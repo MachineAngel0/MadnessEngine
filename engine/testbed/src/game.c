@@ -1,16 +1,10 @@
 ﻿#include "game.h"
 
-#include "dummy.h"
-#include "dummy2.h"
 #include "logger.h"
-#include "yo.h"
 
 b8 game_initialize(game* game_inst) {
     KDEBUG("game_initialize() called!");
 
-    printdummy();
-    printdummy2();
-    yo();
     return TRUE;
 }
 

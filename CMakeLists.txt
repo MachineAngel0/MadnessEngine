@@ -24,31 +24,26 @@ list(REMOVE_DUPLICATES HEADER_DIRS)
 
 add_executable(MadnessEngine
 
-        engine/application.c
-        engine/application.h
-        engine/asserts.h
-        engine/defines.h
-        engine/logger.c
-        engine/logger.h
+        engine/src/core/application.c
+        engine/src/core/application.h
+        engine/src/core/asserts.h
+        engine/src/defines.h
+        engine/src/core/logger.c
+        engine/src/core/logger.h
 
-        engine/platform.h
-        engine/platform_linux.c
-        engine/platform_win32.c
+        engine/src/platform/platform.h
+        engine/src/platform/platform_linux.c
+        engine/src/platform/platform_win32.c
 
-        engine/entry.c
-        engine/entry.h
-        engine/game.c
-        engine/game.h
-        engine/game_types.h
+        engine/testbed/src/entry.c
+        engine/src/entry.h
+        engine/testbed/src/game.c
+        engine/testbed/src/game.h
+        engine/src/game_types.h
 
         engine/stb_image.h
         engine/stb_truetype.h
 
-        engine/src/dummy.h
-        engine/src/dummy2/dummy2.h
-        engine/src/dummy2/dummy2.c
-
-        engine/src/dummy2/yo/yo.h
 )
 
 #TODO: how to make the engine a shared library
