@@ -8,9 +8,19 @@ set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
 # Set the root directory to search recursively
 set(ROOT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Recursively find all directories
-file(GLOB_RECURSE ALL_DIRS LIST_DIRECTORIES true "${ROOT_INCLUDE_DIR}/*")
+# Recursively find all .h files
+file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+file(GLOB_RECURSE HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 
+# Extract the directories of those header files
+set(INCLUDE_DIRS "")
+foreach(header ${HEADER_FILES})
+        get_filename_component(header_dir ${header} DIRECTORY)
+        list(APPEND INCLUDE_DIRS ${header_dir})
+endforeach()
+
+# Remove duplicates
+list(REMOVE_DUPLICATES HEADER_DIRS)
 
 add_executable(MadnessEngine
 
@@ -33,19 +43,20 @@ add_executable(MadnessEngine
 
         engine/stb_image.h
         engine/stb_truetype.h
+
+        engine/src/dummy.h
+        engine/src/dummy2/dummy2.h
+        engine/src/dummy2/dummy2.c
+
+        engine/src/dummy2/yo/yo.h
 )
 
 #TODO: how to make the engine a shared library
 #second executable
 
 
-# Filter only directories and add them
-foreach (dir ${ALL_DIRS})
-    if (IS_DIRECTORY "${dir}")
-        target_include_directories(MadnessEngine PUBLIC ${dir})
-        #target_include_directories(Game PUBLIC ${dir})
-    endif ()
-endforeach ()
+# Add all header directories to include paths
+target_include_directories(MadnessEngine PUBLIC ${INCLUDE_DIRS})
 
 #target_include_directories(MadnessEngine PUBLIC src vendor platform)
 
