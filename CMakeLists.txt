@@ -24,25 +24,13 @@ list(REMOVE_DUPLICATES HEADER_DIRS)
 
 add_executable(MadnessEngine
 
-        engine/src/core/application.c
-        engine/src/core/application.h
+        engine/main.c
         engine/src/core/asserts.h
-        engine/src/defines.h
         engine/src/core/logger.c
         engine/src/core/logger.h
 
-        engine/src/platform/platform.h
-        engine/src/platform/platform_linux.c
-        engine/src/platform/platform_win32.c
-
-        engine/testbed/src/entry.c
-        engine/src/entry.h
-        engine/testbed/src/game.c
-        engine/testbed/src/game.h
-        engine/src/game_types.h
-
-        engine/stb_image.h
-        engine/stb_truetype.h
+        engine/defines.h
+        engine/platform/platform.h
 
 )
 

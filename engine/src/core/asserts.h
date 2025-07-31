@@ -32,7 +32,7 @@ MAPI void report_assertion_failure(const char* expression, const char* message, 
             debugBreak();                                            \
         }                                                            \
     }
-
+//includes a message
 #define KASSERT_MSG(expr, message)                                        \
     {                                                                     \
         if (expr) {                                                       \
