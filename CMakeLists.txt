@@ -22,6 +22,11 @@ endforeach()
 # Remove duplicates
 list(REMOVE_DUPLICATES HEADER_DIRS)
 
+find_package(Vulkan	REQUIRED)
+
+add_subdirectory(engine/src/vendor/glfw-3.4)
+add_subdirectory(engine/src/vendor/glm)
+
 add_executable(MadnessEngine
 
         engine/main.c
@@ -30,7 +35,13 @@ add_executable(MadnessEngine
         engine/src/core/logger.h
 
         engine/defines.h
-        engine/platform/platform.h
+        engine/src/platform/platform.h
+        engine/src/platform/platform_win32.c
+        engine/src/core/Arena.c
+        engine/src/core/Arena.h
+
+        engine/src/core/clock.h
+        engine/src/core/clock.c
 
 )
 
@@ -40,6 +51,13 @@ add_executable(MadnessEngine
 
 # Add all header directories to include paths
 target_include_directories(MadnessEngine PUBLIC ${INCLUDE_DIRS})
+target_link_libraries(MadnessEngine PRIVATE
+                Vulkan::Vulkan
+                glfw
+                glm
+)
+
+#target_link_libraries(MadnessEngine glfw ${GLFW_LIBRARIES} VULKAN::VULKAN)
 
 #target_include_directories(MadnessEngine PUBLIC src vendor platform)
 
