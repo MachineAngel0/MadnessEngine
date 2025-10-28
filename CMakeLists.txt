@@ -1,60 +1,76 @@
 ﻿cmake_minimum_required(VERSION 3.31)
 project(MadnessEngine C)
 
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
 set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
 
-# Set the root directory to search recursively
-set(ROOT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Recursively find all .h files
-file(GLOB_RECURSE SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
-file(GLOB_RECURSE HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+# COMPILER FLAGS #
+#Windows
+if (MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address")
+endif ()
 
-# Extract the directories of those header files
-set(INCLUDE_DIRS "")
-foreach(header ${HEADER_FILES})
-        get_filename_component(header_dir ${header} DIRECTORY)
-        list(APPEND INCLUDE_DIRS ${header_dir})
-endforeach()
+#GCC/MINGW OR CLANG
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 
-# Remove duplicates
-list(REMOVE_DUPLICATES HEADER_DIRS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wvla -Wfloat-equal ")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Waggregate-return -Wconversion") # additional compiler flags
 
-find_package(Vulkan	REQUIRED)
+    #LINUX
+    #if(UNIX AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU") # for some reason gnu not working
+    if (UNIX) # for some reason gnu not working
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+    endif ()
+endif ()
 
-add_subdirectory(engine/src/vendor/glfw-3.4)
-add_subdirectory(engine/src/vendor/glm)
+
+find_package(Vulkan REQUIRED)
+
+
+include_directories(MadnessEngine ./core)
+include_directories(MadnessEngine ./core/serialization/)
+include_directories(MadnessEngine ./dsa)
+include_directories(MadnessEngine ./platform)
+
+include_directories(MadnessEngine ./renderer)
+
+include_directories(MadnessEngine ./lib)
+include_directories(MadnessEngine ./z_assets)
 
 add_executable(MadnessEngine
-
-        engine/main.c
-        engine/src/core/asserts.h
-        engine/src/core/logger.c
-        engine/src/core/logger.h
-
-        engine/defines.h
-        engine/src/platform/platform.h
-        engine/src/platform/platform_win32.c
-        engine/src/core/Arena.c
-        engine/src/core/Arena.h
-
-        engine/src/core/clock.h
-        engine/src/core/clock.c
-
+        main.c
+        unity_build.c
 )
 
-#TODO: how to make the engine a shared library
-#second executable
+add_library(MADNESSDSA SHARED
+        unity_build.c
+)
+
+
+#libs
+if (MSVC)
+    target_link_libraries(MadnessEngine PRIVATE Xinput)
+    target_link_libraries(MadnessEngine PRIVATE winmm)
+endif ()
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    target_link_libraries(MadnessEngine PRIVATE Xinput)
+    target_link_libraries(MadnessEngine PRIVATE winmm)
+endif ()
+if (UNIX)
+endif ()
 
 
 # Add all header directories to include paths
 target_include_directories(MadnessEngine PUBLIC ${INCLUDE_DIRS})
 target_link_libraries(MadnessEngine PRIVATE
-                Vulkan::Vulkan
-                glfw
-                glm
+        Vulkan::Vulkan
+        #glfw
 )
 
 #target_link_libraries(MadnessEngine glfw ${GLFW_LIBRARIES} VULKAN::VULKAN)
