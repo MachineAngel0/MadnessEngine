@@ -34,11 +34,12 @@ find_package(Vulkan REQUIRED)
 
 
 include_directories(MadnessEngine ./core)
+include_directories(MadnessEngine ./core/dsa)
+include_directories(MadnessEngine ./core/platform)
 include_directories(MadnessEngine ./core/serialization/)
-include_directories(MadnessEngine ./dsa)
-include_directories(MadnessEngine ./platform)
 
 include_directories(MadnessEngine ./renderer)
+include_directories(MadnessEngine ./game)
 
 include_directories(MadnessEngine ./lib)
 include_directories(MadnessEngine ./z_assets)
@@ -48,21 +49,35 @@ add_executable(MadnessEngine
         unity_build.c
 )
 
-add_library(MADNESSDSA SHARED
+add_executable(MadnessEngine_game
+        entry_game.h
+        unity_build.c
+)
+add_executable(MadnessEngine_editor
+        entry_editor.h
+        unity_build.c
+)
+
+
+add_library(MADNESSGAME SHARED
+        entry_game.h
         unity_build.c
 )
 
 
 #libs
 if (MSVC)
-    target_link_libraries(MadnessEngine PRIVATE Xinput)
-    target_link_libraries(MadnessEngine PRIVATE winmm)
+    target_link_libraries(MadnessEngine PRIVATE Xinput winmm)
+    target_link_libraries(MadnessEngine_game PRIVATE Xinput winmm)
+    target_link_libraries(MADNESSGAME PRIVATE Xinput winmm)
 endif ()
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    target_link_libraries(MadnessEngine PRIVATE Xinput)
-    target_link_libraries(MadnessEngine PRIVATE winmm)
+    target_link_libraries(MadnessEngine  PRIVATE Xinput winmm)
+    target_link_libraries(MadnessEngine_game PRIVATE Xinput winmm)
+    target_link_libraries(MADNESSGAME PRIVATE Xinput winmm)
 endif ()
 if (UNIX)
+
 endif ()
 
 

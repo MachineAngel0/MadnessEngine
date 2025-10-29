@@ -1,14 +1,23 @@
 ﻿#ifndef EVENT_H
 #define EVENT_H
-#include "array.h"
+#include "dsa/array.h"
 
 
 typedef enum event_type
 {
+    EVENT_APP_QUIT,
+    EVENT_HOT_RELOAD_GAME,
     EVENT_TEST,
     EVENT_TEST2,
-    EVENT_KEYBOARD,
-    EVENT_MOUSE,
+
+    //INPUT
+    EVENT_KEY_PRESSED,
+    EVENT_KEY_RELEASED,
+    EVENT_MOUSE_MOVED,
+    EVENT_MOUSE_WHEEL,
+    EVENT_MOUSE_PRESSED,
+    EVENT_MOUSE_RELEASED,
+    //GAMEPAD
     EVENT_GAMEPAD_PRESS,
     EVENT_GAMEPAD_RELEASE,
 
@@ -48,7 +57,7 @@ typedef bool (*on_event)(event_type code, uint32_t sender_id, uint32_t subscribe
 //list of events -> subscribers -> their respective reactions/callbacks
 
 // can be increased
-#define MAX_SUBSCRIBERS 1000
+#define MAX_SUBSCRIBERS 1000 //idk if this is too much per event
 
 typedef struct subscriber_data
 {
@@ -111,7 +120,7 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
 {
 
     //check if the event arr has been alloacated
-    if (event_system.events[event].subs_arr == 0)
+    if (event_system.events[event].subs_arr == NULL)
     {
         event_system.events[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
     }
@@ -150,6 +159,12 @@ void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 
 void event_fire(event_type event, uint32_t sender_id, event_context context)
 {
+    //check if the event arr has been alloacated
+    if (event_system.events[event].subs_arr == NULL)
+    {
+        event_system.events[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
+    }
+
     for (uint32_t i = 0; i < event_system.events[event].subs_arr->num_items; i++)
     {
         //trigger all the callbacks in the event table

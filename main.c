@@ -1,15 +1,18 @@
-﻿#include <stdio.h>
-#include "platform/audio.h"
+﻿
+
+
+#include "file_serialization.h"
+#include "network_serialization.h"
+#include "dsa/hash_map.h"
+#include "dsa/hash_set.h"
 #include "platform/clock.h"
-#include "core/serialization/network_serialization.h"
-#include "core/serialization/file_serialization.h"
-#include "core/logger.h"
-#include "platform/platform.h"
-
-
+#include "platform/hot_reload.h"
 
 int main(void)
 {
+
+    // reload_dll("libMADNESSGAME.dll",'libMADNESSGAME_TEMP.dll');
+
 
     log_test();
     serialization_test();
@@ -17,8 +20,8 @@ int main(void)
     pack_unpack_test();
 
 
-    // hash_map_test();
-    // hash_set_test();
+    hash_map_test();
+    hash_set_test();
 
     platform_state platform;
 
@@ -40,7 +43,7 @@ int main(void)
         clock_update_frame_start(&clock);
 
 
-        // printf("%f s\n", clock.delta_time);
+        printf("%f s\n", clock.delta_time);
         printf("%f ms\n", clock_delta_time_in_ms(&clock));
         printf("%f fps\n", clock_delta_time_to_fps(&clock));
 

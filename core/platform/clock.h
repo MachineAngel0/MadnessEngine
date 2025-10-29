@@ -2,7 +2,7 @@
 #define CLOCK_H
 
 #include "../core/defines.h"
-#include "../platform/platform.h"
+#include "platform.h"
 
 typedef struct Clock
 {

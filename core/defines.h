@@ -97,20 +97,21 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 #ifdef MEXPORT
 // Exports
-#ifdef _MSC_VER
-#define MAPI __declspec(dllexport)
-#else
-#define MAPI __attribute__((visibility("default")))
-#endif
+#    ifdef _MSC_VER
+#        define MAPI __declspec(dllexport)
+#    else
+#        define MAPI __attribute__((visibility("default")))
+#    endif
 #else
 // Imports
-#ifdef _MSC_VER
-#define MAPI __declspec(dllimport)
-#else
-#define MAPI
+#    ifdef _MSC_VER
+/** @brief Import/export qualifier */
+#        define MAPI __declspec(dllimport)
+#    else
+/** @brief Import/export qualifier */
+#        define MAPI
+#    endif
 #endif
-#endif
-
 
 //forcing inline
 

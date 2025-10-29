@@ -81,8 +81,8 @@ void log_output(log_level level, const char *message, ...)
 
 #define FATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
 
-#ifndef ERROR == 1
-#define ERROR(message, ...) log_output(LOG_LEVEL_ERROR, message, ##__VA_ARGS__);
+#ifndef M_ERROR == 1
+#define M_ERROR(message, ...) log_output(LOG_LEVEL_ERROR, message, ##__VA_ARGS__);
 #endif
 
 #if LOG_WARN_ENABLED == 1
@@ -119,7 +119,7 @@ void report_assertion_failure(const char* expression, const char* message, const
 void log_test()
 {
     FATAL("FATAL TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
-    ERROR("ERROR TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
+    M_ERROR("ERROR TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
     WARN("WARN TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
     INFO("INFO TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
     DEBUG("DEBUG TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
