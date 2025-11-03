@@ -5,8 +5,11 @@
 #include <assert.h>
 #include <string.h>
 
-String* string_create(const char* word, uint32_t length)
+
+
+String* string_create_new(uint8_t* word, uint32_t length)
 {
+
     String* str = malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
 
@@ -24,19 +27,18 @@ String* string_create(const char* word, uint32_t length)
     return str;
 }
 
-String* string_create_no_length(char* word)
+
+
+String* string_create(const char* word, uint32_t length)
 {
-    String* str = (String*)malloc(sizeof(String));
-    memset(str, 0, sizeof(String));
+    String* str = malloc(sizeof(String));
+    //memset(str, 0, sizeof(MString));
 
-    // you have to use strlen, doing sizeof(word) will return the size of a pointer, 4 or 8 bytes
-    str->length = strlen(word);
-    //I might want to double check this
-    printf("size of word %lu\n", sizeof(word));
+    //important to note that we use -1 to not include the null terminated string
+    str->chars = (char*)malloc(sizeof(char) * length-1);
+    memset(str->chars, 0, sizeof(char) * length-1);
 
-    str->chars = (char*)malloc(str->length);
-    memset(str->chars, 0, str->length);
-
+    str->length = length-1;
 
     for (uint32_t i = 0; i < str->length; i++)
     {
@@ -120,6 +122,10 @@ String* string_duplicate(String* str)
 
 void string_test()
 {
+    String* testojnuaohdsus = STRING_CREATE("testing something");
+    String* testojn = string_create_new("testing something", sizeof("testing something"));
+    string_print(testojnuaohdsus);
+    string_print(testojn);
 
     printf("STRING START \n");
 
@@ -127,8 +133,6 @@ void string_test()
     string_print(str1);
 
     //String* test_string_two = string_create_no_length("hello string");
-    String* str2 = string_create_no_length("string, hello");
-    string_print(str2);
 
     String* str3 = string_create("string, hello", sizeof("string, hello"));
     string_print(str3);
@@ -136,9 +140,8 @@ void string_test()
 
 
     printf("%d\n", string_compare(str1, str1));
-    printf("%d\n", string_compare(str1, str2));
 
-    string_append(str1, str2);
+    // string_append(str1, str2);
 
 
     String* str4 = string_duplicate(str1);
@@ -146,7 +149,7 @@ void string_test()
     string_print(str4);
 
     string_free(str1);
-    string_free(str2);
+    // string_free(str2);
 
     printf("STRING END\n\n");
 

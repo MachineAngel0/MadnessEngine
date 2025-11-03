@@ -121,7 +121,7 @@ void queue_print(queue* queue, void (*print_func)(void*))
     printf("\n");
 }
 
-void queue_testing()
+void queue_test()
 {
     printf("QUEUE START\n");
 

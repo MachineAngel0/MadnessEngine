@@ -2,7 +2,7 @@
 
 #ifndef CONTAINER_UTILITY_H
 #define CONTAINER_UTILITY_H
-
+#include "asserts.h"
 
 bool is_power_of_two(uintptr_t x)
 {

@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #include "arena.h"
-#include "linked_list_generic.h"
+#include "linked_list.h"
 
 
 uintptr_t align_forward_uintptr(uintptr_t ptr, uintptr_t align) {

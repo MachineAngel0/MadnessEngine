@@ -10,10 +10,13 @@
 
 #include <windows.h>
 #include <windowsx.h>  // param input extraction
+#include <timeapi.h>
 #include <stdlib.h>
 #include <mmsystem.h>
 
+#include "darray.h"
 #include "input.h"
+
 
 typedef struct internal_state
 {
@@ -154,11 +157,11 @@ b8 platform_pump_messages(platform_state* plat_state)
 }
 
 typedef HRESULT WINAPI DSoundCreate(LPCGUID, LPDIRECTSOUND*, LPUNKNOWN);
+
 #define DirectSoundCreate DSoundCreate
 
 bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_t samples_per_second)
 {
-
     //get the state
     internal_state* state = (internal_state *) plat_state->internal_state;
 
@@ -237,33 +240,33 @@ bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_
         &region2, &region2_size,
         0)))
     {
-        int16_t *sample = (int16_t*)region1;
+        int16_t* sample = (int16_t *) region1;
         int total_samples = region1_size / sizeof(int16_t);
         float tone_hz = 440.0f;
         float phase = 0.0f;
-        float phase_inc = 3.14f*2 * tone_hz / (float)samples_per_second;
+        float phase_inc = 3.14f * 2 * tone_hz / (float) samples_per_second;
 
         for (int i = 0; i < total_samples; i += 2)
         {
             float sample_val = sinf(phase) * 3000.0f;
-            sample[i + 0] = (int16_t)sample_val; // Left
-            sample[i + 1] = (int16_t)sample_val; // Right
+            sample[i + 0] = (int16_t) sample_val; // Left
+            sample[i + 1] = (int16_t) sample_val; // Right
             phase += phase_inc;
-            if (phase > 3.14f*2) phase -= 3.14f*2;
+            if (phase > 3.14f * 2) phase -= 3.14f * 2;
         }
 
         if (region2)
         {
-            int16_t *sample2 = (int16_t*)region2;
+            int16_t* sample2 = (int16_t *) region2;
             int total_samples2 = region2_size / sizeof(int16_t);
             phase = 0.0f;
             for (int i = 0; i < total_samples2; i += 2)
             {
                 float sample_val = sinf(phase) * 3000.0f;
-                sample2[i + 0] = (int16_t)sample_val;
-                sample2[i + 1] = (int16_t)sample_val;
+                sample2[i + 0] = (int16_t) sample_val;
+                sample2[i + 1] = (int16_t) sample_val;
                 phase += phase_inc;
-                if (phase > 3.14f*2) phase -= 3.14f*2;
+                if (phase > 3.14f * 2) phase -= 3.14f * 2;
             }
         }
 
@@ -275,7 +278,6 @@ bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_
 
     // Start playback looping
     secondary_buffer->lpVtbl->Play(secondary_buffer, 0, 0, DSBPLAY_LOOPING);
-
 
 
     return true;
@@ -311,6 +313,11 @@ void* platform_copy_memory(void* dest, const void* source, u64 size)
 void* platform_set_memory(void* dest, i32 value, u64 size)
 {
     return memset(dest, value, size);
+}
+
+void platform_get_extension_names(const char*** extension_name_array)
+{
+    darray_push(*extension_name_array, &"VK_KHR_win32_surface");
 }
 
 f64 platform_get_absolute_time()
@@ -356,9 +363,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         {
             // Key pressed/released
             b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-            keys key = (u16)w_param;
+            keys key = (u16) w_param;
             input_process_key(key, pressed);
-
         }
         break;
         case WM_MOUSEMOVE:
@@ -373,7 +379,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_MOUSEWHEEL:
         {
             i32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
-            if (z_delta != 0) {
+            if (z_delta != 0)
+            {
                 // Flatten the input to an OS-independent (-1, 1)
                 z_delta = (z_delta < 0) ? -1 : 1;
                 input_process_mouse_wheel(z_delta);

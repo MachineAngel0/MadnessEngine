@@ -22,16 +22,20 @@ typedef struct app_config
 }app_config;
 
 
-typedef struct game_fake {
+typedef struct game {
     // The application configuration.
     app_config app_config;
 
     // Function pointer to game's update function.
-    void (*initialize)(struct game_fake* game_inst);
-    void (*update)(struct game_fake* game_inst);
+    void (*initialize)(struct game* game_inst);
+    void (*update)(struct game* game_inst);
+
+
+    void (*renderer_initialize)();
+    void (*renderer_update)();
 
     bool testing_switch;
-} game_fake;
+} game;
 
 
 

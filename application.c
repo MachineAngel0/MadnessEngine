@@ -9,15 +9,19 @@
 #include "input.h"
 #include "core/platform/platform.h"
 #include "entry_game.c"
+#include "memory_tracker.h"
 
 typedef struct application_state {
-    game_fake* game_fake;
+    game* game;
+
+    platform_state platform;
+
     b8 is_running;
     b8 is_suspended;
-    platform_state platform;
+
     i16 width;
     i16 height;
-    f64 last_time;
+
 } application_state;
 
 static application_state app_state;
@@ -29,7 +33,7 @@ bool application_on_key(u16 code, void* sender, void* listener_inst, event_conte
 
 
 
-bool application_game_create(struct game_fake* game)
+bool application_game_create(struct game* game)
 {
     // HMODULE dll_handle;
     // reload_dll("libMADNESSGAME.dll", "libMADNESSGAME_TEMP.dll", &dll_handle);
@@ -41,14 +45,19 @@ bool application_game_create(struct game_fake* game)
 
 
     //init subsystems
-    app_state.game_fake = game;
+    app_state.game = game;
 
     app_state.is_running = true;
 
     // Initialize subsystems.
 
+    
+
+    memory_subsystem_init();
     event_init();
     input_init();
+
+
 
 
     event_register(EVENT_APP_QUIT,10, application_on_event);
@@ -68,10 +77,13 @@ bool application_game_create(struct game_fake* game)
         }
 
     //create the game
-    app_state.game_fake->initialize(app_state.game_fake);
+    app_state.game->initialize(app_state.game);
 
     //run the app/game
     application_game_run();
+
+    //TODO: shutdown (go in reverse order)
+
 
     return true;
 
@@ -110,15 +122,19 @@ void application_game_run()
         if (has_file_changed(filename, &last_write_time))
         {
             INFO("File changed! Reloading...\n");
-            game_reload(app_state.game_fake);
+            game_reload(app_state.game);
             Sleep(1000);
             continue;
         }
 
-        app_state.game_fake->update(app_state.game_fake);
+        app_state.game->update(app_state.game);
     }
 
     //shutdown subsystems
+
+    input_init();
+    event_init();
+    memory_subsystem_init();
 
 }
 
@@ -155,16 +171,26 @@ bool application_on_key(u16 code, void* sender, void* listener_inst, event_conte
         if (key_code == KEY_P)
         {
             //TODO: REMOVE
-            printf("pressed key P ");
-            printf("we are reloading");
+            INFO("pressed key P, we are reloading ");
 
-            game_reload(app_state.game_fake);
+            game_reload(app_state.game);
 
             Sleep(1000);
 
         }
 
     }
+    if (code == EVENT_KEY_RELEASED)
+    {
+        uint16_t key_code =  context.data.u16[0];
+        INFO("released key %hu", key_code);
+
+        if (key_code == KEY_D)
+        {
+            memory_tracker_debug_print();
+        }
+    }
+
 }
 
 

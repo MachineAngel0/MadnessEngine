@@ -4,10 +4,12 @@
 #include "app_types.h"
 #include "defines.h"
 
-
-MAPI bool application_game_create(struct game_fake* game);
+MAPI bool application_game_create(struct game* game);
 MAPI void application_game_run();
 
+
+MAPI void application_renderer_create(void /*renderer*/);
+MAPI void application_renderer_run();
 
 
 MAPI void application_editor_create(struct editor_fake* editor);

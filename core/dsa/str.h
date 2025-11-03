@@ -8,16 +8,20 @@
 #include <stdlib.h>
 
 
+//TODO: refactor to ensure immutability, and ease of use with str_builder
+//immutable string, not meant to be modified
 typedef struct String
 {
     char* chars;
     uint32_t length;
 } String;
 
+String* string_create_new(uint8_t* word, uint32_t length);
 String* string_create(const char* word, uint32_t length);
-String* string_create_no_length(char* word);
 bool string_free(String* string);
 
+//will convert the string into the correct size, for some reason doesn't work after the string has been passed
+#define STRING_CREATE(string) string_create_new(string, sizeof(string))
 
 
 //UTILITY
@@ -33,6 +37,9 @@ bool string_is_empty(String* str);
 
 //TODO: TEST
 String* string_duplicate(String* str);
+
+
+
 
 //TODO:
 // char* string_tokenize_single(char* str, char* delimiter)

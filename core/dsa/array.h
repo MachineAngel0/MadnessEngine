@@ -1,7 +1,8 @@
 ﻿#ifndef ARRAY_H
 #define ARRAY_H
 #include <stdlib.h>
-
+#include <string.h>
+#include "unit_test.h"
 #include "../core/misc_util.h"
 #include "../core/logger.h"
 
@@ -11,12 +12,12 @@
 typedef struct Array
 {
     void** data; //array of void* data
-    size_t data_size; // size/stride of each void* data
-    size_t capacity; // size of the array
-    size_t num_items; // current/top index in our array
+    u64 data_size; // size/stride of each void* data
+    u64 capacity; // size of the array
+    u64 num_items; // current/top index in our array
 } Array;
 
-Array* array_create(size_t data_size, size_t capacity)
+Array* array_create(const u64 data_size, const u64 capacity)
 {
     Array* arr = (Array*) malloc(sizeof(Array));
 
@@ -239,7 +240,7 @@ void array_test()
     array_emplace(arr, &num10);
     array_emplace(arr, &num10); //this should fail
     array_print(arr, print_int);
-    MASSERT(arr->num_items == 5);
+    TEST_DEBUG(arr->num_items == 5);
     printf("ARRAY EMPLACE END\n\n");
 
     printf("ARRAY POP START\n");
@@ -247,11 +248,11 @@ void array_test()
     array_pop(arr);
     array_pop(arr);
     array_print(arr, print_int);
-    MASSERT(arr->num_items == 2);
+    TEST_DEBUG(arr->num_items == 2);
     array_pop(arr);
     array_pop(arr);
     array_pop(arr);
-    MASSERT(arr->num_items == 0);
+    TEST_DEBUG(arr->num_items == 0);
     printf("ARRAY POP END\n\n");
 
     array_emplace(arr, &num5);
@@ -290,6 +291,8 @@ void array_test()
     printf("ARRAY END\n\n");
 
     array_free(arr);
+
+    TEST_REPORT("ARRAY");
 }
 
 

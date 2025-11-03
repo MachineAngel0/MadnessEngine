@@ -51,10 +51,17 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 #define BITFLAG(x) (1 << (x))
 
-#define KB(x) = (1024 * x) // kilobytes
-#define MB(x) = (1024 * KB(x)) // megabytes
-#define GB(x) = (1024 * MB(x)) //gigabytes
-// #define TB(x) = (x * GB(x)) // terabyte, should never need this
+
+//easy lookups
+#define KB_SIZE 1024
+#define GB_SIZE 1024 * 1024
+#define GB_SIZE 1024 * 1024 * 1024
+#define TB_SIZE 1024 * 1024 * 1024 * 1024
+
+#define KB(x) (1024 * x) // kilobytes
+#define MB(x) (1024 * KB(x)) // megabytes
+#define GB(x) (1024 * MB(x)) //gigabytes
+#define TB(x) (1024 * GB(x)) // terabyte, should never need this
 
 
 // Platform detection

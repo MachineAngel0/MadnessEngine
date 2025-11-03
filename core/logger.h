@@ -100,7 +100,7 @@ void log_output(log_level level, const char *message, ...)
 #if LOG_DEBUG_ENABLED == 1
 #define DEBUG(message, ...) log_output(LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
 #else
-#define DEBUG(message, ...)
+#define MDEBUG(message, ...)
 #endif
 
 #if LOG_TRACE_ENABLED == 1

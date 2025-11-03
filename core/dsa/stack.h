@@ -137,7 +137,7 @@ void stack_print(stack* stack, void (*print_func)(void*))
 }
 
 
-void stack_testing()
+void stack_test()
 {
     printf("Stack Start\n"); // number of bytes
 
