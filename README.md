@@ -27,13 +27,12 @@ write my own in Vulkan.
 - Work on the Linux Platform Layer
 
 ### PLANNED:
-
 - Simple Flex Style Immediate Mode UI
 - PBR lighting model
 - Editor for easier development
 
 
-### Fun Fact:
+### Extra Info:
 
 - It's called Madness Engine cause the first game I plan to make with it will be called Pulse of Madness. It will be a
   3d turn based game.
@@ -41,6 +40,6 @@ write my own in Vulkan.
   spending more time on language features, and less time on architecture and problem-solving. Using C gives me a much
   more forced and constrained environment. It forces me to use only the bare essentials of what c++ would give you and
   nothing else. In hindsight now, I also feel that C has made me understand memory management and low-levels concepts
-  much better. 
+  much better, since they are far more explicit than in C++.
 
 
