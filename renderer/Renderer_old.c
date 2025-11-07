@@ -1,4 +1,4 @@
-﻿#include "Renderer.h"
+﻿#include "Renderer_old.h"
 
 #include <chrono>
 #include <cmath>
@@ -141,7 +141,7 @@ void key_callback(GLFWwindow* window, Game_State* game_state, VERTEX_DYNAMIC_INF
 }
 
 
-void init_vulkan(Vulkan_Context& vulkan_context,
+void init_vulkan(vulkan_context& vulkan_context,
                  GLFW_Window_Context& window_info,
                  Swapchain_Context& swapchain_context,
                  Graphics_Context& graphics_context,
@@ -171,7 +171,7 @@ void init_vulkan(Vulkan_Context& vulkan_context,
 }
 
 
-void init_UI_vulkan(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context, Graphics_Context& ui_graphics_context,
+void init_UI_vulkan(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context, Graphics_Context& ui_graphics_context,
                     Graphics_Context& graphics_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& ui_buffer_context, UI_STATE* ui_state)
 {
     //only the buffer context needs to be different
@@ -189,7 +189,7 @@ void init_UI_vulkan(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain
     create_ui_graphics_pipeline(vulkan_context, ui_graphics_context, graphics_context);
 }
 
-void init_Text_vulkan(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void init_Text_vulkan(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                       Graphics_Context& text_graphics_context, Graphics_Context& graphics_context,
                       Command_Buffer_Context& command_buffer_context, Buffer_Context& text_buffer_context,
                       Text_System& text_system, Descriptor& text_descriptor)
@@ -205,7 +205,7 @@ void init_Text_vulkan(Vulkan_Context& vulkan_context, Swapchain_Context& swapcha
 }
 
 
-void draw_frame(Vulkan_Context& vulkan_context, GLFW_Window_Context& window_context, Swapchain_Context& swapchain_context,
+void draw_frame(vulkan_context& vulkan_context, GLFW_Window_Context& window_context, Swapchain_Context& swapchain_context,
                 Graphics_Context& graphics_context, Command_Buffer_Context& command_buffer_context,
                 Buffer_Context& buffer_context, VERTEX_DYNAMIC_INFO& vertex_info, Semaphore_Fences_Context& semaphore_fences_info,
                 Graphics_Context& ui_graphics_context, Buffer_Context& ui_buffer_context, UI_STATE* ui_state,
@@ -378,200 +378,7 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 
 
 
-void create_surface(Vulkan_Context& vulkan_context, GLFW_Window_Context& window_context)
-{
-    if (glfwCreateWindowSurface(vulkan_context.instance, window_context.window, nullptr, &vulkan_context.surface) !=
-        VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create window surface!");
-    }
-    std::cout << "CREATE SURFACE SUCCESS\n";
-}
-
-void pick_physical_device(Vulkan_Context& vulkan_context)
-{
-    uint32_t device_count = 0;
-    if (vkEnumeratePhysicalDevices(vulkan_context.instance, &device_count, nullptr) != VK_SUCCESS)
-    {
-        std::cout << "failed to enumerate physical devices! PICK PHYSICAL DEVICE\n";
-    };
-
-    if (device_count == 0)
-    {
-        throw std::runtime_error("failed to find GPUs with Vulkan support! DEVICE COUNT");
-    }
-
-    std::vector<VkPhysicalDevice> physical_devices(device_count); //gpu list
-    vkEnumeratePhysicalDevices(vulkan_context.instance, &device_count, physical_devices.data());
-
-    if (physical_devices.empty())
-    {
-        throw std::runtime_error("failed to find GPUs with Vulkan support! PHYSICAL DEVICES");
-    }
-
-    //find a suitable device, DO NOT USE THE VULKAN CONTEXT PHYSICAL DEVICE AS THE QUERY
-    for (const auto& physical_device: physical_devices)
-    {
-        //when we find a device break out of the loop
-        if (is_device_suitable(vulkan_context.surface, physical_device))
-        {
-            //std::cout << "FOUND A SUITABLE DEVICE\n";
-            vulkan_context.physical_device = physical_device;
-            //NOTE: we can also query for device information here like max image samples
-            break;
-        }
-    }
-
-
-    //validate we got one
-    if (vulkan_context.physical_device == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("failed to find a suitable GPU/Physical Device");
-    }
-
-    //we can use this to query for things
-    //vkEnumerateDeviceExtensionProperties();
-    //vkGetPhysicalDeviceProperties();
-
-    std::cout << "PICK PHYSICAL DEVICE SUCCESS\n";
-}
-
-bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_device_to_query)
-{
-    //DO NOT PASS THIS A NULL PHYSICAL DEVICE
-    //DO NOT USE THE VULKAN CONTEXT IF IT HAS NOT BEEN SELECTED YET
-
-    if (physical_device_to_query == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("PASSED IN A NULL PHYSICAL DEVICE");
-    }
-    if (surface == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("PASSED IN A NULL SURFACE");
-    }
-
-    //1. queue family support
-    QueueFamilyIndices indices = find_queue_families(surface, physical_device_to_query);
-
-    //2. device extension supported
-
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(physical_device_to_query, nullptr, &extensionCount, nullptr);
-
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(physical_device_to_query, nullptr, &extensionCount,
-                                         availableExtensions.data());
-
-    std::set<std::string> requiredExtensions(device_extensions.begin(), device_extensions.end());
-
-    for (const auto& extension: availableExtensions)
-    {
-        requiredExtensions.erase(extension.extensionName);
-    }
-
-    bool extensionsSupported = requiredExtensions.empty();
-
-
-    //3. swapchain supported
-    bool swapChainAdequate = false;
-    if (extensionsSupported)
-    {
-        SwapChainSupportDetails swapChainSupport;
-
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device_to_query, surface, &swapChainSupport.capabilities);
-
-        uint32_t formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device_to_query, surface, &formatCount, nullptr);
-
-        if (formatCount != 0)
-        {
-            swapChainSupport.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device_to_query, surface, &formatCount,
-                                                 swapChainSupport.formats.data());
-        }
-
-        uint32_t presentModeCount;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device_to_query, surface, &presentModeCount, nullptr);
-
-        if (presentModeCount != 0)
-        {
-            swapChainSupport.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device_to_query, surface, &presentModeCount,
-                                                      swapChainSupport.presentModes.data());
-        }
-
-
-        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-    }
-
-    VkPhysicalDeviceFeatures supportedFeatures;
-    vkGetPhysicalDeviceFeatures(physical_device_to_query, &supportedFeatures);
-
-    return queue_family_indices_is_complete(indices) && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
-}
-
-
-QueueFamilyIndices find_queue_families(VkSurfaceKHR surface, VkPhysicalDevice physical_device)
-{
-    if (physical_device == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("PASSED IN A NULL PHYSICAL DEVICE");
-    }
-    if (surface == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("PASSED IN A NULL SURFACE");
-    }
-
-
-    QueueFamilyIndices indices{};
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queueFamilyCount, nullptr);
-
-    if (queueFamilyCount == 0)
-    {
-        throw std::runtime_error("QUEUE FAMILY COUNT IS UNAVAILABLEUNAVAILABLE");
-    }
-
-    std::vector<VkQueueFamilyProperties> queueFamilies;
-    queueFamilies.resize(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for (const auto& queueFamily: queueFamilies)
-    {
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            indices.graphicsFamily = i;
-        }
-
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &presentSupport);
-
-        if (presentSupport)
-        {
-            indices.presentFamily = i;
-        }
-
-        if (queue_family_indices_is_complete(indices))
-        {
-            break;
-        }
-
-        i++;
-    }
-
-    return indices;
-}
-
-bool queue_family_indices_is_complete(QueueFamilyIndices queue_family_indices)
-{
-    //return queue_family_indices.graphicsFamily > 0; // a way to do it if i dont want to use std::optional
-    return queue_family_indices.graphicsFamily.has_value() && queue_family_indices.presentFamily.has_value();
-}
-
-
-void create_logical_device(Vulkan_Context& vulkan_context)
+void create_logical_device(vulkan_context& vulkan_context)
 {
     //specify queue to use, specify device extensions and device features, create logical device
 
@@ -670,7 +477,7 @@ void create_logical_device(Vulkan_Context& vulkan_context)
     std::cout << "CREATE LOGICAL DEVICE SUCCESS\n";
 }
 
-void create_swapchain(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context)
+void create_swapchain(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context)
 {
     /*
     typedef struct VkSwapchainCreateInfoKHR {
@@ -818,7 +625,7 @@ VkPresentModeKHR choose_present_mode(const std::vector<VkPresentModeKHR>& presen
     return VK_PRESENT_MODE_FIFO_KHR; // vsync which is required to be available by vulkan
 }
 
-void recreate_swapchain(Vulkan_Context& vulkan_context, GLFW_Window_Context& window_context,
+void recreate_swapchain(vulkan_context& vulkan_context, GLFW_Window_Context& window_context,
                         Swapchain_Context& swapchain_context, Graphics_Context& graphics_context, UI_STATE* ui_state)
 {
     //have the device wait while the screen gets recreated
@@ -841,7 +648,7 @@ void recreate_swapchain(Vulkan_Context& vulkan_context, GLFW_Window_Context& win
 
 }
 
-void cleanup_swapchain(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void cleanup_swapchain(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                        Graphics_Context& graphics_context)
 {
     for (auto framebuffer: graphics_context.frame_buffers)
@@ -857,7 +664,7 @@ void cleanup_swapchain(Vulkan_Context& vulkan_context, Swapchain_Context& swapch
     vkDestroySwapchainKHR(vulkan_context.logical_device, swapchain_context.swapchain, nullptr);
 }
 
-void create_image_views(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context)
+void create_image_views(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context)
 {
     //create an image view for every image
     swapchain_context.swap_chain_image_views.resize(swapchain_context.swap_chain_images.size());
@@ -911,7 +718,7 @@ void create_image_views(Vulkan_Context& vulkan_context, Swapchain_Context& swapc
     std::cout << "CREATE IMAGEVIEWS SUCCESS\n";
 }
 
-void create_graphics_pipeline(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void create_graphics_pipeline(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                               Graphics_Context& graphics_context)
 {
     //load shaders from file
@@ -1165,7 +972,7 @@ VkShaderModule create_shader_module(VkDevice& logical_device, const std::vector<
     return shader_module;
 }
 
-void create_render_pass(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void create_render_pass(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                         Graphics_Context& graphics_context)
 {
     //TODO: CHANGE TO DYNAMIC RENDERING AND REPLACES RENDER PASS AND FRAME BUFFer
@@ -1224,7 +1031,7 @@ void create_render_pass(Vulkan_Context& vulkan_context, Swapchain_Context& swapc
     std::cout << "CREATED RENDERPASS SUCCESS\n";
 }
 
-void create_frame_buffers(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void create_frame_buffers(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                           Graphics_Context& graphics_context)
 {
     graphics_context.frame_buffers.resize(swapchain_context.swap_chain_image_views.size());
@@ -1256,7 +1063,7 @@ void create_frame_buffers(Vulkan_Context& vulkan_context, Swapchain_Context& swa
 
 
 
-void create_vertex_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
+void create_vertex_buffer(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
 {
     //NOTE: You can use a seperate device for transfering the vertex buffer from CPU to GPU
     //https://vulkan-tutorial.com/Vertex_buffers/Staging_buffer (top of the page)
@@ -1276,7 +1083,7 @@ void create_vertex_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context
 
     //VK_BUFFER_USAGE_TRANSFER_SRC_BIT: Buffer can be used as source in a memory transfer operation.
     //VK_BUFFER_USAGE_TRANSFER_DST_BIT: Buffer can be used as destination in a memory transfer operation.
-    buffer_create(vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    buffer_create(&vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                   buffer_context.vertex_staging_buffer, buffer_context.vertex_staging_buffer_memory);
 
@@ -1305,7 +1112,7 @@ void create_vertex_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context
      */
 
     //vertex buffer in device local memory
-    buffer_create(vulkan_context, buffer_size,
+    buffer_create(&vulkan_context, buffer_size,
                   VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_context.vertex_buffer,
                   buffer_context.vertex_buffer_memory);
@@ -1323,12 +1130,12 @@ void create_vertex_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context
 
 
 
-void create_index_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
+void create_index_buffer(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
 {
     //basically the same thing as create vertex buffer
     VkDeviceSize buffer_size = sizeof(indices[0]) * indices.size();
 
-    buffer_create(vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    buffer_create(&vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                   buffer_context.index_staging_buffer, buffer_context.index_staging_buffer_memory);
 
@@ -1336,7 +1143,7 @@ void create_index_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context&
     memcpy(buffer_context.data_index, indices.data(), (size_t) buffer_size);
     vkUnmapMemory(vulkan_context.logical_device, buffer_context.index_staging_buffer_memory);
 
-    buffer_create(vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    buffer_create(&vulkan_context, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_context.index_buffer,
                   buffer_context.index_buffer_memory);
 
@@ -1348,7 +1155,7 @@ void create_index_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context&
 }
 
 
-void create_command_buffer(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context)
+void create_command_buffer(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context)
 {
     command_buffer_context.command_buffer.resize(MAX_FRAMES_IN_FLIGHT);
 
@@ -1526,7 +1333,7 @@ void record_command_buffer(Swapchain_Context& swapchain_context, Command_Buffer_
     //std::cout << "RECORD COMMANDPOOL SUCCESS\n";
 }
 
-void create_sync_objects(Vulkan_Context& vulkan_context, Semaphore_Fences_Context& semaphore_fences_info)
+void create_sync_objects(vulkan_context& vulkan_context, Semaphore_Fences_Context& semaphore_fences_info)
 {
     semaphore_fences_info.render_finished_semaphore.resize(MAX_FRAMES_IN_FLIGHT);
     semaphore_fences_info.image_available_semaphore.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1555,7 +1362,7 @@ void create_sync_objects(Vulkan_Context& vulkan_context, Semaphore_Fences_Contex
     std::cout << "CREATE SYNC OBJECTS SUCCESS\n";
 }
 
-void cleanup(Vulkan_Context& vulkan_context, GLFW_Window_Context& window_info,
+void cleanup(vulkan_context& vulkan_context, GLFW_Window_Context& window_info,
              Swapchain_Context& swapchain_context, Graphics_Context& graphics_context,
              Command_Buffer_Context& command_buffer_context, Buffer_Context&
              buffer_context, Semaphore_Fences_Context& semaphore_fences_context)
@@ -1599,7 +1406,7 @@ void cleanup(Vulkan_Context& vulkan_context, GLFW_Window_Context& window_info,
 
 
 
-void update_vertex_buffer_update(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context, VERTEX_DYNAMIC_INFO& vertex_info)
+void update_vertex_buffer_update(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context, VERTEX_DYNAMIC_INFO& vertex_info)
 {
     //TODO: so while not happening rn, we can use an offset to only copy the new data, instead of the whole buffer over
     //so instead of copy buffer we can use copy_buffer_region, which ill have to double check how it works
@@ -1635,7 +1442,7 @@ void update_vertex_buffer_update(Vulkan_Context& vulkan_context, Command_Buffer_
 
 }
 
-void copy_buffer_region(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context,
+void copy_buffer_region(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context,
                         VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
                         VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 {
@@ -1685,13 +1492,13 @@ void copy_buffer_region(Vulkan_Context& vulkan_context, Command_Buffer_Context& 
 
 
 
-void create_index_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
+void create_index_buffer_new(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
 {
     // Create buffer large enough for maximum indices, not just initial indices
     buffer_context.index_buffer_capacity = sizeof(uint16_t) * MAX_INDICES; // Use MAX_INDICES instead of indices.size()
 
     // Create staging buffer
-    buffer_create(vulkan_context, buffer_context.index_buffer_capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    buffer_create(&vulkan_context, buffer_context.index_buffer_capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                   buffer_context.index_staging_buffer, buffer_context.index_staging_buffer_memory);
 
@@ -1708,7 +1515,7 @@ void create_index_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Cont
     vkUnmapMemory(vulkan_context.logical_device, buffer_context.index_staging_buffer_memory);
 
     // Create device local buffer with full size
-    buffer_create(vulkan_context, buffer_context.index_buffer_capacity,
+    buffer_create(&vulkan_context, buffer_context.index_buffer_capacity,
                   VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_context.index_buffer,
                   buffer_context.index_buffer_memory);
@@ -1723,13 +1530,13 @@ void create_index_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Cont
 }
 
 
-void create_vertex_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
+void create_vertex_buffer_new(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context)
 {
     // Create buffer large enough for maximum vertices, not just initial vertices
     buffer_context.vertex_buffer_capacity = sizeof(Vertex) * MAX_VERTICES; // Use MAX_VERTICES instead of vertices.size()
 
 
-    buffer_create(vulkan_context, buffer_context.vertex_buffer_capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    buffer_create(&vulkan_context, buffer_context.vertex_buffer_capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                   buffer_context.vertex_staging_buffer, buffer_context.vertex_staging_buffer_memory);
 
@@ -1746,7 +1553,7 @@ void create_vertex_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Con
     vkUnmapMemory(vulkan_context.logical_device, buffer_context.vertex_staging_buffer_memory);
 
     // Create device local buffer with full size
-    buffer_create(vulkan_context, buffer_context.vertex_buffer_capacity,
+    buffer_create(&vulkan_context, buffer_context.vertex_buffer_capacity,
                   VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer_context.vertex_buffer,
                   buffer_context.vertex_buffer_memory);
@@ -1760,7 +1567,7 @@ void create_vertex_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Con
             " vertices)\n";
 }
 
-void create_ui_graphics_pipeline(Vulkan_Context& vulkan_context, Graphics_Context& ui_graphics_context, Graphics_Context&
+void create_ui_graphics_pipeline(vulkan_context& vulkan_context, Graphics_Context& ui_graphics_context, Graphics_Context&
                                  graphics_context_renderpass_only)
 {
     //load shaders from file
@@ -1983,7 +1790,7 @@ typedef struct VkPipelineShaderStageCreateInfo {
     std::cout << "CREATED UI GRAPHICS PIPELINE SUCCESS\n";
 }
 
-void create_text_graphics_pipeline(Vulkan_Context& vulkan_context, Graphics_Context& text_graphics_context,
+void create_text_graphics_pipeline(vulkan_context& vulkan_context, Graphics_Context& text_graphics_context,
                                    Graphics_Context& graphics_context_renderpass_only, Descriptor& descriptor)
 {
     //load shaders from file

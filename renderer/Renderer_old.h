@@ -1,13 +1,8 @@
 ﻿#ifndef VULKANFROMSPECS_H
 #define VULKANFROMSPECS_H
 
-#include <optional>
-#include <vector>
-#include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
-#include <string>
+#include <vulkan/vulkan.h>
 
 
 struct UI_STATE;
@@ -15,14 +10,13 @@ struct Descriptor;
 struct Text_System;
 struct Command_Buffer_Context;
 struct Buffer_Context;
-struct Vulkan_Context;
+struct vulkan_context;
 struct UI_DRAW_INFO;
-struct Game_State;
 struct VERTEX_DYNAMIC_INFO;
 
 
 //TODO: move out when done
-void key_callback(GLFWwindow* window, Game_State* game_state, VERTEX_DYNAMIC_INFO& vertex_info);
+void key_callback(GLFWwindow* window, VERTEX_DYNAMIC_INFO& vertex_info);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 
@@ -31,44 +25,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 
 
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-
-struct GLFW_Window_Context
-{
-    GLFWwindow* window;
-    const char* WINDOW_NAME = "MadnessEngine";
-    const int WIDTH = 800;
-    const int HEIGHT = 600;
-    bool framebufferResized = false;
-};
 
 
 
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
 
-struct Swapchain_Context
-{
-    VkSwapchainKHR swapchain;
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-    VkExtent2D surface_extent;
-    //also contains VKformat
-    VkSurfaceFormatKHR surface_format;
-    VkPresentModeKHR presentModes;
-    std::vector<VkImage> swap_chain_images;
-    std::vector<VkImageView> swap_chain_image_views;
 
-};
-
-struct QueueFamilyIndices
-{
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-};
 
 
 struct Graphics_Context
