@@ -17,7 +17,6 @@ int main()
     create_game(&game);
 
     application_game_create(&game);
-    application_game_run();
 
     return 0;
 }

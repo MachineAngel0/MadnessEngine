@@ -11,25 +11,44 @@ byte_buffer* byte_buffer_init(uint32_t capacity)
     buffer->data = (uint8_t *) malloc(capacity);
     buffer->write_offset = 0;
     buffer->read_offset = 0;
-    buffer->capacity = capacity;
     return buffer;
 }
 
-void byte_buffer_free(byte_buffer* buffer)
+
+byte_buffer* byte_buffer_init_arena(Arena* arena, const uint32_t capacity)
 {
-    free(buffer->data);
-    free(buffer);
+    //the arena should be empty
+    byte_buffer* buffer = (byte_buffer *) arena_alloc(arena, sizeof(byte_buffer));
+    buffer->data = arena_alloc(arena, capacity);
+    buffer->write_offset = 0;
+    buffer->read_offset = 0;
+    buffer->Arena = arena;
 }
+
+
+// void byte_buffer_free(byte_buffer* buffer)
+// {
+//     free(buffer->data);
+//     free(buffer);
+// }
+
+
+void byte_buffer_free_arena(byte_buffer* buffer)
+{
+    free(buffer->Arena);
+}
+
+
 
 void byte_buffer_print_info(const byte_buffer* buffer)
 {
-    printf("WRITE: %d, READ: %d\n", buffer->write_offset, buffer->write_offset);
+    printf("WRITE: %llu, READ: %llu\n", buffer->write_offset, buffer->write_offset);
 }
 
 /***SERIALIZE***/
 
 
-void serialize_u8(byte_buffer* buffer, uint8_t val)
+void serialize_u8(byte_buffer* buffer, const uint8_t val)
 {
     memcpy(buffer->data + buffer->write_offset, &val, sizeof(uint8_t));
     buffer->write_offset += sizeof(uint8_t);

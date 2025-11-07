@@ -2,8 +2,10 @@
 #define PLATFORM_H
 
 
-#include "str_array.h"
-#include "../core/defines.h"
+#include "vk_device.h"
+#include "defines.h"
+
+
 
 typedef struct platform_state
 {
@@ -11,17 +13,17 @@ typedef struct platform_state
 } platform_state;
 
 
-MAPI b8 platform_startup(
+ b8 platform_startup(
     platform_state* plat_state,
     const char* application_name,
     i32 x, i32 y,
     i32 width, i32 height);
 
 
-MAPI void platform_shutdown(platform_state* plat_state);
+ void platform_shutdown(platform_state* plat_state);
 
 
-MAPI b8 platform_pump_messages(platform_state* plat_state);
+ b8 platform_pump_messages(platform_state* plat_state);
 
 
 //AUDIO
@@ -43,10 +45,6 @@ void* platform_copy_memory(void* dest, const void* source, u64 size);
 
 void* platform_set_memory(void* dest, i32 value, u64 size);
 
-
-// RENDERER
-void platform_get_extension_names(const char*** extension_name_array);
-
 //TIME
 f64 platform_get_absolute_time();
 
@@ -54,5 +52,12 @@ f64 platform_get_absolute_time();
 // Should only be used for giving time back to the OS for unused update power.
 // Therefore it is not exported.
 void platform_sleep(u64 ms);
+
+
+// RENDERER
+void platform_get_vulkan_extension_names(const char*** extension_name_array);
+
+bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context);
+
 
 #endif //PLATFORM_H

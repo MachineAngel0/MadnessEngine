@@ -1,14 +1,12 @@
 ﻿#include "application.h"
 
-
-
 #include "app_types.h"
 #include "audio.h"
 #include "defines.h"
 #include "event.h"
 #include "input.h"
 #include "core/platform/platform.h"
-#include "entry_game.c"
+#include "game_entry.c"
 #include "memory_tracker.h"
 
 typedef struct application_state {
@@ -27,8 +25,8 @@ typedef struct application_state {
 static application_state app_state;
 
 //defined below
-bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
-bool application_on_key(u16 code, void* sender, void* listener_inst, event_context context);
+bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context);
+bool application_on_key(event_type code, void* sender, void* listener_inst, event_context context);
 
 
 
@@ -65,7 +63,7 @@ bool application_game_create(struct game* game)
     event_register(EVENT_KEY_PRESSED,12, application_on_key);
 
 
-    //star the platform
+    //start the platform
     if (!platform_startup(
         &app_state.platform,
         game->app_config.name,
@@ -85,10 +83,16 @@ bool application_game_create(struct game* game)
     //TODO: shutdown (go in reverse order)
 
 
+    //shutdown subsystems
+
+    input_shutdown();
+    event_shutdown();
+    memory_shutdown();
     return true;
 
 }
 
+//TODO: move out into platform layer
 bool has_file_changed(const char* filename, FILETIME* last_write_time)
 {
     WIN32_FILE_ATTRIBUTE_DATA file_info;
@@ -130,16 +134,11 @@ void application_game_run()
         app_state.game->update(app_state.game);
     }
 
-    //shutdown subsystems
-
-    input_init();
-    event_init();
-    memory_subsystem_init();
-
 }
 
 
-bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context)
+
+bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context)
 {
     switch (code)
     {
@@ -151,7 +150,7 @@ bool application_on_event(u16 code, void* sender, void* listener_inst, event_con
 }
 
 
-bool application_on_key(u16 code, void* sender, void* listener_inst, event_context context)
+bool application_on_key(event_type code, void* sender, void* listener_inst, event_context context)
 {
     if (code == EVENT_KEY_PRESSED)
     {

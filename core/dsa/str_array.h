@@ -34,14 +34,14 @@ String_Array* string_array_create(const u64 capacity)
 
 
     return s;
-};
+}
 
 void string_array_free(String_Array* s_arr)
 {
     free(s_arr->data);
     free(s_arr->str_length);
     free(s_arr);
-};
+}
 
 void string_array_resize(String_Array* s_arr, const u64 new_capacity)
 {
@@ -49,12 +49,12 @@ void string_array_resize(String_Array* s_arr, const u64 new_capacity)
     s_arr->str_length = realloc(s_arr->str_length, sizeof(u64) * new_capacity);
 
     s_arr->capacity = new_capacity;
-};
+}
 
 void string_array_reserve(String_Array* s, const u64 new_capacity)
 {
     string_array_resize(s, new_capacity);
-};
+}
 
 
 void string_array_emplace(String_Array* s_arr, const char* string, const u64 string_size)
@@ -74,7 +74,7 @@ void string_array_emplace(String_Array* s_arr, const char* string, const u64 str
     s_arr->data[s_arr->count] = str_copy;
     s_arr->str_length[s_arr->count] = string_size;
     s_arr->count++;
-};
+}
 
 
 void string_array_print_debug(const String_Array* s_arr)
@@ -89,7 +89,7 @@ void string_array_print_debug(const String_Array* s_arr)
     {
         DEBUG("[STRING ARRAY]: %s", s_arr->data[i]);
     }
-};
+}
 
 
 #define STRING_ARRAY_EMPLACE(s, str) string_array_emplace(s, str, sizeof(str))

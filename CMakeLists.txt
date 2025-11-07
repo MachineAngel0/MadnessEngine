@@ -10,16 +10,20 @@ set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
 set(MADNESS_BUILD_TARGETS
         MadnessEngine
         MadnessEngine_game
+        MADNESSGAME
         MadnessEngine_renderer
         MADNESSRENDERER
+        MadnessEngine_editor
 )
 
 
 # COMPILER FLAGS #
 #Windows
 if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
+#    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
     set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address")
+    add_compile_options(/wd4255) # disables function prototype warnings
+    add_compile_options(/wd4464) # path contains '..'
 endif ()
 
 #GCC/MINGW OR CLANG
@@ -38,53 +42,46 @@ endif ()
 
 
 find_package(Vulkan REQUIRED)
+include_directories(${Vulkan_INCLUDE_DIRS})
 
-include_directories(MadnessEngine ./core)
-include_directories(MadnessEngine ./core/dsa)
-include_directories(MadnessEngine ./core/platform)
+include_directories(MadnessEngine ./core/)
+include_directories(MadnessEngine ./core/dsa/)
+include_directories(MadnessEngine ./core/platform/)
 include_directories(MadnessEngine ./core/serialization/)
-
-include_directories(MadnessEngine ./renderer)
+include_directories(MadnessEngine ./editor/)
+include_directories(MadnessEngine ./renderer/)
 include_directories(MadnessEngine ./renderer/shaders)
-
-include_directories(MadnessEngine ./game)
-
-include_directories(MadnessEngine ./lib)
-include_directories(MadnessEngine ./z_assets)
+include_directories(MadnessEngine ./game/)
+include_directories(MadnessEngine ./lib/)
+include_directories(MadnessEngine ./z_assets/)
 
 
 add_executable(MadnessEngine
         main.c
-        unity_build.c
+        unity_build_game.c
 )
 
 ### GAME ###
 add_executable(MadnessEngine_game
-        entry_game.h
-        unity_build.c
+        unity_build_game.c
 )
 add_library(MADNESSGAME SHARED
-        entry_game.h
-        unity_build.c
+        unity_build_game.c
 )
 
 ### RENDERER ###
 
 add_executable(MadnessEngine_renderer
-        renderer/renderer_unity.c
-        core/core_unity.c
-
+        unity_build_renderer.c
 )
 add_library(MADNESSRENDERER SHARED
-        renderer/renderer_unity.c
-        core/core_unity.c
-
+        unity_build_renderer.c
 )
 
 ### EDITOR ###
 add_executable(MadnessEngine_editor
-        entry_editor.h
-        unity_build.c
+        editor_entry.h
+        unity_build_game.c
 )
 
 ### CORE ###
@@ -97,15 +94,11 @@ add_executable(CORE_UNIT_TEST
 
 
 
-
-
-
-
 #libs
 
 
 if (WIN32)
-    SET(MADNESS_WIN_LIBS Xinput winmm)
+    SET(MADNESS_WIN_LIBS Xinput winmm Vulkan::Vulkan )
 
     target_link_libraries(MadnessEngine PRIVATE ${MADNESS_WIN_LIBS})
     target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_WIN_LIBS})
@@ -115,31 +108,11 @@ if (WIN32)
     target_link_libraries(CORE_UNIT_TEST PRIVATE ${MADNESS_WIN_LIBS})
 endif ()
 if (UNIX)
-    SET(MADNESS_UNIX_LIBS Xinput winmm)
-
-
+    SET(MADNESS_UNIX_LIBS Vulkan::Vulkan)
 endif ()
 
 
-# Add all header directories to include paths
-target_link_libraries(MadnessEngine PRIVATE
-        Vulkan::Vulkan
-)
-target_link_libraries(MadnessEngine_game PRIVATE
-        Vulkan::Vulkan
-)
-target_link_libraries(MADNESSGAME PRIVATE
-        Vulkan::Vulkan
-)
 
-target_link_libraries(MadnessEngine_renderer PRIVATE
-        Vulkan::Vulkan
-        #glfw
-)
-target_link_libraries(MADNESSRENDERER PRIVATE
-        Vulkan::Vulkan
-        #glfw
-)
 
 
 #target_link_libraries(MadnessEngine glfw ${GLFW_LIBRARIES} VULKAN::VULKAN)

@@ -7,7 +7,7 @@
 struct Command_Buffer_Context;
 struct Swapchain_Context;
 struct Graphics_Context;
-struct Vulkan_Context;
+struct vulkan_context;
 
 enum Renderpass_Type
 {
@@ -25,11 +25,11 @@ enum Renderpass_Clear_Flag
 };
 
 
-void renderpass_create(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
+void renderpass_create(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
                        Graphics_Context& graphics_context, unsigned char clear_flags, bool has_prev_pass, bool has_next_pass);
 
 
-void renderpass_begin(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context, Command_Buffer_Context* command_buffer,
+void renderpass_begin(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context, Command_Buffer_Context* command_buffer,
                       Graphics_Context& graphics_context, uint32_t image_index, unsigned char clear_flags);
 
 void renderpass_end(Command_Buffer_Context* command_buffer, uint32_t frame);

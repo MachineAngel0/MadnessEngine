@@ -1366,14 +1366,30 @@ float rand_range_f(const float min, const float max)
 
 /*** CLAMP ***/
 
-int32_t clamp_i(const int32_t a, const int32_t b)
+MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_t max)
 {
-    return a > b ? b : a;
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
 }
 
-float clamp_f(const float a, const float b)
+MINLINE float clamp_float(const float cur_val, const float min, const float max)
 {
-    return a > b ? b : a;
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
 }
 
 /*** EQUAL ***/

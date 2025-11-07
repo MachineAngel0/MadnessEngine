@@ -18,13 +18,6 @@ typedef enum hash_map_state
 } hash_map_state;
 
 
-//NOTE: this could in theory be a SOA struct
-typedef struct hash_map_entry
-{
-
-} hash_map_entry;
-
-
 typedef struct hash_map
 {
     uint64_t key_data_size;

@@ -5,7 +5,7 @@
 #ifndef VK_DESCRIPTOR_H
 #define VK_DESCRIPTOR_H
 
-#include "texture.h"
+#include "vk_image.h"
 #include "vk_device.h"
 
 
@@ -15,15 +15,15 @@ struct Descriptor {
     std::vector<VkDescriptorSet> descriptor_sets;
 };
 
-void create_descriptor_set_layout(Vulkan_Context& vulkan_context, Descriptor& descriptor);
-void create_descriptor_pool(Vulkan_Context& vulkan_context, Descriptor& descriptor);
-void create_descriptor_sets(Vulkan_Context& vulkan_context, Texture& texture, Descriptor& descriptor);
+void create_descriptor_set_layout(vulkan_context& vulkan_context, Descriptor& descriptor);
+void create_descriptor_pool(vulkan_context& vulkan_context, Descriptor& descriptor);
+void create_descriptor_sets(vulkan_context& vulkan_context, Texture& texture, Descriptor& descriptor);
 
 
 
-void create_descriptor_set_layout_text(Vulkan_Context& vulkan_context, Descriptor& descriptor);
-void create_descriptor_pool_text(Vulkan_Context& vulkan_context, Descriptor& descriptor);
-void create_descriptor_sets_text(Vulkan_Context& vulkan_context, Texture& texture, Descriptor& descriptor);
+void create_descriptor_set_layout_text(vulkan_context& vulkan_context, Descriptor& descriptor);
+void create_descriptor_pool_text(vulkan_context& vulkan_context, Descriptor& descriptor);
+void create_descriptor_sets_text(vulkan_context& vulkan_context, Texture& texture, Descriptor& descriptor);
 
 
 #endif //VK_DESCRIPTOR_H

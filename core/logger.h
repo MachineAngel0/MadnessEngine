@@ -8,15 +8,15 @@
 #include "defines.h"
 #include "asserts.h"
 
-
 //fatal and error will always be logged
+#define M_ERROR_ENABLED 1
 #define LOG_WARN_ENABLED 1
 #define LOG_INFO_ENABLED 1
 #define LOG_DEBUG_ENABLED 1
 #define LOG_TRACE_ENABLED 1
 
 
-#if CUSTOM_RELEASE == 1
+#if defined(RELEASE_BUILD)
 #define LOG_DEBUG_ENABLED 0
 #define LOG_TRACE_ENABLED 0
 #endif
@@ -59,7 +59,8 @@ void log_output(log_level level, const char *message, ...)
     memset(out_message, 0, sizeof(out_message));
 
     //create our formated variadic argument string
-    __builtin_va_list args_ptr;
+    // __builtin_va_list args_ptr; // apparently you should just use va_list
+    va_list args_ptr;
     va_start(args_ptr, message);
     vsnprintf(out_message, 32000, message, args_ptr);
     va_end(args_ptr);
@@ -81,7 +82,7 @@ void log_output(log_level level, const char *message, ...)
 
 #define FATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
 
-#ifndef M_ERROR == 1
+#if M_ERROR_ENABLED == 1
 #define M_ERROR(message, ...) log_output(LOG_LEVEL_ERROR, message, ##__VA_ARGS__);
 #endif
 
@@ -100,7 +101,7 @@ void log_output(log_level level, const char *message, ...)
 #if LOG_DEBUG_ENABLED == 1
 #define DEBUG(message, ...) log_output(LOG_LEVEL_DEBUG, message, ##__VA_ARGS__);
 #else
-#define MDEBUG(message, ...)
+#define DEBUG(message, ...)
 #endif
 
 #if LOG_TRACE_ENABLED == 1

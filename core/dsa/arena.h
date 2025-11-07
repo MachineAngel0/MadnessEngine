@@ -4,7 +4,7 @@
 #include <string.h>
 #include "../core/logger.h"
 #include "dsa_utility.h"
-
+#include "unit_test.h"
 
 #ifndef DEFAULT_ALIGNMENT
 //most likely to be 4 (32bit) or 8 (64bit) (* 2)
@@ -12,43 +12,52 @@
 #endif
 
 
-
 typedef struct Arena
 {
     uint8_t* memory;
-    size_t current_offset; // where in our memory we are
-    size_t capacity; // how large our arena is
+    u64 current_offset; // where in our memory we are
+    u64 capacity; // how large our arena is
 } Arena;
 
 
 //will malloc for memory, see arena_init for using an already existing arena memory
-Arena* arena_init_global(size_t capacity)
+Arena* arena_init_global(const u64 capacity)
 {
-    Arena* a = malloc(sizeof(Arena));
-    a->memory = malloc(capacity);
+    Arena* a = (Arena *) malloc(sizeof(Arena));
+    if (!a)
+    {
+        MASSERT("ARENA ALLOC FAILED");
+        return NULL;
+    }
+
+    a->memory = (uint8_t *) malloc(capacity);
+    if (!a->memory)
+    {
+        MASSERT("ARENA MALLOC FAILED");
+        return NULL;
+    }
+
     a->current_offset = 0;
     a->capacity = capacity;
     return a;
 }
 
-//used for arenas who get memory from other arenas
-Arena* arena_init(void* backing_buffer, size_t capacity)
+
+void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size)
 {
     //we pass in an already allocated chunk of memory in the event,
     //we want to pass in an already allocated arena memory, say a global arena, and then one for audio for something similar
-    Arena* a = malloc(sizeof(Arena));
     a->memory = (uint8_t *) backing_buffer;
     a->current_offset = 0;
-    a->capacity = capacity;
-    return a;
+    a->capacity = backing_buffer_size;
 }
-
 
 void arena_clear(Arena* a)
 {
     a->current_offset = 0;
 }
 
+//Should only ever be called if we own the memory
 void arena_free(Arena* a)
 {
     free(a->memory);
@@ -57,7 +66,7 @@ void arena_free(Arena* a)
 
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8
-void* arena_alloc_align(Arena* a, size_t mem_request, size_t align)
+void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
 {
     //align the memory
     uintptr_t curr_ptr = (uintptr_t) a->memory + (uintptr_t) a->current_offset; // get current memory address
@@ -80,11 +89,28 @@ void* arena_alloc_align(Arena* a, size_t mem_request, size_t align)
 }
 
 // in the event we just want a default alignment
-void* arena_alloc(Arena* a, size_t mem_request)
+void* arena_alloc(Arena* a, const u64 mem_request)
 {
     return arena_alloc_align(a, mem_request, DEFAULT_ALIGNMENT);
 }
 
+u64 arena_get_memory_left(const Arena* a)
+{
+    return (a->capacity - a->current_offset);
+}
+
+
+void arena_debug_print(Arena* a)
+{
+    if (!a) return;
+    INFO("ARENA CAPACITY: %llu", a->capacity);
+    INFO("ARENA MEMORY USED: %llu", a->current_offset);
+    INFO("ARENA MEMORY LEFT: %llu", a->capacity - a->current_offset);
+}
+
+
+//TODO: i would only use this as a means to debug, in the event there is no memory
+//void* arena_resize(arena* arena, size_t mem_request, size_t align)
 
 //also called a Scratch Arena
 //used arena memory temporarily before resetting it back to its prev offset
@@ -110,4 +136,78 @@ void temp_arena_memory_end(Arena_Temp temp)
 }
 
 
-//TODO:void* arena_resize(arena* arena, size_t mem_request, size_t align)
+void arena_test()
+{
+    TEST_START("ARENA");
+    Arena a = {0};
+    const u64 arena_size = MB(1);
+    void* mem = malloc(arena_size);
+    if (!mem) { MASSERT("ARENA ALLOC FAILED"); }
+    arena_init(&a, mem, arena_size);
+    TEST_DEBUG(a.capacity == MB(1));
+
+
+    //we dont have to do anything with the arr, just make sure we dont touch it again
+
+    int* arr1 = arena_alloc(&a, 10 * sizeof(int));
+    arr1[2] = 15;
+
+    TEST_DEBUG(arr1[2] == 15);
+    TEST_DEBUG(10 * sizeof(int) == a.current_offset);
+    TEST_DEBUG(MB(1) == a.capacity);
+    TEST_DEBUG(MB(1)-40 == a.capacity - a.current_offset);
+
+    arena_clear(&a);
+    TEST_DEBUG(a.current_offset==0);
+
+    int* arr2 = arena_alloc(&a, 50 * sizeof(int));
+    arr2[2] = 100;
+    TEST_DEBUG(arr2[2] == 100);
+    TEST_DEBUG((50 * sizeof(int)) == a.current_offset);
+    TEST_DEBUG(MB(1) == a.capacity);
+    TEST_DEBUG(MB(1) - (50 * sizeof(int)) == a.capacity - a.current_offset);
+
+    arena_clear(&a);
+    TEST_DEBUG(a.current_offset==0);
+
+
+    char* char_arr = arena_alloc(&a, 100 * sizeof(char));
+    TEST_DEBUG(a.current_offset == 100);
+    u64* u64_arr = arena_alloc(&a, 100 * sizeof(u64));
+    //912 due to alignemnt
+    TEST_DEBUG(a.current_offset == 912);
+    i32* i32_arr = arena_alloc(&a, 100 * sizeof(i32));
+    TEST_DEBUG(a.current_offset == 1312);
+
+
+
+
+    free(mem);
+    mem = NULL;
+    TEST_DEBUG(mem == NULL);
+
+
+    Arena* a2 = arena_init_global(arena_size);
+    TEST_DEBUG(a2);
+    TEST_DEBUG(arena_size == a2->capacity);
+    TEST_DEBUG(arena_size == a2->capacity - a2->current_offset);
+
+    int* arr3 = arena_alloc(a2, 10 * sizeof(int));
+    arr3[2] = 15;
+    TEST_DEBUG(40 == a2->current_offset);
+    TEST_DEBUG(arena_size == a2->capacity);
+    TEST_DEBUG(arena_size-40 == a2->capacity - a2->current_offset);
+
+    int* arr4 = arena_alloc(a2, 10 * sizeof(int));
+    arr4[2] = 100;
+    //its going to be 88 due to alignment
+    TEST_DEBUG(88 == a2->current_offset);
+    TEST_DEBUG(arena_size == a2->capacity);
+    TEST_DEBUG(arena_size-88 == a2->capacity - a2->current_offset);
+
+
+
+    arena_free(a2);
+
+    TEST_REPORT("ARENA");
+}

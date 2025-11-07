@@ -181,6 +181,7 @@ bool input_init()
 void input_shutdown()
 {
     //TODO: if needed
+    INFO("INPUT SYSTEM SHUTDOWN")
 }
 
 void input_update()

@@ -9,11 +9,11 @@ typedef struct stack
 {
     void** data; // an array of void*
 
-    size_t capacity; // total size of our stack, used to keep track of the array size
-    size_t size; //size of the void* data
+    u64 capacity; // total size of our stack, used to keep track of the array size
+    u64 size; //size of the void* data
 
     //has to be signed since it can be -1
-    ssize_t num_items; // the number of items in the stack
+    i64 num_items; // the number of items in the stack
 
 
 } stack;

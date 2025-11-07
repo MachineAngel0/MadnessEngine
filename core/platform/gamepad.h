@@ -2,11 +2,11 @@
 #define GAMEPAD_H
 
 
-#include <bemapiset.h>
 #include <windows.h>
 #include <winerror.h>
 #include <xinput.h>
 
+#include "logger.h"
 #include "../core/event.h"
 
 

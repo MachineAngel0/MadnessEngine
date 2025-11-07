@@ -6,6 +6,9 @@
 #include "logger.h"
 #include "misc_util.h"
 
+#include "unit_test.h"
+#include "arena_stack.h"
+
 #define DARRAY_RESIZE_VALUE  2
 #define DARRAY_DEFAULT_CAPACITY 1
 
@@ -40,6 +43,22 @@ void* _darray_create(const u64 capacity, const u64 stride)
     return (void *) ((u8 *) new_array + header_size);
 }
 
+void* _darray_create_arena(const u64 intial_capacity, const u64 stride, Arena_Stack* arena)
+{
+    const u64 header_size = sizeof(array_header);
+    const u64 array_size = intial_capacity * stride;
+    void* new_array = arena_stack_alloc(arena, header_size + array_size);;
+    memset(new_array, 0, header_size + array_size);
+
+    array_header* header = new_array;
+    header->num_items = 0;
+    header->stride = stride;
+    header->capacity = intial_capacity;
+
+    //return the array without the header in it, so that we can use it like a normal array
+    return (void *) ((u8 *) new_array + header_size);
+}
+
 #define darray_create(type) \
     (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type))
 
@@ -57,6 +76,8 @@ void darray_free(void* array)
     //get the array header
     array_header* header = (array_header *) ((u8 *) array - header_size);
     free(header);
+    array = NULL;
+    header = NULL;
 }
 
 u64 darray_get_capacity(void* array)
@@ -86,6 +107,12 @@ u64 darray_get_size(void* array)
 
     return header->num_items;
 }
+
+u64 darray_get_num_count(void* array)
+{
+    return darray_get_size(array);
+}
+
 
 u64 darray_get_stride(void* array)
 {
@@ -172,7 +199,7 @@ void* darray_get(void* array, const u64 index)
     }
 
     //return the locations value
-    return (array + (header->stride * index));
+    return (void*)((u8)array + (header->stride * index));
 }
 
 void darray_set(void* array, void* new_data, const u64 index)
@@ -188,7 +215,7 @@ void darray_set(void* array, void* new_data, const u64 index)
     }
 
     //return the locations value
-    memcpy((array + (header->stride * index)), new_data, header->stride);
+    memcpy(((u8*)array + (header->stride * index)), new_data, header->stride);
 }
 
 void* _darray_push(void* array, const void* new_data)
@@ -206,6 +233,7 @@ void* _darray_push(void* array, const void* new_data)
     //check for size overflow, and resize if needed
     if (header->num_items >= header->capacity)
     {
+        // INFO("RESIZING DARRAY")
         array = _darray_resize(array);
         header = (array_header *) ((u8 *) array - header_size);
     }
@@ -295,10 +323,11 @@ void darray_remove_shift(void* arr, const u64 index)
     //get the array header
     u64 header_size = sizeof(array_header);
     array_header* header = (array_header *) ((u8 *) arr - header_size);
+    const u64 stride = header->stride;
 
-    memcpy(arr + (index * header->stride),
-        arr + ((index+1) * header->stride),
-        header->stride * header->num_items - (index+1));
+    memcpy((u8*)arr + (index * stride),
+        (u8*)arr + ((index+1) * stride),
+        stride * header->num_items - (index+1));
 
     header->num_items--;
 }
@@ -313,8 +342,8 @@ void darray_remove_swap(void* array, const u64 index)
     array_header* header = (array_header *) ((u8 *) array - header_size);
 
     //copy the last val into the cur index
-    memcpy((array + (index * header->stride)),
-            (array + (header->stride * (header->num_items - 1))),
+    memcpy(((u8*)array + (index * header->stride)),
+            ((u8*)array + (header->stride * (header->num_items - 1))),
                 header->stride
         );
 
@@ -377,7 +406,7 @@ void darray_debug_print(void* array, void (*print_func)(void*))
 
     for (u64 i = 0; i < header->num_items; i++)
     {
-        print_func(array + (i * header->stride));
+        print_func((u8*)array + (i * header->stride));
     }
     printf("\n");
 }
@@ -415,7 +444,7 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 
     for (u64 i = start; i < end; i++)
     {
-        print_func(array + (i * header->stride));
+        print_func((u8*)array + (i * header->stride));
     }
     printf("\n");
 }
@@ -425,16 +454,28 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 // void darray_merge_sort(void* array);
 // void darray_radix_sort(void* array);
 
+
+
 void _darray_test()
 {
-    DEBUG("DARRAY END");
+    TEST_START(DARRAY);
 
     int* arr = darray_create(int);
     darray_push(arr, 10);
     darray_push(arr, 15);
+    TEST_INFORM(darray_get_size(arr) == 2);
+    TEST_INFORM(darray_get_capacity(arr) == 2);
+    TEST_INFORM(darray_get_stride(arr) == 4);
     darray_debug_print(arr, print_int);
+    TEST_INFORM(arr[0] == 10);
+    TEST_INFORM(arr[1] == 15);
+    TEST_INFORM(darray_get_size(arr) == 2);
 
     darray_pop(arr);
+    TEST_INFORM(darray_get_size(arr) == 1);
+    TEST_INFORM(darray_get_capacity(arr) == 2);
+    TEST_INFORM(darray_get_stride(arr) == 4);
+
     darray_debug_print(arr, print_int);
 
     int a = 50;
@@ -463,10 +504,9 @@ void _darray_test()
     darray_debug_print(arr, print_int);
 
 
-    darray_free(arr);
+    darray_free(arr); // i cant check this, it can't be nulled
 
-
-    DEBUG("DARRAY END\n");
+    TEST_REPORT(DARRAY);
 }
 
 #endif

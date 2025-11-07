@@ -5,6 +5,7 @@
 #ifndef VK_VERTEX_H
 #define VK_VERTEX_H
 #include <array>
+#include <stdalign.h>
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>

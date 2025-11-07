@@ -1,5 +1,5 @@
 ﻿
-#include "entry_game.h"
+#include "game_entry.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -35,7 +35,14 @@ void create_game(game* game_out){
     game_out->initialize = (game_init*)GetProcAddress(game_dll_handle, "game_fake_initialize");
     game_out->update = (game_update*)GetProcAddress(game_dll_handle, "update_game_fake");
 
-
+    if (!game_out->initialize)
+    {
+        FATAL("FAILED TO SET FUNCTION POINTER GAME INITIALIZATE")
+    }
+    if (!game_out->update)
+    {
+        FATAL("FAILED TO SET FUNCTION POINTER GAME UPDATE ")
+    }
 
 
 }
@@ -43,7 +50,7 @@ void create_game(game* game_out){
 //TODO: this is specific to windows, so it should definetly get changed to be cross platform as some point
 MAPI void game_reload(game* game_f)
 {
-    // alt + ; -> will reload the dll
+    // ctrl + numpad 0 -> will reload the dll
     load_dll("libMADNESSGAME.dll", "libMADNESSGAME_TEMP.dll", &game_dll_handle);
     if (game_dll_handle)
     {
@@ -63,10 +70,10 @@ MAPI void update_game_fake(game* game_f)
     game_f->testing_switch = false;
     if (game_f->testing_switch)
     {
-        // printf("game updating\n");
+        printf("game updating\n");
     }
     else
     {
-        // printf("game other update 565\n");
+        printf("game other update 565\n");
     }
 }

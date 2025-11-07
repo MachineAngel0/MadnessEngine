@@ -6,12 +6,10 @@
 #define VK_BUFFER_H
 
 #include "vulkan/vulkan.h"
+#include "vulkan_types.h"
 
 
-struct Command_Buffer_Context;
-struct Vulkan_Context;
-
-struct Buffer_Context
+typedef struct Buffer_Context
 {
     VkBuffer vertex_buffer;
     VkDeviceMemory vertex_buffer_memory;
@@ -26,23 +24,26 @@ struct Buffer_Context
     VkDeviceMemory index_staging_buffer_memory;
 
     void* data_vertex;
-    VkDeviceSize vertex_buffer_capacity = 0;
+    VkDeviceSize vertex_buffer_capacity;
     void* data_index;
-    VkDeviceSize index_buffer_capacity = 0;
+    VkDeviceSize index_buffer_capacity;
 
-};
+}Buffer_Context;
 
-uint32_t findMemoryType(Vulkan_Context& vulkan_context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-
-
-void buffer_create(Vulkan_Context& vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
-                   VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+uint32_t find_memory_type(vulkan_context* vulkan_context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 
-void buffer_destroy_free(Vulkan_Context& vulkan_context, Buffer_Context& buffer_context);;
 
-void buffer_copy(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_index, VkBuffer srcBuffer,
+//TODO: clean up/ refactor
+/*
+void buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
+                   VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
+
+
+void buffer_destroy_free(vulkan_context* vulkan_context, Buffer_Context* buffer_context);;
+
+void buffer_copy(vulkan_context* vulkan_context, Command_Buffer_Context* command_buffer_index, VkBuffer srcBuffer,
                  VkBuffer dstBuffer, VkDeviceSize size);;
-
+*/
 
 #endif //VK_BUFFER_H

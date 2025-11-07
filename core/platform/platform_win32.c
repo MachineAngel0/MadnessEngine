@@ -17,11 +17,18 @@
 #include "darray.h"
 #include "input.h"
 
+//renderer
+
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
+#include "vk_device.h"
+
 
 typedef struct internal_state
 {
     HINSTANCE h_instance;
     HWND hwnd;
+    VkSurfaceKHR surface;
 } internal_state;
 
 // Clock
@@ -315,10 +322,7 @@ void* platform_set_memory(void* dest, i32 value, u64 size)
     return memset(dest, value, size);
 }
 
-void platform_get_extension_names(const char*** extension_name_array)
-{
-    darray_push(*extension_name_array, &"VK_KHR_win32_surface");
-}
+
 
 f64 platform_get_absolute_time()
 {
@@ -330,10 +334,15 @@ f64 platform_get_absolute_time()
 void platform_sleep(u64 ms)
 {
     Sleep(ms);
+    int a = 0;
+    int n = 0;
+    int b = 0;
+
 }
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
+
     switch (msg)
     {
         case WM_ERASEBKGND:
@@ -401,6 +410,38 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     }
 
     return DefWindowProcA(hwnd, msg, w_param, l_param);
+}
+
+
+void platform_get_vulkan_extension_names(const char*** extension_name_array)
+{
+    darray_push(*extension_name_array, &"VK_KHR_win32_surface");
+}
+
+bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context)
+{
+    // Simply cold-cast to the known type.
+    internal_state *state = (internal_state *)plat_state->internal_state;
+
+    VkWin32SurfaceCreateInfoKHR create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    create_info.hinstance = state->h_instance;
+    create_info.hwnd = state->hwnd;
+
+    VkResult result = vkCreateWin32SurfaceKHR(vulkan_context->instance, &create_info,
+        vulkan_context->allocator, &state->surface);
+    if (result != VK_SUCCESS) {
+        FATAL("Vulkan surface creation failed.");
+        return false;
+    }
+
+
+    vulkan_context->surface = state->surface;
+    if (vulkan_context->surface == VK_NULL_HANDLE) {
+        FATAL("Vulkan surface handle is null!");
+    }
+
+    return TRUE;
 }
 
 #endif // MPLATFORM_WINDOWS

@@ -54,7 +54,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 //easy lookups
 #define KB_SIZE 1024
-#define GB_SIZE 1024 * 1024
+#define MB_SIZE 1024 * 1024
 #define GB_SIZE 1024 * 1024 * 1024
 #define TB_SIZE 1024 * 1024 * 1024 * 1024
 
@@ -102,6 +102,10 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #error "Unknown platform!"
 #endif
 
+
+
+
+#define MEXPORT //defining this by default
 #ifdef MEXPORT
 // Exports
 #    ifdef _MSC_VER
@@ -122,7 +126,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 //forcing inline
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #define MINLINE __forceinline
 #define MNOINLINE __declspec(noinline)
 #else
@@ -131,15 +135,13 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #endif
 
 
-
 //TODO: the defer macro
 
 #define macro_var(name) concat(name, __LINE__)
 #define defer(start, end) for ( \
     int macro_var(_i_) = (start, 0); \
     !macro_var(_i_); \
-    (macro_var(_i_) += 1), end)\
-
+    (macro_var(_i_) += 1), end)
 
 // defer example
 // #define gui(gui_begin, gui_end())

@@ -1,16 +1,17 @@
-﻿
-
-#ifndef HOT_RELOAD_H
+﻿#ifndef HOT_RELOAD_H
 #define HOT_RELOAD_H
 
-#include "../core/defines.h"
+
+#define MEXPORT
 #include <windows.h>
-#include "../dsa/array.h"
+#include "defines.h"
+#include "array.h"
+#include <stdio.h>
+
 
 //FUTURE: rn its just for windows, linux at a later time
 // the only thing i would want to abstract out is the dll reload, and having the dll handles stored somewhere
 // but the setting of the function pointers need to be manually done
-
 
 MAPI void hot_reload_test(void)
 {
@@ -21,6 +22,7 @@ MAPI void hot_reload_test(void)
 #define func_ptr(name) name##_func_ptr
 
 typedef void (func)(void);
+
 static func* hot_reload_var = {0};
 
 
@@ -29,13 +31,13 @@ typedef struct dll_handles
 {
     //array of dll's
     Array dll;
-}dll_handles;
+} dll_handles;
 
 static HMODULE temp_dll;
 
 //example: reload_dll("libMADNESSDSA.dll", "libMADNESSDSA_.dll");
 //a change the copy fails and thus the dll loading fails
-MAPI void reload_dll_test(const char* dll_file_name, const char* temp_dll_name)
+void reload_dll_test(const char* dll_file_name, const char* temp_dll_name)
 {
     HMODULE dll = 0;
 
@@ -65,16 +67,14 @@ MAPI void reload_dll_test(const char* dll_file_name, const char* temp_dll_name)
         // so as a compromise, ill just have to load the functions myslef
 
         // EX: //retrieve our function
-        hot_reload_var = (func*)GetProcAddress(dll, "hot_reload_test");
+        hot_reload_var = (func *) GetProcAddress(dll, "hot_reload_test");
         // call the function to make sure its working
         hot_reload_var();
-
     }
-
 }
 
 
-MAPI bool load_dll(const char* dll_file_name, const char* temp_dll_name, HMODULE* dll_handle)
+bool load_dll(const char* dll_file_name, const char* temp_dll_name, HMODULE* dll_handle)
 {
     if (*dll_handle)
     {
@@ -86,11 +86,16 @@ MAPI bool load_dll(const char* dll_file_name, const char* temp_dll_name, HMODULE
     }
 
     CopyFile(dll_file_name, temp_dll_name, 0);
+    // {
+        // WARN("FAILED TO COPY DLL from %s to %s. Error: %d", dll_file_name, temp_dll_name, GetLastError());
+        // return false;
+    // }
 
-    return *dll_handle = LoadLibraryA(temp_dll_name);
+    *dll_handle = LoadLibraryA(temp_dll_name);
+    return *dll_handle;
 }
 
-MAPI void* load_function_from_dll(HMODULE* dll_handle, const char* function_name)
+void* load_function_from_dll(HMODULE* dll_handle, const char* function_name)
 {
     return GetProcAddress(*dll_handle, function_name);
 }
@@ -113,14 +118,9 @@ void* reload_dll_and_function(const char* dll_file_name, const char* temp_dll_na
         CopyFileA(dll_file_name, temp_dll_name, 0);
 
         dll_handle = LoadLibraryA(temp_dll_name);
-    }while ((!dll_handle));
+    } while ((!dll_handle));
     return GetProcAddress(dll_handle, function_name);
-
 }
-
-
-
-
 
 
 #endif //HOT_RELOAD_H

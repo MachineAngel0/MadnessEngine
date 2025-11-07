@@ -2,7 +2,7 @@
 #define ARRAY_H
 #include <stdlib.h>
 #include <string.h>
-#include "unit_test.h"
+#include "../core/unit_test.h"
 #include "../core/misc_util.h"
 #include "../core/logger.h"
 

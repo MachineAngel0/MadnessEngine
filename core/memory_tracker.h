@@ -18,6 +18,9 @@ typedef enum memory_container_type
     MEMORY_CONTAINER_UNKNOWN,
 
     MEMORY_CONTAINER_ARENA,
+    MEMORY_CONTAINER_ARENA_STACK,
+    MEMORY_CONTAINER_ARENA_POOl,
+    MEMORY_CONTAINER_ARENA_FREELIST,
     MEMORY_CONTAINER_ARRAY,
     MEMORY_CONTAINER_DARRAY,
     MEMORY_CONTAINER_STRING,
@@ -34,6 +37,9 @@ static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 {
     "MEMORY_CONTAINER_UNKNOWN",
     "MEMORY_CONTAINER_ARENA",
+    "MEMORY_CONTAINER_ARENA_STACK",
+    "MEMORY_CONTAINER_ARENA_POOl",
+    "MEMORY_CONTAINER_ARENA_FREELIST",
     "MEMORY_ARRAY",
     "MEMORY_DARRAY",
     "MEMORY_STRING",
@@ -80,25 +86,36 @@ typedef struct memory_tracker
 
 
 static memory_tracker memory;
+static bool memory_tracker_initialized = false;
 
 bool memory_subsystem_init()
 {
     memset(&memory, 0, sizeof(memory_tracker));
     memory.memory_container_size = 0;
     memory.memory_subsystem_size = 0;
+    memory_tracker_initialized = true;
     return true;
 }
 
 bool memory_shutdown()
 {
-    memset(&memory, 0, sizeof(memory_tracker));
-    memory.memory_container_size = 0;
-    memory.memory_subsystem_size = 0;
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED, NOTHING TO SHUTDOWN");
+        return false;
+    }
+    INFO("MEMORY SYSTEM SHUTDOWN")
     return true;
 }
 
 bool memory_container_alloc(const memory_container_type type, const u64 size)
 {
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED");
+        return false;
+    }
+
     if (type == MEMORY_CONTAINER_STRING)
     {
         WARN("MEMORY CONTAINER: USING UNKNOWN TYPE, CHANGE WHEN YOU CAN");
@@ -111,6 +128,12 @@ bool memory_container_alloc(const memory_container_type type, const u64 size)
 
 bool memory_subsystem_alloc(const memory_subsystem_type type, const u64 size)
 {
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED");
+        return false;
+    }
+
     if (type == MEMORY_SUBSYSTEM_UNKNOWN)
     {
         WARN("MEMORY SUBSYSTEM: USING UNKNOWN TYPE, CHANGE WHEN YOU CAN")
@@ -123,6 +146,11 @@ bool memory_subsystem_alloc(const memory_subsystem_type type, const u64 size)
 
 void memory_tracker_debug_print()
 {
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED");
+        return;
+    }
 
     DEBUG("CONTAINER MEMORY");
     for (i32 i = 0; i < MEMORY_CONTAINER_MAX; i++)
@@ -142,6 +170,8 @@ void memory_tracker_debug_print()
 
 bool memory_tracker_unit_test()
 {
+    //insta fail
+    // TEST_INFORM(memory_tracker_initialized);
 
     memory_container_alloc(MEMORY_CONTAINER_UNKNOWN, 1024);
     memory_subsystem_alloc(MEMORY_SUBSYSTEM_UNKNOWN, 1024);

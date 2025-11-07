@@ -1,23 +1,27 @@
 ﻿#ifndef FILE_SERIALIZATION_H
 #define FILE_SERIALIZATION_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
+#include "arena.h"
 
-//NOTE: might want to transition it into a darray
+//TODO: use the allocator properly, like dynamic allocations when writing or reading
 typedef struct byte_buffer
 {
-    //small performance hit, but it just makes the code nicer in not having to remeber to zero offset on a read
-    uint32_t write_offset;
-    uint32_t read_offset;
-    uint32_t capacity;
+    //small but probably negligible performance hit, but it just makes the code nicer in not having to remember to zero offset on a read/write
+    // if you want to know how big your data is, get either the write or the read offset, based on what your doing
+    u64 write_offset;
+    u64 read_offset;
     uint8_t* data;
+    Arena* Arena; // removed capacity and this is return in favor of it
 } byte_buffer;
 
 byte_buffer* byte_buffer_init(uint32_t capacity);
 
-void byte_buffer_free(byte_buffer* buffer);
+// void byte_buffer_free(byte_buffer* buffer);
+byte_buffer* byte_buffer_init_arena(Arena* arena, const uint32_t capacity);
+
+
 
 void byte_buffer_print_info(const byte_buffer* buffer);
 

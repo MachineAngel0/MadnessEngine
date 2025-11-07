@@ -1,4 +1,6 @@
 ﻿
+#include "arena.h"
+#include "arena_stack.h"
 #include "array.h"
 #include "binary_tree.h"
 #include "darray.h"
@@ -8,26 +10,28 @@
 #include "queue.h"
 #include "str_array.h"
 #include "dsa/str.h"
-
 int main(void)
 {
+    arena_test();
+    arena_stack_test();
+
     _darray_test();
 
     //TODO: units tests and finish up the dsa's remaining
     // arena_test();
     // arena_freelist_test();
     // arena_pool_test();
-    array_test();
+    // array_test();
 
-    binary_tree_test();
+    // binary_tree_test();
     // b_tree_red_black_test();
-    hash_map_test();
-    hash_set_test();
+    // hash_map_test();
+    // hash_set_test();
     // heap_test();
-    linked_list_test();
-    queue_test();
-    stack_test();
-    string_test();
+    // linked_list_test();
+    // queue_test();
+    // stack_test();
+    // string_test();
 
-    string_array_unit_test();
+    // string_array_unit_test();
 }
