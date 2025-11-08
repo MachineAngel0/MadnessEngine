@@ -160,7 +160,6 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
 
     INFO("CREATE INSTANCE SUCCESS");
 
-#if defined(DEBUG_BUILD)
     DEBUG("VULKAN INSTANCE CREATED");
     u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
@@ -180,11 +179,10 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
         vulkan_context->instance, "vkCreateDebugUtilsMessengerEXT");
     MASSERT_MSG(func, "Failed to create debug messenger!"); {
         //SAME THING: func == vkCreateDebugUtilsMessengerEXT
-        VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debugMessenger));
+        VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
     }
     DEBUG("VULKAN DEBUGGER CREATED");
 
-#endif
 
     return true;
 }
@@ -216,15 +214,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 
 bool vulkan_instance_destroy(vulkan_context* vulkan_context)
 {
+    INFO("VULKAN DESTROYING DEBUGGER");
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
         vulkan_context->instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != NULL)
     {
-        func(vulkan_context->instance, vulkan_context->debugMessenger, vulkan_context->allocator);
+        func(vulkan_context->instance, vulkan_context->debug_messenger, vulkan_context->allocator);
     }
     vkDestroyInstance(vulkan_context->instance, vulkan_context->allocator);
     INFO("VULKAN INSTANCED DESTROYED");
-
 }
 
 
@@ -339,6 +337,20 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     INFO("Queues obtained.");
 
+
+    //create the command pool for the graphics queue
+    //each command pool is tied to its queue family
+    VkCommandPoolCreateInfo pool_create_info = {};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = vulkan_context->device.graphics_queue_index;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(vulkan_context->device.logical_device,
+        &pool_create_info, vulkan_context->allocator,
+        &vulkan_context->device.graphics_command_pool));
+
+    INFO("GRAPHICS COMMAND POOL CREATED.");
+
+
     return TRUE;
 }
 
@@ -361,10 +373,12 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
     INFO("Physical device reset");
     vulkan_context->device.physical_device = 0;
 
-    //TODO: this free crashes, look into later, when we got an allocator up and runnind
+    //TODO: this free crashes, look into later, when we got an allocator up and running
+    darray_debug_header(vulkan_context->device.swapchain_support.formats);
+
     if (vulkan_context->device.swapchain_support.formats)
     {
-        free(vulkan_context->device.swapchain_support.formats);
+        darray_free(vulkan_context->device.swapchain_support.formats);
         vulkan_context->device.swapchain_support.formats = 0;
         vulkan_context->device.swapchain_support.format_count = 0;
     }
@@ -372,7 +386,7 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
 
     if (vulkan_context->device.swapchain_support.present_modes)
     {
-        free(vulkan_context->device.swapchain_support.present_modes);
+        darray_free(vulkan_context->device.swapchain_support.present_modes);
         vulkan_context->device.swapchain_support.present_modes = 0;
         vulkan_context->device.swapchain_support.present_mode_count = 0;
     }
@@ -386,7 +400,6 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
     vulkan_context->device.transfer_queue_index = -1;
 
     INFO("VULKAN DEVICE DESTROYED");
-
 }
 
 

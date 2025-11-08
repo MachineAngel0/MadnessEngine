@@ -11,7 +11,7 @@ extern void create_renderer(struct renderer* renderer_out);
 
 
 
-int main()
+int main(void)
 {
     struct renderer renderer;
     create_renderer(&renderer);

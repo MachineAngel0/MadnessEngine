@@ -6,6 +6,7 @@
 typedef enum event_type
 {
     EVENT_APP_QUIT,
+    EVENT_APP_RESIZE,
     EVENT_HOT_RELOAD_GAME,
     EVENT_TEST,
     EVENT_TEST2,
@@ -159,7 +160,7 @@ void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 
 void event_fire(event_type event, uint32_t sender_id, event_context context)
 {
-    //check if the event arr has been alloacated
+    //check if the event arr has been allocated
     if (event_system.events[event].subs_arr == NULL)
     {
         event_system.events[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
@@ -169,7 +170,11 @@ void event_fire(event_type event, uint32_t sender_id, event_context context)
     {
         //trigger all the callbacks in the event table
         subscriber_data a = *(subscriber_data *) array_get(event_system.events[event].subs_arr, i);
-        a.callback(event, sender_id, a.subscriber_id, context);
+        if (a.callback(event, sender_id, a.subscriber_id, context))
+        {
+            //the subscriber/listener is telling us we want to not fire this off for anyone else
+            return;
+        };
     }
 }
 

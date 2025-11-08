@@ -323,7 +323,6 @@ void* platform_set_memory(void* dest, i32 value, u64 size)
 }
 
 
-
 f64 platform_get_absolute_time()
 {
     LARGE_INTEGER now_time;
@@ -337,32 +336,34 @@ void platform_sleep(u64 ms)
     int a = 0;
     int n = 0;
     int b = 0;
-
 }
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
-
     switch (msg)
     {
         case WM_ERASEBKGND:
             // Notify the OS that erasing will be handled by the application to prevent flicker.
             return 1;
         case WM_CLOSE:
-            // TODO: Fire an event for the application to quit.
-            return 0;
+            event_context data = {};
+            event_fire(EVENT_APP_QUIT, 0, data);
+            return true;
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
         case WM_SIZE:
         {
-            // Get the updated size.
-            // RECT r;
-            // GetClientRect(hwnd, &r);
-            // u32 width = r.right - r.left;
-            // u32 height = r.bottom - r.top;
-
-            // TODO: Fire an event for window resize.
+            RECT r;
+            GetClientRect(hwnd, &r);
+            u32 width = r.right - r.left;
+            u32 height = r.bottom - r.top;
+            // Fire the event. The application layer should pick this up, but not handle it
+            // as it shouldn be visible to other parts of the application.
+            event_context context;
+            context.data.u16[0] = (u16) width;
+            context.data.u16[1] = (u16) height;
+            event_fire(EVENT_APP_RESIZE, 0, context);
         }
         break;
         case WM_KEYDOWN:
@@ -421,7 +422,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context)
 {
     // Simply cold-cast to the known type.
-    internal_state *state = (internal_state *)plat_state->internal_state;
+    internal_state* state = (internal_state *) plat_state->internal_state;
 
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -429,17 +430,21 @@ bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* 
     create_info.hwnd = state->hwnd;
 
     VkResult result = vkCreateWin32SurfaceKHR(vulkan_context->instance, &create_info,
-        vulkan_context->allocator, &state->surface);
-    if (result != VK_SUCCESS) {
+                                              vulkan_context->allocator, &state->surface);
+    if (result != VK_SUCCESS)
+    {
         FATAL("Vulkan surface creation failed.");
         return false;
     }
 
 
     vulkan_context->surface = state->surface;
-    if (vulkan_context->surface == VK_NULL_HANDLE) {
+    if (vulkan_context->surface == VK_NULL_HANDLE)
+    {
         FATAL("Vulkan surface handle is null!");
     }
+
+    FATAL("Vulkan surface handle has been aqcuired from the platform layer!");
 
     return TRUE;
 }

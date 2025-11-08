@@ -22,5 +22,6 @@ void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapcha
                               VkSemaphore render_complete_semaphore,
                               u32 present_image_index);
 
+bool recreate_swapchain(vulkan_context* backend);
 
 #endif

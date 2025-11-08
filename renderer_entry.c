@@ -7,6 +7,7 @@
 typedef bool (renderer_initialize)(renderer*);
 typedef void (renderer_run)(renderer*);
 typedef void (renderer_terminate)(renderer*);
+typedef void (renderer_resize)(renderer*, u32, u32);
 
 static HMODULE renderer_dll_handle;
 
@@ -25,6 +26,7 @@ void create_renderer(struct renderer* renderer_out)
     renderer_out->renderer_initialize = (renderer_initialize *) GetProcAddress(renderer_dll_handle, "renderer_init");
     renderer_out->renderer_run = (renderer_run *) GetProcAddress(renderer_dll_handle, "renderer_update");
     renderer_out->renderer_shutdown = (renderer_terminate *) GetProcAddress(renderer_dll_handle, "renderer_shutdown");
+    renderer_out->on_resize = (renderer_resize *) GetProcAddress(renderer_dll_handle, "renderer_on_resize");
     if (!renderer_out->renderer_initialize)
     {
         FATAL("FAILED TO SET FUNCTION POINTER RENDER INITIALIZATION")
@@ -36,5 +38,9 @@ void create_renderer(struct renderer* renderer_out)
     if (!renderer_out->renderer_shutdown)
     {
         FATAL("FAILED TO SET FUNCTION POINTER RENDER SHUTDOWN")
+    }
+    if (!renderer_out->on_resize)
+    {
+        FATAL("FAILED TO SET FUNCTION POINTER RENDER RESIZE")
     }
 }

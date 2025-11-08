@@ -9,7 +9,8 @@
 #include "game_entry.c"
 #include "memory_tracker.h"
 
-typedef struct application_state {
+typedef struct application_state
+{
     game* game;
 
     platform_state platform;
@@ -19,17 +20,21 @@ typedef struct application_state {
 
     i16 width;
     i16 height;
-
 } application_state;
 
 static application_state app_state;
 
 //defined below
 bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context);
+
 bool application_on_key(event_type code, void* sender, void* listener_inst, event_context context);
 
 
-
+void application_get_framebuffer_size(u32* width, u32* height)
+{
+    *width = app_state.width;
+    *height = app_state.height;
+}
 
 bool application_game_create(struct game* game)
 {
@@ -49,18 +54,15 @@ bool application_game_create(struct game* game)
 
     // Initialize subsystems.
 
-    
 
     memory_subsystem_init();
     event_init();
     input_init();
 
 
-
-
-    event_register(EVENT_APP_QUIT,10, application_on_event);
-    event_register(EVENT_KEY_RELEASED,10, application_on_key);
-    event_register(EVENT_KEY_PRESSED,12, application_on_key);
+    event_register(EVENT_APP_QUIT, 10, application_on_event);
+    event_register(EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(EVENT_KEY_PRESSED, 12, application_on_key);
 
 
     //start the platform
@@ -70,9 +72,10 @@ bool application_game_create(struct game* game)
         game->app_config.start_pos_x,
         game->app_config.start_pos_y,
         game->app_config.start_width,
-        game->app_config.start_height)) {
+        game->app_config.start_height))
+    {
         return FALSE;
-        }
+    }
 
     //create the game
     app_state.game->initialize(app_state.game);
@@ -89,7 +92,6 @@ bool application_game_create(struct game* game)
     event_shutdown();
     memory_shutdown();
     return true;
-
 }
 
 //TODO: move out into platform layer
@@ -115,7 +117,6 @@ bool has_file_changed(const char* filename, FILETIME* last_write_time)
 
 void application_game_run()
 {
-
     const char* filename = "libMADNESSGAME.dll";
     FILETIME last_write_time = {0};
     while (app_state.is_running)
@@ -133,9 +134,7 @@ void application_game_run()
 
         app_state.game->update(app_state.game);
     }
-
 }
-
 
 
 bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context)
@@ -154,7 +153,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
 {
     if (code == EVENT_KEY_PRESSED)
     {
-        uint16_t key_code =  context.data.u16[0];
+        uint16_t key_code = context.data.u16[0];
         INFO("pressed key %hu", key_code);
 
 
@@ -175,13 +174,11 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
             game_reload(app_state.game);
 
             Sleep(1000);
-
         }
-
     }
     if (code == EVENT_KEY_RELEASED)
     {
-        uint16_t key_code =  context.data.u16[0];
+        uint16_t key_code = context.data.u16[0];
         INFO("released key %hu", key_code);
 
         if (key_code == KEY_D)
@@ -189,7 +186,4 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
             memory_tracker_debug_print();
         }
     }
-
 }
-
-

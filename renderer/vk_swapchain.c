@@ -1,13 +1,15 @@
 ﻿#include "vk_swapchain.h"
 
 #include "logger.h"
+#include "vk_command_buffer.h"
 #include "vk_device.h"
 #include "vk_image.h"
+#include "vk_framebuffer.h"
 
 void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
 {
     VkExtent2D swapchain_extent = {width, height};
-    swapchain_out->max_frames_in_flight = 2; // TODO: probably gonna be changed to 3
+    swapchain_out->max_frames_in_flight = 2; // this does mean 3 swapchain images
 
     //choose a swap surface format, that suits our needs
     bool found = false;
@@ -176,6 +178,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
 
 void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapchain)
 {
+    vkDeviceWaitIdle(context->device.logical_device);
     vulkan_image_destroy(context, &swapchain->depth_attachment);
     // Only destroy the views, not the images, since those are owned by the swapchain and are thus
 
@@ -243,4 +246,87 @@ void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapcha
     {
         FATAL("FAILED TO PRESENT SWAPCHAIN IMAGE!")
     }
+
+    // Increment (and loop) the index.
+    context->current_frame = (context->current_frame + 1) % swapchain->max_frames_in_flight;
+}
+
+bool recreate_swapchain(vulkan_context* context)
+{
+    // If already being recreated, do not try again.
+    if (context->recreating_swapchain)
+    {
+        DEBUG("recreate_swapchain called when already recreating. Booting.");
+        return FALSE;
+    }
+
+    // Detect if the window is too small to be drawn to
+    if (context->framebuffer_width == 0 || context->framebuffer_height == 0)
+    {
+        DEBUG("recreate_swapchain called when window is < 1 in a dimension. Booting.");
+        return FALSE;
+    }
+
+    // Mark as recreating if the dimensions are valid.
+    context->recreating_swapchain = TRUE;
+
+    // Wait for any operations to complete.
+    vkDeviceWaitIdle(context->device.logical_device);
+
+    // Clear these out just in case.
+    for (u32 i = 0; i < context->swapchain.image_count; ++i)
+    {
+        context->images_in_flight[i] = 0;
+    }
+
+    // Requery support
+    vulkan_device_query_swapchain_support(
+        context->device.physical_device,
+        context->surface,
+        &context->device.swapchain_support);
+    vulkan_device_detect_depth_format(&context->device);
+
+    vulkan_swapchain_recreate(context,
+        context->framebuffer_width_new, context->framebuffer_height_new,
+        &context->swapchain);
+
+    // Sync the framebuffer size with the new sizes.
+    context->framebuffer_width = context->framebuffer_width_new;
+    context->framebuffer_height = context->framebuffer_height_new;
+    context->main_renderpass.w = context->framebuffer_width;
+    context->main_renderpass.h = context->framebuffer_height;
+    //NOTE: we can zero them if it ever becomes a problem
+    // context->framebuffer_width_new = 0;
+    // context->framebuffer_height_new = 0;
+
+    // Update framebuffer size generation.
+    context->framebuffer_last_generation = context->framebuffer_size_generation;
+
+    // cleanup swapchain
+    for (u32 i = 0; i < context->swapchain.image_count; ++i)
+    {
+        vulkan_command_buffer_free(context, context->device.graphics_command_pool,
+                                   &context->graphics_command_buffers[i]);
+    }
+
+    // Framebuffers.
+    for (u32 i = 0; i < context->swapchain.image_count; ++i)
+    {
+        vulkan_framebuffer_destroy(context, &context->swapchain.framebuffers[i]);
+    }
+
+    context->main_renderpass.x = 0;
+    context->main_renderpass.y = 0;
+    context->main_renderpass.w = context->framebuffer_width;
+    context->main_renderpass.h = context->framebuffer_height;
+
+    regenerate_framebuffer(context, &context->swapchain, &context->main_renderpass);
+
+
+    vulkan_renderer_command_buffers_create(context);
+
+    // Clear the recreating flag.
+    context->recreating_swapchain = FALSE;
+
+    return TRUE;
 }
