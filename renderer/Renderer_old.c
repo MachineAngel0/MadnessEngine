@@ -152,7 +152,7 @@ void init_vulkan(vulkan_context& vulkan_context,
 
     init_window(window_info);
     create_vk_instance(vulkan_context);
-    create_vk_debug_messanger(vulkan_context.instance, vulkan_context.debugMessenger);
+    create_vk_debug_messanger(vulkan_context.instance, vulkan_context.debug_messenger);
     create_surface(vulkan_context, window_info);
     pick_physical_device(vulkan_context);
     create_logical_device(vulkan_context);
@@ -1392,7 +1392,7 @@ void cleanup(vulkan_context& vulkan_context, GLFW_Window_Context& window_info,
     vkDestroyDevice(vulkan_context.logical_device, nullptr);
 
     //if (enableValidationLayers) {
-    DestroyDebugUtilsMessengerEXT(vulkan_context.instance, vulkan_context.debugMessenger, nullptr);
+    DestroyDebugUtilsMessengerEXT(vulkan_context.instance, vulkan_context.debug_messenger, nullptr);
     //}
 
     vkDestroySurfaceKHR(vulkan_context.instance, vulkan_context.surface, nullptr);

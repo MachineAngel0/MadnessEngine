@@ -5,7 +5,7 @@
 
 #include "defines.h"
 
-typedef struct vec2f
+typedef union vec2f
 {
     f32 elements[2];
 
@@ -23,9 +23,8 @@ typedef struct vec2f
     };
 } vec2;
 
-typedef vec2 Position_2D;
 
-typedef struct vec3f
+typedef union vec3f
 {
     f32 elements[3];
 
@@ -49,10 +48,9 @@ typedef struct vec3f
 
 } vec3;
 
-typedef vec3 Position_3D;
 
 
-typedef struct vec4f
+typedef union vec4f
 {
     f32 elements[4];
 
@@ -70,7 +68,7 @@ typedef struct vec4f
 
         union
         {
-            f32 z, b;
+            f32 z, b, h;
         };
 
         union
@@ -80,9 +78,13 @@ typedef struct vec4f
     };
 } vec4;
 
+
+
+typedef vec2 Position_2D;
+typedef vec3 Position_3D;
 typedef vec4 quat;
 
-typedef struct vec2i
+typedef union vec2i
 {
     i32 elements[2];
 
@@ -100,7 +102,7 @@ typedef struct vec2i
     };
 } vec2i;
 
-typedef struct vec3i
+typedef union vec3i
 {
     i32 elements[3];
 
@@ -123,7 +125,7 @@ typedef struct vec3i
     };
 } vec3i;
 
-typedef struct vec4i
+typedef union vec4i
 {
     i32 elements[4];
 

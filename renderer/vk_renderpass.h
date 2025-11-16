@@ -1,5 +1,5 @@
-﻿#ifndef VK_RENDERP_H
-#define VK_RENDERP_H
+﻿#ifndef VK_RENDERPASS_H
+#define VK_RENDERPASS_H
 
 #include <stdbool.h>
 #include "vulkan_types.h"
@@ -27,8 +27,7 @@ enum Renderpass_Clear_Flag
 void vulkan_renderpass_create(
     vulkan_context* context,
     vulkan_renderpass* out_renderpass,
-    f32 x, f32 y, f32 w, f32 h,
-    f32 r, f32 g, f32 b, f32 a,
+    vec4 screen_pos, vec4 clear_color,
     f32 depth,
     u32 stencil);
 
@@ -57,4 +56,4 @@ void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderp
 // void renderpass_end(Command_Buffer_Context* command_buffer, uint32_t frame);
 
 
-#endif //VK_RENDERP_H
+#endif //VK_RENDERPASS_H

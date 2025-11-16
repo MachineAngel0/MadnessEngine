@@ -14,9 +14,14 @@
 #include "vk_renderpass.c"
 #include "vk_image.c"
 #include "vk_buffer.c"
-#include "vk_fence.c"
+#include "vk_synchronization.c"
 #include "vk_framebuffer.c"
+#include "vk_pipeline.c"
+#include "vk_vertex.c"
 #include "renderer.c"
+
+
+#include "vk_shader.c"
 
 
 

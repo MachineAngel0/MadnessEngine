@@ -15,8 +15,7 @@
 //used for containers like arrays
 typedef enum memory_container_type
 {
-    MEMORY_CONTAINER_UNKNOWN,
-
+    MEMORY_CONTAINER_APPLICATION_ARENA,
     MEMORY_CONTAINER_ARENA,
     MEMORY_CONTAINER_ARENA_STACK,
     MEMORY_CONTAINER_ARENA_POOl,
@@ -35,7 +34,7 @@ typedef enum memory_container_type
 
 static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 {
-    "MEMORY_CONTAINER_UNKNOWN",
+    "MEMORY_CONTAINER_APPLICATION_ARENA",
     "MEMORY_CONTAINER_ARENA",
     "MEMORY_CONTAINER_ARENA_STACK",
     "MEMORY_CONTAINER_ARENA_POOl",
@@ -53,12 +52,13 @@ static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 //used for subsystems like the render or entity systems
 typedef enum memory_subsystem_type
 {
-    MEMORY_SUBSYSTEM_UNKNOWN,
-
     MEMORY_SUBSYSTEM_GAME,
     MEMORY_SUBSYSTEM_ENTITY,
     MEMORY_SUBSYSTEM_ANIMATION,
     MEMORY_SUBSYSTEM_RENDERER,
+    //TODO:
+    // MEMORY_SUBSYSTEM_EVENT,
+    // MEMORY_SUBSYSTEM_INPUT,
 
 
     MEMORY_SUBSYSTEM_MAX,
@@ -67,7 +67,6 @@ typedef enum memory_subsystem_type
 //used for subsystems like animation or entity subsystems
 static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
 {
-    "MEMORY_SUBSYSTEM_UNKNOWN",
     "MEMORY_GAME",
     "MEMORY_ENTITY",
     "MEMORY_ANIMATION",
@@ -88,7 +87,7 @@ typedef struct memory_tracker
 static memory_tracker memory;
 static bool memory_tracker_initialized = false;
 
-bool memory_subsystem_init()
+bool memory_tracker_init()
 {
     memset(&memory, 0, sizeof(memory_tracker));
     memory.memory_container_size = 0;
@@ -97,7 +96,7 @@ bool memory_subsystem_init()
     return true;
 }
 
-bool memory_shutdown()
+bool memory_tracker_shutdown()
 {
     if (!memory_tracker_initialized)
     {
@@ -116,15 +115,25 @@ bool memory_container_alloc(const memory_container_type type, const u64 size)
         return false;
     }
 
-    if (type == MEMORY_CONTAINER_STRING)
-    {
-        WARN("MEMORY CONTAINER: USING UNKNOWN TYPE, CHANGE WHEN YOU CAN");
-    }
 
     memory.memory_container_usage[type] += size;
     memory.memory_container_size += size;
     return true;
 }
+
+
+bool memory_container_free(const memory_container_type type, const u64 size)
+{
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED");
+        return false;
+    }
+    memory.memory_container_usage[type] -= size;
+    memory.memory_container_size -= size;
+    return true;
+}
+
 
 bool memory_subsystem_alloc(const memory_subsystem_type type, const u64 size)
 {
@@ -134,17 +143,26 @@ bool memory_subsystem_alloc(const memory_subsystem_type type, const u64 size)
         return false;
     }
 
-    if (type == MEMORY_SUBSYSTEM_UNKNOWN)
-    {
-        WARN("MEMORY SUBSYSTEM: USING UNKNOWN TYPE, CHANGE WHEN YOU CAN")
-    }
-
     memory.memory_subsystem_usage[type] += size;
     memory.memory_subsystem_size += size;
     return true;
 }
 
-void memory_tracker_debug_print()
+bool memory_subsystem_free(const memory_subsystem_type type, const u64 size)
+{
+    if (!memory_tracker_initialized)
+    {
+        WARN("MEMORY TRACKER NOT INITIALIZED");
+        return false;
+    }
+
+    memory.memory_subsystem_usage[type] -= size;
+    memory.memory_subsystem_size -= size;
+    return true;
+}
+
+
+void memory_tracker_print_memory_usage()
 {
     if (!memory_tracker_initialized)
     {
@@ -155,28 +173,77 @@ void memory_tracker_debug_print()
     DEBUG("CONTAINER MEMORY");
     for (i32 i = 0; i < MEMORY_CONTAINER_MAX; i++)
     {
-        DEBUG("%s : %d", memory_container_type_string[i], memory.memory_container_usage[i]);
+        u32 container_usage = 0;
+        if (memory.memory_container_usage[i] >= GB(1))
+        {
+            container_usage = memory.memory_container_usage[i] / GB(1);
+            DEBUG("%s : %d GB", memory_container_type_string[i], container_usage);
+        }
+        else if (memory.memory_container_usage[i] >= MB(1))
+        {
+            container_usage = memory.memory_container_usage[i] / MB(1);
+            DEBUG("%s : %d MB", memory_container_type_string[i], container_usage);
+        }
+        else if (memory.memory_container_usage[i] >= KB(1))
+        {
+            container_usage = memory.memory_container_usage[i] / KB(1);
+            DEBUG("%s : %d KB", memory_container_type_string[i], container_usage);
+        }
+        else if (memory.memory_container_usage[i] < KB(1))
+        {
+            DEBUG("%s : %d BYTES", memory_container_type_string[i], memory.memory_container_usage[i]);
+        }
+        else
+        {
+            FATAL("MEMORY CONTAINER PRINT ERROR");
+        }
     }
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu MB", (memory.memory_container_size / MB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu BYTES\n", memory.memory_container_size);
 
 
     DEBUG("SUBSYSTEM MEMORY");
     for (i32 i = 0; i < MEMORY_SUBSYSTEM_MAX; i++)
     {
-        DEBUG("%s, %d", memory_subsystem_type_string[i], memory.memory_subsystem_usage[i]);
+        u32 container_usage = 0;
+        if (memory.memory_subsystem_usage[i] >= GB(1))
+        {
+            container_usage = memory.memory_subsystem_usage[i] / GB(1);
+            DEBUG("%s : %d GB", memory_subsystem_type_string[i], container_usage);
+        }
+        else if (memory.memory_subsystem_usage[i] >= MB(1))
+        {
+            container_usage = memory.memory_subsystem_usage[i] / MB(1);
+            DEBUG("%s : %d MB", memory_subsystem_type_string[i], container_usage);
+        }
+        else if (memory.memory_subsystem_usage[i] >= KB(1))
+        {
+            container_usage = memory.memory_subsystem_usage[i] / KB(1);
+            DEBUG("%s : %d KB", memory_subsystem_type_string[i], container_usage);
+        }
+        else if (memory.memory_subsystem_usage[i] < KB(1))
+        {
+            DEBUG("%s : %d BYTES", memory_subsystem_type_string[i], memory.memory_subsystem_usage[i]);
+        }
+        else
+        {
+            FATAL("MEMORY SUBSYSTEM PRINT ERROR");
+        }
     }
+    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu MB", (memory.memory_subsystem_size / MB(1)));
     DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", memory.memory_subsystem_size);
 }
 
 bool memory_tracker_unit_test()
 {
     //insta fail
-    // TEST_INFORM(memory_tracker_initialized);
+    TEST_INFORM(memory_tracker_initialized);
 
-    memory_container_alloc(MEMORY_CONTAINER_UNKNOWN, 1024);
-    memory_subsystem_alloc(MEMORY_SUBSYSTEM_UNKNOWN, 1024);
+    // memory_container_alloc(MEMORY_CONTAINER_UNKNOWN, 1024);
+    // memory_subsystem_alloc(MEMORY_SUBSYSTEM_UNKNOWN, 1024);
+    memory_subsystem_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, KB(1));
 
-    memory_tracker_debug_print();
+    memory_tracker_print_memory_usage();
 }
 
 

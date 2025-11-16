@@ -12,8 +12,10 @@
 typedef struct application_state
 {
     game* game;
+    renderer* renderer;
 
     platform_state platform;
+    Arena* application_memory_arena;
 
     b8 is_running;
     b8 is_suspended;
@@ -50,14 +52,19 @@ bool application_game_create(struct game* game)
     //init subsystems
     app_state.game = game;
 
+
+    //on the stack, we want this first to make sure everything else if working
+    memory_tracker_init();
+
+    app_state.application_memory_arena = arena_init_malloc(MB(64));
+    INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+
     app_state.is_running = true;
 
+
     // Initialize subsystems.
-
-
-    memory_subsystem_init();
-    event_init();
-    input_init();
+    event_init(app_state.application_memory_arena);
+    input_init(app_state.application_memory_arena);
 
 
     event_register(EVENT_APP_QUIT, 10, application_on_event);
@@ -87,10 +94,9 @@ bool application_game_create(struct game* game)
 
 
     //shutdown subsystems
-
     input_shutdown();
     event_shutdown();
-    memory_shutdown();
+    memory_tracker_shutdown();
     return true;
 }
 
@@ -100,7 +106,6 @@ bool has_file_changed(const char* filename, FILETIME* last_write_time)
     WIN32_FILE_ATTRIBUTE_DATA file_info;
     if (!GetFileAttributesExA(filename, GetFileExInfoStandard, &file_info))
         return false;
-
 
     //an alternative way of doing this
     // WIN32_FIND_DATA find_data;
@@ -183,7 +188,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
 
         if (key_code == KEY_D)
         {
-            memory_tracker_debug_print();
+            memory_tracker_print_memory_usage();
         }
     }
 }

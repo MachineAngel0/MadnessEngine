@@ -3,8 +3,8 @@
 
 //TODO: literally everything
 #include "math.h"
+#include "defines.h"
 #include <float.h>
-
 #include "platform.h"
 
 /*** VEC2 ***/

@@ -1,5 +1,6 @@
 ﻿#ifndef EVENT_H
 #define EVENT_H
+#include "arena.h"
 #include "dsa/array.h"
 
 
@@ -73,27 +74,35 @@ typedef struct subscriber_list
     Array* subs_arr;
 } subscriber_list;
 
-typedef struct event_table
+typedef struct event_system
 {
     //look up table for events
     //the event if the index into the array
-    subscriber_list events[MAX_EVENTS];
+    subscriber_list events_table[MAX_EVENTS];
+
+    Arena event_system_arena;
+
+
 } event_table;
 
 //someone that registers to receive the events
 static bool is_event_system_init = false;
-static event_table event_system;
+static event_table event_state;
 
-bool event_init()
+bool event_init(Arena* arena)
 {
     INFO("EVENT SYSTEM INIT")
+
+    u64 event_system_mem_requirement = MB(1);
+    void* event_system_mem = arena_alloc(arena, event_system_mem_requirement);
+    arena_init(&event_state.event_system_arena, event_system_mem, event_system_mem_requirement);
 
 
     if (is_event_system_init == true) { return false; }
 
     is_event_system_init = true;
     //zero the memory
-    memset(&event_system, 0, sizeof(event_system));
+    memset(&event_state, 0, sizeof(event_state));
 
     return true;
 }
@@ -102,16 +111,18 @@ bool event_shutdown()
 {
     INFO("EVENT SYSTEM SHUTDOWN")
 
-    //just free the memory
-    for (int i = 0; i < MAX_EVENTS; i++)
-    {
-        //some arrays are not initialized
-        if (event_system.events[i].subs_arr)
-        {
-            array_free(event_system.events[i].subs_arr);
-            event_system.events[i].subs_arr = NULL;
-        }
-    }
+
+    arena_clear(&event_state.event_system_arena);
+    // //just free the memory
+    // for (int i = 0; i < MAX_EVENTS; i++)
+    // {
+    //     //some arrays are not initialized
+    //     if (event_state.events_table[i].subs_arr)
+    //     {
+    //         array_free(event_state.events_table[i].subs_arr);
+    //         event_state.events_table[i].subs_arr = NULL;
+    //     }
+    // }
 
     return true;
 }
@@ -119,19 +130,19 @@ bool event_shutdown()
 
 void event_register(const event_type event, const uint32_t subscriber, const on_event callback)
 {
-
+    //TODO: hook in the linear allocator for this
     //check if the event arr has been alloacated
-    if (event_system.events[event].subs_arr == NULL)
+    if (event_state.events_table[event].subs_arr == NULL)
     {
-        event_system.events[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
+        event_state.events_table[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
     }
 
 
     //TODO: wrap in a debug if/else
-    uint32_t registered_count = event_system.events[event].subs_arr->num_items;
+    uint32_t registered_count = event_state.events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_system.events[event].subs_arr, i);
+        subscriber_data* sub_data = (subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
         if (sub_data->subscriber_id == subscriber)
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
@@ -142,18 +153,18 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
     subscriber_data* new_sub_data = malloc(sizeof(subscriber_data));
     new_sub_data->subscriber_id = subscriber;
     new_sub_data->callback = callback;
-    array_emplace(event_system.events[event].subs_arr, new_sub_data);
+    array_emplace(event_state.events_table[event].subs_arr, new_sub_data);
 }
 
 void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 {
-    uint32_t registered_count = event_system.events[event].subs_arr->num_items;
+    uint32_t registered_count = event_state.events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_system.events[event].subs_arr, i);
+        subscriber_data* sub_data = (subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
         if ((sub_data->subscriber_id == subscriber) && (sub_data->callback == callback))
         {
-            array_remove_swap(event_system.events[event].subs_arr, i);
+            array_remove_swap(event_state.events_table[event].subs_arr, i);
         };
     }
 }
@@ -161,15 +172,15 @@ void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 void event_fire(event_type event, uint32_t sender_id, event_context context)
 {
     //check if the event arr has been allocated
-    if (event_system.events[event].subs_arr == NULL)
+    if (event_state.events_table[event].subs_arr == NULL)
     {
-        event_system.events[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
+        event_state.events_table[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
     }
 
-    for (uint32_t i = 0; i < event_system.events[event].subs_arr->num_items; i++)
+    for (uint32_t i = 0; i < event_state.events_table[event].subs_arr->num_items; i++)
     {
         //trigger all the callbacks in the event table
-        subscriber_data a = *(subscriber_data *) array_get(event_system.events[event].subs_arr, i);
+        subscriber_data a = *(subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
         if (a.callback(event, sender_id, a.subscriber_id, context))
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else
@@ -194,7 +205,7 @@ bool test_event2(event_type code, uint32_t sender_id, uint32_t subscriber_id, ev
 void event_test()
 {
 
-    event_init();
+    // event_init();
 
     event_register(EVENT_TEST, 0, test_event);
     event_register(EVENT_TEST, 1, test_event2);

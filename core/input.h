@@ -133,8 +133,8 @@ typedef enum keys {
     DEFINE_KEY(RSHIFT, 0xA1),
     DEFINE_KEY(LCONTROL, 0xA2),
     DEFINE_KEY(RCONTROL, 0xA3),
-    DEFINE_KEY(LMENU, 0xA4),
-    DEFINE_KEY(RMENU, 0xA5),
+    DEFINE_KEY(LALT, 0xA4),
+    DEFINE_KEY(RALT, 0xA5),
 
     DEFINE_KEY(SEMICOLON, 0xBA),
     DEFINE_KEY(PLUS, 0xBB),
@@ -151,6 +151,7 @@ typedef enum keys {
 typedef struct keyboard_state
 {
     bool keys[256]; //all the keys, and max u8 amount
+    //true is considered pressed, false is released, if it was pressed the previous frame
 } keyboard_state;
 
 typedef struct mouse_state
@@ -166,15 +167,28 @@ typedef struct input_state
     keyboard_state keyboard_previous;
     mouse_state mouse_current;
     mouse_state mouse_previous;
+
+    Arena input_system_arena;
+
 } input_state;
 
 
-static input_state key_state;
+static input_state input_system;
 
+// static input_state* wow;
 
-bool input_init()
+bool input_init(Arena* arena)
 {
-    memset(&key_state, 0, sizeof(input_state));
+    memset(&input_system, 0, sizeof(input_state));
+
+    // wow = (input_state*)arena_alloc(arena, sizeof(wow));
+
+    u64 input_system_mem_requirement  = MB(1);
+    void* input_system_mem = arena_alloc(arena, input_system_mem_requirement);
+    arena_init(&input_system.input_system_arena, input_system_mem, input_system_mem_requirement);
+
+
+
     return true;
 }
 
@@ -182,25 +196,26 @@ void input_shutdown()
 {
     //TODO: if needed
     INFO("INPUT SYSTEM SHUTDOWN")
+    arena_clear(&input_system.input_system_arena);
+
 }
 
 void input_update()
 {
     // Copy current states to previous states.
-    memcpy(&key_state.keyboard_previous, &key_state.keyboard_current, sizeof(keyboard_state));
-    memcpy(&key_state.mouse_previous, &key_state.mouse_current, sizeof(mouse_state));
+    memcpy(&input_system.keyboard_previous, &input_system.keyboard_current, sizeof(keyboard_state));
+    memcpy(&input_system.mouse_previous, &input_system.mouse_current, sizeof(mouse_state));
 }
 
 
 bool input_process_key(uint8_t key, bool pressed)
 {
     // Only handle this if the state actually changed.
-
-
-    if (key_state.keyboard_current.keys[key] != pressed)
+    if (input_system.keyboard_current.keys[key] != pressed)
     {
         // Update internal state.
-        key_state.keyboard_current.keys[key] = pressed;
+        input_system.keyboard_current.keys[key] = pressed;
+
         // Fire off an event for immediate processing.
         event_context context;
         context.data.u16[0] = key;
@@ -211,13 +226,13 @@ bool input_process_key(uint8_t key, bool pressed)
 void input_process_mouse_move(i16 x, i16 y)
 {
     // Only process if actually different
-    if (key_state.mouse_current.x != x || key_state.mouse_current.y != y) {
+    if (input_system.mouse_current.x != x || input_system.mouse_current.y != y) {
         // NOTE: Enable this if debugging.
         //KDEBUG("Mouse pos: %i, %i!", x, y);
 
         // Update internal state.
-        key_state.mouse_current.x = x;
-        key_state.mouse_current.y = y;
+        input_system.mouse_current.x = x;
+        input_system.mouse_current.y = y;
 
         // Fire the event.
         event_context context;
@@ -240,43 +255,58 @@ void input_process_mouse_wheel(i8 z_delta) {
 //key related
 bool input_is_key_pressed(uint8_t key)
 {
+    return input_system.keyboard_current.keys[key] == true;
 }
 
 bool input_is_key_released(uint8_t key)
 {
+    return input_system.keyboard_current.keys[key] == false;
 }
 
 bool input_was_key_pressed(uint8_t key)
 {
+    //if is released this frame (aka false) and was pressed last frame
+    return input_system.keyboard_previous.keys[key] == true;
 }
 
 bool input_was_key_released(uint8_t key)
 {
+    return input_system.keyboard_previous.keys[key] == false;
 }
 
 //mouse related
-bool input_get_mouse_pos(uint8_t key)
+void input_get_mouse_pos(u16* out_x, u16* out_y)
 {
+     *out_x = input_system.mouse_current.x;
+     *out_y = input_system.mouse_current.y;
 }
 
-bool input_get_previous_mouse_pos(uint8_t key)
+bool input_get_previous_mouse_pos(u16* out_x, u16* out_y)
 {
+    *out_x = input_system.mouse_previous.x;
+    *out_y = input_system.mouse_previous.y;
 }
 
 bool input_is_mouse_button_pressed(uint8_t key)
 {
+    return input_system.mouse_current.buttons[key] == true;
+
 }
 
 bool input_is_mouse_button_released(uint8_t key)
 {
+    return input_system.mouse_current.buttons[key] == false;
 }
 
 bool input_was_mouse_button_pressed(uint8_t key)
 {
+    return input_system.mouse_previous.buttons[key] == true;
+
 }
 
 bool input_was_mouse_button_released(uint8_t key)
 {
+    return input_system.mouse_previous.buttons[key] == false;
 }
 
 

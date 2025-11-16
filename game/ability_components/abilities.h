@@ -7,7 +7,7 @@ typedef struct ability_base_component
 {
     int id;
     int ActionsAvailable;
-    void* (*ability)(int id);
+    void (*ability)(int id);
 }ability_base_component;
 
 

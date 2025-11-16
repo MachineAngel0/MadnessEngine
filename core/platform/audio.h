@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-#include "../mmath.h"
+#include "../math_lib.h"
 
 
 #if MPLATFORM_WINDOWS

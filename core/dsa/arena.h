@@ -5,6 +5,7 @@
 #include "../core/logger.h"
 #include "dsa_utility.h"
 #include "unit_test.h"
+#include "memory_tracker.h"
 
 #ifndef DEFAULT_ALIGNMENT
 //most likely to be 4 (32bit) or 8 (64bit) (* 2)
@@ -20,10 +21,12 @@ typedef struct Arena
 } Arena;
 
 
-//will malloc for memory, see arena_init for using an already existing arena memory
-Arena* arena_init_global(const u64 capacity)
+//will malloc for memory, should only be called by the application or whatever manages the entire lifetime of the program
+//see arena_init for using an already existing arena memory/ block of memory
+Arena* arena_init_malloc(const u64 capacity)
 {
     Arena* a = (Arena *) malloc(sizeof(Arena));
+
     if (!a)
     {
         MASSERT("ARENA ALLOC FAILED");
@@ -36,6 +39,10 @@ Arena* arena_init_global(const u64 capacity)
         MASSERT("ARENA MALLOC FAILED");
         return NULL;
     }
+
+    memory_container_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, sizeof(a));
+    memory_container_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, capacity);
+
 
     a->current_offset = 0;
     a->capacity = capacity;
@@ -50,18 +57,27 @@ void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size)
     a->memory = (uint8_t *) backing_buffer;
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
+
+    //TODO: so it should be noted,
+    // we dont actually keep track of how much memory an arena is giving out
+    // which im going to think about for now
+    memory_container_alloc(MEMORY_CONTAINER_ARENA, backing_buffer_size);
 }
+
 
 void arena_clear(Arena* a)
 {
     a->current_offset = 0;
+    memset(a->memory, 0, a->capacity);
 }
 
-//Should only ever be called if we own the memory
+//Should only ever be called if we own the memory, which is most likely only the application arena
 void arena_free(Arena* a)
 {
+    memory_container_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, a->capacity);
     free(a->memory);
     free(a);
+
 }
 
 
@@ -76,6 +92,7 @@ void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
     //see if we have space left
     if (offset + mem_request > a->capacity)
     {
+        // MASSERT("ARENA OUT OF MEMORY");
         WARN("ARENA OUT OF MEMORY");
         return NULL;
     }
@@ -180,14 +197,12 @@ void arena_test()
     TEST_DEBUG(a.current_offset == 1312);
 
 
-
-
     free(mem);
     mem = NULL;
     TEST_DEBUG(mem == NULL);
 
 
-    Arena* a2 = arena_init_global(arena_size);
+    Arena* a2 = arena_init_malloc(arena_size);
     TEST_DEBUG(a2);
     TEST_DEBUG(arena_size == a2->capacity);
     TEST_DEBUG(arena_size == a2->capacity - a2->current_offset);
@@ -204,7 +219,6 @@ void arena_test()
     TEST_DEBUG(88 == a2->current_offset);
     TEST_DEBUG(arena_size == a2->capacity);
     TEST_DEBUG(arena_size-88 == a2->capacity - a2->current_offset);
-
 
 
     arena_free(a2);

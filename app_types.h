@@ -56,6 +56,8 @@ typedef struct renderer {
     void (*renderer_run)(struct renderer* renderer_inst);
     void (*renderer_shutdown)(struct renderer* renderer_inst);
 
+    void (*on_resize)(struct renderer* renderer_inst, u32 width, u32 height);
+
 } renderer;
 
 #endif

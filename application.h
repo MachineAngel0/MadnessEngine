@@ -2,7 +2,9 @@
 #define APPLICATION_H
 
 #include "app_types.h"
-#include "defines.h"
+
+
+
 
  bool application_game_create(struct game* game);
  void application_game_run();

@@ -41,10 +41,6 @@ void vulkan_command_buffer_begin(
 
 void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer);
 
-void vulkan_command_buffer_update_submitted(vulkan_command_buffer* command_buffer);
-
-void vulkan_command_buffer_reset(vulkan_command_buffer* command_buffer);
-
 
 /**
  * Allocates and begins recording to out_command_buffer.

@@ -5,15 +5,12 @@
 #include "core/core_unity.c"
 
 //GAME
-#include "game/unit_component/actions.h"
-#include "game/unit_component/health.h"
-#include "game/ability_components/abilities.h"
+#include "game/game_unity.c"
 
 //LIB
 #include "lib/stb_impl.c"
 
 //APP and Entry Point
-#include "app_types.h"
 #include "game_application.c"
 #include "application.h"
 #include "game_entry.h"

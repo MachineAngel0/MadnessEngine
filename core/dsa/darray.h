@@ -8,6 +8,7 @@
 
 #include "unit_test.h"
 #include "arena_stack.h"
+#include "memory_tracker.h"
 
 #define DARRAY_RESIZE_VALUE  2
 #define DARRAY_DEFAULT_CAPACITY 1
@@ -32,7 +33,15 @@ void* _darray_create(const u64 capacity, const u64 stride)
     const u64 header_size = sizeof(array_header);
     const u64 array_size = capacity * stride;
     void* new_array = malloc(header_size + array_size);
+    if (!new_array)
+    {
+        MASSERT("DARRAY CREATE, MALLOC FAILED");
+        return NULL;
+    }
     memset(new_array, 0, header_size + array_size);
+
+    memory_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
+
 
     array_header* header = new_array;
     header->num_items = 0;
@@ -49,6 +58,8 @@ void* _darray_create_arena(const u64 intial_capacity, const u64 stride, Arena_St
     const u64 array_size = intial_capacity * stride;
     void* new_array = arena_stack_alloc(arena, header_size + array_size);;
     memset(new_array, 0, header_size + array_size);
+
+    memory_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
 
     array_header* header = new_array;
     header->num_items = 0;
@@ -73,11 +84,18 @@ void darray_free(void* array)
         return;
     }
     u64 header_size = sizeof(array_header);
+
+
     //get the array header
     array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    memory_container_free(MEMORY_CONTAINER_DARRAY, header->capacity + header_size);
+
     free(header);
     array = NULL;
     header = NULL;
+
+
 }
 
 u64 darray_get_capacity(void* array)
@@ -389,6 +407,25 @@ void darray_clear(void* array)
     }
     //just set it to zero and that is it
     header->num_items = 0;
+}
+
+
+void darray_debug_header(void* array)
+{
+    if (!array)
+    {
+        WARN("DARRAY DEBUG HEADER: NULL ARRAY");
+        return;
+    }
+
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+    DEBUG("CAPACITY: %llu, STRIDE: %llu, ITEMS #: %llu", darray_get_capacity(array), darray_get_stride(array), darray_get_size(array));
+    if (!header)
+    {
+        WARN("DARRAY DEBUG HEADER: INVALID ARRAY");
+    }
+
 }
 
 

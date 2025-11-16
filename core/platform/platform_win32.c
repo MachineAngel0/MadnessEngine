@@ -359,7 +359,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             u32 width = r.right - r.left;
             u32 height = r.bottom - r.top;
             // Fire the event. The application layer should pick this up, but not handle it
-            // as it shouldn be visible to other parts of the application.
+            // as it shouldn't be visible to other parts of the application.
             event_context context;
             context.data.u16[0] = (u16) width;
             context.data.u16[1] = (u16) height;
@@ -374,6 +374,45 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             // Key pressed/released
             b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             keys key = (u16) w_param;
+
+            //if alt
+            if (w_param == VK_MENU)
+            {
+                //check if left or right alt key
+                if (GetKeyState(VK_RMENU) & 0x8000)
+                {
+                    key = KEY_RALT;
+                }
+                else if (GetKeyState(VK_LMENU) & 0x8000)
+                {
+                    key = KEY_LALT;
+                }
+            }
+            //shift key
+            else if (w_param == VK_SHIFT)
+            {
+                if (GetKeyState(VK_RSHIFT) & 0x8000)
+                {
+                    key = KEY_RSHIFT;
+                }
+                else if (GetKeyState(VK_LSHIFT) & 0x8000)
+                {
+                    key = KEY_LSHIFT;
+                }
+            }
+            //control key
+            else if (w_param == VK_CONTROL)
+            {
+                if (GetKeyState(VK_RCONTROL) & 0x8000)
+                {
+                    key = KEY_RCONTROL;
+                }
+                else if (GetKeyState(VK_LCONTROL) & 0x8000)
+                {
+                    key = KEY_LCONTROL;
+                }
+            }
+
             input_process_key(key, pressed);
         }
         break;
@@ -421,6 +460,8 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 
 bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context)
 {
+    DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
+
     // Simply cold-cast to the known type.
     internal_state* state = (internal_state *) plat_state->internal_state;
 
@@ -444,7 +485,7 @@ bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* 
         FATAL("Vulkan surface handle is null!");
     }
 
-    FATAL("Vulkan surface handle has been aqcuired from the platform layer!");
+    INFO("Vulkan surface handle has been aqcuired from the platform layer!");
 
     return TRUE;
 }

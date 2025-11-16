@@ -1,6 +1,7 @@
 ﻿#ifndef CLOCK_H
 #define CLOCK_H
 
+#include "audio.h"
 #include "../core/defines.h"
 #include "platform.h"
 
@@ -84,6 +85,13 @@ MINLINE float clock_delta_time_in_ms(Clock* clock)
 MINLINE float clock_delta_time_to_fps(Clock* clock)
 {
     return 1.0f/clock->delta_time;
+}
+
+void clock_print_info(Clock* clock)
+{
+    printf("%f s\n", clock->delta_time);
+    printf("%f ms\n", clock_delta_time_in_ms(clock));
+    printf("%f fps\n", clock_delta_time_to_fps(clock));
 }
 
 

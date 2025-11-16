@@ -1,4 +1,4 @@
-﻿#include "vk_fence.h"
+﻿#include "vk_synchronization.h"
 #include "vulkan_types.h"
 
 
@@ -32,8 +32,8 @@ void vulkan_fence_destroy(vulkan_context* context, vulkan_fence* fence)
 
 b8 vulkan_fence_wait(vulkan_context* context, vulkan_fence* fence, u64 timeout_ns)
 {
-    if (!fence->is_signaled)
-    {
+    // if (!fence->is_signaled)
+    // {
         VkResult result = vkWaitForFences(
             context->device.logical_device,
             1,
@@ -62,12 +62,12 @@ b8 vulkan_fence_wait(vulkan_context* context, vulkan_fence* fence, u64 timeout_n
                 M_ERROR("vk_fence_wait - An unknown error has occurred.");
                 break;
         }
-    }
-    else
-    {
+    // }
+    // else
+    // {
         // If already signaled, do not wait.
-        return TRUE;
-    }
+        // return TRUE;
+    // }
 
     return FALSE;
 }

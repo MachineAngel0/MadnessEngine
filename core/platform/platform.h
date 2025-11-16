@@ -6,28 +6,28 @@
 #include "defines.h"
 
 
-
 typedef struct platform_state
 {
     void* internal_state;
 } platform_state;
 
 
- b8 platform_startup(
+b8 platform_startup(
     platform_state* plat_state,
     const char* application_name,
     i32 x, i32 y,
     i32 width, i32 height);
 
 
- void platform_shutdown(platform_state* plat_state);
+void platform_shutdown(platform_state* plat_state);
 
 
- b8 platform_pump_messages(platform_state* plat_state);
+b8 platform_pump_messages(platform_state* plat_state);
 
 
 //AUDIO
 bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_t samples_per_second);
+
 bool platform_audio_shutdown(platform_state* plat_state);
 
 //MEMORY
