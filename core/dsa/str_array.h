@@ -32,7 +32,6 @@ String_Array* string_array_create(const u64 capacity)
     s->str_length = malloc(sizeof(u64) * s->capacity);
     memset(s->str_length, 0, sizeof(u64 *) * s->capacity);
 
-
     return s;
 }
 

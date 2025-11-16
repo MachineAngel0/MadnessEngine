@@ -9,13 +9,14 @@
 #include "linked_list.h"
 #include "queue.h"
 #include "str_array.h"
+#include "str_builder.h"
 #include "dsa/str.h"
 int main(void)
 {
-    arena_test();
-    arena_stack_test();
+    // arena_test();
+    // arena_stack_test();
 
-    _darray_test();
+    // _darray_test();
 
     //TODO: units tests and finish up the dsa's remaining
     // arena_test();
@@ -32,6 +33,8 @@ int main(void)
     // queue_test();
     // stack_test();
     // string_test();
+    string_builder_test();
+
 
     // string_array_unit_test();
 }

@@ -90,6 +90,8 @@ void test_print_platform()
 //pass in a string
 //returns the report for your specific test, not for all tests
 #define TEST_REPORT(test_name) test_report_print(#test_name)
+//literally just the same thing as TEST_REPORT
+#define TEST_END(test_name) test_report_print(#test_name)
 
 
 #endif //UNIT_TEST_H
