@@ -22,7 +22,7 @@ typedef struct String_Builder
 String_Builder* string_builder_create()
 {
     String_Builder* builder = malloc(sizeof(String_Builder));
-    // builder->string = string_create_from_null_terminated(string, string_size);
+    // builder->string = string_create_fr om_null_terminated(string, string_size);
     memset(&builder->string, 0, sizeof(String));
     return builder;
 }
@@ -112,6 +112,8 @@ void string_builder_test()
     string_builder_print(&builder);
 
     TEST_REPORT("STRING BUILDER");
+
+    arena_free(arena_for_strings);
 
 }
 

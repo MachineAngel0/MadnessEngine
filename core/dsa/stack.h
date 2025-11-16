@@ -7,131 +7,125 @@
 
 typedef struct stack
 {
-    void** data; // an array of void*
-
-    u64 capacity; // total size of our stack, used to keep track of the array size
-    u64 size; //size of the void* data
-
-    //has to be signed since it can be -1
-    i64 num_items; // the number of items in the stack
-
-
+    void* data; //pointer to where the data starts
+    u64 num_items; // current/top index in our array
+    u64 stride; // size/stride of each  data
+    u64 capacity; // size of the array
 } stack;
 
 
-stack* stack_create(size_t capacity, const size_t data_size)
+stack* stack_create(const u64 stride, const u64 capacity)
 {
-    // create the struct memory
-    stack* new_stack = (stack *) malloc(sizeof(stack));
+    stack* s = malloc(sizeof(stack));
+    memset(s, 0, sizeof(stack));
+    s->data = malloc(stride * capacity);
+    memset(s->data, 0, stride * capacity);
 
-    new_stack->data = malloc(sizeof(void *) * capacity);
+    s->stride = stride;
+    s->capacity = capacity;
+    s->num_items = 0;
 
-    new_stack->capacity = capacity;
-    // it's pretty normal to want to access the zero element, which is why we do this
-    new_stack->num_items = -1;
-    new_stack->size = data_size;
-
-    return new_stack;
+    return s;
 }
 
-void stack_free(stack* stack)
+
+void stack_free(stack* s)
 {
-    if (stack == NULL)
+    if (!s)
     {
-        WARN("TRYING TO DEALLOCATE A NULL STACK")
+        WARN("STACK FREE: TRYING TO FREE AN INVALID STACK")
         return;
     }
-    free(stack->data);
-    free(stack);
+    free(s->data);
+    free(s);
 }
 
-void stack_clear(stack* stack)
+void stack_clear(stack* s)
 {
-    //nothing to deallocate just setting reset the count
-    stack->num_items = -1;
+    if (!s)
+    {
+        WARN("STACK CLEAR: TRYING TO USE AN INVALID STACK")
+        return;
+    }
+    s->num_items = 0;
 }
 
-void stack_copy(stack* dest, stack* src)
+void stack_copy(stack* dest, const stack* src)
 {
     memcpy(dest, src, sizeof(stack));
 }
 
-bool stack_is_empty(stack* stack)
+bool stack_is_empty(const stack* s)
 {
-    if (stack->num_items >= -1)
-    {
-        return false;
-    }
-
-    return true;
+    return s->num_items == 0;
 }
 
-bool stack_is_full(stack* stack)
+bool stack_is_full(const stack* s)
 {
-    if (stack->num_items >= stack->capacity)
-    {
-        printf("Stack is full\n");
-        return true;
-    }
-    return false;
+    return s->num_items >= s->capacity;
 }
 
 void stack_resize(stack* stack, size_t new_capacity)
 {
-    stack->data = realloc(stack->data, sizeof(void *) * new_capacity);
-    stack->capacity = new_capacity;
+    realloc(stack, new_capacity);
 }
 
-void stack_push(stack* stack, void* data)
+void stack_push(stack* s, void* data)
 {
-    if (stack_is_full(stack))
+    if (stack_is_full(s))
     {
-        stack_resize(stack, stack->capacity * 2);
-    };
-
-    stack->num_items++;
-    stack->data[stack->num_items] = data;
-}
-
-void stack_pop(stack* stack)
-{
-    //we don't need to remove anything just decrement the size as long as it's not empty
-    if (stack_is_empty(stack)) return;
-
-    stack->num_items--;
-}
-
-// Peek element
-void* stack_peek(stack* stack)
-{
-    if (stack_is_empty(stack)) return NULL;
-    return stack->data[stack->num_items];
-    //return *(stack->data + stack->count); // the same thing as above and this makes a lot of sense and is really cool
-}
-
-// Peek element
-void stack_copy_top(stack* stack, void* dest_data)
-{
-    if (stack_is_empty(stack))
-    {
-        WARN("STACK IS EMPTY, COPY TOP FAILED")
+        WARN("STACK PUSH: Trying to push into a full stack")
         return;
     }
-    memcpy(dest_data,  stack->data[stack->num_items], stack->size);
-    //return *(stack->data + stack->count); // the same thing as above and this makes a lot of sense and is really cool
+
+    // get the start location, then memcpy it
+    uint8_t* dest = (uint8_t *) s->data + (s->stride * (s->num_items));
+    memcpy(dest, data, s->stride);
+
+
+    s->num_items++;
 }
 
-int stack_size(stack* stack)
+void stack_pop(stack* s)
 {
-    return stack->num_items;
+    if (stack_is_empty(s))
+    {
+        WARN("STACK POP: Trying to Pop on an empty stack")
+        return;
+    }
+    s->num_items--;
+}
+
+// Peek element
+void* stack_peek(stack* s)
+{
+    if (!s) return NULL;
+    if (stack_is_empty(s)) return NULL;
+    // return &s->data[s->stride * s->num_items];
+    return (uint8_t *) s->data + (s->stride * (s->num_items-1));
+}
+
+// Peek element
+void stack_copy_top(stack* s, void* dest_data)
+{
+    if (!s) return;
+    if (stack_is_empty(s)) return;
+
+    memcpy(dest_data,
+           ((uint8_t*)s->data + (s->stride * (s->num_items-1))),
+           s->stride);
+}
+
+int stack_size(stack* s)
+{
+    return s->num_items;
 }
 
 void stack_print(stack* stack, void (*print_func)(void*))
 {
-
-    for (int i = 0; i < stack->num_items+1; i++)
+    for (int i = 0; i < stack->num_items; i++)
     {
-        print_func(stack->data[i]);
+        print_func(&stack->data[i * stack->stride]);
     }
     printf("\n"); // number of bytes
 }
@@ -143,7 +137,7 @@ void stack_test()
 
     int num = 3;
     int stack_default_capacity = 3;
-    stack* stack = stack_create(stack_default_capacity, sizeof(num));
+    stack* stack = stack_create(sizeof(num), stack_default_capacity);
 
     //stack_is_empty(stack);
 
@@ -156,10 +150,16 @@ void stack_test()
     stack_push(stack, &num15);
     stack_push(stack, &num20);
     stack_print(stack, print_int);
-    printf("PEEK: %d\n", *(int*)stack_peek(stack));
+    printf("PEEK: %d\n", *(int *) stack_peek(stack));
 
     stack_pop(stack);
 
+    stack_print(stack, print_int);
+
+    stack_pop(stack);
+    stack_pop(stack);
+    stack_pop(stack);
+    stack_pop(stack);
     stack_print(stack, print_int);
 
 

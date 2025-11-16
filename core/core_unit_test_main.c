@@ -31,9 +31,9 @@ int main(void)
     // heap_test();
     // linked_list_test();
     // queue_test();
-    // stack_test();
+    stack_test();
     // string_test();
-    string_builder_test();
+    // string_builder_test();
 
 
     // string_array_unit_test();
