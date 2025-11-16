@@ -13,8 +13,8 @@ typedef struct stack
     u64 capacity; // size of the array
 } stack;
 
-
-stack* stack_create(const u64 stride, const u64 capacity)
+//TODO: test arena functions
+stack* stack_create_malloc(const u64 stride, const u64 capacity)
 {
     stack* s = malloc(sizeof(stack));
     memset(s, 0, sizeof(stack));
@@ -28,7 +28,22 @@ stack* stack_create(const u64 stride, const u64 capacity)
     return s;
 }
 
+stack* stack_create_arena(Arena* arena, const u64 stride, const u64 capacity)
+{
+    stack* s = arena_alloc(arena, sizeof(stack));
+    s->data = arena_alloc(arena, stride * capacity);
 
+    s->stride = stride;
+    s->capacity = capacity;
+    s->num_items = 0;
+
+    return s;
+}
+
+//not worth it
+// #define STACK_CREATE (arena, type, capacity) stack_create_arena(arena, sizeof(type), capacity)
+
+//only use if allocated with malloc
 void stack_free(stack* s)
 {
     if (!s)
@@ -70,7 +85,14 @@ void stack_resize(stack* stack, size_t new_capacity)
     realloc(stack, new_capacity);
 }
 
-void stack_push(stack* s, void* data)
+void stack_resize_arena(Arena* arena, stack* stack, const size_t new_capacity)
+{
+    void* new_data = arena_alloc(arena, new_capacity);
+    memcpy(new_data, stack->data, stack->num_items * stack->stride);
+    stack->data = new_data;
+}
+
+void stack_push(stack* s, const void* data)
 {
     if (stack_is_full(s))
     {
@@ -82,9 +104,25 @@ void stack_push(stack* s, void* data)
     uint8_t* dest = (uint8_t *) s->data + (s->stride * (s->num_items));
     memcpy(dest, data, s->stride);
 
+    s->num_items++;
+}
+
+void stack_push_arena(Arena* arena, stack* s, const void* data)
+{
+    //only this is allowed to resize
+    if (stack_is_full(s))
+    {
+        INFO("STACK PUSH ARENA: RESIZING");
+        //resize
+        stack_resize_arena(arena, s, s->capacity*2);
+    }
+    // get the start location, then memcpy it
+    uint8_t* dest = (uint8_t *) s->data + (s->stride * (s->num_items));
+    memcpy(dest, data, s->stride);
 
     s->num_items++;
 }
+
 
 void stack_pop(stack* s)
 {
@@ -102,26 +140,26 @@ void* stack_peek(stack* s)
     if (!s) return NULL;
     if (stack_is_empty(s)) return NULL;
     // return &s->data[s->stride * s->num_items];
-    return (uint8_t *) s->data + (s->stride * (s->num_items-1));
+    return (uint8_t *) s->data + (s->stride * (s->num_items - 1));
 }
 
 // Peek element
-void stack_copy_top(stack* s, void* dest_data)
+void stack_copy_top(stack* s, void* out_data)
 {
     if (!s) return;
     if (stack_is_empty(s)) return;
 
-    memcpy(dest_data,
-           ((uint8_t*)s->data + (s->stride * (s->num_items-1))),
+    memcpy(out_data,
+           ((uint8_t *) s->data + (s->stride * (s->num_items - 1))),
            s->stride);
 }
 
-int stack_size(stack* s)
+u64 stack_size(const stack* s)
 {
     return s->num_items;
 }
 
-void stack_print(stack* stack, void (*print_func)(void*))
+void stack_print(const stack* stack, void (*print_func)(void*))
 {
     for (int i = 0; i < stack->num_items; i++)
     {
@@ -137,7 +175,7 @@ void stack_test()
 
     int num = 3;
     int stack_default_capacity = 3;
-    stack* stack = stack_create(sizeof(num), stack_default_capacity);
+    stack* stack = stack_create_malloc(sizeof(num), stack_default_capacity);
 
     //stack_is_empty(stack);
 

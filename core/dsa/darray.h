@@ -212,7 +212,7 @@ void* darray_get(void* array, const u64 index)
     //make sure were not accessing invalid memory
     if (index > header->capacity)
     {
-        M_ERROR("DARRAY GET:  INDEX OUT OF BOUNDS");
+        M_ERROR("DARRAY GET: INDEX OUT OF BOUNDS");
         return NULL;
     }
 

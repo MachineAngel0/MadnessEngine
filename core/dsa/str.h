@@ -114,7 +114,7 @@ bool string_free(String* string)
 //UTILITY
 void string_print(String* str)
 {
-    assert(str);
+    MASSERT(str);
 
     for (uint32_t i = 0; i < str->length; i++)
     {
@@ -126,8 +126,8 @@ void string_print(String* str)
 
 bool string_compare(const String* str1, const String* str2)
 {
-    assert(str1 != NULL);
-    assert(str2 != NULL);
+    MASSERT(str1 != NULL);
+    MASSERT(str2 != NULL);
     if (str1->length != str2->length) return false;
 
     for (uint32_t i = 0; i < str1->length; i++)
@@ -141,7 +141,7 @@ bool string_compare(const String* str1, const String* str2)
 
 bool str_is_empty(const String* str)
 {
-    assert(str);
+    MASSERT(str);
     return str->length == 0;
 }
 
