@@ -17,6 +17,7 @@ int main(void)
     // arena_stack_test();
 
     // _darray_test();
+    array_test();
 
     //TODO: units tests and finish up the dsa's remaining
     // arena_test();
@@ -31,7 +32,7 @@ int main(void)
     // heap_test();
     // linked_list_test();
     // queue_test();
-    stack_test();
+    // stack_test();
     // string_test();
     // string_builder_test();
 

@@ -1,32 +1,36 @@
 ﻿#ifndef ARRAY_H
 #define ARRAY_H
+
 #include <stdlib.h>
 #include <string.h>
-#include "../core/unit_test.h"
-#include "../core/misc_util.h"
-#include "../core/logger.h"
+
+#include "stack.h"
+#include "unit_test.h"
+#include "misc_util.h"
+#include "logger.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
 //fixed sized array, so no reallocating more space
 typedef struct Array
 {
-    void** data; //array of void* data
-    u64 data_size; // size/stride of each void* data
+    void* data; //array of void* data
+    u64 stride; // size/stride of each void* data
     u64 capacity; // size of the array
     u64 num_items; // current/top index in our array
 } Array;
 
-Array* array_create(const u64 data_size, const u64 capacity)
+Array* array_create(const u64 data_stride, const u64 capacity)
 {
-    Array* arr = (Array*) malloc(sizeof(Array));
+    Array* arr = (Array *) malloc(sizeof(Array));
+    memset(arr, 0, sizeof(Array));
 
     //alloc and zero
-    arr->data = malloc(capacity * sizeof(void *));
-    memset(arr->data, 0, capacity * sizeof(void *));
+    arr->data = malloc(capacity * data_stride);
+    memset(arr->data, 0, capacity * data_stride);
 
     arr->num_items = 0;
-    arr->data_size = data_size;
+    arr->stride = data_stride;
     arr->capacity = capacity;
     return arr;
 }
@@ -44,14 +48,14 @@ void array_clear(Array* array)
 
 void array_print(Array* array, void (*print_func)(void*))
 {
-    for (size_t i = 0; i < array->num_items; i++)
+    for (u64 i = 0; i < array->num_items; i++)
     {
-        print_func(array->data[i]);
+        print_func(&array->data[i * array->stride]);
     }
     printf("\n");
 }
 
-void array_print_range(Array* array, size_t start, size_t end, void (*print_func)(void*))
+void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void*))
 {
     //technically there should be a check to make sure the values are not zero but seriouly come on
     if (start > end)
@@ -71,9 +75,9 @@ void array_print_range(Array* array, size_t start, size_t end, void (*print_func
     }
 
 
-    for (size_t i = start; i < end; i++)
+    for (u64 i = start; i < end; i++)
     {
-        print_func(array->data[i]);
+        print_func(&array->data[i * array->stride]);
     }
     printf("\n");
 }
@@ -89,45 +93,54 @@ bool array_is_full(const Array* array)
     return array->num_items >= array->capacity;
 }
 
-bool array_valid_index(Array* array, size_t index)
+bool array_valid_index(const Array* array, const u64 index)
 {
     //return true if the index is in a valid range, of already set items
     return index < array->num_items;
 }
 
-void* array_get(Array* array, size_t index)
+void* array_get(Array* array, const u64 index)
 {
     if (!array_valid_index(array, index))
     {
-        WARN("ARRAY GET FAILED, INVALID INDEX");
+        WARN("ARRAY GET: INVALID INDEX");
         return NULL;
     }
-    return array->data[index];
+    if (array_is_empty(array))
+    {
+        WARN("ARRAY GET: ARRAY IS EMPTY");
+        return NULL;
+    }
+    return (u8*)array->data + ((index) * array->stride);
 }
 
-void array_set(Array* array, void* data, size_t pos)
+void array_set(Array* array, const void* data, const u64 pos)
 {
     if (!array_valid_index(array, pos))
     {
-        WARN("ARRAY SET FAILED, INVALID INDEX");
+        WARN("ARRAY SET: INVALID INDEX");
         return;
     }
-    array->data[pos] = data;
+
+    //mem copy the data
+    u8* dest = (u8 *) array->data + (array->stride * pos);
+    memcpy(dest, data, array->stride);
 }
 
 //TODO: TEST
 // fills entire array
-void array_fill(Array* array, void* data)
+void array_fill(const Array* array, const void* data)
 {
-    for (size_t i = 0; i < array->num_items; i++)
+    for (u64 i = 0; i < array->num_items; i++)
     {
-        array->data[i] = data;
+        u8* dest = (u8 *) array->data + (array->stride * i);
+        memcpy(dest, data, array->stride);
     }
 }
 
 //TODO: TEST
 // fills on a range array
-void array_fill_range(Array* array, size_t start, size_t end, void* data)
+void array_fill_range(Array* array, u64 start, u64 end, void* data)
 {
     //check that start is larger than end
     if (start < end)
@@ -142,9 +155,10 @@ void array_fill_range(Array* array, size_t start, size_t end, void* data)
         return;
     }
 
-    for (size_t i = start; i < end; i++)
+    for (u64 i = start; i < end; i++)
     {
-        array->data[i] = data;
+        u8* dest = (u8 *) array->data + (array->stride * i);
+        memcpy(dest, data, array->stride);
     }
 }
 
@@ -152,10 +166,12 @@ void array_emplace(Array* array, void* new_data)
 {
     if (array_is_full(array))
     {
-        WARN("ARRAY IS FULL, CANT EMPLACE");
+        WARN("ARRAY EMPLACE:  ARRAY IS FULL, CAN'T EMPLACE");
         return;
     }
-    array->data[array->num_items] = new_data;
+    u8* dest = (u8 *) array->data + (array->stride * (array->num_items));
+    memcpy(dest, new_data, array->stride);
+
     array->num_items++;
 }
 
@@ -166,14 +182,12 @@ void array_pop(Array* array)
         WARN("ARRAY POP: ARRAY IS EMPTY");
         return;
     }
-    // were only setting this to zero so the print is correct
-
     array->num_items--;
 }
 
 
 //shift the array, maintaining order
-void array_remove(Array* array, size_t index)
+void array_remove(Array* array, const u64 index)
 {
     if (array_is_empty(array))
     {
@@ -186,17 +200,17 @@ void array_remove(Array* array, size_t index)
         return;
     };
 
+    //shift the array left from the index spot of removal
 
-    for (size_t i = index; i < array->num_items; i++)
-    {
-        array->data[i] = array->data[i + 1];
-    }
+    memcpy((u8 *) array->data + (array->stride * index),
+           (u8 *) array->data + (array->stride * (index + 1)),
+           array->stride * (array->num_items - index - 1));
 
     array->num_items--;
 }
 
 //replaces the index value with the last item in the array, then decrementing the array num count
-void array_remove_swap(Array* array, size_t index)
+void array_remove_swap(Array* array, u64 index)
 {
     if (array_is_empty(array))
     {
@@ -209,8 +223,11 @@ void array_remove_swap(Array* array, size_t index)
         return;
     };
 
+    //memcpy the last item into the removal spot
+    memcpy((u8 *) array->data + (array->stride * index),
+           (u8 *) array->data + (array->stride - 1),
+           array->stride);
     //minus one cause num_items always points to a free spot/ or nothing if full
-    array[index] = array[array->num_items - 1];
     array->num_items--;
 }
 
@@ -224,6 +241,8 @@ void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 void array_test()
 {
+    TEST_START("ARRAY TEST");
+
     printf("ARRAY START\n");
     int num3 = 3;
     int num5 = 5;
@@ -255,21 +274,25 @@ void array_test()
     TEST_DEBUG(arr->num_items == 0);
     printf("ARRAY POP END\n\n");
 
-    array_emplace(arr, &num5);
     array_emplace(arr, &num10);
+    array_emplace(arr, &num5);
     printf("ARRAY GET START\n");
     print_int(array_get(arr, 0));
+    TEST_DEBUG(*(int*)array_get(arr, 0) == num10);
+
     printf("\n");
     printf("ARRAY GET END\n\n");
 
     printf("ARRAY SET START\n");
-    array_set(arr, &num3, 2);
+    array_set(arr, &num3, 2); // this should be invalid
     array_set(arr, &num3, 1); //overwrites the 10
+    TEST_DEBUG(*(int*)array_get(arr, 1) == num3);
     array_print(arr, print_int);
     printf("ARRAY SET END\n\n");
 
     printf("ARRAY REMOVE START\n");
     array_remove(arr, 0);
+    TEST_DEBUG(*(int*)array_get(arr, 0) == num3);
     array_print(arr, print_int);
     array_emplace(arr, &num20);
     array_emplace(arr, &num10);
