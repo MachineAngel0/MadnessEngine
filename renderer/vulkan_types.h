@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 #include <defines.h>
 #include "logger.h"
+#include "math_types.h"
 
 #define VK_CHECK(expr)              \
 {                                   \
@@ -36,8 +37,9 @@ typedef enum vulkan_render_pass_state
 typedef struct vulkan_renderpass
 {
     VkRenderPass handle;
-    f32 x, y, w, h;
-    f32 r, g, b, a;
+    vec4 screen_pos;
+    vec4 clear_color;
+
 
     f32 depth;
     u32 stencil;
@@ -59,8 +61,8 @@ typedef struct vulkan_swapchain
     VkSurfaceFormatKHR surface_format;
     u8 max_frames_in_flight;
     VkSwapchainKHR swapchain_handle;
-    u32 image_count;
 
+    u32 image_count;
     VkImage* images;
     VkImageView* image_views;
 
@@ -131,7 +133,7 @@ typedef struct vulkan_physical_device_queue_family_info
 } vulkan_physical_device_queue_family_info;
 
 
-typedef struct vk_fence
+typedef struct vk_synchronization
 {
     VkFence fence_handle;
     b8 is_signaled;
@@ -156,6 +158,37 @@ typedef struct vulkan_command_buffer
     vulkan_command_buffer_state state;
 } vulkan_command_buffer;
 
+typedef struct vulkan_shader_stage {
+    VkShaderModuleCreateInfo create_info;
+    VkShaderModule handle;
+    VkPipelineShaderStageCreateInfo shader_stage_create_info;
+} vulkan_shader_stage;
+
+
+typedef struct vulkan_pipeline {
+    VkPipeline handle;
+    VkPipelineLayout pipeline_layout;
+} vulkan_pipeline;
+
+#define OBJECT_SHADER_STAGE_COUNT 2
+typedef struct vulkan_object_shader {
+    // vertex, fragment
+    vulkan_shader_stage stages[OBJECT_SHADER_STAGE_COUNT];
+    vulkan_pipeline pipeline;
+} vulkan_object_shader;
+
+
+
+
+typedef struct vulkan_buffer {
+    u64 total_size;
+    VkBuffer handle;
+    VkBufferUsageFlagBits usage;
+    b8 is_locked;
+    VkDeviceMemory memory;
+    i32 memory_index;
+    u32 memory_property_flags;
+} vulkan_buffer;
 
 typedef struct vulkan_context
 {
@@ -172,9 +205,6 @@ typedef struct vulkan_context
     // The framebuffer's current width and height.
     u32 framebuffer_width;
     u32 framebuffer_height;
-    //if it does not match last gen, then make a new one
-    u64 framebuffer_size_generation;
-    u64 framebuffer_last_generation;
     //value holders for our framebuffer values
     u32 framebuffer_width_new;
     u32 framebuffer_height_new;
@@ -188,6 +218,10 @@ typedef struct vulkan_context
     u32 current_frame;
     bool recreating_swapchain;
 
+
+    vulkan_buffer object_vertex_buffer;
+    vulkan_buffer object_index_buffer;
+    vulkan_object_shader object_shader;
     //renderpass
     vulkan_renderpass main_renderpass;
 
@@ -202,6 +236,8 @@ typedef struct vulkan_context
 
     // Holds pointers to fences which exist and are owned elsewhere.
     vulkan_fence** images_in_flight;
+
+
 } vulkan_context;
 
 

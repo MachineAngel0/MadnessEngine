@@ -2,6 +2,7 @@
 #define DEFINES_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // Unsigned int types.
 typedef uint8_t u8;
@@ -21,7 +22,7 @@ typedef double f64;
 
 // Boolean types
 typedef int b32;
-typedef char b8; // there is bool but idk if i want to use it
+typedef bool b8; // there is bool but idk if i want to use it
 
 
 // Properly define static assertions.
@@ -125,8 +126,10 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #endif
 
 //forcing inline
-
-#ifdef _MSC_VER
+#if defined(__clang__) || defined(__gcc__)
+#define MINLINE __attribute__((always_inline)) inline
+#define MNOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
 #define MINLINE __forceinline
 #define MNOINLINE __declspec(noinline)
 #else
@@ -134,6 +137,13 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define MNOINLINE
 #endif
 
+// #ifdef _MSC_VER
+// #define MINLINE __forceinline
+// #define MNOINLINE __declspec(noinline)
+// #else
+// #define MINLINE static inline
+// #define MNOINLINE
+// #endif
 
 //TODO: the defer macro
 

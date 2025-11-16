@@ -9,6 +9,7 @@
 #include "../core/math_lib.h"
 #include "../core/unit_test.h"
 #include "../core/memory_tracker.h"
+#include "../core/c_string.h"
 
 
 //CORE - SERIALIZATION
@@ -22,6 +23,7 @@
 #include "../core/platform/gamepad.h"
 #include "../core/platform/hot_reload.h"
 #include "../core/platform/platform.h"
+#include "../core/platform/filesystem.c"
 #if defined(_WIN32)
 #include "../core/platform/platform_win32.c"
 #elif defined(__linux__)

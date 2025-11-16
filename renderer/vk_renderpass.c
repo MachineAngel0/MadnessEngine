@@ -1,18 +1,12 @@
 ﻿#include "vk_renderpass.h"
 
 
-void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, f32 x, f32 y, f32 w, f32 h,
-                              f32 r, f32 g, f32 b, f32 a, f32 depth, u32 stencil)
+void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, vec4 screen_pos, vec4 clear_color,
+                              f32 depth, u32 stencil)
 {
 
-    out_renderpass->x = x;
-    out_renderpass->y = y;
-    out_renderpass->w = w;
-    out_renderpass->h = h;
-    out_renderpass->r = r;
-    out_renderpass->g = g;
-    out_renderpass->b = b;
-    out_renderpass->a = a;
+    out_renderpass->screen_pos = screen_pos;
+    out_renderpass->clear_color = clear_color;
     out_renderpass->depth = depth;
     out_renderpass->stencil = stencil;
 
@@ -128,17 +122,17 @@ void vulkan_renderpass_begin(vulkan_command_buffer* command_buffer, vulkan_rende
     VkRenderPassBeginInfo begin_info = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
     begin_info.renderPass = renderpass->handle;
     begin_info.framebuffer = frame_buffer;
-    begin_info.renderArea.offset.x = renderpass->x;
-    begin_info.renderArea.offset.y = renderpass->y;
-    begin_info.renderArea.extent.width = renderpass->w;
-    begin_info.renderArea.extent.height = renderpass->h;
+    begin_info.renderArea.offset.x = renderpass->screen_pos.x;
+    begin_info.renderArea.offset.y = renderpass->screen_pos.y;
+    begin_info.renderArea.extent.height = renderpass->screen_pos.h;
+    begin_info.renderArea.extent.width = renderpass->screen_pos.w;
 
     VkClearValue clear_values[2] = {0};
 
-    clear_values[0].color.float32[0] = renderpass->r;
-    clear_values[0].color.float32[1] = renderpass->g;
-    clear_values[0].color.float32[2] = renderpass->b;
-    clear_values[0].color.float32[3] = renderpass->a;
+    clear_values[0].color.float32[0] = renderpass->clear_color.r;
+    clear_values[0].color.float32[1] = renderpass->clear_color.g;
+    clear_values[0].color.float32[2] = renderpass->clear_color.b;
+    clear_values[0].color.float32[3] = renderpass->clear_color.a;
     clear_values[1].depthStencil.depth = renderpass->depth;
     clear_values[1].depthStencil.stencil = renderpass->stencil;
 

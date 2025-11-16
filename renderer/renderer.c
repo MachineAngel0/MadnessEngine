@@ -4,10 +4,11 @@
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_command_buffer.h"
-
+#include "vk_shader.h"
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static vulkan_context vk_context;
+
 
 
 bool renderer_init(struct renderer* renderer_inst)
@@ -31,13 +32,12 @@ bool renderer_init(struct renderer* renderer_inst)
     vulkan_instance_create(&vk_context);
 
     // get surface from the platform layer, needed before device creation
-    DEBUG("Creating Vulkan surface...");
     if (!platform_create_vulkan_surface(renderer_inst->plat_state, &vk_context))
     {
         return FALSE;
     }
 
-    //allow the window to resize at this point. NOTE: might want to flip this at the end of init
+    //allow the window to resize at this point. NOTE: might want to move this to the end of init
     vk_context.is_init = true;
 
     // Device creation
@@ -54,13 +54,13 @@ bool renderer_init(struct renderer* renderer_inst)
         vk_context.framebuffer_height,
         &vk_context.swapchain);
 
+
     vulkan_renderpass_create(
         &vk_context,
         &vk_context.main_renderpass,
-        0, 0, vk_context.framebuffer_width, vk_context.framebuffer_height,
-        0.0f, 0.0f, 0.2f, 1.0f,
-        1.0f,
-        0);
+        (vec4){  .x = 0.f, .y = 0.f, .h = vk_context.framebuffer_height, .w = vk_context.framebuffer_width},
+        (vec4){.x =0.f, .y = 0.f, .h = 0.2f, .w = 1.0f}, 1.0f, 0);
+
 
     // Swapchain framebuffers.
     vk_context.swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context.swapchain.image_count);
@@ -104,6 +104,44 @@ bool renderer_init(struct renderer* renderer_inst)
         vk_context.images_in_flight[i] = 0;
     }
 
+    // Create builtin shaders
+    if (!vulkan_object_shader_create(&vk_context, &vk_context.object_shader))
+    {
+        M_ERROR("Error loading built-in basic_lighting shader.");
+        return false;
+    }
+
+    VkMemoryPropertyFlagBits memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    const u64 vertex_buffer_size = sizeof(vertex_3d) * 1024 * 1024;
+    if (!vulkan_buffer_create(
+        &vk_context,
+        vertex_buffer_size,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        memory_property_flags,
+        true,
+        &vk_context.object_vertex_buffer))
+    {
+        M_ERROR("Error creating vertex buffer.");
+        return false;
+    }
+
+    const u64 index_buffer_size = sizeof(u32) * 1024 * 1024;
+    if (!vulkan_buffer_create(
+        &vk_context,
+        index_buffer_size,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        memory_property_flags,
+        true,
+        &vk_context.object_index_buffer))
+    {
+        M_ERROR("Error creating vertex buffer.");
+        return false;
+    }
+
+
+
+
     INFO("VULKAN RENDERER INITIALIZED");
 
     return TRUE;
@@ -111,31 +149,17 @@ bool renderer_init(struct renderer* renderer_inst)
 
 void renderer_update(struct renderer* renderer_inst)
 {
-    // TRACE("renderer is running test");
-    // Check if recreating swap chain and boot out.
-    if (vk_context.recreating_swapchain)
-    {
-        VkResult result = vkDeviceWaitIdle(vk_context.device.logical_device);
+    /*
+      At a high level, rendering a frame in Vulkan consists of a common set of steps:
+      Wait for the previous frame to finish
+      Acquire an image from the swap chain
+      Record a command buffer which draws the scene onto that image
+      Submit the recorded command buffer
+      Present the swap chain image
+      */
+    //semaphore orders queue operations (waiting happens on the GPU),
+    //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
-        INFO("Recreating swapchain, booting.");
-        return;
-    }
-
-    // Check if the framebuffer has been resized. If so, a new swapchain must be created.
-    if (vk_context.framebuffer_size_generation != vk_context.framebuffer_last_generation)
-    {
-        VkResult result = vkDeviceWaitIdle(vk_context.device.logical_device);
-
-        // If the swapchain recreation failed (because, for example, the window was minimized),
-        // boot out before unsetting the flag.
-        if (!recreate_swapchain(&vk_context))
-        {
-            INFO("recreate swapchain, failed.");
-        }
-
-        INFO("Resized, booting.");
-        return;
-    }
 
     // Wait for the execution of the current frame to complete. The fence being free will allow this one to move on.
     if (!vulkan_fence_wait(
@@ -147,6 +171,7 @@ void renderer_update(struct renderer* renderer_inst)
         return;
     }
 
+    /* Acquire an image from the swap chain */
     // Acquire the next image from the swap chain. Pass along the semaphore that should signaled when this completes.
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
     if (!vulkan_swapchain_acquire_next_image_index(
@@ -157,6 +182,7 @@ void renderer_update(struct renderer* renderer_inst)
         0,
         &vk_context.image_index))
     {
+        //if it fails it could mean that the swapchain is recreating itself
         return;
     }
 
@@ -183,8 +209,9 @@ void renderer_update(struct renderer* renderer_inst)
     vkCmdSetViewport(command_buffer->command_buffer_handle, 0, 1, &viewport);
     vkCmdSetScissor(command_buffer->command_buffer_handle, 0, 1, &scissor);
 
-    vk_context.main_renderpass.w = vk_context.framebuffer_width;
-    vk_context.main_renderpass.h = vk_context.framebuffer_height;
+    //TODO: idk why this is here, remove it
+    // vk_context.main_renderpass.screen_pos.w = vk_context.framebuffer_width;
+    // vk_context.main_renderpass.screen_pos.h = vk_context.framebuffer_height;
 
     // Begin the render pass.
     vulkan_renderpass_begin(
@@ -192,6 +219,20 @@ void renderer_update(struct renderer* renderer_inst)
         &vk_context.main_renderpass,
         vk_context.swapchain.framebuffers[vk_context.image_index].framebuffer_handle);
 
+    //Do Bindings
+
+    // TODO: temporary test code
+    vulkan_object_shader_use(&vk_context, &vk_context.object_shader);
+
+    // Bind vertex buffer at offset.
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer->command_buffer_handle, 0, 1, &vk_context.object_vertex_buffer.handle, (VkDeviceSize*)offsets);
+
+    // Bind index buffer at offset.
+    vkCmdBindIndexBuffer(command_buffer->command_buffer_handle, vk_context.object_index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
+
+    // Issue the draw.
+    vkCmdDrawIndexed(command_buffer->command_buffer_handle, 6, 1, 0, 0, 0);
 
     //END FRAME//
 
@@ -260,70 +301,6 @@ void renderer_update(struct renderer* renderer_inst)
         vk_context.image_index);
 }
 
-
-/*void renderer_shutdown(struct renderer* renderer_inst)
-{
-    INFO("WAITING ON ANY DEVICES BEFORE SHUTDOWN...");
-    vkDeviceWaitIdle(vk_context.device.logical_device);
-
-    INFO("Renderer Shutting Down");
-    // Sempaphores and Fences / sync objects
-    for (u8 i = 0; i < vk_context.swapchain.max_frames_in_flight; ++i)
-    {
-        if (vk_context.image_available_semaphores[i])
-        {
-            vkDestroySemaphore(
-                vk_context.device.logical_device,
-                vk_context.image_available_semaphores[i],
-                vk_context.allocator);
-            vk_context.image_available_semaphores[i] = 0;
-        }
-        if (vk_context.queue_complete_semaphores[i])
-        {
-            vkDestroySemaphore(
-                vk_context.device.logical_device,
-                vk_context.queue_complete_semaphores[i],
-                vk_context.allocator);
-            vk_context.queue_complete_semaphores[i] = 0;
-        }
-        vulkan_fence_destroy(&vk_context, &vk_context.in_flight_fences[i]);
-    }
-    darray_free(vk_context.image_available_semaphores);
-    vk_context.image_available_semaphores = 0;
-
-    darray_free(vk_context.queue_complete_semaphores);
-    vk_context.queue_complete_semaphores = 0;
-
-    darray_free(vk_context.in_flight_fences);
-    vk_context.in_flight_fences = 0;
-
-    darray_free(vk_context.images_in_flight);
-    vk_context.images_in_flight = 0;
-
-
-    // Command buffers
-    vulkan_renderer_command_buffer_destroy(&vk_context);
-
-    //TODO: free command pools
-
-    // Command buffers
-    for (u32 i = 0; vk_context.swapchain.image_count; i++)
-    {
-        vulkan_framebuffer_destroy(&vk_context, &vk_context.swapchain.framebuffers[i]);
-    }
-
-    //renderpass
-    vulkan_renderpass_destroy(&vk_context, &vk_context.main_renderpass);
-
-    //swapchain
-    vulkan_swapchain_destroy(&vk_context, &vk_context.swapchain);
-
-    //device
-    vulkan_device_destroy(&vk_context);
-
-    //instance
-    vulkan_instance_destroy(&vk_context);
-}*/
 
 void renderer_shutdown(struct renderer* renderer_inst)
 {
@@ -415,7 +392,6 @@ void renderer_shutdown(struct renderer* renderer_inst)
 }
 
 
-
 void renderer_on_resize(struct renderer* renderer_inst, u32 width, u32 height)
 {
     if (!vk_context.is_init)
@@ -426,7 +402,9 @@ void renderer_on_resize(struct renderer* renderer_inst, u32 width, u32 height)
 
     //NOTE: doesn't actually resize anything here, just flags the renderer for a resize
     INFO("VULKAN RENDERER RESIZE HAS BEEN CALLED: new width: %d, height: %d", width, height);
-    vk_context.framebuffer_size_generation++;
     vk_context.framebuffer_width_new = width;
     vk_context.framebuffer_height_new = height;
+
+    recreate_swapchain(&vk_context);
 }
+

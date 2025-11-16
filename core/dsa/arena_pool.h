@@ -74,6 +74,7 @@ Arena_Pool* arena_pool_init(void* backing_buffer, size_t backing_buffer_length,
 
     // Set up the free list for free chunks
     arena_pool_free_all(a);
+    return a;
 }
 
 void* arena_pool_alloc(Arena_Pool *p)

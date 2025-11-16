@@ -5,8 +5,6 @@
 #include "renderer.h"
 
 
-//TODO: this has not been created yet
-
 extern void create_renderer(struct renderer* renderer_out);
 
 

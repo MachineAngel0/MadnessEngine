@@ -181,17 +181,11 @@ void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapcha
     vkDeviceWaitIdle(context->device.logical_device);
     vulkan_image_destroy(context, &swapchain->depth_attachment);
     // Only destroy the views, not the images, since those are owned by the swapchain and are thus
-
-
     // destroyed when it is.
-
-
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {
         vkDestroyImageView(context->device.logical_device, swapchain->image_views[i], context->allocator);
     }
-
-
     vkDestroySwapchainKHR(context->device.logical_device, swapchain->swapchain_handle, context->allocator);
     INFO("SWAPCHAIN DESTROYED");
 }
@@ -215,7 +209,7 @@ bool vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_s
         vulkan_swapchain_recreate(context, context->framebuffer_width, context->framebuffer_height, swapchain);
         return false;
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
         FATAL("FAILED TO ACQUIRE SWAPCHAIN IMAGE!")
         return false;
@@ -260,13 +254,6 @@ bool recreate_swapchain(vulkan_context* context)
         return FALSE;
     }
 
-    // Detect if the window is too small to be drawn to
-    if (context->framebuffer_width == 0 || context->framebuffer_height == 0)
-    {
-        DEBUG("recreate_swapchain called when window is < 1 in a dimension. Booting.");
-        return FALSE;
-    }
-
     // Mark as recreating if the dimensions are valid.
     context->recreating_swapchain = TRUE;
 
@@ -293,14 +280,9 @@ bool recreate_swapchain(vulkan_context* context)
     // Sync the framebuffer size with the new sizes.
     context->framebuffer_width = context->framebuffer_width_new;
     context->framebuffer_height = context->framebuffer_height_new;
-    context->main_renderpass.w = context->framebuffer_width;
-    context->main_renderpass.h = context->framebuffer_height;
-    //NOTE: we can zero them if it ever becomes a problem
-    // context->framebuffer_width_new = 0;
-    // context->framebuffer_height_new = 0;
+    context->main_renderpass.screen_pos.w = context->framebuffer_width;
+    context->main_renderpass.screen_pos.h = context->framebuffer_height;
 
-    // Update framebuffer size generation.
-    context->framebuffer_last_generation = context->framebuffer_size_generation;
 
     // cleanup swapchain
     for (u32 i = 0; i < context->swapchain.image_count; ++i)
@@ -315,10 +297,10 @@ bool recreate_swapchain(vulkan_context* context)
         vulkan_framebuffer_destroy(context, &context->swapchain.framebuffers[i]);
     }
 
-    context->main_renderpass.x = 0;
-    context->main_renderpass.y = 0;
-    context->main_renderpass.w = context->framebuffer_width;
-    context->main_renderpass.h = context->framebuffer_height;
+    context->main_renderpass.screen_pos.x = 0;
+    context->main_renderpass.screen_pos.y = 0;
+    context->main_renderpass.screen_pos.h = context->framebuffer_height;
+    context->main_renderpass.screen_pos.w = context->framebuffer_width;
 
     regenerate_framebuffer(context, &context->swapchain, &context->main_renderpass);
 

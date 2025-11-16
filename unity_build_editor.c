@@ -17,5 +17,5 @@
 #include "app_types.h"
 #include "editor_application.c"
 #include "application.h"
-#include "editor_entry.h"
+#include "editor_entry.c"
 

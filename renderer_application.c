@@ -2,14 +2,13 @@
 
 
 #include "app_types.h"
-#include "audio.h"
+#include "arena.h"
+#include "clock.h"
 #include "defines.h"
 #include "event.h"
 #include "input.h"
 #include "core/platform/platform.h"
-#include "renderer_entry.c"
 #include "memory_tracker.h"
-#include "core/defines.h"
 
 typedef struct application_state
 {
@@ -17,7 +16,13 @@ typedef struct application_state
 
     platform_state platform;
 
+    Arena* application_memory_arena;
+
+    Clock clock;
+
+
     b8 is_running;
+    //rn used for when the window is minimized
     b8 is_suspended;
 
     i16 width;
@@ -38,14 +43,17 @@ bool application_renderer_create(struct renderer* renderer)
     //set the renderer
     app_state.renderer = renderer;
 
+    //on the stack, we want this first to make sure everything else if working
+    memory_tracker_init();
+
+    app_state.application_memory_arena = arena_init_malloc(MB(64));
+    INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+
     app_state.is_running = true;
 
     // Initialize subsystems.
-
-
-    memory_subsystem_init();
-    event_init();
-    input_init();
+    event_init(app_state.application_memory_arena);
+    input_init(app_state.application_memory_arena);
 
 
     event_register(EVENT_APP_QUIT, 10, application_on_event);
@@ -67,19 +75,22 @@ bool application_renderer_create(struct renderer* renderer)
     }
     app_state.renderer->plat_state = &app_state.platform;
 
-    //create the renderer
-    // if (!app_state.renderer->renderer_initialize(app_state.renderer))
-    // {
-    // FATAL("Failed to initialize the renderer")
-    // return false;
-    // };
-    renderer_init(app_state.renderer);
+    if (!app_state.renderer->renderer_initialize(app_state.renderer))
+    {
+        FATAL("Failed to initialize the renderer")
+        return false;
+    };
+    // renderer_init(app_state.renderer); // here for debugging
 
     //run the renderer
+    //MAIN LOOP
+
+    clock_start(&app_state.clock);
+
     application_renderer_run();
 
 
-    //shutdown
+    /***SHUTDOWN***/
     //NOTE: (go in reverse order)
     app_state.renderer->renderer_shutdown(app_state.renderer);
 
@@ -87,7 +98,10 @@ bool application_renderer_create(struct renderer* renderer)
     //shutdown subsystems
     input_shutdown();
     event_shutdown();
-    memory_shutdown();
+
+
+    arena_free(app_state.application_memory_arena);
+    memory_tracker_shutdown();
 
 
     return true;
@@ -98,9 +112,24 @@ void application_renderer_run()
 {
     while (app_state.is_running)
     {
+
         platform_pump_messages(&app_state.platform);
 
+
+        //vulkan will crash if you minimize the window
+        if (app_state.is_suspended)
+        {
+            continue;
+        }
+
+        clock_update_frame_start(&app_state.clock);
+
+        // clock_print_info(&app_state.clock);
+
         app_state.renderer->renderer_run(app_state.renderer);
+
+        clock_update_frame_end(&app_state.clock);
+
     }
 }
 
@@ -134,6 +163,12 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
             // Block anything else from processing this.
             return TRUE;
         }
+        if (key_code == KEY_M)
+        {
+            //for seeing what our memory is doing
+            memory_tracker_print_memory_usage();
+            return TRUE;
+        }
     }
     if (code == EVENT_KEY_RELEASED)
     {
@@ -142,7 +177,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
 
         if (key_code == KEY_D)
         {
-            memory_tracker_debug_print();
+            memory_tracker_print_memory_usage();
         }
     }
 }

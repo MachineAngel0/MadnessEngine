@@ -158,9 +158,8 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     //TODO allocator
     VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
 
-    INFO("CREATE INSTANCE SUCCESS");
-
     DEBUG("VULKAN INSTANCE CREATED");
+
     u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
@@ -180,6 +179,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     MASSERT_MSG(func, "Failed to create debug messenger!"); {
         //SAME THING: func == vkCreateDebugUtilsMessengerEXT
         VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
+
     }
     DEBUG("VULKAN DEBUGGER CREATED");
 
@@ -351,6 +351,9 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     INFO("GRAPHICS COMMAND POOL CREATED.");
 
 
+    darray_free(indices);
+    darray_free(queue_create_infos);
+
     return TRUE;
 }
 
@@ -405,6 +408,7 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
 
 bool select_physical_device(vulkan_context* vulkan_context)
 {
+    //once for the count
     u32 physical_device_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, 0));
     if (physical_device_count == 0)
@@ -413,6 +417,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
         return FALSE;
     }
 
+    //twice for the devices
     VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
     VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
     for (u32 i = 0; i < physical_device_count; ++i)
@@ -489,14 +494,14 @@ bool select_physical_device(vulkan_context* vulkan_context)
             // Memory information
             for (u32 j = 0; j < memory.memoryHeapCount; ++j)
             {
-                f32 memory_size_gib = (((f32) memory.memoryHeaps[j].size) / 1024.0f / 1024.0f / 1024.0f);
+                f32 memory_size_gib = (((f32) memory.memoryHeaps[j].size) / GB(1));
                 if (memory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
                 {
-                    INFO("Local GPU memory: %.2f GiB", memory_size_gib);
+                    INFO("Local GPU memory: %.2f GB", memory_size_gib);
                 }
                 else
                 {
-                    INFO("Shared System memory: %.2f GiB", memory_size_gib);
+                    INFO("Shared System memory: %.2f GB", memory_size_gib);
                 }
             }
 
@@ -534,7 +539,7 @@ bool physical_device_meets_requirements(
     vulkan_physical_device_queue_family_info* out_queue_info,
     vulkan_swapchain_support_info* out_swapchain_support)
 {
-    // Evaluate device properties to determine if it meets the needs of our applcation.
+    // Evaluate device properties to determine if it meets the needs of our application.
     out_queue_info->graphics_family_index = -1;
     out_queue_info->present_family_index = -1;
     out_queue_info->compute_family_index = -1;

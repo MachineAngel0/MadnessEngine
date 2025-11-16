@@ -28,12 +28,12 @@
 #include "Mesh.h"
 #include "Mesh.h"
 #include "stb_truetype.h"
-#include "texture.h"
+#include "vk_image.h"
 
 
 struct Screen_Size_Push_Constants;
 struct UI_STATE;
-struct Vulkan_Context;
+struct vulkan_context;
 struct Command_Buffer_Context;
 struct Buffer_Context;
 
@@ -77,7 +77,7 @@ struct Text_System
 
 void text_system_init(Text_System& text_system);
 
-bool load_font(Text_System& text_system, const char* filepath, Vulkan_Context& vulkan_context, Command_Buffer_Context&
+bool load_font(Text_System& text_system, const char* filepath, vulkan_context& vulkan_context, Command_Buffer_Context&
                command_buffer_context);
 
 
@@ -89,12 +89,12 @@ void do_text_screen_percentage(UI_STATE* ui_state, std::string text, glm::vec2 p
                                font_size);
 
 
-void text_vertex_buffer_update(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context, Text_System& text_system);
+void text_vertex_buffer_update(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context, Text_System& text_system);
 
 
 void text_update(Text_System& text_system, Screen_Size_Push_Constants push_constants);
 
-void create_text_vertex_buffer_new(Vulkan_Context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context);
+void create_text_vertex_buffer_new(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Buffer_Context& buffer_context);
 
 
 
