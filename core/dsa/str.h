@@ -31,7 +31,7 @@ String* string_create_from_null_terminated(const char* word, const u64 length)
     str->length = length - 1;
 
 
-    memcpy(str->chars, word, sizeof(char) * length);
+    memcpy(str->chars, word, sizeof(char) * length-1);
     // for (uint32_t i = 0; i < str->length; i++)
     // {
     //     str->chars[i] = word[i];
@@ -249,6 +249,47 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     return str_tokens;
 }
 
+String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array)
+{
+
+    MASSERT(s);
+    MASSERT(delimiter_array);
+
+    String_Tokenizer* str_tokens = malloc(sizeof(String_Tokenizer));
+    //theoretically the longest it can be
+    str_tokens->strings = malloc(sizeof(String *) * s->length);
+    str_tokens->number_of_strings = 0;
+
+
+    u64 prev_index = 0;
+    u64 index = 0;
+    while (index < s->length)
+    {
+        for (int i = 0; i < delimiter_array->length; i++)
+        {
+
+            if (s->chars[index] == delimiter_array->chars[i])
+            {
+                String* temp = string_slice_from_to(s, prev_index, index + 1);
+                str_tokens->strings[str_tokens->number_of_strings] = temp;
+                str_tokens->number_of_strings++;
+                prev_index = index + 1;
+                index++;
+                break;
+            }
+        }
+
+        index++;
+    }
+    //in this implementation I will be returning the last string
+    String* temp = string_slice_from_to(s, prev_index, index);
+    str_tokens->strings[str_tokens->number_of_strings] = temp;
+    str_tokens->number_of_strings++;
+    return str_tokens;
+}
+
+
+
 //returns copy of the strings
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
 
@@ -318,11 +359,22 @@ void string_test()
         string_print(string_tokens->strings[i]);
     }
 
+    String* token_the_array = STRING_CREATE("Token; of; a bunch; of ; dumb shit ");
+    String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";")));
+    for (int i = 0; i < super_token->number_of_strings; i++)
+    {
+        string_print(super_token->strings[i]);
+    }
+
+
 
     const String* str_concat1 = STRING_CREATE("First ");
     const String* str_concat2 = STRING_CREATE("Second");
     String* str_concat_final = string_concat(str_concat1, str_concat2);
     string_print(str_concat_final);
+
+
+
 
 
     TEST_REPORT("STRING");
