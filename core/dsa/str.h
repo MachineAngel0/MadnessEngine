@@ -67,18 +67,17 @@ String* string_create_without_null_terminated(const char* word, const u64 length
 
 String* string_create_internal(const String* s)
 {
-    String* str = malloc(sizeof(String));
+    String* out_str = malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
 
     //important to note that we use -1 to not include the null terminated string
-    str->chars = (char *) malloc(sizeof(char) * s->length);
-    memset(str->chars, 0, sizeof(char) * s->length - 1);
+    out_str->chars = (char *) malloc(sizeof(char) * s->length);
+    memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
 
-    str->length = s->length;
+    out_str->length = s->length;
 
-    memcpy(str->chars, s->chars, sizeof(char) * s->length);
 
-    return str;
+    return out_str;
 };
 
 bool string_free(String* string)
@@ -104,7 +103,7 @@ bool string_free(String* string)
 }
 
 
-//this one gets created on the stack
+//this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed
 #define STRING_CREATE(string) string_create_from_null_terminated(string, sizeof(string))
@@ -112,7 +111,7 @@ bool string_free(String* string)
 
 
 //UTILITY
-void string_print(String* str)
+void string_print(const String* str)
 {
     MASSERT(str);
 
@@ -167,6 +166,28 @@ String* string_concat(const String* str1, const String* str2)
     return out_str;
 }
 
+String* string_strip_whitespace(String* str)
+{
+    String* out_string = string_duplicate(str);
+
+    //two pointer
+    u64 i = 0;
+    u64 j = 0; // iterates forward
+    while (j < str->length)
+    {
+        if (str->chars[j] != ' ')
+        {
+            out_string->chars[i] = str->chars[j];
+            i++;
+        }
+        j++;
+    }
+    //where ever i ends up is the new length of the string
+    out_string->length = i;
+    return out_string;
+}
+
+
 /*STRING SLICE*/
 
 String* string_slice_from(const String* s, const u64 slice_size)
@@ -219,6 +240,8 @@ typedef struct String_Tokenizer
     u64 number_of_strings;
 } String_Tokenizer;
 
+
+
 //creates a copy of the string/words passed in
 String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimiter)
 {
@@ -252,6 +275,8 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
 String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array)
 {
 
+    //so the behavior should be something like this: delimeter = "<>" before<token> ->  before,<, token, >
+
     MASSERT(s);
     MASSERT(delimiter_array);
 
@@ -270,11 +295,24 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
 
             if (s->chars[index] == delimiter_array->chars[i])
             {
-                String* temp = string_slice_from_to(s, prev_index, index + 1);
-                str_tokens->strings[str_tokens->number_of_strings] = temp;
+
+
+
+                //take everything before the delimiter,
+                if (index - prev_index > 0){
+                    String* temp = string_slice_from_to(s, prev_index, index);
+                    str_tokens->strings[str_tokens->number_of_strings] = temp;
+                    str_tokens->number_of_strings++;
+                }
+
+                //we want to isolate the delimiter
+                String* delimiter = string_slice_from_to(s, index, index+1);
+                str_tokens->strings[str_tokens->number_of_strings] = delimiter;
                 str_tokens->number_of_strings++;
+
+
                 prev_index = index + 1;
-                index++;
+                // index++;
                 break;
             }
         }
@@ -301,16 +339,16 @@ void string_test()
     String stack_string = STRING("I WAS BORN ON THE STACK, FREED BY IT");
     string_print(&stack_string);
 
+
+
     String* test1 = STRING_CREATE("testing something");
+    string_print(test1);
     String* test2 = string_create_from_null_terminated("testing something", sizeof("testing something"));
     string_print(test1);
     string_print(test2);
 
     string_free(test1);
     string_free(test2);
-
-
-    printf("STRING START \n");
 
     String* str1 = string_create_from_null_terminated("hello string", sizeof("hello string"));
     string_print(str1);
@@ -359,8 +397,8 @@ void string_test()
         string_print(string_tokens->strings[i]);
     }
 
-    String* token_the_array = STRING_CREATE("Token; of; a bunch; of ; dumb shit ");
-    String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";")));
+    String* token_the_array = STRING_CREATE("<Token>; of; a bunch; of ; dumb shit ");
+    String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";<> ")));
     for (int i = 0; i < super_token->number_of_strings; i++)
     {
         string_print(super_token->strings[i]);
@@ -373,6 +411,11 @@ void string_test()
     String* str_concat_final = string_concat(str_concat1, str_concat2);
     string_print(str_concat_final);
 
+
+    String* with_white_space = STRING_CREATE("I HAVE A LOT OF WHITE SPACE");
+    String* without_white_space = string_strip_whitespace(with_white_space);
+    string_print(with_white_space);
+    string_print(without_white_space);
 
 
 
