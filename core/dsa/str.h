@@ -344,6 +344,15 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
     return str_tokens;
 }
 
+void string_tokenizer_print(const String_Tokenizer* str_tokens)
+{
+    for (int i = 0; i < str_tokens->number_of_strings; i++)
+    {
+        string_print(str_tokens->strings[i]);
+    }
+}
+
+
 
 
 //returns copy of the strings
@@ -409,17 +418,12 @@ void string_test()
     String* string_for_token = STRING_CREATE("Creating a token of strings");
     String_Tokenizer* string_tokens = STRING_TOKENIZE(string_for_token);
     // TEST_DEBUG(string_tokens->number_of_strings == 5);
-    for (int i = 0; i < string_tokens->number_of_strings; i++)
-    {
-        string_print(string_tokens->strings[i]);
-    }
+    string_tokenizer_print(string_tokens);
+
 
     String* token_the_array = STRING_CREATE("<Token>; of; a bunch; of ; dumb shit ");
     String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";<> ")), true);
-    for (int i = 0; i < super_token->number_of_strings; i++)
-    {
-        string_print(super_token->strings[i]);
-    }
+    string_tokenizer_print(super_token);
 
 
 
