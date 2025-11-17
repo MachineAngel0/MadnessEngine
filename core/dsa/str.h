@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "defines.h"
 
 
 //TODO: refactor to ensure immutability, and ease of use with str_builder
