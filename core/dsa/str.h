@@ -240,7 +240,13 @@ typedef struct String_Tokenizer
     u64 number_of_strings;
 } String_Tokenizer;
 
-
+//TODO: idk of i really want to implement this
+typedef enum DELIMITER_BEHAVIOR
+{
+    DELIMITER_ISOLATE, // this should be default behavior, gives the delimiter its own string
+    DELIMITER_INCLUDE, // will be the last char of the entire string
+    DELIMITER_REMOVE, // will not be included
+} DELIMITER_BEHAVIOR;
 
 //creates a copy of the string/words passed in
 String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimiter)
@@ -255,6 +261,8 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     u64 index = 0;
     while (index < s->length)
     {
+
+
         if (s->chars[index] == delimiter)
         {
             String* temp = string_slice_from_to(s, prev_index, index + 1);
@@ -272,9 +280,8 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     return str_tokens;
 }
 
-String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array)
+String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array, bool ignore_whitespace)
 {
-
     //so the behavior should be something like this: delimeter = "<>" before<token> ->  before,<, token, >
 
     MASSERT(s);
@@ -290,6 +297,16 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
     u64 index = 0;
     while (index < s->length)
     {
+        if (ignore_whitespace)
+        {
+            if (s->chars[index] == ' ')
+            {
+                prev_index = index + 1;
+                index++;
+                continue;
+            }
+        }
+
         for (int i = 0; i < delimiter_array->length; i++)
         {
 
@@ -330,7 +347,6 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
 
 //returns copy of the strings
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
-
 
 void string_test()
 {
@@ -398,7 +414,7 @@ void string_test()
     }
 
     String* token_the_array = STRING_CREATE("<Token>; of; a bunch; of ; dumb shit ");
-    String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";<> ")));
+    String_Tokenizer* super_token = string_tokenize_delimiter_array(token_the_array, &(STRING(";<> ")), true);
     for (int i = 0; i < super_token->number_of_strings; i++)
     {
         string_print(super_token->strings[i]);
