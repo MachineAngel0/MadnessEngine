@@ -50,7 +50,9 @@ void array_print(Array* array, void (*print_func)(void*))
 {
     for (u64 i = 0; i < array->num_items; i++)
     {
-        print_func(&array->data[i * array->stride]);
+        print_func(
+            (void*)((u8*)array->data + (i * array->stride))
+                );
     }
     printf("\n");
 }
@@ -77,7 +79,9 @@ void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void
 
     for (u64 i = start; i < end; i++)
     {
-        print_func(&array->data[i * array->stride]);
+        print_func(
+            (void*)((u8*)array->data + (i * array->stride))
+            );
     }
     printf("\n");
 }

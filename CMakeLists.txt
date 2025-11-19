@@ -98,7 +98,13 @@ add_executable(CORE_UNIT_TEST
 
 
 if (WIN32)
-    SET(MADNESS_WIN_LIBS Xinput winmm Vulkan::Vulkan )
+    SET(MADNESS_WIN_LIBS
+            Vulkan::Vulkan
+            Xinput
+            winmm
+            xaudio2
+            ole32
+    )
 
     target_link_libraries(MadnessEngine PRIVATE ${MADNESS_WIN_LIBS})
     target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_WIN_LIBS})

@@ -165,7 +165,7 @@ void stack_print(const stack* stack, void (*print_func)(void*))
 {
     for (int i = 0; i < stack->num_items; i++)
     {
-        print_func(&stack->data[i * stack->stride]);
+        print_func((void*)((u8*)stack->data + (i * stack->stride)));
     }
     printf("\n"); // number of bytes
 }
@@ -173,6 +173,7 @@ void stack_print(const stack* stack, void (*print_func)(void*))
 
 void stack_test()
 {
+    TEST_START("STACK");
     printf("Stack Start\n"); // number of bytes
 
     int num = 3;
@@ -207,6 +208,8 @@ void stack_test()
 
 
     printf("Stack End\n\n"); // number of bytes
+    TEST_REPORT("STACK");
+
 }
 
 #endif //STACK_H

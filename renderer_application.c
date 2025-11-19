@@ -40,6 +40,12 @@ bool application_on_resized(u16 code, void* sender, void* listener_inst, event_c
 
 bool application_renderer_create(struct renderer* renderer)
 {
+    //TODO: refactored out, just here now for testing
+    // init_windows_audio();
+
+
+
+
     //set the renderer
     app_state.renderer = renderer;
 
@@ -54,6 +60,7 @@ bool application_renderer_create(struct renderer* renderer)
     // Initialize subsystems.
     event_init(app_state.application_memory_arena);
     input_init(app_state.application_memory_arena);
+    audio_system_init();
 
 
     event_register(EVENT_APP_QUIT, 10, application_on_event);
@@ -96,6 +103,7 @@ bool application_renderer_create(struct renderer* renderer)
 
 
     //shutdown subsystems
+    audio_system_shutdown();
     input_shutdown();
     event_shutdown();
 

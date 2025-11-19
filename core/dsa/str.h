@@ -5,14 +5,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include "defines.h"
 
 
 //TODO: refactor to ensure immutability, and ease of use with str_builder
 
-//immutable string, not meant to be modified
+//immutable string, not meant to be modified,
+//all functions that need to make modifications will return you a new string, leaving the original untouched
 typedef struct String
 {
     char* chars;

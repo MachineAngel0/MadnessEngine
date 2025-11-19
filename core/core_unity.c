@@ -10,6 +10,7 @@
 #include "../core/unit_test.h"
 #include "../core/memory_tracker.h"
 #include "../core/c_string.h"
+#include "../core/id_gen.h"
 
 
 //CORE - SERIALIZATION
