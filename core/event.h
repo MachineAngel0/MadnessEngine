@@ -130,6 +130,12 @@ bool event_shutdown()
 
 void event_register(const event_type event, const uint32_t subscriber, const on_event callback)
 {
+
+    if (!is_event_system_init)
+    {
+        WARN("EVENT REGISTER: SYSTEM NOT INIT")
+    }
+
     //TODO: hook in the linear allocator for this
     //check if the event arr has been alloacated
     if (event_state.events_table[event].subs_arr == NULL)

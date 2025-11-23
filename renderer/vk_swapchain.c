@@ -14,9 +14,9 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     //choose a swap surface format, that suits our needs
     bool found = false;
 
-    for (u32 i = 0; i < context->device.swapchain_support.format_count; i++)
+    for (u32 i = 0; i < context->device.swapchain_capabilities.format_count; i++)
     {
-        VkSurfaceFormatKHR current_surface_format = context->device.swapchain_support.formats[i];
+        VkSurfaceFormatKHR current_surface_format = context->device.swapchain_capabilities.formats[i];
         //Preferred formats
         //NOTE: very unlikely to not have these format, but we can always create a second loop to find another ideal format
         if (current_surface_format.format == VK_FORMAT_R8G8B8A8_UNORM &&
@@ -32,14 +32,14 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     if (!found)
     {
         M_ERROR("NO IDEAL SWAPCHAIN FORMAT FOUND, PICKING FIRST AVAILABLE");
-        swapchain_out->surface_format = context->device.swapchain_support.formats[0];
+        swapchain_out->surface_format = context->device.swapchain_capabilities.formats[0];
     }
 
     //best to use mailbox mode (best for games) or fifo(basically vsync) (is always supported)
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (u32 i = 0; i < context->device.swapchain_support.present_mode_count; i++)
+    for (u32 i = 0; i < context->device.swapchain_capabilities.present_mode_count; i++)
     {
-        VkPresentModeKHR current_present_mode = context->device.swapchain_support.present_modes[i];
+        VkPresentModeKHR current_present_mode = context->device.swapchain_capabilities.present_modes[i];
         if (current_present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
         {
             present_mode = current_present_mode;
@@ -49,25 +49,25 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
 
     //requery swapchain support, needed if a device was changed or resolution was changed
     vulkan_device_query_swapchain_support(context->device.physical_device, context->surface,
-                                          &context->device.swapchain_support);
+                                          &context->device.swapchain_capabilities);
 
     //set the swapchain extend, in the event anything happens
-    if (context->device.swapchain_support.capabilities.currentExtent.width != UINT32_MAX)
+    if (context->device.swapchain_capabilities.capabilities.currentExtent.width != UINT32_MAX)
     {
-        swapchain_extent = context->device.swapchain_support.capabilities.currentExtent;
+        swapchain_extent = context->device.swapchain_capabilities.capabilities.currentExtent;
     }
-    VkExtent2D min = context->device.swapchain_support.capabilities.minImageExtent;
-    VkExtent2D max = context->device.swapchain_support.capabilities.maxImageExtent;
+    VkExtent2D min = context->device.swapchain_capabilities.capabilities.minImageExtent;
+    VkExtent2D max = context->device.swapchain_capabilities.capabilities.maxImageExtent;
 
     swapchain_extent.width = clamp_int(swapchain_extent.width, min.width, max.width);
     swapchain_extent.height = clamp_int(swapchain_extent.height, min.height, max.height);
 
-    u32 image_count = context->device.swapchain_support.capabilities.minImageCount + 1;
+    u32 image_count = context->device.swapchain_capabilities.capabilities.minImageCount + 1;
     // in the event our image count is for some reason greater than the max allowed
-    if (context->device.swapchain_support.capabilities.minImageCount > 0 && image_count >
-        context->device.swapchain_support.capabilities.maxImageCount)
+    if (context->device.swapchain_capabilities.capabilities.minImageCount > 0 && image_count >
+        context->device.swapchain_capabilities.capabilities.maxImageCount)
     {
-        image_count = context->device.swapchain_support.capabilities.maxImageCount;
+        image_count = context->device.swapchain_capabilities.capabilities.maxImageCount;
     }
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {};
@@ -101,7 +101,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     }
 
     //portrait vs landscape
-    swapchain_create_info.preTransform = context->device.swapchain_support.capabilities.currentTransform;
+    swapchain_create_info.preTransform = context->device.swapchain_capabilities.capabilities.currentTransform;
     //compositing with the operating system, wont ever need this
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_create_info.presentMode = present_mode;
@@ -241,8 +241,7 @@ void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapcha
         FATAL("FAILED TO PRESENT SWAPCHAIN IMAGE!")
     }
 
-    // Increment (and loop) the index.
-    context->current_frame = (context->current_frame + 1) % swapchain->max_frames_in_flight;
+
 }
 
 bool recreate_swapchain(vulkan_context* context)
@@ -260,17 +259,13 @@ bool recreate_swapchain(vulkan_context* context)
     // Wait for any operations to complete.
     vkDeviceWaitIdle(context->device.logical_device);
 
-    // Clear these out just in case.
-    for (u32 i = 0; i < context->swapchain.image_count; ++i)
-    {
-        context->images_in_flight[i] = 0;
-    }
+
 
     // Requery support
     vulkan_device_query_swapchain_support(
         context->device.physical_device,
         context->surface,
-        &context->device.swapchain_support);
+        &context->device.swapchain_capabilities);
     vulkan_device_detect_depth_format(&context->device);
 
     vulkan_swapchain_recreate(context,
@@ -287,8 +282,8 @@ bool recreate_swapchain(vulkan_context* context)
     // cleanup swapchain
     for (u32 i = 0; i < context->swapchain.image_count; ++i)
     {
-        vulkan_command_buffer_free(context, context->device.graphics_command_pool,
-                                   &context->graphics_command_buffers[i]);
+        vulkan_command_buffer_free(context, context->graphics_command_pool,
+                                   &context->graphics_command_buffer[i]);
     }
 
     // Framebuffers.

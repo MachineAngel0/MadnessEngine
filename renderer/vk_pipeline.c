@@ -13,7 +13,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
                                      VkViewport viewport,
                                      VkRect2D scissor,
                                      b8 is_wireframe,
-                                     vulkan_pipeline* out_pipeline)
+                                     vulkan_shader_pipeline* out_pipeline)
 {
     // Viewport state
     VkPipelineViewportStateCreateInfo viewport_state = {VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
@@ -154,7 +154,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
         1,
         &pipeline_create_info,
         context->allocator,
-        &out_pipeline->handle);
+        &out_pipeline->pipeline_handle);
 
 
     return true;
@@ -168,28 +168,34 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
     // return false;
 }
 
-void vulkan_pipeline_destroy(vulkan_context* context, vulkan_pipeline* pipeline)
+void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline)
 {
-    if (pipeline)
+    if (!pipeline)
     {
-        // Destroy pipeline
-        if (pipeline->handle)
-        {
-            vkDestroyPipeline(context->device.logical_device, pipeline->handle, context->allocator);
-            pipeline->handle = 0;
-        }
-
-        // Destroy layout
-        if (pipeline->pipeline_layout)
-        {
-            vkDestroyPipelineLayout(context->device.logical_device, pipeline->pipeline_layout, context->allocator);
-            pipeline->pipeline_layout = 0;
-        }
+        M_ERROR("VK PIPELINE DESTROY: INVALID PIPELINE");
+        return;
     }
+    // Destroy pipeline
+    if (!pipeline->pipeline_handle)
+    {
+        M_ERROR("VK PIPELINE DESTROY: INVALID PIPELINE HANDLE");
+        return;
+    }
+    // Destroy layout
+    if (!pipeline->pipeline_layout)
+    {
+        M_ERROR("VK PIPELINE DESTROY: INVALID PIPELINE LAYOUT");
+        return;
+    }
+
+    vkDestroyPipelineLayout(context->device.logical_device, pipeline->pipeline_layout, context->allocator);
+    pipeline->pipeline_layout = 0;
+    vkDestroyPipeline(context->device.logical_device, pipeline->pipeline_handle, context->allocator);
+    pipeline->pipeline_handle = 0;
 }
 
-void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point,
-                          vulkan_pipeline* pipeline)
+void vulkan_pipeline_bind(command_buffer* command_buffer, VkPipelineBindPoint bind_point,
+                          vulkan_shader_pipeline* pipeline)
 {
-    vkCmdBindPipeline(command_buffer->command_buffer_handle, bind_point, pipeline->handle);
+    vkCmdBindPipeline(command_buffer->command_buffer_handle, bind_point, pipeline->pipeline_handle);
 }

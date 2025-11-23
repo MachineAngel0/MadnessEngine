@@ -6,6 +6,7 @@
 // #include "UI.h"
 // #include "vk_descriptor.h"
 
+
 #include "vulkan/vulkan.h"
 #include "vulkan_types.h"
 #include "vk_swapchain.c"
@@ -18,6 +19,8 @@
 #include "vk_framebuffer.c"
 #include "vk_pipeline.c"
 #include "vk_vertex.c"
+#include "vk_vertex_buffer.h"
+#include "camera.h"
 #include "renderer.c"
 
 

@@ -590,7 +590,7 @@ uint32_t get_size(char* format)
 }
 
 
-bool pack_unpack_test()
+void pack_unpack_test()
 {
 
     bool serilization_passing = true;
@@ -698,6 +698,4 @@ bool pack_unpack_test()
     // printf("%d, %d, %d, %d, %f\n", magic, ps2, monkeycount, altitude, absurdityfactor);
 
     TEST_REPORT("NETWORK SERIALIZATION");
-
-
 }

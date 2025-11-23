@@ -18,24 +18,24 @@ MINLINE vec2 vec2_one()
     return (vec2){1.0f, 1.0f};
 }
 
-MINLINE vec2 vec2_left()
-{
-    return (vec2){1.0f, 0.0f};
-}
-
 MINLINE vec2 vec2_up()
-{
-    return (vec2){1.0f, 0.0f};
-}
-
-MINLINE vec2 vec2_right()
 {
     return (vec2){0.0f, 1.0f};
 }
 
 MINLINE vec2 vec2_down()
 {
-    return (vec2){0.0f, 1.0f};
+    return (vec2){0.0f, -1.0f};
+}
+
+MINLINE vec2 vec2_left()
+{
+    return (vec2){-1.0f, 0.0f};
+}
+
+MINLINE vec2 vec2_right()
+{
+    return (vec2){1.0f, 0.0f};
 }
 
 
@@ -114,26 +114,38 @@ MINLINE vec3 vec3_one()
 }
 
 // TODO: decide which coordinate system you want
-// MINLINE vec3 vec3_left()
-// {
-//     return (vec3){1.0f, 0.0f};
-// }
-//
-// MINLINE vec3 vec3_up()
-// {
-//     return (vec3){1.0f, 0.0f};
-// }
-//
-// MINLINE vec3 vec3_right()
-// {
-//     return (vec3){0.0f, 1.0f};
-// }
-//
-// MINLINE vec3 vec3_down()
-// {
-//     return (vec3){0.0f, 1.0f};
-// }
+// Z Up, left handed
+// Left-handed system: +X right, +Z up, +Y forward
 
+MINLINE vec3 vec3_up()
+{
+    return (vec3){0.0f, 0.0f, 1.0f};
+}
+
+MINLINE vec3 vec3_down()
+{
+    return (vec3){0.0f, 0.0f, -1.0f};
+}
+
+MINLINE vec3 vec3_left()
+{
+    return (vec3){-1.0f, 0.0f, 0.0f};
+}
+
+MINLINE vec3 vec3_right()
+{
+    return (vec3){1.0f, 0.0f, 0.0f};
+}
+
+MINLINE vec3 vec3_forward()
+{
+    return (vec3){0.0f, 1.0f, 0.0f};;
+}
+
+MINLINE vec3 vec3_back()
+{
+    return (vec3){0.0f, -1.0f, 0.0f};;
+}
 
 MINLINE vec3 vec3_add(const vec3 a, const vec3 b)
 {
@@ -349,9 +361,9 @@ MINLINE mat3 mat3_identity()
 {
     mat3 out_mat3;
     memset(&out_mat3, 0, sizeof(float) * 9);
-    out_mat3.data[0] = 0;
-    out_mat3.data[5] = 0;
-    out_mat3.data[10] = 0;
+    out_mat3.data[0] = 1.0f;
+    out_mat3.data[5] = 1.0f;
+    out_mat3.data[10] = 1.0f;
     return out_mat3;
 }
 
@@ -639,14 +651,28 @@ MINLINE mat3 mat3_skew(float t, const vec3 a, const vec3 b)
 
 
 /*** MATRIX4 ***/
+
+MINLINE void mat4_set_value(mat4 matrix, const u8 row, const u8 col, const float val)
+{
+    u8 stride = 4;
+    matrix.data[(row * stride) + col] = val;
+}
+
+
+MINLINE mat4 mat4_zero()
+{
+    mat4 out_mat4 = {0};
+    return out_mat4;
+}
+
 MINLINE mat4 mat4_identity()
 {
     mat4 out_mat4;
     memset(&out_mat4, 0, sizeof(float) * 16);
-    out_mat4.data[0] = 0;
-    out_mat4.data[5] = 0;
-    out_mat4.data[10] = 0;
-    out_mat4.data[15] = 0;
+    out_mat4.data[0] = 1.0f;
+    out_mat4.data[5] = 1.0f;
+    out_mat4.data[10] = 1.0f;
+    out_mat4.data[15] = 1.0f;
     return out_mat4;
 }
 
@@ -680,9 +706,9 @@ MINLINE mat4 mat4_orthographic(const f32 left, const f32 right, const f32 bottom
 {
     mat4 out_mat = mat4_identity();
 
-    const f32 lr = 1.0f / (left + right);
-    const f32 bt = 1.0f / (top + bottom);
-    const f32 nf = 1.0f / (near_clip + far_clip);
+    const f32 lr = 1.0f / (right - left);
+    const f32 bt = 1.0f / (top - bottom);
+    const f32 nf = 1.0f / (far_clip - near_clip);
 
     out_mat.rows[0].x = -2.0f * lr;
     out_mat.rows[5].x = -2.0f * bt;
@@ -713,16 +739,16 @@ MINLINE mat4 mat4_perspective(const f32 fov_radians, const f32 aspect_ratio, con
 
 MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
 {
-    mat4 out_mat;
-    vec3 z_axis;
+    mat4 out_mat = mat4_zero();
+    vec3 z_axis = vec3_zero();
 
     z_axis.x = target.x - position.x;
     z_axis.y = target.y - position.y;
     z_axis.z = target.z - position.z;
 
     z_axis = vec3_normalize_functional(z_axis);
-    vec3 x_axis = vec3_normalize_functional(vec3_cross(z_axis, up));
-    vec3 y_axis = vec3_cross(up, z_axis);
+    vec3 x_axis = vec3_normalize_functional(vec3_cross(up, z_axis));
+    vec3 y_axis = vec3_cross(z_axis, up);
 
     out_mat.data[0] = x_axis.x;
     out_mat.data[1] = y_axis.x;
@@ -1080,32 +1106,14 @@ MINLINE quat quat_inverse(const quat q)
 }
 
 
-MINLINE quat quat_mul(const quat q_0, const quat q_1)
+MINLINE quat quat_mul(const quat q0, const quat q1)
 {
     quat out_quaternion;
 
-    out_quaternion.x = q_0.x * q_1.w +
-                       q_0.y * q_1.z -
-                       q_0.z * q_1.y +
-                       q_0.w * q_1.x;
-
-
-    out_quaternion.y = -q_0.x * q_1.z +
-                       q_0.y * q_1.w +
-                       q_0.z * q_1.x +
-                       q_0.w * q_1.y;
-
-
-    out_quaternion.z = q_0.x * q_1.y -
-                       q_0.y * q_1.x +
-                       q_0.z * q_1.w +
-                       q_0.w * q_1.z;
-
-
-    out_quaternion.w = -q_0.x * q_1.x -
-                       q_0.y * q_1.y -
-                       q_0.z * q_1.z +
-                       q_0.w * q_1.w;
+    out_quaternion.x = q0.w * q1.x + q0.x * q1.w + q0.y * q1.z - q0.z * q1.y;
+    out_quaternion.y = q0.w * q1.y - q0.x * q1.z + q0.y * q1.w + q0.z * q1.x;
+    out_quaternion.z = q0.w * q1.z + q0.x * q1.y - q0.y * q1.x + q0.z * q1.w;
+    out_quaternion.w = q0.w * q1.w - q0.x * q1.x - q0.y * q1.y - q0.z * q1.z;
 
     return out_quaternion;
 }
@@ -1120,8 +1128,6 @@ MINLINE f32 quat_dot(quat q_0, quat q_1)
 }
 
 // Calculates a rotation matrix based on the quaternion and the passed in center point.
-
-
 MINLINE mat4 quat_to_rotation_matrix(quat q, vec3 center)
 {
     mat4 out_matrix;
@@ -1148,7 +1154,7 @@ MINLINE mat4 quat_to_rotation_matrix(quat q, vec3 center)
     return out_matrix;
 }
 
-
+// Creates a quaternion from the given axis and angle.
 MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const b8 normalize)
 {
     const f32 half_angle = 0.5f * angle;
@@ -1166,7 +1172,7 @@ MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const b8 nor
     return q;
 }
 
-
+//  Calculates spherical linear interpolation of a given percentage between two quaternions.
 MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
 {
     quat out_quaternion;

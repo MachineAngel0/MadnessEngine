@@ -5,6 +5,16 @@
 
 #include "defines.h"
 
+
+typedef enum Direction
+{
+    DIRECTION_UP,
+    DIRECTION_DOWN,
+    DIRECTION_LEFT,
+    DIRECTION_RIGHT,
+} Direction;
+
+
 typedef union vec2f
 {
     f32 elements[2];
@@ -45,9 +55,7 @@ typedef union vec3f
             f32 z, b, w;
         };
     };
-
 } vec3;
-
 
 
 typedef union vec4f
@@ -77,7 +85,6 @@ typedef union vec4f
         };
     };
 } vec4;
-
 
 
 typedef vec2 Position_2D;
@@ -154,22 +161,22 @@ typedef union vec4i
 } vec4i;
 
 //col major
-typedef union mat3_u
+typedef union mat3_f
 {
     // alignas(16) // idk if this is necessary
     float data[9];
     float n[3][3];
     vec3 rows[3];
-}mat3;
+} mat3;
 
 
 // typedef union alignas(16) mat4_u // apparently this is a thing
-typedef union mat4_u
+typedef union mat4_f
 {
     alignas(16) float data[16];
     // alignas(16) float two_d_arr[4][4];
     alignas(16) vec4 rows[4];
-}mat4;
+} mat4;
 
 
 #define MATH_E		2.7182818284590452354
@@ -193,10 +200,6 @@ typedef union mat4_u
 #define MS_TO_SEC(x) (1000.0f * x)
 #define SEC_TO_MS(x) (x / 1000.0f)
 #define INF	    1e30f // largest value available
-
-
-
-
 
 
 #endif //MATH_TYPES_H

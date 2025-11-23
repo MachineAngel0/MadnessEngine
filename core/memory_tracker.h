@@ -234,7 +234,7 @@ void memory_tracker_print_memory_usage()
     DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", memory.memory_subsystem_size);
 }
 
-bool memory_tracker_unit_test()
+void memory_tracker_unit_test()
 {
     //insta fail
     TEST_INFORM(memory_tracker_initialized);

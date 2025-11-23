@@ -6,40 +6,33 @@
 #include "vulkan_types.h"
 
 
-typedef struct Command_Buffer_Context
-{
-    VkCommandPool command_pool;
-    VkCommandBuffer* command_buffer; // darray
-} Command_Buffer_Context;
-
 
 // used by the renderer, the rest are helper functions
 void vulkan_renderer_command_buffers_create(vulkan_context* vk_context);
 void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context);
-;
 
 
 void vulkan_command_buffer_allocate(
     vulkan_context* context,
     VkCommandPool pool,
     bool is_primary,
-    vulkan_command_buffer* out_command_buffer);
+    command_buffer* out_command_buffer);
 
 
 void vulkan_command_buffer_free(
     vulkan_context* context,
     VkCommandPool pool,
-    vulkan_command_buffer* command_buffer);
+    command_buffer* command_buffer);
 
 
 void vulkan_command_buffer_begin(
-    vulkan_command_buffer* command_buffer,
+    command_buffer* command_buffer,
     bool is_single_use,
     bool is_renderpass_continue,
     bool is_simultaneous_use);
 
 
-void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer);
+void vulkan_command_buffer_end(command_buffer* command_buffer);
 
 
 /**
@@ -48,7 +41,7 @@ void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer);
 void vulkan_command_buffer_allocate_and_begin_single_use(
     vulkan_context* context,
     VkCommandPool pool,
-    vulkan_command_buffer* out_command_buffer);
+    command_buffer* out_command_buffer);
 
 /**
  * Ends recording, submits to and waits for queue operation and frees the provided command buffer.
@@ -56,7 +49,7 @@ void vulkan_command_buffer_allocate_and_begin_single_use(
 void vulkan_command_buffer_end_single_use(
     vulkan_context* context,
     VkCommandPool pool,
-    vulkan_command_buffer* command_buffer,
+    command_buffer* command_buffer,
     VkQueue queue);
 
 

@@ -175,7 +175,6 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
         {
             //for seeing what our memory is doing
             memory_tracker_print_memory_usage();
-            return TRUE;
         }
     }
     if (code == EVENT_KEY_RELEASED)
@@ -188,6 +187,8 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
             memory_tracker_print_memory_usage();
         }
     }
+
+    return false;
 }
 
 
@@ -229,7 +230,5 @@ bool application_on_resized(u16 code, void* sender, void* listener_inst, event_c
 
 
     // Event purposely not handled to allow other listeners to get this.
-
-
-    return FALSE;
+    return false;
 }

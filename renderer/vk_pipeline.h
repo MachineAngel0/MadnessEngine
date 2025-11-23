@@ -18,10 +18,10 @@ bool vulkan_graphics_pipeline_create(
     VkViewport viewport,
     VkRect2D scissor,
     b8 is_wireframe,
-    vulkan_pipeline* out_pipeline);
+    vulkan_shader_pipeline* out_pipeline);
 
-void vulkan_pipeline_destroy(vulkan_context* context, vulkan_pipeline* pipeline);
+void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline);
 
-void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_pipeline* pipeline);
+void vulkan_pipeline_bind(command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_shader_pipeline* pipeline);
 
 #endif

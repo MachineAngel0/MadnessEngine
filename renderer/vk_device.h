@@ -59,13 +59,13 @@ bool physical_device_meets_requirements(
     const VkPhysicalDeviceFeatures* features,
     const vulkan_physical_device_requirements* requirements,
     vulkan_physical_device_queue_family_info* out_queue_info,
-    vulkan_swapchain_support_info* out_swapchain_support);
+    vulkan_swapchain_capabilities_info* out_swapchain_support);
 
 
 void vulkan_device_query_swapchain_support(
     VkPhysicalDevice physical_device,
     VkSurfaceKHR surface,
-    vulkan_swapchain_support_info* out_support_info);
+    vulkan_swapchain_capabilities_info* out_support_info);
 
 /*get depth format from device*/
 bool vulkan_device_detect_depth_format(vulkan_device* device);

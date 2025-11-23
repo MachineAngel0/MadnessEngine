@@ -141,5 +141,8 @@ endforeach()
 
 
 #Here because ill get .dll missing errors
-# Force static linking approach for MinGW
-set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
+# Force static linking approach for MinGW and only MinGW
+if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+endif()
+

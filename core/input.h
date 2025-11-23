@@ -208,7 +208,7 @@ void input_update()
 }
 
 
-bool input_process_key(uint8_t key, bool pressed)
+void input_process_key(uint8_t key, bool pressed)
 {
     // Only handle this if the state actually changed.
     if (input_system.keyboard_current.keys[key] != pressed)
@@ -281,7 +281,7 @@ void input_get_mouse_pos(u16* out_x, u16* out_y)
      *out_y = input_system.mouse_current.y;
 }
 
-bool input_get_previous_mouse_pos(u16* out_x, u16* out_y)
+void input_get_previous_mouse_pos(u16* out_x, u16* out_y)
 {
     *out_x = input_system.mouse_previous.x;
     *out_y = input_system.mouse_previous.y;
@@ -290,7 +290,6 @@ bool input_get_previous_mouse_pos(u16* out_x, u16* out_y)
 bool input_is_mouse_button_pressed(uint8_t key)
 {
     return input_system.mouse_current.buttons[key] == true;
-
 }
 
 bool input_is_mouse_button_released(uint8_t key)

@@ -5,6 +5,7 @@
 #include <defines.h>
 #include "logger.h"
 #include "math_types.h"
+#include "vk_vertex.h"
 
 #define VK_CHECK(expr)              \
 {                                   \
@@ -80,19 +81,18 @@ typedef struct vulkan_swapchain_support_info
     VkSurfaceFormatKHR* formats;
     u32 present_mode_count;
     VkPresentModeKHR* present_modes;
-} vulkan_swapchain_support_info;
+} vulkan_swapchain_capabilities_info;
 
 typedef struct vulkan_device
 {
     VkPhysicalDevice physical_device;
     VkDevice logical_device;
-    vulkan_swapchain_support_info swapchain_support;
+    vulkan_swapchain_capabilities_info swapchain_capabilities;
 
     i32 graphics_queue_index;
     i32 present_queue_index;
     i32 transfer_queue_index;
 
-    VkCommandPool graphics_command_pool;
 
     //family queues
     VkQueue graphics_queue;
@@ -139,64 +139,95 @@ typedef struct vk_synchronization
     b8 is_signaled;
 } vulkan_fence;
 
-typedef enum vulkan_command_buffer_state
-{
-    COMMAND_BUFFER_STATE_READY,
-    COMMAND_BUFFER_STATE_RECORDING,
-    COMMAND_BUFFER_STATE_IN_RENDER_PASS,
-    COMMAND_BUFFER_STATE_RECORDING_ENDED,
-    COMMAND_BUFFER_STATE_SUBMITTED,
-    COMMAND_BUFFER_STATE_NOT_ALLOCATED
-} vulkan_command_buffer_state;
-
 
 typedef struct vulkan_command_buffer
 {
     // VkCommandPool command_pool; // TODO:
     VkCommandBuffer command_buffer_handle;
-    // Command buffer state.
-    vulkan_command_buffer_state state;
-} vulkan_command_buffer;
 
-typedef struct vulkan_shader_stage {
+} command_buffer;
+
+typedef struct vulkan_shader_stage
+{
     VkShaderModuleCreateInfo create_info;
     VkShaderModule handle;
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
 
 
-typedef struct vulkan_pipeline {
-    VkPipeline handle;
+typedef enum pipeline_type
+{
+    PIPELINE_GRAPHICS,
+    PIPELINE_COMPUTE,
+} pipeline_type;
+
+typedef struct vulkan_shader_pipeline
+{
+    pipeline_type type; // NOTE: not in use rn
     VkPipelineLayout pipeline_layout;
-} vulkan_pipeline;
+    VkPipeline pipeline_handle;
+} vulkan_shader_pipeline;
 
-#define OBJECT_SHADER_STAGE_COUNT 2
-typedef struct vulkan_object_shader {
-    // vertex, fragment
-    vulkan_shader_stage stages[OBJECT_SHADER_STAGE_COUNT];
-    vulkan_pipeline pipeline;
-} vulkan_object_shader;
+typedef struct vertex_info
+{
+    //TODO: they should be darrays or arenas, but for now its fine
+    vertex_3d vertices[1000];
+    u64 vertices_size;
+    uint16_t indices[1000];
+    u64 indices_size;
+} vertex_info;
+
+typedef struct vertex_buffer
+{
+    VkBuffer vertex_buffer;
+    VkDeviceMemory vertex_buffer_memory;
+
+    VkBuffer vertex_staging_buffer;
+    VkDeviceMemory vertex_staging_buffer_memory;
+
+    VkBuffer index_buffer;
+    VkDeviceMemory index_buffer_memory;
+
+    VkBuffer index_staging_buffer;
+    VkDeviceMemory index_staging_buffer_memory;
+
+    void* data_vertex;
+    VkDeviceSize vertex_buffer_capacity;
+    void* data_index;
+    VkDeviceSize index_buffer_capacity;
+} vertex_buffer;
 
 
+typedef struct vulkan_uniform_buffer
+{
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
 
+    //all arrays
+    VkBuffer* uniformBuffers;
+    VkDeviceMemory* uniformBuffersMemory;
+    void** uniformBuffersMapped;
+} vulkan_uniform_buffer;
 
-typedef struct vulkan_buffer {
+typedef struct vulkan_buffer
+{
     u64 total_size;
     VkBuffer handle;
     VkBufferUsageFlagBits usage;
-    b8 is_locked;
     VkDeviceMemory memory;
-    i32 memory_index;
-    u32 memory_property_flags;
 } vulkan_buffer;
+
+
+
 
 typedef struct vulkan_context
 {
     bool is_init;
 
-
+    //Instance
     VkInstance instance;
 
+    //Validation Layer
     VkAllocationCallbacks* allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
 
@@ -218,15 +249,26 @@ typedef struct vulkan_context
     u32 current_frame;
     bool recreating_swapchain;
 
-
-    vulkan_buffer object_vertex_buffer;
-    vulkan_buffer object_index_buffer;
-    vulkan_object_shader object_shader;
     //renderpass
     vulkan_renderpass main_renderpass;
 
     //command buffers
-    vulkan_command_buffer* graphics_command_buffers; // darray
+    VkCommandPool graphics_command_pool;
+    command_buffer* graphics_command_buffer; // darray
+
+    //TODO: vertex buffers and vertex data, here for now
+    vertex_buffer default_vertex_buffer;
+    vertex_info default_vertex_info;
+
+    //TODO: temporary for now
+    VkDescriptorSetLayout default_shader_descriptor_set_layout;
+    //Shader
+    vulkan_shader_pipeline default_shader_pipelines;
+    vulkan_uniform_buffer global_uniform_buffers;
+    VkDescriptorPool descriptor_pool;
+
+    VkDescriptorSetLayout* per_frame_set_layouts;
+    VkDescriptorSet* descriptorSets;
 
     //Semaphores and Fences
     VkSemaphore* image_available_semaphores; // darray
@@ -234,8 +276,6 @@ typedef struct vulkan_context
     u32 in_flight_fence_count;
     vulkan_fence* in_flight_fences;
 
-    // Holds pointers to fences which exist and are owned elsewhere.
-    vulkan_fence** images_in_flight;
 
 
 } vulkan_context;

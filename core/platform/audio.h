@@ -11,6 +11,7 @@
 #define MA_IMPLEMENTATION
 #include "miniaudio.h"
 
+//TODO: move into the platform layer
 #if MPLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -19,7 +20,6 @@
 #if MPLATFORM_LINUX
 #endif // MPLATFORM_LINUX
 
-//TODO: when done move into the platform layer, leave this as the higher level api
 
 
 typedef HRESULT WINAPI DSoundCreate(LPCGUID, LPDIRECTSOUND*, LPUNKNOWN);
@@ -60,6 +60,8 @@ bool audio_system_init()
 
     if (use_third_party)
     {
+        // https://github.com/mackron/miniaudio
+
         ma_result result;
 
         result = ma_engine_init(NULL, &engine);
@@ -656,6 +658,8 @@ bool init_windows_audio()
     xaudioBuffer.pAudioData = audioData.data;
     xaudioBuffer.Flags = XAUDIO2_END_OF_STREAM;
     playSound();
+
+    return true;
 }
 
 

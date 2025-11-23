@@ -1,22 +1,67 @@
-﻿//
-// Created by Adams Humbert on 9/10/2025.
-//
-
-#ifndef VK_VERTEX_H
+﻿#ifndef VK_VERTEX_H
 #define VK_VERTEX_H
 
 #include <stdalign.h>
 #include <vulkan/vulkan.h>
 
 
-
-
 typedef struct vertex_3d
 {
-    vec3 position;
-}vertex_3d;
+    vec3 pos;
+} vertex_3d;
+
+const vertex_3d test_vertices[] = {
+    {{-0.5f, -0.5f}},
+    {{0.5f, -0.5f}},
+    {{0.5f, 0.5f}},
+    {{-0.5f, 0.5f}}
+};
 
 
+const uint16_t test_indices[] = {
+    0, 1, 2, 2, 3, 0
+};
+
+typedef struct uniform_buffer_object
+{
+    alignas(16) mat4 model;
+    alignas(16) mat4 view;
+    alignas(16) mat4 proj;
+}uniform_buffer_object;
+
+
+VkVertexInputBindingDescription getBindingDescription()
+{
+    VkVertexInputBindingDescription bindingDescription = {0};
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(vertex_3d);
+    /*
+    * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
+    VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
+     */
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return bindingDescription;
+}
+
+VkVertexInputAttributeDescription* getAttributeDescriptions()
+{
+    VkVertexInputAttributeDescription* attributeDescriptions = malloc(sizeof(VkVertexInputAttributeDescription) * 1);
+
+    //position
+    attributeDescriptions[0].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof(vertex_3d, pos); //offsetof is pretty interesting
+
+    // //color
+    // attributeDescriptions[1].binding = 0;
+    // attributeDescriptions[1].location = 1;
+    // attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    // attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+    return attributeDescriptions;
+}
 
 
 // struct Vertex
@@ -104,7 +149,6 @@ typedef struct vertex_3d
 // *Allocate a descriptor set from a descriptor pool
 // *Bind the descriptor set during rendering
 //  */
-
 
 
 #endif //VK_VERTEX_H

@@ -3,84 +3,86 @@
 
 #include "defines.h"
 
-// Holds a handle to a file.
-typedef struct file_handle {
-    // Opaque handle to internal file handle.
-    void* handle;
-    bool is_valid;
-} file_handle;
+// // Holds a handle to a file.
+// typedef struct file_handle {
+//     // Opaque handle to internal file handle.
+//     void* handle;
+//     bool is_valid;
+// } file_handle;
+//
+// typedef enum file_modes {
+//     FILE_MODE_READ = 0x1,
+//     FILE_MODE_WRITE = 0x2
+// } file_modes;
 
-typedef enum file_modes {
-    FILE_MODE_READ = 0x1,
-    FILE_MODE_WRITE = 0x2
-} file_modes;
 
-/**
- * Checks if a file with the given path exists.
- * @param path The path of the file to be checked.
- * @returns True if exists; otherwise false.
- */
-bool filesystem_exists(const char* path);
+typedef struct file_read_data
+{
+    char* data;
+    u64 size;
+}file_read_data;
 
-/**
- * Attempt to open file located at path.
- * @param path The path of the file to be opened.
- * @param mode Mode flags for the file when opened (read/write). See file_modes enum in filesystem.h.
- * @param binary Indicates if the file should be opened in binary mode.
- * @param out_handle A pointer to a file_handle structure which holds the handle information.
- * @returns True if opened successfully; otherwise false.
- */
-bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle);
+void file_read_data_free(file_read_data* file_data)
+{
+    free(file_data->data);
+}
 
-/**
- * Closes the provided handle to a file.
- * @param handle A pointer to a file_handle structure which holds the handle to be closed.
- */
- void filesystem_close(file_handle* handle);
 
-/**
- * Reads up to a newline or EOF. Allocates *line_buf, which must be freed by the caller.
- * @param handle A pointer to a file_handle structure.
- * @param line_buf A pointer to a character array which will be allocated and populated by this method.
- * @returns True if successful; otherwise false.
- */
-bool filesystem_read_line(file_handle* handle, char** line_buf);
 
-/**
- * Writes text to the provided file, appending a '\n' afterward.
- * @param handle A pointer to a file_handle structure.
- * @param text The text to be written.
- * @returns True if successful; otherwise false.
- */
- bool filesystem_write_line(file_handle* handle, const char* text);
+bool filesystem_open_and_return_bytes(const char* file_path, file_read_data* file_data)
+{
+    FILE* fptr = fopen(file_path, "rb");
+    if (!fptr)
+    {
+        WARN("FILE OPEN AND RETURN BYTES: FAILED TO OPEN FILE %s", file_path);
+        return false;
+    }
 
-/**
- * Reads up to data_size bytes of data into out_bytes_read.
- * Allocates *out_data, which must be freed by the caller.
- * @param handle A pointer to a file_handle structure.
- * @param data_size The number of bytes to read.
- * @param out_data A pointer to a block of memory to be populated by this method.
- * @param out_bytes_read A pointer to a number which will be populated with the number of bytes actually read from the file.
- * @returns True if successful; otherwise false.
- */
- bool filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+    // go to the end of the file and get the size
+    fseek(fptr, 0, SEEK_END);
+    file_data->size = ftell(fptr);
+    file_data->data = malloc(file_data->size);
+    rewind(fptr); // goes to the start of the file
 
-/**
- * Reads up to data_size bytes of data into out_bytes_read.
- * Allocates *out_bytes, which must be freed by the caller.
- * @param handle A pointer to a file_handle structure.
- * @param out_bytes A pointer to a byte array which will be allocated and populated by this method.
- * @param out_bytes_read A pointer to a number which will be populated with the number of bytes actually read from the file.
- * @returns True if successful; otherwise false.
- */
- bool filesystem_read_all_bytes(file_handle* handle, u8** out_bytes, u64* out_bytes_read);
+    fread(file_data->data, 1, file_data->size, fptr);
 
-/**
- * Writes provided data to the file.
- * @param handle A pointer to a file_handle structure.
- * @param data_size The size of the data in bytes.
- * @param data The data to be written.
- * @param out_bytes_written A pointer to a number which will be populated with the number of bytes actually written to the file.
- * @returns True if successful; otherwise false.
- */
- bool filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written);
+    fclose(fptr);
+
+    return true;
+}
+
+bool filesystem_file_size(const char* file_path, u64* out_file_size)
+{
+    FILE* fptr = fopen(file_path, "rb");
+    if (!fptr)
+    {
+        WARN("FILE SIZE: FAILED TO OPEN FILE %s", file_path);
+        return false;
+    }
+
+    // go to the end of the file and get the size
+    fseek(fptr, 0, SEEK_END);
+    *out_file_size = ftell(fptr);
+
+    fclose(fptr);
+
+    return true;
+}
+
+// bool filesystem_exists(const char* path);
+//
+// bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle);
+//
+// void filesystem_close(file_handle* handle);
+//
+// bool filesystem_read_line(file_handle* handle, char** line_buf);
+//
+// bool filesystem_write_line(file_handle* handle, const char* text);
+//
+// bool filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+//
+// bool filesystem_read_all_bytes(file_handle* handle, u8** out_bytes, u64* out_bytes_read);
+//
+// bool filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written);
+//
+//

@@ -223,6 +223,7 @@ bool vulkan_instance_destroy(vulkan_context* vulkan_context)
     }
     vkDestroyInstance(vulkan_context->instance, vulkan_context->allocator);
     INFO("VULKAN INSTANCED DESTROYED");
+    return true;
 }
 
 
@@ -346,7 +347,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(vulkan_context->device.logical_device,
         &pool_create_info, vulkan_context->allocator,
-        &vulkan_context->device.graphics_command_pool));
+        &vulkan_context->graphics_command_pool));
 
     INFO("GRAPHICS COMMAND POOL CREATED.");
 
@@ -377,32 +378,35 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
     vulkan_context->device.physical_device = 0;
 
     //TODO: this free crashes, look into later, when we got an allocator up and running
-    darray_debug_header(vulkan_context->device.swapchain_support.formats);
+    darray_debug_header(vulkan_context->device.swapchain_capabilities.formats);
 
-    if (vulkan_context->device.swapchain_support.formats)
+    if (vulkan_context->device.swapchain_capabilities.formats)
     {
-        darray_free(vulkan_context->device.swapchain_support.formats);
-        vulkan_context->device.swapchain_support.formats = 0;
-        vulkan_context->device.swapchain_support.format_count = 0;
+        darray_free(vulkan_context->device.swapchain_capabilities.formats);
+        vulkan_context->device.swapchain_capabilities.formats = 0;
+        vulkan_context->device.swapchain_capabilities.format_count = 0;
     }
 
 
-    if (vulkan_context->device.swapchain_support.present_modes)
+    if (vulkan_context->device.swapchain_capabilities.present_modes)
     {
-        darray_free(vulkan_context->device.swapchain_support.present_modes);
-        vulkan_context->device.swapchain_support.present_modes = 0;
-        vulkan_context->device.swapchain_support.present_mode_count = 0;
+        darray_free(vulkan_context->device.swapchain_capabilities.present_modes);
+        vulkan_context->device.swapchain_capabilities.present_modes = 0;
+        vulkan_context->device.swapchain_capabilities.present_mode_count = 0;
     }
 
 
-    memset(&vulkan_context->device.swapchain_support.capabilities, 0,
-           sizeof(vulkan_context->device.swapchain_support.capabilities));
+    memset(&vulkan_context->device.swapchain_capabilities.capabilities, 0,
+           sizeof(vulkan_context->device.swapchain_capabilities.capabilities));
 
     vulkan_context->device.graphics_queue_index = -1;
     vulkan_context->device.present_queue_index = -1;
     vulkan_context->device.transfer_queue_index = -1;
 
     INFO("VULKAN DEVICE DESTROYED");
+
+    return true;
+
 }
 
 
@@ -452,7 +456,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
             &features,
             &requirements,
             &queue_info,
-            &vulkan_context->device.swapchain_support);
+            &vulkan_context->device.swapchain_capabilities);
 
         if (result)
         {
@@ -537,7 +541,7 @@ bool physical_device_meets_requirements(
     const VkPhysicalDeviceFeatures* features,
     const vulkan_physical_device_requirements* requirements,
     vulkan_physical_device_queue_family_info* out_queue_info,
-    vulkan_swapchain_support_info* out_swapchain_support)
+    vulkan_swapchain_capabilities_info* out_swapchain_support)
 {
     // Evaluate device properties to determine if it meets the needs of our application.
     out_queue_info->graphics_family_index = -1;
@@ -703,7 +707,7 @@ bool physical_device_meets_requirements(
 
 
 void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
-                                           vulkan_swapchain_support_info* out_support_info)
+                                           vulkan_swapchain_capabilities_info* out_support_info)
 {
     // Surface capabilities
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(

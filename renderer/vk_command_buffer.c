@@ -7,23 +7,23 @@ void vulkan_renderer_command_buffers_create(vulkan_context* vk_context)
     //this won't work rn, because it never gets freed or zero'd
     // if (!vk_context->graphics_command_buffers)
     // {
-        vk_context->graphics_command_buffers = darray_create_reserve(vulkan_command_buffer,
+        vk_context->graphics_command_buffer = darray_create_reserve(command_buffer,
                                                                      vk_context->swapchain.image_count);
         for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
         {
-            memset(&vk_context->graphics_command_buffers[i], 0, sizeof(vulkan_command_buffer));
+            memset(&vk_context->graphics_command_buffer[i], 0, sizeof(command_buffer));
         }
 
         for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
         {
-            if (vk_context->graphics_command_buffers[i].command_buffer_handle)
+            if (vk_context->graphics_command_buffer[i].command_buffer_handle)
             {
-                vulkan_command_buffer_free(vk_context, vk_context->device.graphics_command_pool,
-                                           &vk_context->graphics_command_buffers[i]);
+                vulkan_command_buffer_free(vk_context, vk_context->graphics_command_pool,
+                                           &vk_context->graphics_command_buffer[i]);
             }
-            memset(&vk_context->graphics_command_buffers[i], 0, sizeof(vulkan_command_buffer));
-            vulkan_command_buffer_allocate(vk_context, vk_context->device.graphics_command_pool, true,
-                                           &vk_context->graphics_command_buffers[i]);
+            memset(&vk_context->graphics_command_buffer[i], 0, sizeof(command_buffer));
+            vulkan_command_buffer_allocate(vk_context, vk_context->graphics_command_pool, true,
+                                           &vk_context->graphics_command_buffer[i]);
         }
     // }
     INFO("COMMAND BUFFERS CREATED");
@@ -33,24 +33,24 @@ void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context)
 {
     for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        if (vk_context->graphics_command_buffers[i].command_buffer_handle)
+        if (vk_context->graphics_command_buffer[i].command_buffer_handle)
         {
             vulkan_command_buffer_free(
                 vk_context,
-                vk_context->device.graphics_command_pool,
-                &vk_context->graphics_command_buffers[i]);
-            vk_context->graphics_command_buffers[i].command_buffer_handle = 0;
+                vk_context->graphics_command_pool,
+                &vk_context->graphics_command_buffer[i]);
+            vk_context->graphics_command_buffer[i].command_buffer_handle = 0;
         }
     }
-    darray_free(&vk_context->graphics_command_buffers);
-    vk_context->graphics_command_buffers = 0;
+    darray_free(&vk_context->graphics_command_buffer);
+    vk_context->graphics_command_buffer = 0;
     INFO("COMMAND BUFFERS DESTROYED");
 
 }
 
 
 void vulkan_command_buffer_allocate(vulkan_context* context, VkCommandPool pool, bool is_primary,
-                                    vulkan_command_buffer* out_command_buffer)
+                                    command_buffer* out_command_buffer)
 {
     memset(out_command_buffer, 0, sizeof(out_command_buffer));
 
@@ -68,26 +68,29 @@ void vulkan_command_buffer_allocate(vulkan_context* context, VkCommandPool pool,
     allocate_info.commandBufferCount = 1;
     allocate_info.pNext = 0;
 
-    out_command_buffer->state = COMMAND_BUFFER_STATE_NOT_ALLOCATED;
     VK_CHECK(
         vkAllocateCommandBuffers(context->device.logical_device, &allocate_info, &out_command_buffer->
             command_buffer_handle));
-    out_command_buffer->state = COMMAND_BUFFER_STATE_READY;
 }
 
-void vulkan_command_buffer_free(vulkan_context* context, VkCommandPool pool, vulkan_command_buffer* command_buffer)
+void vulkan_command_buffer_free(vulkan_context* context, VkCommandPool pool, command_buffer* command_buffer)
 {
     vkFreeCommandBuffers(context->device.logical_device, pool, 1, &command_buffer->command_buffer_handle);
     command_buffer->command_buffer_handle = 0;
-    command_buffer->state = COMMAND_BUFFER_STATE_NOT_ALLOCATED;
 }
 
-void vulkan_command_buffer_begin(vulkan_command_buffer* command_buffer, bool is_single_use, bool is_renderpass_continue,
+void vulkan_command_buffer_begin(command_buffer* command_buffer, bool is_single_use, bool is_renderpass_continue,
                                  bool is_simultaneous_use)
 {
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = 0;
+    begin_info.pInheritanceInfo = NULL; //used if its a secondary command buffer
+    /*
+    VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
+    VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
+    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution.
+    */
     if (is_single_use)
     {
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -103,34 +106,23 @@ void vulkan_command_buffer_begin(vulkan_command_buffer* command_buffer, bool is_
     }
 
     VK_CHECK(vkBeginCommandBuffer(command_buffer->command_buffer_handle, &begin_info));
-    command_buffer->state = COMMAND_BUFFER_STATE_RECORDING;
 }
 
-void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer)
+void vulkan_command_buffer_end(command_buffer* command_buffer)
 {
     VK_CHECK(vkEndCommandBuffer(command_buffer->command_buffer_handle));
-    command_buffer->state = COMMAND_BUFFER_STATE_RECORDING_ENDED;
 }
 
-void vulkan_command_buffer_update_submitted(vulkan_command_buffer* command_buffer)
-{
-    command_buffer->state = COMMAND_BUFFER_STATE_SUBMITTED;
-}
-
-void vulkan_command_buffer_reset(vulkan_command_buffer* command_buffer)
-{
-    command_buffer->state = COMMAND_BUFFER_STATE_READY;
-}
 
 void vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context* context, VkCommandPool pool,
-                                                         vulkan_command_buffer* out_command_buffer)
+                                                         command_buffer* out_command_buffer)
 {
     vulkan_command_buffer_allocate(context, pool, true, out_command_buffer);
     vulkan_command_buffer_begin(out_command_buffer, true, false, false);
 }
 
 void vulkan_command_buffer_end_single_use(vulkan_context* context, VkCommandPool pool,
-                                          vulkan_command_buffer* command_buffer, VkQueue queue)
+                                          command_buffer* command_buffer, VkQueue queue)
 {
     vulkan_command_buffer_end(command_buffer);
 

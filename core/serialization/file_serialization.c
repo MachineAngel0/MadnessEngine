@@ -23,6 +23,7 @@ byte_buffer* byte_buffer_init_arena(Arena* arena, const uint32_t capacity)
     buffer->write_offset = 0;
     buffer->read_offset = 0;
     buffer->Arena = arena;
+    return buffer;
 }
 
 
