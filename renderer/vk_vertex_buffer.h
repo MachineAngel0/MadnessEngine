@@ -15,7 +15,7 @@
 #define indices_per_object 6;
 
 
-void create_vertex_buffer(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void create_vertex_buffer(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                           vertex_buffer* vertex_buffer, vertex_info* vertex_info, u32 object_count)
 {
     uint32_t MAX_VERTICES = object_count * vertices_per_object;
@@ -59,7 +59,7 @@ void create_vertex_buffer(vulkan_context* vulkan_context, command_buffer* comman
 }
 
 
-void create_index_buffer_new(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void create_index_buffer_new(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                              vertex_buffer* vertex_buffer, vertex_info* vertex_info, u32 object_count)
 {
     uint32_t MAX_INDICES = object_count * indices_per_object;
@@ -100,7 +100,7 @@ void create_index_buffer_new(vulkan_context* vulkan_context, command_buffer* com
          MAX_INDICES);
 }
 
-void create_vertex_and_indices_buffer(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void create_vertex_and_indices_buffer(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                                       vertex_buffer* vertex_buffer,
                                       vertex_info* vertex_info)
 {
@@ -109,7 +109,7 @@ void create_vertex_and_indices_buffer(vulkan_context* vulkan_context, command_bu
     create_index_buffer_new(vulkan_context, command_buffer_context, vertex_buffer, vertex_info, max_object_counts);
 }
 
-void vertex_buffer_update(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void vertex_buffer_update(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                           vertex_buffer* vertex_buffer, vertex_info* vertex_info)
 {
     //TODO: so while not happening rn, we can use an offset to only copy the new data, instead of the whole buffer over
@@ -144,7 +144,14 @@ void vertex_buffer_update(vulkan_context* vulkan_context, command_buffer* comman
                 vertex_buffer->index_buffer,
                 current_index_data_size);
 }
+void create_vertex_and_indices_destroy(vulkan_context* vulkan_context, vertex_buffer* vertex_buffer)
+{
+    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->index_buffer, 0);
+    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->index_buffer_memory, 0);
 
+    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->vertex_buffer, 0);
+    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_buffer_memory, 0);
+}
 
 void vertex_info_allocate(vertex_info* vertex_info)
 {
@@ -166,13 +173,14 @@ void vertex_info_clear(vertex_info* vertex_info)
 
 void uniform_buffers_create(vulkan_context* context, vulkan_uniform_buffer* uniform_buffer)
 {
+    u8 max_frames = context->swapchain.max_frames_in_flight;
     VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
-    uniform_buffer->uniformBuffers = darray_create_reserve(VkBuffer, context->swapchain.max_frames_in_flight);
-    uniform_buffer->uniformBuffersMemory = darray_create_reserve(VkDeviceMemory, context->swapchain.max_frames_in_flight);
-    uniform_buffer->uniformBuffersMapped = darray_create_reserve(void*, context->swapchain.max_frames_in_flight);
+    uniform_buffer->uniformBuffers = darray_create_reserve(VkBuffer, max_frames);
+    uniform_buffer->uniformBuffersMemory = darray_create_reserve(VkDeviceMemory, max_frames);
+    uniform_buffer->uniformBuffersMapped = darray_create_reserve(void*, max_frames);
 
 
-    for (size_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
+    for (size_t i = 0; i < max_frames; i++)
     {
         buffer_create(context, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -183,6 +191,7 @@ void uniform_buffers_create(vulkan_context* context, vulkan_uniform_buffer* unif
                     &uniform_buffer->uniformBuffersMapped[i]);
     }
 }
+
 
 void uniform_buffer_update(vulkan_context* context, vulkan_uniform_buffer* uniform_buffers, u32 image_index, float time,
                            camera* camera)
@@ -196,7 +205,7 @@ void uniform_buffer_update(vulkan_context* context, vulkan_uniform_buffer* unifo
     ubo.view = camera_get_view_matrix_bad();
     // Perspective
     float aspect = (float) context->framebuffer_width / context->framebuffer_height;
-    ubo.proj = mat4_perspective(deg_to_rad(45.0f), aspect, 0.1f, 1000.0f);
+    ubo.proj = mat4_perspective(deg_to_rad(90.0f), aspect, 0.1f, 1000.0f);
 
     memcpy(uniform_buffers->uniformBuffersMapped[image_index], &ubo, sizeof(ubo));
 }
@@ -211,7 +220,7 @@ void uniform_buffers_destroy(vulkan_context* context, vulkan_uniform_buffer* uni
 }
 
 
-void descriptor_pool_create(vulkan_context* context, VkDescriptorPool* out_descriptor_pool)
+void descriptor_pool_create(vulkan_context* context, vulkan_shader_default* shader)
 {
     VkDescriptorPoolSize poolSize = {0};
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -223,31 +232,25 @@ void descriptor_pool_create(vulkan_context* context, VkDescriptorPool* out_descr
     poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = (uint32_t) context->swapchain.max_frames_in_flight;
 
-    VK_CHECK(vkCreateDescriptorPool(context->device.logical_device, &poolInfo, 0, out_descriptor_pool));
+    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator, &shader->descriptor_pool);
+    VK_CHECK(result);
 }
 
-void descriptor_set_create(vulkan_context* context,
-                           VkDescriptorPool* descriptorPool, vulkan_uniform_buffer* uniform_buffers,
-                           VkDescriptorSetLayout* shader_descriptor_set_layout, VkDescriptorSetLayout* out_layouts,
-                           VkDescriptorSet** descriptor_sets)
+void descriptor_set_create(vulkan_context* context, vulkan_shader_default* shader)
 {
-    //the layout was already created, so we need just need to create an array with appropriate size
-    out_layouts = darray_create_reserve(VkDescriptorSetLayout, context->swapchain.max_frames_in_flight);
     //set each layout for the frame to our descriptor set, since in this case it gets updated per frame
     for (u64 i = 0; i < context->swapchain.max_frames_in_flight; ++i)
     {
-        darray_set(out_layouts, shader_descriptor_set_layout, i);
+        shader->per_frame_set_layouts[i] = shader->default_shader_descriptor_set_layout;
     }
-
-    *descriptor_sets = darray_create_reserve(VkDescriptorSet, context->swapchain.max_frames_in_flight);
 
     VkDescriptorSetAllocateInfo allocInfo = {0};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = *descriptorPool;
+    allocInfo.descriptorPool = shader->descriptor_pool;
     allocInfo.descriptorSetCount = (uint32_t) context->swapchain.max_frames_in_flight;
-    allocInfo.pSetLayouts = out_layouts;
+    allocInfo.pSetLayouts = shader->per_frame_set_layouts;
 
-    if (vkAllocateDescriptorSets(context->device.logical_device, &allocInfo, *descriptor_sets) != VK_SUCCESS)
+    if (vkAllocateDescriptorSets(context->device.logical_device, &allocInfo, shader->descriptor_sets) != VK_SUCCESS)
     {
         FATAL("failed to allocate descriptor sets!");
     }
@@ -255,20 +258,20 @@ void descriptor_set_create(vulkan_context* context,
     for (size_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
     {
         VkDescriptorBufferInfo bufferInfo = {0};
-        bufferInfo.buffer = uniform_buffers->uniformBuffers[i];
+        bufferInfo.buffer = shader->global_uniform_buffers.uniformBuffers[i];
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(uniform_buffer_object);
 
         VkWriteDescriptorSet descriptorWrite = {0};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = (*descriptor_sets)[i];
+        descriptorWrite.dstSet = shader->descriptor_sets[i];
         descriptorWrite.dstBinding = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrite.descriptorCount = 1;
         descriptorWrite.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(context->device.logical_device, 1, &descriptorWrite, 0, 0);
+        vkUpdateDescriptorSets(context->device.logical_device, 1, &descriptorWrite, 0, NULL);
     }
 }
 

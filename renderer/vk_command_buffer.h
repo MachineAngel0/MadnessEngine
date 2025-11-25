@@ -16,23 +16,23 @@ void vulkan_command_buffer_allocate(
     vulkan_context* context,
     VkCommandPool pool,
     bool is_primary,
-    command_buffer* out_command_buffer);
+    vulkan_command_buffer* out_command_buffer);
 
 
 void vulkan_command_buffer_free(
     vulkan_context* context,
     VkCommandPool pool,
-    command_buffer* command_buffer);
+    vulkan_command_buffer* command_buffer);
 
 
 void vulkan_command_buffer_begin(
-    command_buffer* command_buffer,
+    vulkan_command_buffer* command_buffer,
     bool is_single_use,
     bool is_renderpass_continue,
     bool is_simultaneous_use);
 
 
-void vulkan_command_buffer_end(command_buffer* command_buffer);
+void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer);
 
 
 /**
@@ -41,7 +41,7 @@ void vulkan_command_buffer_end(command_buffer* command_buffer);
 void vulkan_command_buffer_allocate_and_begin_single_use(
     vulkan_context* context,
     VkCommandPool pool,
-    command_buffer* out_command_buffer);
+    vulkan_command_buffer* out_command_buffer);
 
 /**
  * Ends recording, submits to and waits for queue operation and frees the provided command buffer.
@@ -49,7 +49,7 @@ void vulkan_command_buffer_allocate_and_begin_single_use(
 void vulkan_command_buffer_end_single_use(
     vulkan_context* context,
     VkCommandPool pool,
-    command_buffer* command_buffer,
+    vulkan_command_buffer* command_buffer,
     VkQueue queue);
 
 

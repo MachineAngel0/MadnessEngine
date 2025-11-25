@@ -23,7 +23,7 @@ VkShaderModule create_shader_module(const vulkan_context* context, const char* s
 }
 
 
-bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipeline* pipeline, VkDescriptorSetLayout* descriptor_set_layout)
+bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default* shader)
 {
     // Pipeline layout creation
 
@@ -35,7 +35,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipelin
     ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ubo_layout_binding.descriptorCount = 1;
     ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    ubo_layout_binding.pImmutableSamplers = 0; // Optional - for image sampling related descriptors
+    ubo_layout_binding.pImmutableSamplers = NULL; // Optional - for image sampling related descriptors
 
     //TODO: image
     // VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -51,20 +51,22 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipelin
     layout_create_info.bindingCount = 1;
     layout_create_info.pBindings = &ubo_layout_binding;
 
-    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info, context->allocator, descriptor_set_layout));
+    VkResult descriptor_set_result = vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info,
+        context->allocator, &shader->default_shader_descriptor_set_layout);
+    VK_CHECK(descriptor_set_result);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1; // Optional
-    pipeline_layout_info.pSetLayouts = descriptor_set_layout;
-    pipeline_layout_info.pushConstantRangeCount = 0; // Optional
-    pipeline_layout_info.pPushConstantRanges = NULL; // Optional
+    pipeline_layout_info.pSetLayouts = &shader->default_shader_descriptor_set_layout;
+    // pipeline_layout_info.pushConstantRangeCount = 0; // Optional
+    // pipeline_layout_info.pPushConstantRanges = 0; // Optional
 
 
     // TODO: Pipeline and Push Constants
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created seperately
     VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
-                                                      &pipeline->pipeline_layout);
+                                                      &shader->default_shader_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);
     //graphics pipeline
     file_read_data vert_data = {0};
@@ -72,6 +74,12 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipelin
 
     filesystem_open_and_return_bytes("../renderer/shaders/shader.vert.spv", &vert_data);
     filesystem_open_and_return_bytes("../renderer/shaders/shader.frag.spv", &frag_data);
+    if (vert_data.size == 0) {
+        FATAL("Vertex shader file not loaded! Size: %llu", vert_data.size);
+    }
+    if (frag_data.size == 0) {
+        FATAL("Fragment shader file not loaded! Size: %llu", frag_data.size);
+    }
 
 
     VkShaderModule vert_shader_module = create_shader_module(context, vert_data.data, vert_data.size);
@@ -116,14 +124,13 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipelin
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(vertex_3d, pos); //offsetof is pretty interesting
-    VkVertexInputAttributeDescription* attribute_description = attributeDescriptions;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
     vertex_input_state_create_info.vertexAttributeDescriptionCount = 1;
-    vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_description;
+    vertex_input_state_create_info.pVertexAttributeDescriptions = attributeDescriptions;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
 
@@ -244,14 +251,15 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_pipelin
     graphics_pipeline_info.pDepthStencilState = &depth_stencil;
     graphics_pipeline_info.pColorBlendState = &color_blending;
     graphics_pipeline_info.pDynamicState = &dynamicState;
-    graphics_pipeline_info.layout = pipeline->pipeline_layout;
+    graphics_pipeline_info.layout = shader->default_shader_pipeline.pipeline_layout;
     graphics_pipeline_info.renderPass = context->main_renderpass.handle;
     graphics_pipeline_info.subpass = 0;
     graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     graphics_pipeline_info.basePipelineIndex = -1;
 
+
     VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
-                                                         &graphics_pipeline_info, NULL, &pipeline->pipeline_handle);
+                                                         &graphics_pipeline_info, NULL, &shader->default_shader_pipeline.pipeline_handle);
 
     if (graphics_result != VK_SUCCESS)
     {
@@ -278,6 +286,6 @@ void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeli
 
 void vulkan_default_shader_pipeline_bind(const vulkan_context* context, vulkan_shader_pipeline* pipeline)
 {
-    vulkan_pipeline_bind(&context->graphics_command_buffer[context->image_index], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vulkan_pipeline_bind(&context->graphics_command_buffer[context->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
                          pipeline);
 }

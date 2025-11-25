@@ -36,12 +36,12 @@ void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* rende
 
 
 void vulkan_renderpass_begin(
-    command_buffer* command_buffer,
+    vulkan_command_buffer* command_buffer,
     vulkan_renderpass* renderpass,
     VkFramebuffer frame_buffer);
 
 
-void vulkan_renderpass_end(command_buffer* command_buffer, vulkan_renderpass* renderpass);
+void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass);
 
 
 // void renderpass_create(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,

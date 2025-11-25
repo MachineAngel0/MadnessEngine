@@ -25,6 +25,18 @@ typedef struct vulkan_image
     u32 height;
 } vulkan_image;
 
+typedef struct Texture
+{
+    VkImage texture_image;
+    VkDeviceMemory texture_image_memory;
+    VkImageView texture_image_view;
+    VkSampler texture_sampler;
+    //optional, not needed rn
+    u32 width;
+    u32 height;
+}Texture;
+
+
 typedef enum vulkan_render_pass_state
 {
     READY,
@@ -40,7 +52,6 @@ typedef struct vulkan_renderpass
     VkRenderPass handle;
     vec4 screen_pos;
     vec4 clear_color;
-
 
     f32 depth;
     u32 stencil;
@@ -145,7 +156,7 @@ typedef struct vulkan_command_buffer
     // VkCommandPool command_pool; // TODO:
     VkCommandBuffer command_buffer_handle;
 
-} command_buffer;
+} vulkan_command_buffer;
 
 typedef struct vulkan_shader_stage
 {
@@ -161,12 +172,6 @@ typedef enum pipeline_type
     PIPELINE_COMPUTE,
 } pipeline_type;
 
-typedef struct vulkan_shader_pipeline
-{
-    pipeline_type type; // NOTE: not in use rn
-    VkPipelineLayout pipeline_layout;
-    VkPipeline pipeline_handle;
-} vulkan_shader_pipeline;
 
 typedef struct vertex_info
 {
@@ -200,14 +205,34 @@ typedef struct vertex_buffer
 
 typedef struct vulkan_uniform_buffer
 {
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
-
     //all arrays
     VkBuffer* uniformBuffers;
     VkDeviceMemory* uniformBuffersMemory;
     void** uniformBuffersMapped;
 } vulkan_uniform_buffer;
+
+
+typedef struct vulkan_shader_pipeline
+{
+    pipeline_type type; // NOTE: not in use rn
+    VkPipelineLayout pipeline_layout;
+    VkPipeline pipeline_handle;
+} vulkan_shader_pipeline;
+
+typedef struct vulkan_shader_default
+{
+    vulkan_shader_pipeline default_shader_pipeline;
+    vulkan_uniform_buffer global_uniform_buffers;
+
+    //TODO: temporary for now
+    VkDescriptorSetLayout default_shader_descriptor_set_layout;
+    VkDescriptorPool descriptor_pool;
+
+    VkDescriptorSetLayout per_frame_set_layouts[2];
+    VkDescriptorSet descriptor_sets[2];
+
+} vulkan_shader_default;
+
 
 typedef struct vulkan_buffer
 {
@@ -245,7 +270,6 @@ typedef struct vulkan_context
 
     //Swapchain
     vulkan_swapchain swapchain;
-    u32 image_index;
     u32 current_frame;
     bool recreating_swapchain;
 
@@ -254,21 +278,15 @@ typedef struct vulkan_context
 
     //command buffers
     VkCommandPool graphics_command_pool;
-    command_buffer* graphics_command_buffer; // darray
+    vulkan_command_buffer* graphics_command_buffer; // darray
 
     //TODO: vertex buffers and vertex data, here for now
     vertex_buffer default_vertex_buffer;
     vertex_info default_vertex_info;
 
-    //TODO: temporary for now
-    VkDescriptorSetLayout default_shader_descriptor_set_layout;
-    //Shader
-    vulkan_shader_pipeline default_shader_pipelines;
-    vulkan_uniform_buffer global_uniform_buffers;
-    VkDescriptorPool descriptor_pool;
+    vulkan_shader_default default_shader_info;
 
-    VkDescriptorSetLayout* per_frame_set_layouts;
-    VkDescriptorSet* descriptorSets;
+
 
     //Semaphores and Fences
     VkSemaphore* image_available_semaphores; // darray

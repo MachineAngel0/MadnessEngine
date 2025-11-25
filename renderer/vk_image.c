@@ -1,9 +1,10 @@
 ﻿#include "vk_image.h"
 
+#include "stb_image.h"
 #include "vk_buffer.h"
 
 
-void vulkan_image_create(vulkan_context* context, VkImageType image_type, u32 width, u32 height, VkFormat format,
+void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkFormat format,
                          VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_flags,
                          b32 create_view,
                          VkImageAspectFlags view_aspect_flags, vulkan_image* out_image)
@@ -104,107 +105,112 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image)
     }
 }
 
-
-/*
-void create_texture_image(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, Texture& texture, const char* filepath)
+void create_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                          const char* filepath, Texture* out_texture)
 {
-     //load the texture
+    //load the texture
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(filepath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
     VkDeviceSize imageSize = texWidth * texHeight * 4; // 4 stride rgba
 
-
+    out_texture->width = texWidth;
+    out_texture->height = texHeight;
     if (!pixels)
     {
-        throw std::runtime_error("failed to load texture image!");
+        WARN("CREATE TEXTURE IMAGE: failed to load texture image!");
+        return;
     }
 
     //create a staging buffer
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    buffer_create(vulkan_context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer,
-                  stagingBufferMemory);
+    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+                  &stagingBufferMemory);
 
     //allocate memory
     void* data;
-    vkMapMemory(vulkan_context.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(vulkan_context.logical_device, stagingBufferMemory);
+    vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, (size_t) (imageSize));
+    vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
     //free texture
     stbi_image_free(pixels);
 
     //create texture image
-    create_image(vulkan_context, texture, texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB,
-                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    transition_image_layout(vulkan_context, command_buffer_context, texture.texture_image,
+
+    // Creation info.
+    VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = texWidth;
+    image_create_info.extent.height = texHeight;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 4; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VK_CHECK(
+        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+            texture_image));
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+
+    // i32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    i32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VkResult result1 = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator,
+                                        &out_texture->texture_image_memory);
+    VK_CHECK(result1);
+    // Bind the memory
+    VkResult result2 = vkBindImageMemory(context->device.logical_device, out_texture->texture_image,
+                                         out_texture->texture_image_memory, 0);
+    VK_CHECK(result2)
+
+    // TODO: configurable memory offset.
+
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, &out_texture->texture_image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(vulkan_context, command_buffer_context, stagingBuffer, texture.texture_image,
-                      static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transition_image_layout(vulkan_context, command_buffer_context, texture.texture_image,
+    copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
+                      (uint32_t)(texWidth), (uint32_t)(texHeight));
+    transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 
-
-
-void create_image(vulkan_context& vulkan_context, Texture& texture, uint32_t width,
-                  uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties)
+void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    imageInfo.flags = 0; // Optional
-
-
-    if (vkCreateImage(vulkan_context.logical_device, &imageInfo, nullptr, &texture.texture_image) !=
-        VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create image!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(vulkan_context.logical_device, texture.texture_image, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(vulkan_context, memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(vulkan_context.logical_device, &allocInfo, nullptr,
-                         &texture.texture_image_memory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
-
-    vkBindImageMemory(vulkan_context.logical_device, texture.texture_image,
-                      texture.texture_image_memory, 0);
-}
-
-void transition_image_layout(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context,
-    VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
-{
-    VkCommandBuffer commandBuffer = command_buffer_begin_single_use(vulkan_context, command_buffer_context.command_pool);
+    vulkan_command_buffer commandBuffer;
+    vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context, vulkan_context->graphics_command_pool,
+                                                        &commandBuffer);
 
     //ensure the buffer is created before being written to
     //allows us to, if we want, transition image layouts, and transfer queue family ownership (if using VK_SHARING_MODE_EXCLUSIVE)
-    VkImageMemoryBarrier image_memory_barrier{};
+    VkImageMemoryBarrier image_memory_barrier = {0};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     //The first two fields specify layout transition.
     //It is possible to use VK_IMAGE_LAYOUT_UNDEFINED as oldLayout if you don't care about the existing contents of the image.
@@ -219,8 +225,8 @@ void transition_image_layout(vulkan_context& vulkan_context, Command_Buffer_Cont
     image_memory_barrier.subresourceRange.baseArrayLayer = 0;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
+    VkPipelineStageFlags sourceStage = 0;
+    VkPipelineStageFlags destinationStage = 0;
 
     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
@@ -240,27 +246,30 @@ void transition_image_layout(vulkan_context& vulkan_context, Command_Buffer_Cont
     }
     else
     {
-        throw std::invalid_argument("unsupported layout transition!");
+        FATAL("unsupported layout transition!");
     }
 
     vkCmdPipelineBarrier(
-        commandBuffer,
+        commandBuffer.command_buffer_handle,
         sourceStage, destinationStage,
         0,
-        0, nullptr,
-        0, nullptr,
+        0, NULL,
+        0, NULL,
         1, &image_memory_barrier
     );
 
-    command_buffer_end_single_use(vulkan_context, command_buffer_context.command_pool, commandBuffer);
+    vulkan_command_buffer_end_single_use(vulkan_context, vulkan_context->graphics_command_pool, command_buffer_context,
+                                         vulkan_context->device.graphics_queue);
 }
 
-void copyBufferToImage(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context, VkBuffer buffer,
-    VkImage image, uint32_t width, uint32_t height)
-{
 
-    VkCommandBuffer commandBuffer = command_buffer_begin_single_use(vulkan_context, command_buffer_context.command_pool);
-    VkBufferImageCopy region{};
+void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
+                       VkImage image, uint32_t width, uint32_t height)
+{
+    vulkan_command_buffer commandBuffer = {0};
+    vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context, vulkan_context->graphics_command_pool,
+                                                        &commandBuffer);
+    VkBufferImageCopy region = {0};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
@@ -270,132 +279,21 @@ void copyBufferToImage(vulkan_context& vulkan_context, Command_Buffer_Context& c
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = 1;
 
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {
+    region.imageOffset = (VkOffset3D){0, 0, 0};
+    region.imageExtent = (VkExtent3D){
         width,
         height,
         1
     };
 
     vkCmdCopyBufferToImage(
-        commandBuffer,
+        &commandBuffer,
         buffer,
         image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1,
         &region
     );
-    command_buffer_end_single_use(vulkan_context, command_buffer_context.command_pool, commandBuffer);
+    vulkan_command_buffer_end_single_use(vulkan_context, vulkan_context->graphics_command_pool, &commandBuffer,
+                                         vulkan_context->device.graphics_queue);
 }
-
-
-
-void create_texture_image_view(vulkan_context& vulkan_context, Texture& texture, VkFormat format)
-{
-    VkImageViewCreateInfo viewInfo{};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = texture.texture_image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    if (vkCreateImageView(vulkan_context.logical_device, &viewInfo, nullptr, &texture.texture_image_view) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create image view!");
-    }
-
-    if (texture.texture_image_view == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("failed to create texture image view! NULL");
-    }
-
-}
-
-void create_texture_sampler(vulkan_context& vulkan_context, Texture& texture)
-{
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-    //VK_SAMPLER_ADDRESS_MODE_REPEAT: Repeat the texture when going beyond the image dimensions.
-    //VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: Like repeat, but inverts the coordinates to mirror the image when going beyond the dimensions.
-    //VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: Take the color of the edge closest to the coordinate beyond the image dimensions.
-    //VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: Like clamp to edge, but instead uses the edge opposite to the closest edge.
-    //VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: Return a solid color when sampling beyond the dimensions of the image.
-
-    samplerInfo.anisotropyEnable = VK_TRUE;
-    //get maxAnisotropy
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(vulkan_context.physical_device, &properties);
-    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-
-    if (vkCreateSampler(vulkan_context.logical_device, &samplerInfo, nullptr, &texture.texture_sampler)
-        != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create texture sampler!");
-    }
-}
-
-void create_texture_glyph(vulkan_context& vulkan_context, Command_Buffer_Context& command_buffer_context,
-                          Texture& texture, const unsigned char* pixel_data, uint32_t width, uint32_t height)
-{
-
-    //text_system.glyph_textures[text_system.glyphs[glyph]] = texture;
-    std::cout << "IMAGE SIZE: " << width << " " << height << '\n';
-    VkDeviceSize imageSize = width * height * 4; // 4 stride rgba
-
-
-    if (!pixel_data)
-    {
-        throw std::runtime_error("NO BITMAPS AVAILABLE!");
-    }
-
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    buffer_create(vulkan_context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer,
-                  stagingBufferMemory);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(vulkan_context.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixel_data, imageSize);
-    vkUnmapMemory(vulkan_context.logical_device, stagingBufferMemory);
-
-    //create texture image
-    create_image(vulkan_context, texture, width, height, VK_FORMAT_R8G8B8A8_SRGB,
-                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    transition_image_layout(vulkan_context, command_buffer_context, texture.texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(vulkan_context, command_buffer_context, stagingBuffer, texture.texture_image,
-                      width, height);
-    transition_image_layout(vulkan_context, command_buffer_context, texture.texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    create_texture_image_view(vulkan_context, texture, VK_FORMAT_R8G8B8A8_SRGB);
-    create_texture_sampler(vulkan_context, texture);
-
-
-}
-*/

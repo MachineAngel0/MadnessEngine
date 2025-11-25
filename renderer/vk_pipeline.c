@@ -194,7 +194,7 @@ void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pi
     pipeline->pipeline_handle = 0;
 }
 
-void vulkan_pipeline_bind(command_buffer* command_buffer, VkPipelineBindPoint bind_point,
+void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point,
                           vulkan_shader_pipeline* pipeline)
 {
     vkCmdBindPipeline(command_buffer->command_buffer_handle, bind_point, pipeline->pipeline_handle);

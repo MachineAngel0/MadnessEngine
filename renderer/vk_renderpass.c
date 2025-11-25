@@ -116,7 +116,7 @@ void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* rende
     }
 }
 
-void vulkan_renderpass_begin(command_buffer* command_buffer, vulkan_renderpass* renderpass,
+void vulkan_renderpass_begin(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass,
                              VkFramebuffer frame_buffer)
 {
     VkRenderPassBeginInfo begin_info = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
@@ -124,8 +124,8 @@ void vulkan_renderpass_begin(command_buffer* command_buffer, vulkan_renderpass* 
     begin_info.framebuffer = frame_buffer;
     begin_info.renderArea.offset.x = renderpass->screen_pos.x;
     begin_info.renderArea.offset.y = renderpass->screen_pos.y;
-    begin_info.renderArea.extent.height = renderpass->screen_pos.h;
-    begin_info.renderArea.extent.width = renderpass->screen_pos.w;
+    begin_info.renderArea.extent.width = renderpass->screen_pos.z;
+    begin_info.renderArea.extent.height = renderpass->screen_pos.w;
 
     VkClearValue clear_values[2] = {0};
 
@@ -142,7 +142,7 @@ void vulkan_renderpass_begin(command_buffer* command_buffer, vulkan_renderpass* 
     vkCmdBeginRenderPass(command_buffer->command_buffer_handle, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void vulkan_renderpass_end(command_buffer* command_buffer, vulkan_renderpass* renderpass)
+void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass)
 {
     vkCmdEndRenderPass(command_buffer->command_buffer_handle);
 }

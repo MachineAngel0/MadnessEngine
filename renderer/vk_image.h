@@ -5,8 +5,10 @@
 #include "vulkan_types.h"
 
 
+
+
+
 void vulkan_image_create(vulkan_context* context,
-                         VkImageType image_type,
                          u32 width, u32 height,
                          VkFormat format, VkImageTiling tiling,
                          VkImageUsageFlags usage,
@@ -23,19 +25,16 @@ void vulkan_image_destroy(vulkan_context* context, vulkan_image* image);
 
 
 
-//TODO: old, need to rewrite/clean up
+void create_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                          const char* filepath, Texture* out_texture);
 
-typedef struct Texture
-{
-    VkImage texture_image;
-    VkDeviceMemory texture_image_memory;
-    VkImageView texture_image_view;
-    VkSampler texture_sampler;
-} Texture;
+void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+    VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
+void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
+    VkImage image, uint32_t width, uint32_t height);
 /*TEXTURE IMAGE*/
-// void create_texture_image(vulkan_context* vulkan_context, Command_Buffer_Context& command_buffer_context,
-//                           Texture& texture, const char* filepath);
+
 //
 // void create_image(vulkan_context* vulkan_context, Texture* texture, uint32_t width, uint32_t height, VkFormat format,
 //                   VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties);

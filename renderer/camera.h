@@ -48,7 +48,7 @@ void camera_init(camera* out_camera)
     const float YAW = -90.0f;
     const float PITCH = 0.0f;
     const float SPEED = 2.5f;
-    const float SENSITIVITY = 0.1f;
+    const float SENSITIVITY = 10.0f;
     const float ZOOM = 45.0f;
 
     out_camera->pos = (vec3){0.0f, 0.0f, 0.0f};

@@ -9,7 +9,7 @@
 void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
 {
     VkExtent2D swapchain_extent = {width, height};
-    swapchain_out->max_frames_in_flight = 2; // this does mean 3 swapchain images
+    swapchain_out->max_frames_in_flight = 2; // this does mean 3 swapchain images, since we start at 0
 
     //choose a swap surface format, that suits our needs
     bool found = false;
@@ -162,7 +162,6 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     // Create depth image and its view.
     vulkan_image_create(
         context,
-        VK_IMAGE_TYPE_2D,
         swapchain_extent.width,
         swapchain_extent.height,
         context->device.depth_format,
@@ -275,8 +274,8 @@ bool recreate_swapchain(vulkan_context* context)
     // Sync the framebuffer size with the new sizes.
     context->framebuffer_width = context->framebuffer_width_new;
     context->framebuffer_height = context->framebuffer_height_new;
-    context->main_renderpass.screen_pos.w = context->framebuffer_width;
-    context->main_renderpass.screen_pos.h = context->framebuffer_height;
+    context->main_renderpass.screen_pos.z = context->framebuffer_width;
+    context->main_renderpass.screen_pos.w = context->framebuffer_height;
 
 
     // cleanup swapchain
@@ -294,8 +293,8 @@ bool recreate_swapchain(vulkan_context* context)
 
     context->main_renderpass.screen_pos.x = 0;
     context->main_renderpass.screen_pos.y = 0;
-    context->main_renderpass.screen_pos.h = context->framebuffer_height;
-    context->main_renderpass.screen_pos.w = context->framebuffer_width;
+    context->main_renderpass.screen_pos.z = context->framebuffer_width;
+    context->main_renderpass.screen_pos.w = context->framebuffer_height;
 
     regenerate_framebuffer(context, &context->swapchain, &context->main_renderpass);
 

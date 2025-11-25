@@ -93,7 +93,7 @@ bool buffer_destroy_free(vulkan_context* vulkan_context, vertex_buffer* vertex_b
 
 
 
-void buffer_copy(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                  VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     // Create a temporary command buffer for the copy operation
@@ -138,7 +138,7 @@ void buffer_copy(vulkan_context* vulkan_context, command_buffer* command_buffer_
 }
 
 
-void buffer_copy_region(vulkan_context* vulkan_context, command_buffer* command_buffer_context, VkBuffer srcBuffer,
+void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer srcBuffer,
     VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 {
 

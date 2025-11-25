@@ -17,9 +17,9 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
 
 bool buffer_destroy_free(vulkan_context* vulkan_context, vertex_buffer* vertex_buffer);;
 
-void buffer_copy(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                         VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-void buffer_copy_region(vulkan_context* vulkan_context, command_buffer* command_buffer_context,
+void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                         VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
                         VkDeviceSize srcOffset, VkDeviceSize dstOffset);
 

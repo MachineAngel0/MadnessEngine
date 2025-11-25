@@ -42,17 +42,17 @@ typedef union vec3f
     {
         union
         {
-            f32 x, r, u;
+            f32 x, r;
         };
 
         union
         {
-            f32 y, g, v;
+            f32 y, g;
         };
 
         union
         {
-            f32 z, b, w;
+            f32 z, b;
         };
     };
 } vec3;
@@ -66,17 +66,17 @@ typedef union vec4f
     {
         union
         {
-            f32 x, r, u;
+            f32 x, r;
         };
 
         union
         {
-            f32 y, g, v;
+            f32 y, g;
         };
 
         union
         {
-            f32 z, b, h;
+            f32 z, b;
         };
 
         union
@@ -87,9 +87,6 @@ typedef union vec4f
 } vec4;
 
 
-typedef vec2 Position_2D;
-typedef vec3 Position_3D;
-typedef vec4 quat;
 
 typedef union vec2i
 {
@@ -177,6 +174,9 @@ typedef union mat4_f
     // alignas(16) float two_d_arr[4][4];
     alignas(16) vec4 rows[4];
 } mat4;
+
+//generally avoid typedef, only really makes sense for quat
+typedef vec4 quat;
 
 
 #define MATH_E		2.7182818284590452354

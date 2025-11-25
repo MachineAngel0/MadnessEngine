@@ -7,6 +7,11 @@
 #include <float.h>
 #include "platform.h"
 
+
+// TODO: decide which coordinate system you want
+// Y Up, left handed
+// Left-handed system: +X right, +Y up, +Z forward (into the screen)
+
 /*** VEC2 ***/
 MINLINE vec2 vec2_zero()
 {
@@ -113,18 +118,15 @@ MINLINE vec3 vec3_one()
     return (vec3){1.0f, 1.0f, 1.0f};
 }
 
-// TODO: decide which coordinate system you want
-// Z Up, left handed
-// Left-handed system: +X right, +Z up, +Y forward
 
 MINLINE vec3 vec3_up()
 {
-    return (vec3){0.0f, 0.0f, 1.0f};
+    return (vec3){0.0f, 1.0f, 0.0f};
 }
 
 MINLINE vec3 vec3_down()
 {
-    return (vec3){0.0f, 0.0f, -1.0f};
+    return (vec3){0.0f, -1.0f, 0.0f};
 }
 
 MINLINE vec3 vec3_left()
@@ -139,12 +141,12 @@ MINLINE vec3 vec3_right()
 
 MINLINE vec3 vec3_forward()
 {
-    return (vec3){0.0f, 1.0f, 0.0f};;
+    return (vec3){0.0f, 0.0f, 1.0f};
 }
 
 MINLINE vec3 vec3_back()
 {
-    return (vec3){0.0f, -1.0f, 0.0f};;
+    return (vec3){0.0f, 0.0f, -1.0f};
 }
 
 MINLINE vec3 vec3_add(const vec3 a, const vec3 b)
@@ -565,9 +567,9 @@ MINLINE mat3 mat3_make_rot(const float t, const vec3 a)
 
 
     return (mat3){
-        c + x * a.x, axay - s * a.z, axaz + s * a.y,
-        axay + s * a.z, c + y * a.y, ayaz - s * a.x,
-        axaz - s * a.y, ayaz + s * a.x, c + z * a.z
+        c + x * a.x, axay + s * a.z, axaz - s * a.y,
+        axay - s * a.z, c + y * a.y, ayaz + s * a.x,
+        axaz + s * a.y, ayaz - s * a.x, c + z * a.z
     };
 }
 
