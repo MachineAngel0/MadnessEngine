@@ -1,28 +1,28 @@
 ﻿#include "vk_renderpass.h"
 
 
-void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, vec4 screen_pos, vec4 clear_color,
+void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, vec4 screen_pos,
+                              vec4 clear_color,
                               f32 depth, u32 stencil)
 {
-
     out_renderpass->screen_pos = screen_pos;
     out_renderpass->clear_color = clear_color;
     out_renderpass->depth = depth;
     out_renderpass->stencil = stencil;
 
 
-
     // Main subpass
-    VkSubpassDescription subpass = {};
+    VkSubpassDescription subpass = {0};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
     // Attachments TODO: make this configurable.
     //TODO: free
     u32 attachment_description_count = 2;
-    VkAttachmentDescription* attachment_descriptions = malloc(sizeof(VkAttachmentDescription) * attachment_description_count);
+    VkAttachmentDescription* attachment_descriptions = malloc(
+        sizeof(VkAttachmentDescription) * attachment_description_count);
 
     // Color attachment
-    VkAttachmentDescription color_attachment;
+    VkAttachmentDescription color_attachment = {0};
     color_attachment.format = context->swapchain.surface_format.format; // TODO: configurable
     color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -37,7 +37,7 @@ void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_re
     color_attachment.flags = 0;
     attachment_descriptions[0] = color_attachment;
 
-    VkAttachmentReference color_attachment_reference;
+    VkAttachmentReference color_attachment_reference = {0};
     color_attachment_reference.attachment = 0; // Attachment description array index
     color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     subpass.colorAttachmentCount = 1;
@@ -45,7 +45,7 @@ void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_re
 
 
     // Depth attachment, if there is one
-    VkAttachmentDescription depth_attachment = {};
+    VkAttachmentDescription depth_attachment = {0};
     depth_attachment.format = context->device.depth_format;
     depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -58,7 +58,7 @@ void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_re
 
 
     // Depth attachment reference
-    VkAttachmentReference depth_attachment_reference;
+    VkAttachmentReference depth_attachment_reference = {0};
     depth_attachment_reference.attachment = 1;
     depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -79,7 +79,7 @@ void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_re
     subpass.pPreserveAttachments = 0;
 
     // Render pass dependencies. TODO: make this configurable.
-    VkSubpassDependency dependency;
+    VkSubpassDependency dependency = {0};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
     dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;

@@ -30,12 +30,12 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     // TODO: Descriptors sets and layout
     //specify set layout binding for each one we use
     //create the info for the layout, then create the set layout and bind it to the pipeline
-    VkDescriptorSetLayoutBinding ubo_layout_binding = {0};
-    ubo_layout_binding.binding = 0;
-    ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ubo_layout_binding.descriptorCount = 1;
-    ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    ubo_layout_binding.pImmutableSamplers = NULL; // Optional - for image sampling related descriptors
+    // VkDescriptorSetLayoutBinding ubo_layout_binding = {0};
+    // ubo_layout_binding.binding = 0;
+    // ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // ubo_layout_binding.descriptorCount = 1;
+    // ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // ubo_layout_binding.pImmutableSamplers = NULL; // Optional - for image sampling related descriptors
 
     //TODO: image
     // VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -45,22 +45,26 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     // samplerLayoutBinding.pImmutableSamplers = 0;
     // samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    //holds the number of layout bindings we have
-    VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
-    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_create_info.bindingCount = 1;
-    layout_create_info.pBindings = &ubo_layout_binding;
+    // //holds the number of layout bindings we have
+    // VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
+    // layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    // layout_create_info.bindingCount = 1;
+    // layout_create_info.pBindings = &ubo_layout_binding;
 
-    VkResult descriptor_set_result = vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info,
-        context->allocator, &shader->default_shader_descriptor_set_layout);
-    VK_CHECK(descriptor_set_result);
+    // VkResult descriptor_set_result = vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info,
+    //     context->allocator, &shader->default_shader_descriptor_set_layout);
+    // VK_CHECK(descriptor_set_result);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1; // Optional
-    pipeline_layout_info.pSetLayouts = &shader->default_shader_descriptor_set_layout;
+    // pipeline_layout_info.setLayoutCount = 1; // Optional
+    // pipeline_layout_info.pSetLayouts = &shader->default_shader_descriptor_set_layout;
     // pipeline_layout_info.pushConstantRangeCount = 0; // Optional
     // pipeline_layout_info.pPushConstantRanges = 0; // Optional
+    pipeline_layout_info.setLayoutCount = 0; // Optional
+    pipeline_layout_info.pSetLayouts = 0;
+    pipeline_layout_info.pushConstantRangeCount = 0;
+    pipeline_layout_info.pPushConstantRanges = 0;
 
 
     // TODO: Pipeline and Push Constants
@@ -122,8 +126,9 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     //position
     attributeDescriptions[0].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(vertex_3d, pos); //offsetof is pretty interesting
+    // attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof(vertex_3d, position); //offsetof is pretty interesting
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

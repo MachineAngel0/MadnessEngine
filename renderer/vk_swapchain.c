@@ -9,7 +9,6 @@
 void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
 {
     VkExtent2D swapchain_extent = {width, height};
-    swapchain_out->max_frames_in_flight = 2; // this does mean 3 swapchain images, since we start at 0
 
     //choose a swap surface format, that suits our needs
     bool found = false;
@@ -70,6 +69,9 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
         image_count = context->device.swapchain_capabilities.capabilities.maxImageCount;
     }
 
+    swapchain_out->max_frames_in_flight = image_count - 1;
+
+
     VkSwapchainCreateInfoKHR swapchain_create_info = {};
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.surface = context->surface;
@@ -112,10 +114,8 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
         &swapchain_out->swapchain_handle));
 
     //create the swapchain image and image view
-    context->current_frame = 0;
 
     swapchain_out->image_count = 0;
-
     VK_CHECK(
         vkGetSwapchainImagesKHR(context->device.logical_device, swapchain_out->swapchain_handle, &swapchain_out->
             image_count,
@@ -146,6 +146,10 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
         view_info.subresourceRange.levelCount = 1;
         view_info.subresourceRange.baseArrayLayer = 0;
         view_info.subresourceRange.layerCount = 1;
+        view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
         VK_CHECK(
             vkCreateImageView(context->device.logical_device, &view_info, context->allocator, &swapchain_out->
@@ -217,10 +221,10 @@ bool vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_s
     return true;
 }
 
-void vulkan_swapchain_present(vulkan_context* context, vulkan_swapchain* swapchain, VkQueue graphics_queue,
+void vulkan_swapchain_present_image(vulkan_context* context, vulkan_swapchain* swapchain, VkQueue graphics_queue,
                               VkQueue present_queue, VkSemaphore render_complete_semaphore, u32 present_image_index)
 {
-    VkPresentInfoKHR present_info = {};
+    VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = &render_complete_semaphore;

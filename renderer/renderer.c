@@ -1,6 +1,7 @@
 ﻿#include "renderer.h"
 
 #include "camera.h"
+#include "darray.h"
 #include "logger.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
@@ -80,31 +81,19 @@ bool renderer_init(struct renderer* renderer_inst)
 
     //TODO: move out into its own function
     // Create sync objects.
-    vk_context.image_available_semaphores = darray_create_reserve(VkSemaphore,
-                                                                  vk_context.swapchain.max_frames_in_flight);
-    vk_context.queue_complete_semaphores =
-            darray_create_reserve(VkSemaphore, vk_context.swapchain.max_frames_in_flight);
-    vk_context.in_flight_fences = darray_create_reserve(vulkan_fence, vk_context.swapchain.max_frames_in_flight);
+    //NOTE: semaphores must be per swapchain image
 
-    for (u8 i = 0; i < vk_context.swapchain.max_frames_in_flight; ++i)
-    {
-        VkSemaphoreCreateInfo semaphore_create_info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-        vkCreateSemaphore(vk_context.device.logical_device, &semaphore_create_info, vk_context.allocator,
-                          &vk_context.image_available_semaphores[i]);
-        vkCreateSemaphore(vk_context.device.logical_device, &semaphore_create_info, vk_context.allocator,
-                          &vk_context.queue_complete_semaphores[i]);
-
-        // Create the fence in a signaled state, indicating that the first frame has already been "rendered".
-        // This will prevent the application from waiting indefinitely for the first frame to render since it
-        // cannot be rendered until a frame is "rendered" before it.
-        vulkan_fence_create(&vk_context, true, &vk_context.in_flight_fences[i]);
-    }
-
+    init_per_frame_sync(&vk_context);
+    vk_context.current_frame = 0;
 
     // Create default shader
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
 
-
+    //TODO: temporary
+    memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
+    vk_context.default_vertex_info.vertices_size = sizeof(test_vertices) / sizeof(test_vertices[0]);
+    memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
+    vk_context.default_vertex_info.indices_size = sizeof(test_indices) / sizeof(test_indices[0]);
     for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
     {
         create_vertex_and_indices_buffer(&vk_context, &vk_context.graphics_command_buffer[i],
@@ -112,15 +101,12 @@ bool renderer_init(struct renderer* renderer_inst)
                                          &vk_context.default_vertex_info);
     }
 
-    uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
-    descriptor_pool_create(&vk_context, &vk_context.default_shader_info);
-    descriptor_set_create(&vk_context, &vk_context.default_shader_info);
 
-    //TODO: temporary
-    memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
-    vk_context.default_vertex_info.vertices_size = sizeof(test_vertices) / sizeof(test_vertices[0]);
-    memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
-    vk_context.default_vertex_info.indices_size = sizeof(test_indices) / sizeof(test_indices[0]);
+    // uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
+    // descriptor_pool_create(&vk_context, &vk_context.default_shader_info);
+    // descriptor_set_create(&vk_context, &vk_context.default_shader_info);
+
+
     INFO("VULKAN RENDERER INITIALIZED");
 
     return TRUE;
@@ -144,7 +130,7 @@ void renderer_update(struct renderer* renderer_inst)
     // Wait for the execution of the current frame to complete. The fence being free will allow this one to move on.
     if (!vulkan_fence_wait(
         &vk_context,
-        &vk_context.in_flight_fences[vk_context.current_frame],
+        &vk_context.queue_submit_fence[vk_context.current_frame],
         UINT64_MAX))
     {
         WARN("In-flight fence wait failure!");
@@ -154,12 +140,12 @@ void renderer_update(struct renderer* renderer_inst)
     /* Acquire an image from the swap chain */
     // Pass along the semaphore that should signaled when this completes.
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
-    u32 image_index;
+    u32 image_index = 0;
     if (!vulkan_swapchain_acquire_next_image_index(
         &vk_context,
         &vk_context.swapchain,
         UINT64_MAX,
-        vk_context.image_available_semaphores[vk_context.current_frame],
+        vk_context.swapchain_acquire_semaphore[vk_context.current_frame],
         0,
         &image_index))
     {
@@ -167,8 +153,6 @@ void renderer_update(struct renderer* renderer_inst)
         return;
     }
 
-    //reset fence only when we successfully acquire the image/resize
-    vulkan_fence_reset(&vk_context, &vk_context.in_flight_fences[vk_context.current_frame]);
 
 
     //World Update
@@ -176,13 +160,14 @@ void renderer_update(struct renderer* renderer_inst)
                          &vk_context.default_vertex_buffer, &vk_context.default_vertex_info);
 
     //global uniform / projection matrix
-    uniform_buffer_update(&vk_context, &vk_context.default_shader_info.global_uniform_buffers, vk_context.current_frame,
-                          1.0f, &camera_to_remove);
+    // uniform_buffer_update(&vk_context, &vk_context.default_shader_info.global_uniform_buffers, vk_context.current_frame,
+    //                       1.0f, &camera_to_remove);
+
 
     // Begin recording commands.
+    //TODO: might have to change to primary command buffer
     vulkan_command_buffer* command_buffer_current_frame = &vk_context.graphics_command_buffer[vk_context.current_frame];
     vkResetCommandBuffer(command_buffer_current_frame->command_buffer_handle, 0);
-
     vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
 
 
@@ -211,7 +196,8 @@ void renderer_update(struct renderer* renderer_inst)
     vkCmdSetScissor(command_buffer_current_frame->command_buffer_handle, 0, 1, &scissor);
 
     //Do Bindings and Draw
-    vulkan_default_shader_pipeline_bind(&vk_context, &vk_context.default_shader_info.default_shader_pipeline);
+    vulkan_default_shader_pipeline_bind(&vk_context, &vk_context.default_shader_info.default_shader_pipeline,
+                                        image_index);
 
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer_current_frame->command_buffer_handle, 0, 1,
@@ -221,13 +207,13 @@ void renderer_update(struct renderer* renderer_inst)
                          vk_context.default_vertex_buffer.index_buffer, 0,
                          VK_INDEX_TYPE_UINT16);
 
-    vkCmdBindDescriptorSets(command_buffer_current_frame->command_buffer_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
-                            &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame],
-                            0, NULL);
+    // vkCmdBindDescriptorSets(command_buffer_current_frame->command_buffer_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    //                         vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
+    //                         &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame],
+    //                         0, NULL);
 
     vkCmdDrawIndexed(command_buffer_current_frame->command_buffer_handle,
-                     (u32)vk_context.default_vertex_info.indices_size,
+                     (u32) vk_context.default_vertex_info.indices_size,
                      1, 0, 0, 0);
 
     //END FRAME//
@@ -239,10 +225,6 @@ void renderer_update(struct renderer* renderer_inst)
     //End DRAW COMMAND
     vulkan_command_buffer_end(command_buffer_current_frame);
 
-
-    // Mark the image fence as in-use by this frame.
-    // vk_context.images_in_flight[vk_context.image_index] = &vk_context.in_flight_fences[vk_context.current_frame];
-
     // Submit the queue and wait for the operation to complete.
     // Begin queue submission
     VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
@@ -251,10 +233,10 @@ void renderer_update(struct renderer* renderer_inst)
     submit_info.pCommandBuffers = &command_buffer_current_frame->command_buffer_handle;
     // The semaphore(s) to be signaled when the queue is complete.
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &vk_context.queue_complete_semaphores[vk_context.current_frame];
+    submit_info.pSignalSemaphores = &vk_context.queue_complete_semaphores[image_index];
     // Wait semaphore ensures that the operation cannot begin until the image is available.
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &vk_context.image_available_semaphores[vk_context.current_frame];
+    submit_info.pWaitSemaphores = &vk_context.image_available_semaphores[image_index];
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
     // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
     // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
@@ -275,12 +257,12 @@ void renderer_update(struct renderer* renderer_inst)
     // End queue submission
 
     // Give the image back to the swapchain.
-    vulkan_swapchain_present(
+    vulkan_swapchain_present_image(
         &vk_context,
         &vk_context.swapchain,
         vk_context.device.graphics_queue,
         vk_context.device.present_queue,
-        vk_context.queue_complete_semaphores[vk_context.current_frame],
+        vk_context.swapchain_release_semaphore[image_index],
         image_index);
 
 
@@ -302,39 +284,39 @@ void renderer_shutdown(struct renderer* renderer_inst)
 
 
     // vulkan_renderer_command_buffer_destroy(&vk_context); //bugged rn
-
     create_vertex_and_indices_destroy(&vk_context, &vk_context.default_vertex_buffer);
 
 
     // Sync objects
-    for (u8 i = 0; i < vk_context.swapchain.max_frames_in_flight; ++i)
+    for (u8 i = 0; i < vk_context.swapchain.image_count; ++i)
     {
-        if (vk_context.image_available_semaphores[i])
-        {
-            vkDestroySemaphore(
-                vk_context.device.logical_device,
-                vk_context.image_available_semaphores[i],
-                vk_context.allocator);
-            vk_context.image_available_semaphores[i] = 0;
-        }
-        if (vk_context.queue_complete_semaphores[i])
-        {
-            vkDestroySemaphore(
-                vk_context.device.logical_device,
-                vk_context.queue_complete_semaphores[i],
-                vk_context.allocator);
-            vk_context.queue_complete_semaphores[i] = 0;
-        }
-        vulkan_fence_destroy(&vk_context, &vk_context.in_flight_fences[i]);
+        VkCommandPool* primary_command_pool = VK_NULL_HANDLE;
+        VkCommandBuffer* primary_command_buffer = VK_NULL_HANDLE;
+
+        vkDestroySemaphore(
+            vk_context.device.logical_device,
+            vk_context.swapchain_acquire_semaphore[i],
+            vk_context.allocator);
+
+        vkDestroySemaphore(
+            vk_context.device.logical_device,
+            vk_context.swapchain_release_semaphore[i],
+            vk_context.allocator);
+
+        vkDestroyFence(vk_context.device.logical_device, vk_context.queue_submit_fence[i],
+                       VK_NULL_HANDLE);
+
+
+        //per frame command buffers
+        vkFreeCommandBuffers(vk_context.device.logical_device, vk_context.primary_command_pool[i], 1,
+                             &vk_context.primary_command_buffer[i]);
+        vkDestroyCommandPool(vk_context.device.logical_device, vk_context.primary_command_pool[i], VK_NULL_HANDLE);
     }
-    darray_free(vk_context.image_available_semaphores);
-    vk_context.image_available_semaphores = 0;
-
-    darray_free(vk_context.queue_complete_semaphores);
-    vk_context.queue_complete_semaphores = 0;
-
-    darray_free(vk_context.in_flight_fences);
-    vk_context.in_flight_fences = 0;
+    darray_free(vk_context.swapchain_acquire_semaphore);
+    darray_free(vk_context.swapchain_release_semaphore);
+    darray_free(vk_context.queue_submit_fence);
+    darray_free(vk_context.primary_command_buffer);
+    darray_free(vk_context.primary_command_pool);
 
 
     // Command buffers

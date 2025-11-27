@@ -1,12 +1,22 @@
 ﻿#ifndef MESH_H
 #define MESH_H
+#include "defines.h"
+#include "vulkan_types.h"
 
 // #include <vector>
 
 
+typedef struct vertex_mesh
+{
+
+}vertex_mesh;
+
 
 typedef struct Mesh
 {
+    vertex_mesh* vertices;
+    u32* indices;
+    Texture* textures;
 }Mesh;
 
 

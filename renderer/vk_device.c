@@ -27,6 +27,7 @@ bool get_vulkan_api_version(uint32_t* apiVersion,
         return true;
     }
 
+
     return false;
 }
 
@@ -75,6 +76,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     const char** extensions_names_array = darray_create(const char*);
     darray_push(extensions_names_array, &VK_KHR_SURFACE_EXTENSION_NAME);
     platform_get_vulkan_extension_names(&extensions_names_array);
+	darray_push(extensions_names_array, &VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 #if defined(DEBUG_BUILD)
     darray_push(extensions_names_array, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -131,12 +133,8 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     INFO("All required validation layers are present.");
 #endif
 
-    //validation layers out messages
-    // VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-    // populateDebugMessengerCreateInfo(&debugCreateInfo);
 
-
-    VkInstanceCreateInfo create_info = {};
+    VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.flags = 0;
     create_info.pApplicationInfo = &application_info;
@@ -164,7 +162,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {};
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
     debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_create_info.messageSeverity = log_severity;
     debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -197,16 +195,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
     {
         default:
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            M_ERROR(callback_data->pMessage);
+            // M_ERROR("%d Validation Layer: Error %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
+            M_ERROR("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            WARN(callback_data->pMessage);
+            WARN("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            INFO(callback_data->pMessage);
+            INFO("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            TRACE(callback_data->pMessage);
+            TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
     }
     return VK_FALSE;
@@ -292,6 +291,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     // TODO: should be config driven
     VkPhysicalDeviceFeatures device_features = {};
     device_features.samplerAnisotropy = VK_TRUE; // Request anistrophy
+
 
 
     VkDeviceCreateInfo device_create_info = {};

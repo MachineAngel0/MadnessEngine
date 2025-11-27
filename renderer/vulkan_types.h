@@ -144,13 +144,6 @@ typedef struct vulkan_physical_device_queue_family_info
 } vulkan_physical_device_queue_family_info;
 
 
-typedef struct vk_synchronization
-{
-    VkFence fence_handle;
-    b8 is_signaled;
-} vulkan_fence;
-
-
 typedef struct vulkan_command_buffer
 {
     // VkCommandPool command_pool; // TODO:
@@ -270,7 +263,6 @@ typedef struct vulkan_context
 
     //Swapchain
     vulkan_swapchain swapchain;
-    u32 current_frame;
     bool recreating_swapchain;
 
     //renderpass
@@ -289,11 +281,15 @@ typedef struct vulkan_context
 
 
     //Semaphores and Fences
-    VkSemaphore* image_available_semaphores; // darray
-    VkSemaphore* queue_complete_semaphores; // darray
-    u32 in_flight_fence_count;
-    vulkan_fence* in_flight_fences;
+    // VkSemaphore* image_available_semaphores; // darray
+    // VkSemaphore* queue_complete_semaphores; // darray
+    u32 current_frame;
 
+    VkFence*         queue_submit_fence          = VK_NULL_HANDLE;
+    VkCommandPool*   primary_command_pool        = VK_NULL_HANDLE;
+    VkCommandBuffer* primary_command_buffer      = VK_NULL_HANDLE;
+    VkSemaphore*     swapchain_acquire_semaphore = VK_NULL_HANDLE;
+    VkSemaphore*     swapchain_release_semaphore = VK_NULL_HANDLE;
 
 
 } vulkan_context;

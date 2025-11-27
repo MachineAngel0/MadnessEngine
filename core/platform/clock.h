@@ -35,23 +35,23 @@ void clock_update_frame_end(Clock* clock)
      f64 frame_time = 1.0f/60.0f; // just testing 60fps for now
      if (remaining_time <= frame_time)
      {
-         printf("sleeping\n");
+         // printf("sleeping\n");
          DWORD sleep_ms = (DWORD)(1000.f*(frame_time - remaining_time));
          if (sleep_ms > 0)
          {
              platform_sleep(sleep_ms);
          }
-         else
-         {
-             printf("sleep but no sleep\n");
-         }
+         // else
+         // {
+             // printf("sleep but no sleep\n");
+         // }
          //NOTE: this also helps but i kinda dont like it here, i dont want to just be stalling for no reasom
          // while ((platform_get_absolute_time() - clock->start_time - clock->time_elapsed) < frame_time) {}
      }
-    else
-    {
-         printf("no sleep\n");
-    }
+    // else
+    // {
+         // printf("no sleep\n");
+    // }
 
     // if (remaining_time > 0)
     // {

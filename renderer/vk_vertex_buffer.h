@@ -144,6 +144,7 @@ void vertex_buffer_update(vulkan_context* vulkan_context, vulkan_command_buffer*
                 vertex_buffer->index_buffer,
                 current_index_data_size);
 }
+
 void create_vertex_and_indices_destroy(vulkan_context* vulkan_context, vertex_buffer* vertex_buffer)
 {
     vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->index_buffer, 0);
@@ -157,10 +158,6 @@ void vertex_info_allocate(vertex_info* vertex_info)
 {
     darray_clear(vertex_info->vertices);
     darray_clear(vertex_info->indices);
-}
-
-void vertex_info_get_vertex_size(vertex_info* vertex_info)
-{
 }
 
 
@@ -182,7 +179,7 @@ void uniform_buffers_create(vulkan_context* context, vulkan_uniform_buffer* unif
 
     for (size_t i = 0; i < max_frames; i++)
     {
-        buffer_create(context, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        buffer_create(context, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                       &uniform_buffer->uniformBuffers[i],
                       &uniform_buffer->uniformBuffersMemory[i]);
@@ -232,7 +229,8 @@ void descriptor_pool_create(vulkan_context* context, vulkan_shader_default* shad
     poolInfo.pPoolSizes = &poolSize;
     poolInfo.maxSets = (uint32_t) context->swapchain.max_frames_in_flight;
 
-    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator, &shader->descriptor_pool);
+    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator,
+                                             &shader->descriptor_pool);
     VK_CHECK(result);
 }
 

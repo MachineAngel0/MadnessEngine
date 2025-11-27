@@ -7,20 +7,25 @@
 
 typedef struct vertex_3d
 {
-    alignas(16) vec3 pos;
+    vec2 position;
+    vec3 color;
 } vertex_3d;
 
+// const vertex_3d test_vertices[] = {
+//     {{-0.5f, -0.5f, 0.0f}},
+//     {{0.5f, -0.5f, 0.0f}},
+//     {{0.5f, 0.5f, 0.0f}},
+//     {{-0.5f, 0.5f, 0.0f}},
+//
+// };
 const vertex_3d test_vertices[] = {
-    {{-0.5f, -0.5f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}},
-    {{-0.5f, 0.5f, 0.0f}},
-
+    {{0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},        // Vertex 1: Red
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},         // Vertex 2: Green
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}         // Vertex 3: Blue
 };
 
 const uint16_t test_indices[] = {
     0, 1, 2, 2, 3, 0,
-
 };
 
 typedef struct uniform_buffer_object
