@@ -76,7 +76,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     const char** extensions_names_array = darray_create(const char*);
     darray_push(extensions_names_array, &VK_KHR_SURFACE_EXTENSION_NAME);
     platform_get_vulkan_extension_names(&extensions_names_array);
-	darray_push(extensions_names_array, &VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    darray_push(extensions_names_array, &VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 #if defined(DEBUG_BUILD)
     darray_push(extensions_names_array, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -177,7 +177,6 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     MASSERT_MSG(func, "Failed to create debug messenger!"); {
         //SAME THING: func == vkCreateDebugUtilsMessengerEXT
         VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
-
     }
     DEBUG("VULKAN DEBUGGER CREATED");
 
@@ -223,6 +222,195 @@ bool vulkan_instance_destroy(vulkan_context* vulkan_context)
     vkDestroyInstance(vulkan_context->instance, vulkan_context->allocator);
     INFO("VULKAN INSTANCED DESTROYED");
     return true;
+}
+
+
+bool vulkan_device_create2(vulkan_context* vulkan_context)
+{
+    //once for the count
+    u32 physical_device_count = 0;
+    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
+    if (physical_device_count == 0)
+    {
+        FATAL("No devices which support Vulkan were found.");
+        return FALSE;
+    }
+
+    //twice for the devices
+    VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
+    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
+
+    for (u32 i = 0; i < physical_device_count; ++i)
+    {
+        // Check if the device supports Vulkan 1.3
+        VkPhysicalDeviceProperties device_properties;
+        vkGetPhysicalDeviceProperties(physical_devices[i], &device_properties);
+
+        if (device_properties.apiVersion < VK_API_VERSION_1_3)
+        {
+            INFO("Physical device '{}' does not support Vulkan 1.3, skipping.", device_properties.deviceName);
+            continue;
+        }
+
+        // Find a queue family that supports graphics and presentation
+        uint32_t queue_family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, NULL);
+
+        VkQueueFamilyProperties* queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, queue_families);
+
+        // Look at each queue and see what queues it supports
+        INFO("Graphics | Present | Compute | Transfer | Name");
+        vulkan_physical_device_queue_family_info queue_info = {0};
+
+        u8 min_transfer_score = 255;
+        for (u32 j = 0; j < queue_family_count; ++j)
+        {
+            u8 current_transfer_score = 0;
+
+            // Graphics queue?
+            if (queue_families[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                queue_info.graphics_family_index = j;
+                ++current_transfer_score;
+            }
+
+            // Compute queue?
+            if (queue_families[j].queueFlags & VK_QUEUE_COMPUTE_BIT)
+            {
+                queue_info.compute_family_index = j;
+                ++current_transfer_score;
+            }
+
+            // Transfer queue?
+            if (queue_families[j].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                // Take the index if it is the current lowest. This increases the
+                // liklihood that it is a dedicated transfer queue.
+                if (current_transfer_score <= min_transfer_score)
+                {
+                    min_transfer_score = current_transfer_score;
+                    queue_info.transfer_family_index = j;
+                }
+            }
+
+            // Present queue?
+            VkBool32 supports_present = VK_FALSE;
+            VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_context->device.logical_device, j, vulkan_context->surface, &supports_present));
+            if (supports_present)
+            {
+                queue_info.present_family_index = j;
+            }
+        }
+
+        if (vulkan_context->device.graphics_queue_index >= 0)
+        {
+            context.gpu = physical_device;
+            break;
+        }
+    }
+
+    if (context.graphics_queue_index < 0)
+    {
+        throw std::runtime_error("Failed to find a suitable GPU with Vulkan 1.3 support.");
+    }
+
+    uint32_t device_extension_count;
+
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(context.gpu, nullptr, &device_extension_count, nullptr));
+
+    std::vector<VkExtensionProperties> device_extensions(device_extension_count);
+
+    VK_CHECK(
+        vkEnumerateDeviceExtensionProperties(context.gpu, nullptr, &device_extension_count, device_extensions.data()));
+
+    // Since this sample has visual output, the device needs to support the swapchain extension
+    std::vector<const char *> required_device_extensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+    if (!validate_extensions(required_device_extensions, device_extensions))
+    {
+        throw std::runtime_error("Required device extensions are missing");
+    }
+
+#if (defined(VKB_ENABLE_PORTABILITY))
+	// VK_KHR_portability_subset must be enabled if present in the implementation (e.g on macOS/iOS with beta extensions enabled)
+	if (std::ranges::any_of(device_extensions,
+	                        [](VkExtensionProperties const &extension) { return strcmp(extension.extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0; }))
+	{
+		required_device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+	}
+#endif
+
+    // Query for Vulkan 1.3 features
+    VkPhysicalDeviceFeatures2 query_device_features2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    VkPhysicalDeviceVulkan13Features query_vulkan13_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT query_extended_dynamic_state_features{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT
+    };
+    query_device_features2.pNext = &query_vulkan13_features;
+    query_vulkan13_features.pNext = &query_extended_dynamic_state_features;
+
+    vkGetPhysicalDeviceFeatures2(context.gpu, &query_device_features2);
+
+    // Check if Physical device supports Vulkan 1.3 features
+    if (!query_vulkan13_features.dynamicRendering)
+    {
+        throw std::runtime_error("Dynamic Rendering feature is missing");
+    }
+
+    if (!query_vulkan13_features.synchronization2)
+    {
+        throw std::runtime_error("Synchronization2 feature is missing");
+    }
+
+    if (!query_extended_dynamic_state_features.extendedDynamicState)
+    {
+        throw std::runtime_error("Extended Dynamic State feature is missing");
+    }
+
+    // Enable only specific Vulkan 1.3 features
+
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT enable_extended_dynamic_state_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+        .extendedDynamicState = VK_TRUE
+    };
+
+    VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &enable_extended_dynamic_state_features,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+    };
+
+    VkPhysicalDeviceFeatures2 enable_device_features2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &enable_vulkan13_features
+    };
+    // Create the logical device
+
+    float queue_priority = 1.0f;
+
+    // Create one queue
+    VkDeviceQueueCreateInfo queue_info{
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = static_cast<uint32_t>(context.graphics_queue_index),
+        .queueCount = 1,
+        .pQueuePriorities = &queue_priority
+    };
+
+    VkDeviceCreateInfo device_info{
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &enable_device_features2,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queue_info,
+        .enabledExtensionCount = vkb::to_u32(required_device_extensions.size()),
+        .ppEnabledExtensionNames = required_device_extensions.data()
+    };
+
+    VK_CHECK(vkCreateDevice(context.gpu, &device_info, nullptr, &context.device));
+    volkLoadDevice(context.device);
+
+    vkGetDeviceQueue(context.device, context.graphics_queue_index, 0, &context.queue);
 }
 
 
@@ -291,7 +479,6 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     // TODO: should be config driven
     VkPhysicalDeviceFeatures device_features = {};
     device_features.samplerAnisotropy = VK_TRUE; // Request anistrophy
-
 
 
     VkDeviceCreateInfo device_create_info = {};
@@ -406,7 +593,6 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
     INFO("VULKAN DEVICE DESTROYED");
 
     return true;
-
 }
 
 
@@ -414,7 +600,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
 {
     //once for the count
     u32 physical_device_count = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, 0));
+    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
     if (physical_device_count == 0)
     {
         FATAL("No devices which support Vulkan were found.");
@@ -426,14 +612,11 @@ bool select_physical_device(vulkan_context* vulkan_context)
     VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
     for (u32 i = 0; i < physical_device_count; ++i)
     {
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(physical_devices[i], &properties);
+        vkGetPhysicalDeviceProperties(physical_devices[i], &vulkan_context->device.properties);
 
-        VkPhysicalDeviceFeatures features;
-        vkGetPhysicalDeviceFeatures(physical_devices[i], &features);
+        vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->device.features);
 
-        VkPhysicalDeviceMemoryProperties memory;
-        vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &memory);
+        vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &vulkan_context->device.memory);
 
         // TODO: These requirements should probably be driven by engine
         // configuration.
@@ -441,8 +624,8 @@ bool select_physical_device(vulkan_context* vulkan_context)
         requirements.graphics = TRUE;
         requirements.present = TRUE;
         requirements.transfer = TRUE;
-        // NOTE: Enable this if compute will be required.
-        // requirements.compute = TRUE;
+        requirements.compute = TRUE;
+
         requirements.sampler_anisotropy = TRUE;
         requirements.discrete_gpu = TRUE;
         requirements.device_extension_names = darray_create(const char*);
@@ -452,17 +635,17 @@ bool select_physical_device(vulkan_context* vulkan_context)
         b8 result = physical_device_meets_requirements(
             physical_devices[i],
             vulkan_context->surface,
-            &properties,
-            &features,
+            &vulkan_context->device.properties,
+            &vulkan_context->device.features,
             &requirements,
             &queue_info,
             &vulkan_context->device.swapchain_capabilities);
 
         if (result)
         {
-            INFO("Selected device: '%s'.", properties.deviceName);
+            INFO("Selected device: '%s'.", &vulkan_context->device.properties.deviceName);
             // GPU type, etc.
-            switch (properties.deviceType)
+            switch (vulkan_context->device.properties.deviceType)
             {
                 default:
                 case VK_PHYSICAL_DEVICE_TYPE_OTHER:
@@ -484,22 +667,22 @@ bool select_physical_device(vulkan_context* vulkan_context)
 
             INFO(
                 "GPU Driver version: %d.%d.%d",
-                VK_VERSION_MAJOR(properties.driverVersion),
-                VK_VERSION_MINOR(properties.driverVersion),
-                VK_VERSION_PATCH(properties.driverVersion));
+                VK_VERSION_MAJOR(vulkan_context->device.properties.driverVersion),
+                VK_VERSION_MINOR(vulkan_context->device.properties.driverVersion),
+                VK_VERSION_PATCH(vulkan_context->device.properties.driverVersion));
 
             // Vulkan API version.
             INFO(
                 "Vulkan API version: %d.%d.%d",
-                VK_VERSION_MAJOR(properties.apiVersion),
-                VK_VERSION_MINOR(properties.apiVersion),
-                VK_VERSION_PATCH(properties.apiVersion));
+                VK_VERSION_MAJOR(vulkan_context->device.properties.apiVersion),
+                VK_VERSION_MINOR(vulkan_context->device.properties.apiVersion),
+                VK_VERSION_PATCH(vulkan_context->device.properties.apiVersion));
 
             // Memory information
-            for (u32 j = 0; j < memory.memoryHeapCount; ++j)
+            for (u32 j = 0; j < vulkan_context->device.memory.memoryHeapCount; ++j)
             {
-                f32 memory_size_gib = (((f32) memory.memoryHeaps[j].size) / GB(1));
-                if (memory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+                f32 memory_size_gib = (((f32) vulkan_context->device.memory.memoryHeaps[j].size) / GB(1));
+                if (vulkan_context->device.memory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
                 {
                     INFO("Local GPU memory: %.2f GB", memory_size_gib);
                 }
@@ -513,12 +696,9 @@ bool select_physical_device(vulkan_context* vulkan_context)
             vulkan_context->device.graphics_queue_index = queue_info.graphics_family_index;
             vulkan_context->device.present_queue_index = queue_info.present_family_index;
             vulkan_context->device.transfer_queue_index = queue_info.transfer_family_index;
+            vulkan_context->device.transfer_queue_index = queue_info.transfer_family_index;
             // NOTE: set compute index here if needed.
 
-            // Keep a copy of properties, features and memory info for later use.
-            vulkan_context->device.properties = properties;
-            vulkan_context->device.features = features;
-            vulkan_context->device.memory = memory;
             break;
         }
     }
@@ -767,15 +947,15 @@ bool vulkan_device_detect_depth_format(vulkan_device* device)
     u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
     for (u64 i = 0; i < candidate_count; ++i)
     {
-        VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &properties);
+        VkFormatProperties format_properties;
+        vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &format_properties);
 
-        if ((properties.linearTilingFeatures & flags) == flags)
+        if ((format_properties.linearTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
             return TRUE;
         }
-        else if ((properties.optimalTilingFeatures & flags) == flags)
+        else if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
             return TRUE;

@@ -116,6 +116,7 @@ typedef struct vulkan_device
     VkPhysicalDeviceMemoryProperties memory;
 
 
+
     VkFormat depth_format;
 } vulkan_device;
 
