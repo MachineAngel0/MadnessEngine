@@ -125,8 +125,6 @@ void renderer_update(struct renderer* renderer_inst)
     //semaphore orders queue operations (waiting happens on the GPU),
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
-    //NOTE: image index is for the swapchain/framebuffers, current frame is for the command buffers
-
     // Wait for the execution of the current frame to complete. The fence being free will allow this one to move on.
     if (!vulkan_fence_wait(
         &vk_context,
@@ -231,28 +229,25 @@ void renderer_update(struct renderer* renderer_inst)
     // Command buffer(s) to be executed.
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &command_buffer_current_frame->command_buffer_handle;
-    // The semaphore(s) to be signaled when the queue is complete.
+	// Semaphore to wait upon before the submitted command buffer starts executing
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &vk_context.queue_complete_semaphores[image_index];
-    // Wait semaphore ensures that the operation cannot begin until the image is available.
+    submit_info.pSignalSemaphores = &vk_context.swapchain_release_semaphore[image_index];
+	// Semaphore to be signaled when command buffers have completed
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &vk_context.image_available_semaphores[image_index];
+    submit_info.pWaitSemaphores = &vk_context.swapchain_acquire_semaphore[vk_context.current_frame];
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
     // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
     // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
-    VkPipelineStageFlags flags[1] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkPipelineStageFlags flags[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit_info.pWaitDstStageMask = flags;
 
+		// Submit to the graphics queue passing a wait fence
     VkResult result = vkQueueSubmit(
         vk_context.device.graphics_queue,
         1,
         &submit_info,
-        vk_context.in_flight_fences[vk_context.current_frame].fence_handle);
-    if (result != VK_SUCCESS)
-    {
-        FATAL("RENDER UPDATE: QUEUE SUBMISSION FAILED");
-        return;
-    }
+        vk_context.queue_submit_fence[vk_context.current_frame]);
+    VK_CHECK(result);
 
     // End queue submission
 

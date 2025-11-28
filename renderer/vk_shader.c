@@ -122,19 +122,25 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 
-    VkVertexInputAttributeDescription attributeDescriptions[1];
+    VkVertexInputAttributeDescription attributeDescriptions[2];
     //position
     attributeDescriptions[0].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
     attributeDescriptions[0].location = 0;
-    // attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(vertex_3d, position); //offsetof is pretty interesting
+
+    //color
+    attributeDescriptions[1].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
+    attributeDescriptions[1].location = 1;
+    // attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof(vertex_3d, color); //offsetof is pretty interesting
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = 1;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = 2;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attributeDescriptions;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
@@ -155,7 +161,8 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    rasterizer.cullMode = VK_CULL_MODE_NONE; //discard back facing triangles
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     // counter means positive area is front facing, clockwise means negative area is front facing
     //MIGHT BE USEFUL FOR SHADOW MAPPING

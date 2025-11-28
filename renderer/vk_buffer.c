@@ -32,11 +32,8 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
     //The flags parameter is used to configure sparse buffer memory, which is not relevant right now. We'll leave it at the default value of 0.
     //bufferInfo.flags;
 
-
-    if (vkCreateBuffer(vulkan_context->device.logical_device, &buffer_create_info, vulkan_context->allocator, buffer) != VK_SUCCESS)
-    {
-        MASSERT("failed to create buffer!");
-    }
+    VK_CHECK(
+        vkCreateBuffer(vulkan_context->device.logical_device, &buffer_create_info, vulkan_context->allocator, buffer));
 
     //finding memory size needed for the buffer
     VkMemoryRequirements memory_requirements;
@@ -61,14 +58,11 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
     memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = find_memory_type(vulkan_context, memory_requirements.memoryTypeBits,
-                                                          properties);
+                                                            properties);
 
-    if (vkAllocateMemory(vulkan_context->device.logical_device, &memory_allocate_info, NULL, bufferMemory) != VK_SUCCESS)
-    {
-        MASSERT("failed to allocate buffer memory!");
-    }
+    VK_CHECK(vkAllocateMemory(vulkan_context->device.logical_device, &memory_allocate_info, NULL, bufferMemory));
 
-    vkBindBufferMemory(vulkan_context->device.logical_device, *buffer, *bufferMemory, 0);
+    VK_CHECK(vkBindBufferMemory(vulkan_context->device.logical_device, *buffer, *bufferMemory, 0));
 
     return true;
 }
@@ -88,9 +82,7 @@ bool buffer_destroy_free(vulkan_context* vulkan_context, vertex_buffer* vertex_b
     vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_staging_buffer_memory, NULL);
 
     return true;
-
 }
-
 
 
 void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
@@ -104,14 +96,15 @@ void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_
     command_buffer_allocation_info.commandBufferCount = 1;
 
     VkCommandBuffer temp_command_buffer;
-    vkAllocateCommandBuffers(vulkan_context->device.logical_device, &command_buffer_allocation_info, &temp_command_buffer);
+    VK_CHECK(vkAllocateCommandBuffers(vulkan_context->device.logical_device, &command_buffer_allocation_info,
+        &temp_command_buffer));
 
     // Begin recording the command buffer
     VkCommandBufferBeginInfo command_buffer_begin_info = {0};
     command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    vkBeginCommandBuffer(temp_command_buffer, &command_buffer_begin_info);
+    VK_CHECK(vkBeginCommandBuffer(temp_command_buffer, &command_buffer_begin_info));
 
     // Set up the copy region with specified offsets and size
     VkBufferCopy copy_region = {0};
@@ -122,7 +115,7 @@ void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_
     // Record the copy command
     vkCmdCopyBuffer(temp_command_buffer, srcBuffer, dstBuffer, 1, &copy_region);
 
-    vkEndCommandBuffer(temp_command_buffer);
+    VK_CHECK(vkEndCommandBuffer(temp_command_buffer));
 
     // Submit the command buffer and wait for completion
     VkSubmitInfo submit_info = {0};
@@ -130,18 +123,19 @@ void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &temp_command_buffer;
 
-    vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vulkan_context->device.graphics_queue);
+    VK_CHECK(vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_CHECK(vkQueueWaitIdle(vulkan_context->device.graphics_queue));
 
     // Clean up the temporary command buffer
-    vkFreeCommandBuffers(vulkan_context->device.logical_device, vulkan_context->graphics_command_pool, 1, &temp_command_buffer);
+    vkFreeCommandBuffers(vulkan_context->device.logical_device, vulkan_context->graphics_command_pool, 1,
+                         &temp_command_buffer);
 }
 
 
-void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer srcBuffer,
-    VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+                        VkBuffer srcBuffer,
+                        VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 {
-
     // Create a temporary command buffer for the copy operation
     VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
     command_buffer_allocation_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -150,7 +144,8 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
     command_buffer_allocation_info.commandBufferCount = 1;
 
     VkCommandBuffer temp_command_buffer;
-    vkAllocateCommandBuffers(vulkan_context->device.logical_device, &command_buffer_allocation_info, &temp_command_buffer);
+    vkAllocateCommandBuffers(vulkan_context->device.logical_device, &command_buffer_allocation_info,
+                             &temp_command_buffer);
 
     // Begin recording the command buffer
     VkCommandBufferBeginInfo command_buffer_begin_info = {0};
@@ -180,5 +175,6 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
     vkQueueWaitIdle(vulkan_context->device.graphics_queue);
 
     // Clean up the temporary command buffer
-    vkFreeCommandBuffers(vulkan_context->device.logical_device, vulkan_context->graphics_command_pool, 1, &temp_command_buffer);
+    vkFreeCommandBuffers(vulkan_context->device.logical_device, vulkan_context->graphics_command_pool, 1,
+                         &temp_command_buffer);
 }

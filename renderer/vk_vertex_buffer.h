@@ -32,9 +32,9 @@ void create_vertex_buffer(vulkan_context* vulkan_context, vulkan_command_buffer*
     // Only copy initial vertices data, but allocate full buffer
     VkDeviceSize initial_data_size = sizeof(vertex_info->vertices) * vertex_info->vertices_size;
 
-    vkMapMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_staging_buffer_memory, 0,
+	VK_CHECK(vkMapMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_staging_buffer_memory, 0,
                 vertex_buffer->vertex_buffer_capacity, 0,
-                &vertex_buffer->data_vertex);
+                &vertex_buffer->data_vertex));
 
     // Zero out the entire buffer first
     memset(vertex_buffer->data_vertex, 0, vertex_buffer->vertex_buffer_capacity);

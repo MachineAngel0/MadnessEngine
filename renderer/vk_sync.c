@@ -17,21 +17,21 @@ void init_per_frame_sync(vulkan_context* context)
     //create
     for (size_t i = 0; i < context->swapchain.image_count; i++)
     {
-        VkFenceCreateInfo info{
+        VkFenceCreateInfo info = {
             .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
         };
         VK_CHECK(vkCreateFence(context->device.logical_device, &info, NULL, &context->queue_submit_fence[i]));
 
-        VkCommandPoolCreateInfo cmd_pool_info{
+        VkCommandPoolCreateInfo cmd_pool_info ={
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-            .queueFamilyIndex = (uint32_t) (context->device.graphics_queue)
+            .queueFamilyIndex = (uint32_t) context->device.graphics_queue_index
         };
         VK_CHECK(
             vkCreateCommandPool(context->device.logical_device, &cmd_pool_info, NULL, &context->primary_command_pool[i]));
 
-        VkCommandBufferAllocateInfo cmd_buf_info{
+        VkCommandBufferAllocateInfo cmd_buf_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .commandPool = *context->primary_command_pool,
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -40,7 +40,7 @@ void init_per_frame_sync(vulkan_context* context)
         VK_CHECK(
             vkAllocateCommandBuffers(context->device.logical_device, &cmd_buf_info, &context->primary_command_buffer[i]));
 
-        VkSemaphoreCreateInfo semaphoreInfo{
+        VkSemaphoreCreateInfo semaphoreInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
         };
         VK_CHECK(
@@ -61,9 +61,11 @@ b8 vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
         context->device.logical_device,
         1,
         fence,
-        true,
+        VK_TRUE,
         timeout_ns);
-	VK_CHECK(vkResetFences(context->device.logical_device, 1, fence));
+	VkResult fence_reset_result = vkResetFences(context->device.logical_device, 1, fence);
+    VK_CHECK(fence_reset_result);
+
 
     switch (result)
     {

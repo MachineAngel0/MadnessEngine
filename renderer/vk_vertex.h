@@ -7,7 +7,7 @@
 
 typedef struct vertex_3d
 {
-    vec2 position;
+    vec3 position;
     vec3 color;
 } vertex_3d;
 
@@ -19,9 +19,9 @@ typedef struct vertex_3d
 //
 // };
 const vertex_3d test_vertices[] = {
-    {{0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},        // Vertex 1: Red
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},         // Vertex 2: Green
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}         // Vertex 3: Blue
+    { {  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } },
+    { { -1.0f,  1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+    { {  0.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }
 };
 
 const uint16_t test_indices[] = {

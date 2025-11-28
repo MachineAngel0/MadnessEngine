@@ -45,7 +45,6 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     {
         MASSERT_MSG(false, "failed to find api version!");
     }
-    INFO("VULKAN VERSION: %d.%d.%d. VERSION VARIANT: %d", major, minor, patch, variant);
 
 
     VkApplicationInfo application_info = {};
@@ -225,195 +224,6 @@ bool vulkan_instance_destroy(vulkan_context* vulkan_context)
 }
 
 
-bool vulkan_device_create2(vulkan_context* vulkan_context)
-{
-    //once for the count
-    u32 physical_device_count = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
-    if (physical_device_count == 0)
-    {
-        FATAL("No devices which support Vulkan were found.");
-        return FALSE;
-    }
-
-    //twice for the devices
-    VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
-    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
-
-    for (u32 i = 0; i < physical_device_count; ++i)
-    {
-        // Check if the device supports Vulkan 1.3
-        VkPhysicalDeviceProperties device_properties;
-        vkGetPhysicalDeviceProperties(physical_devices[i], &device_properties);
-
-        if (device_properties.apiVersion < VK_API_VERSION_1_3)
-        {
-            INFO("Physical device '{}' does not support Vulkan 1.3, skipping.", device_properties.deviceName);
-            continue;
-        }
-
-        // Find a queue family that supports graphics and presentation
-        uint32_t queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, NULL);
-
-        VkQueueFamilyProperties* queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, queue_families);
-
-        // Look at each queue and see what queues it supports
-        INFO("Graphics | Present | Compute | Transfer | Name");
-        vulkan_physical_device_queue_family_info queue_info = {0};
-
-        u8 min_transfer_score = 255;
-        for (u32 j = 0; j < queue_family_count; ++j)
-        {
-            u8 current_transfer_score = 0;
-
-            // Graphics queue?
-            if (queue_families[j].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                queue_info.graphics_family_index = j;
-                ++current_transfer_score;
-            }
-
-            // Compute queue?
-            if (queue_families[j].queueFlags & VK_QUEUE_COMPUTE_BIT)
-            {
-                queue_info.compute_family_index = j;
-                ++current_transfer_score;
-            }
-
-            // Transfer queue?
-            if (queue_families[j].queueFlags & VK_QUEUE_TRANSFER_BIT)
-            {
-                // Take the index if it is the current lowest. This increases the
-                // liklihood that it is a dedicated transfer queue.
-                if (current_transfer_score <= min_transfer_score)
-                {
-                    min_transfer_score = current_transfer_score;
-                    queue_info.transfer_family_index = j;
-                }
-            }
-
-            // Present queue?
-            VkBool32 supports_present = VK_FALSE;
-            VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(vulkan_context->device.logical_device, j, vulkan_context->surface, &supports_present));
-            if (supports_present)
-            {
-                queue_info.present_family_index = j;
-            }
-        }
-
-        if (vulkan_context->device.graphics_queue_index >= 0)
-        {
-            context.gpu = physical_device;
-            break;
-        }
-    }
-
-    if (context.graphics_queue_index < 0)
-    {
-        throw std::runtime_error("Failed to find a suitable GPU with Vulkan 1.3 support.");
-    }
-
-    uint32_t device_extension_count;
-
-    VK_CHECK(vkEnumerateDeviceExtensionProperties(context.gpu, nullptr, &device_extension_count, nullptr));
-
-    std::vector<VkExtensionProperties> device_extensions(device_extension_count);
-
-    VK_CHECK(
-        vkEnumerateDeviceExtensionProperties(context.gpu, nullptr, &device_extension_count, device_extensions.data()));
-
-    // Since this sample has visual output, the device needs to support the swapchain extension
-    std::vector<const char *> required_device_extensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    if (!validate_extensions(required_device_extensions, device_extensions))
-    {
-        throw std::runtime_error("Required device extensions are missing");
-    }
-
-#if (defined(VKB_ENABLE_PORTABILITY))
-	// VK_KHR_portability_subset must be enabled if present in the implementation (e.g on macOS/iOS with beta extensions enabled)
-	if (std::ranges::any_of(device_extensions,
-	                        [](VkExtensionProperties const &extension) { return strcmp(extension.extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME) == 0; }))
-	{
-		required_device_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-	}
-#endif
-
-    // Query for Vulkan 1.3 features
-    VkPhysicalDeviceFeatures2 query_device_features2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-    VkPhysicalDeviceVulkan13Features query_vulkan13_features{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
-    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT query_extended_dynamic_state_features{
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT
-    };
-    query_device_features2.pNext = &query_vulkan13_features;
-    query_vulkan13_features.pNext = &query_extended_dynamic_state_features;
-
-    vkGetPhysicalDeviceFeatures2(context.gpu, &query_device_features2);
-
-    // Check if Physical device supports Vulkan 1.3 features
-    if (!query_vulkan13_features.dynamicRendering)
-    {
-        throw std::runtime_error("Dynamic Rendering feature is missing");
-    }
-
-    if (!query_vulkan13_features.synchronization2)
-    {
-        throw std::runtime_error("Synchronization2 feature is missing");
-    }
-
-    if (!query_extended_dynamic_state_features.extendedDynamicState)
-    {
-        throw std::runtime_error("Extended Dynamic State feature is missing");
-    }
-
-    // Enable only specific Vulkan 1.3 features
-
-    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT enable_extended_dynamic_state_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
-        .extendedDynamicState = VK_TRUE
-    };
-
-    VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext = &enable_extended_dynamic_state_features,
-        .synchronization2 = VK_TRUE,
-        .dynamicRendering = VK_TRUE,
-    };
-
-    VkPhysicalDeviceFeatures2 enable_device_features2{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = &enable_vulkan13_features
-    };
-    // Create the logical device
-
-    float queue_priority = 1.0f;
-
-    // Create one queue
-    VkDeviceQueueCreateInfo queue_info{
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = static_cast<uint32_t>(context.graphics_queue_index),
-        .queueCount = 1,
-        .pQueuePriorities = &queue_priority
-    };
-
-    VkDeviceCreateInfo device_info{
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &enable_device_features2,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue_info,
-        .enabledExtensionCount = vkb::to_u32(required_device_extensions.size()),
-        .ppEnabledExtensionNames = required_device_extensions.data()
-    };
-
-    VK_CHECK(vkCreateDevice(context.gpu, &device_info, nullptr, &context.device));
-    volkLoadDevice(context.device);
-
-    vkGetDeviceQueue(context.device, context.graphics_queue_index, 0, &context.queue);
-}
-
-
 bool vulkan_device_create(vulkan_context* vulkan_context)
 {
     //query physical device
@@ -426,10 +236,20 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     INFO("Creating logical device...");
 
     // NOTE: Do not create additional queues for shared indices.
+
     b8 present_shares_graphics_queue = vulkan_context->device.graphics_queue_index == vulkan_context->device.
                                        present_queue_index;
     b8 transfer_shares_graphics_queue = vulkan_context->device.graphics_queue_index == vulkan_context->device.
                                         transfer_queue_index;
+
+    b8 compute_shares_graphics_queue = false;
+    if (vulkan_context->device.compute_queue_index == vulkan_context->device.graphics_queue_index
+        || vulkan_context->device.compute_queue_index == vulkan_context->device.transfer_queue_index
+        || vulkan_context->device.compute_queue_index == vulkan_context->device.present_queue_index)
+    {
+        compute_shares_graphics_queue = true;
+    }
+
     u32 index_count = 1;
 
     if (!present_shares_graphics_queue)
@@ -437,6 +257,10 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         index_count++;
     }
     if (!transfer_shares_graphics_queue)
+    {
+        index_count++;
+    }
+    if (!compute_shares_graphics_queue)
     {
         index_count++;
     }
@@ -453,8 +277,12 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     {
         indices[index++] = vulkan_context->device.transfer_queue_index;
     }
+    if (!compute_shares_graphics_queue)
+    {
+        indices[index++] = vulkan_context->device.compute_queue_index;
+    }
 
-    //get device queue info
+    //get device queue info for each unique queue family
     VkDeviceQueueCreateInfo* queue_create_infos = darray_create_reserve(VkDeviceQueueCreateInfo, index_count);
     for (u32 i = 0; i < index_count; ++i)
     {
@@ -474,25 +302,51 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         queue_create_infos[i].pQueuePriorities = &queue_priority;
     }
 
+    //device extensions
+    const char* extension_names[] = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+    // Enable only specific Vulkan 1.3 features
+    //will be plugged into the device create infos pNext pointer
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT enable_extended_dynamic_state_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+        .extendedDynamicState = VK_TRUE
+    };
+
+    VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &enable_extended_dynamic_state_features,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+    };
 
     // Request device features.
     // TODO: should be config driven
-    VkPhysicalDeviceFeatures device_features = {};
-    device_features.samplerAnisotropy = VK_TRUE; // Request anistrophy
+    VkPhysicalDeviceFeatures device_features = {
+        .samplerAnisotropy = VK_TRUE // Request anistrophy
+    };
+
+    VkPhysicalDeviceFeatures2 enable_device_features2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &enable_vulkan13_features,
+        .features = device_features,
+    };
 
 
-    VkDeviceCreateInfo device_create_info = {};
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.queueCreateInfoCount = index_count;
-    device_create_info.pQueueCreateInfos = queue_create_infos;
-    device_create_info.pEnabledFeatures = &device_features;
-    device_create_info.enabledExtensionCount = 1;
-    const char* extension_names = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-    device_create_info.ppEnabledExtensionNames = &extension_names;
+    VkDeviceCreateInfo device_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &enable_device_features2,
+        .queueCreateInfoCount = index_count,
+        .pQueueCreateInfos = queue_create_infos,
+        .pEnabledFeatures = 0, // do not use is pNext is used
+        .enabledExtensionCount = 1,
+        .ppEnabledExtensionNames = extension_names,
+        // Deprecated
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = 0,
+    };
 
-    // Deprecated
-    device_create_info.enabledLayerCount = 0;
-    device_create_info.ppEnabledLayerNames = 0;
 
 
     // Create the device.
@@ -510,6 +364,12 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         vulkan_context->device.graphics_queue_index,
         0,
         &vulkan_context->device.graphics_queue);
+
+    vkGetDeviceQueue(
+        vulkan_context->device.logical_device,
+        vulkan_context->device.compute_queue_index,
+        0,
+        &vulkan_context->device.compute_queue);
 
     vkGetDeviceQueue(
         vulkan_context->device.logical_device,
@@ -696,7 +556,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
             vulkan_context->device.graphics_queue_index = queue_info.graphics_family_index;
             vulkan_context->device.present_queue_index = queue_info.present_family_index;
             vulkan_context->device.transfer_queue_index = queue_info.transfer_family_index;
-            vulkan_context->device.transfer_queue_index = queue_info.transfer_family_index;
+            vulkan_context->device.compute_queue_index = queue_info.compute_family_index;
             // NOTE: set compute index here if needed.
 
             break;
@@ -743,6 +603,9 @@ bool physical_device_meets_requirements(
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, 0);
     VkQueueFamilyProperties* queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+
+    //TODO: rn its only picking a queue with each available queue type, later if performance is needed,
+    // then using a specialized queue, like for compute or transfer would be better
 
     // Look at each queue and see what queues it supports
     INFO("Graphics | Present | Compute | Transfer | Name");
@@ -838,8 +701,7 @@ bool physical_device_meets_requirements(
                 0));
             if (available_extension_count != 0)
             {
-                available_extensions = _darray_create(sizeof(VkExtensionProperties) * available_extension_count,
-                                                      sizeof(VkExtensionProperties));
+                available_extensions = darray_create_reserve(VkExtensionProperties, available_extension_count);
                 VK_CHECK(vkEnumerateDeviceExtensionProperties(
                     device,
                     0,

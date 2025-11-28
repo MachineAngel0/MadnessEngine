@@ -34,7 +34,7 @@ typedef struct Texture
     //optional, not needed rn
     u32 width;
     u32 height;
-}Texture;
+} Texture;
 
 
 typedef enum vulkan_render_pass_state
@@ -103,18 +103,18 @@ typedef struct vulkan_device
     i32 graphics_queue_index;
     i32 present_queue_index;
     i32 transfer_queue_index;
-
+    i32 compute_queue_index;
 
     //family queues
     VkQueue graphics_queue;
     VkQueue present_queue;
     VkQueue transfer_queue;
+    VkQueue compute_queue;
 
 
     VkPhysicalDeviceProperties properties;
     VkPhysicalDeviceFeatures features;
     VkPhysicalDeviceMemoryProperties memory;
-
 
 
     VkFormat depth_format;
@@ -149,7 +149,6 @@ typedef struct vulkan_command_buffer
 {
     // VkCommandPool command_pool; // TODO:
     VkCommandBuffer command_buffer_handle;
-
 } vulkan_command_buffer;
 
 typedef struct vulkan_shader_stage
@@ -224,7 +223,6 @@ typedef struct vulkan_shader_default
 
     VkDescriptorSetLayout per_frame_set_layouts[2];
     VkDescriptorSet descriptor_sets[2];
-
 } vulkan_shader_default;
 
 
@@ -235,8 +233,6 @@ typedef struct vulkan_buffer
     VkBufferUsageFlagBits usage;
     VkDeviceMemory memory;
 } vulkan_buffer;
-
-
 
 
 typedef struct vulkan_context
@@ -280,19 +276,16 @@ typedef struct vulkan_context
     vulkan_shader_default default_shader_info;
 
 
-
     //Semaphores and Fences
     // VkSemaphore* image_available_semaphores; // darray
     // VkSemaphore* queue_complete_semaphores; // darray
     u32 current_frame;
 
-    VkFence*         queue_submit_fence          = VK_NULL_HANDLE;
-    VkCommandPool*   primary_command_pool        = VK_NULL_HANDLE;
-    VkCommandBuffer* primary_command_buffer      = VK_NULL_HANDLE;
-    VkSemaphore*     swapchain_acquire_semaphore = VK_NULL_HANDLE;
-    VkSemaphore*     swapchain_release_semaphore = VK_NULL_HANDLE;
-
-
+    VkFence* queue_submit_fence;
+    VkCommandPool* primary_command_pool;
+    VkCommandBuffer* primary_command_buffer;
+    VkSemaphore* swapchain_acquire_semaphore; // semaphore that tells us when our next image is ready for usage/writing to
+    VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
 } vulkan_context;
 
 

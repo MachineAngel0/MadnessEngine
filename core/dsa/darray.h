@@ -184,6 +184,7 @@ void* _darray_resize(void* array)
     u64 header_size = sizeof(array_header);
     array_header* header = (array_header *) ((u8 *) array - header_size);
 
+
     //allocate a new array
     void* new_out_array = _darray_create(header->capacity * DARRAY_RESIZE_VALUE, header->stride);
     array_header* new_header = (array_header *) ((u8 *) new_out_array - header_size);
@@ -402,6 +403,59 @@ void darray_remove_swap(void* array, const u64 index)
     header->num_items--;
 }
 
+bool darray_contains(void* array, const void* key, int (*cmp_func)(const void*, const void*))
+{
+    if (!array)
+    {
+        M_ERROR("DARRAY CONTAINS: NULL ARRAY");
+        return false;
+    }
+
+    //get the array header
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    //check if we have the value, otherwise return false
+    for (int i = 0; i < header->num_items; i++)
+    {
+        //0 means they are equal to each other
+        if (cmp_func(((u8 *) (array ) + (i * header->stride)), key) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+void darray_contains_or_add(void* array, const void* key, int (*cmp_func)(const void*, const void*))
+{
+    // check if the value exists, if it doesn't then add it
+    if (!array)
+    {
+        M_ERROR("DARRAY CONTAINS OR ADD: NULL ARRAY");
+        return;
+    }
+
+    //get the array header
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    //check if we have the value, otherwise return false
+    for (int i = 0; i < header->num_items; i++)
+    {
+        //0 means they are equal to each other, which means we can exit
+        if (cmp_func((u8*)array + (i * header->stride), key) == 0)
+        {
+            return;
+        }
+    }
+
+    //if we reach this point the value is not in the array
+    darray_push(array, key);
+}
+
+
 void* _darray_duplicate(const void* array)
 {
     u64 header_size = sizeof(array_header);
@@ -568,6 +622,13 @@ void _darray_test()
     darray_debug_print(arr, print_int);
     darray_remove_swap(arr, 2);
     darray_debug_print(arr, print_int);
+
+    int contain_num1 = 456;
+    int contain_num2 = 80;
+    int contain_num2_invalid = 99;
+    TEST_INFORM(darray_contains(arr, &contain_num1, cmp_int));
+    TEST_INFORM(!darray_contains(arr, &contain_num2_invalid, cmp_int));
+    TEST_INFORM(darray_contains(arr, &contain_num2, cmp_int));
 
 
     darray_pop(arr);
