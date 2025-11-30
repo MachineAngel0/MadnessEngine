@@ -298,22 +298,23 @@ bool input_key_released_unique(uint8_t key)
 
 
 //mouse related
-void input_get_mouse_pos(u16* out_x, u16* out_y)
+void input_get_mouse_pos(i16* out_x, i16* out_y)
 {
     *out_x = input_system.mouse_current.x;
     *out_y = input_system.mouse_current.y;
 }
 
-void input_get_previous_mouse_pos(u16* out_x, u16* out_y)
+void input_get_previous_mouse_pos(i16* out_x, i16* out_y)
 {
     *out_x = input_system.mouse_previous.x;
     *out_y = input_system.mouse_previous.y;
 }
 
-void input_get_mouse_change(u16* out_x, u16* out_y)
+void input_get_mouse_change(i16* out_x, i16* out_y)
 {
-    *out_x = input_system.mouse_current.x - input_system.mouse_previous.x;
+    *out_x = input_system.mouse_current.x - input_system.mouse_previous.x ;
     *out_y = input_system.mouse_current.y - input_system.mouse_previous.y;
+    DEBUG("MOUSE CHANGE X: %d, MOUSE CHANGE Y: %d", *out_x, *out_y);
 }
 
 
