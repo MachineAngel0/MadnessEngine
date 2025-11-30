@@ -69,6 +69,7 @@ void vulkan_device_query_swapchain_support(
 
 /*get depth format from device*/
 bool vulkan_device_detect_depth_stencil_format(vulkan_device* device);
+bool vulkan_device_detect_depth_format(vulkan_device* device);
 
 
 

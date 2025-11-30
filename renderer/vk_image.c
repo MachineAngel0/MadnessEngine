@@ -15,7 +15,8 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
 
 
     // Creation info.
-    VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
     image_create_info.extent.width = width;
     image_create_info.extent.height = height;

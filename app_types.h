@@ -53,7 +53,7 @@ typedef struct renderer {
     platform_state* plat_state;
 
     bool (*renderer_initialize)(struct renderer* renderer_inst);
-    void (*renderer_run)(struct renderer* renderer_inst);
+    void (*renderer_run)(struct renderer* renderer_inst, Clock* clock);
     void (*renderer_shutdown)(struct renderer* renderer_inst);
 
     void (*on_resize)(struct renderer* renderer_inst, u32 width, u32 height);

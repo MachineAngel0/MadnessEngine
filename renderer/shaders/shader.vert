@@ -1,9 +1,9 @@
 #version 450
 
-layout(binding = 0) uniform UBO {
-    mat4 projectionMatrix;
-    mat4 modelMatrix;
-    mat4 viewMatrix;
+layout(binding = 0) uniform UniformBufferObject{
+    mat4 model;
+    mat4 view;
+    mat4 proj;
 } ubo;
 
 
@@ -13,6 +13,6 @@ layout(location = 1) in vec3 inColor;
 layout(location = 0) out vec3 outColor;
 
 void main() {
-    gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
     outColor = inColor;
 }

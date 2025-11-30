@@ -125,6 +125,4 @@ void print_dummy(char* dummy_string)
 }
 
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-
 #endif //MISC_UTIL_H

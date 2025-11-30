@@ -13,7 +13,6 @@
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static vulkan_context vk_context;
 
-static camera camera_to_remove; // TODO: remove
 
 
 bool renderer_init(struct renderer* renderer_inst)
@@ -89,14 +88,15 @@ bool renderer_init(struct renderer* renderer_inst)
 
     // Create default shader
     createUniformBuffers(&vk_context);
+    // uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
     createDescriptors(&vk_context);
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
 
     //TODO: temporary
     // memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
-    // vk_context.default_vertex_info.vertices_size = sizeof(test_vertices) / sizeof(test_vertices[0]);
+    // vk_context.default_vertex_info.vertices_size = ARRAY_SIZE(test_vertices);
     // memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
-    // vk_context.default_vertex_info.indices_size = sizeof(test_indices) / sizeof(test_indices[0]);
+    // vk_context.default_vertex_info.indices_size = ARRAY_SIZE(test_indices);
     createVertexBuffer(&vk_context, &vk_context.vertex_buffer, &vk_context.index_buffer, &vk_context.default_vertex_info);
 
 
@@ -118,7 +118,7 @@ bool renderer_init(struct renderer* renderer_inst)
     return TRUE;
 }
 
-void renderer_update(struct renderer* renderer_inst)
+void renderer_update(struct renderer* renderer_inst, Clock* clock)
 {
     /*
       At a high level, rendering a frame in Vulkan consists of a common set of steps:
@@ -167,13 +167,14 @@ void renderer_update(struct renderer* renderer_inst)
     //                       1.0f, &camera_to_remove);
     // Update the uniform buffer for the next frame
     uniform_buffer_object ubo = {0};
-    quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * 1.0f, true);
-    ubo.model = quat_to_rotation_matrix(q, (vec3){0.0f, 0.0f, 0.0f});
+    // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
+    // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
+    ubo.model = mat4_identity();
+    // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // ubo.view =  camera_get_view_matrix(camera);
     ubo.view = camera_get_view_matrix_bad();
     // Perspective
-    float aspect = (float) vk_context.framebuffer_width / vk_context.framebuffer_height;
-    ubo.proj = mat4_perspective(deg_to_rad(90.0f), aspect, 0.1f, 1000.0f);
+    ubo.proj = camera_get_projection_matrix_bad((float) vk_context.framebuffer_height, (float) vk_context.framebuffer_width);
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(vk_context.default_shader_info.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
            sizeof(uniform_buffer_object));
@@ -243,6 +244,7 @@ void renderer_update(struct renderer* renderer_inst)
         0.0f, 0.0f, (f32) vk_context.framebuffer_width, (f32) vk_context.framebuffer_height, 0.0f, 1.0f
     };
 
+
     // Scissor
     VkRect2D scissor = {
         .offset = {.x = 0, .y = 0},
@@ -252,16 +254,18 @@ void renderer_update(struct renderer* renderer_inst)
 
     vkCmdSetViewport(command_buffer_current_frame->handle, 0, 1, &viewport);
     vkCmdSetScissor(command_buffer_current_frame->handle, 0, 1, &scissor);
-    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
-                            &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
+
 
     //Do Bindings and Draw
+
     // vulkan_default_shader_pipeline_bind(command_buffer_current_frame, &vk_context.default_shader_info.default_shader_pipeline);
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.default_shader_info.default_shader_pipeline.handle);
 
+    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
 
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
@@ -272,6 +276,7 @@ void renderer_update(struct renderer* renderer_inst)
                          VK_INDEX_TYPE_UINT32);
 
 
+    //draw command
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32) vk_context.default_vertex_info.indices_size,
                      1, 0, 0, 0);

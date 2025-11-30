@@ -27,34 +27,6 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
 {
     // Pipeline layout creation
 
-    // TODO: Descriptors sets and layout
-    //specify set layout binding for each one we use
-    //create the info for the layout, then create the set layout and bind it to the pipeline
-    // VkDescriptorSetLayoutBinding ubo_layout_binding = {0};
-    // ubo_layout_binding.binding = 0;
-    // ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    // ubo_layout_binding.descriptorCount = 1;
-    // ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // ubo_layout_binding.pImmutableSamplers = NULL; // Optional - for image sampling related descriptors
-
-    //TODO: image
-    // VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    // samplerLayoutBinding.binding = 1;
-    // samplerLayoutBinding.descriptorCount = 1;
-    // samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    // samplerLayoutBinding.pImmutableSamplers = 0;
-    // samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    // //holds the number of layout bindings we have
-    // VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
-    // layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    // layout_create_info.bindingCount = 1;
-    // layout_create_info.pBindings = &ubo_layout_binding;
-
-    // VkResult descriptor_set_result = vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info,
-    //     context->allocator, &shader->default_shader_descriptor_set_layout);
-    // VK_CHECK(descriptor_set_result);
-
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1;
@@ -64,7 +36,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
 
 
     // TODO: Pipeline and Push Constants
-    //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created seperately
+    //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
     VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
                                                       &shader->default_shader_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);

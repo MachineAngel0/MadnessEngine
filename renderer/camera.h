@@ -26,11 +26,26 @@ typedef struct camera
     float movement_speed;
     float mouse_sensitivity;
     float zoom;
+
+    //perspective options
+    float fov;
+    float znear;
+    float zfar;
+
+    mat4 projection;
+
 } camera;
 
 static camera camera_temp;
 
+camera* camera_temp_get(void)
+{
+    return &camera_temp;
+}
 
+
+
+ //forward declare
 void update_camera_vectors(camera* camera); //forward declare
 
 bool camera_mouse_movement_event(u16 code, void* sender, void* listener_inst, event_context context);
@@ -39,10 +54,9 @@ bool camera_mouse_movement_scroll_event(u16 code, void* sender, void* listener_i
 
 bool camera_keyboard_event(u16 code, void* sender, void* listener_inst, event_context context);
 
-
 void camera_init(camera* out_camera)
 {
-    memset(out_camera,0, sizeof(camera));
+    memset(out_camera, 0, sizeof(camera));
 
     // Default camera values
     const float YAW = -90.0f;
@@ -50,16 +64,22 @@ void camera_init(camera* out_camera)
     const float SPEED = 2.5f;
     const float SENSITIVITY = 10.0f;
     const float ZOOM = 45.0f;
+    const float FOV = 90.0f;
+    const float ZNEAR = 0.1f;
+    const float ZFAR = 100.0f;
 
     out_camera->pos = (vec3){0.0f, 0.0f, 0.0f};
     out_camera->up = (vec3){0.0f, 1.0f, 0.0f};
     out_camera->yaw = YAW;
     out_camera->pitch = PITCH;
     out_camera->world_up = (vec3){0.0f, 1.0f, 0.0f};
-    out_camera->front = (vec3){0.0f, 0.0f, -1.0f};
+    out_camera->front = (vec3){0.0f, 0.0f, 1.0f};
     out_camera->movement_speed = SPEED;
     out_camera->mouse_sensitivity = SENSITIVITY;
     out_camera->zoom = ZOOM;
+    out_camera->fov = FOV;
+    out_camera->znear = ZNEAR;
+    out_camera->zfar = ZFAR;
 
     update_camera_vectors(out_camera);
 
@@ -67,7 +87,6 @@ void camera_init(camera* out_camera)
     event_register(EVENT_MOUSE_WHEEL, 50, camera_mouse_movement_scroll_event);
     event_register(EVENT_KEY_PRESSED, 50, camera_keyboard_event);
 }
-
 
 
 void camera_bad_init()
@@ -100,10 +119,14 @@ void update_camera_vectors(camera* cam)
 // returns the view matrix calculated using Euler Angles and the LookAt Matrix
 
 
-
 mat4 camera_get_view_matrix(camera* cam)
 {
     return mat4_look_at(cam->pos, vec3_add(cam->pos, cam->front), cam->up);
+}
+
+mat4 camera_get_projection_matrix(const camera* cam, const f32 width, const f32 height)
+{
+    return mat4_perspective(deg_to_rad(cam->fov), width/height, cam->znear, cam->zfar);
 }
 
 mat4 camera_get_view_matrix_bad()
@@ -111,31 +134,36 @@ mat4 camera_get_view_matrix_bad()
     return camera_get_view_matrix(&camera_temp);
 }
 
+mat4 camera_get_projection_matrix_bad(f32 width, f32 height)
+{
+    return camera_get_projection_matrix(&camera_temp, width, height);
+}
+
 
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void camera_process_keyboard(const camera* cam, Camera_Movement movement_direction, float deltaTime)
+void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, float deltaTime)
 {
     float velocity = cam->movement_speed * deltaTime;
     if (movement_direction == CAMERA_MOVEMENT_FORWARD)
     {
         vec3 t = vec3_mul_scalar(cam->front, velocity);
-        vec3_add(cam->pos, t);
+        cam->pos = vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_BACKWARD)
     {
         vec3 t = vec3_mul_scalar(cam->front, velocity);
-        vec3_sub(cam->pos, t);
+        cam->pos = vec3_sub(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_LEFT)
     {
         vec3 t = vec3_mul_scalar(cam->right, velocity);
-        vec3_sub(cam->pos, t);
+        cam->pos = vec3_sub(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_RIGHT)
     {
         vec3 t = vec3_mul_scalar(cam->right, velocity);
-        vec3_add(cam->pos, t);
+        cam->pos = vec3_add(cam->pos, t);
     }
 }
 
@@ -164,7 +192,7 @@ void camera_process_mouse_movement(camera* cam, float x_offset, float y_offset, 
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
 void process_mouse_scroll(camera* cam, float y_offset)
 {
-    cam->zoom -= (float) y_offset;
+    cam->zoom -= y_offset;
     if (cam->zoom < 1.0f)
         cam->zoom = 1.0f;
     if (cam->zoom > 45.0f)
@@ -189,6 +217,8 @@ bool camera_mouse_movement_scroll_event(u16 code, void* sender, void* listener_i
 {
     if (code == EVENT_MOUSE_WHEEL)
     {
+        DEBUG("mouse scrolled for camera");
+
         uint8_t y = context.data.u8[0];
         process_mouse_scroll(&camera_temp, y);
     }
@@ -200,22 +230,26 @@ bool camera_keyboard_event(u16 code, void* sender, void* listener_inst, event_co
 {
     if (code == EVENT_KEY_PRESSED)
     {
+
         uint16_t key_code = context.data.u16[0];
+        float fake_delta = 1.0f;
+
         if (key_code == KEY_W)
         {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_FORWARD, 0.01); //TODO: false delta
+            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_FORWARD, fake_delta); //TODO: false delta
             DEBUG("WWWWWWW");
         }
         if (key_code == KEY_S)
         {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_BACKWARD, 0.01); //TODO: false delta
-        } if (key_code == KEY_A)
+            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_BACKWARD, fake_delta); //TODO: false delta
+        }
+        if (key_code == KEY_A)
         {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_LEFT, 0.01); //TODO: false delta
+            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_LEFT, fake_delta); //TODO: false delta
         }
         if (key_code == KEY_D)
         {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_RIGHT, 0.01); //TODO: false delta
+            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_RIGHT, fake_delta); //TODO: false delta
         }
     }
 

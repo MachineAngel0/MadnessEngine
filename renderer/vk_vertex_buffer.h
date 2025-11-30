@@ -479,8 +479,8 @@ void descriptor_pool_create_new(vulkan_context* context, vulkan_shader_default* 
 
 void createUniformBuffers(vulkan_context* context)
 {
+
     u8 max_frames = context->swapchain.max_frames_in_flight;
-    VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
     context->default_shader_info.global_uniform_buffers.uniform_buffers = darray_create_reserve(VkBuffer, max_frames);
     context->default_shader_info.global_uniform_buffers.uniform_buffers_memory = darray_create_reserve(
         VkDeviceMemory, max_frames);
@@ -494,8 +494,6 @@ void createUniformBuffers(vulkan_context* context)
     // This buffer will be used as a uniform buffer
     bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-    context->default_shader_info.global_uniform_buffers.uniform_buffers_mapped = darray_create_reserve(
-        void*, max_frames);
 
 
     // Create the buffers
@@ -540,7 +538,7 @@ void createDescriptors(vulkan_context* context)
     context->default_shader_info.descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;
 
     // Descriptors are allocated from a pool, that tells the implementation how many and what types of descriptors we are going to use (at maximum)
-    VkDescriptorPoolSize descriptorTypeCounts[1] = {};
+    VkDescriptorPoolSize descriptorTypeCounts[1] = {0};
     // This example only one descriptor type (uniform buffer)
     descriptorTypeCounts[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     // We have one buffer (and as such descriptor) per frame
@@ -557,7 +555,7 @@ void createDescriptors(vulkan_context* context)
     descriptorPoolCI.pPoolSizes = descriptorTypeCounts;
     // Set the max. number of descriptor sets that can be requested from this pool (requesting beyond this limit will result in an error)
     // Our sample will create one set per uniform buffer per frame
-    descriptorPoolCI.maxSets = context->swapchain.max_frames_in_flight;
+    descriptorPoolCI.maxSets = (uint32_t) context->swapchain.max_frames_in_flight;
     VK_CHECK(
         vkCreateDescriptorPool(context->device.logical_device, &descriptorPoolCI, 0, &context->default_shader_info.
             descriptor_pool));
@@ -571,7 +569,8 @@ void createDescriptors(vulkan_context* context)
     layoutBinding.descriptorCount = 1;
     layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    VkDescriptorSetLayoutCreateInfo descriptorLayoutCI = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    VkDescriptorSetLayoutCreateInfo descriptorLayoutCI = {0};
+    descriptorLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorLayoutCI.bindingCount = 1;
     descriptorLayoutCI.pBindings = &layoutBinding;
     VK_CHECK(
@@ -582,7 +581,8 @@ void createDescriptors(vulkan_context* context)
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
     for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
     {
-        VkDescriptorSetAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+        VkDescriptorSetAllocateInfo allocInfo = {0};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = context->default_shader_info.descriptor_pool;
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &context->default_shader_info.descriptor_set_layout;
@@ -593,12 +593,13 @@ void createDescriptors(vulkan_context* context)
         // Update the descriptor set determining the shader binding points
         // For every binding point used in a shader there needs to be one
         // descriptor set matching that binding point
-        VkWriteDescriptorSet writeDescriptorSet = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-
+        VkWriteDescriptorSet writeDescriptorSet = {0};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         // The buffer's information is passed using a descriptor info structure
         VkDescriptorBufferInfo bufferInfo = {0};
         bufferInfo.buffer = context->default_shader_info.global_uniform_buffers.uniform_buffers[i];
         bufferInfo.range = sizeof(uniform_buffer_object);
+        bufferInfo.offset = 0;
 
         // Binding 0 : Uniform buffer
         writeDescriptorSet.dstSet = context->default_shader_info.descriptor_sets[i];

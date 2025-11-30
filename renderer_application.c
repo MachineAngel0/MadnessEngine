@@ -134,7 +134,7 @@ void application_renderer_run()
 
         // clock_print_info(&app_state.clock);
 
-        app_state.renderer->renderer_run(app_state.renderer);
+        app_state.renderer->renderer_run(app_state.renderer, &app_state.clock);
 
         clock_update_frame_end(&app_state.clock);
 
@@ -182,10 +182,10 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
         uint16_t key_code = context.data.u16[0];
         INFO("released key %hu", key_code);
 
-        if (key_code == KEY_D)
-        {
-            memory_tracker_print_memory_usage();
-        }
+        // if (key_code == KEY_M)
+        // {
+        //     memory_tracker_print_memory_usage();
+        // }
     }
 
     return false;

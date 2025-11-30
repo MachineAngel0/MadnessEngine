@@ -5,7 +5,7 @@
 
 
 typedef bool (renderer_initialize)(renderer*);
-typedef void (renderer_run)(renderer*);
+typedef void (renderer_run)(renderer*, Clock* clock);
 typedef void (renderer_terminate)(renderer*);
 typedef void (renderer_resize)(renderer*, u32, u32);
 
