@@ -6,15 +6,6 @@
 #include "defines.h"
 
 
-typedef enum Direction
-{
-    DIRECTION_UP,
-    DIRECTION_DOWN,
-    DIRECTION_LEFT,
-    DIRECTION_RIGHT,
-} Direction;
-
-
 typedef union vec2f
 {
     f32 elements[2];
@@ -179,6 +170,15 @@ typedef union mat4_f
 typedef vec4 quat;
 
 
+
+    typedef enum Direction
+{
+    DIRECTION_UP,
+    DIRECTION_DOWN,
+    DIRECTION_LEFT,
+    DIRECTION_RIGHT,
+} Direction;
+
 #define MATH_E		2.7182818284590452354
 #define LOG2E		1.4426950408889634074
 #define LOG10E	    0.43429448190325182765
@@ -200,6 +200,5 @@ typedef vec4 quat;
 #define MS_TO_SEC(x) (1000.0f * x)
 #define SEC_TO_MS(x) (x / 1000.0f)
 #define INF	    1e30f // largest value available
-
 
 #endif //MATH_TYPES_H

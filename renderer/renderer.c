@@ -12,14 +12,13 @@
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static vulkan_context vk_context;
+static camera main_camera;
 
 
 
 bool renderer_init(struct renderer* renderer_inst)
 {
-    // camera_init(&camera_to_remove);
-    camera_bad_init();
-
+    camera_init(&main_camera);
     vk_context.is_init = false;
     // vulkan_context vulkan_context;
 
@@ -166,15 +165,19 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     // uniform_buffer_update(&vk_context, &vk_context.default_shader_info.global_uniform_buffers, vk_context.current_frame,
     //                       1.0f, &camera_to_remove);
     // Update the uniform buffer for the next frame
+
+    camera_update(&main_camera, clock->delta_time);
+
     uniform_buffer_object ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
     // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
     ubo.model = mat4_identity();
     // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    // ubo.view =  camera_get_view_matrix(camera);
-    ubo.view = camera_get_view_matrix_bad();
+    ubo.view = camera_get_view_matrix(&main_camera);
+    // ubo.view = camera_get_fps_view_matrix(&main_camera);
     // Perspective
-    ubo.proj = camera_get_projection_matrix_bad((float) vk_context.framebuffer_height, (float) vk_context.framebuffer_width);
+    ubo.proj = camera_get_projection(&main_camera, vk_context.framebuffer_width, vk_context.framebuffer_height);
+
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(vk_context.default_shader_info.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
            sizeof(uniform_buffer_object));

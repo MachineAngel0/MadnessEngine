@@ -1,18 +1,19 @@
 ﻿#ifndef KMATH_H
 #define KMATH_H
 
-//TODO: literally everything
 #include "math.h"
 #include "defines.h"
 #include <float.h>
 #include "platform.h"
 
 
-// TODO: decide which coordinate system you want
+// #include "cglm/cglm.h"
+
+
+//FUTURE: rn im just using glm/cglm
 // Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
-
-/*** VEC2 ***/
+// VEC2
 MINLINE vec2 vec2_zero()
 {
     return (vec2){0.0f, 0.0f};
@@ -107,7 +108,7 @@ MINLINE float vec2_distance(const vec2 a, const vec2 b)
     return vec2_length(temp);
 }
 
-/*** VEC3 ***/
+// VEC3
 MINLINE vec3 vec3_zero()
 {
     return (vec3){0.0f, 0.0f, 0.0f};
@@ -261,8 +262,7 @@ MINLINE float vec3_distance(const vec3 a, const vec3 b)
 }
 
 
-/*** VEC4 ***/
-
+//VEC4
 
 MINLINE vec4 vec4_zero()
 {
@@ -357,15 +357,15 @@ MINLINE f32 vec4_dot_f32(const f32 a0, const f32 a1, const f32 a2, const f32 a3,
 }
 
 
-/*** MATRIX3 ***/
+// MATRIX3
 
 MINLINE mat3 mat3_identity()
 {
     mat3 out_mat3;
     memset(&out_mat3, 0, sizeof(float) * 9);
     out_mat3.data[0] = 1.0f;
-    out_mat3.data[5] = 1.0f;
-    out_mat3.data[10] = 1.0f;
+    out_mat3.data[4] = 1.0f;
+    out_mat3.data[8] = 1.0f;
     return out_mat3;
 }
 
@@ -652,7 +652,7 @@ MINLINE mat3 mat3_skew(float t, const vec3 a, const vec3 b)
 }
 
 
-/*** MATRIX4 ***/
+// MATRIX4
 
 MINLINE void mat4_set_value(mat4 matrix, const u8 row, const u8 col, const float val)
 {
@@ -1062,7 +1062,7 @@ MINLINE vec3 mat4_right(const mat4 matrix)
 }
 
 
-/*** QUATERNIONS ***/
+// QUATERNIONS
 MINLINE quat quat_identity()
 {
     return (quat){0, 0, 0, 1.0f};
@@ -1174,6 +1174,14 @@ MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const b8 nor
     return q;
 }
 
+MINLINE mat4 quat_rotate(mat4 m, float angle, vec3 axis)
+{
+    quat rot = quat_from_axis_angle(axis, angle, false);
+    return quat_to_rotation_matrix(rot, vec3_zero());
+    // glm_rotate_make(rot, angle, axis);
+    // glm_mul_rot(m, rot, m);
+}
+
 //  Calculates spherical linear interpolation of a given percentage between two quaternions.
 MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
 {
@@ -1235,7 +1243,7 @@ MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
     };
 }
 
-/*** DEG AND RAD ***/
+// DEG AND RAD
 MINLINE f32 deg_to_rad(const f32 degrees)
 {
     return degrees * DEG2RAD;
@@ -1246,7 +1254,7 @@ MINLINE f32 rad_to_deg(const f32 radians)
     return radians * RAD2DEG;
 }
 
-/*** VEC Conversions ***/
+// VEC Conversions
 MINLINE vec2 vec3_to_vec2(const vec3 v)
 {
     return (vec2){v.x, v.y};
@@ -1288,6 +1296,9 @@ MINLINE mat4 quat_to_mat4(quat q)
 
     return out_matrix;
 }
+
+
+
 
 /*** MAX/MIN FUNCTIONS ***/
 
@@ -1448,6 +1459,4 @@ bool equal_d(const double a, const double b, double tolerance)
 
 #define EQUAL_F(a, b) equal_f(a, b, FLT_EPSILON)
 #define EQUAL_D(a, b) equal_d(a, b, FLT_EPSILON)
-
-
 #endif //KMATH_H

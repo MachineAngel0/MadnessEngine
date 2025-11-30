@@ -121,6 +121,7 @@ void application_renderer_run()
     while (app_state.is_running)
     {
 
+        input_update();
         platform_pump_messages(&app_state.platform);
 
 

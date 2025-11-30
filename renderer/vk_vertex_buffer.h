@@ -328,7 +328,7 @@ void uniform_buffer_update(vulkan_context* context, vulkan_uniform_buffer* unifo
     quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * time, true);
     ubo.model = quat_to_rotation_matrix(q, (vec3){0.0f, 0.0f, 0.0f});
     // ubo.view =  camera_get_view_matrix(camera);
-    ubo.view = camera_get_view_matrix_bad();
+    // ubo.view = camera_get_view_matrix_bad();
     // Perspective
     float aspect = (float) context->framebuffer_width / context->framebuffer_height;
     ubo.proj = mat4_perspective(deg_to_rad(90.0f), aspect, 0.1f, 1000.0f);
