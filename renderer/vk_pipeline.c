@@ -93,7 +93,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
     // Vertex input
     VkVertexInputBindingDescription binding_description;
     binding_description.binding = 0; // Binding index
-    binding_description.stride = sizeof(vertex_3d);
+    binding_description.stride = sizeof(vertex);
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // Move to next data entry for each vertex.
 
     // Attributes
@@ -154,7 +154,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
         1,
         &pipeline_create_info,
         context->allocator,
-        &out_pipeline->pipeline_handle);
+        &out_pipeline->handle);
 
 
     return true;
@@ -176,7 +176,7 @@ void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pi
         return;
     }
     // Destroy pipeline
-    if (!pipeline->pipeline_handle)
+    if (!pipeline->handle)
     {
         M_ERROR("VK PIPELINE DESTROY: INVALID PIPELINE HANDLE");
         return;
@@ -190,12 +190,12 @@ void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pi
 
     vkDestroyPipelineLayout(context->device.logical_device, pipeline->pipeline_layout, context->allocator);
     pipeline->pipeline_layout = 0;
-    vkDestroyPipeline(context->device.logical_device, pipeline->pipeline_handle, context->allocator);
-    pipeline->pipeline_handle = 0;
+    vkDestroyPipeline(context->device.logical_device, pipeline->handle, context->allocator);
+    pipeline->handle = 0;
 }
 
 void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point,
                           vulkan_shader_pipeline* pipeline)
 {
-    vkCmdBindPipeline(command_buffer->command_buffer_handle, bind_point, pipeline->pipeline_handle);
+    vkCmdBindPipeline(command_buffer->handle, bind_point, pipeline->handle);
 }

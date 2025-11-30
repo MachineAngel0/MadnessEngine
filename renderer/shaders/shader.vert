@@ -1,19 +1,18 @@
 #version 450
 
-//layout(binding = 0) uniform uniform_buffer_object {
-//    mat4 model;
-//    mat4 view;
-//    mat4 proj;
-//} ubo;
+layout(binding = 0) uniform UBO {
+    mat4 projectionMatrix;
+    mat4 modelMatrix;
+    mat4 viewMatrix;
+} ubo;
 
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec3 outColor;
 
 void main() {
-//    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    gl_Position = vec4(inPosition, 1.0);
-    fragColor = vec3(inColor);
+    gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+    outColor = inColor;
 }

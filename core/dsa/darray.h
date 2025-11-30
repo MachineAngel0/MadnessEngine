@@ -428,13 +428,15 @@ bool darray_contains(void* array, const void* key, int (*cmp_func)(const void*, 
 }
 
 
-void darray_contains_or_add(void* array, const void* key, int (*cmp_func)(const void*, const void*))
+bool darray_contains_or_add(void* array, void* key, int (*cmp_func)(const void*, const void*))
 {
+    //return tells us if we added to the array or not
+
     // check if the value exists, if it doesn't then add it
     if (!array)
     {
         M_ERROR("DARRAY CONTAINS OR ADD: NULL ARRAY");
-        return;
+        return false;
     }
 
     //get the array header
@@ -444,16 +446,60 @@ void darray_contains_or_add(void* array, const void* key, int (*cmp_func)(const 
     //check if we have the value, otherwise return false
     for (int i = 0; i < header->num_items; i++)
     {
+        void* element = (u8*)array + (i * header->stride);
         //0 means they are equal to each other, which means we can exit
-        if (cmp_func((u8*)array + (i * header->stride), key) == 0)
+        if (cmp_func(element, key) == 0)
         {
-            return;
+            return false;
+        }
+    }
+
+    //if we reach this point the value is not in the array
+   darray_push(array, key);
+    return true;
+
+}
+
+
+bool darray_contains_or_add_other(void* array, void* key)
+{
+    //return tells us if we added to the array or not
+
+    // check if the value exists, if it doesn't then add it
+    if (!array)
+    {
+        M_ERROR("DARRAY CONTAINS OR ADD: NULL ARRAY");
+        return false;
+    }
+
+    //get the array header
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    //check if we have the value, otherwise return false
+    for (int i = 0; i < header->num_items; i++)
+    {
+        void* element = (u8*)array + (i * header->stride);
+        //0 means they are equal to each other, which means we can exit
+        if (memcmp(element, key, header->stride) == 0)
+        {
+            return false;
         }
     }
 
     //if we reach this point the value is not in the array
     darray_push(array, key);
+    return true;
+
 }
+
+#define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
+#define darray_contains_or_add_test(array, value)    \
+{                                                     \
+    temp_value = (void*) STBDS_ADDRESSOF((array, (value)) \
+    darray_contains_or_add_other(array, temp_value); \
+}
+
 
 
 void* _darray_duplicate(const void* array)

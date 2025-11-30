@@ -57,14 +57,10 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    // pipeline_layout_info.setLayoutCount = 1; // Optional
-    // pipeline_layout_info.pSetLayouts = &shader->default_shader_descriptor_set_layout;
-    // pipeline_layout_info.pushConstantRangeCount = 0; // Optional
-    // pipeline_layout_info.pPushConstantRanges = 0; // Optional
-    pipeline_layout_info.setLayoutCount = 0; // Optional
-    pipeline_layout_info.pSetLayouts = 0;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = 0;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &context->default_shader_info.descriptor_set_layout;
+    // pipeline_layout_info.pushConstantRangeCount = 0;
+    // pipeline_layout_info.pPushConstantRanges = 0;
 
 
     // TODO: Pipeline and Push Constants
@@ -114,7 +110,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     //vertex info
     VkVertexInputBindingDescription binding_description = {0};
     binding_description.binding = 0;
-    binding_description.stride = sizeof(vertex_3d);
+    binding_description.stride = sizeof(vertex);
     /*
     * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
     * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
@@ -127,14 +123,14 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     attributeDescriptions[0].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(vertex_3d, position); //offsetof is pretty interesting
+    attributeDescriptions[0].offset = offsetof(vertex, position); //offsetof is pretty interesting
 
     //color
     attributeDescriptions[1].binding = 0; //referencing which VkVertexInputBindingDescription binding we are using
     attributeDescriptions[1].location = 1;
     // attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(vertex_3d, color); //offsetof is pretty interesting
+    attributeDescriptions[1].offset = offsetof(vertex, color); //offsetof is pretty interesting
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -150,21 +146,20 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    input_assembly.primitiveRestartEnable = VK_FALSE;
+    // input_assembly.primitiveRestartEnable = VK_FALSE;
     //pInputAssemblyState.pNext;
     //pInputAssemblyState.flags;
 
     VkPipelineRasterizationStateCreateInfo rasterizer = {0};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.cullMode = VK_CULL_MODE_NONE; //TODO: temp
+    // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
     rasterizer.lineWidth = 1.0f;
-    // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
-    rasterizer.cullMode = VK_CULL_MODE_NONE; //discard back facing triangles
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    // counter means positive area is front facing, clockwise means negative area is front facing
     //MIGHT BE USEFUL FOR SHADOW MAPPING
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f;
@@ -176,12 +171,12 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     //TODO: not in use for now, but this is where we would do our anti aliasing
     VkPipelineMultisampleStateCreateInfo multisampling = {0};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.minSampleShading = 1.0f; // Optional
-    multisampling.pSampleMask = 0; // Optional
-    multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-    multisampling.alphaToOneEnable = VK_FALSE; // Optional
+    multisampling.sampleShadingEnable = VK_FALSE;
+    // multisampling.minSampleShading = 1.0f; // Optional
+    // multisampling.pSampleMask = 0; // Optional
+    // multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+    // multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
     //TODO: uncomment when needed
     // Depth and stencil testing.
@@ -189,9 +184,13 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depth_stencil.depthTestEnable = VK_TRUE;
     depth_stencil.depthWriteEnable = VK_TRUE;
-    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil.back.failOp = VK_STENCIL_OP_KEEP;
+    depth_stencil.back.passOp = VK_STENCIL_OP_KEEP;
+    depth_stencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
     depth_stencil.stencilTestEnable = VK_FALSE;
+    depth_stencil.front = depth_stencil.back;
 
 
     //happens after color returns from the fragment shader
@@ -251,6 +250,15 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     dynamicState.dynamicStateCount = 2;
     dynamicState.pDynamicStates = dynamicStates;
 
+    // Attachment information for dynamic rendering
+    VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = { 0};
+    pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    pipeline_rendering_create_info.colorAttachmentCount = 1;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &vk_context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = vk_context.device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = vk_context.device.depth_format;
+
+
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
     graphics_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     graphics_pipeline_info.stageCount = 2;
@@ -264,14 +272,15 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     graphics_pipeline_info.pColorBlendState = &color_blending;
     graphics_pipeline_info.pDynamicState = &dynamicState;
     graphics_pipeline_info.layout = shader->default_shader_pipeline.pipeline_layout;
-    graphics_pipeline_info.renderPass = context->main_renderpass.handle;
-    graphics_pipeline_info.subpass = 0;
-    graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    graphics_pipeline_info.basePipelineIndex = -1;
+    graphics_pipeline_info.renderPass = 0; // this has to be null if we are doing dynamic rendering
+    // graphics_pipeline_info.subpass = 0;
+    // graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    // graphics_pipeline_info.basePipelineIndex = -1;
+    graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
     VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
-                                                         &graphics_pipeline_info, NULL, &shader->default_shader_pipeline.pipeline_handle);
+                                                         &graphics_pipeline_info, NULL, &shader->default_shader_pipeline.handle);
 
     if (graphics_result != VK_SUCCESS)
     {
@@ -296,8 +305,9 @@ void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeli
 
 }
 
-void vulkan_default_shader_pipeline_bind(const vulkan_context* context, vulkan_shader_pipeline* pipeline)
+void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline)
 {
-    vulkan_pipeline_bind(&context->graphics_command_buffer[context->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vulkan_pipeline_bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                          pipeline);
 }
+

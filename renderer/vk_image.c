@@ -250,7 +250,7 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
     }
 
     vkCmdPipelineBarrier(
-        commandBuffer.command_buffer_handle,
+        commandBuffer.handle,
         sourceStage, destinationStage,
         0,
         0, NULL,
@@ -296,4 +296,27 @@ void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* co
     );
     vulkan_command_buffer_end_single_use(vulkan_context, vulkan_context->graphics_command_pool, &commandBuffer,
                                          vulkan_context->device.graphics_queue);
+}
+
+void insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
+    VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange)
+{
+    VkImageMemoryBarrier imageMemoryBarrier = {0};
+    imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imageMemoryBarrier.srcAccessMask = srcAccessMask;
+    imageMemoryBarrier.dstAccessMask = dstAccessMask;
+    imageMemoryBarrier.oldLayout = oldImageLayout;
+    imageMemoryBarrier.newLayout = newImageLayout;
+    imageMemoryBarrier.image = image;
+    imageMemoryBarrier.subresourceRange = subresourceRange;
+
+    vkCmdPipelineBarrier(
+        cmdbuffer,
+        srcStageMask,
+        dstStageMask,
+        0,
+        0, NULL,
+        0, NULL,
+        1, &imageMemoryBarrier);
 }

@@ -11,7 +11,8 @@ VkShaderModule create_shader_module(const vulkan_context* context,   const char*
 
 bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default* pipeline);
 void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline, VkDescriptorSetLayout* descriptor_set_layout);
-void vulkan_default_shader_pipeline_bind(const vulkan_context* context, vulkan_shader_pipeline* pipeline, u32 image_index);
+void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
+
 
 
 

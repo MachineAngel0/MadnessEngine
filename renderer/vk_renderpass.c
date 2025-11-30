@@ -139,12 +139,12 @@ void vulkan_renderpass_begin(vulkan_command_buffer* command_buffer, vulkan_rende
     begin_info.clearValueCount = 2;
     begin_info.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(command_buffer->command_buffer_handle, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(command_buffer->handle, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass)
 {
-    vkCmdEndRenderPass(command_buffer->command_buffer_handle);
+    vkCmdEndRenderPass(command_buffer->handle);
 }
 
 

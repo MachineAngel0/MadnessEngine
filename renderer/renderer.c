@@ -6,6 +6,7 @@
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_command_buffer.h"
+#include "vk_image.h"
 #include "vk_shader.h"
 #include "vk_vertex_buffer.h"
 
@@ -87,19 +88,24 @@ bool renderer_init(struct renderer* renderer_inst)
     vk_context.current_frame = 0;
 
     // Create default shader
+    createUniformBuffers(&vk_context);
+    createDescriptors(&vk_context);
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
 
     //TODO: temporary
-    memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
-    vk_context.default_vertex_info.vertices_size = sizeof(test_vertices) / sizeof(test_vertices[0]);
-    memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
-    vk_context.default_vertex_info.indices_size = sizeof(test_indices) / sizeof(test_indices[0]);
-    for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
-    {
-        create_vertex_and_indices_buffer(&vk_context, &vk_context.graphics_command_buffer[i],
-                                         &vk_context.default_vertex_buffer,
-                                         &vk_context.default_vertex_info);
-    }
+    // memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
+    // vk_context.default_vertex_info.vertices_size = sizeof(test_vertices) / sizeof(test_vertices[0]);
+    // memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
+    // vk_context.default_vertex_info.indices_size = sizeof(test_indices) / sizeof(test_indices[0]);
+    createVertexBuffer(&vk_context, &vk_context.vertex_buffer, &vk_context.index_buffer, &vk_context.default_vertex_info);
+
+
+    // for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
+    // {
+    //     create_vertex_and_indices_buffer(&vk_context, &vk_context.graphics_command_buffer[i],
+    //                                      &vk_context.default_vertex_buffer,
+    //                                      &vk_context.default_vertex_info);
+    // }
 
 
     // uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
@@ -152,73 +158,139 @@ void renderer_update(struct renderer* renderer_inst)
     }
 
 
-
     //World Update
-    vertex_buffer_update(&vk_context, &vk_context.graphics_command_buffer[vk_context.current_frame],
-                         &vk_context.default_vertex_buffer, &vk_context.default_vertex_info);
+    // vertex_buffer_update(&vk_context, &vk_context.graphics_command_buffer[vk_context.current_frame],
+    //                      &vk_context.default_vertex_buffer, &vk_context.default_vertex_info);
 
     //global uniform / projection matrix
     // uniform_buffer_update(&vk_context, &vk_context.default_shader_info.global_uniform_buffers, vk_context.current_frame,
     //                       1.0f, &camera_to_remove);
+    // Update the uniform buffer for the next frame
+    uniform_buffer_object ubo = {0};
+    quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * 1.0f, true);
+    ubo.model = quat_to_rotation_matrix(q, (vec3){0.0f, 0.0f, 0.0f});
+    // ubo.view =  camera_get_view_matrix(camera);
+    ubo.view = camera_get_view_matrix_bad();
+    // Perspective
+    float aspect = (float) vk_context.framebuffer_width / vk_context.framebuffer_height;
+    ubo.proj = mat4_perspective(deg_to_rad(90.0f), aspect, 0.1f, 1000.0f);
+    // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
+    memcpy(vk_context.default_shader_info.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
+           sizeof(uniform_buffer_object));
 
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
     vulkan_command_buffer* command_buffer_current_frame = &vk_context.graphics_command_buffer[vk_context.current_frame];
-    vkResetCommandBuffer(command_buffer_current_frame->command_buffer_handle, 0);
+    vkResetCommandBuffer(command_buffer_current_frame->handle, 0);
     vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
 
+    // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
+    insertImageMemoryBarrier(command_buffer_current_frame->handle,
+                             vk_context.swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+    );
+    insertImageMemoryBarrier(command_buffer_current_frame->handle,
+                             vk_context.swapchain.depth_attachment.handle, 0,
+                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                             (VkImageSubresourceRange){
+                                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+                             }
+    );
 
-    // Begin the render pass.
-    vulkan_renderpass_begin(
-        command_buffer_current_frame,
-        &vk_context.main_renderpass,
-        vk_context.swapchain.framebuffers[image_index].framebuffer_handle);
+    //
+    // // Begin the render pass.
+    // vulkan_renderpass_begin(
+    //     command_buffer_current_frame,
+    //     &vk_context.main_renderpass,
+    //     vk_context.swapchain.framebuffers[image_index].framebuffer_handle);
+
+    //with dynamic rendering we need to add a layout transition, using barriers
+
+
+    // Set up the rendering attachment info
+    VkRenderingAttachmentInfo color_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = vk_context.swapchain.image_views[image_index],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue.color = {0.0f, 0.0f, 0.2f, 0.0f},
+    };
+
+    VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {
+            .offset = {0, 0},
+            .extent = {vk_context.framebuffer_width, vk_context.framebuffer_height}
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment,
+    };
+    vkCmdBeginRendering(command_buffer_current_frame->handle, &rendering_info);
 
     // Dynamic state
-    VkViewport viewport;
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (f32) vk_context.framebuffer_width;
-    viewport.height = -(f32) vk_context.framebuffer_height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    VkViewport viewport = {
+        0.0f, 0.0f, (f32) vk_context.framebuffer_width, (f32) vk_context.framebuffer_height, 0.0f, 1.0f
+    };
 
     // Scissor
-    VkRect2D scissor;
-    scissor.offset.x = scissor.offset.y = 0;
-    scissor.extent.width = vk_context.framebuffer_width;
-    scissor.extent.height = vk_context.framebuffer_height;
+    VkRect2D scissor = {
+        .offset = {.x = 0, .y = 0},
+        .extent = {.width = vk_context.framebuffer_width, .height = vk_context.framebuffer_height},
+    };
 
-    vkCmdSetViewport(command_buffer_current_frame->command_buffer_handle, 0, 1, &viewport);
-    vkCmdSetScissor(command_buffer_current_frame->command_buffer_handle, 0, 1, &scissor);
+
+    vkCmdSetViewport(command_buffer_current_frame->handle, 0, 1, &viewport);
+    vkCmdSetScissor(command_buffer_current_frame->handle, 0, 1, &scissor);
+    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
 
     //Do Bindings and Draw
-    vulkan_default_shader_pipeline_bind(&vk_context, &vk_context.default_shader_info.default_shader_pipeline,
-                                        image_index);
+    // vulkan_default_shader_pipeline_bind(command_buffer_current_frame, &vk_context.default_shader_info.default_shader_pipeline);
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      vk_context.default_shader_info.default_shader_pipeline.handle);
 
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(command_buffer_current_frame->command_buffer_handle, 0, 1,
-                           &vk_context.default_vertex_buffer.vertex_buffer, offsets);
 
-    vkCmdBindIndexBuffer(command_buffer_current_frame->command_buffer_handle,
-                         vk_context.default_vertex_buffer.index_buffer, 0,
-                         VK_INDEX_TYPE_UINT16);
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
+                           &vk_context.vertex_buffer.handle, offsets);
 
-    // vkCmdBindDescriptorSets(command_buffer_current_frame->command_buffer_handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                         vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
-    //                         &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame],
-    //                         0, NULL);
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT32);
 
-    vkCmdDrawIndexed(command_buffer_current_frame->command_buffer_handle,
+
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32) vk_context.default_vertex_info.indices_size,
                      1, 0, 0, 0);
 
     //END FRAME//
 
+    // Finish the current dynamic rendering section
+    vkCmdEndRendering(command_buffer_current_frame->handle);
 
     // End renderpass
-    vulkan_renderpass_end(command_buffer_current_frame, &vk_context.main_renderpass);
+    // vulkan_renderpass_end(command_buffer_current_frame, &vk_context.main_renderpass);
+
+    // This barrier prepares the color image for presentation, we don't need to care for the depth image
+    insertImageMemoryBarrier(command_buffer_current_frame->handle,
+                             vk_context.swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+
 
     //End DRAW COMMAND
     vulkan_command_buffer_end(command_buffer_current_frame);
@@ -228,11 +300,11 @@ void renderer_update(struct renderer* renderer_inst)
     VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     // Command buffer(s) to be executed.
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer_current_frame->command_buffer_handle;
-	// Semaphore to wait upon before the submitted command buffer starts executing
+    submit_info.pCommandBuffers = &command_buffer_current_frame->handle;
+    // Semaphore to wait upon before the submitted command buffer starts executing
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &vk_context.swapchain_release_semaphore[image_index];
-	// Semaphore to be signaled when command buffers have completed
+    // Semaphore to be signaled when command buffers have completed
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = &vk_context.swapchain_acquire_semaphore[vk_context.current_frame];
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
@@ -241,7 +313,7 @@ void renderer_update(struct renderer* renderer_inst)
     VkPipelineStageFlags flags[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit_info.pWaitDstStageMask = flags;
 
-		// Submit to the graphics queue passing a wait fence
+    // Submit to the graphics queue passing a wait fence
     VkResult result = vkQueueSubmit(
         vk_context.device.graphics_queue,
         1,
@@ -278,10 +350,6 @@ void renderer_shutdown(struct renderer* renderer_inst)
     //                               &vk_context.default_shader_descriptor_set_layout);
 
 
-    // vulkan_renderer_command_buffer_destroy(&vk_context); //bugged rn
-    create_vertex_and_indices_destroy(&vk_context, &vk_context.default_vertex_buffer);
-
-
     // Sync objects
     for (u8 i = 0; i < vk_context.swapchain.image_count; ++i)
     {
@@ -305,8 +373,13 @@ void renderer_shutdown(struct renderer* renderer_inst)
         //per frame command buffers
         vkFreeCommandBuffers(vk_context.device.logical_device, vk_context.primary_command_pool[i], 1,
                              &vk_context.primary_command_buffer[i]);
+    }
+
+    for (u8 i = 0; i < vk_context.swapchain.image_count; ++i)
+    {
         vkDestroyCommandPool(vk_context.device.logical_device, vk_context.primary_command_pool[i], VK_NULL_HANDLE);
     }
+
     darray_free(vk_context.swapchain_acquire_semaphore);
     darray_free(vk_context.swapchain_release_semaphore);
     darray_free(vk_context.queue_submit_fence);
@@ -317,13 +390,13 @@ void renderer_shutdown(struct renderer* renderer_inst)
     // Command buffers
     for (u32 i = 0; i < vk_context.swapchain.image_count; ++i)
     {
-        if (vk_context.graphics_command_buffer[i].command_buffer_handle)
+        if (vk_context.graphics_command_buffer[i].handle)
         {
             vulkan_command_buffer_free(
                 &vk_context,
                 vk_context.graphics_command_pool,
                 &vk_context.graphics_command_buffer[i]);
-            vk_context.graphics_command_buffer[i].command_buffer_handle = 0;
+            vk_context.graphics_command_buffer[i].handle = 0;
         }
     }
     darray_free(vk_context.graphics_command_buffer);

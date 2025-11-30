@@ -16,7 +16,7 @@ void vulkan_renderer_command_buffers_create(vulkan_context* vk_context)
 
         for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
         {
-            if (vk_context->graphics_command_buffer[i].command_buffer_handle)
+            if (vk_context->graphics_command_buffer[i].handle)
             {
                 vulkan_command_buffer_free(vk_context, vk_context->graphics_command_pool,
                                            &vk_context->graphics_command_buffer[i]);
@@ -33,13 +33,13 @@ void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context)
 {
     for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        if (vk_context->graphics_command_buffer[i].command_buffer_handle)
+        if (vk_context->graphics_command_buffer[i].handle)
         {
             vulkan_command_buffer_free(
                 vk_context,
                 vk_context->graphics_command_pool,
                 &vk_context->graphics_command_buffer[i]);
-            vk_context->graphics_command_buffer[i].command_buffer_handle = 0;
+            vk_context->graphics_command_buffer[i].handle = 0;
         }
     }
     darray_free(&vk_context->graphics_command_buffer);
@@ -70,13 +70,13 @@ void vulkan_command_buffer_allocate(vulkan_context* context, VkCommandPool pool,
 
     VK_CHECK(
         vkAllocateCommandBuffers(context->device.logical_device, &allocate_info, &out_command_buffer->
-            command_buffer_handle));
+            handle));
 }
 
 void vulkan_command_buffer_free(vulkan_context* context, VkCommandPool pool, vulkan_command_buffer* command_buffer)
 {
-    vkFreeCommandBuffers(context->device.logical_device, pool, 1, &command_buffer->command_buffer_handle);
-    command_buffer->command_buffer_handle = 0;
+    vkFreeCommandBuffers(context->device.logical_device, pool, 1, &command_buffer->handle);
+    command_buffer->handle = 0;
 }
 
 void vulkan_command_buffer_begin(vulkan_command_buffer* command_buffer, bool is_single_use, bool is_renderpass_continue,
@@ -105,12 +105,12 @@ void vulkan_command_buffer_begin(vulkan_command_buffer* command_buffer, bool is_
         begin_info.flags |= VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     }
 
-    VK_CHECK(vkBeginCommandBuffer(command_buffer->command_buffer_handle, &begin_info));
+    VK_CHECK(vkBeginCommandBuffer(command_buffer->handle, &begin_info));
 }
 
 void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer)
 {
-    VK_CHECK(vkEndCommandBuffer(command_buffer->command_buffer_handle));
+    VK_CHECK(vkEndCommandBuffer(command_buffer->handle));
 }
 
 
@@ -129,7 +129,7 @@ void vulkan_command_buffer_end_single_use(vulkan_context* context, VkCommandPool
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer->command_buffer_handle;
+    submit_info.pCommandBuffers = &command_buffer->handle;
     //TODO:
     // submit_info.signalSemaphoreCount = 1;
     // submit_info.pSignalSemaphores = NULL;

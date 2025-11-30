@@ -2,14 +2,14 @@
 #include "logger.h"
 
 
-uint32_t find_memory_type(vulkan_context* vulkan_context, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(vulkan_context->device.physical_device, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(context->device.physical_device, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
     {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        if ((type_filter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
         {
             return i;
         }
@@ -24,11 +24,12 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
 {
     //create buffer
-    VkBufferCreateInfo buffer_create_info = {0};
-    buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_create_info.size = size;
-    buffer_create_info.usage = usage;
-    buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo buffer_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
     //The flags parameter is used to configure sparse buffer memory, which is not relevant right now. We'll leave it at the default value of 0.
     //bufferInfo.flags;
 
@@ -38,7 +39,6 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
     //finding memory size needed for the buffer
     VkMemoryRequirements memory_requirements;
     vkGetBufferMemoryRequirements(vulkan_context->device.logical_device, *buffer, &memory_requirements);
-
 
     //  NOTE:
     //  It should be noted that in a real world application,
@@ -54,12 +54,12 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
 
 
     //allocate buffer and bind to memory
-    VkMemoryAllocateInfo memory_allocate_info = {0};
-    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = find_memory_type(vulkan_context, memory_requirements.memoryTypeBits,
-                                                            properties);
-
+    VkMemoryAllocateInfo memory_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memory_requirements.size,
+        .memoryTypeIndex = find_memory_type(vulkan_context, memory_requirements.memoryTypeBits,
+                                            properties),
+    };
     VK_CHECK(vkAllocateMemory(vulkan_context->device.logical_device, &memory_allocate_info, NULL, bufferMemory));
 
     VK_CHECK(vkBindBufferMemory(vulkan_context->device.logical_device, *buffer, *bufferMemory, 0));
@@ -67,19 +67,11 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
     return true;
 }
 
-bool buffer_destroy_free(vulkan_context* vulkan_context, vertex_buffer* vertex_buffer)
+bool buffer_destroy_free(vulkan_context* vulkan_context, vulkan_buffer* vk_buffer)
 {
-    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->index_buffer, NULL);
-    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->index_buffer_memory, NULL);
+    vkFreeMemory(vulkan_context->device.logical_device, vk_buffer->memory, NULL);
+    vkDestroyBuffer(vulkan_context->device.logical_device, vk_buffer->handle, NULL);
 
-    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->vertex_buffer, NULL);
-    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_buffer_memory, NULL);
-
-    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->index_staging_buffer, NULL);
-    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->index_staging_buffer_memory, NULL);
-
-    vkDestroyBuffer(vulkan_context->device.logical_device, vertex_buffer->vertex_staging_buffer, NULL);
-    vkFreeMemory(vulkan_context->device.logical_device, vertex_buffer->vertex_staging_buffer_memory, NULL);
 
     return true;
 }

@@ -135,7 +135,6 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
 
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.flags = 0;
     create_info.pApplicationInfo = &application_info;
     create_info.enabledExtensionCount = darray_get_size(extensions_names_array);
     create_info.ppEnabledExtensionNames = extensions_names_array;
@@ -236,70 +235,47 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     INFO("Creating logical device...");
 
     // NOTE: Do not create additional queues for shared indices.
-
-    b8 present_shares_graphics_queue = vulkan_context->device.graphics_queue_index == vulkan_context->device.
-                                       present_queue_index;
-    b8 transfer_shares_graphics_queue = vulkan_context->device.graphics_queue_index == vulkan_context->device.
-                                        transfer_queue_index;
-
-    b8 compute_shares_graphics_queue = false;
-    if (vulkan_context->device.compute_queue_index == vulkan_context->device.graphics_queue_index
-        || vulkan_context->device.compute_queue_index == vulkan_context->device.transfer_queue_index
-        || vulkan_context->device.compute_queue_index == vulkan_context->device.present_queue_index)
+    hash_set* indices = hash_set_init(sizeof(i32), 10);
+    i32* index_array = darray_create_reserve(i32, 10);
+    if (hash_set_insert(indices, &vulkan_context->device.graphics_queue_index))
     {
-        compute_shares_graphics_queue = true;
+        darray_push(index_array, vulkan_context->device.graphics_queue_index);
+    };
+    if (hash_set_insert(indices, &vulkan_context->device.present_queue_index))
+    {
+        darray_push(index_array, vulkan_context->device.present_queue_index);
+    };
+    if (hash_set_insert(indices, &vulkan_context->device.compute_queue_index))
+    {
+        darray_push(index_array, vulkan_context->device.compute_queue_index);
+    }
+    if (hash_set_insert(indices, &vulkan_context->device.transfer_queue_index))
+    {
+        darray_push(index_array, vulkan_context->device.transfer_queue_index);
     }
 
-    u32 index_count = 1;
+    u64 index_count = hash_set_get_size(indices);
+    u64 index_array_size = darray_get_size(index_array);
+    // i32 hash_set_contains_index(const hash_set* h, void* key)
 
-    if (!present_shares_graphics_queue)
-    {
-        index_count++;
-    }
-    if (!transfer_shares_graphics_queue)
-    {
-        index_count++;
-    }
-    if (!compute_shares_graphics_queue)
-    {
-        index_count++;
-    }
-
-    u32* indices = darray_create_reserve(u32, index_count);
-    u8 index = 0;
-
-    indices[index++] = vulkan_context->device.graphics_queue_index;
-    if (!present_shares_graphics_queue)
-    {
-        indices[index++] = vulkan_context->device.present_queue_index;
-    }
-    if (!transfer_shares_graphics_queue)
-    {
-        indices[index++] = vulkan_context->device.transfer_queue_index;
-    }
-    if (!compute_shares_graphics_queue)
-    {
-        indices[index++] = vulkan_context->device.compute_queue_index;
-    }
-
+    f32 default_queue_priority = 1.0f;
     //get device queue info for each unique queue family
     VkDeviceQueueCreateInfo* queue_create_infos = darray_create_reserve(VkDeviceQueueCreateInfo, index_count);
-    for (u32 i = 0; i < index_count; ++i)
+    for (u64 i = 0; i < index_count; ++i)
     {
         queue_create_infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_infos[i].queueFamilyIndex = indices[i];
+        queue_create_infos[i].queueFamilyIndex = index_array[i];
         queue_create_infos[i].queueCount = 1;
 
-        if (indices[i] == vulkan_context->device.graphics_queue_index)
+        if (index_array[i] == vulkan_context->device.graphics_queue_index)
         {
             queue_create_infos[i].queueCount = 2;
         }
 
+        queue_create_infos[i].pQueuePriorities = &default_queue_priority;
+
         queue_create_infos[i].flags = 0;
         queue_create_infos[i].pNext = 0;
-
-        f32 queue_priority = 1.0f;
-        queue_create_infos[i].pQueuePriorities = &queue_priority;
     }
 
     //device extensions
@@ -348,7 +324,6 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     };
 
 
-
     // Create the device.
     VK_CHECK(vkCreateDevice(
         vulkan_context->device.physical_device,
@@ -388,7 +363,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     //create the command pool for the graphics queue
     //each command pool is tied to its queue family
-    VkCommandPoolCreateInfo pool_create_info = {};
+    VkCommandPoolCreateInfo pool_create_info = {0};
     pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_create_info.queueFamilyIndex = vulkan_context->device.graphics_queue_index;
     pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -398,9 +373,11 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     INFO("GRAPHICS COMMAND POOL CREATED.");
 
+    vkDeviceWaitIdle(vulkan_context->device.logical_device);
 
-    darray_free(indices);
+    darray_free(index_array);
     darray_free(queue_create_infos);
+    hash_set_free(indices);
 
     return TRUE;
 }
@@ -794,17 +771,53 @@ void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkS
     }
 }
 
+//were not using this one
 bool vulkan_device_detect_depth_format(vulkan_device* device)
 {
     // Format candidates
     const u64 candidate_count = 3;
     //order we prefer them in
-    VkFormat candidates[3] = {
-        VK_FORMAT_D32_SFLOAT,
+    VkFormat candidates[] = {
         VK_FORMAT_D32_SFLOAT_S8_UINT,
-        VK_FORMAT_D24_UNORM_S8_UINT
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM
     };
+    //try to find a suitable format
+    u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    for (u64 i = 0; i < candidate_count; ++i)
+    {
+        VkFormatProperties format_properties;
+        vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &format_properties);
 
+        if ((format_properties.linearTilingFeatures & flags) == flags)
+        {
+            device->depth_format = candidates[i];
+            return TRUE;
+        }
+        else if ((format_properties.optimalTilingFeatures & flags) == flags)
+        {
+            device->depth_format = candidates[i];
+            return TRUE;
+        }
+    }
+
+
+    return FALSE;
+}
+
+
+bool vulkan_device_detect_depth_stencil_format(vulkan_device* device)
+{
+    // Format candidates
+    const u64 candidate_count = 3;
+    //order we prefer them in
+    VkFormat candidates[] = {
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+    };
     //try to find a suitable format
     u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
     for (u64 i = 0; i < candidate_count; ++i)

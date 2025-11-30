@@ -157,7 +157,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     }
 
     // Get our depth resources
-    if (!vulkan_device_detect_depth_format(&context->device))
+    if (!vulkan_device_detect_depth_stencil_format(&context->device))
     {
         context->device.depth_format = VK_FORMAT_UNDEFINED;
         FATAL("Failed to find a supported depth format!");
@@ -269,7 +269,7 @@ bool recreate_swapchain(vulkan_context* context)
         context->device.physical_device,
         context->surface,
         &context->device.swapchain_capabilities);
-    vulkan_device_detect_depth_format(&context->device);
+    vulkan_device_detect_depth_stencil_format(&context->device);
 
     vulkan_swapchain_recreate(context,
         context->framebuffer_width_new, context->framebuffer_height_new,

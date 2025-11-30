@@ -120,7 +120,6 @@ typedef struct vulkan_device
     VkFormat depth_format;
 } vulkan_device;
 
-
 typedef struct vulkan_physical_device_requirements
 {
     b8 graphics;
@@ -135,7 +134,6 @@ typedef struct vulkan_physical_device_requirements
     b8 discrete_gpu;
 } vulkan_physical_device_requirements;
 
-
 typedef struct vulkan_physical_device_queue_family_info
 {
     u32 graphics_family_index;
@@ -144,11 +142,10 @@ typedef struct vulkan_physical_device_queue_family_info
     u32 transfer_family_index;
 } vulkan_physical_device_queue_family_info;
 
-
 typedef struct vulkan_command_buffer
 {
     // VkCommandPool command_pool; // TODO:
-    VkCommandBuffer command_buffer_handle;
+    VkCommandBuffer handle;
 } vulkan_command_buffer;
 
 typedef struct vulkan_shader_stage
@@ -158,7 +155,6 @@ typedef struct vulkan_shader_stage
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
 
-
 typedef enum pipeline_type
 {
     PIPELINE_GRAPHICS,
@@ -166,42 +162,20 @@ typedef enum pipeline_type
 } pipeline_type;
 
 
-typedef struct vertex_info
+typedef struct vulkan_buffer
 {
-    //TODO: they should be darrays or arenas, but for now its fine
-    vertex_3d vertices[1000];
-    u64 vertices_size;
-    uint16_t indices[1000];
-    u64 indices_size;
-} vertex_info;
-
-typedef struct vertex_buffer
-{
-    VkBuffer vertex_buffer;
-    VkDeviceMemory vertex_buffer_memory;
-
-    VkBuffer vertex_staging_buffer;
-    VkDeviceMemory vertex_staging_buffer_memory;
-
-    VkBuffer index_buffer;
-    VkDeviceMemory index_buffer_memory;
-
-    VkBuffer index_staging_buffer;
-    VkDeviceMemory index_staging_buffer_memory;
-
-    void* data_vertex;
-    VkDeviceSize vertex_buffer_capacity;
-    void* data_index;
-    VkDeviceSize index_buffer_capacity;
-} vertex_buffer;
-
+    // u64 total_size;
+    // VkBufferUsageFlagBits usage;
+    VkDeviceMemory memory;
+    VkBuffer handle;
+} vulkan_buffer;
 
 typedef struct vulkan_uniform_buffer
 {
     //all arrays
-    VkBuffer* uniformBuffers;
-    VkDeviceMemory* uniformBuffersMemory;
-    void** uniformBuffersMapped;
+    VkBuffer* uniform_buffers;
+    VkDeviceMemory* uniform_buffers_memory;
+    void** uniform_buffers_mapped;
 } vulkan_uniform_buffer;
 
 
@@ -209,7 +183,7 @@ typedef struct vulkan_shader_pipeline
 {
     pipeline_type type; // NOTE: not in use rn
     VkPipelineLayout pipeline_layout;
-    VkPipeline pipeline_handle;
+    VkPipeline handle;
 } vulkan_shader_pipeline;
 
 typedef struct vulkan_shader_default
@@ -218,22 +192,24 @@ typedef struct vulkan_shader_default
     vulkan_uniform_buffer global_uniform_buffers;
 
     //TODO: temporary for now
-    VkDescriptorSetLayout default_shader_descriptor_set_layout;
+    VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorPool descriptor_pool;
 
-    VkDescriptorSetLayout per_frame_set_layouts[2];
-    VkDescriptorSet descriptor_sets[2];
+    VkDescriptorSet* descriptor_sets;
+    u32 descriptor_set_count;
 } vulkan_shader_default;
 
 
-typedef struct vulkan_buffer
-{
-    u64 total_size;
-    VkBuffer handle;
-    VkBufferUsageFlagBits usage;
-    VkDeviceMemory memory;
-} vulkan_buffer;
 
+
+typedef struct vertex_info
+{
+    //TODO: they should be darrays or arenas, but for now its fine
+    vertex vertices[1000];
+    u64 vertices_size;
+    uint16_t indices[1000];
+    u64 indices_size;
+} vertex_info;
 
 typedef struct vulkan_context
 {
@@ -270,7 +246,9 @@ typedef struct vulkan_context
     vulkan_command_buffer* graphics_command_buffer; // darray
 
     //TODO: vertex buffers and vertex data, here for now
-    vertex_buffer default_vertex_buffer;
+    vulkan_buffer vertex_buffer;
+    vulkan_buffer index_buffer;
+
     vertex_info default_vertex_info;
 
     vulkan_shader_default default_shader_info;

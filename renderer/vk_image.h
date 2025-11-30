@@ -33,6 +33,19 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
 
 void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
     VkImage image, uint32_t width, uint32_t height);
+
+
+void insertImageMemoryBarrier(
+    VkCommandBuffer cmdbuffer,
+    VkImage image,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkImageLayout oldImageLayout,
+    VkImageLayout newImageLayout,
+    VkPipelineStageFlags srcStageMask,
+    VkPipelineStageFlags dstStageMask,
+    VkImageSubresourceRange subresourceRange);
+
 /*TEXTURE IMAGE*/
 
 //

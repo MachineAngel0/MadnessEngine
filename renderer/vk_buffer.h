@@ -9,13 +9,13 @@
 #include "vulkan_types.h"
 
 
-uint32_t find_memory_type(vulkan_context* vulkan_context, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 
-bool buffer_destroy_free(vulkan_context* vulkan_context, vertex_buffer* vertex_buffer);;
+bool buffer_destroy_free(vulkan_context* vulkan_context, vulkan_buffer* vk_buffer);
 
 void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                         VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);

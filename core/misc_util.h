@@ -37,11 +37,18 @@ void print_char(void* data_int)
 //compare function return -1,0,1
 //-1 if a less than b, 0 equal, 1 if a greater than b
 
-
 int cmp_int(void* a, void* b)
 {
     int A = *(int*) a;
     int B = *(int*) b;
+    return (A > B) - (A < B);
+}
+
+
+int cmp_uint(void* a, void* b)
+{
+    u32 A = *(u32*) a;
+    u32 B = *(u32*) b;
     return (A > B) - (A < B);
 }
 
@@ -117,5 +124,7 @@ void print_dummy(char* dummy_string)
     printf("%s\n", dummy_string);
 }
 
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #endif //MISC_UTIL_H

@@ -80,8 +80,10 @@ void hash_set_free(hash_set* h)
 }
 
 
-void hash_set_insert(hash_set* h, void* key)
+bool hash_set_insert(hash_set* h, void* key)
 {
+    //returns true if inserted, false if insertion fails
+
     //get an index
     uint64_t hash_index = generate_hash_key_64bit(key, h->data_size);
     uint64_t hash_key = hash_index % h->capacity;
@@ -96,14 +98,18 @@ void hash_set_insert(hash_set* h, void* key)
             memcpy(h->data_key[cur_index], key, h->data_size);
             h->state[cur_index] = HASH_SET_USING;
             h->num_entries += 1;
-            return;
+            return true;
         }
         //comparing the values, memcmp returns 0 on success
         if (h->state[cur_index] == HASH_SET_USING && memcmp(h->data_key[cur_index], key, h->data_size) == 0)
         {
-            return;
+            //means we found a duplicate value
+            return false;
         }
     }
+
+    //should never reach this point
+    return false;
 }
 
 void hash_set_delete(hash_set* h, void* key)
@@ -159,6 +165,39 @@ bool hash_set_contains(const hash_set* h, void* key)
     }
 
     return false;
+}
+
+i32 hash_set_contains_index(const hash_set* h, void* key)
+{
+    //return index where the value is stored, returns -1 if not found
+
+    //get an index
+    uint64_t hash_index = generate_hash_key_64bit(key, h->data_size);
+    uint64_t hash_key = hash_index % h->capacity;
+
+    //not in the hash_set
+    if (h->state[hash_key] == HASH_SET_EMPTY)
+    {
+        return -1;
+    }
+
+    //find our value or the first empty
+    uint64_t cur_index = hash_key;
+    for (; cur_index < h->capacity; cur_index++)
+    {
+        //0 is false, 1 is true
+        if (h->state[cur_index] == HASH_SET_USING && memcmp(h->data_key[cur_index], key, h->data_size) == 0)
+        {
+            return cur_index;
+        }
+        if (h->state[cur_index] == HASH_SET_EMPTY)
+        {
+            return -1;
+        }
+    }
+
+    //if we get to this point, it is not in the hash set
+    return -1;
 }
 
 
