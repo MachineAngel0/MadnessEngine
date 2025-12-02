@@ -105,6 +105,11 @@ bool array_valid_index(const Array* array, const u64 index)
 
 void* array_get(Array* array, const u64 index)
 {
+    if (!array)
+    {
+        WARN("ARRAY GET: INVALID ARRAY");
+        return NULL;
+    }
     if (!array_valid_index(array, index))
     {
         WARN("ARRAY GET: INVALID INDEX");

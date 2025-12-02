@@ -14,7 +14,7 @@ typedef union vec2f
     {
         union
         {
-            f32 x, r, u;
+           f32 x, r, u;
         };
 
         union
@@ -78,7 +78,6 @@ typedef union vec4f
 } vec4;
 
 
-
 typedef union vec2i
 {
     i32 elements[2];
@@ -122,9 +121,9 @@ typedef union vec3i
 
 typedef union vec4i
 {
-    i32 elements[4];
+     i32 elements[4];
 
-    struct
+     struct
     {
         union
         {
@@ -151,7 +150,6 @@ typedef union vec4i
 //col major
 typedef union mat3_f
 {
-    // alignas(16) // idk if this is necessary
     float data[9];
     float n[3][3];
     vec3 rows[3];
@@ -161,17 +159,16 @@ typedef union mat3_f
 // typedef union alignas(16) mat4_u // apparently this is a thing
 typedef union mat4_f
 {
-    alignas(16) float data[16];
+    float data[16];
     // alignas(16) float two_d_arr[4][4];
-    alignas(16) vec4 rows[4];
+    vec4 rows[4];
 } mat4;
 
 //generally avoid typedef, only really makes sense for quat
 typedef vec4 quat;
 
 
-
-    typedef enum Direction
+typedef enum Direction
 {
     DIRECTION_UP,
     DIRECTION_DOWN,

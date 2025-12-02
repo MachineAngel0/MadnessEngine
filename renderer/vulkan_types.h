@@ -155,11 +155,6 @@ typedef struct vulkan_shader_stage
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
 
-typedef enum pipeline_type
-{
-    PIPELINE_GRAPHICS,
-    PIPELINE_COMPUTE,
-} pipeline_type;
 
 
 typedef struct vulkan_buffer
@@ -181,7 +176,6 @@ typedef struct vulkan_uniform_buffer
 
 typedef struct vulkan_shader_pipeline
 {
-    pipeline_type type; // NOTE: not in use rn
     VkPipelineLayout pipeline_layout;
     VkPipeline handle;
 } vulkan_shader_pipeline;
@@ -199,9 +193,6 @@ typedef struct vulkan_shader_default
     u32 descriptor_set_count;
 } vulkan_shader_default;
 
-
-
-
 typedef struct vertex_info
 {
     //TODO: they should be darrays or arenas, but for now its fine
@@ -210,6 +201,26 @@ typedef struct vertex_info
     uint16_t indices[1000];
     u64 indices_size;
 } vertex_info;
+
+typedef struct vulkan_shader_texture
+{
+    Texture texture_test_object;
+
+    vulkan_shader_pipeline shader_texture_pipeline;
+
+    //TODO: temporary for now
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorPool descriptor_pool;
+
+    VkDescriptorSet* descriptor_sets; // darray
+    u32 descriptor_set_count;
+
+    vulkan_buffer vertex_buffer;
+    vulkan_buffer index_buffer;
+    vertex_info vertex_info;
+
+} vulkan_shader_texture;
+
 
 typedef struct vulkan_context
 {
@@ -248,11 +259,11 @@ typedef struct vulkan_context
     //TODO: vertex buffers and vertex data, here for now
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
-
     vertex_info default_vertex_info;
-
     vulkan_shader_default default_shader_info;
 
+    //textured triangle
+    vulkan_shader_texture shader_texture;
 
     //Semaphores and Fences
     // VkSemaphore* image_available_semaphores; // darray

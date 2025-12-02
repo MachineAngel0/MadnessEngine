@@ -4,7 +4,6 @@
 // #include "Tetris.h"
 // #include "text.h"
 // #include "UI.h"
-// #include "vk_descriptor.h"
 
 
 #include "vulkan/vulkan.h"
@@ -20,6 +19,7 @@
 #include "vk_pipeline.c"
 #include "vk_vertex.c"
 #include "vk_vertex_buffer.h"
+#include "vk_descriptors.c"
 #include "camera.h"
 #include "renderer.c"
 

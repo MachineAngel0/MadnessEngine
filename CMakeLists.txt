@@ -1,7 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.31)
 project(MadnessEngine C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 11) #i like alignas() so its staying as 11, 99 if I really want the portability
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
@@ -88,6 +88,7 @@ add_executable(MadnessEngine_editor
 add_executable(CORE_UNIT_TEST
         core/core_unit_test_main.c
         core/core_unity.c
+        renderer/vk_descriptors.c
 )
 
 
@@ -145,4 +146,3 @@ endforeach()
 if (MINGW)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
 endif()
-

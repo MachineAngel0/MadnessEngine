@@ -15,7 +15,6 @@ static vulkan_context vk_context;
 static camera main_camera;
 
 
-
 bool renderer_init(struct renderer* renderer_inst)
 {
     camera_init(&main_camera);
@@ -96,8 +95,16 @@ bool renderer_init(struct renderer* renderer_inst)
     // vk_context.default_vertex_info.vertices_size = ARRAY_SIZE(test_vertices);
     // memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
     // vk_context.default_vertex_info.indices_size = ARRAY_SIZE(test_indices);
-    createVertexBuffer(&vk_context, &vk_context.vertex_buffer, &vk_context.index_buffer, &vk_context.default_vertex_info);
+    createVertexBuffer(&vk_context, &vk_context.vertex_buffer, &vk_context.index_buffer,
+                       &vk_context.default_vertex_info);
 
+    //TEXTURE TRIANGLE
+
+    create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
+                          &vk_context.shader_texture.texture_test_object);
+    createDescriptorsTexture(&vk_context, &vk_context.shader_texture);
+    vulkan_textured_shader_create(&vk_context, &vk_context.shader_texture);
+    createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
 
     // for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
     // {
@@ -261,6 +268,7 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
 
     //Do Bindings and Draw
 
+    //Draw Triangle
     // vulkan_default_shader_pipeline_bind(command_buffer_current_frame, &vk_context.default_shader_info.default_shader_pipeline);
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.default_shader_info.default_shader_pipeline.handle);
@@ -277,13 +285,31 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
                          vk_context.index_buffer.handle, 0,
                          VK_INDEX_TYPE_UINT32);
-
-
-    //draw command
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                     (u32) vk_context.default_vertex_info.indices_size,
-                     1, 0, 0, 0);
+                      (u32) vk_context.default_vertex_info.indices_size,
+                      1, 0, 0, 0);
 
+    //Draw Textured Triangle
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      vk_context.shader_texture.shader_texture_pipeline.handle);
+
+    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.shader_texture.shader_texture_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.shader_texture.descriptor_sets[vk_context.current_frame],
+                            0, 0);
+
+    VkDeviceSize offsets2[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
+                           &vk_context.shader_texture.vertex_buffer.handle, offsets2);
+
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.shader_texture.index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                     (u32) vk_context.shader_texture.vertex_info.indices_size,
+                     1, 0, 0, 0);
     //END FRAME//
 
     // Finish the current dynamic rendering section

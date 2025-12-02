@@ -62,16 +62,16 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     if (create_view)
     {
         out_image->view = 0;
-        vulkan_image_view_create(context, format, out_image, view_aspect_flags);
+        vulkan_image_view_create(context, format, &out_image->handle, &out_image->view, view_aspect_flags);
     }
 }
 
 
-void vulkan_image_view_create(vulkan_context* context, VkFormat format, vulkan_image* image,
+void vulkan_image_view_create(vulkan_context* context, VkFormat format, VkImage* handle, VkImageView* view,
                               VkImageAspectFlags aspect_flags)
 {
     VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    view_create_info.image = image->handle;
+    view_create_info.image = *handle;
     view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // TODO: Make configurable.
     view_create_info.format = format;
     view_create_info.subresourceRange.aspectMask = aspect_flags;
@@ -81,7 +81,7 @@ void vulkan_image_view_create(vulkan_context* context, VkFormat format, vulkan_i
     view_create_info.subresourceRange.baseArrayLayer = 0;
     view_create_info.subresourceRange.layerCount = 1;
 
-    VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &image->view));
+    VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, view));
 }
 
 
@@ -115,6 +115,8 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
     VkDeviceSize imageSize = texWidth * texHeight * 4; // 4 stride rgba
 
+    MASSERT_MSG(pixels, "FAILED TO LOAD TEXTURE");
+
     out_texture->width = texWidth;
     out_texture->height = texHeight;
     if (!pixels)
@@ -133,16 +135,15 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     //allocate memory
     void* data;
     vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, (size_t) (imageSize));
+    memcpy(data, pixels, imageSize);
     vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
     //free texture
     stbi_image_free(pixels);
 
     //create texture image
 
-
-    // Creation info.
-    VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
     image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
     image_create_info.extent.width = texWidth;
     image_create_info.extent.height = texHeight;
@@ -186,28 +187,74 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
                                          out_texture->texture_image_memory, 0);
     VK_CHECK(result2)
 
-    // TODO: configurable memory offset.
-
-    // Create view
-    out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, &out_texture->texture_image, VK_IMAGE_ASPECT_COLOR_BIT);
 
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
-                      (uint32_t)(texWidth), (uint32_t)(texHeight));
+                      (uint32_t) (texWidth), (uint32_t) (texHeight));
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    // TODO: configurable memory offset.
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, &out_texture->texture_image,
+                             &out_texture->texture_image_view, VK_IMAGE_ASPECT_COLOR_BIT);
+
+
+    VkSamplerCreateInfo sampler_info = {0};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 0.0f;
+
+    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
 }
 
 
 void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                              VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
+    //TODO: lots of this should probably be extracted out with the functions in command_buffer.h/c
+    //
+
     vulkan_command_buffer commandBuffer;
-    vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context, vulkan_context->graphics_command_pool,
-                                                        &commandBuffer);
+    VkCommandPool pool = vulkan_context->graphics_command_pool;
+    vulkan_command_buffer* out_command_buffer = &commandBuffer;
+    memset(out_command_buffer, 0, sizeof(out_command_buffer));
+
+    VkCommandBufferAllocateInfo allocate_info = {0};
+    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocate_info.commandPool = pool;
+    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocate_info.commandBufferCount = 1;
+    allocate_info.pNext = 0;
+
+    VK_CHECK(
+        vkAllocateCommandBuffers(vulkan_context->device.logical_device, &allocate_info, &out_command_buffer->
+            handle));
+
+    vulkan_command_buffer* command_buffer = &commandBuffer;
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    // begin_info.pInheritanceInfo = NULL; //used if its a secondary command buffer
+    begin_info.flags = 0;
+    begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VK_CHECK(vkBeginCommandBuffer(command_buffer->handle, &begin_info));
+
 
     //ensure the buffer is created before being written to
     //allows us to, if we want, transition image layouts, and transfer queue family ownership (if using VK_SHARING_MODE_EXCLUSIVE)
@@ -259,8 +306,19 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
         1, &image_memory_barrier
     );
 
-    vulkan_command_buffer_end_single_use(vulkan_context, vulkan_context->graphics_command_pool, command_buffer_context,
-                                         vulkan_context->device.graphics_queue);
+    VkQueue queue = vulkan_context->device.graphics_queue;
+    VK_CHECK(vkEndCommandBuffer(command_buffer->handle));
+
+    VkSubmitInfo submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer->handle;
+
+    VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, 0));
+
+    //wait for command buffer to finish then free
+    VK_CHECK(vkQueueWaitIdle(queue));
+    vulkan_command_buffer_free(vulkan_context, pool, command_buffer);
 }
 
 
@@ -288,7 +346,7 @@ void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* co
     };
 
     vkCmdCopyBufferToImage(
-        &commandBuffer,
+        commandBuffer.handle,
         buffer,
         image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -300,8 +358,9 @@ void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* co
 }
 
 void insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
-    VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
-    VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageSubresourceRange subresourceRange)
+                              VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
+                              VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+                              VkImageSubresourceRange subresourceRange)
 {
     VkImageMemoryBarrier imageMemoryBarrier = {0};
     imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

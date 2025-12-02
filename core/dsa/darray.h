@@ -366,9 +366,35 @@ void darray_pop(void* array)
     //we just decrement the value and that's it
     header->num_items--;
 }
+void* darray_pop_return(void* array)
+{
+    if (!array)
+    {
+        WARN("DARRAY POP: NULL ARRAY");
+        return NULL;
+    }
+
+    //get the array header
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    if (header->num_items <= 0)
+    {
+        WARN("DARRAY POP: Nothing to pop");
+        return;
+    }
+    //we just decrement the value and that's it
+    u64 back = header->num_items;
+    header->num_items--;
 
 
-void darray_remove_shift(void* arr, const u64 index)
+    return ((u8*)array + (back * header->stride));
+}
+
+
+
+
+void* darray_remove_shift(void* arr, const u64 index)
 {
     //shift the array left from the index spot of removal
     //maintains order
