@@ -22,6 +22,7 @@
 #include "vk_descriptors.c"
 #include "camera.h"
 #include "renderer.c"
+#include "SPIRV-Reflect-main/spirv_reflect.c"
 
 
 #include "vk_shader.c"

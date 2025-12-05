@@ -2,8 +2,8 @@
 
 :: scans all directories and subdirectories and creates .spirv file for each the frag and vert files
 
-forfiles /s /m *.frag /c "cmd /c %VULKAN_SDK%/Bin/glslangValidator.exe @path -gVS -V -o @fname.frag.spv"
 forfiles /s /m *.vert /c "cmd /c %VULKAN_SDK%/Bin/glslangValidator.exe @path -gVS -V -o @fname.vert.spv"
+forfiles /s /m *.frag /c "cmd /c %VULKAN_SDK%/Bin/glslangValidator.exe @path -gVS -V -o @fname.frag.spv"
 
 :: /s means all folders and sub folders
 ::  /m *.frag match the type

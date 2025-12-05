@@ -17,6 +17,11 @@ static camera main_camera;
 
 bool renderer_init(struct renderer* renderer_inst)
 {
+
+    //TODO: temp while testing it
+    spriv_reflection_testing(&vk_context, &vk_context.shader_texture);
+
+
     camera_init(&main_camera);
     vk_context.is_init = false;
     // vulkan_context vulkan_context;

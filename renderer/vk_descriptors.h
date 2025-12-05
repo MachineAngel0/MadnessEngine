@@ -2,6 +2,7 @@
 #define VK_DESCRIPTOR_H
 
 #include "vulkan_types.h"
+#include "SPIRV-Reflect-main/spirv_reflect.h"
 
 
 //TODO:move out when done
@@ -29,7 +30,7 @@ void vulkan_descriptor_pool_allocate(vulkan_context* context, descriptor_pool_al
                                      VkDescriptorSetLayout* set_layout, VkDescriptorType* types,
                                      VkDescriptorSet* out_descriptors);
 
-
+void spriv_reflection_testing(vulkan_context* context, vulkan_shader_texture* shader_texture);
 
 
 #endif
