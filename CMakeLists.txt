@@ -20,7 +20,7 @@ set(MADNESS_BUILD_TARGETS
 # COMPILER FLAGS #
 #Windows
 if (MSVC)
-#    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
+    #    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
     set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address")
     add_compile_options(/wd4255) # disables function prototype warnings
     add_compile_options(/wd4464) # path contains '..'
@@ -88,11 +88,7 @@ add_executable(MadnessEngine_editor
 add_executable(CORE_UNIT_TEST
         core/core_unit_test_main.c
         core/core_unity.c
-        renderer/vk_descriptors.c
 )
-
-
-
 
 
 #libs
@@ -119,17 +115,14 @@ if (UNIX)
 endif ()
 
 
-
-
-
 #target_link_libraries(MadnessEngine glfw ${GLFW_LIBRARIES} VULKAN::VULKAN)
-
 
 
 #target_compile_definitions(MadnessEngine PRIVATE
 #        $<$<CONFIG:Debug>:DEBUG_BUILD>
 #        $<$<CONFIG:Release>:RELEASE_BUILD>
 #)
+
 
 #equivalent of above
 foreach(tgt IN LISTS MADNESS_BUILD_TARGETS)
@@ -140,9 +133,16 @@ foreach(tgt IN LISTS MADNESS_BUILD_TARGETS)
 endforeach()
 
 
+# pretty sure the above does not work, if you want to check if we are in debug, refer to the examples below
+#ifndef NDEBUG
+#FATAL("WE DEBUGGING");
+#else
+#FATAL("WE RELEASING");
+#endif
+
 
 #Here because ill get .dll missing errors
 # Force static linking approach for MinGW and only MinGW
 if (MINGW)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
-endif()
+endif ()

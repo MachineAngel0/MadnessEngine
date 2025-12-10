@@ -381,7 +381,7 @@ void* darray_pop_return(void* array)
     if (header->num_items <= 0)
     {
         WARN("DARRAY POP: Nothing to pop");
-        return;
+        return NULL;
     }
     //we just decrement the value and that's it
     u64 back = header->num_items;
@@ -394,7 +394,7 @@ void* darray_pop_return(void* array)
 
 
 
-void* darray_remove_shift(void* arr, const u64 index)
+void darray_remove_shift(void* arr, const u64 index)
 {
     //shift the array left from the index spot of removal
     //maintains order

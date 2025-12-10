@@ -25,16 +25,7 @@ typedef struct vulkan_image
     u32 height;
 } vulkan_image;
 
-typedef struct Texture
-{
-    VkImage texture_image;
-    VkDeviceMemory texture_image_memory;
-    VkImageView texture_image_view;
-    VkSampler texture_sampler;
-    //optional, not needed rn
-    u32 width;
-    u32 height;
-} Texture;
+
 
 
 typedef enum vulkan_render_pass_state
@@ -180,6 +171,27 @@ typedef struct vulkan_shader_pipeline
     VkPipeline handle;
 } vulkan_shader_pipeline;
 
+
+typedef struct Texture
+{
+    VkImage texture_image;
+    VkDeviceMemory texture_image_memory;
+    VkImageView texture_image_view;
+    VkSampler texture_sampler;
+} Texture;
+
+typedef struct Material
+{
+    Texture* texture;
+    vulkan_shader_pipeline* pipeline;
+}Material;
+
+typedef struct Shader_System
+{
+    Texture* error_texture;
+}Shader_System;
+
+
 typedef struct vulkan_shader_default
 {
     vulkan_shader_pipeline default_shader_pipeline;
@@ -210,7 +222,7 @@ typedef struct vulkan_shader_texture
 
     //TODO: temporary for now
     VkDescriptorSetLayout descriptor_set_layout;
-    VkDescriptorPool descriptor_pool;
+    VkDescriptorPool descriptor_pool; // TODO: this should not be here
 
     VkDescriptorSet* descriptor_sets; // darray
     u32 descriptor_set_count;
@@ -222,9 +234,18 @@ typedef struct vulkan_shader_texture
 } vulkan_shader_texture;
 
 
+typedef struct descriptor_pool_allocator
+{
+    VkDescriptorPool descriptor_pool;
+} descriptor_pool_allocator;
+
+
+
 typedef struct vulkan_context
 {
     bool is_init;
+
+
 
     //Instance
     VkInstance instance;
@@ -232,6 +253,13 @@ typedef struct vulkan_context
     //Validation Layer
     VkAllocationCallbacks* allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
+
+    //Memory
+    //TODO: not instantiated or used
+    Arena renderer_arena;
+    Frame_Arena frame_allocator;
+
+
 
     //Surface
     VkSurfaceKHR surface;
@@ -255,6 +283,9 @@ typedef struct vulkan_context
     //command buffers
     VkCommandPool graphics_command_pool;
     vulkan_command_buffer* graphics_command_buffer; // darray
+
+    //global_descriptor_pool
+    descriptor_pool_allocator global_descriptor_pool;
 
     //TODO: vertex buffers and vertex data, here for now
     vulkan_buffer vertex_buffer;

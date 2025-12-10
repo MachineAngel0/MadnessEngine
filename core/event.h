@@ -140,7 +140,7 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
     //check if the event arr has been alloacated
     if (event_state.events_table[event].subs_arr == NULL)
     {
-        event_state.events_table[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
+        event_state.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
     }
 
 
@@ -159,7 +159,7 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
     subscriber_data* new_sub_data = malloc(sizeof(subscriber_data));
     new_sub_data->subscriber_id = subscriber;
     new_sub_data->callback = callback;
-    array_emplace(event_state.events_table[event].subs_arr, new_sub_data);
+    array_push(event_state.events_table[event].subs_arr, new_sub_data);
 }
 
 void event_unregister(event_type event, uint32_t subscriber, on_event callback)
@@ -180,7 +180,7 @@ void event_fire(event_type event, uint32_t sender_id, event_context context)
     //check if the event arr has been allocated
     if (event_state.events_table[event].subs_arr == NULL)
     {
-        event_state.events_table[event].subs_arr = array_create(sizeof(subscriber_data), MAX_SUBSCRIBERS);
+        event_state.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
     }
 
     for (uint32_t i = 0; i < event_state.events_table[event].subs_arr->num_items; i++)

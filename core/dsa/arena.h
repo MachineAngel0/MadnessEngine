@@ -20,6 +20,8 @@ typedef struct Arena
     u64 capacity; // how large our arena is
 } Arena;
 
+typedef Arena Frame_Arena; //just for explicitness
+
 
 //will malloc for memory, should only be called by the application or whatever manages the entire lifetime of the program
 //see arena_init for using an already existing arena memory/ block of memory
@@ -27,18 +29,11 @@ Arena* arena_init_malloc(const u64 capacity)
 {
     Arena* a = (Arena *) malloc(sizeof(Arena));
 
-    if (!a)
-    {
-        MASSERT("ARENA ALLOC FAILED");
-        return NULL;
-    }
+    MASSERT_MSG(a, "ARENA ALLOC FAILED");
 
     a->memory = (uint8_t *) malloc(capacity);
-    if (!a->memory)
-    {
-        MASSERT("ARENA MALLOC FAILED");
-        return NULL;
-    }
+
+    MASSERT_MSG(a->memory, "ARENA MALLOC FAILED");
 
     memory_container_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, sizeof(a));
     memory_container_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, capacity);
@@ -93,7 +88,7 @@ void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
     if (offset + mem_request > a->capacity)
     {
         // MASSERT("ARENA OUT OF MEMORY");
-        WARN("ARENA OUT OF MEMORY");
+        M_ERROR("ARENA OUT OF MEMORY");
         return NULL;
     }
 
@@ -141,6 +136,8 @@ typedef struct Arena_Temp
 //so its recommended that it's not a pointer
 Arena_Temp temp_arena_memory_begin(Arena* a)
 {
+    MASSERT_MSG(a, "TEMP ARENA INVALID ARENA PASSED IN");
+
     Arena_Temp temp;
     temp.arena = a;
     temp.prev_offset = a->current_offset;

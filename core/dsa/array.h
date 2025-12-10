@@ -3,13 +3,17 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "stack.h"
 #include "unit_test.h"
 #include "misc_util.h"
 #include "logger.h"
-
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
+
+
+
+
 
 //fixed sized array, so no reallocating more space
 typedef struct Array
@@ -18,10 +22,19 @@ typedef struct Array
     u64 stride; // size/stride of each void* data
     u64 capacity; // size of the array
     u64 num_items; // current/top index in our array
+
+#ifndef NDEBUG
+    //extra debug type info that gets removed in release builds
+    const char* debug_type_name;
+#endif
 } Array;
 
-Array* array_create(const u64 data_stride, const u64 capacity)
+
+
+Array* _array_create(const u64 data_stride, const u64 capacity, const char* type_name)
 {
+
+
     Array* arr = (Array *) malloc(sizeof(Array));
     memset(arr, 0, sizeof(Array));
 
@@ -32,8 +45,40 @@ Array* array_create(const u64 data_stride, const u64 capacity)
     arr->num_items = 0;
     arr->stride = data_stride;
     arr->capacity = capacity;
+
+#ifndef NDEBUG
+    arr->debug_type_name = type_name;
+    DEBUG("ARRAY CREATED WITH TYPE: %s", arr->debug_type_name);
+#endif
+
     return arr;
 }
+
+#define array_create(type, capacity)\
+    _array_create(sizeof(type), capacity, #type)
+
+bool _array_type_check(Array* array, const char* type_name)
+{
+#ifndef NDEBUG
+
+    if (strcmp(array->debug_type_name, type_name) == 0)
+    {
+        DEBUG("SAME TYPES: %s", type_name)
+        return true;
+    }
+
+
+    WARN("DIFFERENT TYPES: ARRAY TYPE: %s, PASSED IN TYPE: %s", array->debug_type_name, type_name)
+    return false;
+#endif
+
+    return true; // going to assume you are using the right type, given this is release build
+};
+
+#define array_type_check(arr, type)\
+    _array_type_check(arr, #type)
+
+
 
 void array_free(Array* array)
 {
@@ -171,11 +216,11 @@ void array_fill_range(Array* array, u64 start, u64 end, void* data)
     }
 }
 
-void array_emplace(Array* array, void* new_data)
+void array_push(Array* array, void* new_data)
 {
     if (array_is_full(array))
     {
-        WARN("ARRAY EMPLACE:  ARRAY IS FULL, CAN'T EMPLACE");
+        WARN("ARRAY PUSH}:  ARRAY IS FULL, CAN'T PUSH");
         return;
     }
     u8* dest = (u8 *) array->data + (array->stride * (array->num_items));
@@ -248,9 +293,17 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 
+
+
 void array_test()
 {
-    TEST_START("ARRAY TEST");
+    TEST_START("ARRAY");
+
+
+    Array* balling_arr = array_create(int, 10);
+    array_type_check(balling_arr, int);
+    array_type_check(balling_arr, float);
+
 
     printf("ARRAY START\n");
     int num3 = 3;
@@ -258,15 +311,15 @@ void array_test()
     int num10 = 10;
     int num20 = 20;
     int arr_capacity = 5;
-    Array* arr = array_create(sizeof(int), arr_capacity);
+    Array* arr = array_create(int, arr_capacity);
 
     printf("ARRAY EMPLACE START\n");
-    array_emplace(arr, &num5);
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num10); //this should fail
+    array_push(arr, &num5);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10); //this should fail
     array_print(arr, print_int);
     TEST_DEBUG(arr->num_items == 5);
     printf("ARRAY EMPLACE END\n\n");
@@ -283,8 +336,8 @@ void array_test()
     TEST_DEBUG(arr->num_items == 0);
     printf("ARRAY POP END\n\n");
 
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num5);
+    array_push(arr, &num10);
+    array_push(arr, &num5);
     printf("ARRAY GET START\n");
     print_int(array_get(arr, 0));
     TEST_DEBUG(*(int*)array_get(arr, 0) == num10);
@@ -303,10 +356,10 @@ void array_test()
     array_remove(arr, 0);
     TEST_DEBUG(*(int*)array_get(arr, 0) == num3);
     array_print(arr, print_int);
-    array_emplace(arr, &num20);
-    array_emplace(arr, &num10);
-    array_emplace(arr, &num5);
-    array_emplace(arr, &num20);
+    array_push(arr, &num20);
+    array_push(arr, &num10);
+    array_push(arr, &num5);
+    array_push(arr, &num20);
     array_print(arr, print_int);
 
     array_remove(arr, arr_capacity); //should warn

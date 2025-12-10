@@ -7,7 +7,7 @@
 
 MAPI bool renderer_init(struct renderer* renderer_inst);
 
-MAPI void renderer_update(struct renderer* renderer_inst);
+MAPI void renderer_update(struct renderer* renderer_inst, Clock* clock);
 
 MAPI void renderer_shutdown(struct renderer* renderer_inst);
 

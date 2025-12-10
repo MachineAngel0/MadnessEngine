@@ -6,15 +6,7 @@
 
 
 //TODO:move out when done
-typedef struct descriptor_pool_allocator
-{
-    //darrays
-    VkDescriptorPool* ready_pools;
-    VkDescriptorPool* full_pools;
-    u32 sets_per_pool;
-} descriptor_pool_allocator;
 
-//TODO: this is kinda wrong rn, but close to what it needs to be
 
 void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_allocator* descriptor_pools);
 
@@ -22,15 +14,40 @@ void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_
 
 void descriptor_pool_allocator_clear(vulkan_context* context, descriptor_pool_allocator* descriptor_pools);
 
-VkDescriptorPool* descriptor_pool_create_return(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
-                                                VkDescriptorType* types, u64 types_size);
+void descriptor_pool_alloc(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
+                           VkDescriptorSetLayout* set_layout, const u32* descriptor_set_count,
+                           VkDescriptorSet* out_descriptors);
 
 
-void vulkan_descriptor_pool_allocate(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
-                                     VkDescriptorSetLayout* set_layout, VkDescriptorType* types,
-                                     VkDescriptorSet* out_descriptors);
+//Todo: create an out struct for all the data i would want
+typedef struct spirv_refect_info
+{
+    int descriptor_set_count;
+    int descriptor_binding_count;
+    int descriptor_set_types;
+    //etc...
+} spirv_refect_info;
 
-void spriv_reflection_testing(vulkan_context* context, vulkan_shader_texture* shader_texture);
+typedef struct spirv_reflect_descriptor_set_info
+{
+    SpvReflectShaderStageFlagBits* stage_flags;
+    u32 descriptor_set_count;
+    u32* binding_number;
+    SpvReflectDescriptorType* descriptor_set_types;
+
+} spirv_reflect_descriptor_set_info;
+
+spirv_refect_info* spriv_reflection_testing(const char* shader_path);
 
 
+spirv_reflect_descriptor_set_info* spriv_reflection_testing_just_descriptor_set(
+    Frame_Arena* arena, const char* shader_path);
+
+void createDescriptorsTexture_reflect_test(vulkan_context* context,
+                                           descriptor_pool_allocator* descriptor_pool_allocator,
+                                           vulkan_shader_texture* shader_texture);
+
+void updateDescriptorsTexture_reflect_test(vulkan_context* context,
+                                           descriptor_pool_allocator* descriptor_pool_allocator,
+                                           vulkan_shader_texture* shader_texture);
 #endif

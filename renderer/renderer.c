@@ -6,6 +6,7 @@
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_command_buffer.h"
+#include "vk_descriptors.h"
 #include "vk_image.h"
 #include "vk_shader.h"
 #include "vk_vertex_buffer.h"
@@ -18,8 +19,7 @@ static camera main_camera;
 bool renderer_init(struct renderer* renderer_inst)
 {
 
-    //TODO: temp while testing it
-    spriv_reflection_testing(&vk_context, &vk_context.shader_texture);
+
 
 
     camera_init(&main_camera);
@@ -80,6 +80,7 @@ bool renderer_init(struct renderer* renderer_inst)
 
     // Create command buffers.
     vulkan_renderer_command_buffers_create(&vk_context);
+    descriptor_pool_allocator_init(&vk_context, &vk_context.global_descriptor_pool);
 
 
     //TODO: move out into its own function
@@ -95,6 +96,11 @@ bool renderer_init(struct renderer* renderer_inst)
     createDescriptors(&vk_context);
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
 
+
+
+
+
+
     //TODO: temporary
     // memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
     // vk_context.default_vertex_info.vertices_size = ARRAY_SIZE(test_vertices);
@@ -107,7 +113,12 @@ bool renderer_init(struct renderer* renderer_inst)
 
     create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
                           &vk_context.shader_texture.texture_test_object);
-    createDescriptorsTexture(&vk_context, &vk_context.shader_texture);
+
+
+    //TODO: temp while testing it
+    createDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+    // createDescriptorsTexture(&vk_context, &vk_context.shader_texture);
+
     vulkan_textured_shader_create(&vk_context, &vk_context.shader_texture);
     createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
 
@@ -129,8 +140,33 @@ bool renderer_init(struct renderer* renderer_inst)
     return TRUE;
 }
 
+
+static bool texture_flip = false;
 void renderer_update(struct renderer* renderer_inst, Clock* clock)
 {
+
+    //TODO: test code, can remove later
+    if (input_key_released_unique(KEY_M))
+    {
+        if (texture_flip)
+        {
+            create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
+                      &vk_context.shader_texture.texture_test_object);
+            updateDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+
+            texture_flip = !texture_flip;
+
+        }
+        else
+        {
+            create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/error_texture.png",
+                               &vk_context.shader_texture.texture_test_object);
+            updateDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+            texture_flip = !texture_flip;
+
+        }
+    }
+
     /*
       At a high level, rendering a frame in Vulkan consists of a common set of steps:
       Wait for the previous frame to finish

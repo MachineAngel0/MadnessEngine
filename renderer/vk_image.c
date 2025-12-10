@@ -117,8 +117,7 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
 
     MASSERT_MSG(pixels, "FAILED TO LOAD TEXTURE");
 
-    out_texture->width = texWidth;
-    out_texture->height = texHeight;
+
     if (!pixels)
     {
         WARN("CREATE TEXTURE IMAGE: failed to load texture image!");

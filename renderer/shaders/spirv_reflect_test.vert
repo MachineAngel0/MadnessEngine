@@ -13,11 +13,6 @@ layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 proj;
 } ubo;
 
-layout(std140, set = 0, binding = 1) uniform UniformBufferObject2{
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo2;
 
 layout(std140, set = 1, binding = 0) uniform Blah{
     vec3 model;

@@ -838,7 +838,6 @@ void createDescriptorsTexture(vulkan_context* context, vulkan_shader_texture* sh
         // For every binding point used in a shader there needs to be one
         // descriptor set matching that binding point
         VkWriteDescriptorSet writeDescriptorSet[2] = {0};
-        writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         // The buffer's information is passed using a descriptor info structure
         VkDescriptorBufferInfo bufferInfo = {0};
         bufferInfo.buffer = context->default_shader_info.global_uniform_buffers.uniform_buffers[i];
@@ -846,12 +845,13 @@ void createDescriptorsTexture(vulkan_context* context, vulkan_shader_texture* sh
         bufferInfo.offset = 0;
 
         // Binding 0 : Uniform buffer
+        writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writeDescriptorSet[0].dstSet = shader_texture->descriptor_sets[i];
         writeDescriptorSet[0].descriptorCount = 1;
         writeDescriptorSet[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         writeDescriptorSet[0].pBufferInfo = &bufferInfo;
         writeDescriptorSet[0].dstBinding = 0;
-        writeDescriptorSet[1].dstArrayElement = 0;
+        writeDescriptorSet[0].dstArrayElement = 0;
 
         VkDescriptorImageInfo image_info = {0};
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
