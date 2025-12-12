@@ -14,6 +14,7 @@ typedef struct String_Builder
     // char* chars;
     // u64 length;
     String string;
+    //TODO: this absolutely should be using capacity, and also in not freeing the old data anywhere, also ideally use a pool arena
     // not using capacity rn, just cause we can just use an arena
     // u64 capacity;
 }String_Builder;

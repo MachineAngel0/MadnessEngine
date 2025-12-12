@@ -1,5 +1,4 @@
 ﻿
-// #include "Mesh.h"
 // #include "Renderer.h"
 // #include "Tetris.h"
 // #include "text.h"
@@ -8,6 +7,7 @@
 
 #include "vulkan/vulkan.h"
 #include "vulkan_types.h"
+#include "mesh.h"
 #include "vk_swapchain.c"
 #include "vk_device.c"
 #include "vk_command_buffer.c"

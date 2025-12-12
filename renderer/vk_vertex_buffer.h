@@ -22,7 +22,6 @@ void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_bu
     //	what should be done a real-world application, where you should allocate large chunks of memory at once instead.
 
     VkDevice device = vulkan_context->device.logical_device;
-    VkPhysicalDevice physical_device = vulkan_context->device.physical_device;
 
     // Setup vertices
     const vertex vertices[] = {
@@ -143,8 +142,7 @@ void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_bu
     // Submit copies to the queue
     VK_CHECK(vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submitInfo, fence));
     // Wait for the fence to signal that command buffer has finished executing
-    u64 DEFAULT_FENCE_TIMEOUT = 100000000000; // nanoseconds
-    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, DEFAULT_FENCE_TIMEOUT));
+    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
     vkDestroyFence(device, fence, 0);
     vkFreeCommandBuffers(device, vulkan_context->graphics_command_pool, 1, &copyCmd);
 
@@ -299,8 +297,7 @@ void createVertexBufferTexture(vulkan_context* vulkan_context, vulkan_shader_tex
     // Submit copies to the queue
     VK_CHECK(vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submitInfo, fence));
     // Wait for the fence to signal that command buffer has finished executing
-    u64 DEFAULT_FENCE_TIMEOUT = 100000000000; // nanoseconds
-    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, DEFAULT_FENCE_TIMEOUT));
+    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
     vkDestroyFence(device, fence, 0);
     vkFreeCommandBuffers(device, vulkan_context->graphics_command_pool, 1, &copyCmd);
 

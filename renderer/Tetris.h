@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 
 #include "clock.h"
-#include "Mesh.h"
+#include "mesh.h"
 #include "UI.h"
 #include "vk_vertex.h"
 

@@ -11,6 +11,7 @@
 #include "vk_shader.h"
 #include "vk_vertex_buffer.h"
 
+
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static vulkan_context vk_context;
 static camera main_camera;
@@ -20,7 +21,8 @@ bool renderer_init(struct renderer* renderer_inst)
 {
 
 
-
+    //TODO: remove when done
+    spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_mesh.vert.spv");
 
     camera_init(&main_camera);
     vk_context.is_init = false;
@@ -122,6 +124,11 @@ bool renderer_init(struct renderer* renderer_inst)
     vulkan_textured_shader_create(&vk_context, &vk_context.shader_texture);
     createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
 
+
+    mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+
+
     // for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
     // {
     //     create_vertex_and_indices_buffer(&vk_context, &vk_context.graphics_command_buffer[i],
@@ -139,6 +146,7 @@ bool renderer_init(struct renderer* renderer_inst)
 
     return TRUE;
 }
+
 
 
 static bool texture_flip = false;

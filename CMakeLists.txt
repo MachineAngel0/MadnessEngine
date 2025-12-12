@@ -53,6 +53,7 @@ include_directories(MadnessEngine ./renderer/)
 include_directories(MadnessEngine ./renderer/shaders)
 include_directories(MadnessEngine ./game/)
 include_directories(MadnessEngine ./lib/)
+include_directories(MadnessEngine ./lib/cgltf-master)
 include_directories(MadnessEngine ./z_assets/)
 
 

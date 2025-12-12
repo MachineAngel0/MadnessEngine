@@ -4,12 +4,20 @@
 #include <stdalign.h>
 
 //NOTE: its not that each member needs to be aligned,
-//its that the whole things needs to be aligned to a power of 16 (on my system at least)
+// its that the whole struct needs to be aligned to a power of 16 (on my system at least)
+typedef struct vertex_3d
+{
+     vec3 position;
+     vec3 color;
+     vec2 padding;
+} vertex;
+
+/* same thing, as above
 typedef struct vertex_3d
 {
     alignas(16) vec3 position;
     alignas(16) vec3 color;
-} vertex;
+} vertex; */
 
 typedef struct vertex_tex
 {

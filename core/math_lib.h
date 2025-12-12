@@ -1297,7 +1297,29 @@ MINLINE mat4 quat_to_mat4(quat q)
     return out_matrix;
 }
 
+void print_vec2(void* data)
+{
+    //cast to int* and then dereferenced, to get the value of the pointer of size int*
+    printf("vec2 x: %f", *(float *) data);
+    printf("y: %f\n", *(float *) ((float*)data + 1));
+}
 
+void print_vec3(void* data)
+{
+    //cast to int* and then dereferenced, to get the value of the pointer of size int*
+    printf("vec3 x: %f ", *(float *) data);
+    printf("y: %f ", *(float *) ((float*)data + 1));
+    printf("z: %f\n", *(float *) ((float*)data + 2));
+}
+
+void print_vec4(void* data)
+{
+    //cast to int* and then dereferenced, to get the value of the pointer of size int*
+    printf("vec4 x: %f ", *(float *) data);
+    printf("y: %f ", *(float *) ((float*)data + 1));
+    printf("z: %f ", *(float *) ((float*)data + 2));
+    printf("w: %f\n", *(float *) ((float*)data + 3));
+}
 
 
 /*** MAX/MIN FUNCTIONS ***/

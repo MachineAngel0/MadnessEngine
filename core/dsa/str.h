@@ -20,19 +20,17 @@ typedef struct String
 } String;
 
 //NOTE: do not call this, just use STRING_CREATE(string) unless you specifally need to pass in the size for some reason
-String* string_create_from_null_terminated(const char* word, const u64 length)
+String* string_create(const char* word, const u64 length)
 {
+    //creates a string without the null terminator
+
     String* str = malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
-
-    //important to note that we use -1 to not include the null terminated string
-    str->chars = (char *) malloc(sizeof(char) * length - 1);
-    memset(str->chars, 0, sizeof(char) * length - 1);
-
     str->length = length - 1;
-
-
-    memcpy(str->chars, word, sizeof(char) * length-1);
+    //important to note that we use -1 to not include the null terminated string
+    str->chars = (char*)malloc(sizeof(char) * str->length);
+    memset(str->chars, 0, sizeof(char) * str->length);
+    memcpy(str->chars, word, sizeof(char) * str->length);
     // for (uint32_t i = 0; i < str->length; i++)
     // {
     //     str->chars[i] = word[i];
@@ -44,9 +42,9 @@ String* string_create_from_null_terminated(const char* word, const u64 length)
 
 
 
-String* string_create_without_null_terminated(const char* word, const u64 length)
+String* string_create_retain_null_terminated(const char* word, const u64 length)
 {
-    String* str = malloc(sizeof(String));
+    String* str = (String*)malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
 
     //important to note that we use -1 to not include the null terminated string
@@ -64,6 +62,8 @@ String* string_create_without_null_terminated(const char* word, const u64 length
 
     return str;
 };
+
+
 
 
 String* string_create_internal(const String* s)
@@ -107,8 +107,9 @@ bool string_free(String* string)
 //this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed
-#define STRING_CREATE(string) string_create_from_null_terminated(string, sizeof(string))
-#define STRING_CREATE_FROM_BUFFER(string) string_create_without_null_terminated(string, sizeof(string))
+#define STRING_CREATE(string) string_create(string, sizeof(string))
+#define STRING_CREATE_NOT_NULL_TERMINATED(string) string_create(string, sizeof(string))
+#define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string)+1)
 
 
 //UTILITY
@@ -167,6 +168,7 @@ String* string_concat(const String* str1, const String* str2)
     return out_str;
 }
 
+
 String* string_strip_whitespace(String* str)
 {
     String* out_string = string_duplicate(str);
@@ -188,6 +190,18 @@ String* string_strip_whitespace(String* str)
     return out_string;
 }
 
+/*C-STRING*/
+
+const char* string_convert_to_c_string(const String* s)
+{
+    //when you need to convert it to a valid directory, this function is nice
+    char* c_string = malloc(sizeof(char) * (s->length + 1)); // +1 for the null terminated string
+    memcpy(c_string, s->chars, s->length);
+    c_string[s->length] = '\0';
+    return c_string;
+}
+
+
 
 /*STRING SLICE*/
 
@@ -199,7 +213,7 @@ String* string_slice_from(const String* s, const u64 slice_size)
         return NULL;
     }
 
-    return string_create_without_null_terminated(s->chars, slice_size);
+    return string_create_retain_null_terminated(s->chars, slice_size);
 }
 
 String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 slice_end)
@@ -232,6 +246,24 @@ String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 s
     }
 
     return new_string_str;
+}
+
+String* string_strip_from_end(String* str, const char stop_character)
+{
+    //mostly used for path string, so that the end value will be removed
+    //includes the stop character in the final result
+
+    u64 i = str->length;
+    for (; i > 0; i--)
+    {
+        if (str->chars[i] == stop_character)
+        {
+            break;
+        }
+    }
+
+    //where ever i ends up is the new length of the string
+    return string_slice_from(str, i+1);
 }
 
 
@@ -369,19 +401,19 @@ void string_test()
 
     String* test1 = STRING_CREATE("testing something");
     string_print(test1);
-    String* test2 = string_create_from_null_terminated("testing something", sizeof("testing something"));
+    String* test2 = string_create("testing something", sizeof("testing something"));
     string_print(test1);
     string_print(test2);
 
     string_free(test1);
     string_free(test2);
 
-    String* str1 = string_create_from_null_terminated("hello string", sizeof("hello string"));
+    String* str1 = string_create("hello string", sizeof("hello string"));
     string_print(str1);
 
     //String* test_string_two = string_create_no_length("hello string");
 
-    String* str3 = string_create_from_null_terminated("string, hello", sizeof("string, hello"));
+    String* str3 = string_create("string, hello", sizeof("string, hello"));
     string_print(str3);
 
     INFO("String Compare str1 and str1: %s", string_compare(str1, str1) ? "true" : "false");
@@ -396,14 +428,21 @@ void string_test()
     // string_free(str2);
 
     /***C_STRING STUFF***/
-    char char_buffer[3];
-    char_buffer[0] = 'l';
-    char_buffer[1] = 'o';
-    char_buffer[2] = 'l';
+    char char_buffer[] = "lol";
+
+    u64 size = strlen(char_buffer);
 
     String* str_from_c_buffer = STRING_CREATE_FROM_BUFFER(char_buffer);
     string_print(str_from_c_buffer);
 
+    const char* string_before_c = "String_convert_to_C_String";
+    String* string_created_from_c_string = STRING_CREATE_FROM_BUFFER(string_before_c);
+    const char* c_string = string_convert_to_c_string(string_created_from_c_string);
+    printf("%s\n", c_string);
+    TEST_DEBUG((strcmp(string_before_c, c_string) == 0));
+
+
+    /***STRING SLICE***/
 
     String* slice_test = STRING_CREATE("Creating a String Slice");
     string_print(slice_test);
@@ -440,9 +479,8 @@ void string_test()
 
 
 
-
     TEST_REPORT("STRING");
-}
+};
 
 
 #endif //STRINGS_H

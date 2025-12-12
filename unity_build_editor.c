@@ -12,6 +12,8 @@
 
 //LIB
 #include "lib/stb_impl.c"
+#include "lib/cgltf-master/cgltf.h"
+#include "lib/cgltf-master/cgltf_write.h"
 
 
 

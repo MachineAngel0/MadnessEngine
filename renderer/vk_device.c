@@ -280,7 +280,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     //device extensions
     const char* extension_names[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
     };
 
     // Enable only specific Vulkan 1.3 features
@@ -290,12 +291,30 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .extendedDynamicState = VK_TRUE
     };
 
+    // VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
+        // .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+    // };
+
     VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
         .pNext = &enable_extended_dynamic_state_features,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
+    VkPhysicalDeviceVulkan12Features enable_vulkan12_features =
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .scalarBlockLayout = VK_TRUE,
+        .pNext = &enable_vulkan13_features,
+    };
+    VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
+  {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &enable_vulkan12_features,
+    };
+
+
+
 
     // Request device features.
     // TODO: should be config driven
@@ -303,9 +322,10 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .samplerAnisotropy = VK_TRUE // Request anistrophy
     };
 
+
     VkPhysicalDeviceFeatures2 enable_device_features2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = &enable_vulkan13_features,
+        .pNext = &enable_vulkan11_features,
         .features = device_features,
     };
 
@@ -316,7 +336,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .queueCreateInfoCount = index_count,
         .pQueueCreateInfos = queue_create_infos,
         .pEnabledFeatures = 0, // do not use is pNext is used
-        .enabledExtensionCount = 1,
+        .enabledExtensionCount = 2,
         .ppEnabledExtensionNames = extension_names,
         // Deprecated
         .enabledLayerCount = 0,

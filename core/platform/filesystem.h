@@ -30,6 +30,7 @@ void file_read_data_free(file_read_data* file_data)
 
 bool filesystem_open_and_return_bytes(const char* file_path, file_read_data* file_data)
 {
+    //TODO: use an arena
     FILE* fptr = fopen(file_path, "rb");
     if (!fptr)
     {

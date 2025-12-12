@@ -1,6 +1,12 @@
 ﻿#ifndef VULKAN_TYPES_H
 #define VULKAN_TYPES_H
 
+
+
+
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+
 #include <vulkan/vulkan.h>
 #include <defines.h>
 #include "logger.h"
@@ -293,8 +299,14 @@ typedef struct vulkan_context
     vertex_info default_vertex_info;
     vulkan_shader_default default_shader_info;
 
+
     //textured triangle
     vulkan_shader_texture shader_texture;
+
+    //temp
+    vulkan_buffer mesh_vertex_buffer;
+    vulkan_buffer mesh_index_buffer;
+
 
     //Semaphores and Fences
     // VkSemaphore* image_available_semaphores; // darray

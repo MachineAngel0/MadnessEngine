@@ -54,7 +54,7 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
     poolInfo.pPoolSizes = pool_sizes;
     poolInfo.maxSets = ARRAY_SIZE(pool_sizes) * max_pool_sizes;
     // poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT; // TODO: bindless
-
+    // VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
     VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator,
                                              &descriptor_pools->descriptor_pool);
@@ -250,7 +250,7 @@ const char* GetShaderStageName(uint32_t flag)
     return "UNKNOWN_STAGE";
 }
 
-spirv_reflect_descriptor_set_info* spriv_reflection_testing_just_descriptor_set(
+spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(
     Frame_Arena* arena, const char* shader_path)
 {
     //TODO: arena
@@ -356,12 +356,78 @@ spirv_reflect_descriptor_set_info* spriv_reflection_testing_just_descriptor_set(
     return out_reflect_info;
 }
 
+spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Frame_Arena* arena, const char* shader_path)
+{
+    //TODO: arena
+    spirv_reflect_input_variable_info* out_reflect_info = malloc(sizeof(spirv_reflect_descriptor_set_info));
+
+    file_read_data vert_shader_data = {0};
+
+    //TODO: SHADER PATH
+    filesystem_open_and_return_bytes(shader_path, &vert_shader_data);
+
+
+    SpvReflectShaderModule vert_module = {0};
+    SpvReflectResult result = spvReflectCreateShaderModule(vert_shader_data.size, vert_shader_data.data, &vert_module);
+    MASSERT_MSG(result == SPV_REFLECT_RESULT_SUCCESS, "SpvReflectCreateShaderModule VERT failed");
+    TRACE("SpvReflectCreateShaderModule VERT result SUCCESS")
+
+    INFO("STAGE TYPE %p, %s", vert_module.shader_stage, GetShaderStageName(vert_module.shader_stage));
+
+
+    uint32_t input_count = 0;
+    spvReflectEnumerateInputVariables(&vert_module, &input_count, NULL);
+    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
+    SpvReflectInterfaceVariable** vert_input_variables =
+            (SpvReflectInterfaceVariable **) malloc(input_count * sizeof(SpvReflectInterfaceVariable *));
+    spvReflectEnumerateInputVariables(&vert_module, &input_count, vert_input_variables);
+    assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+
+    out_reflect_info->input_count = input_count;
+    out_reflect_info->locations = darray_create_reserve(u32, input_count);
+    out_reflect_info->formats = darray_create_reserve(SpvReflectFormat, input_count);
+    out_reflect_info->offsets = darray_create_reserve(u32, input_count+1); // additional index value never gets used
+    darray_push(out_reflect_info->offsets, 0); //we always start at 0
+
+    for (u32 i = 0; i < input_count; i++)
+    {
+        DEBUG("INPUT NAME %s", vert_input_variables[i]->name);
+        DEBUG("LOCATION %d", vert_input_variables[i]->location);
+        DEBUG("FORMAT %d", vert_input_variables[i]->format);
+        DEBUG("OFFSET VECTOR COUNT %d ", vert_input_variables[i]->numeric.vector.component_count);
+        DEBUG("OFFSET MAT ROW/COL %d %d", vert_input_variables[i]->numeric.matrix.row_count, vert_input_variables[i]->numeric.matrix.column_count);
+
+
+        darray_push(out_reflect_info->locations, vert_input_variables[i]->location);
+        darray_push(out_reflect_info->formats, vert_input_variables[i]->format);
+        //determine if it's the offset of the matrix or just a vec
+        if (vert_input_variables[i]->numeric.matrix.column_count > 0)
+        {
+            u32 mat_col = vert_input_variables[i]->numeric.matrix.column_count;
+            u32 mat_row = vert_input_variables[i]->numeric.matrix.row_count;
+            darray_push(out_reflect_info->offsets, mat_col * mat_row * sizeof(f32));
+        }
+        else
+        {
+            darray_push(out_reflect_info->offsets, vert_input_variables[i]->numeric.vector.component_count * sizeof(f32));
+        }
+    }
+
+    // free(d_sets_vert);
+
+    spvReflectDestroyShaderModule(&vert_module);
+
+
+    return out_reflect_info;
+}
+
 
 void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflection_testing_just_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
 
     shader_texture->descriptor_sets = darray_create_reserve(
         VkDescriptorSet, context->swapchain.max_frames_in_flight);
@@ -448,10 +514,7 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
         vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
-
     }
-
-
 }
 
 
@@ -459,7 +522,7 @@ void updateDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflection_testing_just_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
@@ -513,14 +576,14 @@ void updateDescriptorsTexture_reflect_test(vulkan_context* context,
         vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
-
     }
 }
+
 void updateDescriptorsTexture_reflect_test_just_texture(vulkan_context* context,
-                                           descriptor_pool_allocator* descriptor_pool_allocator,
-                                           vulkan_shader_texture* shader_texture)
+                                                        descriptor_pool_allocator* descriptor_pool_allocator,
+                                                        vulkan_shader_texture* shader_texture)
 {
-spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflection_testing_just_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
@@ -574,8 +637,5 @@ spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflection_testing
         vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
-
     }
-
-
 }
