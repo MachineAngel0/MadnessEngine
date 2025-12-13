@@ -251,16 +251,17 @@ const char* GetShaderStageName(uint32_t flag)
 }
 
 spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(
-    Frame_Arena* arena, const char* shader_path)
+    Frame_Arena* arena, const char* vertex_shader_path, const char* fragment_shader_path)
 {
     //TODO: arena
+    //TODO: append the .vert.spv, and .frag.spv so i only have to pass in the path/name
     spirv_reflect_descriptor_set_info* out_reflect_info = malloc(sizeof(spirv_reflect_descriptor_set_info));
 
     file_read_data vert_shader_data = {0};
     file_read_data frag_shader_data = {0};
 
-    filesystem_open_and_return_bytes("../renderer/shaders/shader_texture.vert.spv", &vert_shader_data);
-    filesystem_open_and_return_bytes("../renderer/shaders/shader_texture.frag.spv", &frag_shader_data);
+    filesystem_open_and_return_bytes(vertex_shader_path, &vert_shader_data);
+    filesystem_open_and_return_bytes(fragment_shader_path, &frag_shader_data);
 
 
     SpvReflectShaderModule vert_module = {0};
@@ -396,7 +397,8 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Frame_Arena*
         DEBUG("LOCATION %d", vert_input_variables[i]->location);
         DEBUG("FORMAT %d", vert_input_variables[i]->format);
         DEBUG("OFFSET VECTOR COUNT %d ", vert_input_variables[i]->numeric.vector.component_count);
-        DEBUG("OFFSET MAT ROW/COL %d %d", vert_input_variables[i]->numeric.matrix.row_count, vert_input_variables[i]->numeric.matrix.column_count);
+        DEBUG("OFFSET MAT ROW/COL %d %d", vert_input_variables[i]->numeric.matrix.row_count,
+              vert_input_variables[i]->numeric.matrix.column_count);
 
 
         darray_push(out_reflect_info->locations, vert_input_variables[i]->location);
@@ -410,7 +412,8 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Frame_Arena*
         }
         else
         {
-            darray_push(out_reflect_info->offsets, vert_input_variables[i]->numeric.vector.component_count * sizeof(f32));
+            darray_push(out_reflect_info->offsets,
+                        vert_input_variables[i]->numeric.vector.component_count * sizeof(f32));
         }
     }
 
@@ -427,7 +430,8 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
+
 
     shader_texture->descriptor_sets = darray_create_reserve(
         VkDescriptorSet, context->swapchain.max_frames_in_flight);
@@ -481,7 +485,7 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
 
         // The buffer's information is passed using a descriptor info structure
         VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-        bufferInfo.buffer = context->default_shader_info.global_uniform_buffers.uniform_buffers[i];
+        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
         bufferInfo.range = sizeof(uniform_buffer_object);
         bufferInfo.offset = 0;
 
@@ -518,11 +522,12 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
 }
 
 
-void updateDescriptorsTexture_reflect_test(vulkan_context* context,
+void update_descriptors_texture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
+
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
@@ -543,7 +548,7 @@ void updateDescriptorsTexture_reflect_test(vulkan_context* context,
 
         // The buffer's information is passed using a descriptor info structure
         VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-        bufferInfo.buffer = context->default_shader_info.global_uniform_buffers.uniform_buffers[i];
+        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
         bufferInfo.range = sizeof(uniform_buffer_object);
         bufferInfo.offset = 0;
 
@@ -583,7 +588,7 @@ void updateDescriptorsTexture_reflect_test_just_texture(vulkan_context* context,
                                                         descriptor_pool_allocator* descriptor_pool_allocator,
                                                         vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "blah");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
@@ -604,7 +609,7 @@ void updateDescriptorsTexture_reflect_test_just_texture(vulkan_context* context,
 
         // The buffer's information is passed using a descriptor info structure
         VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-        bufferInfo.buffer = context->default_shader_info.global_uniform_buffers.uniform_buffers[i];
+        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
         bufferInfo.range = sizeof(uniform_buffer_object);
         bufferInfo.offset = 0;
 
@@ -627,6 +632,102 @@ void updateDescriptorsTexture_reflect_test_just_texture(vulkan_context* context,
                 case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: // texture
                     writeDescriptorSet[j].pImageInfo = &image_info;
                     break;
+                case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: // uniform buffer
+                    writeDescriptorSet[j].pBufferInfo = &bufferInfo;
+                    break;
+                default:
+                    WARN("DESCRIPTOR SET CREATE: TYPE NOT YET SUPPORTED")
+            }
+        }
+        vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
+                               writeDescriptorSet, 0, 0);
+        darray_free(writeDescriptorSet);
+    }
+}
+
+void createDescriptorsMesh(vulkan_context* context, descriptor_pool_allocator* descriptor_pool_allocator,
+                           vulkan_mesh_default* default_mesh)
+{
+
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_mesh.vert.spv", "../renderer/shaders/shader_mesh.frag.spv");
+
+    default_mesh->descriptor_sets = darray_create_reserve(
+        VkDescriptorSet, context->swapchain.max_frames_in_flight);
+    default_mesh->descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;
+
+
+    // Descriptor set layouts define the interface between our application and the shader
+    // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
+    // So every shader binding should map to one descriptor set layout binding
+
+
+    VkDescriptorSetLayoutBinding* layoutBinding = darray_create_reserve(VkDescriptorSetLayoutBinding,
+                                                                        d_set_reflect_info->descriptor_set_count);
+    for (int i = 0; i < d_set_reflect_info->descriptor_set_count; i++)
+    {
+        //uniform buffer
+        layoutBinding[i].binding = d_set_reflect_info->binding_number[i];
+        layoutBinding[i].descriptorType = d_set_reflect_info->descriptor_set_types[i];
+        layoutBinding[i].descriptorCount = 1;
+        //TODO:  this can stay as 1 until we use bindless, then we have to use the max value
+        layoutBinding[i].stageFlags = d_set_reflect_info->stage_flags[i];
+    }
+
+
+    VkDescriptorSetLayoutCreateInfo descriptor_layout_ci = {0};
+    descriptor_layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout_ci.bindingCount = d_set_reflect_info->descriptor_set_count;
+    descriptor_layout_ci.pBindings = layoutBinding;
+
+
+    VK_CHECK(
+        vkCreateDescriptorSetLayout(context->device.logical_device, &descriptor_layout_ci, 0, &default_mesh->
+            descriptor_set_layout));
+
+    // Where the descriptor set layout is the interface, the descriptor set points to actual data
+    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
+    for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
+    {
+        u32 set_count = 1;
+        descriptor_pool_alloc(context, descriptor_pool_allocator, &default_mesh->descriptor_set_layout,
+                              &set_count,
+                              &default_mesh->descriptor_sets[i]);
+
+        // Update the descriptor set determining the shader binding points
+        // For every binding point used in a shader there needs to be one
+        // descriptor set matching that binding point
+        VkWriteDescriptorSet* writeDescriptorSet = darray_create_reserve(
+            VkWriteDescriptorSet, d_set_reflect_info->descriptor_set_count);
+
+        //TODO: these values (uniform buffer/texture) are either going to be seperate functions or enums switches
+
+        // The buffer's information is passed using a descriptor info structure
+        VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
+        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
+        bufferInfo.range = sizeof(uniform_buffer_object);
+        bufferInfo.offset = 0;
+
+        /*
+        VkDescriptorImageInfo image_info = {0}; // for texture
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info.imageView = default_mesh->texture_test_object.texture_image_view;
+        image_info.sampler = default_mesh->texture_test_object.texture_sampler;
+        */
+
+        for (int j = 0; j < d_set_reflect_info->descriptor_set_count; j++)
+        {
+            writeDescriptorSet[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeDescriptorSet[j].dstSet = default_mesh->descriptor_sets[i];
+            writeDescriptorSet[j].descriptorType = d_set_reflect_info->descriptor_set_types[j];
+            writeDescriptorSet[j].dstBinding = d_set_reflect_info->binding_number[j];
+            writeDescriptorSet[j].descriptorCount = 1;
+            writeDescriptorSet[j].dstArrayElement = 0;
+
+            switch (d_set_reflect_info->descriptor_set_types[j])
+            {
+                /*case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: // texture
+                    writeDescriptorSet[j].pImageInfo = &image_info;
+                    break;*/
                 case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: // uniform buffer
                     writeDescriptorSet[j].pBufferInfo = &bufferInfo;
                     break;

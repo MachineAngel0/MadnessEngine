@@ -19,11 +19,6 @@ static camera main_camera;
 
 bool renderer_init(struct renderer* renderer_inst)
 {
-
-
-    //TODO: remove when done
-    spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_mesh.vert.spv");
-
     camera_init(&main_camera);
     vk_context.is_init = false;
     // vulkan_context vulkan_context;
@@ -82,6 +77,7 @@ bool renderer_init(struct renderer* renderer_inst)
 
     // Create command buffers.
     vulkan_renderer_command_buffers_create(&vk_context);
+    // Create Descriptor Pool
     descriptor_pool_allocator_init(&vk_context, &vk_context.global_descriptor_pool);
 
 
@@ -94,8 +90,7 @@ bool renderer_init(struct renderer* renderer_inst)
 
     // Create default shader
     createUniformBuffers(&vk_context);
-    // uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
-    createDescriptors(&vk_context);
+    createDescriptors(&vk_context, &vk_context.global_descriptor_pool);
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
 
 
@@ -115,9 +110,6 @@ bool renderer_init(struct renderer* renderer_inst)
 
     create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
                           &vk_context.shader_texture.texture_test_object);
-
-
-    //TODO: temp while testing it
     createDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
     // createDescriptorsTexture(&vk_context, &vk_context.shader_texture);
 
@@ -125,21 +117,12 @@ bool renderer_init(struct renderer* renderer_inst)
     createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
 
 
-    mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
-    // mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-
-
-    // for (u32 i = 0; i < vk_context.swapchain.image_count; i++)
-    // {
-    //     create_vertex_and_indices_buffer(&vk_context, &vk_context.graphics_command_buffer[i],
-    //                                      &vk_context.default_vertex_buffer,
-    //                                      &vk_context.default_vertex_info);
-    // }
-
-
-    // uniform_buffers_create(&vk_context, &vk_context.default_shader_info.global_uniform_buffers);
-    // descriptor_pool_create(&vk_context, &vk_context.default_shader_info);
-    // descriptor_set_create(&vk_context, &vk_context.default_shader_info);
+    mesh* test_mesh = mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
+    // buffer the data
+    createDescriptorsMesh(&vk_context, &vk_context.global_descriptor_pool,
+                           &vk_context.mesh_default);
+    vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default);
+    createVertexBufferMesh(&vk_context, &vk_context.mesh_default, test_mesh);
 
 
     INFO("VULKAN RENDERER INITIALIZED");
@@ -160,7 +143,7 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
         {
             create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
                       &vk_context.shader_texture.texture_test_object);
-            updateDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
 
             texture_flip = !texture_flip;
 
@@ -169,7 +152,7 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
         {
             create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/error_texture.png",
                                &vk_context.shader_texture.texture_test_object);
-            updateDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
             texture_flip = !texture_flip;
 
         }
@@ -235,7 +218,7 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     ubo.proj = camera_get_projection(&main_camera, vk_context.framebuffer_width, vk_context.framebuffer_height);
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    memcpy(vk_context.default_shader_info.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
+    memcpy(vk_context.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
            sizeof(uniform_buffer_object));
 
 
@@ -359,6 +342,31 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32) vk_context.shader_texture.vertex_info.indices_size,
                      1, 0, 0, 0);
+
+    //DRAW MESH
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    vk_context.mesh_default.mesh_shader_pipeline.handle);
+
+    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
+
+    VkDeviceSize mesh_offsets[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
+                           &vk_context.mesh_default.vertex_buffer.handle, offsets);
+
+    vkCmdDraw(command_buffer_current_frame->handle, vk_context.mesh_default.vertex_info.vertices_size, 1, 0, 0);
+
+    /*
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                      (u32) vk_context.default_vertex_info.indices_size,
+                      1, 0, 0, 0);
+    */
+
     //END FRAME//
 
     // Finish the current dynamic rendering section

@@ -196,7 +196,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                         vec2 temp_vert;
                         temp_vert.x = tex_coord_buffer[normal_index];
                         temp_vert.y = tex_coord_buffer[normal_index + 1];
-                        darray_push(out_mesh->vertices.tex_coord, temp_vert);
+                        darray_push(out_mesh->vertices.tex_coord, &temp_vert);
                     }
                 }
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "COLOR_n") == 0)

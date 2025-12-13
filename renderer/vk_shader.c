@@ -92,7 +92,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-                spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
@@ -571,13 +571,13 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     return true;
 }
 
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader)
+bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data)
 {
     // Pipeline layout creation
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &textured_shader->descriptor_set_layout;
+    pipeline_layout_info.pSetLayouts = &mesh_data->descriptor_set_layout;
     // pipeline_layout_info.pushConstantRangeCount = 0;
     // pipeline_layout_info.pPushConstantRanges = 0;
 
@@ -585,7 +585,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* t
     // TODO: Pipeline and Push Constants
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
     VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
-                                                      &textured_shader->shader_texture_pipeline.pipeline_layout);
+                                                      &mesh_data->mesh_shader_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);
     //graphics pipeline
     file_read_data vert_data = {0};
@@ -639,7 +639,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* t
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-             spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
@@ -658,7 +658,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* t
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = 3;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
@@ -793,7 +793,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* t
     graphics_pipeline_info.pDepthStencilState = &depth_stencil;
     graphics_pipeline_info.pColorBlendState = &color_blending;
     graphics_pipeline_info.pDynamicState = &dynamicState;
-    graphics_pipeline_info.layout = textured_shader->shader_texture_pipeline.pipeline_layout;
+    graphics_pipeline_info.layout = mesh_data->mesh_shader_pipeline.pipeline_layout;
     graphics_pipeline_info.renderPass = 0; // this has to be null if we are doing dynamic rendering
     // graphics_pipeline_info.subpass = 0;
     // graphics_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
@@ -803,7 +803,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_shader_texture* t
 
     VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
                                                          &graphics_pipeline_info, NULL,
-                                                         &textured_shader->shader_texture_pipeline.handle);
+                                                         &mesh_data->mesh_shader_pipeline.handle);
 
     if (graphics_result != VK_SUCCESS)
     {

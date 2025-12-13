@@ -308,8 +308,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
-  {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
         .pNext = &enable_vulkan12_features,
     };
 

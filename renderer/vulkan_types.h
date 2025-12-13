@@ -201,15 +201,14 @@ typedef struct Shader_System
 typedef struct vulkan_shader_default
 {
     vulkan_shader_pipeline default_shader_pipeline;
-    vulkan_uniform_buffer global_uniform_buffers;
 
     //TODO: temporary for now
     VkDescriptorSetLayout descriptor_set_layout;
-    VkDescriptorPool descriptor_pool;
 
     VkDescriptorSet* descriptor_sets;
     u32 descriptor_set_count;
 } vulkan_shader_default;
+
 
 typedef struct vertex_info
 {
@@ -220,6 +219,25 @@ typedef struct vertex_info
     u64 indices_size;
 } vertex_info;
 
+typedef struct vulkan_mesh_default
+{
+    vulkan_shader_pipeline mesh_shader_pipeline;
+
+    //TODO: temporary for now
+    VkDescriptorSetLayout descriptor_set_layout;
+
+    VkDescriptorSet* descriptor_sets;
+    u32 descriptor_set_count;
+
+    vulkan_buffer vertex_buffer;
+    vulkan_buffer mesh_index_buffer;
+    vertex_info vertex_info;
+
+
+} vulkan_mesh_default;
+
+
+
 typedef struct vulkan_shader_texture
 {
     Texture texture_test_object;
@@ -228,7 +246,6 @@ typedef struct vulkan_shader_texture
 
     //TODO: temporary for now
     VkDescriptorSetLayout descriptor_set_layout;
-    VkDescriptorPool descriptor_pool; // TODO: this should not be here
 
     VkDescriptorSet* descriptor_sets; // darray
     u32 descriptor_set_count;
@@ -266,7 +283,6 @@ typedef struct vulkan_context
     Frame_Arena frame_allocator;
 
 
-
     //Surface
     VkSurfaceKHR surface;
     // The framebuffer's current width and height.
@@ -293,6 +309,10 @@ typedef struct vulkan_context
     //global_descriptor_pool
     descriptor_pool_allocator global_descriptor_pool;
 
+    //model,view, projection matrix
+    vulkan_uniform_buffer global_uniform_buffers;
+
+
     //TODO: vertex buffers and vertex data, here for now
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
@@ -304,8 +324,7 @@ typedef struct vulkan_context
     vulkan_shader_texture shader_texture;
 
     //temp
-    vulkan_buffer mesh_vertex_buffer;
-    vulkan_buffer mesh_index_buffer;
+    vulkan_mesh_default mesh_default;
 
 
     //Semaphores and Fences

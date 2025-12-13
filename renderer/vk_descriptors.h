@@ -50,8 +50,8 @@ typedef struct spirv_reflect_input_variable_info
 spirv_refect_info* spriv_reflection_testing(const char* shader_path);
 
 
-spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(
-    Frame_Arena* arena, const char* shader_path);
+spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(Frame_Arena* arena,
+    const char* vertex_shader_path, const char* fragment_shader_path);
 
 spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(
     Frame_Arena* arena, const char* shader_path);
@@ -60,7 +60,11 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture);
 
-void updateDescriptorsTexture_reflect_test(vulkan_context* context,
+void update_descriptors_texture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture);
+
+void createDescriptorsMesh(vulkan_context* context, descriptor_pool_allocator* descriptor_pool_allocator,
+                           vulkan_mesh_default* default_mesh);
+
 #endif
