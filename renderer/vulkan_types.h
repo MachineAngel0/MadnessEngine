@@ -230,8 +230,10 @@ typedef struct vulkan_mesh_default
     u32 descriptor_set_count;
 
     vulkan_buffer vertex_buffer;
-    vulkan_buffer mesh_index_buffer;
+    vulkan_buffer index_buffer;
     vertex_info vertex_info;
+    VkIndexType index_stride;
+
 
 
 } vulkan_mesh_default;

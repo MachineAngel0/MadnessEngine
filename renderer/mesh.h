@@ -7,7 +7,7 @@
 
 typedef struct vertex_mesh
 {
-    //all darrays
+    //all darrays, NOTE: They might not need to be darrays, just normal arrays, if they dont change in size
     vec3* pos;
     // vec3* normal;
     // vec4* tangent;
@@ -20,10 +20,9 @@ typedef struct mesh
 {
     vertex_mesh vertices;
     u32* indices;
-    Texture* textures; // prob gonna need to be materials instead
-
-    //move out to its won struct for better performance
-    bool has_indices;
+    u64 indices_size;
+    VkIndexType index_type;
+    Texture* textures; // TODO: prob gonna need to be materials instead
 } mesh;
 
 mesh* mesh_init()
@@ -36,7 +35,7 @@ mesh* mesh_init()
     // m->vertices.tangent = darray_create(vec4);
     // m->vertices.color = darray_create(vec4);
 
-    m->indices = darray_create(u32);
+    // m->indices = darray_create(u32);
     m->textures = darray_create(Texture);
 
     return m;
@@ -53,17 +52,21 @@ void mesh_free(mesh* m)
 }
 
 
+//ill combine the functions later with a switch but for now, i dont want it
 mesh* mesh_load_gltf(const char* gltf_path)
 {
     //gltf files can technically come with on indices
 
     mesh* out_mesh = mesh_init();
 
+    //TODO: since there can be multiple meshes, we would need multiple of these buffers
     u8* position_buffer;
     u8* normal_buffer;
     u8* tangent_buffer;
     u8* tex_coord_buffer;
     // float* color_buffer;
+
+    u8* index_buffer;
 
     cgltf_options options = {0};
     cgltf_data* data = NULL;
@@ -78,11 +81,55 @@ mesh* mesh_load_gltf(const char* gltf_path)
     String* removed_path = string_strip_from_end(path, '/');
     string_print(removed_path);
 
-
     for (int i = 0; i < data->meshes_count; i++)
     {
         for (int mesh_index = 0; mesh_index < data->meshes[i].primitives_count; mesh_index++)
         {
+            //one set of indices per primitive
+            //points to the accessor field data type
+            u64 index_count = data->meshes[i].primitives[mesh_index].indices->count;
+            u64 index_offset = data->meshes[i].primitives[mesh_index].indices->offset;
+            u64 index_stride = data->meshes[i].primitives[mesh_index].indices->stride;
+            u64 index_read_size = data->meshes[i].primitives[mesh_index].indices->buffer_view->size;
+            const char* index_uri_file_name = data->meshes[i].primitives[mesh_index].indices->buffer_view->buffer->uri;
+
+            out_mesh->indices_size = index_count;
+
+            String* index_bin = STRING_CREATE_FROM_BUFFER(index_uri_file_name);
+            String* index_bin_path = string_concat(removed_path, index_bin);
+            string_print(index_bin_path);
+            const char* new_bin_path = string_convert_to_c_string(index_bin_path);
+
+            FILE* index_bin_fptr = fopen(new_bin_path, "rb");
+            if (!index_bin_fptr)
+            {
+                printf("%s", new_bin_path);
+                return NULL;
+            }
+            fseek(index_bin_fptr, index_offset, SEEK_CUR);
+            out_mesh->indices = malloc(index_read_size); // TODO: replace with allocator
+            // index_buffer = malloc(index_read_size);
+            size_t index_bytes_read = fread(out_mesh->indices, 1, index_read_size, index_bin_fptr);
+            if (index_bytes_read != index_read_size)
+            {
+                WARN("NOT YET HANDLED BUT GLTF BIN NOT READ ENTIRE BUFFER FOR INDEX")
+            }
+            if (index_stride == 2)
+            {
+                out_mesh->index_type = VK_INDEX_TYPE_UINT16;
+            }
+            else if (index_stride == 4)
+            {
+                out_mesh->index_type = VK_INDEX_TYPE_UINT32;
+            }
+            else
+            {
+                WARN("MESH LOADING: UNKNOWN INDEX BUFFER STRIDE");
+            }
+
+                fclose(index_bin_fptr);
+
+
             for (int atr_index = 0; atr_index < data->meshes[i].primitives[mesh_index].attributes_count; atr_index
                  ++)
             {
@@ -91,6 +138,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                         offset;
                 u64 read_size = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
                         size;
+
 
                 // how many of the type we have = 36 vec3's
                 size_t data_count = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->count;
@@ -130,7 +178,6 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     INFO("PROCESSING POSITION");
 
 
-
                     //get vertex buffer data
                     position_buffer = malloc(read_size);
 
@@ -144,7 +191,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                         vec3 temp_vert;
                         memcpy(&temp_vert.x, (position_buffer + vert_index), sizeof(float));
                         memcpy(&temp_vert.y, (position_buffer + vert_index + 4), sizeof(float));
-                        memcpy(&temp_vert.z, (position_buffer +  vert_index + 8), sizeof(float));
+                        memcpy(&temp_vert.z, (position_buffer + vert_index + 8), sizeof(float));
                         darray_push(out_mesh->vertices.pos, temp_vert);
                     }
 
@@ -256,7 +303,6 @@ mesh* mesh_load_gltf(const char* gltf_path)
     // darray_debug_print(out_mesh->vertices.pos, )
     return out_mesh;
 }
-
 
 
 /*

@@ -156,7 +156,7 @@ void process_mouse_scroll(camera* cam, float y_offset)
 }
 
 
-mat4 camera_update(camera* cam, float dt)
+void camera_update(camera* cam, float dt)
 {
     //TODO: This will need to be configurable at some point
     if (input_is_key_pressed(KEY_W))

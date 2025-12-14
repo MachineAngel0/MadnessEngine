@@ -3,6 +3,7 @@
 #include "camera.h"
 #include "darray.h"
 #include "logger.h"
+#include "mesh.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
 #include "vk_command_buffer.h"
@@ -19,6 +20,7 @@ static camera main_camera;
 
 bool renderer_init(struct renderer* renderer_inst)
 {
+
     camera_init(&main_camera);
     vk_context.is_init = false;
     // vulkan_context vulkan_context;
@@ -117,12 +119,24 @@ bool renderer_init(struct renderer* renderer_inst)
     createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
 
 
-    mesh* test_mesh = mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh* test_mesh = mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
+    mesh* test_mesh = mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    vk_context.mesh_default.index_stride = test_mesh->index_type;
     // buffer the data
     createDescriptorsMesh(&vk_context, &vk_context.global_descriptor_pool,
                            &vk_context.mesh_default);
     vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default);
     createVertexBufferMesh(&vk_context, &vk_context.mesh_default, test_mesh);
+
+
+    /*
+    mesh* test_mesh_indicies = mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    createDescriptorsMesh(&vk_context, &vk_context.global_descriptor_pool,
+                           &vk_context.mesh_default_indicies);
+    vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default_indicies);
+    createVertexBufferMesh(&vk_context, &vk_context.mesh_default_indicies, test_mesh_indicies);
+    */
+
 
 
     INFO("VULKAN RENDERER INITIALIZED");
@@ -355,7 +369,14 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
                            &vk_context.mesh_default.vertex_buffer.handle, mesh_offsets);
 
-    vkCmdDraw(command_buffer_current_frame->handle, vk_context.mesh_default.vertex_info.vertices_size, 1, 0, 0);
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.mesh_default.index_buffer.handle, 0,
+                          vk_context.mesh_default.index_stride);
+
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                     (u32) vk_context.mesh_default.vertex_info.indices_size,
+                     1, 0, 0, 0);
+
 
     /*
     vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
