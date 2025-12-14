@@ -213,7 +213,7 @@ typedef struct vulkan_shader_default
 typedef struct vertex_info
 {
     //TODO: they should be darrays or arenas, but for now its fine
-    vertex vertices[1000];
+    vertex_3d vertices[1000];
     u64 vertices_size;
     uint16_t indices[1000];
     u64 indices_size;

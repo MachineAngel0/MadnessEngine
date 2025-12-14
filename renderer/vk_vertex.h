@@ -10,7 +10,7 @@ typedef struct vertex_3d
      vec3 position;
      vec3 color;
      vec2 padding;
-} vertex;
+} vertex_3d;
 
 /* same thing, as above
 typedef struct vertex_3d
@@ -37,7 +37,7 @@ typedef struct vertex_tex
 //     {{-0.5f, 0.5f, 0.0f}},
 //
 // };
-const vertex test_vertices[] = {
+const vertex_3d test_vertices[] = {
     {{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
     {{-1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
     {{0.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}

@@ -347,14 +347,13 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     vk_context.mesh_default.mesh_shader_pipeline.handle);
 
-    // Bind descriptor set for the current frame's uniform buffer, so the shader uses the data from that buffer for this draw
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.default_shader_info.default_shader_pipeline.pipeline_layout, 0, 1,
+                            vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 0, 1,
                             &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
 
     VkDeviceSize mesh_offsets[1] = {0};
     vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
-                           &vk_context.mesh_default.vertex_buffer.handle, offsets);
+                           &vk_context.mesh_default.vertex_buffer.handle, mesh_offsets);
 
     vkCmdDraw(command_buffer_current_frame->handle, vk_context.mesh_default.vertex_info.vertices_size, 1, 0, 0);
 

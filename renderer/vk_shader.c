@@ -84,7 +84,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     //vertex info
     VkVertexInputBindingDescription binding_description = {0};
     binding_description.binding = 0;
-    binding_description.stride = sizeof(vertex);
+    binding_description.stride = sizeof(vertex_3d);
     /*
     * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
     * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
@@ -362,7 +362,7 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     //vertex info
     VkVertexInputBindingDescription binding_description = {0};
     binding_description.binding = 0;
-    binding_description.stride = sizeof(vertex);
+    binding_description.stride = sizeof(vertex_3d);
     /*
     * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
     * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
@@ -631,7 +631,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     //vertex info
     VkVertexInputBindingDescription binding_description = {0};
     binding_description.binding = 0;
-    binding_description.stride = sizeof(vertex);
+    binding_description.stride = 12; //sizeof(vertex_mesh);
     /*
     * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
     * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
@@ -642,23 +642,33 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
             spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
-    VkVertexInputAttributeDescription* attribute_descriptions = malloc(
-        sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
-    for (u32 attribute_index = 0; attribute_index < attribute_info->input_count; attribute_index++)
-    {
-        attribute_descriptions[attribute_index].binding = 0;
-        attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
-        attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
 
-        offset_total += attribute_info->offsets[attribute_index];
-        attribute_descriptions[attribute_index].offset = offset_total;
-    }
+    // VkVertexInputAttributeDescription* attribute_descriptions = malloc(
+    //     sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
+    // for (u32 attribute_index = 0; attribute_index < attribute_info->input_count; attribute_index++)
+    // {
+    //     attribute_descriptions[attribute_index].binding = 0;
+    //     attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
+    //     attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
+    //
+    //     offset_total += attribute_info->offsets[attribute_index];
+    //     attribute_descriptions[attribute_index].offset = offset_total;
+    // }
+
+    VkVertexInputAttributeDescription attribute_descriptions[1];
+    attribute_descriptions[0].binding = 0;
+    attribute_descriptions[0].location = 0;
+    attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descriptions[0].offset = 0;
+
+
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
+    // vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = 1;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;

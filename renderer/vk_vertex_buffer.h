@@ -25,13 +25,13 @@ void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_bu
     VkDevice device = vulkan_context->device.logical_device;
 
     // Setup vertices
-    const vertex vertices[] = {
+    const vertex_3d vertices[] = {
         {{1.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
         {{-1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
         {{0.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
     };
     vertex_info->vertices_size = ARRAY_SIZE(vertices);
-    u32 vertexBufferSize = vertex_info->vertices_size * sizeof(vertex);
+    u32 vertexBufferSize = vertex_info->vertices_size * sizeof(vertex_3d);
 
     // Setup indices
     // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
@@ -333,7 +333,8 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     u64 pos_size = darray_get_size(test_mesh->vertices.pos);
 
     default_mesh->vertex_info.vertices_size = pos_size;
-    u32 vertexBufferSize = default_mesh->vertex_info.vertices_size * sizeof(vertex_mesh);
+    // u32 vertexBufferSize = default_mesh->vertex_info.vertices_size * sizeof(vertex_mesh);
+    u32 vertexBufferSize = default_mesh->vertex_info.vertices_size * sizeof(vec3);
 
     // Setup indices
     // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices

@@ -9,10 +9,11 @@ typedef struct vertex_mesh
 {
     //all darrays
     vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* tex_coord;
-    // vec4* color;
+    // vec3* normal;
+    // vec4* tangent;
+    // vec2* tex_coord;
+
+    // vec4* color; //might not support
 } vertex_mesh;
 
 typedef struct mesh
@@ -30,9 +31,9 @@ mesh* mesh_init()
     mesh* m = malloc(sizeof(m));
 
     m->vertices.pos = darray_create(vec3);
-    m->vertices.normal = darray_create(vec3);
-    m->vertices.tex_coord = darray_create(vec2);
-    m->vertices.tangent = darray_create(vec4);
+    // m->vertices.normal = darray_create(vec3);
+    // m->vertices.tex_coord = darray_create(vec2);
+    // m->vertices.tangent = darray_create(vec4);
     // m->vertices.color = darray_create(vec4);
 
     m->indices = darray_create(u32);
@@ -44,8 +45,8 @@ mesh* mesh_init()
 void mesh_free(mesh* m)
 {
     darray_free(m->vertices.pos);
-    darray_free(m->vertices.normal);
-    darray_free(m->vertices.tex_coord);
+    // darray_free(m->vertices.normal);
+    // darray_free(m->vertices.tex_coord);
     darray_free(m->indices);
     darray_free(m->textures);
     free(m);
@@ -58,10 +59,10 @@ mesh* mesh_load_gltf(const char* gltf_path)
 
     mesh* out_mesh = mesh_init();
 
-    float* position_buffer;
-    float* normal_buffer;
-    float* tangent_buffer;
-    float* tex_coord_buffer;
+    u8* position_buffer;
+    u8* normal_buffer;
+    u8* tangent_buffer;
+    u8* tex_coord_buffer;
     // float* color_buffer;
 
     cgltf_options options = {0};
@@ -95,7 +96,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                 size_t data_count = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->count;
                 // how large is the type: vec3 = 12 stride (36*12) = 432, which is the size in bytes = read_size
                 size_t stride = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->stride;
-                //gives us a custom type, if i do use, will need to do an conversion to my type's
+                //gives us a custom type, if i do use, will need have a switch statement
                 cgltf_type data_type = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->type;
 
                 data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->buffer;
@@ -120,11 +121,19 @@ mesh* mesh_load_gltf(const char* gltf_path)
                 // fseek(bin_fptr, file_offset, SEEK_SET);
 
 
+                //move the fileptr into the proper location, then read the data later on
+                fseek(bin_fptr, file_offset, SEEK_CUR);
+
+
                 if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "POSITION") == 0)
                 {
                     INFO("PROCESSING POSITION");
+
+
+
                     //get vertex buffer data
                     position_buffer = malloc(read_size);
+
                     size_t bytes_read = fread(position_buffer, 1, read_size, bin_fptr);
                     if (bytes_read != read_size)
                     {
@@ -133,15 +142,16 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     for (u64 vert_index = 0; vert_index < read_size; vert_index += stride)
                     {
                         vec3 temp_vert;
-                        temp_vert.x = position_buffer[vert_index];
-                        temp_vert.y = position_buffer[vert_index + 1];
-                        temp_vert.z = position_buffer[vert_index + 2];
+                        memcpy(&temp_vert.x, (position_buffer + vert_index), sizeof(float));
+                        memcpy(&temp_vert.y, (position_buffer + vert_index + 4), sizeof(float));
+                        memcpy(&temp_vert.z, (position_buffer +  vert_index + 8), sizeof(float));
                         darray_push(out_mesh->vertices.pos, temp_vert);
                     }
 
                     fclose(bin_fptr);
                 }
-                else if(strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "NORMAL") == 0)
+                /*
+                else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "NORMAL") == 0)
                 {
                     INFO("PROCESSING NORMAL");
 
@@ -155,9 +165,9 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     for (u64 normal_index = 0; normal_index < read_size; normal_index += (4 * 3))
                     {
                         vec3 temp_vert;
-                        temp_vert.x = normal_buffer[normal_index];
-                        temp_vert.y = normal_buffer[normal_index + 1];
-                        temp_vert.z = normal_buffer[normal_index + 2];
+                        memcpy(&temp_vert.x, (normal_buffer + normal_index), sizeof(float));
+                        memcpy(&temp_vert.y, (normal_buffer + normal_index + 4), sizeof(float));
+                        memcpy(&temp_vert.z, (normal_buffer +  normal_index + 8), sizeof(float));
                         darray_push(out_mesh->vertices.normal, temp_vert);
                     }
                 }
@@ -171,13 +181,13 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     {
                         WARN("NOT YET HANDLED BUT GLTF BIN NOT READ ENTIRE BUFFER")
                     }
-                    for (u64 normal_index = 0; normal_index < read_size; normal_index += stride)
+                    for (u64 tangent_index = 0; tangent_index < read_size; tangent_index += stride)
                     {
                         vec4 temp_vert;
-                        temp_vert.x = tangent_buffer[normal_index];
-                        temp_vert.y = tangent_buffer[normal_index + 1];
-                        temp_vert.z = tangent_buffer[normal_index + 2];
-                        temp_vert.w = tangent_buffer[normal_index + 3];
+                        memcpy(&temp_vert.x, (tangent_buffer + tangent_index), sizeof(float));
+                        memcpy(&temp_vert.y, (tangent_buffer + tangent_index + 4), sizeof(float));
+                        memcpy(&temp_vert.z, (tangent_buffer +  tangent_index + 8), sizeof(float));
+                        memcpy(&temp_vert.w, (tangent_buffer +  tangent_index + 12), sizeof(float));
                         darray_push(out_mesh->vertices.tangent, temp_vert);
                     }
                 }
@@ -191,18 +201,17 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     {
                         WARN("NOT YET HANDLED BUT GLTF BIN NOT READ ENTIRE BUFFER")
                     }
-                    for (u64 normal_index = 0; normal_index < read_size; normal_index += stride)
+                    for (u64 tex_index = 0; tex_index < read_size; tex_index += stride)
                     {
                         vec2 temp_vert;
-                        temp_vert.x = tex_coord_buffer[normal_index];
-                        temp_vert.y = tex_coord_buffer[normal_index + 1];
+                        memcpy(&temp_vert.x, (tex_coord_buffer + tex_index), sizeof(float));
+                        memcpy(&temp_vert.y, (tex_coord_buffer + tex_index + 4), sizeof(float));
                         darray_push(out_mesh->vertices.tex_coord, &temp_vert);
                     }
                 }
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "COLOR_n") == 0)
                 {
                     WARN("PROCESSING COLOR_n, NOT SUPPORTED");
-                    /*
                     tex_coord_buffer = malloc(read_size);
                     size_t bytes_read = fread(tangent_buffer, 1, read_size, bin_fptr);
                     if (bytes_read != read_size)
@@ -225,8 +234,6 @@ mesh* mesh_load_gltf(const char* gltf_path)
                         default:
                             break;
                     }
-                    */
-
                 }
                 //for animations
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "JOINTS_n") == 0)
@@ -237,7 +244,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                 {
                     DEBUG("TODO: GLTF WIEGHTS");
                 }
-
+                */
                 fclose(bin_fptr);
             }
         }
@@ -250,6 +257,9 @@ mesh* mesh_load_gltf(const char* gltf_path)
     return out_mesh;
 }
 
+
+
+/*
 mesh* mesh_load_obj(const char* obj_path)
 {
     //NOTE: material data is stored in a seperate .mtl file
@@ -320,6 +330,7 @@ mesh* mesh_load_obj(const char* obj_path)
 
     return out_mesh;
 }
+*/
 
 
 #endif
