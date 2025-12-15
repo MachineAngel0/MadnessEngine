@@ -5,13 +5,11 @@
 #include "renderer.h"
 
 
-extern void create_renderer(struct renderer* renderer_out);
-
-
+extern void create_renderer(struct renderer_app* renderer_out);
 
 int main(void)
 {
-    struct renderer renderer;
+    struct renderer_app renderer;
     create_renderer(&renderer);
 
     application_renderer_create(&renderer);

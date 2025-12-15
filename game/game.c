@@ -3,12 +3,12 @@
 
 
 //TODO: this is specific to windows, so it should definetly get changed to be cross platform as some point
-void game_fake_initialize(game* game_f)
+void game_fake_initialize(game_app* game_f)
 {
     printf("game init\n");
 }
 
-void update_game_fake(game* game_f)
+void update_game_fake(game_app* game_f)
 {
     game_f->testing_switch = false;
     if (game_f->testing_switch)

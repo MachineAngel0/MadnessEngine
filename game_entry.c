@@ -5,14 +5,14 @@
 #include "game.h"
 
 
-typedef void (game_init)(game*);
-typedef void (game_update)(game*);
+typedef void (game_init)(game_app*);
+typedef void (game_update)(game_app*);
 
 static HMODULE game_dll_handle;
 
 
 
-void create_game(game* game_out){
+void create_game(game_app* game_out){
 
     game_out->app_config.start_pos_x = 100;
     game_out->app_config.start_pos_y = 100;
@@ -44,7 +44,7 @@ void create_game(game* game_out){
 }
 
 //TODO: this is specific to windows, so it should definetly get changed to be cross platform as some point
-void game_reload(game* game_f)
+void game_reload(game_app* game_f)
 {
     // ctrl + numpad 0 -> will reload the dll
     load_dll("libMADNESSGAME.dll", "libMADNESSGAME_TEMP.dll", &game_dll_handle);

@@ -4,15 +4,15 @@
 #include "renderer.h"
 
 
-typedef bool (renderer_initialize)(renderer*);
-typedef void (renderer_run)(renderer*, Clock* clock);
-typedef void (renderer_terminate)(renderer*);
-typedef void (renderer_resize)(renderer*, u32, u32);
+typedef bool (renderer_initialize)(renderer_app*, Arena*);
+typedef void (renderer_run)(renderer_app*, Clock* clock);
+typedef void (renderer_terminate)(renderer_app*);
+typedef void (renderer_resize)(renderer_app*, u32, u32);
 
 static HMODULE renderer_dll_handle;
 
 
-void create_renderer(struct renderer* renderer_out)
+void create_renderer(struct renderer_app* renderer_out)
 {
     renderer_out->app_config.start_pos_x = 100;
     renderer_out->app_config.start_pos_y = 100;

@@ -89,6 +89,8 @@ add_executable(MadnessEngine_editor
 add_executable(CORE_UNIT_TEST
         core/core_unit_test_main.c
         core/core_unity.c
+        renderer/shader_system.c
+        renderer/shader_system.h
 )
 
 

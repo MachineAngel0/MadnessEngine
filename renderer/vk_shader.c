@@ -243,9 +243,9 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &vk_context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = vk_context.device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = vk_context.device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -527,9 +527,9 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &vk_context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = vk_context.device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = vk_context.device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -787,9 +787,9 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &vk_context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = vk_context.device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = vk_context.device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};

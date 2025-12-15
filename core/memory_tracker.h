@@ -56,10 +56,8 @@ typedef enum memory_subsystem_type
     MEMORY_SUBSYSTEM_ENTITY,
     MEMORY_SUBSYSTEM_ANIMATION,
     MEMORY_SUBSYSTEM_RENDERER,
-    //TODO:
-    // MEMORY_SUBSYSTEM_EVENT,
-    // MEMORY_SUBSYSTEM_INPUT,
-
+    MEMORY_SUBSYSTEM_EVENT,
+    MEMORY_SUBSYSTEM_INPUT,
 
     MEMORY_SUBSYSTEM_MAX,
 } memory_subsystem_type;
@@ -71,6 +69,8 @@ static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
     "MEMORY_ENTITY",
     "MEMORY_ANIMATION",
     "MEMORY_RENDERER",
+    "MEMORY_EVENT",
+    "MEMORY_INPUT",
 };
 
 

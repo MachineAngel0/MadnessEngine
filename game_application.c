@@ -11,8 +11,8 @@
 
 typedef struct application_state
 {
-    game* game;
-    renderer* renderer;
+    game_app* game;
+    renderer_app* renderer;
 
     platform_state platform;
     Arena* application_memory_arena;
@@ -38,7 +38,7 @@ void application_get_framebuffer_size(u32* width, u32* height)
     *height = app_state.height;
 }
 
-bool application_game_create(struct game* game)
+bool application_game_create(struct game_app* game)
 {
     // HMODULE dll_handle;
     // reload_dll("libMADNESSGAME.dll", "libMADNESSGAME_TEMP.dll", &dll_handle);

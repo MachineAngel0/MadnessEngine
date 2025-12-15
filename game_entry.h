@@ -7,13 +7,13 @@
 
 //NOTE: create game will not be the same thing as initialize game
 // create game, is meant to create the information needed for the platform state
-extern void create_game(game* game_out);
+extern void create_game(game_app* game_out);
 
 
 
 int main()
 {
-    game game;
+    game_app game;
     create_game(&game);
 
     application_game_create(&game);

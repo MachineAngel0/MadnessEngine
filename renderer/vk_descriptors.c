@@ -250,8 +250,8 @@ const char* GetShaderStageName(uint32_t flag)
     return "UNKNOWN_STAGE";
 }
 
-spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(
-    Frame_Arena* arena, const char* vertex_shader_path, const char* fragment_shader_path)
+spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(Arena* frame_arena,
+    const char* vertex_shader_path, const char* fragment_shader_path)
 {
     //TODO: arena
     //TODO: append the .vert.spv, and .frag.spv so i only have to pass in the path/name
@@ -357,7 +357,7 @@ spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(
     return out_reflect_info;
 }
 
-spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Frame_Arena* arena, const char* shader_path)
+spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame_arena, const char* shader_path)
 {
     //TODO: arena
     spirv_reflect_input_variable_info* out_reflect_info = malloc(sizeof(spirv_reflect_descriptor_set_info));

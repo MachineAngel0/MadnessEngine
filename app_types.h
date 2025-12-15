@@ -18,46 +18,55 @@ typedef struct app_config
 
     // The application name used in windowing, if applicable.
     char* name;
+
+    //TODO:
+    //u64* application_memory_requirement;
+
 }app_config;
 
 
-typedef struct game {
-    // The application configuration.
-    app_config app_config;
-
-    // Function pointer to game's update function.
-    void (*initialize)(struct game* game_inst);
-    void (*update)(struct game* game_inst);
-
-
-    void (*renderer_initialize)(struct renderer* renderer_inst);
-    void (*renderer_update)(struct renderer* renderer_inst);
-
-    bool testing_switch;
-    void* memory_reserve; // might move to app config
-} game;
-
-
-
-typedef struct editor {
-    // The application configuration.
-    app_config app_config;
-
-    // Function pointer to game's update function.
-    void (*update)(struct editor* editor_inst);
-} editor;
-
-typedef struct renderer {
+typedef struct game_app {
     // The application configuration.
     app_config app_config;
     platform_state* plat_state;
 
-    bool (*renderer_initialize)(struct renderer* renderer_inst);
-    void (*renderer_run)(struct renderer* renderer_inst, Clock* clock);
-    void (*renderer_shutdown)(struct renderer* renderer_inst);
+    // Function pointer to game's update function.
+    void (*initialize)(struct game_app* game_inst);
+    void (*update)(struct game_app* game_inst);
 
-    void (*on_resize)(struct renderer* renderer_inst, u32 width, u32 height);
 
-} renderer;
+    void (*renderer_initialize)(struct renderer_app* renderer_inst);
+    void (*renderer_update)(struct renderer_app* renderer_inst);
+    void (*renderer_shutdown)(struct renderer_app* renderer_inst);
+
+    bool testing_switch;
+    void* memory_reserve; // might move to app config
+} game_app;
+
+
+
+typedef struct editor_app {
+    // The application configuration.
+    app_config app_config;
+    platform_state* plat_state;
+
+    // Function pointer to game's update function.
+    void (*update)(struct editor_app* editor_inst);
+} editor_app;
+
+
+
+typedef struct renderer_app {
+    // The application configuration.
+    app_config app_config;
+    platform_state* plat_state;
+
+    bool (*renderer_initialize)(struct renderer_app* renderer_inst, Arena*);
+    void (*renderer_run)(struct renderer_app* renderer_inst, Clock* clock);
+    void (*renderer_shutdown)(struct renderer_app* renderer_inst);
+
+    void (*on_resize)(struct renderer_app* renderer_inst, u32 width, u32 height);
+
+} renderer_app;
 
 #endif

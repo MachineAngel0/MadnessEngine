@@ -9,9 +9,9 @@ typedef struct vertex_mesh
 {
     //all darrays, NOTE: They might not need to be darrays, just normal arrays, if they dont change in size
     vec3* pos;
-    // vec3* normal;
-    // vec4* tangent;
-    // vec2* tex_coord;
+    vec3* normal;
+    vec4* tangent;
+    vec2* tex_coord;
 
     // vec4* color; //might not support
 } vertex_mesh;
@@ -22,7 +22,7 @@ typedef struct mesh
     u32* indices;
     u64 indices_size;
     VkIndexType index_type;
-    Texture* textures; // TODO: prob gonna need to be materials instead
+    Material* material;
 } mesh;
 
 mesh* mesh_init()
@@ -30,13 +30,13 @@ mesh* mesh_init()
     mesh* m = malloc(sizeof(m));
 
     m->vertices.pos = darray_create(vec3);
-    // m->vertices.normal = darray_create(vec3);
-    // m->vertices.tex_coord = darray_create(vec2);
-    // m->vertices.tangent = darray_create(vec4);
+    m->vertices.normal = darray_create(vec3);
+    m->vertices.tex_coord = darray_create(vec2);
+    m->vertices.tangent = darray_create(vec4);
     // m->vertices.color = darray_create(vec4);
 
     // m->indices = darray_create(u32);
-    m->textures = darray_create(Texture);
+    // m->textures = darray_create(Texture);
 
     return m;
 }
@@ -47,7 +47,7 @@ void mesh_free(mesh* m)
     // darray_free(m->vertices.normal);
     // darray_free(m->vertices.tex_coord);
     darray_free(m->indices);
-    darray_free(m->textures);
+    // darray_free(m->textures);
     free(m);
 }
 
@@ -57,6 +57,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
 {
     //gltf files can technically come with on indices
 
+    //TODO: they're might be multiple meshes here by technicality
     mesh* out_mesh = mesh_init();
 
     //TODO: since there can be multiple meshes, we would need multiple of these buffers
@@ -197,7 +198,6 @@ mesh* mesh_load_gltf(const char* gltf_path)
 
                     fclose(bin_fptr);
                 }
-                /*
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "NORMAL") == 0)
                 {
                     INFO("PROCESSING NORMAL");
@@ -243,7 +243,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                     INFO("PROCESSING TEXCOORD_0");
 
                     tex_coord_buffer = malloc(read_size);
-                    size_t bytes_read = fread(tangent_buffer, 1, read_size, bin_fptr);
+                    size_t bytes_read = fread(tex_coord_buffer, 1, read_size, bin_fptr);
                     if (bytes_read != read_size)
                     {
                         WARN("NOT YET HANDLED BUT GLTF BIN NOT READ ENTIRE BUFFER")
@@ -256,6 +256,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                         darray_push(out_mesh->vertices.tex_coord, &temp_vert);
                     }
                 }
+                /*
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "COLOR_n") == 0)
                 {
                     WARN("PROCESSING COLOR_n, NOT SUPPORTED");

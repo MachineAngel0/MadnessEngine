@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 // Unsigned int types.
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -15,7 +16,6 @@ typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
-
 // Floating point types
 typedef float f32;
 typedef double f64;
@@ -50,15 +50,15 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 
 //easy lookups
-#define KB_SIZE 1024
-#define MB_SIZE 1024 * 1024
-#define GB_SIZE 1024 * 1024 * 1024
-#define TB_SIZE 1024 * 1024 * 1024 * 1024
+#define KB_SIZE 1024ULL
+#define MB_SIZE 1024ULL * 1024ULL
+#define GB_SIZE 1024ULL * 1024ULL * 1024ULL
+#define TB_SIZE 1024ULL * 1024ULL * 1024ULL * 1024ULL
 
-#define KB(x) (1024 * x) // kilobytes
-#define MB(x) (1024 * KB(x)) // megabytes
-#define GB(x) (1024 * MB(x)) //gigabytes
-#define TB(x) (1024 * GB(x)) // terabyte, should never need this
+#define KB(x) (1024ULL * x) // kilobytes
+#define MB(x) (1024ULL * KB(x)) // megabytes
+#define GB(x) (1024ULL * MB(x)) //gigabytes
+#define TB(x) (1024ULL * GB(x)) // terabyte, should never need this
 
 
 // Platform detection

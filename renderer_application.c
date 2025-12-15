@@ -12,14 +12,13 @@
 
 typedef struct application_state
 {
-    struct renderer* renderer;
+    struct renderer_app* renderer;
 
     platform_state platform;
 
     Arena* application_memory_arena;
 
     Clock clock;
-
 
     b8 is_running;
     //rn used for when the window is minimized
@@ -38,12 +37,10 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
 bool application_on_resized(u16 code, void* sender, void* listener_inst, event_context context);
 
 
-bool application_renderer_create(struct renderer* renderer)
+bool application_renderer_create(struct renderer_app* renderer)
 {
     //TODO: refactored out, just here now for testing
     // init_windows_audio();
-
-
 
 
     //set the renderer
@@ -52,7 +49,8 @@ bool application_renderer_create(struct renderer* renderer)
     //on the stack, we want this first to make sure everything else if working
     memory_tracker_init();
 
-    app_state.application_memory_arena = arena_init_malloc(MB(64));
+    u64 application_memory_requirments = GB(4);
+    app_state.application_memory_arena = arena_init_malloc(application_memory_requirments);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 
     app_state.is_running = true;
@@ -82,7 +80,7 @@ bool application_renderer_create(struct renderer* renderer)
     }
     app_state.renderer->plat_state = &app_state.platform;
 
-    if (!app_state.renderer->renderer_initialize(app_state.renderer))
+    if (!app_state.renderer->renderer_initialize(app_state.renderer, app_state.application_memory_arena))
     {
         FATAL("Failed to initialize the renderer")
         return false;

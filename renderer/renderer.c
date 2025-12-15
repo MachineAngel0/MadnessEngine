@@ -14,14 +14,42 @@
 
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
-static vulkan_context vk_context;
-static camera main_camera;
+vulkan_context vk_context;
+
+typedef struct renderer
+{
+    camera main_camera;
+
+    Arena arena; // total memory for the entire renderer
+    Arena frame_arena;
+
+    //material system
+    //mesh system
+    //animation system
+    //ui draw info
+
+}renderer;
+
+static renderer renderer_internal;
 
 
-bool renderer_init(struct renderer* renderer_inst)
+
+bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 {
 
-    camera_init(&main_camera);
+
+    //set up memory for the renderer
+    u64 renderer_system_mem_requirement = GB(1);
+    void* renderer_system_mem = arena_alloc(arena, renderer_system_mem_requirement);
+    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement);
+
+    u64 frame_arena_mem_size = GB(0.5);
+    void* frame_arena_mem = arena_alloc(&renderer_internal.arena, frame_arena_mem_size);
+    arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size);
+
+    // vulkan_context vk_context = renderer_internal.vulkan_context;
+
+    camera_init(&renderer_internal.main_camera);
     vk_context.is_init = false;
     // vulkan_context vulkan_context;
 
@@ -147,8 +175,13 @@ bool renderer_init(struct renderer* renderer_inst)
 
 
 static bool texture_flip = false;
-void renderer_update(struct renderer* renderer_inst, Clock* clock)
+void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 {
+    arena_clear(&renderer_internal.frame_arena);
+
+
+    // vulkan_context vk_context = renderer_internal.vulkan_context;
+
 
     //TODO: test code, can remove later
     if (input_key_released_unique(KEY_M))
@@ -219,7 +252,7 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     //                       1.0f, &camera_to_remove);
     // Update the uniform buffer for the next frame
 
-    camera_update(&main_camera, clock->delta_time);
+    camera_update(&renderer_internal.main_camera, clock->delta_time);
 
     uniform_buffer_object ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
@@ -227,9 +260,9 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
     ubo.model = mat4_identity();
     // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // ubo.view = camera_get_view_matrix(&main_camera);
-    ubo.view = camera_get_fps_view_matrix(&main_camera);
+    ubo.view = camera_get_fps_view_matrix(&renderer_internal.main_camera);
     // Perspective
-    ubo.proj = camera_get_projection(&main_camera, vk_context.framebuffer_width, vk_context.framebuffer_height);
+    ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width, vk_context.framebuffer_height);
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(vk_context.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
@@ -449,8 +482,11 @@ void renderer_update(struct renderer* renderer_inst, Clock* clock)
 }
 
 
-void renderer_shutdown(struct renderer* renderer_inst)
+void renderer_shutdown(struct renderer_app* renderer_inst)
 {
+    // vulkan_context vk_context = renderer_internal.vulkan_context;
+
+
     vkDeviceWaitIdle(vk_context.device.logical_device);
 
     // Destroy in the opposite order of creation.
@@ -549,8 +585,11 @@ void renderer_shutdown(struct renderer* renderer_inst)
 }
 
 
-void renderer_on_resize(struct renderer* renderer_inst, u32 width, u32 height)
+void renderer_on_resize(struct renderer_app* renderer_inst, u32 width, u32 height)
 {
+    // vulkan_context vk_context = renderer_internal.vulkan_context;
+
+
     if (!vk_context.is_init)
     {
         INFO("cant resize window yet, not initialized");

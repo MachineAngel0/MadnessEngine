@@ -186,15 +186,20 @@ typedef struct Texture
     VkSampler texture_sampler;
 } Texture;
 
+
+
 typedef struct Material
 {
-    Texture* texture;
-    vulkan_shader_pipeline* pipeline;
+    u32 texture_indexes[10]; //TODO: could be more but fine for now
+    u32 pipeline_indexes;
 }Material;
 
 typedef struct Shader_System
 {
-    Texture* error_texture;
+    Texture error_texture;
+    Texture textures[100]; // this should be increased but this is fine for now
+    Material* material_references;
+    vulkan_shader_pipeline* pipeline_referenes;
 }Shader_System;
 
 
@@ -215,7 +220,7 @@ typedef struct vertex_info
     //TODO: they should be darrays or arenas, but for now its fine
     vertex_3d vertices[1000];
     u64 vertices_size;
-    uint16_t indices[1000];
+    u16 indices[1000];
     u64 indices_size;
 } vertex_info;
 
@@ -278,12 +283,6 @@ typedef struct vulkan_context
     //Validation Layer
     VkAllocationCallbacks* allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
-
-    //Memory
-    //TODO: not instantiated or used
-    Arena renderer_arena;
-    Frame_Arena frame_allocator;
-
 
     //Surface
     VkSurfaceKHR surface;
