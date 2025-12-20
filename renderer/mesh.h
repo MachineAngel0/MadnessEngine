@@ -198,6 +198,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
 
                     fclose(bin_fptr);
                 }
+                /*
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "NORMAL") == 0)
                 {
                     INFO("PROCESSING NORMAL");

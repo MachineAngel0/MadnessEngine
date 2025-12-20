@@ -150,6 +150,7 @@ bool application_on_event(event_type code, void* sender, void* listener_inst, ev
             app_state.is_running = false;
             return true;
     }
+    return false;
 }
 
 

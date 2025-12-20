@@ -21,7 +21,9 @@
 #include "vk_vertex_buffer.h"
 #include "vk_descriptors.c"
 #include "camera.h"
+#include "shader_system.h"
 #include "renderer.c"
+#include "spv_reflect.h"
 #include "SPIRV-Reflect-main/spirv_reflect.c"
 
 

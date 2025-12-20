@@ -23,7 +23,8 @@ typedef struct renderer
     Arena arena; // total memory for the entire renderer
     Arena frame_arena;
 
-    //material system
+    shader_system* shader_system;
+
     //mesh system
     //animation system
     //ui draw info
@@ -48,6 +49,10 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
+
+    //TODO: buffer
+    //shader_system_init(&vk_context, renderer_internal.shader_system);
+
 
     camera_init(&renderer_internal.main_camera);
     vk_context.is_init = false;
@@ -119,14 +124,12 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     vk_context.current_frame = 0;
 
     // Create default shader
-    createUniformBuffers(&vk_context);
+    create_global_uniform_buffer(&vk_context);
+    create_global_texture_bindless_descriptor_set(&vk_context, &vk_context.global_descriptor_pool,
+                         &vk_context.bindless_texture_descriptors, &vk_context.shader_texture_bindless);
+    /*
     createDescriptors(&vk_context, &vk_context.global_descriptor_pool);
     vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
-
-
-
-
-
 
     //TODO: temporary
     // memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
@@ -156,16 +159,19 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default);
     createVertexBufferMesh(&vk_context, &vk_context.mesh_default, test_mesh);
 
+*/
 
-    /*
-    mesh* test_mesh_indicies = mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    createDescriptorsMesh(&vk_context, &vk_context.global_descriptor_pool,
-                           &vk_context.mesh_default_indicies);
-    vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default_indicies);
-    createVertexBufferMesh(&vk_context, &vk_context.mesh_default_indicies, test_mesh_indicies);
-    */
+    create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/error_texture.png",
+                              &vk_context.shader_texture_bindless.texture_test_object);
+    createDescriptorsTexture_with_bindless(&vk_context, &vk_context.shader_texture_bindless);
 
 
+    vulkan_bindless_textured_shader_create(&vk_context, &vk_context.shader_texture_bindless);
+    createVertexBufferTexture(&vk_context, &vk_context.shader_texture_bindless);
+
+    //TODO: WRITE IS BUGGED FIX WHENEVER YOU START THIS AGAIN
+    update_global_texture_bindless_descriptor_set(&vk_context,  &vk_context.bindless_texture_descriptors,
+                                           &vk_context.shader_texture_bindless);
 
     INFO("VULKAN RENDERER INITIALIZED");
 
@@ -347,6 +353,12 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     //Do Bindings and Draw
 
+    //TODO:
+    // SET 0 GLOBAL UNIFORMS: CAMERA LIGHTS ETC
+    // SET 1 GLOBAL TEXTURES: textures etc
+    // SET 2 GLOBAL BUFFERS: CAMERA LIGHTS ETC
+
+    /*
     //Draw Triangle
     // vulkan_default_shader_pipeline_bind(command_buffer_current_frame, &vk_context.default_shader_info.default_shader_pipeline);
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -390,9 +402,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      (u32) vk_context.shader_texture.vertex_info.indices_size,
                      1, 0, 0, 0);
 
+
+
     //DRAW MESH
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    vk_context.mesh_default.mesh_shader_pipeline.handle);
+                 vk_context.mesh_default.mesh_shader_pipeline.handle);
 
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 0, 1,
@@ -411,14 +425,35 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      1, 0, 0, 0);
 
 
-    /*
-    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
-                         vk_context.index_buffer.handle, 0,
-                         VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                      (u32) vk_context.default_vertex_info.indices_size,
-                      1, 0, 0, 0);
     */
+    //DRAW BINDLESS textured triangle
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      vk_context.shader_texture_bindless.shader_texture_pipeline.handle);
+
+    //uniform
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.shader_texture_bindless.descriptor_sets[vk_context.current_frame],
+                            0, 0);
+    //textures
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
+                            &vk_context.bindless_texture_descriptors.descriptor_sets[vk_context.current_frame],
+                            0, 0);
+
+
+    VkDeviceSize offsets_bindless[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
+                           &vk_context.shader_texture_bindless.vertex_buffer.handle, offsets_bindless);
+
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.shader_texture_bindless.index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                     (u32) vk_context.shader_texture_bindless.vertex_info.indices_size,
+                     1, 0, 0, 0);
+
 
     //END FRAME//
 

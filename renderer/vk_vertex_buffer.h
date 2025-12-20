@@ -326,7 +326,8 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     if (test_mesh->index_type == VK_INDEX_TYPE_UINT32)
     {
         indexBufferSize = default_mesh->vertex_info.indices_size * sizeof(uint32_t);
-    }else if (test_mesh->index_type == VK_INDEX_TYPE_UINT16)
+    }
+    else if (test_mesh->index_type == VK_INDEX_TYPE_UINT16)
     {
         indexBufferSize = default_mesh->vertex_info.indices_size * sizeof(uint16_t);
     }
@@ -444,7 +445,8 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
 
-void createVertexBufferMesh_no_index_buffer(vulkan_context* vulkan_context, vulkan_mesh_default* default_mesh, mesh* test_mesh)
+void createVertexBufferMesh_no_index_buffer(vulkan_context* vulkan_context, vulkan_mesh_default* default_mesh,
+                                            mesh* test_mesh)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -458,7 +460,6 @@ void createVertexBufferMesh_no_index_buffer(vulkan_context* vulkan_context, vulk
     //     {{-1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 1.0f}},
     //     {{0.0f, -1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f}}
     // };
-
 
 
     // const vertex vertices[] = {
@@ -570,7 +571,6 @@ void createVertexBufferMesh_no_index_buffer(vulkan_context* vulkan_context, vulk
     vkDestroyBuffer(device, staging_buffer.handle, vulkan_context->allocator);
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
-
 
 
 /*
@@ -831,7 +831,7 @@ void descriptor_set_layout_destroy(vulkan_context* context, VkDescriptorSetLayou
     vkDestroyDescriptorSetLayout(context->device.logical_device, *descriptor_set_layout, 0);
 }
 
-void createUniformBuffers(vulkan_context* context)
+void create_global_uniform_buffer(vulkan_context* context)
 {
     u8 max_frames = context->swapchain.max_frames_in_flight;
     context->global_uniform_buffers.uniform_buffers = darray_create_reserve(VkBuffer, max_frames);
@@ -897,20 +897,23 @@ void createDescriptors(vulkan_context* context, descriptor_pool_allocator* descr
     layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layoutBinding.descriptorCount = 1;
     layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // layoutBinding.binding
 
     VkDescriptorSetLayoutCreateInfo descriptorLayoutCI = {0};
     descriptorLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorLayoutCI.bindingCount = 1;
     descriptorLayoutCI.pBindings = &layoutBinding;
-        VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &descriptorLayoutCI, 0, &context->
-            default_shader_info.descriptor_set_layout));
+
+    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &descriptorLayoutCI, 0,
+        &context->default_shader_info.descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
     // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
     for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc(context, descriptor_pool, &context->default_shader_info.descriptor_set_layout, &set_count, &context->default_shader_info.descriptor_sets[i]);
+        descriptor_pool_alloc(context, descriptor_pool, &context->default_shader_info.descriptor_set_layout, &set_count,
+                              &context->default_shader_info.descriptor_sets[i]);
 
         // Update the descriptor set determining the shader binding points
         // For every binding point used in a shader there needs to be one
@@ -1034,6 +1037,74 @@ void createDescriptorsTexture(vulkan_context* context, vulkan_shader_texture* sh
         writeDescriptorSet[1].pImageInfo = &image_info;
 
         vkUpdateDescriptorSets(context->device.logical_device, 2, writeDescriptorSet, 0, 0);
+    }
+}
+
+
+void createDescriptorsTexture_with_bindless(vulkan_context* context,
+                                            vulkan_shader_texture* shader_texture)
+{
+    shader_texture->descriptor_sets = darray_create_reserve(
+        VkDescriptorSet, context->swapchain.max_frames_in_flight);
+    shader_texture->descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;
+
+
+    // Descriptor set layouts define the interface between our application and the shader
+    // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
+    // So every shader binding should map to one descriptor set layout binding
+
+    // Binding 0: Uniform buffer (Vertex shader)
+    VkDescriptorSetLayoutBinding layoutBinding[1] = {0};
+    //uniform buffer
+    layoutBinding[0].binding = 0;
+    layoutBinding[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layoutBinding[0].descriptorCount = 1;
+    layoutBinding[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
+    VkDescriptorSetLayoutCreateInfo descriptorLayoutCI = {0};
+    descriptorLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorLayoutCI.bindingCount = 1;
+    descriptorLayoutCI.pBindings = layoutBinding;
+
+
+    VK_CHECK(
+        vkCreateDescriptorSetLayout(context->device.logical_device, &descriptorLayoutCI, 0, &shader_texture->
+            descriptor_set_layout));
+
+    // Where the descriptor set layout is the interface, the descriptor set points to actual data
+    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
+    for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
+    {
+        VkDescriptorSetAllocateInfo allocInfo = {0};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = context->global_descriptor_pool.descriptor_pool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &shader_texture->descriptor_set_layout;
+        VK_CHECK(
+            vkAllocateDescriptorSets(context->device.logical_device, &allocInfo, &shader_texture->descriptor_sets[i]));
+
+        // Update the descriptor set determining the shader binding points
+        // For every binding point used in a shader there needs to be one
+        // descriptor set matching that binding point
+        VkWriteDescriptorSet writeDescriptorSet[1] = {0};
+        // The buffer's information is passed using a descriptor info structure
+        VkDescriptorBufferInfo bufferInfo = {0};
+        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
+        bufferInfo.range = sizeof(uniform_buffer_object);
+        bufferInfo.offset = 0;
+
+        // Binding 0 : Uniform buffer
+        writeDescriptorSet[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet[0].dstSet = shader_texture->descriptor_sets[i];
+        writeDescriptorSet[0].descriptorCount = 1;
+        writeDescriptorSet[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSet[0].pBufferInfo = &bufferInfo;
+        writeDescriptorSet[0].dstBinding = 0;
+        writeDescriptorSet[0].dstArrayElement = 0;
+
+
+        vkUpdateDescriptorSets(context->device.logical_device, 1, writeDescriptorSet, 0, 0);
     }
 }
 

@@ -15,7 +15,7 @@
 
 typedef struct Arena
 {
-    uint8_t* memory;
+    u8* memory;
     u64 current_offset; // where in our memory we are
     u64 capacity; // how large our arena is
 } Arena;
@@ -30,7 +30,7 @@ Arena* arena_init_malloc(const u64 capacity)
 
     MASSERT_MSG(a, "ARENA ALLOC FAILED");
 
-    a->memory = (uint8_t *) malloc(capacity);
+    a->memory = (u8 *) malloc(capacity);
 
     MASSERT_MSG(a->memory, "ARENA MALLOC FAILED");
 

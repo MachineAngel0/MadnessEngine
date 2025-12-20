@@ -94,7 +94,11 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     const char** validation_layers_names = 0;
     u32 validation_layers_count = 0;
 
-#if defined(DEBUG_BUILD)
+    //validation extensions
+    VkValidationFeaturesEXT validation_features_info = {0};
+    bool validation_ext_enabled = false;
+
+#ifndef NDEBUG
     INFO("Validation layers enabled. Enumerating...");
 
 
@@ -130,8 +134,18 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
         }
     }
     INFO("All required validation layers are present.");
-#endif
 
+    VkValidationFeatureEnableEXT enable_features[2] = {
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+    };
+
+    validation_features_info.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    validation_features_info.enabledValidationFeatureCount = 2;
+    validation_features_info.pEnabledValidationFeatures    = enable_features;
+    validation_ext_enabled = true;
+
+#endif
 
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -141,8 +155,13 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     create_info.enabledLayerCount = validation_layers_count;
     create_info.ppEnabledLayerNames = validation_layers_names;
 
-
     create_info.pNext = 0;
+
+    //TODO: enable if you want extra info, its very slow
+    // if (validation_ext_enabled)
+    // {
+    //     create_info.pNext = &validation_features_info;
+    // }
     // create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *) &debugCreateInfo;
 
     /*
@@ -151,7 +170,6 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
         const VkAllocationCallbacks*                pAllocator,
         VkInstance*                                 pInstance);
    */
-    //TODO allocator
     VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
 
     DEBUG("VULKAN INSTANCE CREATED");
@@ -281,18 +299,25 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     //device extensions
     const char* extension_names[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        // VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME // not supported
         VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, //promoted in 1.2
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
     };
 
     // Enable only specific Vulkan 1.3 features
     //will be plugged into the device create infos pNext pointer
+
+
     VkPhysicalDeviceExtendedDynamicStateFeaturesEXT enable_extended_dynamic_state_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
-        .extendedDynamicState = VK_TRUE
+        .extendedDynamicState = VK_TRUE,
+        .pNext = NULL,
     };
 
+
     // VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
-        // .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+    // .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
     // };
 
     VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
@@ -305,6 +330,11 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .scalarBlockLayout = VK_TRUE,
+        .descriptorIndexing = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .descriptorBindingSampledImageUpdateAfterBind  = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
@@ -313,21 +343,21 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .pNext = &enable_vulkan12_features,
     };
 
-
-
-
     // Request device features.
     // TODO: should be config driven
     VkPhysicalDeviceFeatures device_features = {
         .samplerAnisotropy = VK_TRUE // Request anistrophy
     };
 
-
     VkPhysicalDeviceFeatures2 enable_device_features2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
         .pNext = &enable_vulkan11_features,
         .features = device_features,
     };
+
+    vkGetPhysicalDeviceFeatures2(vulkan_context->device.physical_device, &enable_device_features2);
+    vkGetPhysicalDeviceFeatures(vulkan_context->device.physical_device, &device_features);
+
 
 
     VkDeviceCreateInfo device_create_info = {
@@ -336,7 +366,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .queueCreateInfoCount = index_count,
         .pQueueCreateInfos = queue_create_infos,
         .pEnabledFeatures = 0, // do not use is pNext is used
-        .enabledExtensionCount = 2,
+        .enabledExtensionCount = 3,
         .ppEnabledExtensionNames = extension_names,
         // Deprecated
         .enabledLayerCount = 0,

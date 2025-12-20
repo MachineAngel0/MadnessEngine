@@ -1,8 +1,25 @@
 ﻿#include "vk_descriptors.h"
-
 #include "arena.h"
 #include "array.h"
-#include "filesystem.h"
+#include "spv_reflect.h"
+
+
+#define max_bindless_resources 4092u
+#define max_bindless_bindings 16;
+
+
+typedef enum descriptor_type
+{
+    UNIFORM_BUFFER,
+    TEXTURE,
+    descriptor_type_max,
+} descriptor_type;
+
+VkDescriptorType descriptor_type_lookup[descriptor_type_max] = {
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+};
+
 
 void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
 {
@@ -33,32 +50,59 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
 
     //upfront allocation
     //FUTURE: most likely I can tailor each type to a different max size
-    u32 max_pool_sizes = 4092;
-
     VkDescriptorPoolSize pool_sizes[2] =
     {
         {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = max_pool_sizes
+            .descriptorCount = max_bindless_resources
         },
         {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = max_pool_sizes
+            .descriptorCount = max_bindless_resources
         },
 
     };
 
-    VkDescriptorPoolCreateInfo poolInfo = {0};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = ARRAY_SIZE(pool_sizes); // number of different pool sizes, we created
-    poolInfo.pPoolSizes = pool_sizes;
-    poolInfo.maxSets = ARRAY_SIZE(pool_sizes) * max_pool_sizes;
-    // poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT; // TODO: bindless
-    // VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
-    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator,
+    VkDescriptorPoolCreateInfo pool_info = {0};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = ARRAY_SIZE(pool_sizes); // number of different pool sizes, we created
+    pool_info.pPoolSizes = pool_sizes;
+    pool_info.maxSets = ARRAY_SIZE(pool_sizes) * max_bindless_resources;
+
+    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &pool_info, context->allocator,
                                              &descriptor_pools->descriptor_pool);
     VK_CHECK(result);
+
+
+    //BINDLESS
+
+    VkDescriptorPoolSize bindless_pool_sizes[1] =
+    {
+        /*
+        {
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = max_bindless_resources
+        },*/
+        {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = max_bindless_resources
+        },
+
+    };
+
+    VkDescriptorPoolCreateInfo bindless_pool_info = {0};
+    bindless_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    bindless_pool_info.poolSizeCount = ARRAY_SIZE(bindless_pool_sizes); // number of different pool sizes, we created
+    bindless_pool_info.pPoolSizes = bindless_pool_sizes;
+    bindless_pool_info.maxSets = ARRAY_SIZE(bindless_pool_sizes) * max_bindless_resources;
+    bindless_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+    // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
+
+    VkResult bindless_result = vkCreateDescriptorPool(context->device.logical_device, &bindless_pool_info,
+                                                      context->allocator,
+                                                      &descriptor_pools->bindless_descriptor_pool);
+    VK_CHECK(bindless_result);
 }
 
 void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
@@ -91,338 +135,32 @@ void descriptor_pool_alloc(vulkan_context* context, descriptor_pool_allocator* d
 }
 
 
-#include <stdio.h>
-
-const char* SpvReflectDescriptorType_TABLE[] = {
-    "SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT",
-    "SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR",
-};
-
-
-spirv_refect_info* spriv_reflection_testing(const char* shader_path)
+void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
+                                    VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
+                                    VkDescriptorSet* out_descriptors)
 {
-    //TODO: add a type, vert, frag, (or frag and vert combined) compute etc
+    VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info = {0};
+    count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
+    count_info.descriptorSetCount = *descriptor_set_count;
+    // This number is the max allocatable count
+    // count_info.pDescriptorCounts = (const u32*)max_bindless_resources;
+    const u32 binding_count = max_bindless_resources-1;
+    count_info.pDescriptorCounts = &binding_count;
 
-    spirv_refect_info* out_reflect_info = malloc(sizeof(spirv_refect_info));
+    VkDescriptorSetAllocateInfo alloc_info = {0};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = descriptor_pools->bindless_descriptor_pool;
+    alloc_info.descriptorSetCount = *descriptor_set_count;
+    alloc_info.pSetLayouts = set_layout;
+    alloc_info.pNext = &count_info;
 
-    file_read_data shader_data = {0};
+    VkResult alloc_result = vkAllocateDescriptorSets(context->device.logical_device, &alloc_info, out_descriptors);
 
-
-    filesystem_open_and_return_bytes("../renderer/shaders/spirv_reflect_test.vert.spv", &shader_data);
-
-
-    SpvReflectShaderModule module = {0};
-    SpvReflectResult result = spvReflectCreateShaderModule(shader_data.size, shader_data.data, &module);
-    MASSERT_MSG(result == SPV_REFLECT_RESULT_SUCCESS, "SpvReflectCreateShaderModule failed");
-    TRACE("SpvReflectCreateShaderModule result SUCCESS")
-
-    // this has an additional flag param i dont need rn
-    // SpvReflectResult result2 = spvReflectCreateShaderModule2();
-    // SpvReflectModuleFlags a;
-    // Enumerate and extract shader's input variables
-
-
-    uint32_t input_var_count = 0;
-    spvReflectEnumerateInputVariables(&module, &input_var_count, NULL);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    SpvReflectInterfaceVariable** inputs_variables =
-            (SpvReflectInterfaceVariable **) malloc(input_var_count * sizeof(SpvReflectInterfaceVariable *));
-    spvReflectEnumerateInputVariables(&module, &input_var_count, inputs_variables);
-    assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-    for (u32 i = 0; i < input_var_count; i++)
+    if (alloc_result == VK_ERROR_OUT_OF_POOL_MEMORY || alloc_result == VK_ERROR_FRAGMENTED_POOL)
     {
-        //format of the in values
-        TRACE("FORMAT %d", inputs_variables[i]->format);
-        TRACE("spirv_id %d", inputs_variables[i]->spirv_id);
-        TRACE("stride %d", inputs_variables[i]->array.stride);
+        FATAL("FAILED TO ALLOCATE FROM DESCRIPTOR POOL, INCREASE POOL SIZE")
     }
-
-
-    uint32_t d_set_count = 0;
-    result = spvReflectEnumerateDescriptorSets(&module, &d_set_count, NULL);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    SpvReflectDescriptorSet** d_sets =
-            (SpvReflectDescriptorSet **) malloc(d_set_count * sizeof(SpvReflectDescriptorSet *));
-    result = spvReflectEnumerateDescriptorSets(&module, &d_set_count, d_sets);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-
-
-    DEBUG("D-Set COUNTsss %d", d_set_count);
-    for (u32 i = 0; i < d_set_count; i++)
-    {
-        //format of the in values
-        TRACE("D-Set set %d", d_sets[i]->set);
-        TRACE("D-Set BINDING COUNT %d", d_sets[i]->binding_count);
-        for (u32 j = 0; j < d_sets[i]->binding_count; j++)
-        {
-            TRACE("BINDING NAME: %s", d_sets[i]->bindings[j]->name);
-            DEBUG("BINDING NUMBER %d", d_sets[i]->bindings[j]->binding);
-            INFO("type %d, NAME: %s", d_sets[i]->bindings[j]->descriptor_type,
-                 SpvReflectDescriptorType_TABLE[d_sets[i]->bindings[j]->descriptor_type]);
-        }
-    }
-
-
-    //NOTE: kinda no need for this since this data is contained in d_sets
-    uint32_t d_binding_count = 0;
-    spvReflectEnumerateDescriptorBindings(&module, &d_binding_count, NULL);
-    SpvReflectDescriptorBinding** d_bindings =
-            (SpvReflectDescriptorBinding **) malloc(d_binding_count * sizeof(SpvReflectDescriptorBinding *));
-    spvReflectEnumerateDescriptorBindings(&module, &d_binding_count, d_bindings);
-
-
-    uint32_t output_var_count = 0;
-    spvReflectEnumerateOutputVariables(&module, &output_var_count, NULL);
-    SpvReflectInterfaceVariable** ouput_variables =
-            (SpvReflectInterfaceVariable **) malloc(output_var_count * sizeof(SpvReflectInterfaceVariable *));
-    spvReflectEnumerateOutputVariables(&module, &output_var_count, ouput_variables);
-
-    uint32_t push_constant_count = 0;
-    spvReflectEnumeratePushConstantBlocks(&module, &push_constant_count, NULL);
-    SpvReflectBlockVariable** push_constants =
-            (SpvReflectBlockVariable **) malloc(push_constant_count * sizeof(SpvReflectBlockVariable *));
-    spvReflectEnumeratePushConstantBlocks(&module, &push_constant_count, push_constants);
-
-    uint32_t specialized_constant_count = 0;
-    spvReflectEnumerateSpecializationConstants(&module, &specialized_constant_count, NULL);
-    SpvReflectSpecializationConstant** specialized_constants =
-            (SpvReflectSpecializationConstant **) malloc(
-                specialized_constant_count * sizeof(SpvReflectSpecializationConstant *));
-    spvReflectEnumerateSpecializationConstants(&module, &specialized_constant_count, specialized_constants);
-
-    // free(d_sets);
-    // free(d_bindings);
-    // free(specialized_constants);
-    // free(push_constants);
-    // free(ouput_variables);
-    // free(inputs_variables);
-
-    spvReflectDestroyShaderModule(&module);
-
-
-    return out_reflect_info;
-}
-
-typedef struct
-{
-    uint32_t flag;
-    const char* name;
-} ShaderStageName;
-
-static const ShaderStageName ShaderStageTable[] = {
-    {SPV_REFLECT_SHADER_STAGE_VERTEX_BIT, "VERTEX"},
-    {SPV_REFLECT_SHADER_STAGE_TESSELLATION_CONTROL_BIT, "TESSELLATION_CONTROL"},
-    {SPV_REFLECT_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, "TESSELLATION_EVALUATION"},
-    {SPV_REFLECT_SHADER_STAGE_GEOMETRY_BIT, "GEOMETRY"},
-    {SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT, "FRAGMENT"},
-    {SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT, "COMPUTE"},
-    {SPV_REFLECT_SHADER_STAGE_TASK_BIT_NV, "TASK_NV"},
-    {SPV_REFLECT_SHADER_STAGE_TASK_BIT_EXT, "TASK_EXT"},
-    {SPV_REFLECT_SHADER_STAGE_MESH_BIT_NV, "MESH_NV"},
-    {SPV_REFLECT_SHADER_STAGE_MESH_BIT_EXT, "MESH_EXT"},
-    {SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR, "RAYGEN_KHR"},
-    {SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR, "ANY_HIT_KHR"},
-    {SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "CLOSEST_HIT_KHR"},
-    {SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR, "MISS_KHR"},
-    {SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR, "INTERSECTION_KHR"},
-    {SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR, "CALLABLE_KHR"}
-};
-static const int ShaderStageTableCount = sizeof(ShaderStageTable) / sizeof(ShaderStageTable[0]);
-
-const char* GetShaderStageName(uint32_t flag)
-{
-    for (int i = 0; i < ShaderStageTableCount; ++i)
-    {
-        if (ShaderStageTable[i].flag == flag)
-            return ShaderStageTable[i].name;
-    }
-    return "UNKNOWN_STAGE";
-}
-
-spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(Arena* frame_arena,
-    const char* vertex_shader_path, const char* fragment_shader_path)
-{
-    //TODO: arena
-    //TODO: append the .vert.spv, and .frag.spv so i only have to pass in the path/name
-    spirv_reflect_descriptor_set_info* out_reflect_info = malloc(sizeof(spirv_reflect_descriptor_set_info));
-
-    file_read_data vert_shader_data = {0};
-    file_read_data frag_shader_data = {0};
-
-    filesystem_open_and_return_bytes(vertex_shader_path, &vert_shader_data);
-    filesystem_open_and_return_bytes(fragment_shader_path, &frag_shader_data);
-
-
-    SpvReflectShaderModule vert_module = {0};
-    SpvReflectResult result = spvReflectCreateShaderModule(vert_shader_data.size, vert_shader_data.data, &vert_module);
-    MASSERT_MSG(result == SPV_REFLECT_RESULT_SUCCESS, "SpvReflectCreateShaderModule VERT failed");
-    TRACE("SpvReflectCreateShaderModule VERT result SUCCESS")
-
-    SpvReflectShaderModule frag_module = {0};
-    result = spvReflectCreateShaderModule(frag_shader_data.size, frag_shader_data.data, &frag_module);
-    MASSERT_MSG(result == SPV_REFLECT_RESULT_SUCCESS, "SpvReflectCreateShaderModule FRAG failed");
-    TRACE("SpvReflectCreateShaderModule FRAG result SUCCESS")
-
-    INFO("STAGE TYPE %p, %s", vert_module.shader_stage, GetShaderStageName(vert_module.shader_stage));
-    INFO("STAGE TYPE %p, %s", frag_module.shader_stage, GetShaderStageName(frag_module.shader_stage));
-
-
-    //vert
-    uint32_t d_set_count_vert = 0;
-    result = spvReflectEnumerateDescriptorSets(&vert_module, &d_set_count_vert, NULL);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    SpvReflectDescriptorSet** d_sets_vert =
-            (SpvReflectDescriptorSet **) malloc(d_set_count_vert * sizeof(SpvReflectDescriptorSet *));
-    result = spvReflectEnumerateDescriptorSets(&vert_module, &d_set_count_vert, d_sets_vert);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-
-    //frag
-    uint32_t d_set_count_frag = 0;
-    result = spvReflectEnumerateDescriptorSets(&frag_module, &d_set_count_frag, NULL);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    SpvReflectDescriptorSet** d_sets_frag =
-            (SpvReflectDescriptorSet **) malloc(d_set_count_frag * sizeof(SpvReflectDescriptorSet *));
-    result = spvReflectEnumerateDescriptorSets(&frag_module, &d_set_count_frag, d_sets_frag);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-
-    out_reflect_info->descriptor_set_count = d_set_count_vert + d_set_count_frag;
-    out_reflect_info->stage_flags = darray_create_reserve(SpvReflectShaderStageFlagBits,
-                                                          out_reflect_info->descriptor_set_count);
-    out_reflect_info->binding_number = darray_create_reserve(u32, out_reflect_info->descriptor_set_count);
-    out_reflect_info->descriptor_set_types = darray_create_reserve(SpvReflectDescriptorType,
-                                                                   out_reflect_info->descriptor_set_count);
-
-    //DEBUG
-    TRACE("D-Set COUNT VERT %d", d_set_count_vert);
-    for (u32 i = 0; i < d_set_count_vert; i++)
-    {
-        darray_push(out_reflect_info->stage_flags, vert_module.shader_stage);
-
-        //format of the in values
-        TRACE("D-Set BINDING COUNT %d", d_sets_vert[i]->binding_count);
-        for (u32 j = 0; j < d_sets_vert[i]->binding_count; j++)
-        {
-            darray_push(out_reflect_info->binding_number, d_sets_vert[i]->bindings[j]->binding);
-            darray_push(out_reflect_info->descriptor_set_types, d_sets_vert[i]->bindings[j]->descriptor_type);
-
-            TRACE("BINDING NAME: %s", d_sets_vert[i]->bindings[j]->name);
-            DEBUG("BINDING NUMBER %d", d_sets_vert[i]->bindings[j]->binding);
-            DEBUG("SET BINDING NUMBER %d", d_sets_vert[i]->bindings[j]->set);
-
-            INFO("type %d, NAME: %s", d_sets_vert[i]->bindings[j]->descriptor_type,
-                 SpvReflectDescriptorType_TABLE[d_sets_vert[i]->bindings[j]->descriptor_type]);
-        }
-        TRACE("D-Set set %d", d_sets_vert[i]->set);
-    }
-
-    TRACE("D-Set COUNT FRAG %d", d_set_count_frag);
-    for (u32 i = 0; i < d_set_count_frag; i++)
-    {
-        darray_push(out_reflect_info->stage_flags, frag_module.shader_stage);
-
-        TRACE("D-Set FRAG BINDING COUNT %d", d_sets_frag[i]->binding_count);
-        for (u32 j = 0; j < d_sets_frag[i]->binding_count; j++)
-        {
-            darray_push(out_reflect_info->binding_number, d_sets_frag[i]->bindings[j]->binding);
-            darray_push(out_reflect_info->descriptor_set_types, d_sets_frag[i]->bindings[j]->descriptor_type);
-
-
-            TRACE("BINDING NAME FRAG: %s", d_sets_frag[i]->bindings[j]->name);
-            DEBUG("BINDING NUMBER %d", d_sets_frag[i]->bindings[j]->binding);
-            DEBUG("SET BINDING NUMBER %d", d_sets_frag[i]->bindings[j]->set);
-            INFO("type %d, NAME FRAG: %s", d_sets_frag[i]->bindings[j]->descriptor_type,
-                 SpvReflectDescriptorType_TABLE[d_sets_frag[i]->bindings[j]->descriptor_type]);
-        }
-        TRACE("D-Set FRAG set %d", d_sets_frag[i]->set);
-    }
-
-
-    // free(d_sets_vert);
-    // free(d_sets_frag);
-
-    spvReflectDestroyShaderModule(&vert_module);
-
-
-    return out_reflect_info;
-}
-
-spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame_arena, const char* shader_path)
-{
-    //TODO: arena
-    spirv_reflect_input_variable_info* out_reflect_info = malloc(sizeof(spirv_reflect_descriptor_set_info));
-
-    file_read_data vert_shader_data = {0};
-
-    //TODO: SHADER PATH
-    filesystem_open_and_return_bytes(shader_path, &vert_shader_data);
-
-
-    SpvReflectShaderModule vert_module = {0};
-    SpvReflectResult result = spvReflectCreateShaderModule(vert_shader_data.size, vert_shader_data.data, &vert_module);
-    MASSERT_MSG(result == SPV_REFLECT_RESULT_SUCCESS, "SpvReflectCreateShaderModule VERT failed");
-    TRACE("SpvReflectCreateShaderModule VERT result SUCCESS")
-
-    INFO("STAGE TYPE %p, %s", vert_module.shader_stage, GetShaderStageName(vert_module.shader_stage));
-
-
-    uint32_t input_count = 0;
-    spvReflectEnumerateInputVariables(&vert_module, &input_count, NULL);
-    MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    SpvReflectInterfaceVariable** vert_input_variables =
-            (SpvReflectInterfaceVariable **) malloc(input_count * sizeof(SpvReflectInterfaceVariable *));
-    spvReflectEnumerateInputVariables(&vert_module, &input_count, vert_input_variables);
-    assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-
-    out_reflect_info->input_count = input_count;
-    out_reflect_info->locations = darray_create_reserve(u32, input_count);
-    out_reflect_info->formats = darray_create_reserve(SpvReflectFormat, input_count);
-    out_reflect_info->offsets = darray_create_reserve(u32, input_count+1); // additional index value never gets used
-    darray_push(out_reflect_info->offsets, 0); //we always start at 0
-
-    for (u32 i = 0; i < input_count; i++)
-    {
-        DEBUG("INPUT NAME %s", vert_input_variables[i]->name);
-        DEBUG("LOCATION %d", vert_input_variables[i]->location);
-        DEBUG("FORMAT %d", vert_input_variables[i]->format);
-        DEBUG("OFFSET VECTOR COUNT %d ", vert_input_variables[i]->numeric.vector.component_count);
-        DEBUG("OFFSET MAT ROW/COL %d %d", vert_input_variables[i]->numeric.matrix.row_count,
-              vert_input_variables[i]->numeric.matrix.column_count);
-
-
-        darray_push(out_reflect_info->locations, vert_input_variables[i]->location);
-        darray_push(out_reflect_info->formats, vert_input_variables[i]->format);
-        //determine if it's the offset of the matrix or just a vec
-        if (vert_input_variables[i]->numeric.matrix.column_count > 0)
-        {
-            u32 mat_col = vert_input_variables[i]->numeric.matrix.column_count;
-            u32 mat_row = vert_input_variables[i]->numeric.matrix.row_count;
-            darray_push(out_reflect_info->offsets, mat_col * mat_row * sizeof(f32));
-        }
-        else
-        {
-            darray_push(out_reflect_info->offsets,
-                        vert_input_variables[i]->numeric.vector.component_count * sizeof(f32));
-        }
-    }
-
-    // free(d_sets_vert);
-
-    spvReflectDestroyShaderModule(&vert_module);
-
-
-    return out_reflect_info;
+    VK_CHECK(alloc_result);
 }
 
 
@@ -430,7 +168,8 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(
+        NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
 
 
     shader_texture->descriptor_sets = darray_create_reserve(
@@ -523,10 +262,11 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
 
 
 void update_descriptors_texture_reflect_test(vulkan_context* context,
-                                           descriptor_pool_allocator* descriptor_pool_allocator,
-                                           vulkan_shader_texture* shader_texture)
+                                             descriptor_pool_allocator* descriptor_pool_allocator,
+                                             vulkan_shader_texture* shader_texture)
 {
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(
+        NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
 
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -584,72 +324,12 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
     }
 }
 
-void updateDescriptorsTexture_reflect_test_just_texture(vulkan_context* context,
-                                                        descriptor_pool_allocator* descriptor_pool_allocator,
-                                                        vulkan_shader_texture* shader_texture)
-{
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_texture.vert.spv", "../renderer/shaders/shader_texture.frag.spv");
-
-    // Where the descriptor set layout is the interface, the descriptor set points to actual data
-    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
-    for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
-    {
-        u32 set_count = 1;
-        descriptor_pool_alloc(context, descriptor_pool_allocator, &shader_texture->descriptor_set_layout,
-                              &set_count,
-                              &shader_texture->descriptor_sets[i]);
-
-        // Update the descriptor set determining the shader binding points
-        // For every binding point used in a shader there needs to be one
-        // descriptor set matching that binding point
-        VkWriteDescriptorSet* writeDescriptorSet = darray_create_reserve(
-            VkWriteDescriptorSet, d_set_reflect_info->descriptor_set_count);
-
-        //TODO: these values (uniform buffer/texture) are either going to be seperate functions or enums switches
-
-        // The buffer's information is passed using a descriptor info structure
-        VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
-        bufferInfo.range = sizeof(uniform_buffer_object);
-        bufferInfo.offset = 0;
-
-        VkDescriptorImageInfo image_info = {0}; // for texture
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_info.imageView = shader_texture->texture_test_object.texture_image_view;
-        image_info.sampler = shader_texture->texture_test_object.texture_sampler;
-
-        for (int j = 0; j < d_set_reflect_info->descriptor_set_count; j++)
-        {
-            writeDescriptorSet[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writeDescriptorSet[j].dstSet = shader_texture->descriptor_sets[i];
-            writeDescriptorSet[j].descriptorType = d_set_reflect_info->descriptor_set_types[j];
-            writeDescriptorSet[j].dstBinding = d_set_reflect_info->binding_number[j];
-            writeDescriptorSet[j].descriptorCount = 1;
-            writeDescriptorSet[j].dstArrayElement = 0;
-
-            switch (d_set_reflect_info->descriptor_set_types[j])
-            {
-                case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: // texture
-                    writeDescriptorSet[j].pImageInfo = &image_info;
-                    break;
-                case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: // uniform buffer
-                    writeDescriptorSet[j].pBufferInfo = &bufferInfo;
-                    break;
-                default:
-                    WARN("DESCRIPTOR SET CREATE: TYPE NOT YET SUPPORTED")
-            }
-        }
-        vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
-                               writeDescriptorSet, 0, 0);
-        darray_free(writeDescriptorSet);
-    }
-}
 
 void createDescriptorsMesh(vulkan_context* context, descriptor_pool_allocator* descriptor_pool_allocator,
                            vulkan_mesh_default* default_mesh)
 {
-
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(NULL, "../renderer/shaders/shader_mesh.vert.spv", "../renderer/shaders/shader_mesh.frag.spv");
+    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(
+        NULL, "../renderer/shaders/shader_mesh.vert.spv", "../renderer/shaders/shader_mesh.frag.spv");
 
     default_mesh->descriptor_sets = darray_create_reserve(
         VkDescriptorSet, context->swapchain.max_frames_in_flight);
@@ -739,4 +419,106 @@ void createDescriptorsMesh(vulkan_context* context, descriptor_pool_allocator* d
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
     }
+}
+
+
+void create_global_texture_bindless_descriptor_set(vulkan_context* context,
+                                           descriptor_pool_allocator* descriptor_pool_allocator,
+                                           vulkan_bindless_texture_descriptors* texture_descriptors,
+                                           vulkan_shader_texture* test_texture)
+{
+    /*spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(
+        NULL, "../renderer/shaders/shader_texture_descriptor.vert.spv",
+        "../renderer/shaders/shader_texture_descriptor.frag.spv");*/
+
+
+    /*shader_texture->descriptor_sets = darray_create_reserve(
+        VkDescriptorSet, context->swapchain.max_frames_in_flight);
+    shader_texture->descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;*/
+    texture_descriptors->descriptor_sets = darray_create_reserve(
+        VkDescriptorSet, context->swapchain.max_frames_in_flight);
+    texture_descriptors->descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;
+
+    // Descriptor set layouts define the interface between our application and the shader
+    // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
+    // So every shader binding should map to one descriptor set layout binding
+
+    //GLOBAL TEXTURE SET LAYOUT
+
+    //SET 1, Layout 0
+    VkDescriptorSetLayoutBinding layout_binding = {0};
+    //image sampler
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layout_binding.binding = 0;
+    layout_binding.descriptorCount = max_bindless_resources;
+    layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
+    layout_binding.pImmutableSamplers = NULL;
+
+    VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT |
+                                              VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
+                                              VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info = {0};
+    extended_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+    extended_info.bindingCount = 1; // bindingCount is zero or the number of elements in pBindingFlags.
+    extended_info.pBindingFlags = &bindless_flags;
+    extended_info.pNext = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layout_create_info = {0};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_create_info.bindingCount = 1;
+    layout_create_info.pBindings = &layout_binding;
+    layout_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+    layout_create_info.pNext = &extended_info;
+
+
+    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info, 0,
+        &texture_descriptors->descriptor_set_layout));
+
+    // Where the descriptor set layout is the interface, the descriptor set points to actual data
+    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
+
+    for (int i = 0; i < texture_descriptors->descriptor_set_count; i++)
+    {
+        u32 set_count = 1;
+        descriptor_pool_alloc_bindless(context, descriptor_pool_allocator, &texture_descriptors->descriptor_set_layout,
+                                       &set_count,
+                                       &texture_descriptors->descriptor_sets[i]);
+    }
+
+
+    // darray_free(texture_descriptors->descriptor_sets);
+
+}
+
+void update_global_texture_bindless_descriptor_set(vulkan_context* context,
+                                           vulkan_bindless_texture_descriptors* texture_descriptors,
+                                           vulkan_shader_texture* test_texture)
+{
+
+    for (int i = 0; i < texture_descriptors->descriptor_set_count; i++)
+    {
+        VkDescriptorImageInfo image_info = {0}; // for textures
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info.imageView = test_texture->texture_test_object.texture_image_view;
+        image_info.sampler = test_texture->texture_test_object.texture_sampler;
+
+
+        VkWriteDescriptorSet write_descriptor_set = {0};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = texture_descriptors->descriptor_sets[i];
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.dstBinding = 0;
+        // write_descriptor_set.descriptorCount = max_bindless_resources;
+        write_descriptor_set.descriptorCount = 1;
+        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
+        write_descriptor_set.dstArrayElement = 0;
+        write_descriptor_set.pImageInfo = &image_info;
+        //
+        vkUpdateDescriptorSets(context->device.logical_device, 1,
+                               &write_descriptor_set, 0, 0);
+    }
+
+    // darray_free(texture_descriptors->descriptor_sets);
+
 }

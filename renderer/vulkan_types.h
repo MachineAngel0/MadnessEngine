@@ -33,7 +33,6 @@ typedef struct vulkan_image
 
 
 
-
 typedef enum vulkan_render_pass_state
 {
     READY,
@@ -110,6 +109,9 @@ typedef struct vulkan_device
 
 
     VkPhysicalDeviceProperties properties;
+    // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
+    // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
+
     VkPhysicalDeviceFeatures features;
     VkPhysicalDeviceMemoryProperties memory;
 
@@ -194,13 +196,18 @@ typedef struct Material
     u32 pipeline_indexes;
 }Material;
 
-typedef struct Shader_System
+
+typedef struct shader_system
 {
     Texture error_texture;
-    Texture textures[100]; // this should be increased but this is fine for now
-    Material* material_references;
-    vulkan_shader_pipeline* pipeline_referenes;
-}Shader_System;
+    Texture* textures[100];
+    u32 available_texture_indexes; // count up for now, releasing is another issue
+    // u32 free_list_texture_indexes[100];
+
+    Material* material_references[100];
+    u32 material_indexes;
+    vulkan_shader_pipeline pipeline_references[100];
+}shader_system;
 
 
 typedef struct vulkan_shader_default
@@ -264,9 +271,19 @@ typedef struct vulkan_shader_texture
 } vulkan_shader_texture;
 
 
+typedef struct vulkan_bindless_texture_descriptors
+{
+
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSet* descriptor_sets; //darray
+    u32 descriptor_set_count;
+
+} vulkan_bindless_texture_descriptors;
+
 typedef struct descriptor_pool_allocator
 {
     VkDescriptorPool descriptor_pool;
+    VkDescriptorPool bindless_descriptor_pool;
 } descriptor_pool_allocator;
 
 
@@ -323,6 +340,9 @@ typedef struct vulkan_context
 
     //textured triangle
     vulkan_shader_texture shader_texture;
+    vulkan_shader_texture shader_texture_bindless;
+
+    vulkan_bindless_texture_descriptors bindless_texture_descriptors;
 
     //temp
     vulkan_mesh_default mesh_default;
