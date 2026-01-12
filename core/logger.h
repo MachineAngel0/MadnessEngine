@@ -80,6 +80,8 @@ void log_output(log_level level, const char *message, ...)
 
 }
 
+
+
 #define FATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);
 
 #if M_ERROR_ENABLED == 1
@@ -104,6 +106,8 @@ void log_output(log_level level, const char *message, ...)
 #define DEBUG(message, ...)
 #endif
 
+
+
 #if LOG_TRACE_ENABLED == 1
 #define TRACE(message, ...) log_output(LOG_LEVEL_TRACE, message, ##__VA_ARGS__);
 #else
@@ -113,6 +117,10 @@ void log_output(log_level level, const char *message, ...)
 void report_assertion_failure(const char* expression, const char* message, const char* file, int line)
 {
     log_output(LOG_LEVEL_FATAL, "Assertion Failure: %s, message: '%s', in file: %s, line: %d\n", expression, message, file, line);
+}
+void report_unimplemented(const char* file, int32_t line)
+{
+    log_output(LOG_LEVEL_FATAL, "TODO: UNIMPLEMENTED FILE: %s, FILE: %d\n", file, line);
 }
 
 

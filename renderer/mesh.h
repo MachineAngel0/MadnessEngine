@@ -1,8 +1,8 @@
 ﻿#ifndef MESH_H
 #define MESH_H
-#include "defines.h"
-#include "str.h"
+
 #include "vulkan_types.h"
+#include "shader_system.h"
 
 
 typedef struct vertex_mesh
@@ -16,14 +16,25 @@ typedef struct vertex_mesh
     // vec4* color; //might not support
 } vertex_mesh;
 
+//TODO: so every model can have multiple meshes
 typedef struct mesh
 {
     vertex_mesh vertices;
     u32* indices;
     u64 indices_size;
     VkIndexType index_type;
-    Material* material;
+    //wether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
+    shader_handle* handles;
 } mesh;
+
+
+typedef struct static_mesh
+{
+    mesh* mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+} static_mesh;
+
 
 mesh* mesh_init()
 {
@@ -37,6 +48,7 @@ mesh* mesh_init()
 
     // m->indices = darray_create(u32);
     // m->textures = darray_create(Texture);
+
 
     return m;
 }
@@ -53,7 +65,7 @@ void mesh_free(mesh* m)
 
 
 //ill combine the functions later with a switch but for now, i dont want it
-mesh* mesh_load_gltf(const char* gltf_path)
+mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
     //gltf files can technically come with on indices
 
@@ -81,6 +93,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
     string_print(path);
     String* removed_path = string_strip_from_end(path, '/');
     string_print(removed_path);
+
 
     for (int i = 0; i < data->meshes_count; i++)
     {
@@ -128,7 +141,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                 WARN("MESH LOADING: UNKNOWN INDEX BUFFER STRIDE");
             }
 
-                fclose(index_bin_fptr);
+            fclose(index_bin_fptr);
 
 
             for (int atr_index = 0; atr_index < data->meshes[i].primitives[mesh_index].attributes_count; atr_index
@@ -136,9 +149,9 @@ mesh* mesh_load_gltf(const char* gltf_path)
             {
                 //points to the accessor field data type
                 u64 file_offset = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
-                        offset;
+                    offset;
                 u64 read_size = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
-                        size;
+                    size;
 
 
                 // how many of the type we have = 36 vec3's
@@ -151,7 +164,7 @@ mesh* mesh_load_gltf(const char* gltf_path)
                 data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->buffer;
 
                 const char* gltf_bin = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->
-                        buffer_view->buffer->uri;
+                    buffer_view->buffer->uri;
                 String* bin = STRING_CREATE_FROM_BUFFER(gltf_bin);
                 String* bin_path = string_concat(removed_path, bin);
                 string_print(bin_path);
@@ -298,6 +311,45 @@ mesh* mesh_load_gltf(const char* gltf_path)
             }
         }
     }
+
+
+
+    out_mesh->handles = malloc(sizeof(shader_handle) * data->textures_count);
+    for (int i = 0; i < data->textures_count; i++)
+    {
+        String* index_bin = STRING_CREATE_FROM_BUFFER(data->textures[i].image->uri);
+        String* index_bin_path = string_concat(removed_path, index_bin);
+        string_print(index_bin_path);
+        const char* new_texture_path = string_convert_to_c_string(index_bin_path);
+        out_mesh->handles[i] = shader_system_add_texture(&renderer->context, renderer->shader_system, new_texture_path);
+    }
+
+
+    /*
+    for (int i = 0; i < data->materials_count; i++)
+    {
+
+        if (data->materials->has_pbr_metallic_roughness)
+        {
+            // data->materials->pbr_metallic_roughness.base_color_texture
+        };
+
+
+
+        if (data->materials->has_pbr_specular_glossiness){}
+        if (data->materials->has_clearcoat){}
+        if (data->materials->has_sheen){}
+        if (data->materials->has_volume){}
+        if (data->materials->has_ior){}
+        if (data->materials->has_specular){}
+        if (data->materials->has_emissive_strength){}
+        if (data->materials->has_iridescence){}
+        if (data->materials->has_diffuse_transmission){}
+        if (data->materials->has_anisotropy){}
+        if (data->materials->has_dispersion){}
+
+
+    }*/
 
 
     cgltf_free(data);

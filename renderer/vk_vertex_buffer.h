@@ -912,7 +912,7 @@ void createDescriptors(vulkan_context* context, descriptor_pool_allocator* descr
     for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc(context, descriptor_pool, &context->default_shader_info.descriptor_set_layout, &set_count,
+        descriptor_pool_alloc_bindless(context, descriptor_pool, &context->default_shader_info.descriptor_set_layout, &set_count,
                               &context->default_shader_info.descriptor_sets[i]);
 
         // Update the descriptor set determining the shader binding points
@@ -1041,7 +1041,7 @@ void createDescriptorsTexture(vulkan_context* context, vulkan_shader_texture* sh
 }
 
 
-void createDescriptorsTexture_with_bindless(vulkan_context* context,
+void create_descriptors_texture_with_bindless(vulkan_context* context,
                                             vulkan_shader_texture* shader_texture)
 {
     shader_texture->descriptor_sets = darray_create_reserve(
@@ -1073,7 +1073,8 @@ void createDescriptorsTexture_with_bindless(vulkan_context* context,
             descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
-    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
+    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU,
+    // so we create one per max frame in flight
     for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
     {
         VkDescriptorSetAllocateInfo allocInfo = {0};

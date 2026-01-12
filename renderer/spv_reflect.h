@@ -1,5 +1,6 @@
 ﻿#ifndef SPV_REFLECT_H
 #define SPV_REFLECT_H
+#include "SPIRV-Reflect-main/spirv_reflect.h"
 
 
 //Todo: create an out struct for all the data i would want
@@ -295,6 +296,8 @@ spirv_reflect_descriptor_set_info* spriv_reflect_get_descriptor_set(Arena* frame
 
     return out_reflect_info;
 }
+
+
 
 spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame_arena, const char* shader_path)
 {

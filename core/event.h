@@ -1,7 +1,7 @@
 ﻿#ifndef EVENT_H
 #define EVENT_H
 #include "arena.h"
-#include "dsa/array.h"
+#include "array.h"
 
 
 typedef enum event_type

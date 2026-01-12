@@ -571,13 +571,14 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     return true;
 }
 
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data)
+bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data, vulkan_bindless_descriptors* uniform_descriptors, vulkan_bindless_descriptors* texture_descriptors)
 {
     // Pipeline layout creation
+    VkDescriptorSetLayout set_layouts[2] = {uniform_descriptors->descriptor_set_layout, context->global_bindless_texture_descriptors.descriptor_set_layout};
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &mesh_data->descriptor_set_layout;
+    pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
+    pipeline_layout_info.pSetLayouts = set_layouts;
     // pipeline_layout_info.pushConstantRangeCount = 0;
     // pipeline_layout_info.pPushConstantRanges = 0;
 
@@ -834,7 +835,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader)
 {
     // Pipeline layout creation
-    VkDescriptorSetLayout set_layouts[2] = {textured_shader->descriptor_set_layout, context->bindless_texture_descriptors.descriptor_set_layout};
+    VkDescriptorSetLayout set_layouts[2] = {textured_shader->descriptor_set_layout, context->global_bindless_texture_descriptors.descriptor_set_layout};
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);

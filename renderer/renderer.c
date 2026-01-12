@@ -1,43 +1,23 @@
 ﻿#include "renderer.h"
-
 #include "camera.h"
-#include "darray.h"
-#include "logger.h"
 #include "mesh.h"
-#include "vk_device.h"
-#include "vk_renderpass.h"
+#include "shader_system.h"
 #include "vk_command_buffer.h"
-#include "vk_descriptors.h"
+#include "vk_framebuffer.h"
 #include "vk_image.h"
+#include "vk_renderpass.h"
 #include "vk_shader.h"
+#include "vk_sync.h"
 #include "vk_vertex_buffer.h"
 
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
-vulkan_context vk_context;
-
-typedef struct renderer
-{
-    camera main_camera;
-
-    Arena arena; // total memory for the entire renderer
-    Arena frame_arena;
-
-    shader_system* shader_system;
-
-    //mesh system
-    //animation system
-    //ui draw info
-
-}renderer;
-
 static renderer renderer_internal;
-
 
 
 bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 {
-
+    vulkan_context* vk_context = &renderer_internal.context;
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(1);
@@ -50,40 +30,37 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
-    //TODO: buffer
-    //shader_system_init(&vk_context, renderer_internal.shader_system);
-
 
     camera_init(&renderer_internal.main_camera);
-    vk_context.is_init = false;
+    vk_context->is_init = false;
     // vulkan_context vulkan_context;
 
     //get the size for the default window from the app config
     //if these aren't set we use 800/600 for default
-    vk_context.framebuffer_width = (renderer_inst->app_config.start_width != 0)
-                                       ? renderer_inst->app_config.start_width
-                                       : 600;
-    vk_context.framebuffer_height = (renderer_inst->app_config.start_height != 0)
-                                        ? renderer_inst->app_config.start_height
+    vk_context->framebuffer_width = (renderer_inst->app_config.start_width != 0)
+                                        ? renderer_inst->app_config.start_width
                                         : 600;
+    vk_context->framebuffer_height = (renderer_inst->app_config.start_height != 0)
+                                         ? renderer_inst->app_config.start_height
+                                         : 600;
     //set this as well
-    vk_context.framebuffer_width_new = vk_context.framebuffer_width;
-    vk_context.framebuffer_height_new = vk_context.framebuffer_height;
+    vk_context->framebuffer_width_new = vk_context->framebuffer_width;
+    vk_context->framebuffer_height_new = vk_context->framebuffer_height;
 
     //create the instance
-    vulkan_instance_create(&vk_context);
+    vulkan_instance_create(vk_context);
 
     // get surface from the platform layer, needed before device creation
-    if (!platform_create_vulkan_surface(renderer_inst->plat_state, &vk_context))
+    if (!platform_create_vulkan_surface(renderer_inst->plat_state, vk_context))
     {
         return FALSE;
     }
 
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
-    vk_context.is_init = true;
+    vk_context->is_init = true;
 
     // Device creation
-    if (!vulkan_device_create(&vk_context))
+    if (!vulkan_device_create(vk_context))
     {
         M_ERROR("Failed to create device!");
         return FALSE;
@@ -91,87 +68,102 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     // Swapchain
     vulkan_swapchain_create(
-        &vk_context,
-        vk_context.framebuffer_width,
-        vk_context.framebuffer_height,
-        &vk_context.swapchain);
+        vk_context,
+        vk_context->framebuffer_width,
+        vk_context->framebuffer_height,
+        &vk_context->swapchain);
 
 
     // Main Renderpass
     vulkan_renderpass_create(
-        &vk_context,
-        &vk_context.main_renderpass,
-        (vec4){.x = 0.f, .y = 0.f, .z = vk_context.framebuffer_width, .w = vk_context.framebuffer_height},
+        vk_context,
+        &vk_context->main_renderpass,
+        (vec4){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
         (vec4){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
 
 
     // Swapchain framebuffers.
-    vk_context.swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context.swapchain.image_count);
-    regenerate_framebuffer(&vk_context, &vk_context.swapchain, &vk_context.main_renderpass);
+    vk_context->swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context->swapchain.image_count);
+    regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
 
     // Create command buffers.
-    vulkan_renderer_command_buffers_create(&vk_context);
-    // Create Descriptor Pool
-    descriptor_pool_allocator_init(&vk_context, &vk_context.global_descriptor_pool);
+    vulkan_renderer_command_buffers_create(vk_context);
 
-
-    //TODO: move out into its own function
-    // Create sync objects.
     //NOTE: semaphores must be per swapchain image
+    init_per_frame_sync(vk_context);
+    vk_context->current_frame = 0;
 
-    init_per_frame_sync(&vk_context);
-    vk_context.current_frame = 0;
+
+    // Create Descriptor Pool
+    descriptor_pool_allocator_init(vk_context, &vk_context->global_descriptor_pool);
+    //TODO: move functions into the init of pool allocator
+    create_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
+                                           &vk_context->global_bindless_texture_descriptors);
+    create_bindless_uniform_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
+                                                  &vk_context->global_bindless_uniform_descriptors);
+
+    //GLOBAL UNIFORM BUFFER
+    create_global_uniform_buffer(vk_context);
+
+
+
+
+    //Shader System
+    shader_system_init(&renderer_internal, &renderer_internal.shader_system);
+
 
     // Create default shader
-    create_global_uniform_buffer(&vk_context);
-    create_global_texture_bindless_descriptor_set(&vk_context, &vk_context.global_descriptor_pool,
-                         &vk_context.bindless_texture_descriptors, &vk_context.shader_texture_bindless);
-    /*
-    createDescriptors(&vk_context, &vk_context.global_descriptor_pool);
-    vulkan_default_shader_create(&vk_context, &vk_context.default_shader_info);
+    createDescriptors(vk_context, &vk_context->global_descriptor_pool);
+    vulkan_default_shader_create(vk_context, &vk_context->default_shader_info);
 
     //TODO: temporary
     // memcpy(vk_context.default_vertex_info.vertices, test_vertices, sizeof(test_vertices));
     // vk_context.default_vertex_info.vertices_size = ARRAY_SIZE(test_vertices);
     // memcpy(vk_context.default_vertex_info.indices, test_indices, sizeof(test_indices));
     // vk_context.default_vertex_info.indices_size = ARRAY_SIZE(test_indices);
-    createVertexBuffer(&vk_context, &vk_context.vertex_buffer, &vk_context.index_buffer,
-                       &vk_context.default_vertex_info);
+    createVertexBuffer(vk_context, &vk_context->vertex_buffer, &vk_context->index_buffer,
+                       &vk_context->default_vertex_info);
 
     //TEXTURE TRIANGLE
-
-    create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
-                          &vk_context.shader_texture.texture_test_object);
-    createDescriptorsTexture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+    create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/test_texture.jpg",
+                         &vk_context->shader_texture.texture_test_object);
+    createDescriptorsTexture_reflect_test(vk_context, &vk_context->global_descriptor_pool, &vk_context->shader_texture);
     // createDescriptorsTexture(&vk_context, &vk_context.shader_texture);
 
-    vulkan_textured_shader_create(&vk_context, &vk_context.shader_texture);
-    createVertexBufferTexture(&vk_context, &vk_context.shader_texture);
+    vulkan_textured_shader_create(vk_context, &vk_context->shader_texture);
+    createVertexBufferTexture(vk_context, &vk_context->shader_texture);
 
-
+    //MESH
     // mesh* test_mesh = mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
-    mesh* test_mesh = mesh_load_gltf("../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    vk_context.mesh_default.index_stride = test_mesh->index_type;
+    mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    vk_context->mesh_default.index_stride = test_mesh->index_type;
     // buffer the data
-    createDescriptorsMesh(&vk_context, &vk_context.global_descriptor_pool,
-                           &vk_context.mesh_default);
-    vulkan_mesh_shader_create(&vk_context, &vk_context.mesh_default);
-    createVertexBufferMesh(&vk_context, &vk_context.mesh_default, test_mesh);
 
-*/
+    //we only need the spriv reflection for the write data
+    // createDescriptorsMesh(&renderer_internal, &vk_context->global_descriptor_pool,
+                          // &vk_context->global_bindless_uniform_descriptors, test_mesh);
 
-    create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/error_texture.png",
-                              &vk_context.shader_texture_bindless.texture_test_object);
-    createDescriptorsTexture_with_bindless(&vk_context, &vk_context.shader_texture_bindless);
+    update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_bindless_texture_descriptors,
+                                                  &vk_context->shader_texture, 1);
+    update_global_uniform_buffer_bindless_descriptor_set(vk_context, &vk_context->global_bindless_uniform_descriptors,
+                                                  &vk_context->global_uniform_buffers, 1);
+    vulkan_mesh_shader_create(vk_context, &vk_context->mesh_default, &vk_context->global_bindless_texture_descriptors,
+                              &vk_context->global_bindless_uniform_descriptors);
+    createVertexBufferMesh(vk_context, &vk_context->mesh_default, test_mesh);
+
+    //BINDLESS TEXTURE
+    create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
+                         &vk_context->shader_texture_bindless.texture_test_object);
+    create_descriptors_texture_with_bindless(vk_context, &vk_context->shader_texture_bindless);
 
 
-    vulkan_bindless_textured_shader_create(&vk_context, &vk_context.shader_texture_bindless);
-    createVertexBufferTexture(&vk_context, &vk_context.shader_texture_bindless);
+    vulkan_bindless_textured_shader_create(vk_context, &vk_context->shader_texture_bindless);
+    createVertexBufferTexture(vk_context, &vk_context->shader_texture_bindless);
 
-    //TODO: WRITE IS BUGGED FIX WHENEVER YOU START THIS AGAIN
-    update_global_texture_bindless_descriptor_set(&vk_context,  &vk_context.bindless_texture_descriptors,
-                                           &vk_context.shader_texture_bindless);
+    update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_bindless_texture_descriptors,
+                                                  &vk_context->shader_texture_bindless, 0);
+
 
     INFO("VULKAN RENDERER INITIALIZED");
 
@@ -179,10 +171,13 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 }
 
 
-
 static bool texture_flip = false;
+
 void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 {
+    vulkan_context vk_context = renderer_internal.context;
+
+
     arena_clear(&renderer_internal.frame_arena);
 
 
@@ -194,20 +189,22 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     {
         if (texture_flip)
         {
-            create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/test_texture.jpg",
-                      &vk_context.shader_texture.texture_test_object);
-            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+            create_texture_image(&vk_context, vk_context.graphics_command_buffer,
+                                 "../renderer/texture/test_texture.jpg",
+                                 &vk_context.shader_texture.texture_test_object);
+            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool,
+                                                    &vk_context.shader_texture);
 
             texture_flip = !texture_flip;
-
         }
         else
         {
-            create_texture_image(&vk_context, vk_context.graphics_command_buffer, "../renderer/texture/error_texture.png",
-                               &vk_context.shader_texture.texture_test_object);
-            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool, &vk_context.shader_texture);
+            create_texture_image(&vk_context, vk_context.graphics_command_buffer,
+                                 "../renderer/texture/error_texture.png",
+                                 &vk_context.shader_texture.texture_test_object);
+            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool,
+                                                    &vk_context.shader_texture);
             texture_flip = !texture_flip;
-
         }
     }
 
@@ -268,7 +265,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // ubo.view = camera_get_view_matrix(&main_camera);
     ubo.view = camera_get_fps_view_matrix(&renderer_internal.main_camera);
     // Perspective
-    ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width, vk_context.framebuffer_height);
+    ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
+                                     vk_context.framebuffer_height);
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(vk_context.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
@@ -336,7 +334,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Dynamic state
     VkViewport viewport = {
-        0.0f, 0.0f, (f32) vk_context.framebuffer_width, (f32) vk_context.framebuffer_height, 0.0f, 1.0f
+        0.0f, 0.0f, (f32)vk_context.framebuffer_width, (f32)vk_context.framebuffer_height, 0.0f, 1.0f
     };
 
 
@@ -355,8 +353,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     //TODO:
     // SET 0 GLOBAL UNIFORMS: CAMERA LIGHTS ETC
-    // SET 1 GLOBAL TEXTURES: textures etc
-    // SET 2 GLOBAL BUFFERS: CAMERA LIGHTS ETC
+    // SET 1 GLOBAL TEXTURES: textures
+    // SET 2 GLOBAL BUFFERS: Mesh etc
 
     /*
     //Draw Triangle
@@ -403,14 +401,20 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      1, 0, 0, 0);
 
 
-
     //DRAW MESH
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                 vk_context.mesh_default.mesh_shader_pipeline.handle);
+                      vk_context.mesh_default.mesh_shader_pipeline.handle);
 
+    //uniform
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 0, 1,
                             &vk_context.default_shader_info.descriptor_sets[vk_context.current_frame], 0, 0);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
+                            &vk_context.global_bindless_texture_descriptors.descriptor_sets[vk_context.current_frame],
+                            0, 0);
 
     VkDeviceSize mesh_offsets[1] = {0};
     vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
@@ -418,14 +422,14 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
                          vk_context.mesh_default.index_buffer.handle, 0,
-                          vk_context.mesh_default.index_stride);
+                         vk_context.mesh_default.index_stride);
 
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                     (u32) vk_context.mesh_default.vertex_info.indices_size,
+                     (u32)vk_context.mesh_default.vertex_info.indices_size,
                      1, 0, 0, 0);
 
-
     */
+
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.shader_texture_bindless.shader_texture_pipeline.handle);
@@ -438,7 +442,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
-                            &vk_context.bindless_texture_descriptors.descriptor_sets[vk_context.current_frame],
+                            &vk_context.global_bindless_texture_descriptors.descriptor_sets[vk_context.current_frame],
                             0, 0);
 
 
@@ -451,10 +455,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                          VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                     (u32) vk_context.shader_texture_bindless.vertex_info.indices_size,
+                     (u32)vk_context.shader_texture_bindless.vertex_info.indices_size,
                      1, 0, 0, 0);
-
-
+    // vkCmdDrawIndexedIndirect()
     //END FRAME//
 
     // Finish the current dynamic rendering section
@@ -519,6 +522,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
 void renderer_shutdown(struct renderer_app* renderer_inst)
 {
+    vulkan_context vk_context = renderer_internal.context;
+
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
@@ -610,8 +615,8 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
     if (vk_context.debug_messenger)
     {
         PFN_vkDestroyDebugUtilsMessengerEXT func =
-                (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
-                    vk_context.instance, "vkDestroyDebugUtilsMessengerEXT");
+            (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+                vk_context.instance, "vkDestroyDebugUtilsMessengerEXT");
         func(vk_context.instance, vk_context.debug_messenger, vk_context.allocator);
     }
 
@@ -623,6 +628,7 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
 void renderer_on_resize(struct renderer_app* renderer_inst, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
+    vulkan_context vk_context = renderer_internal.context;
 
 
     if (!vk_context.is_init)

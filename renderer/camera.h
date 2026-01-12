@@ -1,45 +1,5 @@
 ﻿#ifndef CAMERA_H
 #define CAMERA_H
-#include "input.h"
-#include "math_lib.h"
-
-typedef enum Camera_Movement
-{
-    CAMERA_MOVEMENT_FORWARD,
-    CAMERA_MOVEMENT_BACKWARD,
-    CAMERA_MOVEMENT_LEFT,
-    CAMERA_MOVEMENT_RIGHT
-} Camera_Movement;
-
-
-typedef struct camera
-{
-    vec3 rotation;
-    vec3 pos;
-    vec4 viewPos;
-
-    float rotation_speed;
-    float move_speed;
-
-    //perspective options
-    float fov;
-    float znear;
-    float zfar;
-
-    mat4 projection;
-    mat4 view;
-
-    //fps
-    float pitch;
-    float yaw;
-} camera;
-
-struct camera_arrays
-{
-    camera lookat_cameras[10];
-    camera fps_cameras[10];
-    camera arcball_cameras[10];
-};
 
 
 // bool camera_mouse_movement_event(u16 code, void* sender, void* listener_inst, event_context context);

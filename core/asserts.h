@@ -3,6 +3,7 @@
 
 // Disable assertions by commenting out the below line.
 #define MASSERTIONS_ENABLED
+#include "logger.h"
 
 #ifdef MASSERTIONS_ENABLED
 #if _MSC_VER
@@ -13,11 +14,14 @@
 #endif
 
 
+
+
 #include <stdint.h>
 
 
 //NOTE: this is implemented inside the logger
 void report_assertion_failure(const char* expression, const char* message, const char* file, int32_t line);
+void report_unimplemented(const char* file, int32_t line);
 
 
 //__FILE__ gets the c file of the error, __LINE__ gets the line in the c file of the error
@@ -64,6 +68,8 @@ void report_assertion_failure(const char* expression, const char* message, const
 
 #endif
 
+
+#define UNIMPLEMENTED() report_unimplemented(__FILE__, __LINE__);
 
 
 

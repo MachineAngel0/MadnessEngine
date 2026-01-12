@@ -8,7 +8,6 @@
 
 #include "unit_test.h"
 #include "arena_stack.h"
-#include "math_lib.h"
 #include "math_types.h"
 #include "memory_tracker.h"
 

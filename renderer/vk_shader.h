@@ -17,7 +17,8 @@ void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, 
 
 
 bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader);
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data);
+bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data, vulkan_bindless_descriptors* uniform_descriptors, vulkan_bindless_descriptors* texture_descriptors);
+
 bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader);
 
 

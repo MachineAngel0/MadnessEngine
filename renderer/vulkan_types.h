@@ -7,11 +7,8 @@
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
-#include <vulkan/vulkan.h>
-#include <defines.h>
-#include "logger.h"
-#include "math_types.h"
 #include "vk_vertex.h"
+
 
 #define VK_CHECK(expr)              \
 {                                   \
@@ -19,6 +16,18 @@
         FATAL("VULKAN ERROR CODE: %d", expr);\
     }\
 }
+
+
+
+typedef struct shader_handle
+{
+    u32 handle;
+} shader_handle;
+
+typedef struct buffer_handle
+{
+    u32 handle;
+} buffer_handle;
 
 
 typedef struct vulkan_image
@@ -197,14 +206,17 @@ typedef struct Material
 }Material;
 
 
+
+
 typedef struct shader_system
 {
     Texture error_texture;
-    Texture* textures[100];
+    Texture textures[100];
     u32 available_texture_indexes; // count up for now, releasing is another issue
+    // u32 texture_usage_count[100]; // how many things are referencing this texture, so when it hits 0, we can add it to the free list
     // u32 free_list_texture_indexes[100];
 
-    Material* material_references[100];
+    Material material_references[100];
     u32 material_indexes;
     vulkan_shader_pipeline pipeline_references[100];
 }shader_system;
@@ -235,12 +247,6 @@ typedef struct vulkan_mesh_default
 {
     vulkan_shader_pipeline mesh_shader_pipeline;
 
-    //TODO: temporary for now
-    VkDescriptorSetLayout descriptor_set_layout;
-
-    VkDescriptorSet* descriptor_sets;
-    u32 descriptor_set_count;
-
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
     vertex_info vertex_info;
@@ -250,6 +256,15 @@ typedef struct vulkan_mesh_default
 
 } vulkan_mesh_default;
 
+
+typedef struct vulkan_bindless_descriptors
+{
+
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSet* descriptor_sets; //darray
+    u32 descriptor_set_count;
+
+} vulkan_bindless_descriptors;
 
 
 typedef struct vulkan_shader_texture
@@ -271,19 +286,13 @@ typedef struct vulkan_shader_texture
 } vulkan_shader_texture;
 
 
-typedef struct vulkan_bindless_texture_descriptors
-{
 
-    VkDescriptorSetLayout descriptor_set_layout;
-    VkDescriptorSet* descriptor_sets; //darray
-    u32 descriptor_set_count;
-
-} vulkan_bindless_texture_descriptors;
 
 typedef struct descriptor_pool_allocator
 {
     VkDescriptorPool descriptor_pool;
     VkDescriptorPool bindless_descriptor_pool;
+
 } descriptor_pool_allocator;
 
 
@@ -291,8 +300,6 @@ typedef struct descriptor_pool_allocator
 typedef struct vulkan_context
 {
     bool is_init;
-
-
 
     //Instance
     VkInstance instance;
@@ -342,7 +349,8 @@ typedef struct vulkan_context
     vulkan_shader_texture shader_texture;
     vulkan_shader_texture shader_texture_bindless;
 
-    vulkan_bindless_texture_descriptors bindless_texture_descriptors;
+    vulkan_bindless_descriptors global_bindless_texture_descriptors;
+    vulkan_bindless_descriptors global_bindless_uniform_descriptors;
 
     //temp
     vulkan_mesh_default mesh_default;
@@ -358,7 +366,76 @@ typedef struct vulkan_context
     VkCommandBuffer* primary_command_buffer;
     VkSemaphore* swapchain_acquire_semaphore; // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
+
+
+
+
 } vulkan_context;
+
+
+
+/* CAMERA */
+typedef enum Camera_Movement
+{
+    CAMERA_MOVEMENT_FORWARD,
+    CAMERA_MOVEMENT_BACKWARD,
+    CAMERA_MOVEMENT_LEFT,
+    CAMERA_MOVEMENT_RIGHT
+} Camera_Movement;
+
+
+typedef struct camera
+{
+    vec3 rotation;
+    vec3 pos;
+    vec4 viewPos;
+
+    float rotation_speed;
+    float move_speed;
+
+    //perspective options
+    float fov;
+    float znear;
+    float zfar;
+
+    mat4 projection;
+    mat4 view;
+
+    //fps
+    float pitch;
+    float yaw;
+} camera;
+
+struct camera_arrays
+{
+    camera lookat_cameras[10];
+    camera fps_cameras[10];
+    camera arcball_cameras[10];
+};
+
+
+typedef struct renderer
+{
+    camera main_camera;
+
+    Arena arena; // total memory for the entire renderer
+    Arena frame_arena;
+
+    shader_system* shader_system;
+
+    //mesh system
+    //animation system
+    //ui draw info
+
+    //TODO:
+    vulkan_context context;
+
+}renderer;
+
+
+
+
+
 
 
 #endif //VULKAN_TYPES_H

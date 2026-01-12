@@ -1,9 +1,6 @@
 ﻿#ifndef VK_DESCRIPTOR_H
 #define VK_DESCRIPTOR_H
 
-#include "vulkan_types.h"
-#include "SPIRV-Reflect-main/spirv_reflect.h"
-
 
 //TODO:move out when done
 
@@ -23,28 +20,34 @@ void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_all
                                     VkDescriptorSet* out_descriptors);
 
 
-
 void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture);
 
 void update_descriptors_texture_reflect_test(vulkan_context* context,
-                                           descriptor_pool_allocator* descriptor_pool_allocator,
-                                           vulkan_shader_texture* shader_texture);
+                                             descriptor_pool_allocator* descriptor_pool_allocator,
+                                             vulkan_shader_texture* shader_texture);
 
 
+void createDescriptorsMesh(renderer* renderer, descriptor_pool_allocator* descriptor_pool_allocator,
+                           vulkan_bindless_descriptors* uniform_descriptors, const mesh* in_mesh);
 
-
-void createDescriptorsMesh(vulkan_context* context, descriptor_pool_allocator* descriptor_pool_allocator,
-                           vulkan_mesh_default* default_mesh);
-
-
-void create_global_texture_bindless_descriptor_set(vulkan_context* context,
-                                           descriptor_pool_allocator* descriptor_pool_allocator,
-                                           vulkan_bindless_texture_descriptors* texture_descriptors,
-                                           vulkan_shader_texture* test_texture);
+void create_texture_bindless_descriptor_set(vulkan_context* context,
+                                            descriptor_pool_allocator* descriptor_pool_allocator,
+                                            vulkan_bindless_descriptors* texture_descriptors);
 
 void update_global_texture_bindless_descriptor_set(vulkan_context* context,
-                                           vulkan_bindless_texture_descriptors* texture_descriptors,
-                                           vulkan_shader_texture* test_texture);
+                                                   vulkan_bindless_descriptors* texture_descriptors,
+                                                   vulkan_shader_texture* test_texture, u32 array_index);
+
+
+void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
+                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+                                                   vulkan_bindless_descriptors* uniform_descriptors);
+
+void update_global_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
+                                                          vulkan_bindless_descriptors* uniform_descriptors,
+                                                          vulkan_uniform_buffer* buffer, u32 array_index);
+
+
 #endif
