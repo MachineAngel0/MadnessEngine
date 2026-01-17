@@ -20,6 +20,10 @@ typedef struct Arena
     u64 capacity; // how large our arena is
 } Arena;
 
+typedef Arena Frame_Arena;
+typedef Arena Renderer_Arena;
+typedef Arena Entity_Arena;
+
 
 
 //will malloc for memory, should only be called by the application or whatever manages the entire lifetime of the program

@@ -2,7 +2,6 @@
 #define SHADER_SYSTEM_H
 
 
-
 //TODO: increase later when it becomes relevant
 #define shader_system_texture_amount 100;
 #include "vk_image.h"
@@ -23,7 +22,8 @@ void shader_system_init(renderer* renderer, shader_system** out_shader_system)
     (*out_shader_system)->material_indexes = 0;
 
     //create our debug texture
-    shader_system_add_texture(&renderer->context, *out_shader_system, "../renderer/texture/error_texture.png");
+    (*out_shader_system)->default_texture_handle = shader_system_add_texture(&renderer->context, *out_shader_system,
+                                                       "../renderer/texture/error_texture.png");
 }
 
 Texture* shader_system_get_texture(shader_system* system, shader_handle* handle)
@@ -52,7 +52,8 @@ void shader_system_remove_texture(shader_system* system)
 {
 }
 
-void shader_system_update_texture(renderer* renderer, shader_system* system, shader_handle* handle, const char* filepath)
+void shader_system_update_texture(renderer* renderer, shader_system* system, shader_handle* handle,
+                                  const char* filepath)
 {
     // create texture if it's not already loaded
     // update descriptor set

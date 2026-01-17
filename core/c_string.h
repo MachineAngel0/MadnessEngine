@@ -8,6 +8,7 @@
 // Returns the length of the given string.
 MAPI u64 c_string_length(const char* str)
 {
+    //does not count the null terminated string
     return strlen(str);
 }
 
@@ -18,6 +19,25 @@ MAPI char* c_string_duplicate(const char* str)
     memcpy(copy, str, length + 1);
     return copy;
 };
+
+
+MAPI const char* c_string_concat(const char* str1, const char* str2)
+{
+    u64 str1_length = c_string_length(str1);
+    u64 str2_length = c_string_length(str2);
+
+
+    //+1 for the null char
+    char* out_str = malloc(str1_length + str2_length + 1);
+    memcpy(out_str, str1, str1_length);
+    memcpy(out_str, str2, str1_length + str2_length);
+    out_str[str1_length + str2_length + 1] = '\0';
+
+    return out_str;
+};
+
+
+
 
 // Case-sensitive string comparison. True if the same, otherwise false.
 MAPI bool c_strings_equal(const char* str0, const char* str1)

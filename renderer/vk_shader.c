@@ -11,7 +11,7 @@ VkShaderModule create_shader_module(const vulkan_context* context, const char* s
     //vertex_create_info.pNext;
     shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_module_create_info.codeSize = shader_size;
-    shader_module_create_info.pCode = (uint32_t *) shader_bytes;
+    shader_module_create_info.pCode = (uint32_t*)shader_bytes;
 
     VkShaderModule shader_module;
     if (vkCreateShaderModule(context->device.logical_device, &shader_module_create_info, NULL, &shader_module) !=
@@ -92,7 +92,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
@@ -199,7 +199,7 @@ bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
-                                          | VK_COLOR_COMPONENT_A_BIT;
+        | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
     //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -301,14 +301,14 @@ void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, 
                          pipeline);
 }
 
-bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader)
+bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader,
+                                    VkDescriptorSetLayout* descriptor_layout)
 {
     // Pipeline layout creation
-
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &textured_shader->descriptor_set_layout;
+    pipeline_layout_info.pSetLayouts = descriptor_layout;
     // pipeline_layout_info.pushConstantRangeCount = 0;
     // pipeline_layout_info.pPushConstantRanges = 0;
 
@@ -370,7 +370,7 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
@@ -483,7 +483,7 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
-                                          | VK_COLOR_COMPONENT_A_BIT;
+        | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
     //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -571,10 +571,13 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     return true;
 }
 
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data, vulkan_bindless_descriptors* uniform_descriptors, vulkan_bindless_descriptors* texture_descriptors)
+bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data)
 {
     // Pipeline layout creation
-    VkDescriptorSetLayout set_layouts[2] = {uniform_descriptors->descriptor_set_layout, context->global_bindless_texture_descriptors.descriptor_set_layout};
+    VkDescriptorSetLayout set_layouts[2] = {
+        context->global_descriptors.uniform_descriptors.descriptor_set_layout, context->global_descriptors.texture_descriptors.descriptor_set_layout
+    };
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
@@ -640,7 +643,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
     u32 offset_total = 0;
 
 
@@ -661,7 +664,6 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     attribute_descriptions[0].location = 0;
     attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attribute_descriptions[0].offset = 0;
-
 
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
@@ -744,7 +746,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
-                                          | VK_COLOR_COMPONENT_A_BIT;
+        | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
     //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -835,7 +837,10 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader)
 {
     // Pipeline layout creation
-    VkDescriptorSetLayout set_layouts[2] = {textured_shader->descriptor_set_layout, context->global_bindless_texture_descriptors.descriptor_set_layout};
+    VkDescriptorSetLayout set_layouts[2] = {
+        context->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        context->global_descriptors.texture_descriptors.descriptor_set_layout,
+    };
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
@@ -901,7 +906,7 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-            spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture_descriptor.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture_descriptor.vert.spv");
     u32 offset_total = 0;
 
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
@@ -1014,7 +1019,7 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
-                                          | VK_COLOR_COMPONENT_A_BIT;
+        | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
     //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional

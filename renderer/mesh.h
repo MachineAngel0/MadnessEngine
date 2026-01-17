@@ -24,7 +24,7 @@ typedef struct mesh
     u64 indices_size;
     VkIndexType index_type;
     //wether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
-    shader_handle* handles;
+    shader_handle* material_handles;
 } mesh;
 
 
@@ -46,8 +46,6 @@ mesh* mesh_init()
     m->vertices.tangent = darray_create(vec4);
     // m->vertices.color = darray_create(vec4);
 
-    // m->indices = darray_create(u32);
-    // m->textures = darray_create(Texture);
 
 
     return m;
@@ -64,7 +62,7 @@ void mesh_free(mesh* m)
 }
 
 
-//ill combine the functions later with a switch but for now, i dont want it
+//TODO: this needs a rewrite from scratch, i have no idea why its crashing my application
 mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
     //gltf files can technically come with on indices
@@ -73,26 +71,29 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     mesh* out_mesh = mesh_init();
 
     //TODO: since there can be multiple meshes, we would need multiple of these buffers
-    u8* position_buffer;
-    u8* normal_buffer;
-    u8* tangent_buffer;
-    u8* tex_coord_buffer;
+    u8* position_buffer = NULL;
+    u8* normal_buffer = NULL;
+    u8* tangent_buffer = NULL;
+    u8* tex_coord_buffer = NULL;
     // float* color_buffer;
 
-    u8* index_buffer;
+    u8* index_buffer = NULL;
 
     cgltf_options options = {0};
     cgltf_data* data = NULL;
     cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
     if (result != cgltf_result_success)
     {
+        MASSERT_MSG(false, "Failed to load GLTF")
         return NULL;
     }
+
 
     String* path = STRING_CREATE_FROM_BUFFER(gltf_path);
     string_print(path);
     String* removed_path = string_strip_from_end(path, '/');
     string_print(removed_path);
+
 
 
     for (int i = 0; i < data->meshes_count; i++)
@@ -121,6 +122,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                 return NULL;
             }
             fseek(index_bin_fptr, index_offset, SEEK_CUR);
+
             out_mesh->indices = malloc(index_read_size); // TODO: replace with allocator
             // index_buffer = malloc(index_read_size);
             size_t index_bytes_read = fread(out_mesh->indices, 1, index_read_size, index_bin_fptr);
@@ -148,10 +150,11 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                  ++)
             {
                 //points to the accessor field data type
-                u64 file_offset = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
+                size_t file_offset = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
                     offset;
-                u64 read_size = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
+                size_t read_size = data->meshes[i].primitives[mesh_index].attributes[atr_index].data->buffer_view->
                     size;
+
 
 
                 // how many of the type we have = 36 vec3's
@@ -168,32 +171,35 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                 String* bin = STRING_CREATE_FROM_BUFFER(gltf_bin);
                 String* bin_path = string_concat(removed_path, bin);
                 string_print(bin_path);
-                const char* new_bin_path = string_convert_to_c_string(bin_path);
+                const char* mesh_bin_path = string_convert_to_c_string(bin_path);
 
                 //NOTE: they can technically be different bins, it's not likely but here just in case
-                FILE* bin_fptr = fopen(new_bin_path, "rb");
+                FILE* bin_fptr = fopen(mesh_bin_path, "rb");
                 if (!bin_fptr)
                 {
-                    printf("%s", new_bin_path);
+                    printf("%s", mesh_bin_path);
                     return NULL;
                 }
 
                 //not needed if we constantly reopen the file
                 // go to the file destination from the start
-                // fseek(bin_fptr, file_offset, SEEK_SET);
-
+                fseek(bin_fptr, file_offset, SEEK_SET);
 
                 //move the fileptr into the proper location, then read the data later on
-                fseek(bin_fptr, file_offset, SEEK_CUR);
+                // fseek(bin_fptr, file_offset, SEEK_CUR);
 
 
                 if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "POSITION") == 0)
                 {
                     INFO("PROCESSING POSITION");
 
-
                     //get vertex buffer data
                     position_buffer = malloc(read_size);
+                    if (!position_buffer)
+                    {
+                        FATAL("POSITION BUFFER MALLOC FAILED")
+                        return NULL;
+                    }
 
                     size_t bytes_read = fread(position_buffer, 1, read_size, bin_fptr);
                     if (bytes_read != read_size)
@@ -209,7 +215,9 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                         darray_push(out_mesh->vertices.pos, temp_vert);
                     }
 
-                    fclose(bin_fptr);
+                    free(position_buffer);
+                    position_buffer = NULL;
+
                 }
                 /*
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "NORMAL") == 0)
@@ -228,7 +236,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                         vec3 temp_vert;
                         memcpy(&temp_vert.x, (normal_buffer + normal_index), sizeof(float));
                         memcpy(&temp_vert.y, (normal_buffer + normal_index + 4), sizeof(float));
-                        memcpy(&temp_vert.z, (normal_buffer +  normal_index + 8), sizeof(float));
+                        memcpy(&temp_vert.z, (normal_buffer + normal_index + 8), sizeof(float));
                         darray_push(out_mesh->vertices.normal, temp_vert);
                     }
                 }
@@ -247,11 +255,12 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                         vec4 temp_vert;
                         memcpy(&temp_vert.x, (tangent_buffer + tangent_index), sizeof(float));
                         memcpy(&temp_vert.y, (tangent_buffer + tangent_index + 4), sizeof(float));
-                        memcpy(&temp_vert.z, (tangent_buffer +  tangent_index + 8), sizeof(float));
-                        memcpy(&temp_vert.w, (tangent_buffer +  tangent_index + 12), sizeof(float));
+                        memcpy(&temp_vert.z, (tangent_buffer + tangent_index + 8), sizeof(float));
+                        memcpy(&temp_vert.w, (tangent_buffer + tangent_index + 12), sizeof(float));
                         darray_push(out_mesh->vertices.tangent, temp_vert);
                     }
                 }
+
                 else if (strcmp(data->meshes[i].primitives[mesh_index].attributes[atr_index].name, "TEXCOORD_0") == 0)
                 {
                     INFO("PROCESSING TEXCOORD_0");
@@ -267,7 +276,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                         vec2 temp_vert;
                         memcpy(&temp_vert.x, (tex_coord_buffer + tex_index), sizeof(float));
                         memcpy(&temp_vert.y, (tex_coord_buffer + tex_index + 4), sizeof(float));
-                        darray_push(out_mesh->vertices.tex_coord, &temp_vert);
+                        darray_push(out_mesh->vertices.tex_coord, temp_vert);
                     }
                 }
                 /*
@@ -312,16 +321,17 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         }
     }
 
-
-
-    out_mesh->handles = malloc(sizeof(shader_handle) * data->textures_count);
-    for (int i = 0; i < data->textures_count; i++)
+    INFO("PROCESSING MATERIAL LOCATIONS");
+    out_mesh->material_handles = malloc(sizeof(shader_handle) * data->textures_count);
+    memset(out_mesh->material_handles, 0, sizeof(shader_handle) * data->textures_count);
+    for (size_t i = 0; i < data->textures_count; i++)
     {
         String* index_bin = STRING_CREATE_FROM_BUFFER(data->textures[i].image->uri);
         String* index_bin_path = string_concat(removed_path, index_bin);
         string_print(index_bin_path);
         const char* new_texture_path = string_convert_to_c_string(index_bin_path);
-        out_mesh->handles[i] = shader_system_add_texture(&renderer->context, renderer->shader_system, new_texture_path);
+        out_mesh->material_handles[i] = shader_system_add_texture(&renderer->context, renderer->shader_system,
+                                                                  new_texture_path);
     }
 
 

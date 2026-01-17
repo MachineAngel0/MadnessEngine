@@ -219,6 +219,9 @@ typedef struct shader_system
     Material material_references[100];
     u32 material_indexes;
     vulkan_shader_pipeline pipeline_references[100];
+
+    shader_handle default_texture_handle;
+
 }shader_system;
 
 
@@ -261,7 +264,7 @@ typedef struct vulkan_bindless_descriptors
 {
 
     VkDescriptorSetLayout descriptor_set_layout;
-    VkDescriptorSet* descriptor_sets; //darray
+    VkDescriptorSet* descriptor_sets; //darray, the number of max frames in use
     u32 descriptor_set_count;
 
 } vulkan_bindless_descriptors;
@@ -272,12 +275,6 @@ typedef struct vulkan_shader_texture
     Texture texture_test_object;
 
     vulkan_shader_pipeline shader_texture_pipeline;
-
-    //TODO: temporary for now
-    VkDescriptorSetLayout descriptor_set_layout;
-
-    VkDescriptorSet* descriptor_sets; // darray
-    u32 descriptor_set_count;
 
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
@@ -294,6 +291,12 @@ typedef struct descriptor_pool_allocator
     VkDescriptorPool bindless_descriptor_pool;
 
 } descriptor_pool_allocator;
+
+typedef struct global_descriptor_sets
+{
+    vulkan_bindless_descriptors uniform_descriptors;
+    vulkan_bindless_descriptors texture_descriptors;
+} global_descriptor_sets;
 
 
 
@@ -349,8 +352,7 @@ typedef struct vulkan_context
     vulkan_shader_texture shader_texture;
     vulkan_shader_texture shader_texture_bindless;
 
-    vulkan_bindless_descriptors global_bindless_texture_descriptors;
-    vulkan_bindless_descriptors global_bindless_uniform_descriptors;
+    global_descriptor_sets global_descriptors;
 
     //temp
     vulkan_mesh_default mesh_default;

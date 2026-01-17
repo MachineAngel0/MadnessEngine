@@ -1,10 +1,12 @@
 #version 450
 
+#extension GL_EXT_nonuniform_qualifier : require
+
 layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 model;
     mat4 view;
     mat4 proj;
-} ubo;
+} ubo[];
 
 
 layout(location = 0) in vec3 inPosition;
@@ -15,7 +17,7 @@ layout(location = 0) out vec3 outColor;
 layout(location = 1) out vec2 outTex;
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+    gl_Position = ubo[nonuniformEXT(0)].proj * ubo[nonuniformEXT(0)].view * ubo[nonuniformEXT(0)].model * vec4(inPosition, 1.0);
     //gl_Position = vec4(inPosition, 1.0);
     outColor = inColor;
     outTex = inTex;

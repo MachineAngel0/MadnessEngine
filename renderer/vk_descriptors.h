@@ -19,7 +19,7 @@ void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_all
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors);
 
-
+/*
 void createDescriptorsTexture_reflect_test(vulkan_context* context,
                                            descriptor_pool_allocator* descriptor_pool_allocator,
                                            vulkan_shader_texture* shader_texture);
@@ -27,7 +27,7 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
 void update_descriptors_texture_reflect_test(vulkan_context* context,
                                              descriptor_pool_allocator* descriptor_pool_allocator,
                                              vulkan_shader_texture* shader_texture);
-
+*/
 
 void createDescriptorsMesh(renderer* renderer, descriptor_pool_allocator* descriptor_pool_allocator,
                            vulkan_bindless_descriptors* uniform_descriptors, const mesh* in_mesh);
@@ -36,10 +36,10 @@ void create_texture_bindless_descriptor_set(vulkan_context* context,
                                             descriptor_pool_allocator* descriptor_pool_allocator,
                                             vulkan_bindless_descriptors* texture_descriptors);
 
+
 void update_global_texture_bindless_descriptor_set(vulkan_context* context,
                                                    vulkan_bindless_descriptors* texture_descriptors,
-                                                   vulkan_shader_texture* test_texture, u32 array_index);
-
+                                                   Texture* texture, u32 array_index);
 
 void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
                                                    descriptor_pool_allocator* descriptor_pool_allocator,
