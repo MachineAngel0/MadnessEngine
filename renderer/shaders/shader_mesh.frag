@@ -3,9 +3,9 @@
 #extension GL_EXT_nonuniform_qualifier : require
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 
-//layout(location = 0) in vec3 in_normal;
-//layout(location = 1) in vec4 in_tangent;
-//layout(location = 2) in vec2 in_tex;
+layout(location = 0) in vec3 in_normal;
+layout(location = 1) in vec4 in_tangent;
+layout(location = 2) in vec2 in_tex;
 
 
 //look into subpasses/renderpasses for more/different out values
@@ -14,8 +14,8 @@ layout(location = 0) out vec4 outColor;
 void main() {
     //outColor = vec4(inColor, 1.0) * texture(texSampler, in_tex); // if we want colors overlayed
     //outColor = texture(texSampler, in_tex);
-    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
-//    outColor = texture(texture_samples[(nonuniformEXT(1))], inTex);
+//    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
+    outColor = texture(texture_samples[(nonuniformEXT(1))], in_tex);
 
 
 }

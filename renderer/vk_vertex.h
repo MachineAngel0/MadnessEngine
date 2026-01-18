@@ -66,4 +66,30 @@ typedef struct uniform_buffer_object
 } uniform_buffer_object;
 
 
+//TODO: PUSH CONSTANTS
+typedef struct pc_globals
+{
+    u32 projection_view_index;
+    u32 camera_something;
+    u32 vertex_offset;
+    u32 vertex_size;
+}pc_globals;
+
+typedef struct pc_vertex
+{
+    mat4 model;
+    u32 vertex_offset;
+    u32 vertex_size;
+}pc_vertex;
+
+
+typedef struct pc_material
+{
+    vec3 color;
+    float emissive;
+    float roughness;
+    float metallic;
+
+}pc_material;
+
 #endif //VK_VERTEX_H

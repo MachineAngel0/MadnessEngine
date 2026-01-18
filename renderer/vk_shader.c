@@ -302,7 +302,7 @@ void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, 
 }
 
 bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader,
-                                    VkDescriptorSetLayout* descriptor_layout)
+                                   VkDescriptorSetLayout* descriptor_layout)
 {
     // Pipeline layout creation
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -575,7 +575,8 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        context->global_descriptors.uniform_descriptors.descriptor_set_layout, context->global_descriptors.texture_descriptors.descriptor_set_layout
+        context->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        context->global_descriptors.texture_descriptors.descriptor_set_layout
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -633,43 +634,61 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
     //vertex info
-    VkVertexInputBindingDescription binding_description = {0};
-    binding_description.binding = 0;
-    binding_description.stride = 12; //sizeof(vertex_mesh);
     /*
-    * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
-    * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
-    */
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+ * VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
+ * VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
+ */
+    VkVertexInputBindingDescription binding_description[4];
+    binding_description[0].binding = 0;
+    binding_description[0].stride = sizeof(vec3);
+    binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_description[1].binding = 0;
+    binding_description[1].stride = sizeof(vec3);
+    binding_description[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_description[2].binding = 0;
+    binding_description[2].stride = sizeof(vec4);
+    binding_description[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_description[3].binding = 0;
+    binding_description[3].stride = sizeof(vec2);
+    binding_description[3].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+
+
 
     spirv_reflect_input_variable_info* attribute_info =
-        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_mesh.vert.spv");
     u32 offset_total = 0;
 
+    VkVertexInputAttributeDescription* attribute_descriptions = malloc(
+        sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
+    for (u32 attribute_index = 0; attribute_index < attribute_info->input_count; attribute_index++)
+    {
+        attribute_descriptions[attribute_index].binding = 0;
+        attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
+        attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
 
-    // VkVertexInputAttributeDescription* attribute_descriptions = malloc(
-    //     sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
-    // for (u32 attribute_index = 0; attribute_index < attribute_info->input_count; attribute_index++)
-    // {
-    //     attribute_descriptions[attribute_index].binding = 0;
-    //     attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
-    //     attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
-    //
-    //     offset_total += attribute_info->offsets[attribute_index];
-    //     attribute_descriptions[attribute_index].offset = offset_total;
-    // }
+        offset_total += attribute_info->offsets[attribute_index];
+        attribute_descriptions[attribute_index].offset = offset_total;
+    }
 
-    VkVertexInputAttributeDescription attribute_descriptions[1];
+
+    /* TODO: REMOVE
+    VkVertexInputAttributeDescription attribute_descriptions[2];
     attribute_descriptions[0].binding = 0;
     attribute_descriptions[0].location = 0;
     attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     attribute_descriptions[0].offset = 0;
 
+    attribute_descriptions[1].binding = 0;
+    attribute_descriptions[1].location = 0;
+    attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attribute_descriptions[1].offset = offsetof(vertex_3d, );
+*/
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
-    vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = ARRAY_SIZE(binding_description); // the number of binding_description
+    vertex_input_state_create_info.pVertexBindingDescriptions = binding_description;
     // vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
     vertex_input_state_create_info.vertexAttributeDescriptionCount = 1;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;

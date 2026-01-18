@@ -136,9 +136,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
 
     //MESH
-    mesh* test_mesh = load_mesh_from_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-
-    // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer_internal.frame_arena);
+    mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     vk_context->mesh_default.index_stride = test_mesh->index_type;
 
     // buffer the data

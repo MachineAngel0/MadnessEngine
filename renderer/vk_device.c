@@ -339,6 +339,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .descriptorBindingPartiallyBound = VK_TRUE,
         .descriptorBindingSampledImageUpdateAfterBind  = VK_TRUE,
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .bufferDeviceAddress = VK_TRUE,
+        .bufferDeviceAddressMultiDevice = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
