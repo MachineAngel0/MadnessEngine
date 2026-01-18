@@ -172,6 +172,9 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
    */
     VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
 
+    //create the debugger
+#ifndef NDEBUG
+
     DEBUG("VULKAN INSTANCE CREATED");
 
     u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -195,6 +198,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
         VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
     }
     DEBUG("VULKAN DEBUGGER CREATED");
+#endif
 
 
     return true;

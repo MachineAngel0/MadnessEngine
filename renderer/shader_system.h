@@ -26,9 +26,9 @@ void shader_system_init(renderer* renderer, shader_system** out_shader_system)
                                                        "../renderer/texture/error_texture.png");
 }
 
-Texture* shader_system_get_texture(shader_system* system, shader_handle* handle)
+Texture* shader_system_get_texture(shader_system* system, shader_handle handle)
 {
-    return &system->textures[handle->handle];
+    return &system->textures[handle.handle];
 }
 
 //pass out the texture index

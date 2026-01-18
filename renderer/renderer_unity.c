@@ -4,6 +4,8 @@
 // #include "text.h"
 // #include "UI.h"
 
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
 
 #include "vulkan/vulkan.h"
 #include "vulkan_types.h"

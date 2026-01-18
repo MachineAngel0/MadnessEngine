@@ -46,7 +46,7 @@ typedef struct sound_data
 
 
 
-//forwrad declare
+//forward declare
 bool init_windows_audio();
 
 
@@ -408,7 +408,6 @@ bool audio_play_sound_testing(Sound_Data* sound_data)
 
     return true;
 }
-
 
 
 

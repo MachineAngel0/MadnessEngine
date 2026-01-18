@@ -4,8 +4,7 @@
 
 
 
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
+
 
 #include "vk_vertex.h"
 

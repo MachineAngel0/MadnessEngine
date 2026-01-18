@@ -5,6 +5,7 @@
 #define VK_VERTEX_BUFFER_H
 
 #include "camera.h"
+#include "darray.h"
 #include "vulkan_types.h"
 #include "vk_buffer.h"
 #include "vk_descriptors.h"
@@ -306,7 +307,7 @@ void createVertexBufferTexture(vulkan_context* vulkan_context, vulkan_shader_tex
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
 
-void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default* default_mesh, mesh* test_mesh)
+void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default* default_mesh, mesh* in_mesh)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -314,20 +315,20 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
 
     VkDevice device = vulkan_context->device.logical_device;
 
-    u64 pos_size = darray_get_size(test_mesh->vertices.pos);
+    u64 pos_size = in_mesh->vertex_count; // OLD: darray_get_size(in_mesh->vertices.pos);
     default_mesh->vertex_info.vertices_size = pos_size;
     u32 vertexBufferSize = default_mesh->vertex_info.vertices_size * (sizeof(vec3)); //vec3
 
     // Setup indices
     // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
 
-    default_mesh->vertex_info.indices_size = test_mesh->indices_size;
-    uint32_t indexBufferSize;
-    if (test_mesh->index_type == VK_INDEX_TYPE_UINT32)
+    default_mesh->vertex_info.indices_size = in_mesh->indices_size;
+    uint32_t indexBufferSize = 0;
+    if (in_mesh->index_type == VK_INDEX_TYPE_UINT32)
     {
         indexBufferSize = default_mesh->vertex_info.indices_size * sizeof(uint32_t);
     }
-    else if (test_mesh->index_type == VK_INDEX_TYPE_UINT16)
+    else if (in_mesh->index_type == VK_INDEX_TYPE_UINT16)
     {
         indexBufferSize = default_mesh->vertex_info.indices_size * sizeof(uint16_t);
     }
@@ -367,10 +368,10 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     VK_CHECK(vkAllocateMemory(device, &memAlloc, 0, &staging_buffer.memory));
     VK_CHECK(vkBindBufferMemory(device, staging_buffer.handle, staging_buffer.memory, 0));
     // Map the buffer and copy vertices and indices into it, this way we can use a single buffer as the source for both vertex and index GPU buffers
-    uint8_t* data = {0};
+    uint8_t* data = NULL;
     VK_CHECK(vkMapMemory(device, staging_buffer.memory, 0, memAlloc.allocationSize, 0, (void**)&data));
-    memcpy(data, test_mesh->vertices.pos, vertexBufferSize);
-    memcpy(((char *) data) + vertexBufferSize, test_mesh->indices, indexBufferSize);
+    memcpy(data, in_mesh->vertices.pos, vertexBufferSize);
+    memcpy(((char *) data) + vertexBufferSize, in_mesh->indices, indexBufferSize);
 
 
     // Create a device local buffer to which the (host local) vertex data will be copied and which will be used for rendering
@@ -378,7 +379,7 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     vertexbufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     vertexbufferCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     vertexbufferCI.size = vertexBufferSize;
-    VK_CHECK(vkCreateBuffer(device, &vertexbufferCI, 0, &default_mesh->vertex_buffer.handle));
+    VK_CHECK(vkCreateBuffer(device, &vertexbufferCI, vulkan_context->allocator, &default_mesh->vertex_buffer.handle));
     vkGetBufferMemoryRequirements(device, default_mesh->vertex_buffer.handle, &memReqs);
     memAlloc.allocationSize = memReqs.size;
     memAlloc.memoryTypeIndex = find_memory_type(vulkan_context, memReqs.memoryTypeBits,

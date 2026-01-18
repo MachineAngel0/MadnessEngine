@@ -50,5 +50,6 @@
 #include "../core/dsa/str.h"
 #include "../core/dsa/str_array.h"
 #include "../core/dsa/str_builder.h"
+#include "../core/dsa/str_c.h"
 #include "../core/dsa/queue.h"
 #include "../core/dsa/unions.h"

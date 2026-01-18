@@ -16,7 +16,7 @@
 typedef struct String
 {
     char* chars;
-    u64 length;
+    u64 length; // we never retain the null terminated char, but it might be that there is one based on the function used
 } String;
 
 //NOTE: do not call this, just use STRING_CREATE(string) unless you specifally need to pass in the size for some reason
@@ -24,7 +24,7 @@ String* string_create(const char* word, const u64 length)
 {
     //creates a string without the null terminator
 
-    String* str = malloc(sizeof(String));
+    String* str = (String*)malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
     str->length = length - 1;
     //important to note that we use -1 to not include the null terminated string
@@ -47,18 +47,15 @@ String* string_create_retain_null_terminated(const char* word, const u64 length)
     String* str = (String*)malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
 
-    //important to note that we use -1 to not include the null terminated string
-    str->chars = (char *) malloc(sizeof(char) * length);
+    str->chars = (char *) malloc(sizeof(char) * (length+1));
     memset(str->chars, 0, sizeof(char) * length);
 
     str->length = length;
 
 
     memcpy(str->chars, word, sizeof(char) * length);
-    // for (uint32_t i = 0; i < str->length; i++)
-    // {
-    //     str->chars[i] = word[i];
-    // }
+    str->chars[str->length] = '\0';
+
 
     return str;
 };
@@ -108,8 +105,8 @@ bool string_free(String* string)
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed
 #define STRING_CREATE(string) string_create(string, sizeof(string))
-#define STRING_CREATE_NOT_NULL_TERMINATED(string) string_create(string, sizeof(string))
-#define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string)+1)
+//create a string from an already existing char* that excludes the null terminated string
+#define STRING_CREATE_FROM_BUFFER(string) string_create_retain_null_terminated(string, strlen(string))
 
 
 //UTILITY
@@ -483,4 +480,4 @@ void string_test()
 };
 
 
-#endif //STRINGS_H
+#endif

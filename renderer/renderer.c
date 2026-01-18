@@ -136,20 +136,19 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
 
     //MESH
-    // mesh* test_mesh = mesh_load_gltf("../z_assets/models/cube_gltf/Cube.gltf");
+    mesh* test_mesh = load_mesh_from_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
 
-    mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer_internal.frame_arena);
     vk_context->mesh_default.index_stride = test_mesh->index_type;
+
     // buffer the data
 
     //we only need the spriv reflection for the write data
     // createDescriptorsMesh(&renderer_internal, &vk_context->global_descriptor_pool,
     // &vk_context->global_bindless_uniform_descriptors, test_mesh);
-
-
     update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
                                                   shader_system_get_texture(
-                                                      renderer_internal.shader_system, &test_mesh->material_handles[0]),
+                                                      renderer_internal.shader_system, test_mesh->material_handles[0]),
                                                   1);
     update_global_uniform_buffer_bindless_descriptor_set(
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
@@ -409,8 +408,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      1, 0, 0, 0);
     */
 
-
-
     //DRAW MESH
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.mesh_default.mesh_shader_pipeline.handle);
@@ -439,7 +436,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32)vk_context.mesh_default.vertex_info.indices_size,
                      1, 0, 0, 0);
-
 
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
