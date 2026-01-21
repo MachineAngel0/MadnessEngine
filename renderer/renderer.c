@@ -134,16 +134,35 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     createVertexBufferTexture(vk_context, &vk_context->shader_texture);
 */
 
+    /*
+        //MESH
+        mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+        vk_context->mesh_default.index_stride = test_mesh->index_type;
 
-    //MESH
+        // buffer the data
+
+        //we only need the spriv reflection for the write data
+        // createDescriptorsMesh(&renderer_internal, &vk_context->global_descriptor_pool,
+        // &vk_context->global_bindless_uniform_descriptors, test_mesh);
+        update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
+                                                      shader_system_get_texture(
+                                                          renderer_internal.shader_system, test_mesh->material_handles[0]),
+                                                      1);
+        update_global_uniform_buffer_bindless_descriptor_set(
+            vk_context, &vk_context->global_descriptors.uniform_descriptors,
+            &vk_context->global_uniform_buffers, 1);
+        vulkan_mesh_shader_create(vk_context, &vk_context->mesh_default);
+        createVertexBufferMesh(vk_context, &vk_context->mesh_default, test_mesh);
+
+    */
+
+
+    //BUFFER ADDRESSING
     mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     vk_context->mesh_default.index_stride = test_mesh->index_type;
+    vk_context->mesh_default.vertex_info.vertices_size = test_mesh->vertex_count;
+    vk_context->mesh_default.vertex_info.indices_size = test_mesh->indices_count;
 
-    // buffer the data
-
-    //we only need the spriv reflection for the write data
-    // createDescriptorsMesh(&renderer_internal, &vk_context->global_descriptor_pool,
-    // &vk_context->global_bindless_uniform_descriptors, test_mesh);
     update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
                                                   shader_system_get_texture(
                                                       renderer_internal.shader_system, test_mesh->material_handles[0]),
@@ -151,8 +170,17 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     update_global_uniform_buffer_bindless_descriptor_set(
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
         &vk_context->global_uniform_buffers, 1);
-    vulkan_mesh_shader_create(vk_context, &vk_context->mesh_default);
-    createVertexBufferMesh(vk_context, &vk_context->mesh_default, test_mesh);
+
+    create_buffer_device_address_mesh(vk_context, &vk_context->vertex_buffers, test_mesh->vertices.pos,
+                                      test_mesh->vertex_count * sizeof(vec3));
+    // create_buffer_device_address_mesh(vk_context, &vk_context->normal_buffers, test_mesh->vertices.normal, test_mesh->normal_count);
+    // create_buffer_device_address_mesh(vk_context, &vk_context->tangent_buffers, test_mesh->vertices.tangent, test_mesh->tangent_count);
+    // create_buffer_device_address_mesh(vk_context, &vk_context->uv_buffers, test_mesh->vertices.uv, test_mesh->uv_count);
+    create_buffer_index_device_address_mesh(vk_context, &vk_context->index_buffer, test_mesh->indices,
+                                      test_mesh->indices_count * sizeof(u16));
+
+    vulkan_mesh_bda_shader_create(vk_context, &vk_context->mesh_default);
+
 
     //BINDLESS TEXTURE
     create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
@@ -164,7 +192,8 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
                                                   &vk_context->shader_texture_bindless.texture_test_object, 0);
-    update_global_uniform_buffer_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.uniform_descriptors,
+    update_global_uniform_buffer_bindless_descriptor_set(
+        vk_context, &vk_context->global_descriptors.uniform_descriptors,
         &vk_context->global_uniform_buffers, 0);
 
     INFO("VULKAN RENDERER INITIALIZED");
@@ -406,6 +435,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      1, 0, 0, 0);
     */
 
+    /*
     //DRAW MESH
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.mesh_default.mesh_shader_pipeline.handle);
@@ -434,6 +464,60 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32)vk_context.mesh_default.vertex_info.indices_size,
                      1, 0, 0, 0);
+    */
+
+    //BUFFER ADDRESSING//
+
+
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      vk_context.mesh_default.mesh_shader_pipeline.handle);
+
+    //uniform
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 0, 1,
+                            &vk_context.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
+                                current_frame], 0, 0);
+
+    VkDeviceAddress position_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+                                                                    vk_context.vertex_buffers.handle);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 1, 1,
+                            &vk_context.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+                                current_frame],
+                            0, 0);
+    // PUSH CONSTANT DEVICE ADDRESS
+    pc_mesh temp_pc_mesh = {.pos_index = position_buffer_address};
+    vkCmdPushConstants(command_buffer_current_frame->handle,
+                       vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(pc_mesh), &temp_pc_mesh);
+
+
+    // vkCmdPushConstants2()
+
+
+
+    /*// Create arrays of buffers and offsets
+    VkBuffer mesh_vertex_buffers[4] = {
+        vk_context.vertex_buffers.handle,
+        vk_context.normal_buffers.handle,
+        vk_context.tangent_buffers.handle,
+        vk_context.uv_buffers.handle,
+    };
+    VkDeviceSize mesh_offsets[4] = {0, 0, 0, 0};*/
+
+
+    VkDeviceSize mesh_offsets[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
+                           &vk_context.vertex_buffers.handle, mesh_offsets);
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                         vk_context.index_buffer.handle, 0,
+                         vk_context.mesh_default.index_stride);
+    vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                     (u32)vk_context.mesh_default.vertex_info.indices_size ,
+                     1, 0, 0, 0);
+
 
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,

@@ -10,10 +10,20 @@ typedef struct vertex_mesh
     vec3* pos;
     vec3* normal;
     vec4* tangent;
-    vec2* tex_coord;
+    vec2* uv;
 
     // vec4* color; //might not support
 } vertex_mesh;
+
+typedef struct pc_mesh
+{
+    u64 pos_index;
+    // u32 normal_index;
+    // u32 tangent_index;
+    // u32 uv_index;
+
+    // vec4* color; //might not support
+} pc_mesh;
 
 
 //TODO: so every model can have multiple meshes
@@ -22,7 +32,10 @@ typedef struct mesh
     vertex_mesh vertices;
     size_t* indices;
     u64 vertex_count;
-    u32 indices_size;
+    u64 normal_count;
+    u64 tangent_count;
+    u64 uv_count;
+    u32 indices_count;
     VkIndexType index_type;
     //wether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
     shader_handle* material_handles;
@@ -56,9 +69,6 @@ void mesh_free(mesh* m)
     // darray_free(m->textures);
     free(m);
 }
-
-
-
 
 
 mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
@@ -104,6 +114,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                                                               0);
     if (norm_accessor)
     {
+        out_mesh->normal_count = norm_accessor->count;
         cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
         float* normal_data = arena_alloc(&renderer->arena, norm_floats * sizeof(float));
         cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
@@ -113,8 +124,10 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     //  Find tangent accessor
     const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[0].primitives,
                                                                  cgltf_attribute_type_tangent, 0);
+
     if (tangent_accessor)
     {
+        out_mesh->tangent_count = tangent_accessor->count;
         cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
         float* tangent_data = arena_alloc(&renderer->arena, tangent_floats * sizeof(float));
         cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
@@ -126,15 +139,16 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                                                                   cgltf_attribute_type_texcoord, 0);
     if (texcoord_accessor)
     {
+        out_mesh->uv_count = texcoord_accessor->count;
         MASSERT_MSG(texcoord_accessor, "NO TEX COORD FOUND MESH LOADER");
         cgltf_size texcoord_floats = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
         float* texcoords_data = arena_alloc(&renderer->arena, texcoord_floats * sizeof(float));
         cgltf_accessor_unpack_floats(texcoord_accessor, texcoords_data, texcoord_floats);
-        out_mesh->vertices.tex_coord = (vec2*)texcoords_data;
+        out_mesh->vertices.uv = (vec2*)texcoords_data;
     }
 
     // Load indices
-    out_mesh->indices_size = data->meshes[0].primitives->indices->count;
+    out_mesh->indices_count = data->meshes[0].primitives->indices->count;
     out_mesh->indices = (size_t*)arena_alloc(&renderer->arena,
                                              data->meshes[0].primitives[0].indices->buffer_view->size);
     u8 index_stride = data->meshes[0].primitives[0].indices->stride;
@@ -152,7 +166,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         out_mesh->index_type = VK_INDEX_TYPE_UINT32;
     }
     cgltf_accessor_unpack_indices(data->meshes[0].primitives->indices, out_mesh->indices, index_stride,
-                                  out_mesh->indices_size);
+                                  out_mesh->indices_count);
 
 
     //load materials

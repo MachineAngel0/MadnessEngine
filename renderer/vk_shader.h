@@ -23,6 +23,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 
 bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader);
 
+bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data);
 
 
 

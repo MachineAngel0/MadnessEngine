@@ -322,7 +322,7 @@ void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default*
     // Setup indices
     // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
 
-    default_mesh->vertex_info.indices_size = in_mesh->indices_size;
+    default_mesh->vertex_info.indices_size = in_mesh->indices_count;
     uint32_t indexBufferSize = 0;
     if (in_mesh->index_type == VK_INDEX_TYPE_UINT32)
     {
@@ -936,5 +936,257 @@ void createDescriptors(vulkan_context* context, descriptor_pool_allocator* descr
         vkUpdateDescriptorSets(context->device.logical_device, 1, &writeDescriptorSet, 0, 0);
     }
 }
+
+
+
+void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* buffer_data, size_t data_size)
+{
+    // A note on memory management in Vulkan in general:
+    //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
+    //	what should be done a real-world application, where you should allocate large chunks of memory at once instead.
+
+    VkDevice device = vulkan_context->device.logical_device;
+
+    size_t vertexBufferSize = data_size;
+
+    // Setup indices
+    // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
+
+    //for Buffer devide addressing
+    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo memAlloc = {0};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = &allocFlagsInfo;
+
+    VkMemoryRequirements memReqs;
+
+    // Static data like vertex and index buffer should be stored on the device memory for optimal (and fastest) access by the GPU
+    //
+    // To achieve this we use so-called "staging buffers" :
+    // - Create a buffer that's visible to the host (and can be mapped)
+    // - Copy the data to this buffer
+    // - Create another buffer that's local on the device (VRAM) with the same size
+    // - Copy the data from the host to the device using a command buffer
+    // - Delete the host visible (staging) buffer
+    // - Use the device local buffers for rendering
+    //
+    // Note: On unified memory architectures where host (CPU) and GPU share the same memory, staging is not necessary
+    // To keep this sample easy to follow, there is no check for that in place
+
+    // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
+    vulkan_buffer staging_buffer;
+    VkBufferCreateInfo stagingBufferCI = {0};
+    stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    stagingBufferCI.size = vertexBufferSize;
+    // Buffer is used as the copy source
+    stagingBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    // Create a host-visible buffer to copy the vertex data to (staging buffer)
+    VK_CHECK(vkCreateBuffer(device, &stagingBufferCI, 0, &staging_buffer.handle));
+    vkGetBufferMemoryRequirements(device, staging_buffer.handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    // Request a host visible memory type that can be used to copy our data to
+    // Also request it to be coherent, so that writes are visible to the GPU right after unmapping the buffer
+    // VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT for buffer device addressing
+    memAlloc.memoryTypeIndex = find_memory_type(vulkan_context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, vulkan_context->allocator, &staging_buffer.memory));
+    VK_CHECK(vkBindBufferMemory(device, staging_buffer.handle, staging_buffer.memory, 0));
+    // Map the buffer and copy vertices
+    uint8_t* data = NULL;
+    VK_CHECK(vkMapMemory(device, staging_buffer.memory, 0, memAlloc.allocationSize, 0, (void**)&data));
+    memcpy(data, buffer_data, vertexBufferSize);
+
+
+    // Create a device local buffer to which the (host local) vertex data will be copied and which will be used for rendering
+    VkBufferCreateInfo vertexbufferCI = {0};
+    vertexbufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vertexbufferCI.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+    vertexbufferCI.size = vertexBufferSize;
+    VK_CHECK(vkCreateBuffer(device, &vertexbufferCI, vulkan_context->allocator, &out_buffer->handle));
+    vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    memAlloc.memoryTypeIndex = find_memory_type(vulkan_context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, vulkan_context->allocator, &out_buffer->memory));
+    VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
+
+
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+    VkCommandBuffer copyCmd;
+
+    VkCommandBufferAllocateInfo cmdBufAllocateInfo = {0};
+    cmdBufAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocateInfo.commandPool = vulkan_context->graphics_command_pool;
+    cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufAllocateInfo.commandBufferCount = 1;
+    VK_CHECK(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
+
+    VkCommandBufferBeginInfo cmdBufInfo = {0};
+    cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+    // Copy vertex and index buffers to the device
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = vertexBufferSize;
+    vkCmdCopyBuffer(copyCmd, staging_buffer.handle, out_buffer->handle, 1, &copyRegion);
+    VK_CHECK(vkEndCommandBuffer(copyCmd));
+
+    // Submit the command buffer to the queue to finish the copy
+    VkSubmitInfo submitInfo = {0};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &copyCmd;
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fenceCI = {0};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    VK_CHECK(vkCreateFence(device, &fenceCI, vulkan_context->allocator, &fence));
+    // Submit copies to the queue
+    VK_CHECK(vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submitInfo, fence));
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+    vkDestroyFence(device, fence, 0);
+    vkFreeCommandBuffers(device, vulkan_context->graphics_command_pool, 1, &copyCmd);
+
+    // The fence made sure copies are finished, so we can safely delete the staging buffer
+    vkDestroyBuffer(device, staging_buffer.handle, vulkan_context->allocator);
+    vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
+}
+
+void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* index_buffer_data, size_t data_size)
+{
+    // A note on memory management in Vulkan in general:
+    //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
+    //	what should be done a real-world application, where you should allocate large chunks of memory at once instead.
+
+    VkDevice device = vulkan_context->device.logical_device;
+
+    size_t index_buffer_size = data_size;
+
+    // Setup indices
+    // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
+
+    //for Buffer devide addressing
+    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo memAlloc = {0};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = &allocFlagsInfo;
+
+    VkMemoryRequirements memReqs;
+
+    // Static data like vertex and index buffer should be stored on the device memory for optimal (and fastest) access by the GPU
+    //
+    // To achieve this we use so-called "staging buffers" :
+    // - Create a buffer that's visible to the host (and can be mapped)
+    // - Copy the data to this buffer
+    // - Create another buffer that's local on the device (VRAM) with the same size
+    // - Copy the data from the host to the device using a command buffer
+    // - Delete the host visible (staging) buffer
+    // - Use the device local buffers for rendering
+    //
+    // Note: On unified memory architectures where host (CPU) and GPU share the same memory, staging is not necessary
+    // To keep this sample easy to follow, there is no check for that in place
+
+    // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
+    vulkan_buffer staging_buffer;
+    VkBufferCreateInfo stagingBufferCI = {0};
+    stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    stagingBufferCI.size = index_buffer_size;
+    // Buffer is used as the copy source
+    stagingBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    // Create a host-visible buffer to copy the vertex data to (staging buffer)
+    VK_CHECK(vkCreateBuffer(device, &stagingBufferCI, 0, &staging_buffer.handle));
+    vkGetBufferMemoryRequirements(device, staging_buffer.handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    // Request a host visible memory type that can be used to copy our data to
+    // Also request it to be coherent, so that writes are visible to the GPU right after unmapping the buffer
+    // VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT for buffer device addressing
+    memAlloc.memoryTypeIndex = find_memory_type(vulkan_context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, vulkan_context->allocator, &staging_buffer.memory));
+    VK_CHECK(vkBindBufferMemory(device, staging_buffer.handle, staging_buffer.memory, 0));
+    // Map the buffer and copy vertices
+    uint8_t* data = NULL;
+    VK_CHECK(vkMapMemory(device, staging_buffer.memory, 0, memAlloc.allocationSize, 0, (void**)&data));
+    memcpy(data, index_buffer_data, index_buffer_size);
+
+
+    // Create a device local buffer to which the (host local) vertex data will be copied and which will be used for rendering
+    VkBufferCreateInfo index_buffer_CI = {0};
+    index_buffer_CI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    index_buffer_CI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+    index_buffer_CI.size = index_buffer_size;
+    VK_CHECK(vkCreateBuffer(device, &index_buffer_CI, vulkan_context->allocator, &out_buffer->handle));
+    vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    memAlloc.memoryTypeIndex = find_memory_type(vulkan_context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, vulkan_context->allocator, &out_buffer->memory));
+    VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
+
+
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+    VkCommandBuffer copyCmd;
+
+    VkCommandBufferAllocateInfo cmdBufAllocateInfo = {0};
+    cmdBufAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocateInfo.commandPool = vulkan_context->graphics_command_pool;
+    cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufAllocateInfo.commandBufferCount = 1;
+    VK_CHECK(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
+
+    VkCommandBufferBeginInfo cmdBufInfo = {0};
+    cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+    // Copy vertex and index buffers to the device
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = index_buffer_size;
+    vkCmdCopyBuffer(copyCmd, staging_buffer.handle, out_buffer->handle, 1, &copyRegion);
+    VK_CHECK(vkEndCommandBuffer(copyCmd));
+
+    // Submit the command buffer to the queue to finish the copy
+    VkSubmitInfo submitInfo = {0};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &copyCmd;
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fenceCI = {0};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    VK_CHECK(vkCreateFence(device, &fenceCI, vulkan_context->allocator, &fence));
+    // Submit copies to the queue
+    VK_CHECK(vkQueueSubmit(vulkan_context->device.graphics_queue, 1, &submitInfo, fence));
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+    vkDestroyFence(device, fence, 0);
+    vkFreeCommandBuffers(device, vulkan_context->graphics_command_pool, 1, &copyCmd);
+
+    // The fence made sure copies are finished, so we can safely delete the staging buffer
+    vkDestroyBuffer(device, staging_buffer.handle, vulkan_context->allocator);
+    vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
+}
+
+
+// Get device address of a buffer
+VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer)
+{
+    VkBufferDeviceAddressInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = buffer
+    };
+    return vkGetBufferDeviceAddress(device, &info);
+}
+
 
 #endif //VK_VERTEX_BUFFER_H

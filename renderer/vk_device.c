@@ -300,23 +300,50 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         queue_create_infos[i].pNext = 0;
     }
 
+
+    //prints out all extensions available
+    /*
+    uint32_t extCount = 0;
+    vkEnumerateDeviceExtensionProperties(vulkan_context->device.physical_device, NULL, &extCount, NULL);
+
+    VkExtensionProperties* extensions = malloc(extCount * sizeof(VkExtensionProperties));
+    vkEnumerateDeviceExtensionProperties(vulkan_context->device.physical_device, NULL, &extCount, extensions);
+
+    printf("\n=== Supported Device Extensions ===\n");
+    for (uint32_t i = 0; i < extCount; i++) {
+        printf("  %s (v%u)\n", extensions[i].extensionName, extensions[i].specVersion);
+    }
+    printf("Total: %u extensions\n\n", extCount);
+
+    free(extensions);*/
+
     //device extensions
     const char* extension_names[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         // VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME // not supported
         VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, //promoted in 1.2
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+        // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, // doesnt work
+        //for buffer device addressing
+        // VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME, // doesnt work on my hardware
+        // VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_SHADER_RELAXED_EXTENDED_INSTRUCTION_EXTENSION_NAME,
     };
 
     // Enable only specific Vulkan 1.3 features
     //will be plugged into the device create infos pNext pointer
 
+    VkPhysicalDeviceShaderRelaxedExtendedInstructionFeaturesKHR relaxed_shader_extension = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_RELAXED_EXTENDED_INSTRUCTION_FEATURES_KHR,
+        .shaderRelaxedExtendedInstruction = VK_TRUE,
+        .pNext = NULL,
+    };
 
     VkPhysicalDeviceExtendedDynamicStateFeaturesEXT enable_extended_dynamic_state_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
         .extendedDynamicState = VK_TRUE,
-        .pNext = NULL,
+        .pNext = &relaxed_shader_extension,
     };
 
 
@@ -371,13 +398,14 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .pNext = &enable_device_features2,
         .queueCreateInfoCount = index_count,
         .pQueueCreateInfos = queue_create_infos,
-        .pEnabledFeatures = 0, // do not use is pNext is used
-        .enabledExtensionCount = 3,
+        .pEnabledFeatures = NULL, // do not use is pNext is used
+        .enabledExtensionCount = ARRAY_SIZE(extension_names),
         .ppEnabledExtensionNames = extension_names,
         // Deprecated
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = 0,
     };
+
 
 
     // Create the device.

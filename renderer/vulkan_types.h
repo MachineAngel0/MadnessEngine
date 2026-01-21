@@ -369,6 +369,11 @@ typedef struct vulkan_context
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
 
 
+    //buffer addressing
+    vulkan_buffer vertex_buffers;
+    vulkan_buffer normal_buffers;
+    vulkan_buffer tangent_buffers;
+    vulkan_buffer uv_buffers;
 
 
 } vulkan_context;
