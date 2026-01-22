@@ -10,11 +10,6 @@ layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 proj;
 } ubo[];
 
-//possible to also use std430 instead of scalar
-layout (buffer_reference, scalar) readonly buffer MatrixReference {
-    mat4 matrix;
-};
-
 
 layout (buffer_reference, scalar) readonly buffer PositionBuffer {
     vec3 position[];
@@ -28,7 +23,7 @@ layout (buffer_reference, scalar) readonly buffer TexBuffer {
 layout (push_constant, scalar) uniform push_constants
 {
     PositionBuffer position_buffer;
-//    TexBuffer tex_buffer;
+    TexBuffer tex_buffer;
 //    int index;
 } pc;
 
@@ -53,7 +48,6 @@ void main() {
 
     out_normal = vec3(1,1,1);
     out_tangent = vec4(1,1,1,1);
-    out_tex = vec2(1,1);
-//    out_tex = pc.position_buffer.tex_buffer[idx];
-
+//    out_tex = vec2(0.5,0.5);
+    out_tex = pc.tex_buffer.tex_coord[idx];
 }

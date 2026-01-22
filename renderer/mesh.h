@@ -18,9 +18,9 @@ typedef struct vertex_mesh
 typedef struct pc_mesh
 {
     u64 pos_index;
-    // u32 normal_index;
-    // u32 tangent_index;
-    // u32 uv_index;
+    // u64 normal_index;
+    // u64 tangent_index;
+    u64 uv_index;
 
     // vec4* color; //might not support
 } pc_mesh;
@@ -70,7 +70,7 @@ void mesh_free(mesh* m)
     free(m);
 }
 
-
+//TODO: load all meshes, we are only loading the first one
 mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
     cgltf_options options = {0};
@@ -88,7 +88,7 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
     mesh* out_mesh = mesh_init(&renderer->arena);
 
-
+    // for (u32 i = 0; i < data->meshes_count; i++)
     /* Find position accessor */
     const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[0].primitives, cgltf_attribute_type_position,
                                                              0);
@@ -140,11 +140,16 @@ mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     if (texcoord_accessor)
     {
         out_mesh->uv_count = texcoord_accessor->count;
-        MASSERT_MSG(texcoord_accessor, "NO TEX COORD FOUND MESH LOADER");
-        cgltf_size texcoord_floats = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-        float* texcoords_data = arena_alloc(&renderer->arena, texcoord_floats * sizeof(float));
-        cgltf_accessor_unpack_floats(texcoord_accessor, texcoords_data, texcoord_floats);
-        out_mesh->vertices.uv = (vec2*)texcoords_data;
+        cgltf_size texcoord_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+        float* texcoords_data = arena_alloc(&renderer->arena, texcoord_floats_size * sizeof(float));
+        cgltf_accessor_unpack_floats(texcoord_accessor, texcoords_data, texcoord_floats_size);
+        out_mesh->vertices.uv = arena_alloc(&renderer->arena, texcoord_floats_size * sizeof(float));
+        // for (size_t i = 0; i < texcoord_accessor->count; i++)
+        // {
+        //     out_mesh->vertices.uv[i].x = texcoords_data[i * 2 + 0];
+        //     out_mesh->vertices.uv[i].y = texcoords_data[i * 2 + 1];
+        // }
+        memcpy(out_mesh->vertices.uv, texcoords_data, texcoord_floats_size * sizeof(float));
     }
 
     // Load indices

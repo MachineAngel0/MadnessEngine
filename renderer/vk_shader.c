@@ -1234,9 +1234,10 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
     VkPipelineRasterizationStateCreateInfo rasterizer = {0};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
+    // rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.cullMode = VK_CULL_MODE_NONE; //TODO: temp
-    // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    // rasterizer.cullMode = VK_CULL_MODE_NONE; // temp for debugging
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
     // rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
