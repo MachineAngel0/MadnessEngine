@@ -307,6 +307,9 @@ void createVertexBufferTexture(vulkan_context* vulkan_context, vulkan_shader_tex
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
 
+
+/*
+
 void createVertexBufferMesh(vulkan_context* vulkan_context, vulkan_mesh_default* default_mesh, mesh* in_mesh)
 {
     // A note on memory management in Vulkan in general:
@@ -574,7 +577,6 @@ void createVertexBufferMesh_no_index_buffer(vulkan_context* vulkan_context, vulk
 }
 
 
-/*
 void create_vertex_buffer(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                          vertex_buffer* vertex_buffer, vertex_info* vertex_info, u32 object_count)
 {
@@ -1124,7 +1126,7 @@ void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vul
     // Create a device local buffer to which the (host local) vertex data will be copied and which will be used for rendering
     VkBufferCreateInfo index_buffer_CI = {0};
     index_buffer_CI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    index_buffer_CI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+    index_buffer_CI.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     index_buffer_CI.size = index_buffer_size;
     VK_CHECK(vkCreateBuffer(device, &index_buffer_CI, vulkan_context->allocator, &out_buffer->handle));
     vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);

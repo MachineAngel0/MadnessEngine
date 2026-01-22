@@ -2,6 +2,33 @@
 #include "logger.h"
 
 
+buffer_system* buffer_system_init(renderer* renderer)
+{
+    buffer_system* out_buffer_system = arena_alloc(&renderer->arena, sizeof(buffer_system));
+    out_buffer_system->vertex_buffer_count = 1;
+    out_buffer_system->index_buffer_count = 1;
+    out_buffer_system->storage_buffer_count = 1;
+    out_buffer_system->uniform_buffer_count = 1;
+
+    //TODO: pass in the buffer_system
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, VERTEX, out_buffer_system->vertex_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, STORAGE, out_buffer_system->storage_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, INDEX, out_buffer_system->index_buffers, MB(32));
+
+    //NOTE: uniform buffer, can simply be the size of the uniform buffer struct with a count of how many of them we want
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, UNIFORM, out_buffer_system->uniform_buffers, MB(32));
+
+    //TODO:
+    //STAGING BUFFERS
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, VERTEX, out_buffer_system->vertex_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, STORAGE, out_buffer_system->storage_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, INDEX, out_buffer_system->index_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, &renderer->context, UNIFORM, out_buffer_system->uniform_buffers, MB(32));
+
+
+    return out_buffer_system;
+}
+
 uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -77,7 +104,7 @@ bool buffer_destroy_free(vulkan_context* vulkan_context, vulkan_buffer* vk_buffe
 }
 
 
-void buffer_copy(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+void buffer_copy(vulkan_context* vulkan_context,
                  VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     // Create a temporary command buffer for the copy operation
@@ -169,4 +196,185 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
     // Clean up the temporary command buffer
     vkFreeCommandBuffers(vulkan_context->device.logical_device, vulkan_context->graphics_command_pool, 1,
                          &temp_command_buffer);
+}
+
+void vulkan_buffer_vertex_bda_create(renderer* renderer, const buffer_type buffer_type, vulkan_buffer* out_buffer, const u64 data_size)
+{
+    //do a large allocation upfront
+    out_buffer = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
+    out_buffer->capacity = data_size;
+    out_buffer->current_offset = 0;
+
+    VkDevice device = renderer->context.device.logical_device;
+
+
+    //for Buffer device addressing
+    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo memAlloc = {0};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = &allocFlagsInfo;
+
+    VkMemoryRequirements memReqs;
+
+
+    VkBufferCreateInfo out_buffer_create_info = {0};
+    out_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    out_buffer_create_info.size = out_buffer->capacity;
+    out_buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // look into later
+
+    // intended to be used as the destination of a copy from a staging buffer
+    switch (buffer_type)
+    {
+    case UNIFORM:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    case STORAGE:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    case VERTEX:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    case INDEX:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    case INDIRECT:
+        //NOTE: this might not need bda
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    }
+
+    // Create a host-visible buffer to copy the vertex data to (staging buffer)
+    VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &out_buffer->handle));
+    vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &out_buffer->memory));
+    VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
+}
+
+
+
+
+void vulkan_buffer_data_insert_from_offset(renderer* renderer, vulkan_buffer* buffer, vulkan_staging_buffer* staging_buffer, void* data,
+                                           u64 data_size)
+{
+
+    VkDevice device = renderer->context.device.logical_device;
+
+    //copy data into the staging buffer
+    memcpy(staging_buffer->mapped_data, data, data_size);
+
+    //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
+
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+    VkCommandBuffer copyCmd;
+
+    VkCommandBufferAllocateInfo cmdBufAllocateInfo = {0};
+    cmdBufAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufAllocateInfo.commandPool = renderer->context.graphics_command_pool;
+    cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufAllocateInfo.commandBufferCount = 1;
+    VK_CHECK(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
+
+    VkCommandBufferBeginInfo cmdBufInfo = {0};
+    cmdBufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VK_CHECK(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+    // Copy vertex and index buffers to the device
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = data_size;
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    vkCmdCopyBuffer(copyCmd, staging_buffer->handle, buffer->handle, 1, &copyRegion);
+    VK_CHECK(vkEndCommandBuffer(copyCmd));
+
+    // Submit the command buffer to the queue to finish the copy
+    VkSubmitInfo submitInfo = {0};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &copyCmd;
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fenceCI = {0};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    VK_CHECK(vkCreateFence(device, &fenceCI, renderer->context.allocator, &fence));
+    // Submit copies to the queue
+    VK_CHECK(vkQueueSubmit(renderer->context.device.graphics_queue, 1, &submitInfo, fence));
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+    vkDestroyFence(device, fence, 0);
+    vkFreeCommandBuffers(device, renderer->context.graphics_command_pool, 1, &copyCmd);
+
+    // The fence made sure copies are finished, so we can safely delete the staging buffer
+    vkDestroyBuffer(device, staging_buffer->handle, renderer->context.allocator);
+    vkFreeMemory(device, staging_buffer->memory, renderer->context.allocator);
+}
+
+void vulkan_staging_buffer_create(renderer* renderer, vulkan_staging_buffer* out_buffer, const u64 data_size)
+{
+
+    out_buffer = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
+
+
+    VkDevice device = renderer->context.device.logical_device;
+
+
+    // Setup indices
+    // We do this for demonstration purposes, a triangle doesn't require indices to be rendered (because of the 1:1 mapping), but more complex shapes usually make use of indices
+
+    //for Buffer devide addressing
+    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo memAlloc = {0};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = &allocFlagsInfo;
+
+    VkMemoryRequirements memReqs;
+
+    // Static data like vertex and index buffer should be stored on the device memory for optimal (and fastest) access by the GPU
+    //
+    // To achieve this we use so-called "staging buffers" :
+    // - Create a buffer that's visible to the host (and can be mapped)
+    // - Copy the data to this buffer
+    // - Create another buffer that's local on the device (VRAM) with the same size
+    // - Copy the data from the host to the device using a command buffer
+    // - Delete the host visible (staging) buffer
+    // - Use the device local buffers for rendering
+    //
+    // Note: On unified memory architectures where host (CPU) and GPU share the same memory, staging is not necessary
+    // To keep this sample easy to follow, there is no check for that in place
+
+    // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
+    VkBufferCreateInfo staging_buffer_create_info = {0};
+    staging_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    staging_buffer_create_info.size = data_size;
+    // Buffer is used as the copy source
+    staging_buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    // Create a host-visible buffer to copy the vertex data to (staging buffer)
+    VK_CHECK(vkCreateBuffer(device, &staging_buffer_create_info, 0, &out_buffer->handle));
+    vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    // Request a host visible memory type that can be used to copy our data to
+    // Also request it to be coherent, so that writes are visible to the GPU right after unmapping the buffer
+    // VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT for buffer device addressing
+    memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &out_buffer->memory));
+    VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
+
+    // Map the buffer and copy vertices
+    VK_CHECK(vkMapMemory(device, out_buffer->memory, 0, memAlloc.allocationSize, 0, (void**)&out_buffer->mapped_data));
 }

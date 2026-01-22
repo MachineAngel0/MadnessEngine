@@ -1,11 +1,6 @@
 ﻿#ifndef VULKAN_TYPES_H
 #define VULKAN_TYPES_H
 
-
-
-
-
-
 #include "vk_vertex.h"
 
 
@@ -17,7 +12,7 @@
 }
 
 
-
+/// HANDLES ///
 typedef struct shader_handle
 {
     u32 handle;
@@ -29,6 +24,7 @@ typedef struct buffer_handle
 } buffer_handle;
 
 
+
 typedef struct vulkan_image
 {
     VkImage handle;
@@ -38,6 +34,52 @@ typedef struct vulkan_image
     u32 width;
     u32 height;
 } vulkan_image;
+
+
+/// MESH ///
+typedef struct vertex_mesh
+{
+    vec3* pos;
+    vec3* normal;
+    vec4* tangent;
+    vec2* uv;
+
+    // vec4* color; //might not support
+} vertex_mesh;
+
+typedef struct pc_mesh
+{
+    u64 pos_index;
+    // u64 normal_index;
+    // u64 tangent_index;
+    u64 uv_index;
+
+    // vec4* color; //might not support
+} pc_mesh;
+
+
+//TODO: every model can have multiple meshes
+typedef struct mesh
+{
+    vertex_mesh vertices;
+    size_t* indices;
+    u64 vertex_count;
+    u64 normal_count;
+    u64 tangent_count;
+    u64 uv_count;
+    u32 indices_count;
+    VkIndexType index_type;
+    //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
+} mesh;
+
+
+typedef struct static_mesh
+{
+    mesh* mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+    shader_handle* material_handles;
+} static_mesh;
 
 
 
@@ -170,7 +212,22 @@ typedef struct vulkan_buffer
     // VkBufferUsageFlagBits usage;
     VkDeviceMemory memory;
     VkBuffer handle;
+
+    //VkDeviceSize are typedefs for u64's
+    u64 current_offset;
+    u64 capacity;
 } vulkan_buffer;
+
+typedef struct vulkan_staging_buffer
+{
+    // u64 total_size;
+    // VkBufferUsageFlagBits usage;
+    VkDeviceMemory memory;
+    VkBuffer handle;
+    //VkDeviceSize are typedefs for u64's
+    uint8_t* mapped_data;
+    u64 capacity;
+} vulkan_staging_buffer;
 
 typedef struct vulkan_uniform_buffer
 {
@@ -247,13 +304,11 @@ typedef struct vertex_info
 
 typedef struct vulkan_mesh_default
 {
-    vulkan_shader_pipeline mesh_shader_pipeline;
+    static_mesh* static_mesh;
 
+    vulkan_shader_pipeline mesh_shader_pipeline;
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
-    vertex_info vertex_info;
-    VkIndexType index_stride;
-
 
 
 } vulkan_mesh_default;
@@ -340,7 +395,7 @@ typedef struct vulkan_context
     vulkan_uniform_buffer global_uniform_buffers;
 
 
-    //TODO: vertex buffers and vertex data, here for now
+    //TODO: Clean this up
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
     vertex_info default_vertex_info;
@@ -370,10 +425,10 @@ typedef struct vulkan_context
 
 
     //buffer addressing
-    vulkan_buffer vertex_buffers;
-    vulkan_buffer normal_buffers;
-    vulkan_buffer tangent_buffers;
-    vulkan_buffer uv_buffers;
+    vulkan_buffer global_vertex_buffers;
+    vulkan_buffer global_normal_buffers;
+    vulkan_buffer global_tangent_buffers;
+    vulkan_buffer global_uv_buffers;
 
 
 } vulkan_context;
@@ -428,6 +483,8 @@ typedef struct renderer
     Arena frame_arena;
 
     shader_system* shader_system;
+    //TODO:
+    // buffer_system* buffer_system;
 
     //mesh system
     //animation system

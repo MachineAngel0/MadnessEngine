@@ -631,6 +631,8 @@ bool select_physical_device(vulkan_context* vulkan_context)
         return FALSE;
     }
 
+
+
     INFO("Physical device selected.");
     return TRUE;
 }
@@ -874,6 +876,8 @@ bool vulkan_device_detect_depth_format(vulkan_device* device)
     {
         VkFormatProperties format_properties;
         vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &format_properties);
+
+
 
         if ((format_properties.linearTilingFeatures & flags) == flags)
         {

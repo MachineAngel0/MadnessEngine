@@ -103,9 +103,16 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     create_bindless_uniform_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
                                                   &vk_context->global_descriptors.uniform_descriptors);
 
+    //Allocate buffers up front
     //GLOBAL UNIFORM BUFFER
     create_global_uniform_buffer(vk_context);
 
+    vulkan_buffer_vertex_bda_create(&renderer_internal, vk_context,
+                                          VERTEX, &vk_context->global_vertex_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(&renderer_internal, vk_context,
+                                      STORAGE, &vk_context->global_uv_buffers, MB(32));
+    vulkan_buffer_vertex_bda_create(&renderer_internal, vk_context,
+                                      INDEX, &vk_context->index_buffer, MB(32));
 
     //Shader System
     shader_system_init(&renderer_internal, &renderer_internal.shader_system);
@@ -159,11 +166,9 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     //BUFFER ADDRESSING
     // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    static_mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/cube_gltf/Cube.gltf");
-    vk_context->mesh_default.index_stride = test_mesh->index_type;
-    vk_context->mesh_default.vertex_info.vertices_size = test_mesh->vertex_count;
-    vk_context->mesh_default.vertex_info.indices_size = test_mesh->indices_count;
+    vk_context->mesh_default.static_mesh = test_mesh;
 
     update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
                                                   shader_system_get_texture(
@@ -173,24 +178,27 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
         &vk_context->global_uniform_buffers, 1);
 
-    create_buffer_device_address_mesh(vk_context, &vk_context->vertex_buffers, test_mesh->vertices.pos,
-                                      test_mesh->vertex_count * sizeof(vec3));
-    // create_buffer_device_address_mesh(vk_context, &vk_context->normal_buffers, test_mesh->vertices.normal, test_mesh->normal_count);
-    // create_buffer_device_address_mesh(vk_context, &vk_context->tangent_buffers, test_mesh->vertices.tangent, test_mesh->tangent_count);
-    create_buffer_device_address_mesh(vk_context, &vk_context->uv_buffers, test_mesh->vertices.uv,
-                                      test_mesh->uv_count * sizeof(vec2));
-    switch (test_mesh->index_type)
+    for (u32 i = 0; i < test_mesh->mesh_size; i++)
     {
-    case VK_INDEX_TYPE_UINT16:
-        create_buffer_index_device_address_mesh(vk_context, &vk_context->index_buffer, test_mesh->indices,
-                                                test_mesh->indices_count * sizeof(u16));
-        break;
-    case VK_INDEX_TYPE_UINT32:
-        create_buffer_index_device_address_mesh(vk_context, &vk_context->index_buffer, test_mesh->indices,
-                                                test_mesh->indices_count * sizeof(u32));
-        break;
-    default: MASSERT("MESH INDEX TYPE NOT FOUND");
-        break;
+        vulkan_buffer_data_insert_from_offset(renderer_internal, &vk_context->global_vertex_buffers, test_mesh->mesh[i].vertices.pos,
+                                          test_mesh->mesh[i].vertex_count * sizeof(vec3));
+        // create_buffer_device_address_mesh(vk_context, &vk_context->normal_buffers, test_mesh->vertices.normal, test_mesh->normal_count);
+        // create_buffer_device_address_mesh(vk_context, &vk_context->tangent_buffers, test_mesh->vertices.tangent, test_mesh->tangent_count);
+        vulkan_buffer_data_insert_from_offset(renderer_internal, &vk_context->global_uv_buffers, test_mesh->mesh[i].vertices.uv,
+                                          test_mesh->mesh[i].uv_count * sizeof(vec2));
+        switch (test_mesh->mesh[i].index_type)
+        {
+        case VK_INDEX_TYPE_UINT16:
+            vulkan_buffer_data_insert_from_offset(renderer_internal, &vk_context->index_buffer, test_mesh->mesh[i].indices,
+                                                    test_mesh->mesh[i].indices_count * sizeof(u16));
+            break;
+        case VK_INDEX_TYPE_UINT32:
+            vulkan_buffer_data_insert_from_offset(renderer_internal, &vk_context->index_buffer, test_mesh->mesh[i].indices,
+                                                    test_mesh->mesh[i].indices_count * sizeof(u32));
+            break;
+        default: MASSERT("MESH INDEX TYPE NOT FOUND");
+            break;
+        }
     }
 
     vulkan_mesh_bda_shader_create(vk_context, &vk_context->mesh_default);
@@ -493,9 +501,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                                 current_frame], 0, 0);
 
     VkDeviceAddress position_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                        vk_context.vertex_buffers.handle);
+                                                                        vk_context.global_vertex_buffers.handle);
     VkDeviceAddress uv_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                  vk_context.uv_buffers.handle);
+                                                                  vk_context.global_uv_buffers.handle);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -503,35 +511,27 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                             &vk_context.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
                                 current_frame],
                             0, 0);
-    // PUSH CONSTANT DEVICE ADDRESS
-    pc_mesh temp_pc_mesh = {.pos_index = position_buffer_address, .uv_index = uv_buffer_address};
-    vkCmdPushConstants(command_buffer_current_frame->handle,
-                       vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(pc_mesh), &temp_pc_mesh);
+
+    for (u64 i = 0; vk_context.mesh_default.static_mesh->mesh_size; i++)
+    {
+        // PUSH CONSTANT DEVICE ADDRESS
+        pc_mesh temp_pc_mesh = {.pos_index = position_buffer_address, .uv_index = uv_buffer_address};
+        vkCmdPushConstants(command_buffer_current_frame->handle,
+                           vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                           sizeof(pc_mesh), &temp_pc_mesh);
+        // vkCmdPushConstants2() // TODO: look into
 
 
-    // vkCmdPushConstants2()
-
-
-    // Create arrays of buffers and offsets
-    VkBuffer mesh_vertex_buffers[] = {
-        vk_context.vertex_buffers.handle,
-        // vk_context.normal_buffers.handle,
-        // vk_context.tangent_buffers.handle,
-        vk_context.uv_buffers.handle,
-    };
-    VkDeviceSize mesh_offsets[] = {0, 0, /*0, 0*/};
-
-    //dont actually need this
-    /*vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, ARRAY_SIZE(mesh_vertex_buffers),
-                           mesh_vertex_buffers, mesh_offsets);*/
-    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
-                         vk_context.index_buffer.handle, 0,
-                         vk_context.mesh_default.index_stride);
-    vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                     (u32)vk_context.mesh_default.vertex_info.indices_size,
-                     1, 0, 0, 0);
-
+        //dont need to bind vertex buffer since we are passing its address instead
+        vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
+                             vk_context.index_buffer.handle, 0,
+                              vk_context.mesh_default.static_mesh->mesh[i].index_type);
+        // // allows better validation and allows partial binding, such as rendering a certain amount of meshes
+        // vkCmdBindIndexBuffer2();
+        vkCmdDrawIndexed(command_buffer_current_frame->handle,
+                         (u32)vk_context.mesh_default.static_mesh->mesh[i].indices_count,
+                         1, 0, 0, 0);
+    }
 
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
