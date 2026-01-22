@@ -5,8 +5,6 @@
 #include "shader_system.h"
 
 
-
-
 mesh* mesh_init(Arena* arena)
 {
     mesh* m = arena_alloc(arena, sizeof(mesh));
@@ -59,23 +57,27 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, data->meshes_count);
 
 
-    // for (size_t i = 0; i < data->meshes_count; i++)
-    for (size_t i = 0; i < 2; i++) // TODO: TEMP for now, delete later
+    for (size_t i = 0; i < data->meshes_count; i++)
     {
         /* Find position accessor */
         const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[i].primitives,
                                                                  cgltf_attribute_type_position,
-                                                                 i);
+                                                                 0);
         if (pos_accessor)
         {
+            //get size information
             out_static_mesh->mesh[i].vertex_count = pos_accessor->count;
             cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
-            float* pos_data = arena_alloc(&renderer->arena, num_floats * sizeof(float));
-            out_static_mesh->mesh[i].vertices.pos = arena_alloc(&renderer->arena, num_floats * sizeof(float));
+            cgltf_size float_bytes = num_floats * sizeof(float);
+            out_static_mesh->mesh[i].vertex_bytes = float_bytes;
+
+            //alloc and copy data
+            float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
+            out_static_mesh->mesh[i].vertices.pos = arena_alloc(&renderer->arena, float_bytes);
             if (pos_data)
             {
-                cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats * sizeof(float));
-                memcpy(out_static_mesh->mesh[i].vertices.pos, pos_data, num_floats * sizeof(vec3));
+                cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+                memcpy(out_static_mesh->mesh[i].vertices.pos, pos_data, float_bytes);
             }
         }
 
@@ -83,7 +85,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         // Find normal accessor
         const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[i].primitives,
                                                                   cgltf_attribute_type_normal,
-                                                                  i);
+                                                                  0);
         if (norm_accessor)
         {
             out_static_mesh->mesh[i].normal_count = norm_accessor->count;
@@ -95,7 +97,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
         //  Find tangent accessor
         const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                     cgltf_attribute_type_tangent, i);
+                                                                     cgltf_attribute_type_tangent, 0);
 
         if (tangent_accessor)
         {
@@ -108,28 +110,24 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
         //  Find texcoord accessor
         const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                      cgltf_attribute_type_texcoord, i);
+                                                                      cgltf_attribute_type_texcoord, 0);
         if (texcoord_accessor)
         {
             out_static_mesh->mesh[i].uv_count = texcoord_accessor->count;
-            cgltf_size texcoord_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-            float* texcoords_data = arena_alloc(&renderer->arena, texcoord_floats_size * sizeof(float));
-            cgltf_accessor_unpack_floats(texcoord_accessor, texcoords_data, texcoord_floats_size);
-            out_static_mesh->mesh[i].vertices.uv = arena_alloc(&renderer->arena, texcoord_floats_size * sizeof(float));
-            // for (size_t i = 0; i < texcoord_accessor->count; i++)
-            // {
-            //     out_mesh->vertices.uv[i].x = texcoords_data[i * 2 + 0];
-            //     out_mesh->vertices.uv[i].y = texcoords_data[i * 2 + 1];
-            // }
-            memcpy(out_static_mesh->mesh[i].vertices.uv, texcoords_data, texcoord_floats_size * sizeof(float));
+            cgltf_size uv_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size uv_byte_size = uv_floats_size * sizeof(float);
+            out_static_mesh->mesh[i].uv_bytes = uv_byte_size;
+
+
+            float* uv_data = arena_alloc(&renderer->arena, uv_byte_size);
+            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_size);
+            out_static_mesh->mesh[i].vertices.uv = arena_alloc(&renderer->arena, uv_byte_size);
+
+            memcpy(out_static_mesh->mesh[i].vertices.uv, uv_data, uv_byte_size);
         }
 
         // Load indices
         // SEE componentType in the specs for more detail 3.6.2
-        out_static_mesh->mesh[i].indices_count = data->meshes[i].primitives->indices->count;
-        //TODO: there can be multiple primitices/indices, will come back to
-        out_static_mesh->mesh[i].indices = (size_t*)arena_alloc(&renderer->arena,
-                                                 data->meshes[i].primitives[0].indices->buffer_view->size);
         u8 index_stride = data->meshes[i].primitives[0].indices->stride;
         if (index_stride == 2)
         {
@@ -144,7 +142,14 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
             out_static_mesh->mesh[i].index_type = VK_INDEX_TYPE_UINT32;
         }
-        cgltf_accessor_unpack_indices(data->meshes[0].primitives->indices, out_static_mesh->mesh[i].indices, index_stride,
+        out_static_mesh->mesh[i].indices_count = data->meshes[i].primitives->indices->count;
+        out_static_mesh->mesh[i].indices_bytes = data->meshes[i].primitives->indices->count * index_stride;
+        //TODO: there can be multiple primitices/indices, will come back to
+        out_static_mesh->mesh[i].indices = (size_t*)arena_alloc(&renderer->arena,
+                                                                out_static_mesh->mesh[i].indices_bytes);
+
+        cgltf_accessor_unpack_indices(data->meshes[i].primitives->indices, out_static_mesh->mesh[i].indices,
+                                      index_stride,
                                       out_static_mesh->mesh[i].indices_count);
     }
 

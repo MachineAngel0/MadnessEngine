@@ -20,6 +20,7 @@ layout (buffer_reference, scalar) readonly buffer TexBuffer {
 };
 
 
+
 layout (push_constant, scalar) uniform push_constants
 {
     PositionBuffer position_buffer;

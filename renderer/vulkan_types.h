@@ -49,12 +49,15 @@ typedef struct vertex_mesh
 
 typedef struct pc_mesh
 {
-    u64 pos_index;
+    // VkDeviceAddress just a typedef of a u64
+    VkDeviceAddress pos_address;
     // u64 normal_index;
     // u64 tangent_index;
-    u64 uv_index;
+    VkDeviceAddress uv_index;
 
-    // vec4* color; //might not support
+    //TODO:
+    // u32 material_albedo_index;
+
 } pc_mesh;
 
 
@@ -62,13 +65,23 @@ typedef struct pc_mesh
 typedef struct mesh
 {
     vertex_mesh vertices;
+
     size_t* indices;
-    u64 vertex_count;
-    u64 normal_count;
-    u64 tangent_count;
-    u64 uv_count;
     u32 indices_count;
+    u32 indices_bytes;
     VkIndexType index_type;
+
+    u64 vertex_count;
+    u64 vertex_bytes;
+
+    u64 normal_count;
+    u64 normal_bytes;
+
+    u64 tangent_count;
+    u64 tangent_bytes;
+
+    u64 uv_count;
+    u64 uv_bytes;
     //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
 } mesh;
 
@@ -280,6 +293,50 @@ typedef struct shader_system
 
 }shader_system;
 
+typedef enum buffer_type
+{
+    UNIFORM,
+    STORAGE, // meant to be used in a descriptor set
+    VERTEX, // meant to only be used with vkCmdBindVertexBuffers
+    INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
+    // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
+    INDIRECT,
+
+    //idk what these are used for yet, but they will probably be useful later
+    //UNIFORM_TEXEL,
+    //STORAGE_TEXEL,
+} buffer_type;
+
+typedef struct buffer_system
+{
+    //an array of them
+    //NOTE: if we run out we can always allocate more, for now we just keep one of each
+    vulkan_buffer* vertex_buffers;
+    vulkan_buffer* uv_buffers;
+    vulkan_buffer* index_buffers;
+    vulkan_buffer* storage_buffers;
+    vulkan_buffer* uniform_buffers;
+
+    //how many have been allocated
+    u32 vertex_buffer_count;
+    u32 index_buffer_count;
+    u32 storage_buffer_count;
+    u32 uniform_buffer_count;
+
+    //TODO: this should be an array
+    //NOTE: when we multithread, it would make sense to have more than one of these in something like a ring buffer
+    vulkan_staging_buffer* staging_buffer_ring;
+    u32 staging_buffer_count;
+
+
+    //TODO: queries for size
+    /*
+    u64 temp = vulkan_context->device.properties.limits.maxStorageBufferRange;
+    u64 temp1 = vulkan_context->device.properties.limits.maxUniformBufferRange;
+    u64 temp3 = vulkan_context->device.properties.limits.maxMemoryAllocationCount;
+    */
+} buffer_system;
+
 
 typedef struct vulkan_shader_default
 {
@@ -424,13 +481,6 @@ typedef struct vulkan_context
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
 
 
-    //buffer addressing
-    vulkan_buffer global_vertex_buffers;
-    vulkan_buffer global_normal_buffers;
-    vulkan_buffer global_tangent_buffers;
-    vulkan_buffer global_uv_buffers;
-
-
 } vulkan_context;
 
 
@@ -483,8 +533,7 @@ typedef struct renderer
     Arena frame_arena;
 
     shader_system* shader_system;
-    //TODO:
-    // buffer_system* buffer_system;
+    buffer_system* buffer_system;
 
     //mesh system
     //animation system

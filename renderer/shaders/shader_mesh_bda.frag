@@ -15,7 +15,7 @@ void main() {
     //outColor = vec4(inColor, 1.0) * texture(texSampler, in_tex); // if we want colors overlayed
     //outColor = texture(texSampler, in_tex);
 //    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
-    outColor = texture(texture_samples[(nonuniformEXT(1))], in_tex);
+    outColor = texture(texture_samples[(nonuniformEXT(0))], in_tex);
 
 
 }
