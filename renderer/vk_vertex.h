@@ -79,6 +79,13 @@ typedef struct uniform_buffer_object_new
 
     //active camera
 
+    //Shadow cameras
+
+    //TODO: should probably be an enum
+    // regular, normal, lighting, shadows, lights, etc...
+    u32 debug_mode;
+
+
 } uniform_buffer_object_new;
 
 

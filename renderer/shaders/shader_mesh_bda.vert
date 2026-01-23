@@ -1,14 +1,20 @@
 #version 450
 
+// required for including other shader files
+#extension GL_GOOGLE_include_directive : require
+
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_buffer_reference : require
 
-layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo[];
+
+#include "shader_includes/test_uniform.glsl"
+
+//layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
+//    mat4 model;
+//    mat4 view;
+//    mat4 proj;
+//} ubo[];
 
 
 layout (buffer_reference, scalar) readonly buffer PositionBuffer {

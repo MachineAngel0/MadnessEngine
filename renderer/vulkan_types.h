@@ -23,6 +23,18 @@ typedef struct buffer_handle
     u32 handle;
 } buffer_handle;
 
+typedef struct light_buffer_handle
+{
+    u32 handle;
+    u32 offset;
+    u32 index;
+} light_buffer_handle;
+
+typedef struct mesh_handle
+{
+    u32 handle;
+} mesh_handle;
+
 
 typedef struct vulkan_image
 {
@@ -265,12 +277,23 @@ typedef struct Material
     u32 pipeline_indexes;
 } Material;
 
-typedef struct Material_Data
+typedef struct PC_Material_Data
 {
+
+    u32 color_idx;
+    u32 normal_idx;
+    u32 roughness_idx;
+    u32 metallic_idx;
+    u32 emissive_idx;
+
+
     vec4 color;
     float roughness;
     float metallic;
-} Material_Data;
+
+
+
+} PC_Material_Data;
 
 
 typedef struct shader_system
@@ -513,6 +536,40 @@ struct camera_arrays
     camera arcball_cameras[10];
 };
 
+typedef struct Directional_Light
+{
+    vec3 direction;
+    vec3 color;
+    float diffuse;
+    float specular;
+} Directional_Light;
+
+typedef struct Point_Light
+{
+    vec4 position;
+    vec4 color;
+    float diffuse;
+    float ambient;
+    float specular;
+    float intensity;
+    float radius;
+} Point_Light;
+
+typedef struct Spot_Light
+{
+    //TODO:
+    vec3 position;
+} Spot_Light;
+
+typedef struct Area_Light
+{
+    //TODO:
+    vec3 position;
+} Area_Light;
+
+
+
+
 
 typedef struct renderer
 {
@@ -530,6 +587,9 @@ typedef struct renderer
 
     //TODO:
     vulkan_context context;
+
+    Directional_Light directional_light;
+
 } renderer;
 
 
