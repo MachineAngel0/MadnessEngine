@@ -17,6 +17,8 @@ buffer_system* buffer_system_free(renderer* renderer);
 
 uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
+
+//TODO: used in texture image, replace with a storage buffer call or retrieve
 bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 

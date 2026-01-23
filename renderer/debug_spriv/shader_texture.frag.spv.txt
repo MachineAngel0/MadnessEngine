@@ -1,14 +1,14 @@
 ; SPIR-V
 ; Version: 1.0
 ; Generator: Khronos Glslang Reference Front End; 11
-; Bound: 86
+; Bound: 74
 ; Schema: 0
                OpCapability Shader
                OpExtension "SPV_KHR_non_semantic_info"
           %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
           %3 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
-               OpEntryPoint Fragment %main "main" %outColor %inColor %inTex
+               OpEntryPoint Fragment %main "main" %outColor %inTex %inColor
                OpExecutionMode %main OriginUpperLeft
           %2 = OpString "C:\\Users\\Adams Humbert\\Documents\\Clion\\MadnessEngine\\renderer\\shaders\\shader_texture.frag"
           %8 = OpString "uint"
@@ -28,28 +28,29 @@ layout(location = 1) in vec2 inTex;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = vec4(inColor, 1.0) * texture(texSampler, inTex); // if we want colors overlayed
+//    outColor = vec4(inColor, 1.0);
+//    outColor = vec4(inColor, 1.0) * texture(texSampler, inTex); // if we want colors overlayed
     outColor = texture(texSampler, inTex);
 }"
          %29 = OpString "float"
          %37 = OpString "outColor"
-         %46 = OpString "inColor"
-         %56 = OpString "type.2d.image"
-         %57 = OpString "@type.2d.image"
-         %61 = OpString "type.sampled.image"
-         %62 = OpString "@type.sampled.image"
-         %67 = OpString "texSampler"
-         %75 = OpString "inTex"
+         %42 = OpString "type.2d.image"
+         %43 = OpString "@type.2d.image"
+         %47 = OpString "type.sampled.image"
+         %48 = OpString "@type.sampled.image"
+         %53 = OpString "texSampler"
+         %62 = OpString "inTex"
+         %73 = OpString "inColor"
                OpName %main "main"
                OpName %outColor "outColor"
-               OpName %inColor "inColor"
                OpName %texSampler "texSampler"
                OpName %inTex "inTex"
+               OpName %inColor "inColor"
                OpDecorate %outColor Location 0
-               OpDecorate %inColor Location 0
                OpDecorate %texSampler Binding 1
                OpDecorate %texSampler DescriptorSet 0
                OpDecorate %inTex Location 1
+               OpDecorate %inColor Location 0
        %void = OpTypeVoid
           %5 = OpTypeFunction %void
        %uint = OpTypeInt 32 0
@@ -73,54 +74,41 @@ void main() {
 %_ptr_Output_v4float = OpTypePointer Output %v4float
          %34 = OpExtInst %void %1 DebugTypePointer %32 %uint_3 %uint_0
    %outColor = OpVariable %_ptr_Output_v4float Output
-    %uint_12 = OpConstant %uint 12
-     %uint_8 = OpConstant %uint 8
-         %36 = OpExtInst %void %1 DebugGlobalVariable %37 %32 %18 %uint_12 %uint_0 %21 %37 %outColor %uint_8
-    %v3float = OpTypeVector %float 3
-         %41 = OpExtInst %void %1 DebugTypeVector %30 %uint_3
-%_ptr_Input_v3float = OpTypePointer Input %v3float
-         %43 = OpExtInst %void %1 DebugTypePointer %41 %uint_1 %uint_0
-    %inColor = OpVariable %_ptr_Input_v3float Input
-         %45 = OpExtInst %void %1 DebugGlobalVariable %46 %41 %18 %uint_12 %uint_0 %21 %46 %inColor %uint_8
-    %float_1 = OpConstant %float 1
-         %54 = OpTypeImage %float 2D 0 0 0 1 Unknown
-         %58 = OpExtInst %void %1 DebugInfoNone
-         %55 = OpExtInst %void %1 DebugTypeComposite %56 %uint_0 %18 %uint_12 %uint_0 %21 %57 %58 %uint_3
-         %59 = OpTypeSampledImage %54
-         %60 = OpExtInst %void %1 DebugTypeComposite %61 %uint_0 %18 %uint_12 %uint_0 %21 %62 %58 %uint_3
-%_ptr_UniformConstant_59 = OpTypePointer UniformConstant %59
-         %64 = OpExtInst %void %1 DebugTypePointer %60 %uint_0 %uint_0
- %texSampler = OpVariable %_ptr_UniformConstant_59 UniformConstant
-         %66 = OpExtInst %void %1 DebugGlobalVariable %67 %60 %18 %uint_12 %uint_0 %21 %67 %texSampler %uint_8
-    %v2float = OpTypeVector %float 2
-         %70 = OpExtInst %void %1 DebugTypeVector %30 %uint_2
-%_ptr_Input_v2float = OpTypePointer Input %v2float
-         %72 = OpExtInst %void %1 DebugTypePointer %70 %uint_1 %uint_0
-      %inTex = OpVariable %_ptr_Input_v2float Input
-         %74 = OpExtInst %void %1 DebugGlobalVariable %75 %70 %18 %uint_12 %uint_0 %21 %75 %inTex %uint_8
-    %uint_13 = OpConstant %uint 13
     %uint_14 = OpConstant %uint 14
+     %uint_8 = OpConstant %uint 8
+         %36 = OpExtInst %void %1 DebugGlobalVariable %37 %32 %18 %uint_14 %uint_0 %21 %37 %outColor %uint_8
+         %40 = OpTypeImage %float 2D 0 0 0 1 Unknown
+         %44 = OpExtInst %void %1 DebugInfoNone
+         %41 = OpExtInst %void %1 DebugTypeComposite %42 %uint_0 %18 %uint_14 %uint_0 %21 %43 %44 %uint_3
+         %45 = OpTypeSampledImage %40
+         %46 = OpExtInst %void %1 DebugTypeComposite %47 %uint_0 %18 %uint_14 %uint_0 %21 %48 %44 %uint_3
+%_ptr_UniformConstant_45 = OpTypePointer UniformConstant %45
+         %50 = OpExtInst %void %1 DebugTypePointer %46 %uint_0 %uint_0
+ %texSampler = OpVariable %_ptr_UniformConstant_45 UniformConstant
+         %52 = OpExtInst %void %1 DebugGlobalVariable %53 %46 %18 %uint_14 %uint_0 %21 %53 %texSampler %uint_8
+    %v2float = OpTypeVector %float 2
+         %57 = OpExtInst %void %1 DebugTypeVector %30 %uint_2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+         %59 = OpExtInst %void %1 DebugTypePointer %57 %uint_1 %uint_0
+      %inTex = OpVariable %_ptr_Input_v2float Input
+         %61 = OpExtInst %void %1 DebugGlobalVariable %62 %57 %18 %uint_14 %uint_0 %21 %62 %inTex %uint_8
+    %uint_15 = OpConstant %uint 15
+    %v3float = OpTypeVector %float 3
+         %68 = OpExtInst %void %1 DebugTypeVector %30 %uint_3
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+         %70 = OpExtInst %void %1 DebugTypePointer %68 %uint_1 %uint_0
+    %inColor = OpVariable %_ptr_Input_v3float Input
+         %72 = OpExtInst %void %1 DebugGlobalVariable %73 %68 %18 %uint_15 %uint_0 %21 %73 %inColor %uint_8
        %main = OpFunction %void None %5
          %15 = OpLabel
          %26 = OpExtInst %void %1 DebugScope %17
          %27 = OpExtInst %void %1 DebugLine %18 %uint_11 %uint_11 %uint_0 %uint_0
          %25 = OpExtInst %void %1 DebugFunctionDefinition %17 %main
-         %48 = OpExtInst %void %1 DebugLine %18 %uint_12 %uint_12 %uint_0 %uint_0
-         %47 = OpLoad %v3float %inColor
-         %50 = OpCompositeExtract %float %47 0
-         %51 = OpCompositeExtract %float %47 1
-         %52 = OpCompositeExtract %float %47 2
-         %53 = OpCompositeConstruct %v4float %50 %51 %52 %float_1
-         %68 = OpLoad %59 %texSampler
-         %76 = OpLoad %v2float %inTex
-         %77 = OpImageSampleImplicitLod %v4float %68 %76
-         %78 = OpFMul %v4float %53 %77
-               OpStore %outColor %78
-         %80 = OpExtInst %void %1 DebugLine %18 %uint_13 %uint_13 %uint_0 %uint_0
-         %79 = OpLoad %59 %texSampler
-         %82 = OpLoad %v2float %inTex
-         %83 = OpImageSampleImplicitLod %v4float %79 %82
-               OpStore %outColor %83
-         %84 = OpExtInst %void %1 DebugLine %18 %uint_14 %uint_14 %uint_0 %uint_0
+         %55 = OpExtInst %void %1 DebugLine %18 %uint_14 %uint_14 %uint_0 %uint_0
+         %54 = OpLoad %45 %texSampler
+         %63 = OpLoad %v2float %inTex
+         %64 = OpImageSampleImplicitLod %v4float %54 %63
+               OpStore %outColor %64
+         %65 = OpExtInst %void %1 DebugLine %18 %uint_15 %uint_15 %uint_0 %uint_0
                OpReturn
                OpFunctionEnd
