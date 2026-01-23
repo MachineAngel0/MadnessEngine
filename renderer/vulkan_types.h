@@ -277,26 +277,33 @@ typedef struct Material
     u32 pipeline_indexes;
 } Material;
 
-typedef struct PC_Material_Data
+
+
+typedef struct Material_Index_Data {
+    u32 color_index;
+
+    u32 roughness_index;
+    u32 metallic_index;
+    u32 specular_index;
+    u32 emissive_index;
+    // u32 ambient_occlusion_index;
+    u32 normal_index;
+} Material_Index_Data;
+
+typedef struct Material_Param_Data
 {
 
-    u32 color_idx;
-    u32 normal_idx;
-    u32 roughness_idx;
-    u32 metallic_idx;
-    u32 emissive_idx;
+    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
+    //ALL FROM RANGES 0-1
+    float ambient_strength; // optional for now we can remove it later
+    float roughness_strength;
+    float metallic_strength;
+    float normal_strength;
+    float emissive_strength;
+} Material_Param_Data;
 
 
-    vec4 color;
-    float roughness;
-    float metallic;
-
-
-
-} PC_Material_Data;
-
-
-typedef struct shader_system
+typedef struct Shader_System
 {
     Texture error_texture;
     Texture textures[100];
@@ -309,7 +316,12 @@ typedef struct shader_system
     vulkan_shader_pipeline pipeline_references[100];
 
     shader_handle default_texture_handle;
-} shader_system;
+
+    Material_Param_Data material_params[100];
+    // Material_Index_Data material_index[100]; // idk about this one
+
+
+} Shader_System;
 
 typedef enum buffer_type
 {
@@ -325,7 +337,7 @@ typedef enum buffer_type
     //STORAGE_TEXEL,
 } buffer_type;
 
-typedef struct buffer_system
+typedef struct Buffer_System
 {
     //an array of them
     //NOTE: if we run out we can always allocate more, for now we just keep one of each
@@ -358,7 +370,7 @@ typedef struct buffer_system
     u64 temp1 = vulkan_context->device.properties.limits.maxUniformBufferRange;
     u64 temp3 = vulkan_context->device.properties.limits.maxMemoryAllocationCount;
     */
-} buffer_system;
+} Buffer_System;
 
 
 typedef struct vulkan_shader_default
@@ -567,7 +579,14 @@ typedef struct Area_Light
     vec3 position;
 } Area_Light;
 
-
+typedef struct Light_System
+{
+    //each type is an array of them
+    Point_Light* point_lights;
+    Directional_Light* directional_lights;
+    u32 point_light_count;
+    u32 directional_light_count;
+} Light_System;
 
 
 
@@ -578,8 +597,9 @@ typedef struct renderer
     Arena arena; // total memory for the entire renderer
     Arena frame_arena;
 
-    shader_system* shader_system;
-    buffer_system* buffer_system;
+    Shader_System* shader_system;
+    Buffer_System* buffer_system;
+    Light_System* light_system;
 
     //mesh system
     //animation system

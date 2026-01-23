@@ -27,12 +27,14 @@ layout (buffer_reference, scalar) readonly buffer Point_Light_Buffer {
 layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 view;
     mat4 proj;
-    //mat4 viewProj;
-    vec4 cameraPos;
+//mat4 viewProj;
+//    vec4 cameraPos;
 
 
     Directional_Light_Buffer directional_lights;
-    //uint directional_light_index, extra param, for when we want to render with a specific directional light
+//uint directional_light_index, extra param, for when we want to render with a specific directional light
     Point_Light_Buffer point_lights;
 
+// TODO:
+    uint debug_mode;
 } ubo[];

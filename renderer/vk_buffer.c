@@ -1,9 +1,9 @@
 ﻿#include "vk_buffer.h"
 
 
-buffer_system* buffer_system_init(renderer* renderer)
+Buffer_System* buffer_system_init(renderer* renderer)
 {
-    buffer_system* out_buffer_system = arena_alloc(&renderer->arena, sizeof(buffer_system));
+    Buffer_System* out_buffer_system = arena_alloc(&renderer->arena, sizeof(Buffer_System));
     out_buffer_system->vertex_buffer_count = 1;
     out_buffer_system->index_buffer_count = 1;
     out_buffer_system->storage_buffer_count = 1;

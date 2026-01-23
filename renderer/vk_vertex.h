@@ -70,14 +70,16 @@ typedef struct uniform_buffer_object
 //TODO: global uniform buffer
 typedef struct uniform_buffer_object_new
 {
+    mat4 view;
+    mat4 proj;
+
     VkDeviceAddress view_buffer;
     VkDeviceAddress projection_buffer;
-
+    VkDeviceAddress directional_light_buffer;
     VkDeviceAddress spot_light_buffer;
 
-    // Directional_Light directional_light;
-
-    //active camera
+    //camera camera
+     // vec4 cameraPos;
 
     //Shadow cameras
 

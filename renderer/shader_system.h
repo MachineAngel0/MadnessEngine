@@ -7,12 +7,12 @@
 #include "vk_image.h"
 
 
-shader_handle shader_system_add_texture(vulkan_context* context, shader_system* system, char const* filepath);
+shader_handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
 
 
-void shader_system_init(renderer* renderer, shader_system** out_shader_system)
+void shader_system_init(renderer* renderer, Shader_System** out_shader_system)
 {
-    (*out_shader_system) = arena_alloc(&renderer->arena, sizeof(shader_system));
+    (*out_shader_system) = arena_alloc(&renderer->arena, sizeof(Shader_System));
 
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
     //                      "../renderer/texture/error_texture.png",
@@ -26,13 +26,13 @@ void shader_system_init(renderer* renderer, shader_system** out_shader_system)
                                                        "../renderer/texture/error_texture.png");
 }
 
-Texture* shader_system_get_texture(shader_system* system, shader_handle handle)
+Texture* shader_system_get_texture(Shader_System* system, shader_handle handle)
 {
     return &system->textures[handle.handle];
 }
 
 //pass out the texture index
-shader_handle shader_system_add_texture(vulkan_context* context, shader_system* system, char const* filepath)
+shader_handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath)
 {
     //get an available index
     shader_handle out_texture_handle;
@@ -48,11 +48,11 @@ shader_handle shader_system_add_texture(vulkan_context* context, shader_system* 
     return out_texture_handle;
 }
 
-void shader_system_remove_texture(shader_system* system)
+void shader_system_remove_texture(Shader_System* system)
 {
 }
 
-void shader_system_update_texture(renderer* renderer, shader_system* system, shader_handle* handle,
+void shader_system_update_texture(renderer* renderer, Shader_System* system, shader_handle* handle,
                                   const char* filepath)
 {
     // create texture if it's not already loaded
@@ -69,13 +69,27 @@ void shader_system_update_texture(renderer* renderer, shader_system* system, sha
 }
 
 
-void shader_system_add_material(shader_system* system)
+void shader_system_add_material(Shader_System* system)
 {
 }
 
-void shader_system_remove_material(shader_system* system)
+void shader_system_remove_material(Shader_System* system)
 {
 }
+
+
+//
+void material_param_data_init(Material_Param_Data* out_data)
+{
+    out_data->color = vec4_one();
+    out_data->ambient_strength = 1.0;
+    out_data->roughness_strength = 1.0;
+    out_data->metallic_strength = 1.0;
+    out_data->normal_strength = 1.0;
+    out_data->emissive_strength = 1.0;
+
+}
+
 
 
 #endif //SHADER_SYSTEM_H

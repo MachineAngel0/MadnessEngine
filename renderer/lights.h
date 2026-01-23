@@ -6,6 +6,24 @@
 //TODO: light buffer, and add it to the global uniform buffer
 
 
+Light_System* light_system_init(renderer* renderer)
+{
+    Light_System* out_light_system = arena_alloc(&renderer->arena, sizeof(Light_System));
+
+    //TODO: TEMP FOR NOW
+    out_light_system->directional_light_count = 1;
+    out_light_system->point_light_count = 1;
+
+    out_light_system->point_lights =
+        arena_alloc(&renderer->arena, sizeof(Point_Light) * out_light_system->point_light_count);
+
+    out_light_system->directional_lights =
+        arena_alloc(&renderer->arena, sizeof(Directional_Light) * out_light_system->directional_light_count);
+
+
+    return out_light_system;
+}
+
 Point_Light* point_light_init(Arena* a)
 {
     Point_Light* light = arena_alloc(a, sizeof(Point_Light));
