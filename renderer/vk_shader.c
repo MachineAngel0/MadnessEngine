@@ -1132,7 +1132,7 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
 
     VkPushConstantRange push_constants = {0};
     push_constants.size = sizeof(pc_mesh);
-    push_constants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constants.offset = 0;
 
     // Pipeline layout creation

@@ -5,6 +5,7 @@
 #include "binary_tree.h"
 #include "darray.h"
 #include "hash_map.h"
+#include "hash_map_string.h"
 #include "hash_set.h"
 #include "linked_list.h"
 #include "queue.h"
@@ -30,6 +31,7 @@ int main(void)
     // binary_tree_test();
     // b_tree_red_black_test();
     // hash_map_test();
+    hash_map_string_test();
     // hash_set_test();
     // heap_test();
     // linked_list_test();

@@ -53,13 +53,17 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
     {
         h->state[i] = HASH_MAP_EMPTY;
         h->key_data[i] = malloc(h->key_data_size);
-        h->value_data[i] = malloc( h->value_data_size);
+        h->value_data[i] = malloc(h->value_data_size);
         memset(h->key_data[i], 0, key_data_size);
         memset(h->value_data[i], 0, value_data_size);
     }
 
     return h;
 }
+
+#define HASH_MAP_CREATE(key_type, value_type, capacity)\
+         hash_map_init(sizeof(key_type), sizeof(value_type), capacity)
+
 
 //this version will have capacity will be increased until it is a power of two
 // then we can do this with our generated hash index
@@ -122,14 +126,14 @@ void hash_map_insert(hash_map* h, void* key, void* value)
         }
 
         //check for duplicates
-        if (h->state[cur_index] == HASH_MAP_USING && memcmp(h->key_data[cur_index],key, h->key_data_size) == 0)
+        if (h->state[cur_index] == HASH_MAP_USING && memcmp(h->key_data[cur_index], key, h->key_data_size) == 0)
         {
             return;
         }
     }
 }
 
-void hash_map_delete(hash_map* h, void* key)
+void hash_map_remove(hash_map* h, void* key)
 {
     //get an index
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
@@ -203,6 +207,7 @@ bool hash_map_contains(hash_map* h, void* key)
 
 
 void hash_map_rehash(hash_map* h);
+
 void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_func_value)(void*))
 {
     for (uint64_t i = 0; i < h->capacity; i++)
@@ -215,7 +220,6 @@ void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_fun
             printf("VALUE:");
             print_func_value(h->value_data[i]);
             printf("\n");
-
         }
     }
     printf("\n");
@@ -253,7 +257,6 @@ void hash_map_test()
             printf("contains %llu\n", i);
         }
     }
-
 
 
     hash_map_print(h, print_int, print_int);

@@ -122,6 +122,11 @@ void report_unimplemented(const char* file, int32_t line)
 {
     log_output(LOG_LEVEL_FATAL, "TODO: UNIMPLEMENTED FILE: %s, FILE: %d\n", file, line);
 }
+void report_unreachable(const char* file, int32_t line)
+{
+    log_output(LOG_LEVEL_FATAL, "UNREACHABLE CODE REACHED: FILE: %s, FILE: %d\n", file, line);
+
+}
 
 
 

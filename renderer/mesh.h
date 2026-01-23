@@ -57,114 +57,13 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, data->meshes_count);
 
 
-    for (size_t i = 0; i < data->meshes_count; i++)
-    {
-        /* Find position accessor */
-        const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                 cgltf_attribute_type_position,
-                                                                 0);
-        if (pos_accessor)
-        {
-            //get size information
-            out_static_mesh->mesh[i].vertex_count = pos_accessor->count;
-            cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
-            cgltf_size float_bytes = num_floats * sizeof(float);
-            out_static_mesh->mesh[i].vertex_bytes = float_bytes;
-
-            //alloc and copy data
-            float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
-            out_static_mesh->mesh[i].vertices.pos = arena_alloc(&renderer->arena, float_bytes);
-            if (pos_data)
-            {
-                cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
-                memcpy(out_static_mesh->mesh[i].vertices.pos, pos_data, float_bytes);
-            }
-        }
-
-
-        // Find normal accessor
-        const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                  cgltf_attribute_type_normal,
-                                                                  0);
-        if (norm_accessor)
-        {
-            out_static_mesh->mesh[i].normal_count = norm_accessor->count;
-            cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
-            float* normal_data = arena_alloc(&renderer->arena, norm_floats * sizeof(float));
-            cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
-            out_static_mesh->mesh[i].vertices.normal = (vec3*)normal_data;
-        }
-
-        //  Find tangent accessor
-        const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                     cgltf_attribute_type_tangent, 0);
-
-        if (tangent_accessor)
-        {
-            out_static_mesh->mesh[i].tangent_count = tangent_accessor->count;
-            cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
-            float* tangent_data = arena_alloc(&renderer->arena, tangent_floats * sizeof(float));
-            cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-            out_static_mesh->mesh[i].vertices.tangent = (vec4*)tangent_data;
-        }
-
-        //  Find texcoord accessor
-        const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[i].primitives,
-                                                                      cgltf_attribute_type_texcoord, 0);
-        if (texcoord_accessor)
-        {
-            out_static_mesh->mesh[i].uv_count = texcoord_accessor->count;
-            cgltf_size uv_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-            cgltf_size uv_byte_size = uv_floats_size * sizeof(float);
-            out_static_mesh->mesh[i].uv_bytes = uv_byte_size;
-
-
-            float* uv_data = arena_alloc(&renderer->arena, uv_byte_size);
-            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_size);
-            out_static_mesh->mesh[i].vertices.uv = arena_alloc(&renderer->arena, uv_byte_size);
-
-            memcpy(out_static_mesh->mesh[i].vertices.uv, uv_data, uv_byte_size);
-        }
-
-        // Load indices
-        // SEE componentType in the specs for more detail 3.6.2
-        u8 index_stride = data->meshes[i].primitives[0].indices->stride;
-        if (index_stride == 2)
-        {
-            out_static_mesh->mesh[i].index_type = VK_INDEX_TYPE_UINT16;
-        }
-        else if (index_stride == 4)
-        {
-            out_static_mesh->mesh[i].index_type = VK_INDEX_TYPE_UINT32;
-        }
-        else
-        {
-            WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
-            out_static_mesh->mesh[i].index_type = VK_INDEX_TYPE_UINT32;
-        }
-        out_static_mesh->mesh[i].indices_count = data->meshes[i].primitives->indices->count;
-        out_static_mesh->mesh[i].indices_bytes = data->meshes[i].primitives->indices->count * index_stride;
-        //TODO: there can be multiple primitices/indices, will come back to
-        out_static_mesh->mesh[i].indices = (size_t*)arena_alloc(&renderer->arena,
-                                                                out_static_mesh->mesh[i].indices_bytes);
-
-        cgltf_accessor_unpack_indices(data->meshes[i].primitives->indices, out_static_mesh->mesh[i].indices,
-                                      index_stride,
-                                      out_static_mesh->mesh[i].indices_count);
-    }
-
-    //load materials
-    // if (data->meshes[0].primitives->material) {
-    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
-    //     int hi = 0;
-    // }
-    // cgltf_texture_index();
-
-    //load the textures
+    // LOAD TEXTURES (Material data is a separate thing)
     out_static_mesh->material_handles = arena_alloc(&renderer->arena, sizeof(shader_handle) * data->textures_count);
 
+
     char* base_path = NULL;
-    for (int i = strlen(gltf_path); i > 0; i--)
+    int i = strlen(gltf_path);
+    for (; i > 0; i--)
     {
         if (gltf_path[i] == '/')
         {
@@ -176,6 +75,10 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         }
     }
 
+    /*
+
+    hash_map_string* path_to_handle = HASH_MAP_STRING_CREATE_DEFAULT_SIZE(shader_handle);
+
     for (size_t texture_index = 0; texture_index < data->textures_count; texture_index++)
     {
         const char* texture_uri = data->textures[texture_index].image->uri;
@@ -184,10 +87,143 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         // takes a buffer, message format, then the remaining strings
         sprintf(texture_path, "%s%s", base_path, texture_uri);
         printf("Texture Path:  %s\n", texture_path);
+
+
         out_static_mesh->material_handles[texture_index] = shader_system_add_texture(
             &renderer->context, renderer->shader_system,
             texture_path);
+
+        hash_map_string_insert(path_to_handle, texture_path, &out_static_mesh->material_handles[texture_index]);
+
     }
+
+    hash_map_string_print(path_to_handle, print_int);
+    */
+
+
+    //LOAD VERTEX/INDEX DATA
+
+    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+    {
+        /* Find position accessor */
+        const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                 cgltf_attribute_type_position,
+                                                                 0);
+        if (pos_accessor)
+        {
+            //get size information
+            out_static_mesh->mesh[mesh_idx].vertex_count = pos_accessor->count;
+            cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
+            cgltf_size float_bytes = num_floats * sizeof(float);
+            out_static_mesh->mesh[mesh_idx].vertex_bytes = float_bytes;
+
+            //alloc and copy data
+            float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
+            out_static_mesh->mesh[mesh_idx].vertices.pos = arena_alloc(&renderer->arena, float_bytes);
+            if (pos_data)
+            {
+                cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+                memcpy(out_static_mesh->mesh[mesh_idx].vertices.pos, pos_data, float_bytes);
+            }
+        }
+
+
+        // Find normal accessor
+        const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                  cgltf_attribute_type_normal,
+                                                                  0);
+        if (norm_accessor)
+        {
+            out_static_mesh->mesh[mesh_idx].normal_count = norm_accessor->count;
+            cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
+            float* normal_data = arena_alloc(&renderer->arena, norm_floats * sizeof(float));
+            cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
+            out_static_mesh->mesh[mesh_idx].vertices.normal = (vec3*)normal_data;
+        }
+
+        //  Find tangent accessor
+        const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                     cgltf_attribute_type_tangent, 0);
+
+        if (tangent_accessor)
+        {
+            out_static_mesh->mesh[mesh_idx].tangent_count = tangent_accessor->count;
+            cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
+            float* tangent_data = arena_alloc(&renderer->arena, tangent_floats * sizeof(float));
+            cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
+            out_static_mesh->mesh[mesh_idx].vertices.tangent = (vec4*)tangent_data;
+        }
+
+        //  Find texcoord accessor
+        const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                      cgltf_attribute_type_texcoord, 0);
+        if (texcoord_accessor)
+        {
+            out_static_mesh->mesh[mesh_idx].uv_count = texcoord_accessor->count;
+            cgltf_size uv_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size uv_byte_size = uv_floats_size * sizeof(float);
+            out_static_mesh->mesh[mesh_idx].uv_bytes = uv_byte_size;
+
+
+            float* uv_data = arena_alloc(&renderer->arena, uv_byte_size);
+            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_size);
+            out_static_mesh->mesh[mesh_idx].vertices.uv = arena_alloc(&renderer->arena, uv_byte_size);
+
+            memcpy(out_static_mesh->mesh[mesh_idx].vertices.uv, uv_data, uv_byte_size);
+        }
+
+        // Load indices
+        // SEE componentType in the specs for more detail 3.6.2
+        u8 index_stride = data->meshes[mesh_idx].primitives[0].indices->stride;
+        if (index_stride == 2)
+        {
+            out_static_mesh->mesh[mesh_idx].index_type = VK_INDEX_TYPE_UINT16;
+        }
+        else if (index_stride == 4)
+        {
+            out_static_mesh->mesh[mesh_idx].index_type = VK_INDEX_TYPE_UINT32;
+        }
+        else
+        {
+            WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
+            out_static_mesh->mesh[mesh_idx].index_type = VK_INDEX_TYPE_UINT32;
+        }
+        out_static_mesh->mesh[mesh_idx].indices_count = data->meshes[mesh_idx].primitives->indices->count;
+        out_static_mesh->mesh[mesh_idx].indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
+            index_stride;
+        //TODO: there can be multiple primitices/indices, will come back to
+        out_static_mesh->mesh[mesh_idx].indices = (size_t*)arena_alloc(&renderer->arena,
+                                                                       out_static_mesh->mesh[mesh_idx].indices_bytes);
+
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
+                                      out_static_mesh->mesh[mesh_idx].indices,
+                                      index_stride,
+                                      out_static_mesh->mesh[mesh_idx].indices_count);
+
+        //LOAD TEXTURES/MATERIALS
+
+        //BASE COLOR
+        const char* texture_uri = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_texture
+                                                        .texture->image->uri;
+
+        char* texture_path = arena_alloc(&renderer->frame_arena, strlen(base_path) + strlen(texture_uri));
+        // takes a buffer, message format, then the remaining strings
+        sprintf(texture_path, "%s%s", base_path, texture_uri);
+        printf("Texture Path:  %s\n", texture_path);
+
+
+        out_static_mesh->mesh[mesh_idx].color_texture = shader_system_add_texture(
+            &renderer->context, renderer->shader_system,
+            texture_path);
+    }
+
+    //load materials
+    // if (data->meshes[0].primitives->material) {
+    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
+    //     int hi = 0;
+    // }
+    // cgltf_texture_index();
+
 
     cgltf_free(data);
     return out_static_mesh;

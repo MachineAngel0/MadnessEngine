@@ -55,6 +55,8 @@ typedef struct pc_mesh
     // u64 tangent_index;
     VkDeviceAddress uv_index;
 
+    u32 albedo_material_index;
+    uint32_t _padding;
     //TODO:
     // u32 material_albedo_index;
 
@@ -82,6 +84,8 @@ typedef struct mesh
 
     u64 uv_count;
     u64 uv_bytes;
+
+    shader_handle color_texture;
     //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
 } mesh;
 

@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "logger.h"
+#include "math_types.h"
 #include "misc_util.h"
 
 #include "unit_test.h"
 #include "arena_stack.h"
-#include "math_types.h"
 #include "memory_tracker.h"
 
 #define DARRAY_RESIZE_VALUE  2
@@ -710,6 +710,7 @@ void _darray_test()
 
     darray_free(arr); // i cant check this, it can't be nulled
 
+    /*
     vec2* vec2_arr = darray_create(vec2);
     vec2 tea;
     tea.x = 420.0f;
@@ -720,7 +721,7 @@ void _darray_test()
     darray_push(vec2_arr, tea);
     darray_push(vec2_arr, tea2);
     darray_debug_print(vec2_arr, print_vec2);
-
+*/
 
 
     TEST_REPORT(DARRAY);

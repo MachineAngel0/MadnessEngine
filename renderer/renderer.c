@@ -167,16 +167,19 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/cube_gltf/Cube.gltf");
     vk_context->mesh_default.static_mesh = test_mesh;
 
-    update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
-                                                  shader_system_get_texture(
-                                                      renderer_internal.shader_system, test_mesh->material_handles[0]),
-                                                  1);
+
     update_global_uniform_buffer_bindless_descriptor_set(
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
         &vk_context->global_uniform_buffers, 1);
 
     for (u32 i = 0; i < test_mesh->mesh_size; i++)
     {
+
+        update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
+                                                         shader_system_get_texture(
+                                                             renderer_internal.shader_system, test_mesh->mesh[i].color_texture),
+                                                         test_mesh->mesh[i].color_texture.handle);
+
         vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
                                               test_mesh->mesh[i].vertices.pos,
                                               test_mesh->mesh[i].vertex_bytes);
@@ -508,12 +511,15 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     u32 index_bytes = 0;
     for (u64 i = 0; i < vk_context.mesh_default.static_mesh->mesh_size; i++)
     {
-        // PUSH CONSTANT DEVICE ADDRESS
+        // PUSH CONSTANT with DEVICE BUFFER ADDRESS's
         pc_mesh temp_pc_mesh = {
-            .pos_address = position_buffer_address + vertex_bytes, .uv_index = uv_buffer_address + uv_bytes
+            .pos_address = position_buffer_address + vertex_bytes,
+            .uv_index = uv_buffer_address + uv_bytes,
+            .albedo_material_index = vk_context.mesh_default.static_mesh->mesh[i].color_texture.handle,
         };
         vkCmdPushConstants(command_buffer_current_frame->handle,
-                           vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                           vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout,
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                            sizeof(pc_mesh), &temp_pc_mesh);
         // vkCmdPushConstants2() // TODO: look into
 

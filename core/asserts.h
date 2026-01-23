@@ -22,6 +22,7 @@
 //NOTE: this is implemented inside the logger
 void report_assertion_failure(const char* expression, const char* message, const char* file, int32_t line);
 void report_unimplemented(const char* file, int32_t line);
+void report_unreachable(const char* file, int32_t line);
 
 
 //__FILE__ gets the c file of the error, __LINE__ gets the line in the c file of the error
@@ -70,6 +71,8 @@ void report_unimplemented(const char* file, int32_t line);
 
 
 #define UNIMPLEMENTED() report_unimplemented(__FILE__, __LINE__);
+#define UNREACHABLE() report_unreachable(__FILE__, __LINE__)
+
 
 
 
