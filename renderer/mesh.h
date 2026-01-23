@@ -41,6 +41,9 @@ void mesh_free(mesh* m)
 
 static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
+
+    renderer->context.device.properties.limits.maxPerStageDescriptorUniformBuffers;
+
     cgltf_options options = {0};
     cgltf_data* data = NULL;
     cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
@@ -112,7 +115,6 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         if (pos_accessor)
         {
             //get size information
-            out_static_mesh->mesh[mesh_idx].vertex_count = pos_accessor->count;
             cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
             cgltf_size float_bytes = num_floats * sizeof(float);
             out_static_mesh->mesh[mesh_idx].vertex_bytes = float_bytes;
@@ -120,11 +122,8 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             //alloc and copy data
             float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
             out_static_mesh->mesh[mesh_idx].vertices.pos = arena_alloc(&renderer->arena, float_bytes);
-            if (pos_data)
-            {
-                cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
-                memcpy(out_static_mesh->mesh[mesh_idx].vertices.pos, pos_data, float_bytes);
-            }
+            cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+            memcpy(out_static_mesh->mesh[mesh_idx].vertices.pos, pos_data, float_bytes);
         }
 
 
@@ -134,11 +133,16 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                                                                   0);
         if (norm_accessor)
         {
-            out_static_mesh->mesh[mesh_idx].normal_count = norm_accessor->count;
+            //get size information
             cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
-            float* normal_data = arena_alloc(&renderer->arena, norm_floats * sizeof(float));
+            cgltf_size norm_bytes = norm_floats * sizeof(float);
+            out_static_mesh->mesh[mesh_idx].normal_bytes = norm_bytes;
+
+            //alloc and copy data
+            float* normal_data = arena_alloc(&renderer->arena, norm_bytes);
+            out_static_mesh->mesh[mesh_idx].vertices.normal = arena_alloc(&renderer->arena, norm_bytes);
             cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
-            out_static_mesh->mesh[mesh_idx].vertices.normal = (vec3*)normal_data;
+            memcpy(out_static_mesh->mesh[mesh_idx].vertices.normal, normal_data, norm_bytes);
         }
 
         //  Find tangent accessor
@@ -147,11 +151,18 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
         if (tangent_accessor)
         {
-            out_static_mesh->mesh[mesh_idx].tangent_count = tangent_accessor->count;
+            //get size information
             cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
-            float* tangent_data = arena_alloc(&renderer->arena, tangent_floats * sizeof(float));
+            cgltf_size tangent_bytes = tangent_floats * sizeof(float);
+            out_static_mesh->mesh[mesh_idx].tangent_bytes = tangent_bytes;
+
+
+            //alloc and copy data
+            float* tangent_data = arena_alloc(&renderer->arena, tangent_bytes);
+            out_static_mesh->mesh[mesh_idx].vertices.tangent = arena_alloc(&renderer->arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-            out_static_mesh->mesh[mesh_idx].vertices.tangent = (vec4*)tangent_data;
+            memcpy( out_static_mesh->mesh[mesh_idx].vertices.tangent, tangent_data, tangent_bytes);
+
         }
 
         //  Find texcoord accessor
@@ -159,16 +170,16 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
                                                                       cgltf_attribute_type_texcoord, 0);
         if (texcoord_accessor)
         {
-            out_static_mesh->mesh[mesh_idx].uv_count = texcoord_accessor->count;
+            //get size information
             cgltf_size uv_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
             cgltf_size uv_byte_size = uv_floats_size * sizeof(float);
             out_static_mesh->mesh[mesh_idx].uv_bytes = uv_byte_size;
 
 
+            //alloc and copy data
             float* uv_data = arena_alloc(&renderer->arena, uv_byte_size);
             cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_size);
             out_static_mesh->mesh[mesh_idx].vertices.uv = arena_alloc(&renderer->arena, uv_byte_size);
-
             memcpy(out_static_mesh->mesh[mesh_idx].vertices.uv, uv_data, uv_byte_size);
         }
 

@@ -174,17 +174,19 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     for (u32 i = 0; i < test_mesh->mesh_size; i++)
     {
-
         update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
-                                                         shader_system_get_texture(
-                                                             renderer_internal.shader_system, test_mesh->mesh[i].color_texture),
-                                                         test_mesh->mesh[i].color_texture.handle);
+                                                      shader_system_get_texture(
+                                                          renderer_internal.shader_system,
+                                                          test_mesh->mesh[i].color_texture),
+                                                      test_mesh->mesh[i].color_texture.handle);
 
         vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
                                               test_mesh->mesh[i].vertices.pos,
                                               test_mesh->mesh[i].vertex_bytes);
-        // create_buffer_device_address_mesh(vk_context, &vk_context->normal_buffers, test_mesh->vertices.normal, test_mesh->normal_count);
-        // create_buffer_device_address_mesh(vk_context, &vk_context->tangent_buffers, test_mesh->vertices.tangent, test_mesh->tangent_count);
+        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
+                                              test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
+        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
+                                              test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
         vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
                                               test_mesh->mesh[i].vertices.uv,
                                               test_mesh->mesh[i].uv_bytes);
@@ -498,6 +500,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                                                                         ->handle);
     VkDeviceAddress uv_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
                                                                   renderer_internal.buffer_system->uv_buffers->handle);
+    VkDeviceAddress normal_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+                                                                  renderer_internal.buffer_system->normal_buffers->handle);
+    VkDeviceAddress tangent_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+                                                                  renderer_internal.buffer_system->tangent_buffers->handle);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -509,11 +515,15 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     u32 vertex_bytes = 0;
     u32 uv_bytes = 0;
     u32 index_bytes = 0;
+    u32 tangent_bytes = 0;
+    u32 normal_bytes = 0;
     for (u64 i = 0; i < vk_context.mesh_default.static_mesh->mesh_size; i++)
     {
         // PUSH CONSTANT with DEVICE BUFFER ADDRESS's
         pc_mesh temp_pc_mesh = {
             .pos_address = position_buffer_address + vertex_bytes,
+            .normal_index = normal_buffer_address + normal_bytes,
+            .tangent_index =tangent_buffer_address + tangent_bytes,
             .uv_index = uv_buffer_address + uv_bytes,
             .albedo_material_index = vk_context.mesh_default.static_mesh->mesh[i].color_texture.handle,
         };
@@ -537,6 +547,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
         vertex_bytes += vk_context.mesh_default.static_mesh->mesh[i].vertex_bytes;
         uv_bytes += vk_context.mesh_default.static_mesh->mesh[i].uv_bytes;
         index_bytes += vk_context.mesh_default.static_mesh->mesh[i].indices_bytes;
+        tangent_bytes += vk_context.mesh_default.static_mesh->mesh[i].tangent_bytes;
+        normal_bytes += vk_context.mesh_default.static_mesh->mesh[i].normal_bytes;
     }
 
     //DRAW BINDLESS textured triangle

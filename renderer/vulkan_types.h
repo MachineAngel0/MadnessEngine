@@ -24,7 +24,6 @@ typedef struct buffer_handle
 } buffer_handle;
 
 
-
 typedef struct vulkan_image
 {
     VkImage handle;
@@ -49,17 +48,15 @@ typedef struct vertex_mesh
 
 typedef struct pc_mesh
 {
-    // VkDeviceAddress just a typedef of a u64
+    // NOTE: VkDeviceAddress just a typedef of a u64
     VkDeviceAddress pos_address;
-    // u64 normal_index;
-    // u64 tangent_index;
+    VkDeviceAddress normal_index;
+    VkDeviceAddress tangent_index;
     VkDeviceAddress uv_index;
 
     u32 albedo_material_index;
     uint32_t _padding;
-    //TODO:
-    // u32 material_albedo_index;
-
+    uint64_t _padding2;
 } pc_mesh;
 
 
@@ -73,16 +70,9 @@ typedef struct mesh
     u32 indices_bytes;
     VkIndexType index_type;
 
-    u64 vertex_count;
     u64 vertex_bytes;
-
-    u64 normal_count;
     u64 normal_bytes;
-
-    u64 tangent_count;
     u64 tangent_bytes;
-
-    u64 uv_count;
     u64 uv_bytes;
 
     shader_handle color_texture;
@@ -97,7 +87,6 @@ typedef struct static_mesh
     u32 mesh_size;
     shader_handle* material_handles;
 } static_mesh;
-
 
 
 typedef enum vulkan_render_pass_state
@@ -222,7 +211,6 @@ typedef struct vulkan_shader_stage
 } vulkan_shader_stage;
 
 
-
 typedef struct vulkan_buffer
 {
     // u64 total_size;
@@ -271,14 +259,18 @@ typedef struct Texture
 } Texture;
 
 
-
 typedef struct Material
 {
     u32 texture_indexes[10]; //TODO: could be more but fine for now
     u32 pipeline_indexes;
-}Material;
+} Material;
 
-
+typedef struct Material_Data
+{
+    vec4 color;
+    float roughness;
+    float metallic;
+} Material_Data;
 
 
 typedef struct shader_system
@@ -294,8 +286,7 @@ typedef struct shader_system
     vulkan_shader_pipeline pipeline_references[100];
 
     shader_handle default_texture_handle;
-
-}shader_system;
+} shader_system;
 
 typedef enum buffer_type
 {
@@ -316,8 +307,11 @@ typedef struct buffer_system
     //an array of them
     //NOTE: if we run out we can always allocate more, for now we just keep one of each
     vulkan_buffer* vertex_buffers;
-    vulkan_buffer* uv_buffers;
     vulkan_buffer* index_buffers;
+    vulkan_buffer* uv_buffers;
+    vulkan_buffer* normal_buffers;
+    vulkan_buffer* tangent_buffers;
+
     vulkan_buffer* storage_buffers;
     vulkan_buffer* uniform_buffers;
 
@@ -326,6 +320,8 @@ typedef struct buffer_system
     u32 index_buffer_count;
     u32 storage_buffer_count;
     u32 uniform_buffer_count;
+    u32 tangent_buffer_count;
+    u32 normal_buffer_count;
 
     //TODO: this should be an array
     //NOTE: when we multithread, it would make sense to have more than one of these in something like a ring buffer
@@ -370,18 +366,14 @@ typedef struct vulkan_mesh_default
     vulkan_shader_pipeline mesh_shader_pipeline;
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
-
-
 } vulkan_mesh_default;
 
 
 typedef struct vulkan_bindless_descriptors
 {
-
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSet* descriptor_sets; //darray, the number of max frames in use
     u32 descriptor_set_count;
-
 } vulkan_bindless_descriptors;
 
 
@@ -394,17 +386,13 @@ typedef struct vulkan_shader_texture
     vulkan_buffer vertex_buffer;
     vulkan_buffer index_buffer;
     vertex_info vertex_info;
-
 } vulkan_shader_texture;
-
-
 
 
 typedef struct descriptor_pool_allocator
 {
     VkDescriptorPool descriptor_pool;
     VkDescriptorPool bindless_descriptor_pool;
-
 } descriptor_pool_allocator;
 
 typedef struct global_descriptor_sets
@@ -412,7 +400,6 @@ typedef struct global_descriptor_sets
     vulkan_bindless_descriptors uniform_descriptors;
     vulkan_bindless_descriptors texture_descriptors;
 } global_descriptor_sets;
-
 
 
 typedef struct vulkan_context
@@ -481,12 +468,10 @@ typedef struct vulkan_context
     VkFence* queue_submit_fence;
     VkCommandPool* primary_command_pool;
     VkCommandBuffer* primary_command_buffer;
-    VkSemaphore* swapchain_acquire_semaphore; // semaphore that tells us when our next image is ready for usage/writing to
+    VkSemaphore* swapchain_acquire_semaphore;
+    // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
-
-
 } vulkan_context;
-
 
 
 /* CAMERA */
@@ -545,13 +530,7 @@ typedef struct renderer
 
     //TODO:
     vulkan_context context;
-
-}renderer;
-
-
-
-
-
+} renderer;
 
 
 #endif //VULKAN_TYPES_H

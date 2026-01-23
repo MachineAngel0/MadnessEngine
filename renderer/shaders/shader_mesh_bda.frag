@@ -9,14 +9,24 @@ layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 layout (buffer_reference, scalar) readonly buffer PositionBuffer {
     vec3 position[];
 };
-
-layout (buffer_reference, scalar) readonly buffer TexBuffer {
-    vec2 tex_coord[];
+layout (buffer_reference, scalar) readonly buffer NormalBuffer {
+    vec3 normal[];
 };
+layout (buffer_reference, scalar) readonly buffer TangentBuffer {
+    vec4 tangent[];
+};
+layout (buffer_reference, scalar) readonly buffer UVBuffer {
+    vec2 uv[];
+};
+
+
 layout (push_constant, scalar) uniform push_constants
 {
     PositionBuffer position_buffer;
-    TexBuffer tex_buffer;
+    NormalBuffer normal_buffer;
+    TangentBuffer tangent_buffer;
+    UVBuffer uv_buffer;
+
     uint albedo_idx;
 } pc;
 
@@ -26,16 +36,18 @@ layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_tex;
 
 
-
 //look into subpasses/renderpasses for more/different out values
 layout(location = 0) out vec4 outColor;
 
 void main() {
     //outColor = vec4(inColor, 1.0) * texture(texSampler, in_tex); // if we want colors overlayed
     //outColor = texture(texSampler, in_tex);
-//    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
-    outColor = texture(texture_samples[(nonuniformEXT(pc.albedo_idx))], in_tex);
-//    outColor = texture(texture_samples[(nonuniformEXT(1))], in_tex);
+    //    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
+    //    outColor = vec4(1.0f, 0.5f, 0.5f, 1.0f) * texture(texture_samples[(nonuniformEXT(pc.albedo_idx))], in_tex);
 
+    vec3 norm = normalize(in_normal);
+//    vec3 light_direction = normalize(lightPos - FragPos);
+
+    outColor = texture(texture_samples[(nonuniformEXT(pc.albedo_idx))], in_tex);
 
 }

@@ -14,24 +14,31 @@ layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
 layout (buffer_reference, scalar) readonly buffer PositionBuffer {
     vec3 position[];
 };
-
-layout (buffer_reference, scalar) readonly buffer TexBuffer {
-    vec2 tex_coord[];
+layout (buffer_reference, scalar) readonly buffer NormalBuffer {
+    vec3 normal[];
 };
-
+layout (buffer_reference, scalar) readonly buffer TangentBuffer {
+    vec4 tangent[];
+};
+layout (buffer_reference, scalar) readonly buffer UVBuffer {
+    vec2 uv[];
+};
 
 
 layout (push_constant, scalar) uniform push_constants
 {
     PositionBuffer position_buffer;
-    TexBuffer tex_buffer;
+    NormalBuffer normal_buffer;
+    TangentBuffer tangent_buffer;
+    UVBuffer uv_buffer;
+
     uint albedo_idx;
 } pc;
 
 
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
-layout(location = 2) out vec2 out_tex;
+layout(location = 2) out vec2 out_uv;
 
 void main() {
 
@@ -39,9 +46,9 @@ void main() {
     vec3 in_pos = pc.position_buffer.position[idx];
     gl_Position = ubo[nonuniformEXT(0)].proj * ubo[nonuniformEXT(0)].view * ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0);
 
-    out_normal = vec3(1,1,1);
-    out_tangent = vec4(1,1,1,1);
+    out_normal = pc.normal_buffer.normal[idx];
+    out_tangent = pc.tangent_buffer.tangent[idx];
 
-    out_tex = pc.tex_buffer.tex_coord[idx];
+    out_uv = pc.uv_buffer.uv[idx];
 
 }

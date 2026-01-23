@@ -3,6 +3,8 @@
 
 #include <stdalign.h>
 
+
+
 //NOTE: its not that each member needs to be aligned,
 // its that the whole struct needs to be aligned to a power of 16 (on my system at least)
 typedef struct vertex_3d
@@ -64,6 +66,20 @@ typedef struct uniform_buffer_object
     alignas(16) mat4 view;
     alignas(16) mat4 proj;
 } uniform_buffer_object;
+
+//TODO: global uniform buffer
+typedef struct uniform_buffer_object_new
+{
+    VkDeviceAddress view_buffer;
+    VkDeviceAddress projection_buffer;
+
+    VkDeviceAddress spot_light_buffer;
+
+    // Directional_Light directional_light;
+
+    //active camera
+
+} uniform_buffer_object_new;
 
 
 //TODO: PUSH CONSTANTS

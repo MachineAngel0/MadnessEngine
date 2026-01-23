@@ -8,18 +8,25 @@ buffer_system* buffer_system_init(renderer* renderer)
     out_buffer_system->index_buffer_count = 1;
     out_buffer_system->storage_buffer_count = 1;
     out_buffer_system->uniform_buffer_count = 1;
+    out_buffer_system->tangent_buffer_count = 1;
+    out_buffer_system->normal_buffer_count= 1;
 
     out_buffer_system->vertex_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
     out_buffer_system->uv_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
+    out_buffer_system->normal_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
+    out_buffer_system->tangent_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
     out_buffer_system->storage_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
     out_buffer_system->index_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
     out_buffer_system->uniform_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer));
+
 
     //TODO: pass in the buffer_system
     vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->vertex_buffers, VERTEX, MB(32));
     vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->uv_buffers, STORAGE, MB(32));
     vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->storage_buffers, STORAGE, MB(32));
     vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->index_buffers, INDEX, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->normal_buffers, STORAGE, MB(32));
+    vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->tangent_buffers, STORAGE, MB(32));
 
     //NOTE: uniform buffer, can simply be the size of the uniform buffer struct with a count of how many of them we want
     vulkan_buffer_vertex_bda_create(renderer, out_buffer_system->uniform_buffers, UNIFORM, MB(32));
