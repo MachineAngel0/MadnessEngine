@@ -30,21 +30,30 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
                         VkDeviceSize srcOffset, VkDeviceSize dstOffset);
 
 //new API
-void vulkan_buffer_vertex_bda_create(renderer* renderer, vulkan_buffer* out_buffer, buffer_type buffer_type,
-                                     u64 data_size);
-bool vulkan_buffer_free(renderer* renderer, vulkan_buffer* vk_buffer);
 
-void vulkan_staging_buffer_create(renderer* renderer, vulkan_staging_buffer* out_buffer, u64 data_size);
+//CREATE
+void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer, vulkan_cpu_buffer_type buffer_type,
+                                  u64 data_size);
+void vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer, vulkan_gpu_buffer_type buffer_type, u64 data_size);
 
-void vulkan_staging_buffer_free(renderer* renderer, vulkan_staging_buffer* staging_buffer);
+//FREE
+bool vulkan_buffer_cpu_free(renderer* renderer, vulkan_buffer_cpu* vk_buffer);
+void vulkan_buffer_gpu_free(renderer* renderer, vulkan_buffer_gpu* staging_buffer);
 
-//for inserting data into a specific memory region of the buffer
-void vulkan_buffer_data_insert_from_offset(renderer* renderer, vulkan_buffer* buffer,
+//INSERT/COPY
+
+//for inserting data into the offset specified by the offset in the buffer
+void vulkan_buffer_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
                                            void* data, u64 data_size);
 
-/* TODO: dont need rn but could use in the future
+/* TODO: dont need rn but could use later
+//for inserting data into a specific memory region of the buffer
 void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                                vulkan_buffer* buffer, vulkan_buffer* staging_buffer, void* data, u64 data_size, u64 offset);
 */
+
+
+
+
 
 #endif //VK_BUFFER_H

@@ -223,7 +223,7 @@ typedef struct vulkan_shader_stage
 } vulkan_shader_stage;
 
 
-typedef struct vulkan_buffer
+typedef struct vulkan_buffer_cpu
 {
     // u64 total_size;
     // VkBufferUsageFlagBits usage;
@@ -233,9 +233,9 @@ typedef struct vulkan_buffer
     //VkDeviceSize are typedefs for u64's
     u64 current_offset;
     u64 capacity;
-} vulkan_buffer;
+} vulkan_buffer_cpu;
 
-typedef struct vulkan_staging_buffer
+typedef struct vulkan_buffer_gpu
 {
     // u64 total_size;
     // VkBufferUsageFlagBits usage;
@@ -244,15 +244,7 @@ typedef struct vulkan_staging_buffer
     //VkDeviceSize are typedefs for u64's
     uint8_t* mapped_data;
     u64 capacity;
-} vulkan_staging_buffer;
-
-typedef struct vulkan_uniform_buffer
-{
-    //all arrays
-    VkBuffer* uniform_buffers;
-    VkDeviceMemory* uniform_buffers_memory;
-    void** uniform_buffers_mapped;
-} vulkan_uniform_buffer;
+} vulkan_buffer_gpu;
 
 
 typedef struct vulkan_shader_pipeline
@@ -278,8 +270,8 @@ typedef struct Material
 } Material;
 
 
-
-typedef struct Material_Index_Data {
+typedef struct Material_Index_Data
+{
     u32 color_index;
 
     u32 roughness_index;
@@ -292,7 +284,6 @@ typedef struct Material_Index_Data {
 
 typedef struct Material_Param_Data
 {
-
     vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
     //ALL FROM RANGES 0-1
     float ambient_strength; // optional for now we can remove it later
@@ -319,36 +310,48 @@ typedef struct Shader_System
 
     Material_Param_Data material_params[100];
     // Material_Index_Data material_index[100]; // idk about this one
-
-
 } Shader_System;
 
-typedef enum buffer_type
+typedef enum vulkan_cpu_buffer_type
 {
-    UNIFORM,
-    STORAGE, // meant to be used in a descriptor set
-    VERTEX, // meant to only be used with vkCmdBindVertexBuffers
-    INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
-    // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
-    INDIRECT,
+    CPU_VERTEX, // meant to only be used with vkCmdBindVertexBuffers
+    CPU_INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
 
+    //create this if the storage is used large data
+    CPU_STORAGE, // meant to be used in a descriptor set
+    // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
+    CPU_INDIRECT,
     //idk what these are used for yet, but they will probably be useful later
     //UNIFORM_TEXEL,
     //STORAGE_TEXEL,
-} buffer_type;
+} vulkan_cpu_buffer_type;
+
+typedef enum vulkan_gpu_buffer_type
+{
+    GPU_UNIFORM,
+    //create this if the storage is used for compute or if the data is relatively small and updates every frame, or static/rarely gets updated
+    GPU_STORAGE,
+    GPU_STAGING,
+} vulkan_gpu_buffer_type;
+
 
 typedef struct Buffer_System
 {
+    //GLOBAL BUFFERS
+    vulkan_buffer_gpu* global_uniform_buffer;
+    u32 global_uniform_buffer_size;
+
     //an array of them
     //NOTE: if we run out we can always allocate more, for now we just keep one of each
-    vulkan_buffer* vertex_buffers;
-    vulkan_buffer* index_buffers;
-    vulkan_buffer* uv_buffers;
-    vulkan_buffer* normal_buffers;
-    vulkan_buffer* tangent_buffers;
+    vulkan_buffer_cpu* vertex_buffers;
+    vulkan_buffer_cpu* index_buffers;
+    vulkan_buffer_cpu* uv_buffers;
+    vulkan_buffer_cpu* normal_buffers;
+    vulkan_buffer_cpu* tangent_buffers;
 
-    vulkan_buffer* storage_buffers;
-    vulkan_buffer* uniform_buffers;
+    vulkan_buffer_cpu* storage_buffers;
+
+    vulkan_buffer_gpu* uniform_buffers;
 
     //how many have been allocated
     u32 vertex_buffer_count;
@@ -360,7 +363,7 @@ typedef struct Buffer_System
 
     //TODO: this should be an array
     //NOTE: when we multithread, it would make sense to have more than one of these in something like a ring buffer
-    vulkan_staging_buffer* staging_buffer_ring;
+    vulkan_buffer_gpu* staging_buffer_ring;
     u32 staging_buffer_count;
 
 
@@ -399,8 +402,8 @@ typedef struct vulkan_mesh_default
     static_mesh* static_mesh;
 
     vulkan_shader_pipeline mesh_shader_pipeline;
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
+    vulkan_buffer_cpu vertex_buffer;
+    vulkan_buffer_cpu index_buffer;
 } vulkan_mesh_default;
 
 
@@ -418,8 +421,8 @@ typedef struct vulkan_shader_texture
 
     vulkan_shader_pipeline shader_texture_pipeline;
 
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
+    vulkan_buffer_cpu vertex_buffer;
+    vulkan_buffer_cpu index_buffer;
     vertex_info vertex_info;
 } vulkan_shader_texture;
 
@@ -474,13 +477,10 @@ typedef struct vulkan_context
     //global_descriptor_pool
     descriptor_pool_allocator global_descriptor_pool;
 
-    //model,view, projection matrix
-    vulkan_uniform_buffer global_uniform_buffers;
-
 
     //TODO: Clean this up
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
+    vulkan_buffer_cpu vertex_buffer;
+    vulkan_buffer_cpu index_buffer;
     vertex_info default_vertex_info;
     vulkan_shader_default default_shader_info;
 
@@ -589,7 +589,6 @@ typedef struct Light_System
 } Light_System;
 
 
-
 typedef struct renderer
 {
     camera main_camera;
@@ -609,7 +608,6 @@ typedef struct renderer
     vulkan_context context;
 
     Directional_Light directional_light;
-
 } renderer;
 
 

@@ -73,26 +73,16 @@ typedef struct uniform_buffer_object_new
     mat4 view;
     mat4 proj;
 
-    VkDeviceAddress view_buffer;
-    VkDeviceAddress projection_buffer;
     VkDeviceAddress directional_light_buffer;
     VkDeviceAddress spot_light_buffer;
 
     //camera camera
-     // vec4 cameraPos;
-
-    //Shadow cameras
+    // vec4 cameraPos;
 
     //TODO: should probably be an enum
     // regular, normal, lighting, shadows, lights, etc...
     u32 debug_mode;
 
-
-    //Shadow cameras
-
-    //TODO: should probably be an enum
-    // regular, normal, lighting, shadows, lights, etc...
-    u32 debug_mode;
 
 
 } uniform_buffer_object_new;

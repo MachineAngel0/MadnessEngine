@@ -220,7 +220,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         char* texture_path = arena_alloc(&renderer->frame_arena, strlen(base_path) + strlen(texture_uri));
         // takes a buffer, message format, then the remaining strings
         sprintf(texture_path, "%s%s", base_path, texture_uri);
-        printf("Texture Path:  %s\n", texture_path);
+        TRACE("Texture Path:  %s", texture_path);
 
 
         out_static_mesh->mesh[mesh_idx].color_texture = shader_system_add_texture(

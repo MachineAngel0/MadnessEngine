@@ -28,7 +28,7 @@ layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 view;
     mat4 proj;
     //mat4 viewProj;
-    vec4 cameraPos;
+//    vec4 cameraPos;
 
 
     Directional_Light_Buffer directional_lights;

@@ -1,5 +1,6 @@
 ﻿#include "renderer.h"
 #include "camera.h"
+#include "lights.h"
 #include "mesh.h"
 #include "shader_system.h"
 #include "vk_command_buffer.h"
@@ -107,11 +108,11 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     renderer_internal.buffer_system = buffer_system_init(&renderer_internal);
     //Allocate buffers up front
 
-    //GLOBAL UNIFORM BUFFER
-    create_global_uniform_buffer(vk_context);
 
     //Shader System
     shader_system_init(&renderer_internal, &renderer_internal.shader_system);
+    // Light System
+    renderer_internal.light_system = light_system_init(&renderer_internal);
 
 
     /*
@@ -168,9 +169,13 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     vk_context->mesh_default.static_mesh = test_mesh;
 
 
-    update_global_uniform_buffer_bindless_descriptor_set(
+    //NOTE: I am going to have to pass the index at some point, because a different one is used each frame
+    for (u32 i = 0; i < renderer_internal.buffer_system->global_uniform_buffer_size; i++)
+    {
+        update_uniform_buffer_bindless_descriptor_set(
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
-        &vk_context->global_uniform_buffers, 1);
+        &renderer_internal.buffer_system->global_uniform_buffer[i], sizeof(uniform_buffer_object), i);
+    }
 
     for (u32 i = 0; i < test_mesh->mesh_size; i++)
     {
@@ -180,18 +185,18 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                                                           test_mesh->mesh[i].color_texture),
                                                       test_mesh->mesh[i].color_texture.handle);
 
-        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
+        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
                                               test_mesh->mesh[i].vertices.pos,
                                               test_mesh->mesh[i].vertex_bytes);
-        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
+        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
                                               test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
-        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
+        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
                                               test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
-        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
+        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
                                               test_mesh->mesh[i].vertices.uv,
                                               test_mesh->mesh[i].uv_bytes);
 
-        vulkan_buffer_data_insert_from_offset(&renderer_internal, renderer_internal.buffer_system->index_buffers,
+        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->index_buffers,
                                               test_mesh->mesh[i].indices,
                                               test_mesh->mesh[i].indices_bytes);
     }
@@ -209,9 +214,11 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     update_global_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptors.texture_descriptors,
                                                   &vk_context->shader_texture_bindless.texture_test_object, 0);
-    update_global_uniform_buffer_bindless_descriptor_set(
+    /*
+    update_uniform_buffer_bindless_descriptor_set(
         vk_context, &vk_context->global_descriptors.uniform_descriptors,
-        &vk_context->global_uniform_buffers, 0);
+        &renderer_internal.buffer_system->global_uniform_buffer[0], sizeof(uniform_buffer_object), 0);
+        */
 
     INFO("VULKAN RENDERER INITIALIZED");
 
@@ -320,8 +327,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                                      vk_context.framebuffer_height);
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    memcpy(vk_context.global_uniform_buffers.uniform_buffers_mapped[vk_context.current_frame], &ubo,
-           sizeof(uniform_buffer_object));
+    memcpy(renderer_internal.buffer_system->global_uniform_buffer[vk_context.current_frame].mapped_data, &ubo, sizeof(uniform_buffer_object));
 
 
     // Begin recording commands.
@@ -501,9 +507,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     VkDeviceAddress uv_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
                                                                   renderer_internal.buffer_system->uv_buffers->handle);
     VkDeviceAddress normal_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                  renderer_internal.buffer_system->normal_buffers->handle);
+                                                                      renderer_internal.buffer_system->normal_buffers->
+                                                                      handle);
     VkDeviceAddress tangent_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                  renderer_internal.buffer_system->tangent_buffers->handle);
+                                                                       renderer_internal.buffer_system->tangent_buffers
+                                                                       ->handle);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -523,7 +531,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
         pc_mesh temp_pc_mesh = {
             .pos_address = position_buffer_address + vertex_bytes,
             .normal_index = normal_buffer_address + normal_bytes,
-            .tangent_index =tangent_buffer_address + tangent_bytes,
+            .tangent_index = tangent_buffer_address + tangent_bytes,
             .uv_index = uv_buffer_address + uv_bytes,
             .albedo_material_index = vk_context.mesh_default.static_mesh->mesh[i].color_texture.handle,
         };

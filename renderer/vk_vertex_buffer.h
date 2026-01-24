@@ -16,7 +16,7 @@
 #define vertices_per_object 4;
 #define indices_per_object 6;
 
-void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_buffer, vulkan_buffer* index_buffer,
+void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer_cpu* vertex_buffer, vulkan_buffer_cpu* index_buffer,
                         vertex_info* vertex_info)
 {
     // A note on memory management in Vulkan in general:
@@ -57,7 +57,7 @@ void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_bu
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer staging_buffer;
+    vulkan_buffer_cpu staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize + indexBufferSize;
@@ -211,7 +211,7 @@ void createVertexBufferTexture(vulkan_context* vulkan_context, vulkan_shader_tex
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer staging_buffer;
+    vulkan_buffer_cpu staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize + indexBufferSize;
@@ -721,29 +721,8 @@ void vertex_info_clear(vertex_info* vertex_info)
 }
 
 
-void uniform_buffers_create(vulkan_context* context, vulkan_uniform_buffer* uniform_buffer)
-{
-    u8 max_frames = context->swapchain.max_frames_in_flight;
-    VkDeviceSize buffer_size = sizeof(uniform_buffer_object);
-    uniform_buffer->uniform_buffers = darray_create_reserve(VkBuffer, max_frames);
-    uniform_buffer->uniform_buffers_memory = darray_create_reserve(VkDeviceMemory, max_frames);
-    uniform_buffer->uniform_buffers_mapped = darray_create_reserve(void*, max_frames);
 
-
-    for (size_t i = 0; i < max_frames; i++)
-    {
-        buffer_create(context, buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                      &uniform_buffer->uniform_buffers[i],
-                      &uniform_buffer->uniform_buffers_memory[i]);
-
-        vkMapMemory(context->device.logical_device, uniform_buffer->uniform_buffers_memory[i], 0, buffer_size, 0,
-                    &uniform_buffer->uniform_buffers_mapped[i]);
-    }
-}
-
-
-void uniform_buffer_update(vulkan_context* context, vulkan_uniform_buffer* uniform_buffers, u32 image_index, float time,
+void global_uniform_buffer_update(vulkan_context* context, vulkan_buffer_gpu* uniform_buffers, u32 image_index, float time,
                            camera* camera)
 {
     uniform_buffer_object ubo = {0};
@@ -757,191 +736,13 @@ void uniform_buffer_update(vulkan_context* context, vulkan_uniform_buffer* unifo
     float aspect = (float) context->framebuffer_width / context->framebuffer_height;
     ubo.proj = mat4_perspective(deg_to_rad(90.0f), aspect, 0.1f, 1000.0f);
 
-    memcpy(uniform_buffers->uniform_buffers_mapped[image_index], &ubo, sizeof(ubo));
-}
-
-void uniform_buffers_destroy(vulkan_context* context, vulkan_uniform_buffer* uniform_buffer)
-{
-    for (size_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
-    {
-        vkDestroyBuffer(context->device.logical_device, uniform_buffer->uniform_buffers[i], 0);
-        vkFreeMemory(context->device.logical_device, uniform_buffer->uniform_buffers_memory[i], 0);
-    }
-}
-
-
-void descriptor_pool_create(vulkan_context* context, descriptor_pool_allocator* descriptor_pool,
-                            vulkan_shader_default* shader)
-{
-    VkDescriptorPoolSize poolSize = {0};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = (uint32_t) context->swapchain.max_frames_in_flight;
-
-    VkDescriptorPoolCreateInfo poolInfo = {0};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = (uint32_t) context->swapchain.max_frames_in_flight;
-
-    VkResult result = vkCreateDescriptorPool(context->device.logical_device, &poolInfo, context->allocator,
-                                             &descriptor_pool->descriptor_pool);
-    VK_CHECK(result);
-}
-
-void descriptor_set_create(vulkan_context* context, descriptor_pool_allocator* descriptor_pool,
-                           vulkan_shader_default* shader)
-{
-    shader->descriptor_sets = darray_create_reserve(VkDescriptorSet, context->swapchain.max_frames_in_flight);
-
-    VkDescriptorSetAllocateInfo allocInfo = {0};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptor_pool->descriptor_pool;
-    allocInfo.descriptorSetCount = (uint32_t) context->swapchain.max_frames_in_flight;
-    allocInfo.pSetLayouts = &shader->descriptor_set_layout;
-
-    if (vkAllocateDescriptorSets(context->device.logical_device, &allocInfo, shader->descriptor_sets) != VK_SUCCESS)
-    {
-        FATAL("failed to allocate descriptor sets!");
-    }
-
-    for (size_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
-    {
-        VkDescriptorBufferInfo bufferInfo = {0};
-        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(uniform_buffer_object);
-
-        VkWriteDescriptorSet descriptorWrite = {0};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = shader->descriptor_sets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
-
-        vkUpdateDescriptorSets(context->device.logical_device, 1, &descriptorWrite, 0, NULL);
-    }
-}
-
-void descriptor_pool_destroy(vulkan_context* context, VkDescriptorPool* descriptorPool)
-{
-    vkDestroyDescriptorPool(context->device.logical_device, *descriptorPool, 0);
-}
-
-void descriptor_set_layout_destroy(vulkan_context* context, VkDescriptorSetLayout* descriptor_set_layout)
-{
-    vkDestroyDescriptorSetLayout(context->device.logical_device, *descriptor_set_layout, 0);
-}
-
-void create_global_uniform_buffer(vulkan_context* context)
-{
-    u8 max_frames = context->swapchain.max_frames_in_flight;
-    context->global_uniform_buffers.uniform_buffers = darray_create_reserve(VkBuffer, max_frames);
-    context->global_uniform_buffers.uniform_buffers_memory = darray_create_reserve(
-        VkDeviceMemory, max_frames);
-    context->global_uniform_buffers.uniform_buffers_mapped = darray_create_reserve(
-        void*, max_frames);
-
-    // Prepare and initialize the per-frame uniform buffer blocks containing shader uniforms
-    // Single uniforms like in OpenGL are no longer present in Vulkan. All shader uniforms are passed via uniform buffer blocks
-    VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufferInfo.size = sizeof(uniform_buffer_object);
-    // This buffer will be used as a uniform buffer
-    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-
-    // Create the buffers
-    for (uint32_t i = 0; i < max_frames; i++)
-    {
-        VK_CHECK(
-            vkCreateBuffer(context->device.logical_device, &bufferInfo, 0, &context->global_uniform_buffers.
-                uniform_buffers[i]));
-        // Get memory requirements including size, alignment and memory type based on the buffer type we request (uniform buffer)
-        VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(context->device.logical_device,
-                                      context->global_uniform_buffers.uniform_buffers[i], &memReqs);
-        VkMemoryAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-        // Note that we use the size we got from the memory requirements and not the actual buffer size, as the former may be larger due to alignment requirements of the device
-        allocInfo.allocationSize = memReqs.size;
-        // Get the memory type index that supports host visible memory access
-        // Most implementations offer multiple memory types and selecting the correct one to allocate memory from is crucial
-        // We also want the buffer to be host coherent so we don't have to flush (or sync after every update).
-        allocInfo.memoryTypeIndex = find_memory_type(context, memReqs.memoryTypeBits,
-                                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        // Allocate memory for the uniform buffer
-        VK_CHECK(
-            vkAllocateMemory(context->device.logical_device, &allocInfo, 0,
-                &( context->global_uniform_buffers.uniform_buffers_memory[i])));
-        // Bind memory to buffer
-        VK_CHECK(
-            vkBindBufferMemory(context->device.logical_device, context->global_uniform_buffers.uniform_buffers[i],
-                context->global_uniform_buffers.uniform_buffers_memory[i], 0));
-        // We map the buffer once, so we can update it without having to map it again
-        VK_CHECK(vkMapMemory(context->device.logical_device, context->global_uniform_buffers.uniform_buffers_memory[i],
-            0, sizeof(uniform_buffer_object), 0,
-            &context->global_uniform_buffers.uniform_buffers_mapped[i]));
-    }
-}
-
-// Descriptors are used to pass data to shaders, for our sample we use a descriptor to pass parameters like matrices to the shader
-void createDescriptors(vulkan_context* context, descriptor_pool_allocator* descriptor_pool)
-{
-    context->default_shader_info.descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, context->swapchain.max_frames_in_flight);
-    context->default_shader_info.descriptor_set_count = (u32) context->swapchain.max_frames_in_flight;
-
-    // Descriptor set layouts define the interface between our application and the shader
-    // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
-    // So every shader binding should map to one descriptor set layout binding
-    // Binding 0: Uniform buffer (Vertex shader)
-    VkDescriptorSetLayoutBinding layoutBinding = {0};
-    layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layoutBinding.descriptorCount = 1;
-    layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // layoutBinding.binding
-
-    VkDescriptorSetLayoutCreateInfo descriptorLayoutCI = {0};
-    descriptorLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorLayoutCI.bindingCount = 1;
-    descriptorLayoutCI.pBindings = &layoutBinding;
-
-    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &descriptorLayoutCI, 0,
-        &context->default_shader_info.descriptor_set_layout));
-
-    // Where the descriptor set layout is the interface, the descriptor set points to actual data
-    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
-    for (uint32_t i = 0; i < context->swapchain.max_frames_in_flight; i++)
-    {
-        u32 set_count = 1;
-        descriptor_pool_alloc_bindless(context, descriptor_pool, &context->default_shader_info.descriptor_set_layout, &set_count,
-                              &context->default_shader_info.descriptor_sets[i]);
-
-        // Update the descriptor set determining the shader binding points
-        // For every binding point used in a shader there needs to be one
-        // descriptor set matching that binding point
-        VkWriteDescriptorSet writeDescriptorSet = {0};
-        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        // The buffer's information is passed using a descriptor info structure
-        VkDescriptorBufferInfo bufferInfo = {0};
-        bufferInfo.buffer = context->global_uniform_buffers.uniform_buffers[i];
-        bufferInfo.range = sizeof(uniform_buffer_object);
-        bufferInfo.offset = 0;
-
-        // Binding 0 : Uniform buffer
-        writeDescriptorSet.dstSet = context->default_shader_info.descriptor_sets[i];
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeDescriptorSet.pBufferInfo = &bufferInfo;
-        writeDescriptorSet.dstBinding = 0;
-        vkUpdateDescriptorSets(context->device.logical_device, 1, &writeDescriptorSet, 0, 0);
-    }
+    memcpy(uniform_buffers->mapped_data, &ubo, sizeof(ubo));
 }
 
 
 
-void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* buffer_data, size_t data_size)
+
+void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer_cpu* out_buffer, void* buffer_data, size_t data_size)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -979,7 +780,7 @@ void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_bu
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer staging_buffer;
+    vulkan_buffer_cpu staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize;
@@ -1060,7 +861,7 @@ void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_bu
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
 
-void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* index_buffer_data, size_t data_size)
+void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer_cpu* out_buffer, void* index_buffer_data, size_t data_size)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -1098,7 +899,7 @@ void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vul
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer staging_buffer;
+    vulkan_buffer_cpu staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = index_buffer_size;

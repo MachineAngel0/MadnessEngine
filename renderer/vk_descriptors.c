@@ -72,6 +72,9 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
                                                       context->allocator,
                                                       &descriptor_pools->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
+
+
+
 }
 
 void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
@@ -274,58 +277,6 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
 */
 
 
-void createDescriptorsMesh(renderer* renderer, descriptor_pool_allocator* descriptor_pool_allocator,
-                           vulkan_bindless_descriptors* uniform_descriptors, const mesh* in_mesh)
-{
-    spirv_reflect_descriptor_set_info* d_set_reflect_info = spriv_reflect_get_descriptor_set(
-        &renderer->frame_arena, "../renderer/shaders/shader_mesh.vert.spv", "../renderer/shaders/shader_mesh.frag.spv");
-
-    // Descriptor set layouts define the interface between our application and the shader
-    // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
-    // So every shader binding should map to one descriptor set layout binding
-
-
-    // Where the descriptor set layout is the interface, the descriptor set points to actual data
-    // Descriptors that are changed per frame need to be multiplied, so we can update descriptor n+1 while n is still used by the GPU, so we create one per max frame in flight
-    for (uint32_t i = 0; i < renderer->context.swapchain.max_frames_in_flight; i++)
-    {
-        // The buffer's information is passed using a descriptor info structure
-        VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-        bufferInfo.buffer = renderer->context.global_uniform_buffers.uniform_buffers[i];
-        bufferInfo.range = sizeof(uniform_buffer_object);
-        bufferInfo.offset = 0;
-        // Update the descriptor set determining the shader binding points
-        // For every binding point used in a shader there needs to be one
-        // descriptor set matching that binding point
-        VkWriteDescriptorSet* writeDescriptorSet = darray_create_reserve(
-            VkWriteDescriptorSet, d_set_reflect_info->descriptor_set_count);
-
-        //TODO: these values (uniform buffer/texture) are either going to be seperate functions or enums switches
-
-
-        for (int j = 0; j < d_set_reflect_info->descriptor_set_count; j++)
-        {
-            writeDescriptorSet[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writeDescriptorSet[j].dstSet = uniform_descriptors->descriptor_sets[i];
-            writeDescriptorSet[j].descriptorType = d_set_reflect_info->descriptor_set_types[j];
-            writeDescriptorSet[j].dstBinding = d_set_reflect_info->binding_number[j];
-            writeDescriptorSet[j].descriptorCount = 1;
-            writeDescriptorSet[j].dstArrayElement = 0;
-
-            switch (d_set_reflect_info->descriptor_set_types[j])
-            {
-            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER: // uniform buffer
-                writeDescriptorSet[j].pBufferInfo = &bufferInfo;
-                break;
-            default:
-                WARN("DESCRIPTOR SET CREATE: TYPE NOT YET SUPPORTED")
-            }
-        }
-        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
-                               writeDescriptorSet, 0, 0);
-        darray_free(writeDescriptorSet);
-    }
-}
 
 
 void create_texture_bindless_descriptor_set(vulkan_context* context,
@@ -478,14 +429,14 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
     // darray_free(texture_descriptors->descriptor_sets);
 }
 
-void update_global_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
+void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
                                                           vulkan_bindless_descriptors* uniform_descriptors,
-                                                          vulkan_uniform_buffer* buffer, u32 array_index)
+                                                          vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index)
 {
     // The buffer's information is passed using a descriptor info structure
     VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-    bufferInfo.buffer = buffer->uniform_buffers[0];
-    bufferInfo.range = sizeof(uniform_buffer_object);
+    bufferInfo.buffer = buffer->handle;
+    bufferInfo.range = data_size;
     bufferInfo.offset = 0;
 
     for (int j = 0; j < uniform_descriptors->descriptor_set_count; j++)
