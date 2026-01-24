@@ -489,7 +489,6 @@ typedef struct vulkan_context
     vulkan_shader_texture shader_texture;
     vulkan_shader_texture shader_texture_bindless;
 
-    global_descriptor_sets global_descriptors;
 
     //temp
     vulkan_mesh_default mesh_default;
@@ -586,6 +585,10 @@ typedef struct Light_System
     Directional_Light* directional_lights;
     u32 point_light_count;
     u32 directional_light_count;
+
+    vulkan_buffer_cpu directional_light_buffer;
+    vulkan_buffer_cpu spot_light_buffer;
+
 } Light_System;
 
 
@@ -600,6 +603,8 @@ typedef struct renderer
     Buffer_System* buffer_system;
     Light_System* light_system;
 
+    global_descriptor_sets global_descriptors;
+
     //mesh system
     //animation system
     //ui draw info
@@ -607,7 +612,6 @@ typedef struct renderer
     //TODO:
     vulkan_context context;
 
-    Directional_Light directional_light;
 } renderer;
 
 

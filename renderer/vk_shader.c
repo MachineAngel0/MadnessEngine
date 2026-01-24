@@ -571,12 +571,12 @@ bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_textur
     return true;
 }
 
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data)
+bool vulkan_mesh_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        context->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        context->global_descriptors.texture_descriptors.descriptor_set_layout
+        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        renderer->global_descriptors.texture_descriptors.descriptor_set_layout
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -589,7 +589,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
 
     // TODO: Pipeline and Push Constants
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info, NULL,
                                                       &mesh_data->mesh_shader_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);
     //graphics pipeline
@@ -608,8 +608,8 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -809,9 +809,9 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -834,7 +834,7 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &mesh_data->mesh_shader_pipeline.handle);
 
@@ -847,18 +847,18 @@ bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mes
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(context->device.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(context->device.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
 
     return true;
 }
 
-bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader)
+bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_texture* textured_shader)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        context->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        context->global_descriptors.texture_descriptors.descriptor_set_layout,
+        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
     };
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -870,7 +870,7 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
 
     // TODO: Pipeline and Push Constants
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info, NULL,
                                                       &textured_shader->shader_texture_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);
     //graphics pipeline
@@ -889,8 +889,8 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -1082,9 +1082,9 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -1107,7 +1107,7 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &textured_shader->shader_texture_pipeline.handle);
 
@@ -1120,14 +1120,14 @@ bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shad
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(context->device.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(context->device.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
 
     return true;
 }
 
 
-bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data)
+bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data)
 {
 
     VkPushConstantRange push_constants = {0};
@@ -1137,8 +1137,8 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
 
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        context->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        context->global_descriptors.texture_descriptors.descriptor_set_layout
+        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        renderer->global_descriptors.texture_descriptors.descriptor_set_layout
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -1150,7 +1150,7 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(context->device.logical_device, &pipeline_layout_info, NULL,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info, NULL,
                                                       &mesh_data->mesh_shader_pipeline.pipeline_layout);
     VK_CHECK(pipeline_result);
     //graphics pipeline
@@ -1169,8 +1169,8 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -1337,9 +1337,9 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &context->swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = context->device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = context->device.depth_format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.device.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.device.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -1362,7 +1362,7 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(context->device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &mesh_data->mesh_shader_pipeline.handle);
 
@@ -1375,8 +1375,8 @@ bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default*
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(context->device.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(context->device.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
 
     return true;
 }

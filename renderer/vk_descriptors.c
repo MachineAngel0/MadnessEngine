@@ -57,7 +57,11 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = max_bindless_resources
         },
-
+        /*
+        {
+            .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = max_bindless_resources
+        },*/
     };
 
     VkDescriptorPoolCreateInfo bindless_pool_info = {0};
@@ -72,9 +76,6 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
                                                       context->allocator,
                                                       &descriptor_pools->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
-
-
-
 }
 
 void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
@@ -277,8 +278,6 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
 */
 
 
-
-
 void create_texture_bindless_descriptor_set(vulkan_context* context,
                                             descriptor_pool_allocator* descriptor_pool_allocator,
                                             vulkan_bindless_descriptors* texture_descriptors)
@@ -430,8 +429,8 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
 }
 
 void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                          vulkan_bindless_descriptors* uniform_descriptors,
-                                                          vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index)
+                                                   vulkan_bindless_descriptors* uniform_descriptors,
+                                                   vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index)
 {
     // The buffer's information is passed using a descriptor info structure
     VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer

@@ -54,6 +54,10 @@ Light_System* light_system_init(renderer* renderer)
         directional_light_init(&out_light_system->directional_lights[directional_light_idx]);
     }
 
+    //TODO: remove later just some test lights for now
+    out_light_system->point_lights[0].color = (vec4){0.5f, 0.0f, 0.0f, 1.0f};
+    out_light_system->directional_lights[0].color = (vec3){0.5f, 0.5f, 0.5f};
+
 
     return out_light_system;
 }

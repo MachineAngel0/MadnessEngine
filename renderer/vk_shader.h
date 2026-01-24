@@ -19,11 +19,11 @@ void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, 
 bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader,
                                     VkDescriptorSetLayout* descriptor_layout);
 
-bool vulkan_mesh_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data);
+bool vulkan_mesh_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
 
-bool vulkan_bindless_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader);
+bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_texture* textured_shader);
 
-bool vulkan_mesh_bda_shader_create(vulkan_context* context, vulkan_mesh_default* mesh_data);
+bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
 
 
 
