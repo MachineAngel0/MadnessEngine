@@ -43,7 +43,7 @@ void vulkan_buffer_gpu_free(renderer* renderer, vulkan_buffer_gpu* staging_buffe
 //INSERT/COPY
 
 //for inserting data into the offset specified by the offset in the buffer
-void vulkan_buffer_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
+void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
                                            void* data, u64 data_size);
 
 /* TODO: dont need rn but could use later

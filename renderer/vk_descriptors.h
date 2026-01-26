@@ -46,8 +46,16 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
                                                    vulkan_bindless_descriptors* uniform_descriptors);
 
 void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                          vulkan_bindless_descriptors* uniform_descriptors,
-                                                          vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index);
+                                                   vulkan_bindless_descriptors* uniform_descriptors,
+                                                   vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index);
+
+void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
+                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+                                                   vulkan_bindless_descriptors* storage_descriptors);
+void update_storage_buffer_bindless_descriptor_set(vulkan_context* context,
+                                                   vulkan_bindless_descriptors* storage_descriptors,
+                                                   vulkan_buffer_cpu* buffer, u64 data_size,
+                                                   u32 array_index);
 
 //TODO: we need a function of some sort to return a handle so that we can use it for later updates
 //NOTE: one isn't needed for textures because the shader_system handles that

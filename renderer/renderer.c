@@ -103,16 +103,74 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                                            &renderer_internal.global_descriptors.texture_descriptors);
     create_bindless_uniform_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
                                                   &renderer_internal.global_descriptors.uniform_descriptors);
+    create_bindless_storage_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
+                                                  &renderer_internal.global_descriptors.storage_descriptors);
+
 
     //BUFFER SYSTEM
-    renderer_internal.buffer_system = buffer_system_init(&renderer_internal);
     //Allocate buffers up front
-
+    renderer_internal.buffer_system = buffer_system_init(&renderer_internal);
+    for (u32 i = 0; i < renderer_internal.buffer_system->global_uniform_buffer_size; i++)
+    {
+        update_uniform_buffer_bindless_descriptor_set(
+            vk_context, &renderer_internal.global_descriptors.uniform_descriptors,
+            &renderer_internal.buffer_system->global_uniform_buffer[i], sizeof(uniform_buffer_object), i);
+    }
 
     //Shader System
     shader_system_init(&renderer_internal, &renderer_internal.shader_system);
     // Light System
     renderer_internal.light_system = light_system_init(&renderer_internal);
+
+    //INDIRECT DRAW
+    renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
+                                                              "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+
+
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_vertex_buffer, CPU_VERTEX, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_index_buffer, CPU_INDEX, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_buffer, CPU_INDIRECT, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_ssbo_buffer, CPU_STORAGE, MB(32));
+
+    for (u32 i = 0; i < renderer_internal.indirect_mesh->mesh_size; i++)
+    {
+        update_global_texture_bindless_descriptor_set(
+            vk_context, &renderer_internal.global_descriptors.texture_descriptors,
+            shader_system_get_texture(
+                renderer_internal.shader_system,
+                renderer_internal.indirect_mesh->mesh[i].color_texture),
+            renderer_internal.indirect_mesh->mesh[i].color_texture.handle);
+
+
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_vertex_buffer,
+                                                renderer_internal.indirect_mesh->mesh[i].vertices.pos,
+                                                renderer_internal.indirect_mesh->mesh[i].vertex_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_index_buffer,
+                                                renderer_internal.indirect_mesh->mesh[i].indices,
+                                                renderer_internal.indirect_mesh->mesh[i].indices_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_buffer,
+                                                &renderer_internal.indirect_mesh->indirect_draw_array[i],
+                                                sizeof(VkDrawIndexedIndirectCommand));
+
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.material_ssbo_buffer,
+                                                &renderer_internal.indirect_mesh->mesh[i].color_texture.handle,
+                                                sizeof(u32));
+
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.uv_ssbo_buffer,
+                                                &renderer_internal.indirect_mesh->mesh[i].vertices.uv,
+                                                renderer_internal.indirect_mesh->mesh[i].uv_bytes);
+    }
+
+    update_storage_buffer_bindless_descriptor_set(
+        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
+        &renderer_internal.uv_ssbo_buffer, renderer_internal.uv_ssbo_buffer.current_offset, 0);
+    update_storage_buffer_bindless_descriptor_set(
+        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
+        &renderer_internal.material_ssbo_buffer, renderer_internal.material_ssbo_buffer.current_offset, 1);
+
+
+    vulkan_mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_pipeline);
 
 
     //BUFFER ADDRESSING
@@ -123,14 +181,6 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     vk_context->mesh_default.static_mesh = test_mesh;
 
 
-    //NOTE: I am going to have to pass the index at some point, because a different one is used each frame
-    for (u32 i = 0; i < renderer_internal.buffer_system->global_uniform_buffer_size; i++)
-    {
-        update_uniform_buffer_bindless_descriptor_set(
-            vk_context, &renderer_internal.global_descriptors.uniform_descriptors,
-            &renderer_internal.buffer_system->global_uniform_buffer[i], sizeof(uniform_buffer_object), i);
-    }
-
     for (u32 i = 0; i < test_mesh->mesh_size; i++)
     {
         update_global_texture_bindless_descriptor_set(
@@ -140,20 +190,20 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                 test_mesh->mesh[i].color_texture),
             test_mesh->mesh[i].color_texture.handle);
 
-        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
-                                            test_mesh->mesh[i].vertices.pos,
-                                            test_mesh->mesh[i].vertex_bytes);
-        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
-                                            test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
-        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
-                                            test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
-        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
-                                            test_mesh->mesh[i].vertices.uv,
-                                            test_mesh->mesh[i].uv_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
+                                                test_mesh->mesh[i].vertices.pos,
+                                                test_mesh->mesh[i].vertex_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
+                                                test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
+                                                test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
+                                                test_mesh->mesh[i].vertices.uv,
+                                                test_mesh->mesh[i].uv_bytes);
 
-        vulkan_buffer_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->index_buffers,
-                                            test_mesh->mesh[i].indices,
-                                            test_mesh->mesh[i].indices_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->index_buffers,
+                                                test_mesh->mesh[i].indices,
+                                                test_mesh->mesh[i].indices_bytes);
     }
 
     vulkan_mesh_bda_shader_create(&renderer_internal, &vk_context->mesh_default);
@@ -386,7 +436,53 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // SET 2 GLOBAL BUFFERS: Mesh/Material values (just as an example)
     // SET 2 GLOBAL BUFFERS: FOG/BLOOM/IDK (just as an example)
 
+    //INDIRECT DRAW
+    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      renderer_internal.indirect_pipeline.handle);
 
+    //uniform
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_pipeline.pipeline_layout, 0, 1,
+                            &renderer_internal.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
+                                current_frame], 0, 0);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_pipeline.pipeline_layout, 1, 1,
+                            &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+                                current_frame], 0, 0);
+
+    //storage buffers
+    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_pipeline.pipeline_layout, 2, 1,
+                            &renderer_internal.global_descriptors.storage_descriptors.descriptor_sets[vk_context.
+                                current_frame], 0, 0);
+
+
+    VkDeviceSize pOffsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1, &renderer_internal.indirect_vertex_buffer.handle,
+                           pOffsets);
+
+    vkCmdBindIndexBuffer(command_buffer_current_frame->handle, renderer_internal.indirect_index_buffer.handle, 0,
+                         VK_INDEX_TYPE_UINT16);
+
+    if (renderer_internal.context.device.features.multiDrawIndirect)
+    {
+        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle, renderer_internal.indirect_buffer.handle, 0,
+                                 vk_context.mesh_default.static_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
+    }
+    else
+    {
+        // If multi draw is not available, we must issue separate draw commands
+        for (auto j = 0; j < vk_context.mesh_default.static_mesh->mesh_size; j++)
+        {
+            vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
+                                     renderer_internal.buffer_system->indirect_buffer[0].handle,
+                                     j * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));
+        }
+    }
+
+    /*
     //BUFFER ADDRESSING//
 
 
@@ -456,7 +552,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
         tangent_bytes += vk_context.mesh_default.static_mesh->mesh[i].tangent_bytes;
         normal_bytes += vk_context.mesh_default.static_mesh->mesh[i].normal_bytes;
     }
-
+*/
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.shader_texture_bindless.shader_texture_pipeline.handle);

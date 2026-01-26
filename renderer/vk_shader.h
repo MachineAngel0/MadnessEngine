@@ -24,6 +24,7 @@ bool vulkan_mesh_shader_create(renderer* renderer, vulkan_mesh_default* mesh_dat
 bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_texture* textured_shader);
 
 bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
+bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline);
 
 
 

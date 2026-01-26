@@ -39,6 +39,7 @@ layout (push_constant, scalar) uniform push_constants
     UVBuffer uv_buffer;
 
     uint albedo_idx;
+    uint padding;
 } pc;
 
 

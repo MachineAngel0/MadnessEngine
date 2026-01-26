@@ -368,6 +368,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
         .bufferDeviceAddressMultiDevice = VK_TRUE,
+        .drawIndirectCount = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
@@ -379,7 +380,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     // Request device features.
     // TODO: should be config driven
     VkPhysicalDeviceFeatures device_features = {
-        .samplerAnisotropy = VK_TRUE // Request anistrophy
+        .samplerAnisotropy = VK_TRUE, // Request anistrophy
+        .multiDrawIndirect = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures2 enable_device_features2 = {

@@ -17,17 +17,18 @@ Buffer_System* buffer_system_init(renderer* renderer)
 
     buffer_system->vertex_buffer_count = 1;
     buffer_system->index_buffer_count = 1;
+    buffer_system->indirect_buffer_count = 1;
     buffer_system->storage_buffer_count = 1;
     buffer_system->uniform_buffer_count = 1;
     buffer_system->tangent_buffer_count = 1;
     buffer_system->normal_buffer_count = 1;
 
     buffer_system->vertex_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
-    buffer_system->uv_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
+    buffer_system->index_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
+    buffer_system->indirect_buffer = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));    buffer_system->uv_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->normal_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->tangent_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->storage_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
-    buffer_system->index_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->uniform_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
 
 
@@ -40,7 +41,7 @@ Buffer_System* buffer_system_init(renderer* renderer)
     vulkan_buffer_cpu_create(renderer, buffer_system->tangent_buffers, CPU_STORAGE, MB(32));
 
     //NOTE: uniform buffer, can simply be the size of the uniform buffer struct with a count of how many of them we want
-    vulkan_buffer_cpu_create(renderer, buffer_system->uniform_buffers, GPU_UNIFORM, MB(32));
+    vulkan_buffer_gpu_create(renderer, buffer_system->uniform_buffers, GPU_UNIFORM, MB(32));
 
     //STAGING BUFFERS
     buffer_system->staging_buffer_ring = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_gpu));
@@ -264,6 +265,7 @@ void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     case CPU_INDIRECT:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         break;
     }
 
@@ -302,7 +304,7 @@ void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
 }
 
 
-void vulkan_buffer_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
+void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
                                          void* data, u64 data_size)
 {
     VkDevice device = renderer->context.device.logical_device;

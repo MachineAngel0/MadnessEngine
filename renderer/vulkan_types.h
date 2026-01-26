@@ -68,7 +68,6 @@ typedef struct pc_mesh
 
     u32 albedo_material_index;
     uint32_t _padding;
-    uint64_t _padding2;
 } pc_mesh;
 
 
@@ -97,7 +96,7 @@ typedef struct static_mesh
     mesh* mesh;
     // the number of meshes in the model
     u32 mesh_size;
-    shader_handle* material_handles;
+    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
 } static_mesh;
 
 
@@ -274,13 +273,18 @@ typedef struct Material_Index_Data
 {
     u32 color_index;
 
-    u32 roughness_index;
-    u32 metallic_index;
-    u32 specular_index;
-    u32 emissive_index;
+    // u32 roughness_index;
+    // u32 metallic_index;
+    // u32 specular_index;
+    // u32 emissive_index;
     // u32 ambient_occlusion_index;
-    u32 normal_index;
+    // u32 normal_index;
 } Material_Index_Data;
+
+
+
+
+
 
 typedef struct Material_Param_Data
 {
@@ -345,6 +349,8 @@ typedef struct Buffer_System
     //NOTE: if we run out we can always allocate more, for now we just keep one of each
     vulkan_buffer_cpu* vertex_buffers;
     vulkan_buffer_cpu* index_buffers;
+    vulkan_buffer_cpu* indirect_buffer;
+
     vulkan_buffer_cpu* uv_buffers;
     vulkan_buffer_cpu* normal_buffers;
     vulkan_buffer_cpu* tangent_buffers;
@@ -356,6 +362,7 @@ typedef struct Buffer_System
     //how many have been allocated
     u32 vertex_buffer_count;
     u32 index_buffer_count;
+    u32 indirect_buffer_count;
     u32 storage_buffer_count;
     u32 uniform_buffer_count;
     u32 tangent_buffer_count;
@@ -437,6 +444,7 @@ typedef struct global_descriptor_sets
 {
     vulkan_bindless_descriptors uniform_descriptors;
     vulkan_bindless_descriptors texture_descriptors;
+    vulkan_bindless_descriptors storage_descriptors;
 } global_descriptor_sets;
 
 
@@ -611,6 +619,15 @@ typedef struct renderer
 
     //TODO:
     vulkan_context context;
+
+    static_mesh* indirect_mesh;
+    vulkan_shader_pipeline indirect_pipeline;
+    vulkan_buffer_cpu indirect_buffer;
+    vulkan_buffer_cpu indirect_vertex_buffer;
+    vulkan_buffer_cpu indirect_index_buffer;
+    vulkan_buffer_cpu material_ssbo_buffer;
+    vulkan_buffer_cpu uv_ssbo_buffer;
+
 
 } renderer;
 
