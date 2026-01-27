@@ -307,7 +307,7 @@ void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
 
 
 void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_cpu* buffer,
-                                         void* data, u64 data_size)
+                                             void* data, u64 data_size)
 {
     VkDevice device = renderer->context.device.logical_device;
     vulkan_buffer_gpu* staging_buffer = renderer->buffer_system->staging_buffer_ring;

@@ -241,7 +241,7 @@ void memory_tracker_unit_test()
 
     // memory_container_alloc(MEMORY_CONTAINER_UNKNOWN, 1024);
     // memory_subsystem_alloc(MEMORY_SUBSYSTEM_UNKNOWN, 1024);
-    memory_subsystem_alloc(MEMORY_CONTAINER_APPLICATION_ARENA, KB(1));
+    memory_subsystem_alloc(MEMORY_SUBSYSTEM_GAME, KB(1));
 
     memory_tracker_print_memory_usage();
 }
