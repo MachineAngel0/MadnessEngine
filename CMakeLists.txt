@@ -57,6 +57,7 @@ include_directories(MadnessEngine ./renderer/shaders)
 include_directories(MadnessEngine ./game/)
 include_directories(MadnessEngine ./lib/)
 include_directories(MadnessEngine ./lib/cgltf-master)
+include_directories(MadnessEngine ./lib/ufbx)
 include_directories(MadnessEngine ./z_assets/)
 
 
@@ -80,6 +81,7 @@ add_executable(MadnessEngine_renderer
 )
 add_library(MADNESSRENDERER SHARED
         unity_build_renderer.c
+
 )
 
 ### EDITOR ###
@@ -92,12 +94,13 @@ add_executable(MadnessEngine_editor
 add_executable(CORE_UNIT_TEST
         core/core_unit_test_main.c
         core/core_unity.c
-
 )
 
 
 #libs
 
+target_sources(MadnessEngine_renderer PRIVATE
+)
 
 if (WIN32)
     SET(MADNESS_WIN_LIBS

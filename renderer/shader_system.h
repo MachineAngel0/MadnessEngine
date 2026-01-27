@@ -7,7 +7,7 @@
 #include "vk_image.h"
 
 
-shader_handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
+Shader_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
 
 
 void shader_system_init(renderer* renderer, Shader_System** out_shader_system)
@@ -26,16 +26,16 @@ void shader_system_init(renderer* renderer, Shader_System** out_shader_system)
                                                        "../renderer/texture/error_texture.png");
 }
 
-Texture* shader_system_get_texture(Shader_System* system, shader_handle handle)
+Texture* shader_system_get_texture(Shader_System* system, Shader_Handle handle)
 {
     return &system->textures[handle.handle];
 }
 
 //pass out the texture index
-shader_handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath)
+Shader_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath)
 {
     //get an available index
-    shader_handle out_texture_handle;
+    Shader_Handle out_texture_handle;
     out_texture_handle.handle = system->available_texture_indexes;
 
     //create the texture
@@ -52,7 +52,7 @@ void shader_system_remove_texture(Shader_System* system)
 {
 }
 
-void shader_system_update_texture(renderer* renderer, Shader_System* system, shader_handle* handle,
+void shader_system_update_texture(renderer* renderer, Shader_System* system, Shader_Handle* handle,
                                   const char* filepath)
 {
     // create texture if it's not already loaded

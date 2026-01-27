@@ -1,7 +1,6 @@
 ﻿#ifndef MATH_TYPES_H
 #define MATH_TYPES_H
 
-#include <stdalign.h>
 
 #include "defines.h"
 

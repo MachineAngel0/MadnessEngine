@@ -1,5 +1,5 @@
-﻿#ifndef KMATH_H
-#define KMATH_H
+﻿#ifndef MATH_LIB_H
+#define MATH_LIB_H
 
 
 
@@ -9,7 +9,6 @@
 #include "platform.h"
 
 
-// #include "cglm/cglm.h"
 
 
 //FUTURE: rn im not using glm/cglm, should probably switch
@@ -769,7 +768,7 @@ MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
     out_mat.data[11] = 0;
     out_mat.data[12] = -vec3_dot(x_axis, target);
     out_mat.data[13] = -vec3_dot(y_axis, target);
-    out_mat.data[14] = vec3_dot(z_axis, target);
+    out_mat.data[14] = -vec3_dot(z_axis, target);
     out_mat.data[15] = 1.0f;
 
 
@@ -1484,4 +1483,4 @@ bool equal_d(const double a, const double b, double tolerance)
 
 #define EQUAL_F(a, b) equal_f(a, b, FLT_EPSILON)
 #define EQUAL_D(a, b) equal_d(a, b, FLT_EPSILON)
-#endif //KMATH_H
+#endif //MATH_LIB_H

@@ -13,15 +13,15 @@
 
 
 /// HANDLES ///
-typedef struct shader_handle
+typedef struct Shader_Handle
 {
     u32 handle;
-} shader_handle;
+} Shader_Handle;
 
-typedef struct buffer_handle
+typedef struct Buffer_Handle
 {
     u32 handle;
-} buffer_handle;
+} Buffer_Handle;
 
 typedef struct light_buffer_handle
 {
@@ -33,7 +33,7 @@ typedef struct light_buffer_handle
 typedef struct mesh_handle
 {
     u32 handle;
-} mesh_handle;
+} Mesh_Handle;
 
 
 typedef struct vulkan_image
@@ -71,7 +71,6 @@ typedef struct pc_mesh
 } pc_mesh;
 
 
-//TODO: every model can have multiple meshes
 typedef struct mesh
 {
     vertex_mesh vertices;
@@ -88,7 +87,7 @@ typedef struct mesh
     u64 tangent_bytes;
     u64 uv_bytes;
 
-    shader_handle color_texture;
+    Shader_Handle color_texture;
     //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
 } mesh;
 
@@ -101,6 +100,17 @@ typedef struct static_mesh
     VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
 } static_mesh;
 
+// TODO: skinned mesh
+typedef struct skinned_mesh
+{
+    mesh* mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
+
+    //Joints joints;
+    //Weights weights;
+} skinned_mesh;
 
 typedef enum vulkan_render_pass_state
 {
@@ -312,7 +322,7 @@ typedef struct Shader_System
     u32 material_indexes;
     vulkan_shader_pipeline pipeline_references[100];
 
-    shader_handle default_texture_handle;
+    Shader_Handle default_texture_handle;
 
     Material_Param_Data material_params[100];
     // Material_Index_Data material_index[100]; // idk about this one
@@ -561,25 +571,49 @@ typedef struct Directional_Light
 {
     vec3 direction;
     vec3 color;
+
+    //strength values
     float diffuse;
     float specular;
+
+
 } Directional_Light;
 
 typedef struct Point_Light
 {
+    //point lights go out in all directions
     vec4 position;
     vec4 color;
-    // float diffuse;
-    // float ambient;
-    // float specular;
+
+    //light fall offs
+    float constant;
+    float linear;
+    float quadratic;
+
+    //strength values
+    float diffuse;
+    float specular;
     // float intensity;
     // float radius;
+
 } Point_Light;
 
 typedef struct Spot_Light
 {
     //TODO:
-    vec3 position;
+    vec4 position;
+    vec4 color;
+    vec3 direction;
+
+    float cutOff;
+    float outerCutOff;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    float diffuse;
+    float specular;
 } Spot_Light;
 
 typedef struct Area_Light
@@ -601,13 +635,13 @@ typedef struct Light_System
 
 } Light_System;
 
-typedef enum debug_mode
+typedef enum Render_Mode
 {
-    DEBUG_MODE_NONE,
-    DEBUG_MODE_NORMAL,
-    DEBUG_MODE_LIGHTING,
-    DEBUG_MODE_MAX,
-}debug_mode;
+    RENDER_MODE_NONE,
+    RENDER_MODE_NORMAL,
+    RENDER_MODE_LIGHTING,
+    RENDER_MODE_MAX,
+}Render_Mode;
 
 typedef struct uniform_buffer_object
 {
@@ -616,7 +650,7 @@ typedef struct uniform_buffer_object
     mat4 proj;
 
 
-    // Directional_Light* directional_lights;
+    VkDeviceAddress directional_lights_address;
     // which one do we want to use for this particular instance (might be better as a push constant)
     // u32 directional_light_index;
     VkDeviceAddress point_lights_address;
@@ -625,16 +659,50 @@ typedef struct uniform_buffer_object
     //camera
     vec4 camera_position;
 
-    //TODO: should probably be an enum
-    // regular, normal, lighting, shadows, lights, etc...
-    u32 debug_mode;
+    Render_Mode render_mode;
 
 } uniform_buffer_object;
+
+
+typedef struct Mesh_System
+{
+    //NOTE: this is just me figuring out how to handle buffers for a particular system
+    //it would also make sense to keep reuploading the meshes into the buffers every frame, well see if its a performance penality
+
+    //global count of all the data
+    static_mesh* static_meshes;
+    u32 static_mesh_size;
+
+    Buffer_Handle vertex_buffer_handle;
+    Buffer_Handle index_buffer_handle;
+    Buffer_Handle indirect_buffer_handle;
+    Buffer_Handle normal_buffer_handle;
+    Buffer_Handle uv_buffer_handle;
+    Buffer_Handle tangent_buffer_handle;
+    Buffer_Handle transform_buffer_handle;
+
+
+    skinned_mesh* skinned_meshes;
+    u32 skinned_mesh_size;
+
+    Buffer_Handle s_vertex_buffer_handle;
+    Buffer_Handle s_index_buffer_handle;
+    Buffer_Handle s_indirect_buffer_handle;
+    Buffer_Handle s_normal_buffer_handle;
+    Buffer_Handle s_uv_buffer_handle;
+    Buffer_Handle s_tangent_buffer_handle;
+    Buffer_Handle s_transform_buffer_handle;
+
+    // maybe one for dynamic/deformable meshes
+
+
+} Mesh_System;
 
 
 typedef struct renderer
 {
     camera main_camera;
+    Render_Mode mode;
 
     Arena arena; // total memory for the entire renderer
     Arena frame_arena;

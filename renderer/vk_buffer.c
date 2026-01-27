@@ -223,8 +223,9 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 }
 
 
-void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer, vulkan_cpu_buffer_type buffer_type,
-                              u64 data_size)
+Buffer_Handle vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
+                                       vulkan_cpu_buffer_type buffer_type,
+                                       u64 data_size)
 {
     //NOTE: the vulkan buffer must be allocated before bieng passed in
 
@@ -379,8 +380,10 @@ void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_c
 }
 
 
-void vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer, vulkan_gpu_buffer_type buffer_type,
-                              u64 data_size)
+
+Buffer_Handle vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer,
+                                       vulkan_gpu_buffer_type buffer_type,
+                                       u64 data_size)
 {
     //NOTE: the vulkan buffer must be allocated before being passed in
 
@@ -456,4 +459,10 @@ void vulkan_buffer_gpu_free(renderer* renderer, vulkan_buffer_gpu* staging_buffe
     // The fence made sure copies are finished, so we can safely delete the staging buffer
     vkDestroyBuffer(renderer->context.device.logical_device, staging_buffer->handle, renderer->context.allocator);
     vkFreeMemory(renderer->context.device.logical_device, staging_buffer->memory, renderer->context.allocator);
+}
+
+
+vulkan_buffer_cpu* vulkan_buffer_cpu_get(renderer* renderer, Buffer_Handle buffer_handle)
+{
+    return &renderer->buffer_system->vertex_buffers[buffer_handle.handle];
 }

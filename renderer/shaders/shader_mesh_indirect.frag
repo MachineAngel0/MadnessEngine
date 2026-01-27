@@ -25,35 +25,39 @@ void main() {
 
     //    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
 
-    // ambient
-    //    float ambientStrength = 0.1;
-    //    vec3 ambient = ambientStrength * lightColor;
 
-    float ambient_strength = 0.5;
-    float specular_strength = 0.5;
 
-    vec3 light_pos = ubo[nonuniformEXT(0)].point_lights.point_light[0].position.xyz;
-    vec3 light_color = ubo[nonuniformEXT(0)].point_lights.point_light[0].color.xyz;
 
-    vec3 ambient = ambient_strength * light_color;
-
-    //diffuse
+    // properties
     vec3 norm = normalize(in_normal);
-    vec3 light_direction = normalize(light_pos - in_frag_pos);
-    float diff = max(dot(norm, light_direction), 0.0);
-    vec3 diffuse = diff * light_color;
-
-    //specular
     vec3 view_direction = normalize(ubo[nonuniformEXT(0)].camera_view_pos.xyz - in_frag_pos);
-    vec3 reflect_direction = reflect(-light_direction, norm);
-    float spec = pow(max(dot(view_direction, reflect_direction), 0.0), 32);
-    vec3 specular = specular_strength * spec * light_color;
+
+    // Directional lighting
+    vec3 result = calculate_directional_light(ubo[nonuniformEXT(0)].directional_lights.directional_light[0], norm, view_direction);
+    // Point lights
+    for(int i = 0; i < ubo[nonuniformEXT(0)].point_lights_count; i++){
+        result += calculate_point_light(ubo[nonuniformEXT(0)].point_lights.point_light[i], norm, in_frag_pos, view_direction);
+    }
+    // phase 3: Spot light
+    //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);
 
     //final color
     vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
-    vec4 final_result = vec4(ambient + diffuse + specular, 1.0) * texture_result;
+    vec4 final_result = vec4(result,1.0) * texture_result;
 
+    //LIGHTING INFO
+    if (ubo[nonuniformEXT(0)].render_mode == 2){
+        final_result = vec4(result, 1.0) * (in_normal,1.0);
+    }
     outColor = final_result;
-//    outColor = vec4(norm * 0.5 + 0.5, 1.0);
+
+
+    //NORMALS INFO
+    if (ubo[nonuniformEXT(0)].render_mode == 1){
+        outColor = vec4(abs(in_normal), 1.0f);
+    }
+
+
+
 
 }

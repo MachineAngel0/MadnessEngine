@@ -16,6 +16,7 @@
 static renderer renderer_internal;
 
 
+
 bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 {
     vulkan_context* vk_context = &renderer_internal.context;
@@ -47,6 +48,8 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     //set this as well
     vk_context->framebuffer_width_new = vk_context->framebuffer_width;
     vk_context->framebuffer_height_new = vk_context->framebuffer_height;
+
+    renderer_internal.mode = RENDER_MODE_NONE;
 
     //create the instance
     vulkan_instance_create(vk_context);
@@ -121,6 +124,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     shader_system_init(&renderer_internal, &renderer_internal.shader_system);
     // Light System
     renderer_internal.light_system = light_system_init(&renderer_internal);
+
 
     //INDIRECT DRAW
     renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
@@ -261,8 +265,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
 
     //TODO: test code, can remove later
-    if (input_key_released_unique(KEY_M))
+    if (input_key_released_unique(KEY_U))
     {
+        //TODO: MOVE OUT LATER
+        renderer_internal.mode = (renderer_internal.mode + 1) % RENDER_MODE_MAX;
+        FATAL("RENDER_MODE: %d", renderer_internal.mode)
         if (texture_flip)
         {
             /* TODO:
@@ -272,6 +279,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
             update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool,
                                                     &vk_context.shader_texture);
             */
+
             texture_flip = !texture_flip;
         }
         else
@@ -286,6 +294,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
             texture_flip = !texture_flip;
         }
     }
+
 
     /*
       At a high level, rendering a frame in Vulkan consists of a common set of steps:
@@ -347,13 +356,19 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
                                      vk_context.framebuffer_height);
 
-    VkDeviceAddress light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+    VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+                                                                     renderer_internal.light_system->
+                                                                     directional_light_storage_buffer.handle);
+
+    VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
                                                                      renderer_internal.light_system->
                                                                      point_light_storage_buffer.handle);
-    ubo.point_lights_address = light_buffer_address;
+
+    ubo.directional_lights_address = directional_light_buffer_address;
+    ubo.point_lights_address = point_light_buffer_address;
     ubo.point_lights_count = renderer_internal.light_system->point_light_count;
     ubo.camera_position = renderer_internal.main_camera.viewPos;
-    ubo.debug_mode = DEBUG_MODE_NONE;
+    ubo.render_mode = renderer_internal.mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(renderer_internal.buffer_system->global_uniform_buffer[vk_context.current_frame].mapped_data, &ubo,

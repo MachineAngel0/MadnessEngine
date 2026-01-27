@@ -21,8 +21,8 @@ static_mesh* static_mesh_init(Arena* arena, u32 mesh_size)
     out_static_mesh->mesh_size = mesh_size;
     // for (u32 i = 0; i < mesh_size; i++)
     // {
-        // out_static_mesh[i].mesh = arena_alloc(arena, sizeof(mesh));
-        // out_static_mesh[i].indirect_draw_array = arena_alloc(arena, sizeof(VkDrawIndexedIndirectCommand));
+    // out_static_mesh[i].mesh = arena_alloc(arena, sizeof(mesh));
+    // out_static_mesh[i].indirect_draw_array = arena_alloc(arena, sizeof(VkDrawIndexedIndirectCommand));
     // }
     out_static_mesh->mesh = arena_alloc(arena, sizeof(mesh) * mesh_size);
     out_static_mesh->indirect_draw_array = arena_alloc(arena, sizeof(VkDrawIndexedIndirectCommand) * mesh_size);
@@ -45,7 +45,6 @@ void mesh_free(mesh* m)
 
 static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
-
     renderer->context.device.properties.limits.maxPerStageDescriptorUniformBuffers;
 
     cgltf_options options = {0};
@@ -163,8 +162,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             float* tangent_data = arena_alloc(&renderer->arena, tangent_bytes);
             out_static_mesh->mesh[mesh_idx].vertices.tangent = arena_alloc(&renderer->arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-            memcpy( out_static_mesh->mesh[mesh_idx].vertices.tangent, tangent_data, tangent_bytes);
-
+            memcpy(out_static_mesh->mesh[mesh_idx].vertices.tangent, tangent_data, tangent_bytes);
         }
 
         //  Find texcoord accessor
@@ -206,7 +204,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             index_stride;
         //TODO: there can be multiple primitices/indices, will come back to
         out_static_mesh->mesh[mesh_idx].indices = arena_alloc(&renderer->arena,
-                                                                       out_static_mesh->mesh[mesh_idx].indices_bytes);
+                                                              out_static_mesh->mesh[mesh_idx].indices_bytes);
 
         cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
                                       out_static_mesh->mesh[mesh_idx].indices,
@@ -243,11 +241,8 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 }
 
 
-
 static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
 {
-
-
     cgltf_options options = {0};
     cgltf_data* data = NULL;
     cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
@@ -287,7 +282,6 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
-
         /* Find position accessor */
         const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
                                                                  cgltf_attribute_type_position,
@@ -342,8 +336,7 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
             float* tangent_data = arena_alloc(&renderer->arena, tangent_bytes);
             out_static_mesh->mesh[mesh_idx].vertices.tangent = arena_alloc(&renderer->arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-            memcpy( out_static_mesh->mesh[mesh_idx].vertices.tangent, tangent_data, tangent_bytes);
-
+            memcpy(out_static_mesh->mesh[mesh_idx].vertices.tangent, tangent_data, tangent_bytes);
         }
 
         //  Find texcoord accessor
@@ -387,10 +380,12 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
             index_stride;
         //TODO: there can be multiple primitices/indices, will come back to
         out_static_mesh->mesh[mesh_idx].indices = arena_alloc(&renderer->arena,
-                                                                       out_static_mesh->mesh[mesh_idx].indices_bytes);
+                                                              out_static_mesh->mesh[mesh_idx].indices_bytes);
 
-	    const uint8_t* index_buffer_data = cgltf_buffer_view_data(data->meshes[mesh_idx].primitives->indices->buffer_view);
-        memcpy(out_static_mesh->mesh[mesh_idx].indices, index_buffer_data, out_static_mesh->mesh[mesh_idx].indices_bytes);
+        const uint8_t* index_buffer_data = cgltf_buffer_view_data(
+            data->meshes[mesh_idx].primitives->indices->buffer_view);
+        memcpy(out_static_mesh->mesh[mesh_idx].indices, index_buffer_data,
+               out_static_mesh->mesh[mesh_idx].indices_bytes);
         /*
         cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
                                       out_static_mesh->mesh[mesh_idx].indices,
@@ -415,16 +410,14 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
             texture_path);
 
 
-
-         out_static_mesh->indirect_draw_array[mesh_idx].firstIndex = index_cumulative_offset;
-         out_static_mesh->indirect_draw_array[mesh_idx].firstInstance = 0;
-         out_static_mesh->indirect_draw_array[mesh_idx].indexCount = data->meshes[mesh_idx].primitives->indices->count;
-         out_static_mesh->indirect_draw_array[mesh_idx].instanceCount = 1;
-         out_static_mesh->indirect_draw_array[mesh_idx].vertexOffset = vertex_cumulative_offset/sizeof(vec3);
+        out_static_mesh->indirect_draw_array[mesh_idx].firstIndex = index_cumulative_offset;
+        out_static_mesh->indirect_draw_array[mesh_idx].firstInstance = 0;
+        out_static_mesh->indirect_draw_array[mesh_idx].indexCount = data->meshes[mesh_idx].primitives->indices->count;
+        out_static_mesh->indirect_draw_array[mesh_idx].instanceCount = 1;
+        out_static_mesh->indirect_draw_array[mesh_idx].vertexOffset = vertex_cumulative_offset / sizeof(vec3);
 
         index_cumulative_offset += data->meshes[mesh_idx].primitives->indices->count;
-        vertex_cumulative_offset +=  out_static_mesh->mesh[mesh_idx].vertex_bytes;
-
+        vertex_cumulative_offset += out_static_mesh->mesh[mesh_idx].vertex_bytes;
     }
 
     //load materials
@@ -439,7 +432,61 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
     return out_static_mesh;
 }
 
+/*
+static_mesh* mesh_load_fbx(renderer* renderer, const char* gltf_path)
+{
 
+    //NOTE: use this when ready to test
+    mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+
+    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
+    // https://ufbx.github.io/ - online docs
+
+    ufbx_load_opts opts = { 0 }; // Optional, pass NULL for defaults
+    ufbx_error error; // Optional, pass NULL if you don't care about errors
+    ufbx_scene *scene = ufbx_load_file("thing.fbx", &opts, &error);
+    if (!scene) {
+        fprintf(stderr, "Failed to load: %s\n", error.description.data);
+        exit(1);
+    }
+
+    // Use and inspect `scene`, it's just plain data!
+    // Let's just list all objects within the scene for example:
+    for (size_t i = 0; i < scene->nodes.count; i++) {
+        ufbx_node *node = scene->nodes.data[i];
+        if (node->is_root) continue;
+
+        printf("Object: %s\n", node->name.data);
+        if (node->mesh) {
+            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
+        }
+    }
+
+
+
+    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->nodes.count);
+
+    // GET BASE PATH
+
+    char* base_path = NULL;
+    int i = strlen(gltf_path);
+    for (; i > 0; i--)
+    {
+        if (gltf_path[i] == '/')
+        {
+            base_path = arena_alloc(&renderer->frame_arena, i + 2);
+            memcpy(base_path, gltf_path, i + 1);
+            base_path[i + 1] = '\0';
+
+            break;
+        }
+    }
+
+    ufbx_free_scene(scene);
+    return out_static_mesh;
+
+}
+*/
 /*
 mesh* mesh_load_obj(const char* obj_path)
 {
