@@ -1,6 +1,8 @@
 ﻿#ifndef KMATH_H
 #define KMATH_H
 
+
+
 #include "math.h"
 #include "defines.h"
 #include <float.h>
@@ -10,9 +12,10 @@
 // #include "cglm/cglm.h"
 
 
-//FUTURE: rn im just using glm/cglm
+//FUTURE: rn im not using glm/cglm, should probably switch
 // Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
+
 // VEC2
 MINLINE vec2 vec2_zero()
 {

@@ -18,17 +18,31 @@
 //    mat4 proj;
 //} ubo[];
 
-layout(set = 2, binding = 0, scalar) readonly buffer UVBUFFER{
-    vec2 uv[];
-}UV[];
+
 
 struct material_data{
     uint color_id;
 };
 
+
+//0
+layout(set = 2, binding = 0, scalar) readonly buffer UV_BUFFER{
+    vec2 uv[];
+}UV[];
+
+//1
+layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
+    vec3 normal[];
+}NORMAL[];
+
+//2
 layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_BUFFER{
     material_data color_index[];
 }MATERIAL[];
+
+
+
+
 
 
 layout(location = 0) in vec3 in_pos;
@@ -37,6 +51,7 @@ layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
+layout(location = 4) out vec3 out_frag_pos;
 
 void main() {
 
@@ -45,21 +60,19 @@ void main() {
 
 
     uint idx = gl_VertexIndex;
-    //    vec3 in_pos = pc.position_buffer.position[idx];
+
     gl_Position = ubo[nonuniformEXT(0)].proj * ubo[nonuniformEXT(0)].view * ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0);
     //    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
 
-    out_normal = vec3(1.0, 1.0, 1.0);
+    out_normal = NORMAL[nonuniformEXT(1)].normal[nonuniformEXT(idx)];
     out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
 
-    //    out_uv = vec2(0.5,0.5);
     out_uv = UV[nonuniformEXT(0)].uv[nonuniformEXT(idx)];
 
-    out_color_idx = MATERIAL[nonuniformEXT(1)].color_index[nonuniformEXT(gl_DrawIDARB)].color_id;
+    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(gl_DrawIDARB)].color_id;
 
 
-    //    out_normal = pc.normal_buffer.normal[idx];
-    //    out_tangent = pc.tangent_buffer.tangent[idx];
-    //    out_uv = pc.uv_buffer.uv[idx];
+    out_frag_pos = vec3(ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0));
+
 
 }

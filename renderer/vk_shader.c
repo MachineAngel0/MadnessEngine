@@ -1509,7 +1509,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     // rasterizer.cullMode = VK_CULL_MODE_NONE; // temp for debugging
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
-    // rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;

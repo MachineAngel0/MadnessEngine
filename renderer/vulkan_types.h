@@ -569,11 +569,11 @@ typedef struct Point_Light
 {
     vec4 position;
     vec4 color;
-    float diffuse;
-    float ambient;
-    float specular;
-    float intensity;
-    float radius;
+    // float diffuse;
+    // float ambient;
+    // float specular;
+    // float intensity;
+    // float radius;
 } Point_Light;
 
 typedef struct Spot_Light
@@ -596,10 +596,40 @@ typedef struct Light_System
     u32 point_light_count;
     u32 directional_light_count;
 
-    vulkan_buffer_cpu directional_light_buffer;
-    vulkan_buffer_cpu spot_light_buffer;
+    vulkan_buffer_cpu directional_light_storage_buffer;
+    vulkan_buffer_cpu point_light_storage_buffer;
 
 } Light_System;
+
+typedef enum debug_mode
+{
+    DEBUG_MODE_NONE,
+    DEBUG_MODE_NORMAL,
+    DEBUG_MODE_LIGHTING,
+    DEBUG_MODE_MAX,
+}debug_mode;
+
+typedef struct uniform_buffer_object
+{
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+
+
+    // Directional_Light* directional_lights;
+    // which one do we want to use for this particular instance (might be better as a push constant)
+    // u32 directional_light_index;
+    VkDeviceAddress point_lights_address;
+    u32 point_lights_count;
+
+    //camera
+    vec4 camera_position;
+
+    //TODO: should probably be an enum
+    // regular, normal, lighting, shadows, lights, etc...
+    u32 debug_mode;
+
+} uniform_buffer_object;
 
 
 typedef struct renderer
@@ -628,7 +658,10 @@ typedef struct renderer
     vulkan_buffer_cpu indirect_vertex_buffer;
     vulkan_buffer_cpu indirect_index_buffer;
     vulkan_buffer_cpu material_ssbo_buffer;
-    vulkan_buffer_cpu uv_ssbo_buffer;
+    vulkan_buffer_cpu normal_storage_buffer;
+    vulkan_buffer_cpu uv_storage_buffer;
+    vulkan_buffer_cpu directional_light_storage_buffer;
+    vulkan_buffer_cpu spot_light_storage_buffer;
 
 
 } renderer;

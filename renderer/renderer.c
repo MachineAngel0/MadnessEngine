@@ -126,13 +126,17 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
                                                               "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
-                                                              // "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    // "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
 
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_vertex_buffer, CPU_VERTEX, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_index_buffer, CPU_INDEX, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_draw_command_buffer, CPU_INDIRECT, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_ssbo_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_storage_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.normal_storage_buffer, CPU_STORAGE, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.directional_light_storage_buffer, CPU_STORAGE,
+                             MB(32));
+
 
     for (u32 i = 0; i < renderer_internal.indirect_mesh->mesh_size; i++)
     {
@@ -158,16 +162,23 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                                                 &renderer_internal.indirect_mesh->mesh[i].color_texture.handle,
                                                 sizeof(u32));
 
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.uv_ssbo_buffer,
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.uv_storage_buffer,
                                                 renderer_internal.indirect_mesh->mesh[i].vertices.uv,
                                                 renderer_internal.indirect_mesh->mesh[i].uv_bytes);
+
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.normal_storage_buffer,
+                                                renderer_internal.indirect_mesh->mesh[i].vertices.normal,
+                                                renderer_internal.indirect_mesh->mesh[i].normal_bytes);
     }
     update_storage_buffer_bindless_descriptor_set(
         vk_context, &renderer_internal.global_descriptors.storage_descriptors,
-        &renderer_internal.uv_ssbo_buffer, renderer_internal.uv_ssbo_buffer.current_offset, 0);
+        &renderer_internal.uv_storage_buffer, renderer_internal.uv_storage_buffer.current_offset, 0);
     update_storage_buffer_bindless_descriptor_set(
         vk_context, &renderer_internal.global_descriptors.storage_descriptors,
-        &renderer_internal.material_ssbo_buffer, renderer_internal.material_ssbo_buffer.current_offset, 1);
+        &renderer_internal.normal_storage_buffer, renderer_internal.normal_storage_buffer.current_offset, 1);
+    update_storage_buffer_bindless_descriptor_set(
+        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
+        &renderer_internal.material_ssbo_buffer, renderer_internal.material_ssbo_buffer.current_offset, 2);
 
 
     vulkan_mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_pipeline);
@@ -336,24 +347,17 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
                                      vk_context.framebuffer_height);
 
+    VkDeviceAddress light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+                                                                     renderer_internal.light_system->
+                                                                     point_light_storage_buffer.handle);
+    ubo.point_lights_address = light_buffer_address;
+    ubo.point_lights_count = renderer_internal.light_system->point_light_count;
+    ubo.camera_position = renderer_internal.main_camera.viewPos;
+    ubo.debug_mode = DEBUG_MODE_NONE;
+
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     memcpy(renderer_internal.buffer_system->global_uniform_buffer[vk_context.current_frame].mapped_data, &ubo,
            sizeof(uniform_buffer_object));
-
-
-    uniform_buffer_object_new ubo_new = {0};
-    ubo_new.debug_mode = 0;
-    ubo_new.view = camera_get_fps_view_matrix(&renderer_internal.main_camera);
-    ubo_new.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
-                                         vk_context.framebuffer_height);
-    /* TODO:
-    ubo_new.directional_light_buffer = get_buffer_device_address(vk_context.device.logical_device,
-                                                                        renderer_internal.light_system->directional_light_buffer.handle);
-    ubo_new.spot_light_buffer = get_buffer_device_address(vk_context.device.logical_device,
-                                                                        renderer_internal.light_system->spot_light_buffer.handle);
-
-    // memcpy(renderer_internal.buffer_system->global_uniform_buffer[vk_context.current_frame].mapped_data, &ubo_new, sizeof(uniform_buffer_object_new));
-*/
 
 
     // Begin recording commands.
@@ -473,7 +477,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     if (renderer_internal.context.device.features.multiDrawIndirect)
     {
-        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle, renderer_internal.indirect_draw_command_buffer.handle, 0,
+        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
+                                 renderer_internal.indirect_draw_command_buffer.handle, 0,
                                  renderer_internal.indirect_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
     }
     else

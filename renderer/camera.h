@@ -17,6 +17,7 @@ void camera_init(camera* out_camera)
     const float ZNEAR = 0.1f;
     const float ZFAR = 100.0f;
 
+
     out_camera->rotation = vec3_zero();
     out_camera->pos = vec3_zero();
     out_camera->viewPos = vec4_zero();
