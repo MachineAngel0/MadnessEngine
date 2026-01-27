@@ -352,14 +352,15 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
         if (texcoord_accessor)
         {
             //get size information
-            cgltf_size uv_floats_size = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-            cgltf_size uv_byte_size = uv_floats_size * sizeof(float);
+            cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
             out_static_mesh->mesh[mesh_idx].uv_bytes = uv_byte_size;
 
 
             //alloc and copy data
-            float* uv_data = arena_alloc(&renderer->arena, uv_byte_size);
-            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_size);
+            float* uv_data = arena_alloc(&renderer->frame_arena, uv_byte_size);
+            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
+
             out_static_mesh->mesh[mesh_idx].vertices.uv = arena_alloc(&renderer->arena, uv_byte_size);
             memcpy(out_static_mesh->mesh[mesh_idx].vertices.uv, uv_data, uv_byte_size);
         }
@@ -378,8 +379,9 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
         else
         {
             WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
-            out_static_mesh->mesh[mesh_idx].index_type = VK_INDEX_TYPE_UINT32;
         }
+
+
         out_static_mesh->mesh[mesh_idx].indices_count = data->meshes[mesh_idx].primitives->indices->count;
         out_static_mesh->mesh[mesh_idx].indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
@@ -387,10 +389,14 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
         out_static_mesh->mesh[mesh_idx].indices = arena_alloc(&renderer->arena,
                                                                        out_static_mesh->mesh[mesh_idx].indices_bytes);
 
+	    const uint8_t* index_buffer_data = cgltf_buffer_view_data(data->meshes[mesh_idx].primitives->indices->buffer_view);
+        memcpy(out_static_mesh->mesh[mesh_idx].indices, index_buffer_data, out_static_mesh->mesh[mesh_idx].indices_bytes);
+        /*
         cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
                                       out_static_mesh->mesh[mesh_idx].indices,
                                       index_stride,
                                       out_static_mesh->mesh[mesh_idx].indices_count);
+        */
 
         //LOAD TEXTURES/MATERIALS
 

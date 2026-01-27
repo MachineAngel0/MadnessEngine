@@ -31,6 +31,7 @@ void main() {
 
 
     outColor = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
+//    outColor = texture(texture_samples[(nonuniformEXT(0))], in_tex);
 //        outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // old
 
 }

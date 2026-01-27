@@ -1396,8 +1396,8 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
     pipeline_layout_info.pSetLayouts = set_layouts;
-    // pipeline_layout_info.pushConstantRangeCount = 0;
-    // pipeline_layout_info.pPushConstantRanges = NULL;
+    pipeline_layout_info.pushConstantRangeCount = 0;
+    pipeline_layout_info.pPushConstantRanges = NULL;
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately

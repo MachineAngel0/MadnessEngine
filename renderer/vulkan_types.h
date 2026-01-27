@@ -76,7 +76,9 @@ typedef struct mesh
 {
     vertex_mesh vertices;
 
-    size_t* indices;
+    // size_t* indices;
+    u8* indices;
+    // u8* indices_2;
     u32 indices_count;
     u32 indices_bytes;
     VkIndexType index_type;
@@ -622,7 +624,7 @@ typedef struct renderer
 
     static_mesh* indirect_mesh;
     vulkan_shader_pipeline indirect_pipeline;
-    vulkan_buffer_cpu indirect_buffer;
+    vulkan_buffer_cpu indirect_draw_command_buffer;
     vulkan_buffer_cpu indirect_vertex_buffer;
     vulkan_buffer_cpu indirect_index_buffer;
     vulkan_buffer_cpu material_ssbo_buffer;

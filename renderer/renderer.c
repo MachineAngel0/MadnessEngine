@@ -125,13 +125,14 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     //INDIRECT DRAW
     renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
                                                               "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-
+    // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
+                                                              // "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
 
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_vertex_buffer, CPU_VERTEX, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_index_buffer, CPU_INDEX, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_buffer, CPU_INDIRECT, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_draw_command_buffer, CPU_INDIRECT, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_ssbo_buffer, CPU_STORAGE, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
 
     for (u32 i = 0; i < renderer_internal.indirect_mesh->mesh_size; i++)
     {
@@ -149,7 +150,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_index_buffer,
                                                 renderer_internal.indirect_mesh->mesh[i].indices,
                                                 renderer_internal.indirect_mesh->mesh[i].indices_bytes);
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_buffer,
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_draw_command_buffer,
                                                 &renderer_internal.indirect_mesh->indirect_draw_array[i],
                                                 sizeof(VkDrawIndexedIndirectCommand));
 
@@ -158,10 +159,9 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                                                 sizeof(u32));
 
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.uv_ssbo_buffer,
-                                                &renderer_internal.indirect_mesh->mesh[i].vertices.uv,
+                                                renderer_internal.indirect_mesh->mesh[i].vertices.uv,
                                                 renderer_internal.indirect_mesh->mesh[i].uv_bytes);
     }
-
     update_storage_buffer_bindless_descriptor_set(
         vk_context, &renderer_internal.global_descriptors.storage_descriptors,
         &renderer_internal.uv_ssbo_buffer, renderer_internal.uv_ssbo_buffer.current_offset, 0);
@@ -174,11 +174,13 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
 
     //BUFFER ADDRESSING
+    /*
     // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     static_mesh* test_mesh = mesh_load_gltf(&renderer_internal,
                                             "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/cube_gltf/Cube.gltf");
     vk_context->mesh_default.static_mesh = test_mesh;
+
 
 
     for (u32 i = 0; i < test_mesh->mesh_size; i++)
@@ -195,8 +197,11 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
                                                 test_mesh->mesh[i].vertex_bytes);
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
                                                 test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
+
+
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
                                                 test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
+
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
                                                 test_mesh->mesh[i].vertices.uv,
                                                 test_mesh->mesh[i].uv_bytes);
@@ -207,7 +212,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     }
 
     vulkan_mesh_bda_shader_create(&renderer_internal, &vk_context->mesh_default);
-
+    */
 
     //BINDLESS TEXTURE
     create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
@@ -464,20 +469,20 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                            pOffsets);
 
     vkCmdBindIndexBuffer(command_buffer_current_frame->handle, renderer_internal.indirect_index_buffer.handle, 0,
-                         VK_INDEX_TYPE_UINT16);
+                         renderer_internal.indirect_mesh->mesh[0].index_type);
 
     if (renderer_internal.context.device.features.multiDrawIndirect)
     {
-        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle, renderer_internal.indirect_buffer.handle, 0,
-                                 vk_context.mesh_default.static_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
+        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle, renderer_internal.indirect_draw_command_buffer.handle, 0,
+                                 renderer_internal.indirect_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
     }
     else
     {
         // If multi draw is not available, we must issue separate draw commands
-        for (auto j = 0; j < vk_context.mesh_default.static_mesh->mesh_size; j++)
+        for (auto j = 0; j < renderer_internal.indirect_mesh->mesh_size; j++)
         {
             vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
-                                     renderer_internal.buffer_system->indirect_buffer[0].handle,
+                                     renderer_internal.indirect_draw_command_buffer.handle,
                                      j * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));
         }
     }

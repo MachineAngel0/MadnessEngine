@@ -49,6 +49,8 @@ Buffer_System* buffer_system_init(renderer* renderer)
     buffer_system->staging_buffer_count = 1;
 
 
+
+
     return buffer_system;
 }
 
@@ -265,7 +267,7 @@ void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     case CPU_INDIRECT:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     }
 
@@ -309,8 +311,26 @@ void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_c
 {
     VkDevice device = renderer->context.device.logical_device;
     vulkan_buffer_gpu* staging_buffer = renderer->buffer_system->staging_buffer_ring;
+
+    // Debug 1: Check source data
+    float* src = (float*)data;
+    printf("Source data before memcpy: %f, %f\n", src[0], src[1]);
+
     //copy data into the staging buffer
     memcpy(staging_buffer->mapped_data, data, data_size);
+
+    // Debug 2: Check staging buffer after memcpy
+    float* staging = (float*)staging_buffer->mapped_data;
+    printf("Staging buffer after memcpy: %f, %f\n", staging[0], staging[1]);
+
+    // Flush the mapped memory to make it visible to the GPU
+    VkMappedMemoryRange range = {0};
+    range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    range.memory = staging_buffer->memory;
+    range.offset = 0;
+    range.size = VK_WHOLE_SIZE;
+    vkFlushMappedMemoryRanges(device, 1, &range);
+
 
     //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
 
