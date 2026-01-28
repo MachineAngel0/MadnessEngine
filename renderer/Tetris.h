@@ -773,7 +773,7 @@ inline void init_play_state(Game_State* game_state, VERTEX_DYNAMIC_INFO& vertex_
 
 
 
-inline void game_update_DOD(Game_State* game_state, UI_STATE* ui_state, VERTEX_DYNAMIC_INFO& vertex_dynamic_info, float dt)
+inline void game_update_DOD(Game_State* game_state, UI_System* ui_state, VERTEX_DYNAMIC_INFO& vertex_dynamic_info, float dt)
 {
 
     for (auto& game : game_state->start_game)

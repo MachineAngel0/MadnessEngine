@@ -1,15 +1,11 @@
 ﻿
-// #include "Renderer.h"
 // #include "Tetris.h"
 // #include "text.h"
 // #include "UI.h"
 
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
 
 
 
-#include "vulkan/vulkan.h"
 #include "vulkan_types.h"
 #include "renderer.c"
 #include "shader_system.h"

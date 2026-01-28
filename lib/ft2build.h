@@ -35,6 +35,7 @@
 #define FT2BUILD_H_
 
 #include <freetype/config/ftheader.h>
+#include FT_FREETYPE_H
 
 #endif /* FT2BUILD_H_ */
 

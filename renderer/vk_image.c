@@ -1,6 +1,5 @@
 ﻿#include "vk_image.h"
 
-#include "stb_image.h"
 #include "vk_buffer.h"
 
 

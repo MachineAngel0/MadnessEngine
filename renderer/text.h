@@ -5,37 +5,9 @@
 #ifndef TEXT_H
 #define TEXT_H
 
-#include <vulkan/vulkan.h>
-#include <array>
-#include <string>
-#include <vector>
-#include <glm/glm.hpp>
-
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "mesh.h"
-#include "stb_truetype.h"
-#include "vk_image.h"
+#include "vulkan_types.h"
 
 
-struct Screen_Size_Push_Constants;
-struct UI_STATE;
-struct vulkan_context;
-struct Command_Buffer_Context;
-struct Buffer_Context;
 
 struct Vertex_Text
 {

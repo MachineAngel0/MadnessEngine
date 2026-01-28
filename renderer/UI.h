@@ -1,17 +1,8 @@
-﻿//
-// Created by Adams Humbert on 8/17/2025.
-//
-
-#ifndef UI_H
+﻿#ifndef UI_H
 #define UI_H
-
-#include "Renderer_old.h"
-#include <ft2build.h>
-#include FT_FREETYPE_H
 
 
 #include "math_types.h"
-#include "vk_vertex.h"
 #include "text.h"
 
 
@@ -20,10 +11,7 @@
 //TODO: this should just get replaced
 //we can just keep setting whatever the size of the window is at the start/end of each frame,
 //it literally won't be a noticeable performance cost
-typedef struct Screen_Size_Push_Constants
-{
-    vec2 screenSize{800.0f, 600.0f};
-} Screen_Size_Push_Constants;
+
 
 typedef enum Alignment
 {
@@ -41,7 +29,7 @@ typedef struct UIID
 } UIID;
 
 //TODO: update to SOA
-struct UI_BUTTON
+typedef struct UI_BUTTON
 {
     UIID id;
     vec2 position;
@@ -53,9 +41,22 @@ struct UI_BUTTON
 
 typedef struct UI_DRAW_INFO
 {
-    VERTEX_DYNAMIC_INFO vertex_info;
+    vec3* vertices;
+    u16* indices;
+
+    u32 vertex_count;
+    u32 index_count;
+
     UI_BUTTON* UI_Objects; // darray or maybe even an allocator
 } UI_DRAW_INFO;
+
+
+typedef enum UI_Type
+{
+    color,
+    texture,
+} UI_Type;
+
 
 typedef struct UI_STATE
 {
@@ -69,19 +70,19 @@ typedef struct UI_STATE
 
     int mouse_down = 0;
     int mouse_released = 0;
-    glm::vec2 mouse_pos = {-1, -1};
+    vec2 mouse_pos = {-1, -1};
 
-    //TODO: currently the ui changes its push constants when the ui is resized
-    // however we can just set the push_constants at the start of every frame, or use an event system for it
-    Screen_Size_Push_Constants push_constants;
+    //TODO: on UI update, we can just pass the screen size
+    vec2 screen_size{800.0f, 600.0f};
 
     UI_DRAW_INFO draw_info{};
     Text_System text_system;
-} UI_STATE;
 
-inline UI_STATE* init_ui_state()
+} UI_System;
+
+UI_System* init_ui_state()
 {
-    UI_STATE* ui_state = static_cast<UI_STATE *>(malloc(sizeof(UI_STATE)));
+    UI_System* ui_state = (UI_System*)(malloc(sizeof(UI_System)));
     ui_state->active.ID = -1;
     ui_state->active.layer = -1;
     ui_state->hot.ID = -1;
@@ -93,12 +94,6 @@ inline UI_STATE* init_ui_state()
     return ui_state;
 }
 
-
-typedef enum UI_Type
-{
-    color,
-    texture,
-} UI_Type;
 
 
 typedef struct TRANSFORM_2D
@@ -119,7 +114,7 @@ typedef struct TRANSFORM_2D
 } TRANSFORM_2D;
 
 
-inline glm::vec2 get_mouse_pos(GLFWwindow* window)
+inline vec2 get_mouse_pos(GLFWwindow* window)
 {
     double xpos;
     double ypos;
@@ -149,7 +144,7 @@ inline std::vector<Vertex> UI_create_quad_screen_percentage(glm::vec2 pos, glm::
 }
 
 
-inline int ui_draw_rect(glm::vec2 pos, glm::vec2 size, glm::vec3 color, UI_STATE* ui_state)
+inline int ui_draw_rect(glm::vec2 pos, glm::vec2 size, glm::vec3 color, UI_System* ui_state)
 {
     std::vector<Vertex> new_quad = UI_create_quad(pos, size, color);
     uint16_t base_index = static_cast<uint16_t>(ui_state->draw_info.vertex_info.dynamic_vertices.size());
@@ -179,7 +174,7 @@ inline int ui_draw_rect(glm::vec2 pos, glm::vec2 size, glm::vec3 color, UI_STATE
 };
 
 
-inline int ui_draw_button_rect_screen_size_percentage(UI_STATE* ui_state, glm::vec2 pos, glm::vec2 screen_percentage,
+inline int ui_draw_button_rect_screen_size_percentage(UI_System* ui_state, glm::vec2 pos, glm::vec2 screen_percentage,
                                                       glm::vec3 color = {1.0f, 1.0f, 1.0f},
                                                       glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
                                                       pressed_color = {1.0f, 1.0f, 1.0f})
@@ -299,7 +294,7 @@ inline int ui_draw_button_rect_screen_size_percentage(UI_STATE* ui_state, glm::v
 };
 
 
-inline void update_UI_on_resize(UI_STATE* ui_state, uint32_t screen_width, uint32_t screen_height)
+inline void update_UI_on_resize(UI_System* ui_state, uint32_t screen_width, uint32_t screen_height)
 {
     //update screen percentage
     //ui_state->push_constants.screenSize.x = swapchain_context.surface_capabilities.currentExtent.width;
@@ -365,18 +360,18 @@ inline void update_UI_on_resize(UI_STATE* ui_state, uint32_t screen_width, uint3
     ui_state->draw_info.vertex_info.vertex_buffer_should_update = true;
 }
 
-inline bool is_ui_hot(UI_STATE* ui_state, int id)
+inline bool is_ui_hot(UI_System* ui_state, int id)
 {
     return ui_state->hot.ID && ui_state->hot.ID == id;
 }
 
-inline bool is_ui_active(UI_STATE* ui_state, int id)
+inline bool is_ui_active(UI_System* ui_state, int id)
 {
     return ui_state->active.ID && ui_state->active.ID == id;
 }
 
 
-inline bool region_hit(UI_STATE* ui_state, glm::vec2 pos, glm::vec2 size)
+inline bool region_hit(UI_System* ui_state, glm::vec2 pos, glm::vec2 size)
 {
     //check if we are inside a ui_object
     ui_state->mouse_pos;
@@ -400,7 +395,7 @@ inline bool region_hit(UI_STATE* ui_state, glm::vec2 pos, glm::vec2 size)
     return true;
 }
 
-inline bool region_hit_new(UI_STATE* ui_state, glm::vec2 pos, glm::vec2 size)
+inline bool region_hit_new(UI_System* ui_state, glm::vec2 pos, glm::vec2 size)
 {
     //check if we are inside a ui_object
     ui_state->mouse_pos;
@@ -442,7 +437,7 @@ bool button(UI_STATE& ui_state, int id, int x, int y)
 }*/
 
 //check if we can use the button
-inline bool use_button(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 size)
+inline bool use_button(UI_System* ui_state, UIID id, glm::vec2 pos, glm::vec2 size)
 {
     //checking if we released the mouse button, are active, and we are inside the hit region
     if (ui_state->mouse_down == 0 &&
@@ -453,7 +448,7 @@ inline bool use_button(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 siz
     return false;
 }
 
-inline bool use_button_new(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 size)
+inline bool use_button_new(UI_System* ui_state, UIID id, glm::vec2 pos, glm::vec2 size)
 {
     //checking if we released the mouse button, are active, and we are inside the hit region
     if (ui_state->mouse_down == 0 &&
@@ -464,12 +459,12 @@ inline bool use_button_new(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2
     return false;
 }
 
-inline int generate_id(UI_STATE* ui_state)
+inline int generate_id(UI_System* ui_state)
 {
     return ui_state->id_generation_number++;
 }
 
-inline void set_hot(UI_STATE* ui_state, UIID id)
+inline void set_hot(UI_System* ui_state, UIID id)
 {
     if (ui_state->hot.layer <= id.layer)
     {
@@ -479,7 +474,7 @@ inline void set_hot(UI_STATE* ui_state, UIID id)
     }
 }
 
-inline void set_active(UI_STATE* ui_state, UIID id)
+inline void set_active(UI_System* ui_state, UIID id)
 {
     if (ui_state->active.layer <= id.layer)
     {
@@ -489,23 +484,23 @@ inline void set_active(UI_STATE* ui_state, UIID id)
     }
 }
 
-inline bool can_be_active(UI_STATE* ui_state)
+inline bool can_be_active(UI_System* ui_state)
 {
     return ui_state->active.ID == -1 && ui_state->mouse_down;
 }
 
-inline bool is_active(UI_STATE* ui_state, UIID id)
+inline bool is_active(UI_System* ui_state, UIID id)
 {
     return ui_state->active.ID == id.ID;
 }
 
-inline bool is_hot(UI_STATE* ui_state, UIID id)
+inline bool is_hot(UI_System* ui_state, UIID id)
 {
     return ui_state->hot.ID == id.ID;
 }
 
 
-inline bool do_button(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 screen_percentage,
+inline bool do_button(UI_System* ui_state, UIID id, glm::vec2 pos, glm::vec2 screen_percentage,
                       glm::vec3 color = {1.0f, 1.0f, 1.0f}, glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
                       pressed_color = {1.0f, 1.0f, 1.0f})
 {
@@ -610,7 +605,7 @@ inline bool do_button(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 scre
 }
 
 
-inline bool do_button_new(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 size,
+inline bool do_button_new(UI_System* ui_state, UIID id, glm::vec2 pos, glm::vec2 size,
                           Alignment alignment = Alignment::LEFT, glm::vec3 color = {1.0f, 1.0f, 1.0f},
                           glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
                           pressed_color = {1.0f, 1.0f, 1.0f})
@@ -741,7 +736,7 @@ inline bool do_button_new(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 
     return false;
 }
 
-inline bool do_button_new_text(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::vec2 size, std::string text,
+inline bool do_button_new_text(UI_System* ui_state, UIID id, glm::vec2 pos, glm::vec2 size, std::string text,
                                glm::vec2 text_padding = {0.0f, 0.0f}, glm::vec3 color = {1.0f, 1.0f, 1.0f},
                                glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
                                pressed_color = {1.0f, 1.0f, 1.0f})
@@ -850,7 +845,7 @@ inline bool do_button_new_text(UI_STATE* ui_state, UIID id, glm::vec2 pos, glm::
     return false;
 }
 
-inline bool do_button_text(UI_STATE* ui_state, UIID id, std::string text, glm::vec2 pos, glm::vec2 screen_percentage,
+inline bool do_button_text(UI_System* ui_state, UIID id, std::string text, glm::vec2 pos, glm::vec2 screen_percentage,
                            glm::vec3 color = {1.0f, 1.0f, 1.0f}, glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
                            pressed_color = {1.0f, 1.0f, 1.0f})
 {
@@ -957,7 +952,7 @@ inline bool do_button_text(UI_STATE* ui_state, UIID id, std::string text, glm::v
     return false;
 }
 
-inline void ui_begin(UI_STATE* ui_state)
+inline void ui_begin(UI_System* ui_state)
 {
     //clear draw info and reset the hot id
 
@@ -975,7 +970,7 @@ inline void ui_begin(UI_STATE* ui_state)
     text_update(ui_state->text_system, ui_state->push_constants);
 }
 
-inline void ui_end(UI_STATE* ui_state, GLFWwindow* window)
+inline void ui_end(UI_System* ui_state, GLFWwindow* window)
 {
     //check if mouse is released, if so reset the active id
     //also update the mouse state
