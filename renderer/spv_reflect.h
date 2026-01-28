@@ -1,6 +1,5 @@
 ﻿#ifndef SPV_REFLECT_H
 #define SPV_REFLECT_H
-#include "SPIRV-Reflect-main/spirv_reflect.h"
 
 
 //Todo: create an out struct for all the data i would want

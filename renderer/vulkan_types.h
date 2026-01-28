@@ -1,7 +1,7 @@
 ﻿#ifndef VULKAN_TYPES_H
 #define VULKAN_TYPES_H
 
-#include "vk_vertex.h"
+
 
 
 #define VK_CHECK(expr)              \
@@ -415,6 +415,22 @@ typedef struct vulkan_shader_default
     u32 descriptor_set_count;
 } vulkan_shader_default;
 
+typedef struct vertex_3d
+{
+    vec3 position;
+    vec3 color;
+    vec2 padding;
+} vertex_3d;
+
+typedef struct vertex_tex
+{
+    // alignas(16) vec3 position;
+    // alignas(16) vec3 color;
+    // alignas(16) vec2 texture;
+    vec3 position;
+    vec3 color;
+    vec2 texture;
+} vertex_tex;
 
 typedef struct vertex_info
 {

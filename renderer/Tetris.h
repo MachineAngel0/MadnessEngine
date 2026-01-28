@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 
 #include "clock.h"
-#include "mesh.h"
+#include "mesh.c"
 #include "UI.h"
 #include "vk_vertex.h"
 
@@ -603,7 +603,7 @@ inline bool move_block(Tetris_Grid& tetris_grid, Tetromino& tetromino, Direction
                 return false;
             }
             break;
-        case RIGHT:
+        case UI_ALIGNMENT_RIGHT:
             if (can_move(tetris_grid, tetromino, glm::vec2{1,0}))
             {
                 tetromino.grid_position.x++;

@@ -2,8 +2,6 @@
 #define VK_PIPELINE_H
 
 
-#include <stdbool.h>
-#include "vulkan_types.h"
 
 
 bool vulkan_graphics_pipeline_create(

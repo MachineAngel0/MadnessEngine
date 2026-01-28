@@ -1,9 +1,6 @@
 ﻿#ifndef COMMAND_BUFFER_H
 #define COMMAND_BUFFER_H
 
-#include <stdbool.h>
-#include <vulkan/vulkan.h>
-#include "vulkan_types.h"
 
 
 

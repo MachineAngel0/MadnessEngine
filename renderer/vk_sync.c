@@ -1,5 +1,5 @@
 ﻿#include "vk_sync.h"
-#include "vulkan_types.h"
+
 
 
 void init_per_frame_sync(vulkan_context* context)

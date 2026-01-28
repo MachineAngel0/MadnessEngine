@@ -1,8 +1,9 @@
 ﻿#ifndef LIGHTS_H
 #define LIGHTS_H
 
+
 #include "vk_buffer.h"
-#include "vulkan_types.h"
+
 
 //TODO: light buffer, and add it to the global uniform buffer
 

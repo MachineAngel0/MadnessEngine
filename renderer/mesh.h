@@ -1,7 +1,6 @@
 ﻿#ifndef MESH_H
 #define MESH_H
 
-#include "vulkan_types.h"
 #include "shader_system.h"
 
 

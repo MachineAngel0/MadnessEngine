@@ -1,6 +1,5 @@
 ﻿#include "vk_pipeline.h"
 
-#include "vk_vertex.h"
 
 
 bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass* renderpass,

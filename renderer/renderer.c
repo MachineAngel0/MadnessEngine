@@ -1,6 +1,6 @@
 ﻿#include "renderer.h"
 #include "camera.h"
-#include "lights.h"
+#include "lights.c"
 #include "mesh.h"
 #include "shader_system.h"
 #include "vk_command_buffer.h"

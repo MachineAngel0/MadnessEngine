@@ -68,6 +68,12 @@ MINLINE vec2 vec2_div(const vec2 a, const vec2 b)
     return (vec2){a.x / b.x, a.y / b.y};
 }
 
+MINLINE vec2 vec2_div_scalar(const vec2 a, float scalar)
+{
+    return (vec2){a.x / scalar, a.y / scalar};
+}
+
+
 MINLINE float vec2_length_squared(const vec2 v)
 {
     return (v.x * v.x) + (v.y * v.y);

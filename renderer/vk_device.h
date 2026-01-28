@@ -1,10 +1,7 @@
 ﻿#ifndef VK_DEVICE_H
 #define VK_DEVICE_H
 
-#include <stdbool.h>
 
-#include <vulkan/vulkan.h>
-#include "platform.h"
 #include "vk_swapchain.h"
 
 

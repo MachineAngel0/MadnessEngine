@@ -12,7 +12,10 @@
 
 #include <ft2build.h>
 
-#include "vulkan/vulkan.h"
+#include <vulkan/vulkan.h>
+
+#include "SPIRV-Reflect-main/spirv_reflect.h"
+
 
 //TODO: MAYBE, ALSO SHOULD GO INTO THE CORE_UNITY, ACCESSIBLE BY EVERYONE
 // #include "cglm/cglm.h"
@@ -20,7 +23,6 @@
 
 //Renderer
 #include "renderer/renderer_unity.c"
-
 
 
 

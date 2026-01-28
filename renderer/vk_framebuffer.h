@@ -1,8 +1,6 @@
 ﻿#ifndef VK_FRAMEBUFFER_H
 #define VK_FRAMEBUFFER_H
 
-#include <vulkan/vulkan.h>
-#include "vulkan_types.h"
 
 
 void vulkan_framebuffer_create(

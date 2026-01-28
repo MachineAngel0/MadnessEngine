@@ -3,9 +3,7 @@
 
 
 #include <vulkan/vulkan.h>
-#include "defines.h"
 #include "vulkan_types.h"
-
 
 void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out);
 

@@ -1,7 +1,6 @@
 ﻿#ifndef VK_FENCES_H
 #define VK_FENCES_H
 
-#include "vulkan_types.h"
 
 
 void init_per_frame_sync(vulkan_context* context);

@@ -1,20 +1,12 @@
-﻿#include "../renderer/vk_device.h"
-
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-
-#include "darray.h"
-#include "logger.h"
-#include "platform.h"
-#include "vulkan_types.h"
+﻿#include "vk_device.h"
 
 
-bool get_vulkan_api_version(uint32_t* apiVersion,
-                            uint32_t* variant,
-                            uint32_t* major,
-                            uint32_t* minor,
-                            uint32_t* patch)
+
+bool get_vulkan_api_version(u32* apiVersion,
+                            u32* variant,
+                            u32* major,
+                            u32* minor,
+                            u32* patch)
 {
     // gets the instance
     if (vkEnumerateInstanceVersion(apiVersion) == VK_SUCCESS)
@@ -35,11 +27,11 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
 {
     vulkan_context->allocator = 0;
 
-    uint32_t apiVersion;
-    uint32_t variant;
-    uint32_t major;
-    uint32_t minor;
-    uint32_t patch;
+    u32 apiVersion;
+    u32 variant;
+    u32 major;
+    u32 minor;
+    u32 patch;
     // gets the instance
     if (!get_vulkan_api_version(&apiVersion, &variant, &major, &minor, &patch))
     {

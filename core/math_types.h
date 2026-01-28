@@ -146,6 +146,15 @@ typedef union vec4i
     };
 } vec4i;
 
+
+typedef union mat2_f
+{
+    float data[6];
+    float n[2][2];
+    vec3 rows[2];
+} mat2;
+
+
 //col major
 typedef union mat3_f
 {

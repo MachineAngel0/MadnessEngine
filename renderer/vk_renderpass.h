@@ -1,13 +1,6 @@
 ﻿#ifndef VK_RENDERPASS_H
 #define VK_RENDERPASS_H
 
-#include <stdbool.h>
-#include "vulkan_types.h"
-
-struct Command_Buffer_Context;
-struct Swapchain_Context;
-struct Graphics_Context;
-struct vulkan_context;
 
 enum Renderpass_Type
 {

@@ -1,6 +1,5 @@
 ﻿#include "vk_image.h"
 
-#include "vk_buffer.h"
 
 
 void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkFormat format,
