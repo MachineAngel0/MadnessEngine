@@ -102,7 +102,7 @@ void* load_function_from_dll(HMODULE* dll_handle, const char* function_name)
 
 void* reload_dll_and_function(const char* dll_file_name, const char* temp_dll_name, const char* function_name)
 {
-    HMODULE dll_handle;
+    HMODULE dll_handle = 0;
 
     do
     {

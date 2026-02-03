@@ -7,6 +7,20 @@
 #include "vk_image.h"
 
 
+//known pipelines
+typedef enum
+{
+    none,
+    opaque,
+    transparency,
+    lights,
+    terrain,
+} pipeline_type;
+
+
+
+
+
 Shader_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
 
 

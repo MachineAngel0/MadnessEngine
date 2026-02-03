@@ -22,6 +22,7 @@ typedef struct hash_map_string
     void** value_data;
 } hash_map_string;
 
+
 hash_map_string* _hash_map_string_create(u64 value_data_size, u64 capacity)
 {
     hash_map_string* h = malloc(sizeof(hash_map_string));
@@ -145,6 +146,7 @@ bool hash_map_string_contains(hash_map_string* h, char* key_str)
             return true;
         }
     }
+    return false;
 }
 
 void hash_map_string_set(hash_map_string* h, char* key_str, void* value)
@@ -171,6 +173,7 @@ void hash_map_string_set(hash_map_string* h, char* key_str, void* value)
             return;
         }
     }
+    return;
 }
 
 void* hash_map_string_get(hash_map_string* h, char* key_str)

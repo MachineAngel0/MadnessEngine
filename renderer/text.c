@@ -422,7 +422,7 @@ bool load_font(Text_System& text_system, const char* filepath,
     free(ttf_buffer);
 
     // Convert to RGBA
-    std::vector<unsigned char> atlasRGBA(atlasWidth* atlasHeight *4);
+    vector<unsigned char> atlasRGBA(atlasWidth* atlasHeight *4);
     for (int i = 0; i < atlasWidth * atlasHeight; i++)
     {
         unsigned char v = atlasPixels[i];
@@ -434,7 +434,7 @@ bool load_font(Text_System& text_system, const char* filepath,
 
     // Save atlas to file for debugging, will be under cmake-build-debug
     std::string debug_filename = "font_atlas_debug.ppm";
-    std::FILE* debug_file = fopen(debug_filename.c_str(), "wb");
+    FILE* debug_file = fopen(debug_filename.c_str(), "wb");
     if (debug_file)
     {
         // Write PPM header (P6 format for RGB)
@@ -457,7 +457,7 @@ bool load_font(Text_System& text_system, const char* filepath,
 
     // Also save as raw RGBA data
     std::string raw_filename = "font_atlas_debug.raw";
-    std::FILE* raw_file = fopen(raw_filename.c_str(), "wb");
+    FILE* raw_file = fopen(raw_filename.c_str(), "wb");
     if (raw_file)
     {
         fwrite(atlasRGBA.data(), 1, atlasRGBA.size(), raw_file);

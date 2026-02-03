@@ -1,14 +1,5 @@
-﻿#include "application.h"
+﻿#include "app_types.h"
 
-
-#include "app_types.h"
-#include "arena.h"
-#include "clock.h"
-#include "defines.h"
-#include "event.h"
-#include "input.h"
-#include "core/platform/platform.h"
-#include "memory_tracker.h"
 
 typedef struct application_state
 {

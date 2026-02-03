@@ -2,7 +2,26 @@
 #define MESH_H
 
 #include "shader_system.h"
+#include "vk_buffer.h"
 
+
+
+typedef struct
+{
+    //vertex_data
+    bool vertex;
+    bool index;
+
+    //texture
+    bool color;
+    bool albedo_texture;
+    bool normal_texture;
+
+    /* TODO:
+    //effects
+    bool burn_effect;
+    bool wave_effect;*/
+} pipeline_mesh_config;
 
 mesh* mesh_init(Arena* arena)
 {
@@ -417,6 +436,8 @@ static_mesh* mesh_load_gltf_indirect(renderer* renderer, const char* gltf_path)
 
         index_cumulative_offset += data->meshes[mesh_idx].primitives->indices->count;
         vertex_cumulative_offset += out_static_mesh->mesh[mesh_idx].vertex_bytes;
+
+        //TODO: find out the objects pipeline type
     }
 
     //load materials
@@ -558,6 +579,131 @@ mesh* mesh_load_obj(const char* obj_path)
     return out_mesh;
 }
 */
+
+
+Mesh_System* mesh_system_init(renderer* renderer)
+{
+    Mesh_System* out_system = arena_alloc(&renderer->arena, sizeof(Mesh_System));
+
+
+    return out_system;
+}
+
+
+void mesh_system_begin_frame(renderer* renderer, Mesh_System* mesh_system)
+{
+    //clear all the data
+}
+
+void mesh_system_end_frame(renderer* renderer, Mesh_System* mesh_system)
+{
+}
+
+void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system)
+{
+    //global_mesh_data, stores all our mesh data,
+    //check the mesh pipeline type, then add to the corresponding pipeline type
+
+    //for the mesh data descriptor set, we will have a few buffers
+    // vertex, index, uv, normal, tangent, material, transforms
+    // these need to be constructed every frame, so that all the data matches up with the index it is retrieved from
+
+    u64 index_cumulative_offset = 0;
+    u64 vertex_cumulative_offset = 0;
+
+    //get the number of meshes we have and then allocate that amount for the indirect draw data
+    size_t indirect_draw_array_size = 0;
+    size_t vertex_size = 0;
+    size_t indices_size = 0;
+    size_t normals_size = 0;
+    size_t tangent_size = 0;
+    size_t uv_size = 0;
+    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_size; s_mesh_idx++)
+    {
+        indirect_draw_array_size += mesh_system->static_meshes[s_mesh_idx].mesh_size;
+        for (size_t submesh_idx = 0; submesh_idx < mesh_system->static_meshes[s_mesh_idx].mesh_size; submesh_idx++)
+        {
+            vertex_size += mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx].vertex_bytes;
+            indices_size += mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx].indices_bytes;
+            normals_size += mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx].normal_bytes;
+            tangent_size += mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx].tangent_bytes;
+            uv_size += mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx].uv_bytes;
+        }
+    }
+
+    VkDrawIndexedIndirectCommand* indirect_draw_array = arena_alloc(&renderer->frame_arena,
+                                                                    indirect_draw_array_size * sizeof(
+                                                                        VkDrawIndexedIndirectCommand));
+
+
+    size_t current_indirect_index = 0;
+    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_size; s_mesh_idx++)
+    {
+        for (size_t submesh_idx = 0; submesh_idx < mesh_system->static_meshes[s_mesh_idx].mesh_size; submesh_idx++)
+        {
+            mesh* current_mesh = &mesh_system->static_meshes[s_mesh_idx].mesh[submesh_idx];
+
+            //
+            current_mesh->vertices.pos;
+            current_mesh->vertices.normal;
+            current_mesh->vertices.tangent;
+            current_mesh->vertices.uv;
+
+            //build the indirect draw info
+            indirect_draw_array[current_indirect_index].firstIndex = index_cumulative_offset;
+            indirect_draw_array[current_indirect_index].firstInstance = 0;
+            indirect_draw_array[current_indirect_index].indexCount = current_mesh->indices_count;
+            indirect_draw_array[current_indirect_index].instanceCount = 1;
+            indirect_draw_array[current_indirect_index].vertexOffset = vertex_cumulative_offset / sizeof(vec3);
+
+            index_cumulative_offset += current_mesh->indices_count;
+            vertex_cumulative_offset += current_mesh->vertex_bytes;
+
+            current_indirect_index += 1;
+        }
+    }
+
+
+    //TODO: upload into the buffers
+    //get buffers
+    vulkan_buffer_cpu* indirect_buffer = vulkan_buffer_cpu_get(renderer, mesh_system->indirect_buffer_handle);
+    vulkan_buffer_cpu_data_copy_from_offset(renderer, indirect_buffer, indirect_draw_array,
+                                            indirect_draw_array_size * sizeof(VkDrawIndexedIndirectCommand));
+
+
+
+
+}
+
+
+void mesh_system_generate_permutations(renderer* renderer, Mesh_System* mesh_system,
+                                       pipeline_mesh_config* pipeline_config)
+{
+    //global_mesh_data, stores all our mesh data,
+    //check the mesh pipeline type, then add to the corresponding pipeline type
+    //add
+
+    //points to a pipeline
+    pipeline_mesh_config* global_configs = NULL;
+    u32 config_size = 0;
+
+
+    for (int i = 0; i < config_size; i++)
+    {
+        if (global_configs->color != pipeline_config->color)
+        {
+            continue;
+        }
+        if (global_configs->albedo_texture != pipeline_config->albedo_texture)
+        {
+            continue;
+        }
+
+        //if we found a matching one
+        // return []->pipeline_handle;
+        return;
+    }
+}
 
 
 #endif

@@ -1,6 +1,6 @@
 ﻿#ifndef HEALTH_H
 #define HEALTH_H
-#include "math_lib.h"
+#include "maths/math_lib.h"
 
 
 typedef struct health_component

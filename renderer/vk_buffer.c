@@ -25,7 +25,8 @@ Buffer_System* buffer_system_init(renderer* renderer)
 
     buffer_system->vertex_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->index_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
-    buffer_system->indirect_buffer = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));    buffer_system->uv_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
+    buffer_system->indirect_buffer = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
+    buffer_system->uv_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->normal_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->tangent_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
     buffer_system->storage_buffers = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_cpu));
@@ -47,8 +48,6 @@ Buffer_System* buffer_system_init(renderer* renderer)
     buffer_system->staging_buffer_ring = arena_alloc(&renderer->arena, sizeof(vulkan_buffer_gpu));
     vulkan_buffer_gpu_create(renderer, buffer_system->staging_buffer_ring, GPU_STAGING, MB(32));
     buffer_system->staging_buffer_count = 1;
-
-
 
 
     return buffer_system;
@@ -223,10 +222,14 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 }
 
 
-Buffer_Handle vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
-                                       vulkan_cpu_buffer_type buffer_type,
-                                       u64 data_size)
+void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer,
+                              vulkan_cpu_buffer_type buffer_type,
+                              u64 data_size)
 {
+
+    MASSERT_MSG(out_buffer, "VULKAN BUFFER CPU CREATE: INVALID PASSED IN BUFFER");
+
+
     //NOTE: the vulkan buffer must be allocated before bieng passed in
 
     //do a large allocation upfront
@@ -268,32 +271,10 @@ Buffer_Handle vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* ou
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     case CPU_INDIRECT:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     }
-
-    /*
-    switch (buffer_type)
-    {
-    case UNIFORM:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    case STORAGE:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-
-
-    case INDIRECT:
-        //NOTE: this might not need bda
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    default:
-        WARN("UNSUPPORTED BUFFER TYPE");
-        break;
-    }*/
 
     // Create a host-visible buffer to copy the vertex data to (staging buffer)
     VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &out_buffer->handle));
@@ -304,6 +285,92 @@ Buffer_Handle vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* ou
 
     VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &out_buffer->memory));
     VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
+
+}
+
+Buffer_Handle vulkan_buffer_cpu_create_handle(renderer* renderer, vulkan_cpu_buffer_type buffer_type, u64 data_size)
+{
+    //NOTE: the vulkan buffer must be allocated before bieng passed in
+
+    vulkan_buffer_cpu* buffer_ref = NULL;
+
+    switch (buffer_type)
+    {
+    case CPU_VERTEX:
+        buffer_ref = &renderer->buffer_system->vertex_buffers[0];
+        break;
+    case CPU_INDEX:
+        buffer_ref = &renderer->buffer_system->indirect_buffer[0];
+        break;
+    case CPU_STORAGE:
+        buffer_ref = &renderer->buffer_system->storage_buffers[0];
+        break;
+    case CPU_INDIRECT:
+        buffer_ref = &renderer->buffer_system->indirect_buffer[0];
+        break;
+    default:
+        FATAL("INVALID BUFFER TYPE");
+        break;
+    }
+
+    MASSERT(buffer_ref);
+
+              //do a large allocation upfront
+    buffer_ref->capacity = data_size;
+    buffer_ref->current_offset = 0;
+
+    VkDevice device = renderer->context.device.logical_device;
+
+
+    //for Buffer device addressing
+    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+    VkMemoryAllocateInfo memAlloc = {0};
+    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAlloc.pNext = &allocFlagsInfo;
+
+    VkMemoryRequirements memReqs;
+
+
+    VkBufferCreateInfo out_buffer_create_info = {0};
+    out_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    out_buffer_create_info.size = buffer_ref->capacity;
+    out_buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // look into later
+
+    // intended to be used as the destination of a copy from a staging buffer
+    switch (buffer_type)
+    {
+    case CPU_VERTEX:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    case CPU_INDEX:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    case CPU_STORAGE:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    case CPU_INDIRECT:
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        break;
+    }
+
+    // Create a host-visible buffer to copy the vertex data to (staging buffer)
+    VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_ref->handle));
+    vkGetBufferMemoryRequirements(device, buffer_ref->handle, &memReqs);
+    memAlloc.allocationSize = memReqs.size;
+    memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
+                                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &buffer_ref->memory));
+    VK_CHECK(vkBindBufferMemory(device, buffer_ref->handle, buffer_ref->memory, 0));
+
+
+    return (Buffer_Handle){-1};
 }
 
 
@@ -380,10 +447,9 @@ void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer_c
 }
 
 
-
-Buffer_Handle vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer,
-                                       vulkan_gpu_buffer_type buffer_type,
-                                       u64 data_size)
+void vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer,
+                              vulkan_gpu_buffer_type buffer_type,
+                              u64 data_size)
 {
     //NOTE: the vulkan buffer must be allocated before being passed in
 
@@ -426,10 +492,12 @@ Buffer_Handle vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* ou
     switch (buffer_type)
     {
     case GPU_UNIFORM:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     case GPU_STORAGE:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
     case GPU_STAGING:
         out_buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -465,4 +533,9 @@ void vulkan_buffer_gpu_free(renderer* renderer, vulkan_buffer_gpu* staging_buffe
 vulkan_buffer_cpu* vulkan_buffer_cpu_get(renderer* renderer, Buffer_Handle buffer_handle)
 {
     return &renderer->buffer_system->vertex_buffers[buffer_handle.handle];
+}
+
+vulkan_buffer_cpu* vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer)
+{
+    buffer->current_offset = 0;
 }

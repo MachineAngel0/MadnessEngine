@@ -125,4 +125,19 @@ void print_dummy(char* dummy_string)
 }
 
 
+u64 calculate_permutations_amount(u64 number_of_objects)
+{
+    int permutations = 1;
+    for (int i = 1; i <= number_of_objects; i++)
+    {
+        permutations *= i;
+    }
+    TRACE("permutations %d", permutations)
+    return permutations;
+}
+
+
+
+
+
 #endif //MISC_UTIL_H

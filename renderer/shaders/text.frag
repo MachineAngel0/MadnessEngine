@@ -1,6 +1,8 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform sampler2D texSampler;
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec2 fragTexCoord;
@@ -12,7 +14,7 @@ void main() {
     //outColor = vec4(fragColor, 1.0);
     //outColor = vec4(fragTexCoord, 0.0, 1.0); // useful for debugging
     //outColor = texture(texSampler, fragTexCoord);
-    outColor = vec4(fragColor, 1.0) * texture(texSampler, fragTexCoord); // if we want colors overlayed
+    outColor = vec4(fragColor, 1.0) * texture(texture_samples[(nonuniformEXT(0))], fragTexCoord); // if we want colors overlayed
 
     //creates greyish outline, but looks bad
     //vec4 texel = texture(texSampler, fragTexCoord);      // sample atlas RGBA

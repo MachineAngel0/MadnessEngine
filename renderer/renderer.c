@@ -3,6 +3,7 @@
 #include "lights.c"
 #include "mesh.h"
 #include "shader_system.h"
+#include "UI.h"
 #include "vk_command_buffer.h"
 #include "vk_framebuffer.h"
 #include "vk_image.h"
@@ -14,11 +15,13 @@
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static renderer renderer_internal;
+static UI_System* UI_System_internal;
 
 
 
 bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 {
+
     vulkan_context* vk_context = &renderer_internal.context;
 
     //set up memory for the renderer
@@ -125,16 +128,25 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     // Light System
     renderer_internal.light_system = light_system_init(&renderer_internal);
 
+    //TODO: should be initialized after the renderer
+    UI_System_internal = ui_system_init(&renderer_internal);
+
+
+    //Pipelines
+    ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline);
+    text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
     renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
                                                               "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
+                                                           // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
+    // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
 
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_vertex_buffer, CPU_VERTEX, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_index_buffer, CPU_INDEX, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_draw_command_buffer, CPU_INDIRECT, MB(32));
+    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_draw_buffer, CPU_INDIRECT, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_storage_buffer, CPU_STORAGE, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.normal_storage_buffer, CPU_STORAGE, MB(32));
     vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
@@ -158,7 +170,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
         vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_index_buffer,
                                                 renderer_internal.indirect_mesh->mesh[i].indices,
                                                 renderer_internal.indirect_mesh->mesh[i].indices_bytes);
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_draw_command_buffer,
+        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_draw_buffer,
                                                 &renderer_internal.indirect_mesh->indirect_draw_array[i],
                                                 sizeof(VkDrawIndexedIndirectCommand));
 
@@ -260,6 +272,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     arena_clear(&renderer_internal.frame_arena);
 
+    ui_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
+    UI_ID test_id = {0,0};
+    DO_BUTTON_TEST(UI_System_internal, test_id);
+    ui_system_upload_draw_data(&renderer_internal, UI_System_internal);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -460,6 +476,19 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // SET 2 GLOBAL BUFFERS: Mesh/Material values (just as an example)
     // SET 2 GLOBAL BUFFERS: FOG/BLOOM/IDK (just as an example)
 
+    //TODO: MESH LAYOUT
+    // SET 0: UNIFORM
+    // SET 1: TEXTURE
+    // THE ABOVE IS FOR EVERYTHING
+    // DRAW LOOP:
+    //      bind vertex and index buffer
+    //      for(pipeline_type):
+    //            Bind: PIPELINE_TYPE
+    //            SET 2 : MESH SHADER DATA
+    //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
+
+
+
     //INDIRECT DRAW
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer_internal.indirect_pipeline.handle);
@@ -493,7 +522,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     if (renderer_internal.context.device.features.multiDrawIndirect)
     {
         vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
-                                 renderer_internal.indirect_draw_command_buffer.handle, 0,
+                                 renderer_internal.indirect_draw_buffer.handle, 0,
                                  renderer_internal.indirect_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
     }
     else
@@ -502,7 +531,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
         for (auto j = 0; j < renderer_internal.indirect_mesh->mesh_size; j++)
         {
             vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
-                                     renderer_internal.indirect_draw_command_buffer.handle,
+                                     renderer_internal.indirect_draw_buffer.handle,
                                      j * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));
         }
     }
@@ -667,6 +696,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
+    ui_end(UI_System_internal);
+
 }
 
 

@@ -1,8 +1,6 @@
 ﻿#ifndef ENTRY_RENDERER_H
 #define ENTRY_RENDERER_H
 
-#include "application.h"
-#include "renderer.h"
 
 
 extern void create_renderer(struct renderer_app* renderer_out);

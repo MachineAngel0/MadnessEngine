@@ -83,11 +83,11 @@ typedef struct event_system
     Arena event_system_arena;
 
 
-} event_table;
+} event_system;
 
 //someone that registers to receive the events
 static bool is_event_system_init = false;
-static event_table event_state;
+static event_system event_system_internal;
 
 bool event_init(Arena* arena)
 {
@@ -95,14 +95,14 @@ bool event_init(Arena* arena)
 
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = arena_alloc(arena, event_system_mem_requirement);
-    arena_init(&event_state.event_system_arena, event_system_mem, event_system_mem_requirement);
+    arena_init(&event_system_internal.event_system_arena, event_system_mem, event_system_mem_requirement);
 
 
     if (is_event_system_init == true) { return false; }
 
     is_event_system_init = true;
     //zero the memory
-    memset(&event_state, 0, sizeof(event_state));
+    memset(&event_system_internal, 0, sizeof(event_system_internal));
 
     return true;
 }
@@ -112,7 +112,7 @@ bool event_shutdown()
     INFO("EVENT SYSTEM SHUTDOWN")
 
 
-    arena_clear(&event_state.event_system_arena);
+    arena_clear(&event_system_internal.event_system_arena);
     // //just free the memory
     // for (int i = 0; i < MAX_EVENTS; i++)
     // {
@@ -138,17 +138,17 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
 
     //TODO: hook in the linear allocator for this
     //check if the event arr has been alloacated
-    if (event_state.events_table[event].subs_arr == NULL)
+    if (event_system_internal.events_table[event].subs_arr == NULL)
     {
-        event_state.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
+        event_system_internal.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
     }
 
 
     //TODO: wrap in a debug if/else
-    uint32_t registered_count = event_state.events_table[event].subs_arr->num_items;
+    uint32_t registered_count = event_system_internal.events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
+        subscriber_data* sub_data = (subscriber_data *) array_get(event_system_internal.events_table[event].subs_arr, i);
         if (sub_data->subscriber_id == subscriber)
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
@@ -159,18 +159,18 @@ void event_register(const event_type event, const uint32_t subscriber, const on_
     subscriber_data* new_sub_data = malloc(sizeof(subscriber_data));
     new_sub_data->subscriber_id = subscriber;
     new_sub_data->callback = callback;
-    array_push(event_state.events_table[event].subs_arr, new_sub_data);
+    array_push(event_system_internal.events_table[event].subs_arr, new_sub_data);
 }
 
 void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 {
-    uint32_t registered_count = event_state.events_table[event].subs_arr->num_items;
+    uint32_t registered_count = event_system_internal.events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
+        subscriber_data* sub_data = (subscriber_data *) array_get(event_system_internal.events_table[event].subs_arr, i);
         if ((sub_data->subscriber_id == subscriber) && (sub_data->callback == callback))
         {
-            array_remove_swap(event_state.events_table[event].subs_arr, i);
+            array_remove_swap(event_system_internal.events_table[event].subs_arr, i);
         };
     }
 }
@@ -178,15 +178,15 @@ void event_unregister(event_type event, uint32_t subscriber, on_event callback)
 void event_fire(event_type event, uint32_t sender_id, event_context context)
 {
     //check if the event arr has been allocated
-    if (event_state.events_table[event].subs_arr == NULL)
+    if (event_system_internal.events_table[event].subs_arr == NULL)
     {
-        event_state.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
+        event_system_internal.events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
     }
 
-    for (uint32_t i = 0; i < event_state.events_table[event].subs_arr->num_items; i++)
+    for (uint32_t i = 0; i < event_system_internal.events_table[event].subs_arr->num_items; i++)
     {
         //trigger all the callbacks in the event table
-        subscriber_data a = *(subscriber_data *) array_get(event_state.events_table[event].subs_arr, i);
+        subscriber_data a = *(subscriber_data *) array_get(event_system_internal.events_table[event].subs_arr, i);
         if (a.callback(event, sender_id, a.subscriber_id, context))
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else

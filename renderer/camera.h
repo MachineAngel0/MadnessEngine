@@ -201,6 +201,8 @@ mat4 camera_get_fps_view_matrix(camera* cam)
 mat4 camera_get_projection(camera* cam, const float width, const float height)
 {
     return mat4_perspective(cam->fov, (float) (width / height), cam->znear, cam->zfar);
+    // float fov = 1.5;
+    // return mat4_orthographic(-10 * fov, 10 * fov, -10 * fov, 10 * fov, cam->znear, cam->zfar);
 }
 
 

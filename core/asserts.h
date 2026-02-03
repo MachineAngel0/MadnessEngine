@@ -14,8 +14,6 @@
 #endif
 
 
-
-
 #include <stdint.h>
 
 
@@ -46,6 +44,12 @@ void report_unreachable(const char* file, int32_t line);
         }                                                                 \
     }
 
+#define MASSERT_MSG_FALSE(message)                                              \
+    {                                                                           \
+        report_assertion_failure("MASSERT_FALSE", message, __FILE__, __LINE__); \
+        debugBreak();                                                           \
+    }
+
 
 #ifdef _DEBUG
 #define MASSERT_DEBUG(expr)                                          \
@@ -72,11 +76,6 @@ void report_unreachable(const char* file, int32_t line);
 
 #define UNIMPLEMENTED() report_unimplemented(__FILE__, __LINE__);
 #define UNREACHABLE() report_unreachable(__FILE__, __LINE__)
-
-
-
-
-
 
 
 #endif

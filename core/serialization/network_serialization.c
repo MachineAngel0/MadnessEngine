@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../math_lib.h"
+#include "../maths/math_lib.h"
 #include "../unit_test.h"
 
 

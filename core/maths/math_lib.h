@@ -2,18 +2,16 @@
 #define MATH_LIB_H
 
 
-
 #include "math.h"
-#include "defines.h"
+#include "../defines.h"
 #include <float.h>
 #include "platform.h"
 
 
-
-
 //FUTURE: rn im not using glm/cglm, should probably switch
-// Y Up, left handed
+//NOTE: Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
+// Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)
 
 // VEC2
 MINLINE vec2 vec2_zero()
@@ -174,15 +172,28 @@ MINLINE vec3 vec3_mul(const vec3 a, const vec3 b)
     return (vec3){a.x * b.x, a.y * b.y, a.z * b.z};
 }
 
+
 MINLINE vec3 vec3_mul_scalar(const vec3 a, const float scalar)
 {
     return (vec3){a.x * scalar, a.y * scalar, a.z * scalar};
 }
 
+MINLINE vec3 vec3_flip_sign(const vec3 a)
+{
+    return vec3_mul_scalar(a, -1.0f);
+}
+
+
 MINLINE vec3 vec3_div(const vec3 a, const vec3 b)
 {
     return (vec3){a.x / b.x, a.y / b.y, a.z / b.z};
 }
+
+MINLINE vec3 vec3_div_scalar(const vec3 a, const float s)
+{
+    return (vec3){a.x / s, a.y / s, a.z / s};
+}
+
 
 MINLINE float vec3_dot(const vec3 a, const vec3 b)
 {
@@ -227,6 +238,16 @@ MINLINE float vec3_length(const vec3 v)
 {
     return sqrt(vec3_length_squared(v));
 }
+
+MINLINE float vec3_magnitude(const vec3 v)
+{
+    return vec3_length(v);
+}
+MINLINE float vec3_magnitude_squared(const vec3 v)
+{
+    return vec3_length_squared(v);
+}
+
 
 MINLINE void vec3_normalize(vec3* v)
 {
@@ -365,11 +386,12 @@ MINLINE f32 vec4_dot_f32(const f32 a0, const f32 a1, const f32 a2, const f32 a3,
 }
 
 
-// MATRIX3
+// MATRIX3*3
 
 MINLINE mat3 mat3_identity()
 {
     mat3 out_mat3;
+    // mat3 out_mat3 = {0};
     memset(&out_mat3, 0, sizeof(float) * 9);
     out_mat3.data[0] = 1.0f;
     out_mat3.data[4] = 1.0f;
@@ -461,9 +483,9 @@ MINLINE mat3 mat3_mul(const mat3 m1, const mat3 m2)
         for (int j = 0; j < 3; j++)
         {
             *dst_ptr =
-                    m1_ptr[0] * m2_ptr[0 + j] +
-                    m1_ptr[1] * m2_ptr[4 + j] +
-                    m1_ptr[2] * m2_ptr[8 + j];
+                m1_ptr[0] * m2_ptr[0 + j] +
+                m1_ptr[1] * m2_ptr[4 + j] +
+                m1_ptr[2] * m2_ptr[8 + j];
             dst_ptr++;
         }
         m1_ptr += 3;
@@ -491,6 +513,8 @@ MINLINE mat3 mat3_mul_alt(const mat3 m1, const mat3 m2)
 
 MINLINE vec3 mat3_mul_vec3(const mat3 m, const vec3 v)
 {
+    //this looks something like [x,y,z] [3*3] = vec3[x,y,z]
+    //and not  [3*3] [x,y,z](vertical)  = mat3[3*3]
     return (vec3)
     {
         .x = (m.data[0] * v.x) + (m.data[1] * v.y) + (m.data[2] * v.z),
@@ -503,9 +527,9 @@ MINLINE float mat3_determinant(const mat3 m)
 {
     const float* a = m.data;
     return
-            a[0] * (a[4] * a[8] - a[7] * a[5]) +
-            a[3] * (a[7] * a[2] - a[1] * a[8]) +
-            a[6] * (a[1] * a[5] - a[4] * a[2]);
+        a[0] * (a[4] * a[8] - a[7] * a[5]) +
+        a[3] * (a[7] * a[2] - a[1] * a[8]) +
+        a[6] * (a[1] * a[5] - a[4] * a[2]);
 }
 
 MINLINE mat3 mat3_inverse(const mat3 m)
@@ -530,8 +554,8 @@ MINLINE mat3 mat3_make_rot_x(const float t)
 
     return (mat3){
         1.0f, 0.0f, 0.0f,
-        0.0f, c, -s,
-        0.0f, s, c,
+        0.0f, c, s,
+        0.0f, -s, c,
     };
 }
 
@@ -541,9 +565,9 @@ MINLINE mat3 mat3_make_rot_y(const float t)
     const float s = sin(t);
 
     return (mat3){
-        c, 0.0f, s,
+        c, 0.0f, -s,
         0.0f, 1.0f, 0.0f,
-        -s, 0.0f, c,
+        s, 0.0f, c,
     };
 }
 
@@ -553,8 +577,8 @@ MINLINE mat3 mat3_make_rot_z(const float t)
     const float s = sin(t);
 
     return (mat3){
-        c, -s, 0.0f,
-        s, c, 0.0f,
+        c, s, 0.0f,
+        -s, c, 0.0f,
         0.0f, 0.0f, 1.0f,
     };
 }
@@ -580,6 +604,33 @@ MINLINE mat3 mat3_make_rot(const float t, const vec3 a)
         axaz + s * a.y, ayaz - s * a.x, c + z * a.z
     };
 }
+
+//NOTE: Careful on using this
+MINLINE mat3 mat3_make_rot_arbitrary_axis(const float theta, const vec3 axis)
+{
+    //NOTE: its implied that we are rotating about the origin, that axis is a unit vector
+    const float c = cos(theta);
+    const float s = sin(theta);
+    const float d = 1 - cos(theta);
+
+    // vec3 normalized_axis = vec3_normalize_functional(axis);
+
+    float nx = axis.x;
+    float ny = axis.y;
+    float nz = axis.z;
+
+    float nx_square = pow(axis.x, 2);
+    float ny_square = pow(axis.y, 2);
+    float nz_square = pow(axis.z, 2);
+
+
+    return (mat3){
+        nx_square * d + c, (nx * ny * d) + (nz * s), nx * nz * d - ny * s,
+        nx * ny * d - nz * s, (ny_square * d) + (c), ny * nz * d + nz * s,
+        nx * nz * d - ny * s, (ny * nz * d) - nz * s, nz_square * d + c,
+    };
+}
+
 
 MINLINE mat3 mat3_make_reflection(const vec3 a)
 {
@@ -698,10 +749,10 @@ MINLINE mat4 mat4_mul(const mat4 m1, const mat4 m2)
         for (int j = 0; j < 4; j++)
         {
             *dst_ptr =
-                    m1_ptr[0] * m2_ptr[0 + j] +
-                    m1_ptr[1] * m2_ptr[4 + j] +
-                    m1_ptr[2] * m2_ptr[8 + j] +
-                    m1_ptr[3] * m2_ptr[12 + j];
+                m1_ptr[0] * m2_ptr[0 + j] +
+                m1_ptr[1] * m2_ptr[4 + j] +
+                m1_ptr[2] * m2_ptr[8 + j] +
+                m1_ptr[3] * m2_ptr[12 + j];
             dst_ptr++;
         }
         m1_ptr += 4;
@@ -720,13 +771,13 @@ MINLINE mat4 mat4_orthographic(const f32 left, const f32 right, const f32 bottom
     const f32 bt = 1.0f / (top - bottom);
     const f32 nf = 1.0f / (far_clip - near_clip);
 
-    out_mat.rows[0].x = -2.0f * lr;
-    out_mat.rows[5].x = -2.0f * bt;
-    out_mat.rows[10].x = 2.0f * nf;
+    out_mat.data[0] = -2.0f * lr;
+    out_mat.data[5] = -2.0f * bt;
+    out_mat.data[10] = 2.0f * nf;
 
-    out_mat.rows[12].x = (left + right) * lr;
-    out_mat.rows[13].x = (top + bottom) * bt;
-    out_mat.rows[14].x = (far_clip + near_clip) * nf;
+    out_mat.data[12] = (left + right) * lr;
+    out_mat.data[13] = (top + bottom) * bt;
+    out_mat.data[14] = (far_clip + near_clip) * nf;
     return out_mat;
 }
 
@@ -910,6 +961,7 @@ MINLINE mat4 mat4_translation(const vec3 position)
     out_matrix.data[12] = position.x;
     out_matrix.data[13] = position.y;
     out_matrix.data[14] = position.z;
+
 
     return out_matrix;
 }
@@ -1115,6 +1167,37 @@ MINLINE quat quat_inverse(const quat q)
     return quat_normalize(quat_conjugate(q));
 }
 
+MINLINE quat quat_exponential(const quat q, const f32 exponent)
+{
+    // q^t operation
+
+    quat out_quat = q;
+
+    // Check for the case of an identity quaternion.
+    // This will protect against divide by zero
+    if (fabs(out_quat.w) < .9999f)
+    {
+        // Extract the half angle alpha (alpha = theta/2)
+        float alpha = acos(out_quat.w);
+
+        // Compute new alpha value
+        float newAlpha = alpha * exponent;
+
+        // Compute new w value
+        out_quat.w = cos(newAlpha);
+
+        // Compute new xyz values
+        float mult = sin(newAlpha) / sin(alpha);
+        out_quat.x *= mult;
+        out_quat.y *= mult;
+        out_quat.z *= mult;
+        return out_quat;
+    }
+
+    //this is here in the event w is less than 1
+    return q;
+}
+
 
 MINLINE quat quat_mul(const quat q0, const quat q1)
 {
@@ -1131,10 +1214,10 @@ MINLINE quat quat_mul(const quat q0, const quat q1)
 
 MINLINE f32 quat_dot(quat q_0, quat q_1)
 {
-    return q_0.x * q_1.x +
-           q_0.y * q_1.y +
-           q_0.z * q_1.z +
-           q_0.w * q_1.w;
+    return (q_0.x * q_1.x) +
+        (q_0.y * q_1.y) +
+        (q_0.z * q_1.z) +
+        (q_0.w * q_1.w);
 }
 
 // Calculates a rotation matrix based on the quaternion and the passed in center point.
@@ -1193,6 +1276,8 @@ MINLINE mat4 quat_rotate(mat4 m, float angle, vec3 axis)
 //  Calculates spherical linear interpolation of a given percentage between two quaternions.
 MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
 {
+    //percentage is from 0-1
+
     quat out_quaternion;
 
     // Source: https://en.wikipedia.org/wiki/Slerp
@@ -1205,10 +1290,9 @@ MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
     // Compute the cosine of the angle between the two vectors.
     f32 dot = quat_dot(v0, v1);
 
-    // If the dot product is negative, slerp won't take
-    // the shorter path. Note that v1 and -v1 are equivalent when
-    // the negation is applied to all four components. Fix by
-    // reversing one quaternion.
+    // If the dot product is negative, slerp won't take the shorter path.
+    // Note that v1 and -v1 are equivalent when the negation is applied to all four components.
+    // Fix by reversing one quaternion.
 
     if (dot < 0.0f)
     {
@@ -1262,7 +1346,7 @@ MINLINE f32 rad_to_deg(const f32 radians)
     return radians * RAD2DEG;
 }
 
-// VEC Conversions
+// CONVERSIONS
 MINLINE vec2 vec3_to_vec2(const vec3 v)
 {
     return (vec2){v.x, v.y};
@@ -1305,29 +1389,287 @@ MINLINE mat4 quat_to_mat4(quat q)
     return out_matrix;
 }
 
+MINLINE mat4 quat_to_euler(quat q, vec3 out_v)
+{
+    // Input quaternion
+    float w, x, y, z;
+
+    // Output Euler angles (radians)
+    float h, p, b;
+
+    // Extract sin(pitch)
+    float sp = -2.0f * (q.y * q.z - q.w * q.x);
+
+    // Check for Gimbal lock, giving slight tolerance
+    // for numerical imprecision
+    if (fabs(sp) > 0.9999f)
+    {
+        // Looking straight up or down
+        p = 1.570796f * sp; // pi/2
+
+        // Compute heading, slam bank to zero
+        h = atan2(-q.x * q.z + q.w * q.y, 0.5f - q.y * q.y - q.z * q.z);
+        b = 0.0f;
+    }
+    else
+    {
+        // Compute angles
+        p = asin(sp);
+        h = atan2(q.x * q.z + q.w * q.y, 0.5f - q.x * q.x - q.y * q.y);
+        b = atan2(q.x * q.y + q.w * q.z, 0.5f - q.x * q.x - q.z * q.z);
+    }
+}
+
+
+//UTILITY
 void print_vec2(void* data)
 {
     //cast to int* and then dereferenced, to get the value of the pointer of size int*
-    printf("vec2 x: %f", *(float *) data);
-    printf("y: %f\n", *(float *) ((float*)data + 1));
+    printf("vec2 x: %f", *(float*)data);
+    printf("y: %f\n", *(float*)((float*)data + 1));
 }
 
 void print_vec3(void* data)
 {
     //cast to int* and then dereferenced, to get the value of the pointer of size int*
-    printf("vec3 x: %f ", *(float *) data);
-    printf("y: %f ", *(float *) ((float*)data + 1));
-    printf("z: %f\n", *(float *) ((float*)data + 2));
+    printf("vec3 x: %f ", *(float*)data);
+    printf("y: %f ", *(float*)((float*)data + 1));
+    printf("z: %f\n", *(float*)((float*)data + 2));
 }
 
 void print_vec4(void* data)
 {
     //cast to int* and then dereferenced, to get the value of the pointer of size int*
-    printf("vec4 x: %f ", *(float *) data);
-    printf("y: %f ", *(float *) ((float*)data + 1));
-    printf("z: %f ", *(float *) ((float*)data + 2));
-    printf("w: %f\n", *(float *) ((float*)data + 3));
+    printf("vec4 x: %f ", *(float*)data);
+    printf("y: %f ", *(float*)((float*)data + 1));
+    printf("z: %f ", *(float*)((float*)data + 2));
+    printf("w: %f\n", *(float*)((float*)data + 3));
 }
+
+// POLAR COORDINATES
+void polar_canonical_form(float in_radius, float in_theta)
+{
+    MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
+    // POLAR COORDINATES
+
+    // Radial distance
+    float r = in_radius;
+
+    // Angle in RADIANS
+    float theta = in_theta;
+
+    // Declare a constant for 2*pi (360 degrees)
+    const float TWOPI = 2.0f * PI;
+
+    // Check if we are exactly at the origin
+    if (r == 0.0f)
+    {
+        // At the origin - slam theta to zero
+        theta = 0.0f;
+    }
+    else
+    {
+        // Handle negative distance
+        if (r < 0.0f)
+        {
+            r = -r;
+            theta += PI;
+        }
+
+        // Theta out of range?  Note that this if() check is not
+        // strictly necessary, but we try to avoid doing floating
+        // point operations if they aren't necessary.  Why
+        // incur floating point precision loss if we don't
+        // need to?
+        if (fabs(theta) > PI)
+        {
+            // Offset by PI
+            theta += PI;
+
+            // Wrap in range 0...TWOPI
+            theta -= floor(theta / TWOPI) * TWOPI;
+
+            // Undo offset, shifting angle back in range -PI...PI
+            theta -= PI;
+        }
+    }
+}
+
+void polar_to_cartesian(float in_radius, float in_theta, float* out_x, float* out_y)
+{
+    MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
+    // Theta Angle in RADIANS
+
+    *out_x = in_radius * cos(in_theta);
+    *out_y = in_radius * sin(in_theta);
+}
+
+void cartesian_to_polar(float in_x, float in_y, float* out_radius, float* out_theta)
+{
+    MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
+    // Input: Cartesian coordinates
+    // Output: polar radial distance, and angle in RADIANS
+
+
+    // Check if we are at the origin
+    if (in_x == 0.0f && in_y == 0.0f)
+    {
+        // At the origin - slam both polar coordinates to zero
+        *out_radius = 0.0f;
+        *out_theta = 0.0f;
+    }
+    else
+    {
+        // Compute values.  Isn't the atan2 function great?
+        *out_radius = sqrt(in_x * in_x + in_y * in_y);
+        *out_theta = atan2(in_y, in_x);
+    }
+}
+
+void spherical_canonical_form(float* r, float* heading, float* pitch)
+{
+    // Radial distance
+    // float r;
+
+    // Angles in radians
+    //heading = theta, pitch = phi
+    // float heading, pitch;
+
+    // Declare a few constants
+    const float TWOPI = 2.0f * PI; // 360 degrees
+    const float PIOVERTWO = PI / 2.0f; // 90 degrees
+
+    // Check if we are exactly at the origin
+    if (*r == 0.0f)
+    {
+        // At the origin - slam angles to zero
+        *heading = *pitch = 0.0f;
+    }
+    else
+    {
+        // Handle negative distance
+        if (*r < 0.0f)
+        {
+            *r = -(*r);
+            *heading += PI;
+            *pitch = -(*pitch);
+        }
+
+        // Pitch out of range?
+        if (fabs(*pitch) > PIOVERTWO)
+        {
+            // Offset by 90 degrees
+            *pitch += PIOVERTWO;
+
+            // Wrap in range 0...TWOPI
+            *pitch -= floor(*pitch / TWOPI) * TWOPI;
+
+            // Out of range?
+            if (*pitch > PI)
+            {
+                // Flip heading
+                *heading += PI;
+
+                // Undo offset and also set pitch = 180-pitch
+                *pitch = 3.0f * PI / 2.0f - *pitch; // p = 270 degrees - p
+            }
+            else
+            {
+                // Undo offset, shifting pitch in range
+                // -90 degrees ... +90 degrees
+                *pitch -= PIOVERTWO;
+            }
+        }
+
+        // Gimbal lock?  Test using a relatively small tolerance
+        // here, close to the limits of single precision.
+        if (fabs(*pitch) >= PIOVERTWO * 0.9999)
+        {
+            *heading = 0.0f;
+        }
+        else
+        {
+            // Wrap heading, avoiding math when possible
+            // to preserve precision
+            if (fabs(*heading) > PI)
+            {
+                // Offset by PI
+                *heading += PI;
+
+                // Wrap in range 0...TWOPI
+                *heading -= floor(*heading / TWOPI) * TWOPI;
+
+                // Undo offset, shifting angle back in range -PI...PI
+                *heading -= PI;
+            }
+        }
+    }
+}
+
+void spherical_to_cartesian(float* out_x, float* out_y, float* out_z,
+                            const float radius, const float theta, const float phi)
+{
+    //phi = books calls its p for pitch
+    //theta = books calls it h for heading
+    //think of both like airplane movements
+    *out_x = radius * cos(phi) * sin(theta);
+    *out_y = -radius * sin(phi);
+    *out_z = -radius * cos(phi) * cos(theta);
+}
+
+void cartesian_to_spherical(const float x, const float y, const float z, float* out_radius, float* out_theta,
+                            float* out_phi)
+{
+    // Input Cartesian coordinates
+    // float x,y,z;
+
+    // Output radial distance
+    // float r;
+
+    // Output angles in radians
+    // float heading, pitch;
+
+    // Declare a few constants
+    const float TWOPI = 2.0f * PI; // 360 degrees
+    const float PIOVERTWO = PI / 2.0f; // 90 degrees
+
+    // Compute radial distance
+    *out_radius = sqrt(x * x + y * y + z * z);
+
+    // Check if we are exactly at the origin
+    if (*out_radius > 0.0f)
+    {
+        // Compute pitch
+        *out_phi = asin(-y / *out_radius);
+
+        // Check for gimbal lock, since the library atan2
+        // function is undefined at the (2D) origin
+        if (fabs(*out_phi) >= PIOVERTWO * 0.9999)
+        {
+            *out_theta = 0.0f;
+        }
+        else
+        {
+            *out_theta = atan2(x, z);
+        }
+    }
+    else
+    {
+        // At the origin - slam angles to zero
+        *out_theta = *out_phi = 0.0f;
+    }
+}
+
+
+/*COLOR*/
+static const vec3 COLOR_BLACK = {0.0f, 0.0f, 0.0f};
+static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
+static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
+static const vec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};
+static const vec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
+
+static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 
 
 /*** MAX/MIN FUNCTIONS ***/
@@ -1376,7 +1718,7 @@ uint32_t randi()
 {
     if (!rand_seeded)
     {
-        srand((u32) platform_get_absolute_time());
+        srand((u32)platform_get_absolute_time());
         rand_seeded = true;
     }
     return rand();
@@ -1386,7 +1728,7 @@ uint32_t rand_range_i(uint32_t min, uint32_t max)
 {
     if (!rand_seeded)
     {
-        srand((u32) platform_get_absolute_time());
+        srand((u32)platform_get_absolute_time());
         rand_seeded = true;
     }
     return (rand() % (max - min + 1)) + min;
@@ -1396,20 +1738,20 @@ static float randf()
 {
     if (!rand_seeded)
     {
-        srand((u32) platform_get_absolute_time());
+        srand((u32)platform_get_absolute_time());
         rand_seeded = true;
     }
-    return (rand() / (f32) RAND_MAX);
+    return (rand() / (f32)RAND_MAX);
 }
 
 float rand_range_f(const float min, const float max)
 {
     if (!rand_seeded)
     {
-        srand((u32) platform_get_absolute_time());
+        srand((u32)platform_get_absolute_time());
         rand_seeded = true;
     }
-    return min + ((float) rand() / ((f32) RAND_MAX / (max - min)));
+    return min + ((float)rand() / ((f32)RAND_MAX / (max - min)));
 }
 
 

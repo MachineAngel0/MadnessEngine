@@ -1,16 +1,25 @@
-﻿//CORE - Top Level
+﻿//C- STD library
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+//CORE - Top Level
 #include "../core/defines.h"
 #include "../core/color_asci.h"
 #include "../core/event.h"
 #include "../core/input.h"
 #include "../core/logger.h"
-#include "../core/math_types.h"
+#include "../core/maths/math_types.h"
 #include "../core/misc_util.h"
-#include "../core/math_lib.h"
+#include "maths/math_lib.h"
 #include "../core/unit_test.h"
 #include "../core/memory_tracker.h"
 #include "../core/c_string.h"
 #include "../core/id_gen.h"
+
 
 
 //CORE - SERIALIZATION
@@ -30,6 +39,7 @@
 #elif defined(__linux__)
 #include "../core/platform/platform_linux.c"
 #endif
+
 
 //CORE - DSA
 #include "../core/dsa/arena.h"
@@ -54,3 +64,7 @@
 #include "../core/dsa/str_c.h"
 #include "../core/dsa/queue.h"
 #include "../core/dsa/unions.h"
+
+
+
+

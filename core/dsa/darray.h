@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "logger.h"
-#include "math_types.h"
+#include "../maths/math_types.h"
 #include "misc_util.h"
 
 #include "unit_test.h"
@@ -430,7 +430,7 @@ void darray_remove_swap(void* array, const u64 index)
     header->num_items--;
 }
 
-bool darray_contains(void* array, const void* key, int (*cmp_func)(const void*, const void*))
+bool darray_contains(void* array,  void* key, int (*cmp_func)( void*,  void*))
 {
     if (!array)
     {

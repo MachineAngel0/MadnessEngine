@@ -66,8 +66,16 @@ void test_report_print(const char* test_name)
 
 }
 
+void test_report_final_total()
+{
+    printf("\n"ASCII_MAGENTA_BOLD "FINAL: " ASCII_END
+        ASCII_BOLD "TOTAL PASSING: " ASCII_GREEN_BOLD "%d, "ASCII_END ASCII_BOLD "TOTAL FAILING: " ASCII_RED_BOLD "%d" ASCII_END
+        "\n", total_passing, total_failing);
+}
 
-//TODO: go through the platform print colors
+
+
+//TODO (MAYBE???): go through the platform print colors
 void test_print_platform()
 {
     return;
@@ -92,6 +100,10 @@ void test_print_platform()
 #define TEST_REPORT(test_name) test_report_print(#test_name)
 //literally just the same thing as TEST_REPORT
 #define TEST_END(test_name) test_report_print(#test_name)
+
+
+//reports the accumulative passing and failing scores
+#define TEST_REPORT_TOTAL() test_report_final_total()
 
 
 #endif //UNIT_TEST_H

@@ -18,18 +18,20 @@ write my own in Vulkan.
     - Math Library: Vec2,3,4
 - Unit Tests and Custom Loggers/Asserts.
 - File and network serialization code.
+- Mesh Loader
 
 ### Current Todo's:
 
 - Finish setting up a more robust renderer
 - Unit Tests for the Data Structure's Folder
-- Hookup the Memory Logger and Arena Allocators
+- Hookup the Memory Logger 
 - Work on the Linux Platform Layer
 
 ### PLANNED:
 - Simple Flex Style Immediate Mode UI
 - PBR lighting model
 - Editor for easier development
+- Develop the Turn Based Game
 
 
 ### Extra Info:

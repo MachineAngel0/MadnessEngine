@@ -2,8 +2,6 @@
 #define VULKAN_TYPES_H
 
 
-
-
 #define VK_CHECK(expr)              \
 {                                   \
     if(expr != VK_SUCCESS){         \
@@ -17,6 +15,11 @@ typedef struct Shader_Handle
 {
     u32 handle;
 } Shader_Handle;
+
+typedef struct Pipeline_Handle
+{
+    u32 handle;
+} Pipeline_Handle;
 
 typedef struct Buffer_Handle
 {
@@ -50,9 +53,6 @@ typedef struct vulkan_image
 
 
 /// UI ///
-
-
-
 
 
 
@@ -98,6 +98,7 @@ typedef struct mesh
 
     Shader_Handle color_texture;
     //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
+    Pipeline_Handle pipeline;
 } mesh;
 
 
@@ -700,25 +701,22 @@ typedef struct Mesh_System
 
     Buffer_Handle vertex_buffer_handle;
     Buffer_Handle index_buffer_handle;
-    Buffer_Handle indirect_buffer_handle;
+    Buffer_Handle indirect_buffer_handle; // basically our draw data
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
     Buffer_Handle transform_buffer_handle;
 
 
+    //NOTE: NOT IN USE
     skinned_mesh* skinned_meshes;
     u32 skinned_mesh_size;
 
-    Buffer_Handle s_vertex_buffer_handle;
-    Buffer_Handle s_index_buffer_handle;
-    Buffer_Handle s_indirect_buffer_handle;
-    Buffer_Handle s_normal_buffer_handle;
-    Buffer_Handle s_uv_buffer_handle;
-    Buffer_Handle s_tangent_buffer_handle;
-    Buffer_Handle s_transform_buffer_handle;
+    Buffer_Handle bone_buffer_handle;
+    Buffer_Handle wieghts_buffer_handle;
 
-    // maybe one for dynamic/deformable meshes
+
+
 
 
 } Mesh_System;
@@ -745,9 +743,15 @@ typedef struct renderer
     //TODO:
     vulkan_context context;
 
-    static_mesh* indirect_mesh;
+    //pipelines
     vulkan_shader_pipeline indirect_pipeline;
-    vulkan_buffer_cpu indirect_draw_command_buffer;
+    vulkan_shader_pipeline ui_pipeline;
+    vulkan_shader_pipeline text_pipeline;
+
+
+
+    static_mesh* indirect_mesh;
+    vulkan_buffer_cpu indirect_draw_buffer;
     vulkan_buffer_cpu indirect_vertex_buffer;
     vulkan_buffer_cpu indirect_index_buffer;
     vulkan_buffer_cpu material_ssbo_buffer;
@@ -755,6 +759,7 @@ typedef struct renderer
     vulkan_buffer_cpu uv_storage_buffer;
     vulkan_buffer_cpu directional_light_storage_buffer;
     vulkan_buffer_cpu spot_light_storage_buffer;
+
 
 
 } renderer;

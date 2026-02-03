@@ -1,19 +1,7 @@
 ﻿#ifndef UI_H
 #define UI_H
 
-
-#include "math_lib.h"
-#include "math_types.h"
-#include "text.h"
-
-
 //IMMEDIATE MODE UI
-
-//TODO: this should just get replaced
-//we can just keep setting whatever the size of the window is at the start/end of each frame,
-//it literally won't be a noticeable performance cost
-
-
 
 
 
@@ -25,7 +13,6 @@ typedef enum UI_Alignment
     //JUSTIFIED,
     UI_ALIGNMENT_MAX,
 } UI_Alignment;
-
 
 typedef struct UI_ID
 {
@@ -46,11 +33,29 @@ typedef struct UI_BUTTON
 } UI_BUTTON;
 
 
-typedef struct UI_Vertex
+typedef struct Quad_Vertex
 {
     vec2 pos;
     vec3 color;
-} UI_Vertex;
+} Quad_Vertex;
+
+typedef struct Quad_Textured_Vertex
+{
+    vec2 pos;
+    vec2 tex_coord;
+} Quad_Textured_Vertex;
+
+
+Quad_Vertex default_quad_vertex[4]= {
+    {{-0.5f, -0.5f},  {1.0f, 0.0f}},
+    {{0.5f, -0.5f},  {0.0f, 0.0f}},
+    {{0.5f, 0.5f},  {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f}}
+};
+uint16_t default_quad_indices[6] = {
+    0, 1, 2, 2, 3, 0
+};
+
 
 typedef struct
 {
@@ -62,14 +67,18 @@ typedef struct
 
 typedef struct UI_Draw_Data
 {
-    vec3* vertices;
-    u16* indices;
+    //the 100 is temporary
+    Quad_Vertex quad_vertex[100];
+    u32 quad_vertex_byte_offset;
+    u32 quad_vertex_count;
 
-    u32 vertex_count;
+    u16 indices[100];
+    u32 index_byte_offset;
     u32 index_count;
 
     UI_BUTTON* UI_Objects; // darray or maybe even an allocator
 } UI_Draw_Data;
+
 
 
 typedef enum UI_Type
@@ -81,6 +90,8 @@ typedef enum UI_Type
 
 typedef struct UI_System
 {
+    Frame_Arena* frame_arena;
+
     UI_ID hot;
     UI_ID active;
 
@@ -88,50 +99,28 @@ typedef struct UI_System
 
     int mouse_down;
     int mouse_released;
-    i32 mouse_pos_x;
-    i32 mouse_pos_y;
+    i16 mouse_pos_x;
+    i16 mouse_pos_y;
 
-    //TODO: on UI update, we can just pass the screen size
     vec2 screen_size;
 
     UI_Draw_Data draw_info;
-    Text_System text_system;
+    // Text_System text_system;
 
-    //TODO: buffers
-    Buffer_Handle quad_buffer;
+    //TODO: remove buffers, leave handles, the buffer create function is somewhat incorrect
+    vulkan_buffer_cpu ui_quad_vertex_buffer;
+    vulkan_buffer_cpu ui_quad_index_buffer;
+    vulkan_buffer_cpu text_vertex_buffer;
+    vulkan_buffer_cpu text_index_buffer;
+
+    Buffer_Handle ui_quad_vertex_buffer_handle;
+    Buffer_Handle ui_quad_index_buffer_handle;
+    Buffer_Handle text_vertex_buffer_handle;
+    Buffer_Handle text_index_buffer_handle;
 
 } UI_System;
 
-UI_System* init_ui_state()
-{
-    UI_System* ui_state = (UI_System*)(malloc(sizeof(UI_System)));
-    memset(ui_state, 0, (sizeof(UI_System)));
-
-    ui_state->active.ID = -1;
-    ui_state->active.layer = -1;
-    ui_state->hot.ID = -1;
-    ui_state->hot.layer = -1;
-
-
-    ui_state->id_generation_number = -1;
-
-    ui_state->mouse_pos_x = -1.0f;
-    ui_state->mouse_pos_y = -1.0f;
-
-    ui_state->mouse_down = 0;
-    ui_state->mouse_released = 0;
-
-    //TODO: replace with an in param
-    ui_state->screen_size = (vec2){800.0f, 600.0f};
-
-
-    text_system_init(ui_state->text_system);
-
-    return ui_state;
-}
-
-
-
+/* TODO: make sense to pass in as a param for the UI at some point
 typedef struct Transform_2D
 {
     vec2 translation{};
@@ -142,323 +131,43 @@ typedef struct Transform_2D
     {
         float s = sin(rotation);
         float c = cos(rotation);
-        mat2 rotMatrix = {{scale.x, s}, {c, scale.y}};
+        mat2 rotMatrix = (mat2){{scale.x, s}, {c, scale.y}};
 
-        mat2 scaleMat = {{scale.x, 0.0f}, {0.0f, scale.y}};
+        mat2 scaleMat = (mat2){{scale.x, 0.0f}, {0.0f, scale.y}};
         return rotMatrix * scaleMat;
     }
 } Transform_2D;
+*/
 
 
-void update_ui_mouse_pos(UI_System* ui_system)
-{
-    input_get_mouse_pos(&ui_system->mouse_pos_x, &ui_system->mouse_pos_y);
-}
+//NOTE: Remove the renderer from the init, these should not be coupled
+//I should only have to pass the vertex/index data to the renderer for drawing
+UI_System* ui_system_init(renderer* renderer);
 
+//pass in the size every frame, in the event the size changes
+void ui_begin(UI_System* ui_state, i32 screen_size_x, i32 screen_size_y);
+void ui_end(UI_System* ui_system);
 
-UI_Vertex* UI_create_quad(vec2 pos, vec2 size, vec3 color)
-{
-    MASSERT_MSG(false, "UI_CREATE_QUAD LIKELY WILL CRASH")
 
-    UI_Vertex out_vertex[] = {
-        {.pos = {pos.x, pos.y}, .color = color},
-        {.pos = {pos.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y}, .color = color},
-    };
+//VULKAN
+void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system);
 
 
-    return out_vertex;
-}
 
-UI_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, vec2 size, vec3 color)
-{
-    MASSERT_MSG(false, "UI_CREATE_QUAD_SCEEN_PERCENTAGE LIKELY WILL CRASH")
 
-    UI_Vertex out_vertex[] ={
-        {.pos = {pos.x - size.x, pos.y - size.y}, .color = color},
-        {.pos = {pos.x - size.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y - size.y}, .color = color},
-    };
+//for drawing
+Quad_Vertex* UI_create_quad(vec2 pos, vec2 size, vec3 color);
 
-    return out_vertex;
-}
 
+Quad_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, vec2 size, vec3 color);
 
-int ui_draw_rect(UI_System* ui_state, vec2 pos, vec2 size, vec3 color)
-{
-    UI_Vertex* new_quad = UI_create_quad(pos, size, color);
-    uint16_t base_index = (uint16_t)(ui_state->draw_info.vertex_info.dynamic_vertices.size());
+bool is_ui_hot(UI_System* ui_state, int id);
 
-    // Add vertices
-    ui_state->draw_info.vertex_info.dynamic_vertices.insert(ui_state->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
+bool is_ui_active(UI_System* ui_state, int id);
 
-    // Add indices (two triangles per quad)
-    uint16_t quad_indices[] = {
-        (uint16_t)(base_index + 0),
-        (uint16_t)(base_index + 1),
-        (uint16_t)(base_index + 2),
-        (uint16_t)(base_index + 2),
-        (uint16_t)(base_index + 3),
-        (uint16_t)(base_index + 0)
-    };
+bool region_hit(UI_System* ui_system, vec2 pos, vec2 size);
 
-    memcpy(ui_state->draw_info.indices, quad_indices, ARRAY_SIZE(quad_indices));
-
-
-    return ui_state->id_generation_number++;
-};
-
-
-inline int ui_draw_button_rect_screen_size_percentage(UI_System* ui_system, vec2 pos, vec2 screen_percentage,
-                                                      vec3 color = {1.0f, 1.0f, 1.0f},
-                                                      vec3 hovered_color = {1.0f, 1.0f, 1.0f},
-                                                      vec3 pressed_color = {1.0f, 1.0f, 1.0f})
-{
-    //TODO: so rn its based on the topleft corner, but i want to expand the object from the center of where i put it not from top left
-
-    //so in theory, giving a position on where it should be on the screen is fucking terrible, cause it will 100 go off the screen on a resize
-    //so a -1,1, device coordinate wouldn't actually be a bad idea, we just specify where relatively on the screen we want it
-
-
-    //tells us how much of the screen we want based on the size percentage
-    if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
-    {
-        printf("YOU ARE STUPID");
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("YOU ARE STUPID 2 ");
-    }
-
-
-    //so we specify what percent on the screen we want to start, and how big the elemenst are
-    // 1920 * 1080    we want to position it at at 10% left, 10% down, then 10% wide and height
-
-    //convert 0-100 -> 0-1
-    glm::vec2 converted_pos = pos / 100.0f;
-    glm::vec2 converted_size = screen_percentage / 100.0f;
-
-    //these are the values in our vertex, but not in our ui_object
-    /*
-    glm::vec2 final_pos = {
-        ui_state->draw_info.push_constants.screenSize.x * converted_pos.x,
-        ui_state->draw_info.push_constants.screenSize.y * converted_pos.y
-    };
-
-    glm::vec2 final_size = {
-        (ui_state->draw_info.push_constants.screenSize.x * converted_size.x) / 2,
-        (ui_state->draw_info.push_constants.screenSize.y * converted_size.y) / 2
-    };
-    */
-
-    vec2 final_pos = {
-        ui_system->screen_size.x * converted_pos.x,
-        ui_system->screen_size.y * converted_pos.y
-    };
-    vec2 final_size = {
-        (ui_system->screen_size.x * converted_size.x) / 2,
-        (ui_system->screen_size.y * converted_size.y) / 2
-    };
-
-
-    //std::vector<Vertex> new_quad = UI_create_quad(pos, screen_percentage, color);
-
-
-    //std::vector<Vertex> new_quad = UI_create_quad(pos, screen_percentage, color);
-    //this anchors the ui top left
-    /*
-    std::vector<Vertex> new_quad =  {
-             {{final_pos.x , final_pos.y}, {color}},
-                {{final_pos.x, final_pos.y + final_size.y}, {color}},
-                {{final_pos.x + final_size.x, final_pos.y + final_size.y}, {color}},
-                {{final_pos.x + final_size.x, final_pos.y}, {color}}
-    };*/
-
-    /*
-    printf("Final Pos %f, %f\n", final_pos.x, final_pos.y);
-    printf("Final SIZE %f, %f\n", final_size.x, final_size.y);
-    */
-
-
-    std::vector<Vertex> new_quad = UI_create_quad_screen_percentage(final_pos, final_size, color);
-
-    /*
-    std::cout << "QUAD:" << new_quad[0].pos.x << new_quad[0].pos.y << '\n';
-    std::cout << "QUAD:" << new_quad[1].pos.x << new_quad[1].pos.y << '\n';
-    std::cout << "QUAD:" << new_quad[2].pos.x << new_quad[2].pos.y << '\n';
-    std::cout << "QUAD:" << new_quad[3].pos.x << new_quad[3].pos.y << '\n';
-    */
-
-    uint16_t base_index = (uint16_t)(ui_system->draw_info.vertex_info.dynamic_vertices.size());
-
-
-    // create indices (two triangles per quad)
-    uint16_t quad_indices[] = {
-        (uint16_t)(base_index + 0),
-        (uint16_t)(base_index + 1),
-        (uint16_t)(base_index + 2),
-        (uint16_t)(base_index + 2),
-        (uint16_t)(base_index + 3),
-        (uint16_t)(base_index + 0)
-    };
-
-
-    // Add vertices
-    ui_system->draw_info.vertex_info.dynamic_vertices.insert(ui_system->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-
-    // Add indices
-    ui_system->draw_info.vertex_info.dynamic_indices.insert(ui_system->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-
-
-    UI_BUTTON new_ui_object = {
-        {ui_system->draw_info.vertex_info.mesh_id, 0}, converted_pos, converted_size, color, hovered_color, pressed_color
-    };
-
-    //TODO: I MIGHT WANT TO REMOVE THIS the ID and have it passed in instead
-    //increment id
-    ui_system->id_generation_number++;
-
-    ui_system->draw_info.UI_Objects.emplace_back(new_ui_object);
-
-    return ui_system->draw_info.vertex_info.mesh_id;
-};
-
-
-inline void update_UI_on_resize(UI_System* ui_state, uint32_t screen_width, uint32_t screen_height)
-{
-    //update screen percentage
-    //ui_state->push_constants.screenSize.x = swapchain_context.surface_capabilities.currentExtent.width;
-    //ui_state->push_constants.screenSize.y = swapchain_context.surface_capabilities.currentExtent.height;
-    ui_state->screen_size.x = screen_width;
-    ui_state->screen_size.y = screen_height;
-
-
-    //iterate over all ui objects and recalculate their size values
-
-    //so in theory, giving a position on where it should be on the screen is fucking terrible, cause it will 100 go off the screen on a resize
-    //so a -1,1, device coordinate wouldn't actually be a bad idea, we just specify where relatively on the screen we want it
-
-    ui_state->draw_info.vertex_info.dynamic_vertices.clear();
-    ui_state->draw_info.vertex_info.dynamic_indices.clear();
-
-    for (auto& ui_object: ui_state->draw_info.UI_Objects)
-    {
-        //so we specify what percent on the screen we want to start, and how big the elemenst are
-        // 1920 * 1080    we want to position it at at 10% left, 10% down, then 10% wide and height
-
-
-        //these are the values in our vertex, but not in our ui_object
-        glm::vec2 final_pos = {
-            ui_state->push_constants.screenSize.x * ui_object.position.x,
-            ui_state->push_constants.screenSize.y * ui_object.position.y
-        };
-        glm::vec2 final_size = {
-            (ui_state->push_constants.screenSize.x * ui_object.screen_percentage.x) / 2,
-            (ui_state->push_constants.screenSize.y * ui_object.screen_percentage.y) / 2
-        };
-
-        //glm::vec2 converted_pos = pos / 100.0f;
-        //glm::vec2 converted_size = screen_percentage / 100.0f;
-
-        //ui_object.position = final_pos;
-        //ui_object.screen_percentage
-
-        //std::vector<Vertex> new_quad = UI_create_quad(pos, screen_percentage, color);
-        std::vector<Vertex> new_quad = UI_create_quad_screen_percentage(final_pos, final_size, ui_object.color);
-
-
-        uint16_t base_index = (uint16_t)(ui_state->draw_info.vertex_info.dynamic_vertices.size());
-
-        // Add vertices
-        ui_state->draw_info.vertex_info.dynamic_vertices.insert(ui_state->draw_info.vertex_info.dynamic_vertices.end(),
-                                                                new_quad.begin(), new_quad.end());
-
-        // Add indices (two triangles per quad)
-        uint16_t quad_indices[] = {
-            (uint16_t)(base_index + 0),
-            (uint16_t)(base_index + 1),
-            (uint16_t)(base_index + 2),
-            (uint16_t)(base_index + 2),
-            (uint16_t)(base_index + 3),
-            (uint16_t)(base_index + 0)
-        };
-
-        ui_state->draw_info.vertex_info.dynamic_indices.insert(ui_state->draw_info.vertex_info.dynamic_indices.end(),
-                                                               quad_indices.begin(), quad_indices.end());
-    }
-
-}
-
-inline bool is_ui_hot(UI_System* ui_state, int id)
-{
-    return ui_state->hot.ID && ui_state->hot.ID == id;
-}
-
-inline bool is_ui_active(UI_System* ui_state, int id)
-{
-    return ui_state->active.ID && ui_state->active.ID == id;
-}
-
-
-inline bool region_hit(UI_System* ui_system, vec2 pos, vec2 size)
-{
-    //check if we are inside a ui_object
-
-    // bottom left
-    if (pos.x - size.x > ui_system->mouse_pos_x) return false;
-    if (pos.y - size.y > ui_system->mouse_pos_y) return false;
-
-    // top left
-    if (pos.x - size.x > ui_system->mouse_pos_x) return false;
-    if (pos.y + size.y < ui_system->mouse_pos_y) return false;
-
-    // top right
-    if (pos.x + size.x < ui_system->mouse_pos_x)return false;
-    if (pos.y + size.y < ui_system->mouse_pos_y) return false;
-
-    // bottom right
-    if (pos.x + size.x < ui_system->mouse_pos_x) return false;
-    if (pos.y - size.y > ui_system->mouse_pos_y) return false;
-
-    return true;
-}
-
-inline bool region_hit_new(UI_System* ui_state, vec2 pos, vec2 size)
-{
-    //check if we are inside a ui_object
-
-    //printf("DEBUG REGION HIT: MOUSE: %f, %f POS: %f, %f SIZE: %f, %f\n", ui_state->mouse_pos.x, ui_state->mouse_pos.y, pos.x, pos.y, size.x, size.y);
-
-    //top left
-    if (pos.x > ui_state->mouse_pos_x) return false;
-    if (pos.y > ui_state->mouse_pos_y) return false;
-
-
-    // bottom left
-    if (pos.x > ui_state->mouse_pos_x) return false;
-    if (pos.y + size.y < ui_state->mouse_pos_y) return false;
-
-
-    //top right
-    if (pos.x + size.x < ui_state->mouse_pos_x) return false;
-    if (pos.y > ui_state->mouse_pos_y) return false;
-
-    // bottom right
-    if (pos.x + size.x < ui_state->mouse_pos_x) return false;
-    if (pos.y + size.y < ui_state->mouse_pos_y) return false;
-
-
-    return true;
-}
-
+bool region_hit_new(UI_System* ui_state, vec2 pos, vec2 size);
 
 /*
 bool button(UI_STATE& ui_state, int id, int x, int y)
@@ -471,559 +180,60 @@ bool button(UI_STATE& ui_state, int id, int x, int y)
     }
 }*/
 
+
+//UTILITY
+
+void update_ui_mouse_pos(UI_System* ui_system);
+
 //check if we can use the button
-inline bool use_button(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size)
-{
-    //checking if we released the mouse button, are active, and we are inside the hit region
-    if (ui_state->mouse_down == 0 &&
-        ui_state->active.ID == id.ID &&
-        region_hit(ui_state, pos, size))
-        return true;
+bool use_button(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size);
 
-    return false;
-}
+bool use_button_new(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size);
 
-inline bool use_button_new(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size)
-{
-    //checking if we released the mouse button, are active, and we are inside the hit region
-    if (ui_state->mouse_down == 0 &&
-        ui_state->active.ID == id.ID &&
-        region_hit_new(ui_state, pos, size))
-        return true;
+int generate_id(UI_System* ui_state);
 
-    return false;
-}
+void set_hot(UI_System* ui_state, UI_ID id);
 
-inline int generate_id(UI_System* ui_state)
-{
-    return ui_state->id_generation_number++;
-}
+void set_active(UI_System* ui_state, UI_ID id);
 
-inline void set_hot(UI_System* ui_state, UI_ID id)
-{
-    if (ui_state->hot.layer <= id.layer)
-    {
-        ui_state->hot.ID = id.ID;
-        ui_state->hot.layer = id.layer;
-        //printf("ID: %d, is hot\n", id);
-    }
-}
+bool can_be_active(UI_System* ui_state);
+bool is_active(UI_System* ui_state, UI_ID id);
 
-inline void set_active(UI_System* ui_state, UI_ID id)
-{
-    if (ui_state->active.layer <= id.layer)
-    {
-        ui_state->active.ID = id.ID;
-        ui_state->active.layer = id.layer;
-        //printf("ID: %d, is active\n", id);
-    }
-}
+bool is_hot(UI_System* ui_state, UI_ID id);
 
-inline bool can_be_active(UI_System* ui_state)
-{
-    return ui_state->active.ID == -1 && ui_state->mouse_down;
-}
 
-inline bool is_active(UI_System* ui_state, UI_ID id)
-{
-    return ui_state->active.ID == id.ID;
-}
+//API
+bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
+               vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-inline bool is_hot(UI_System* ui_state, UI_ID id)
-{
-    return ui_state->hot.ID == id.ID;
-}
+bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
+                   UI_Alignment alignment, vec3 color,
+                   vec3 hovered_color, vec3 pressed_color);
 
+#define DO_BUTTON_TEST(UI_SYSTEM, UI_ID) do_button(UI_SYSTEM, UI_ID, (vec2){0.0f,0.0f}, (vec2){10.0f,10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f});
 
-inline bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
-                      vec3 color = {1.0f, 1.0f, 1.0f}, vec3 hovered_color = {1.0f, 1.0f, 1.0f},
-                      vec3 pressed_color = {1.0f, 1.0f, 1.0f})
-{
-    /*validation*/
 
-    if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
-    {
-        printf("SCREEN PERCENTAGE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
+/*
+bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
+               vec3 color = {1.0f, 1.0f, 1.0f}, vec3 hovered_color = {1.0f, 1.0f, 1.0f},
+               vec3 pressed_color = {1.0f, 1.0f, 1.0f});
 
-    /*POS AND SIZE CALCULATIONS*/
 
-    vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
-    vec2 converted_size = vec2_div_scalar(screen_percentage,100.0f);
+bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
+                   UI_Alignment alignment = UI_Alignment::UI_ALIGNMENT_LEFT, vec3 color = {1.0f, 1.0f, 1.0f},
+                   vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
+                   pressed_color = {1.0f, 1.0f, 1.0f});
+*/
 
-    vec2 final_pos = {
-        ui_system->screen_size.x * converted_pos.x,
-        ui_system->screen_size.y * converted_pos.y
-    };
-    vec2 final_size = {
-        (ui_system->screen_size.x * converted_size.x) / 2,
-        (ui_system->screen_size.y * converted_size.y) / 2
-    };
+/* TODO: after everything else is sorted
+bool do_button_new_text(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size, String text,
+                        vec2 text_padding = {0.0f, 0.0f}, vec3 color = {1.0f, 1.0f, 1.0f},
+                        vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
+                        pressed_color = {1.0f, 1.0f, 1.0f});
 
-
-    /*SET UI STATE*/
-
-    int mesh_id = ui_system->id_generation_number++;
-
-    //check if button is hot and active
-    if (region_hit(ui_system, final_pos, final_size))
-    {
-        set_hot(ui_system, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_system))
-        {
-            set_active(ui_system, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    /*SET DRAW COLOR Based on the state*/
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system, final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system, final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system,final_pos, final_size, color);
-    }
-
-
-    /*SET DRAW INFO*/
-
-    uint16_t base_index = <uint16_t>(ui_system->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t>(base_index + 0),
-        <uint16_t>(base_index + 1),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 3),
-        <uint16_t>(base_index + 0)
-    };
-
-    // Add vertices
-    ui_system->draw_info.vertex_info.dynamic_vertices.insert(ui_system->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_system->draw_info.vertex_info.dynamic_indices.insert(ui_system->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button(ui_system, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-
-inline bool do_button_new(UI_System* ui_state, UI_ID id, glm::vec2 pos, glm::vec2 size,
-                          UI_Alignment alignment = UI_Alignment::UI_ALIGNMENT_LEFT, glm::vec3 color = {1.0f, 1.0f, 1.0f},
-                          glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
-                          pressed_color = {1.0f, 1.0f, 1.0f})
-{
-    /*validation*/
-    if (size.x > 100 || size.x < 0 || size.y > 100 || size.y < 0)
-    {
-        printf("SIZE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-
-    /*POS AND SIZE CALCULATIONS*/
-
-    glm::vec2 converted_pos = pos / 100.0f;
-    glm::vec2 converted_size = size / 100.0f;
-
-    //TODO: this realistically can be moved out to the ui_state struct
-    //TODO: THIS IS COMPLETELY WRONG and does not work how i think it does
-    float quarter_size_x = ui_state->push_constants.screenSize.x * 0.25;
-    float quarter_size_y = ui_state->push_constants.screenSize.y * 0.25;
-    float half_size_x = ui_state->push_constants.screenSize.x * 0.5;
-    float half_size_y = ui_state->push_constants.screenSize.y * 0.5;
-    glm::vec2 final_pos;
-    switch (alignment)
-    {
-        case UI_Alignment::UI_ALIGNMENT_CENTER:
-            final_pos = {
-                ui_state->screen_size.x * converted_pos.x - quarter_size_x,
-                ui_state->screen_size.y * converted_pos.y - quarter_size_y,
-            };
-            break;
-        case UI_Alignment::UI_ALIGNMENT_LEFT:
-            final_pos = {
-                ui_state->screen_size.x * converted_pos.x,
-                ui_state->screen_size.y * converted_pos.y,
-            };
-            break;
-        case UI_Alignment::UI_ALIGNMENT_RIGHT:
-            final_pos = {
-                ui_state->screen_size.x * converted_pos.x + half_size_x,
-                ui_state->screen_size.y * converted_pos.y,
-            };
-            break;
-    }
-
-
-    vec2 final_size = {
-        (ui_state->screen_size.x * converted_size.x),
-        (ui_state->screen_size.y * converted_size.y),
-    };
-
-    /*SET UI STATE*/
-
-    int mesh_id = ui_state->draw_info.vertex_info.mesh_id++;
-
-    //check if button is hot and active
-    if (region_hit_new(ui_state, final_pos, final_size))
-    {
-        set_hot(ui_state, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_state))
-        {
-            set_active(ui_state, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    /*SET DRAW COLOR Based on the state*/
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_state, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_state, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad(final_pos, final_size, color);
-    }
-
-
-    /*SET DRAW INFO*/
-
-    uint16_t base_index = <uint16_t>(ui_state->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t>(base_index + 0),
-        <uint16_t>(base_index + 1),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 3),
-        <uint16_t>(base_index + 0)
-    };
-
-    // Add vertices
-    ui_state->draw_info.vertex_info.dynamic_vertices.insert(ui_state->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_state->draw_info.vertex_info.dynamic_indices.insert(ui_state->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button_new(ui_state, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-inline bool do_button_new_text(UI_System* ui_state, UI_ID id, glm::vec2 pos, glm::vec2 size, std::string text,
-                               glm::vec2 text_padding = {0.0f, 0.0f}, glm::vec3 color = {1.0f, 1.0f, 1.0f},
-                               glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
-                               pressed_color = {1.0f, 1.0f, 1.0f})
-{
-    /*validation*/
-    if (size.x > 100 || size.x < 0 || size.y > 100 || size.y < 0)
-    {
-        printf("SIZE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-
-    // POS AND SIZE CALCULATIONS
-
-    vec2 converted_pos = pos / 100.0f;
-    vec2 converted_size = size / 100.0f;
-
-    vec2 final_pos = {
-        ui_state->screen_size.x * converted_pos.x,
-        ui_state->screen_size.y * converted_pos.y,
-    };
-
-    vec2 final_size = {
-        (ui_state->screen_size.x * converted_size.x),
-        (ui_state->screen_size.y * converted_size.y),
-    };
-
-    do_text(ui_state, text, pos + text_padding, vec3{1.0, 1.0, 0.0});
-
-
-    /*SET UI STATE*/
-
-    int mesh_id = ui_state->draw_info.vertex_info.mesh_id++;
-
-    //check if button is hot and active
-    if (region_hit_new(ui_state, final_pos, final_size))
-    {
-        set_hot(ui_state, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_state))
-        {
-            set_active(ui_state, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    /*SET DRAW COLOR Based on the state*/
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_state, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_state, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad(final_pos, final_size, color);
-    }
-
-
-    /*SET DRAW INFO*/
-
-    uint16_t base_index = <uint16_t>(ui_state->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t>(base_index + 0),
-        <uint16_t>(base_index + 1),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 3),
-        <uint16_t>(base_index + 0)
-    };
-
-    // Add vertices
-    ui_state->draw_info.vertex_info.dynamic_vertices.insert(ui_state->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_state->draw_info.vertex_info.dynamic_indices.insert(ui_state->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button_new(ui_state, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-inline bool do_button_text(UI_System* ui_state, UI_ID id, std::string text, glm::vec2 pos, glm::vec2 screen_percentage,
-                           glm::vec3 color = {1.0f, 1.0f, 1.0f}, glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
-                           pressed_color = {1.0f, 1.0f, 1.0f})
-{
-    /*validation*/
-
-    if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
-    {
-        printf("SCREEN PERCENTAGE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-    /*POS AND SIZE CALCULATIONS*/
-
-    glm::vec2 converted_pos = pos / 100.0f;
-    glm::vec2 converted_size = screen_percentage / 100.0f;
-
-    glm::vec2 final_pos = {
-        ui_state->push_constants.screenSize.x * converted_pos.x,
-        ui_state->push_constants.screenSize.y * converted_pos.y
-    };
-    glm::vec2 final_size = {
-        (ui_state->push_constants.screenSize.x * converted_size.x) / 2,
-        (ui_state->push_constants.screenSize.y * converted_size.y) / 2
-    };
-
-    //do_text(ui_state, text, final_pos, {1.0f,1.0f,1.0f});
-    do_text_screen_percentage(ui_state, text, pos, screen_percentage, {0.0f, 0.0f, 1.0f}, 48);
-
-
-    /*SET UI STATE*/
-
-    int mesh_id = ui_state->draw_info.vertex_info.mesh_id++;
-
-    //check if button is hot and active
-    if (region_hit(ui_state, final_pos, final_size))
-    {
-        set_hot(ui_state, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_state))
-        {
-            set_active(ui_state, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    /*SET DRAW COLOR Based on the state*/
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_state, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_state, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, color);
-    }
-
-
-    /*SET DRAW INFO*/
-
-    uint16_t base_index = <uint16_t>(ui_state->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t>(base_index + 0),
-        <uint16_t>(base_index + 1),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 2),
-        <uint16_t>(base_index + 3),
-        <uint16_t>(base_index + 0)
-    };
-
-    // Add vertices
-    ui_state->draw_info.vertex_info.dynamic_vertices.insert(ui_state->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_state->draw_info.vertex_info.dynamic_indices.insert(ui_state->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button(ui_state, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-inline void ui_begin(UI_System* ui_state)
-{
-    //clear draw info and reset the hot id
-
-    //std::cout << "MOUSE STATE:" << ui_state.mouse_down << '\n';
-
-    clear_vertex_info(ui_state->draw_info.vertex_info);
-    ui_state->draw_info.UI_Objects.clear();
-
-    ui_state->hot.ID = -1;
-    ui_state->hot.layer = -1;
-
-
-    //UPDATE TEXT
-    text_update(ui_state->text_system);
-}
-
-inline void ui_end(UI_System* ui_system)
-{
-    //check if mouse is released, if so reset the active id
-    //also update the mouse state
-
-    //printf("HOT ID: %d, HOT LAYER: %d\n", ui_state->hot.ID, ui_state->hot.layer);
-    //printf("ACTIVE ID: %d, ACTIVE LAYER: %d\n", ui_state->active.ID, ui_state->active.layer);
-
-    if (input_is_mouse_button_released(MOUSE_BUTTON_LEFT))
-    {
-        //std::cout << "mouse released\n";
-        ui_system->active.ID = -1;
-    }
-
-
-    //update mouse state
-    ui_system->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
-    //update mouse pos
-    update_ui_mouse_pos(ui_system);
-}
-
+bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 screen_percentage,
+                    vec3 color = {1.0f, 1.0f, 1.0f}, vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
+                    pressed_color = {1.0f, 1.0f, 1.0f});
+*/
 
 #endif //UI_H

@@ -27,9 +27,12 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 //new API
 
 //CREATE
-Buffer_Handle vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer, vulkan_cpu_buffer_type buffer_type,
-                                  u64 data_size);
-Buffer_Handle vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer, vulkan_gpu_buffer_type buffer_type, u64 data_size);
+void vulkan_buffer_cpu_create(renderer* renderer, vulkan_buffer_cpu* out_buffer, vulkan_cpu_buffer_type buffer_type,
+                              u64 data_size);
+Buffer_Handle vulkan_buffer_cpu_create_handle(renderer* renderer, vulkan_cpu_buffer_type buffer_type,
+                                              u64 data_size);
+void vulkan_buffer_gpu_create(renderer* renderer, vulkan_buffer_gpu* out_buffer, vulkan_gpu_buffer_type buffer_type,
+                              u64 data_size);
 
 //FREE
 bool vulkan_buffer_cpu_free(renderer* renderer, vulkan_buffer_cpu* vk_buffer);
@@ -49,6 +52,8 @@ void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vu
 
 //UTILITY
 vulkan_buffer_cpu* vulkan_buffer_cpu_get(renderer* renderer, Buffer_Handle buffer_handle);
+// vulkan_buffer_cpu* vulkan_buffer_cpu_clear(renderer* renderer, Buffer_Handle buffer_handle);
+vulkan_buffer_cpu* vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer);
 
 
 

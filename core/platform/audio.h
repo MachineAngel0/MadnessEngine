@@ -5,7 +5,7 @@
 #include "../logger.h"
 #include <dsound.h>
 #include <stdbool.h>
-#include "../math_lib.h"
+#include "../maths/math_lib.h"
 
 //TODO: remove when i implement audio myself
 #define MA_IMPLEMENTATION

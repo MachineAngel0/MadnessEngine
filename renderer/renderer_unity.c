@@ -1,18 +1,28 @@
 ﻿
 // #include "Tetris.h"
 
-
-
 #include "vulkan_types.h"
 
-// #include "text.c"
-// #include "UI.h"
+#include "renderer.h"
 
 
-#include "renderer.c"
 #include "spv_reflect.h"
 #include "shader_system.h"
 #include "mesh.h"
+#include "vk_vertex.h"
+#include "vk_vertex_buffer.h"
+#include "vk_shader.h"
+#include "vk_buffer.h"
+/*
+
+#include "text.c"
+#include "text.h"
+*/
+#include "UI.h"
+#include "UI.c"
+
+#include "renderer.c"
+
 #include "vk_device.c"
 #include "vk_swapchain.c"
 #include "vk_image.c"
@@ -22,11 +32,8 @@
 #include "vk_sync.c"
 #include "vk_framebuffer.c"
 #include "vk_pipeline.c"
-#include "vk_vertex.h"
-#include "vk_vertex_buffer.h"
 #include "vk_descriptors.c"
 #include "camera.h"
-#include "SPIRV-Reflect-main/spirv_reflect.c"
 #include "lights.c"
 #include "vk_shader.c"
 

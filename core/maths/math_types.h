@@ -2,7 +2,7 @@
 #define MATH_TYPES_H
 
 
-#include "defines.h"
+#include "../defines.h"
 
 
 typedef union vec2f

@@ -1,7 +1,6 @@
 ﻿#include "renderer_entry.h"
 
-#include "hot_reload.h"
-#include "renderer.h"
+
 
 
 typedef bool (renderer_initialize)(renderer_app*, Arena*);
