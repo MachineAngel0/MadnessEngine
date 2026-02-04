@@ -9,7 +9,6 @@
 #include "hash_set.h"
 #include "linked_list.h"
 #include "queue.h"
-#include "str_array.h"
 #include "str_builder.h"
 #include "str.h"
 
@@ -41,7 +40,6 @@ int main(void)
     string_builder_test();
 
 
-    string_array_unit_test();
 
     TEST_REPORT_TOTAL();
 }

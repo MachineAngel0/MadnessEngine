@@ -124,9 +124,13 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     }
 
     //Shader System
-    shader_system_init(&renderer_internal, &renderer_internal.shader_system);
+    renderer_internal.shader_system = shader_system_init(&renderer_internal);
     // Light System
     renderer_internal.light_system = light_system_init(&renderer_internal);
+    // Mesh System
+    renderer_internal.mesh_system = mesh_system_init(&renderer_internal);
+
+
 
     //TODO: should be initialized after the renderer
     UI_System_internal = ui_system_init(&renderer_internal);

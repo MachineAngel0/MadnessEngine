@@ -20,6 +20,10 @@ bool vulkan_graphics_pipeline_create(
 
 void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline);
 
-void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindPoint bind_point, vulkan_shader_pipeline* pipeline);
+void vulkan_pipeline_graphics_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
+
+void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
+
+
 
 #endif

@@ -11,114 +11,140 @@
 // but modify in place
 typedef struct String_Builder
 {
-    // char* chars;
-    // u64 length;
-    String string;
-    //TODO: this absolutely should be using capacity, and also in not freeing the old data anywhere, also ideally use a pool arena
-    // not using capacity rn, just cause we can just use an arena
-    // u64 capacity;
-}String_Builder;
+    char* str;
+    u64 current_length;
+    //TODO: add an arena or pool just for strings
+    u64 capacity; // here if we want to realloc the data
+} String_Builder;
 
 //if you do not need to heap allocate, then do not heap allocate (String_Builder = {0})
-String_Builder* string_builder_create()
+String_Builder* string_builder_create(const u64 capacity)
 {
+    assert(capacity > 0);
+
+    //TODO: replace malloc
     String_Builder* builder = malloc(sizeof(String_Builder));
+    memset(builder, 0, sizeof(String_Builder));
+    builder->str = malloc(capacity * sizeof(char));
+
+    builder->current_length = 0;
+    builder->capacity = capacity;
     // builder->string = string_create_fr om_null_terminated(string, string_size);
-    memset(&builder->string, 0, sizeof(String));
     return builder;
 }
+
 void string_builder_free(String_Builder* builder)
 {
-     free(builder);
+    assert(builder);
+    assert(builder->str);
+
+    free(builder->str);
+    free(builder);
+
+    builder = NULL;
 }
 
-
+/*
 void string_build(Arena* arena, String_Builder* builder, const char* string, const u64 length)
 {
-    u64 new_length = length + builder->string.length;
-    char* data = (char*)arena_alloc(arena, new_length);
-
-    //write old data into the buffer
-    memcpy(data ,builder->string.chars, builder->string.length);
-    //then write new data into the buffer
-    memcpy(&data[builder->string.length], string, length);
-
-    //replace the old string, and set the new size
-    builder->string.chars = data;
-    builder->string.length = new_length;
-
-
+    UNIMPLEMENTED();
 }
+*/
 
-
-void string_build_string(Arena* arena, String_Builder* builder, String* str)
-{
-    u64 new_length = str->length + builder->string.length;
-    char* data = (char*)arena_alloc(arena, new_length);
-
-    //write old data into the buffer
-    memcpy(data ,builder->string.chars, builder->string.length);
-    //then write new data into the buffer
-    memcpy(&data[builder->string.length], str->chars, str->length);
-
-    //replace the old string, and set the new size
-    builder->string.chars = data;
-    builder->string.length = new_length;
-}
-
-#define STRING_BUILD(arena, builder, string) string_build(arena, builder, string, sizeof(string)-1)
-
-u64 string_get_length(const String_Builder* builder)
-{
-    return builder->string.length;
-}
 
 void string_builder_print(String_Builder* builder)
 {
-    string_print(&builder->string);
+    printf("%.*s", (int)builder->current_length, builder->str);
 }
 
-void string_builder_append_str(String_Builder* builder, String* s)
+void string_builder_append_string(String_Builder* str_builder, String* s)
 {
-    // if ((builder->string->length + s->length) > builder->capacity){
-        // WARN("STRING BUILDER APPEND STRING: capacity overflow");
-    // }
+    //check if we have enough space
+    if (str_builder->current_length + s->length > str_builder->capacity)
+    {
+        u64 length_requested = str_builder->current_length + s->length;
+        u64 new_capacity = str_builder->capacity * 2;
+        if (new_capacity < length_requested)
+        {
+            str_builder->str = realloc(str_builder->str, length_requested);
+            str_builder->capacity = length_requested;
+        }
+        else
+        {
+            str_builder->str = realloc(str_builder->str, new_capacity);
+            str_builder->capacity = new_capacity;
+        }
+    };
+
+    //copy the word into the string
+    memcpy(str_builder->str + str_builder->current_length, s->chars, s->length);
+    str_builder->current_length += s->length;
 }
 
-void string_builder_append_word(String_Builder* builder, char* word, u64 word_size)
+void string_builder_append_char(String_Builder* str_builder, const char* word, const u64 word_size)
 {
+    //check if we have enough space
+    if (str_builder->current_length + word_size > str_builder->capacity)
+    {
+        u64 length_requested = str_builder->current_length + word_size;
+        u64 new_capacity = str_builder->capacity * 2;
+        if (new_capacity < length_requested)
+        {
+            str_builder->str = realloc(str_builder->str, length_requested);
+            str_builder->capacity = length_requested;
+        }
+        else
+        {
+            str_builder->str = realloc(str_builder->str, new_capacity);
+            str_builder->capacity = new_capacity;
+        }
+    };
 
+    //copy the word into the string
+    memcpy(str_builder->str + str_builder->current_length, word, word_size);
+    str_builder->current_length += word_size;
 }
 
+String* string_builder_to_string(const String_Builder* builder)
+{
+    return string_create(builder->str, builder->current_length);
+}
+String* string_builder_to_c_string(const String_Builder* builder)
+{
+    UNIMPLEMENTED();
+    return NULL;
+}
 
-
+#define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_char(builder, string, sizeof(string)-1)
 
 
 void string_builder_test()
 {
     TEST_START("STRING BUILDER");
 
-    String_Builder builder = {0};
+    const char* HI = "HI";
 
-    Arena* arena_for_strings = arena_init_malloc(KB(1));
+    String_Builder* str1 = string_builder_create(100);
 
-    STRING_BUILD(arena_for_strings, &builder, "ANOTHER WORD, ");
-    string_builder_print(&builder);
-    STRING_BUILD(arena_for_strings, &builder, "A SECOND WORD, ");
+    String* other_str1 = STRING_CREATE("HI");
 
-    // string_builder_print(&builder);
-    string_builder_print(&builder);
+    string_builder_append_string(str1, other_str1);
 
-    string_build_string(arena_for_strings, &builder, &(STRING("OH MY, A THIRD WORD")));
-    string_builder_print(&builder);
+    for (size_t i = 0; i < strlen(HI); i++)
+    {
+        TEST_DEBUG(other_str1->chars[i] == HI[i]);
+    }
 
-    TEST_REPORT("STRING BUILDER");
 
-    arena_free(arena_for_strings);
 
+    string_builder_free(str1);
+
+    TEST_DEBUG(str1 == NULL);
+
+
+
+    TEST_END("STRING BUILDER");
 }
 
 
-
 #endif
-

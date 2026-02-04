@@ -11,36 +11,37 @@
 typedef enum
 {
     none,
-    opaque,
-    transparency,
-    lights,
-    terrain,
+    PIPELINE_TYPE_MESH,
+    PIPELINE_TYPE_OPAQUE,
+    PIPELINE_TYPE_TRANSPARENCY,
+    PIPELINE_TYPE_LIGHTS,
+    PIPELINE_TYPE_TERRAIN,
 } pipeline_type;
-
-
 
 
 
 Shader_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
 
 
-void shader_system_init(renderer* renderer, Shader_System** out_shader_system)
+Shader_System* shader_system_init(renderer* renderer)
 {
-    (*out_shader_system) = arena_alloc(&renderer->arena, sizeof(Shader_System));
+    Shader_System* out_shader_system = arena_alloc(&renderer->arena, sizeof(Shader_System));
 
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
     //                      "../renderer/texture/error_texture.png",
     //                      &(*out_shader_system)->error_texture);
 
-    (*out_shader_system)->available_texture_indexes = 0;
-    (*out_shader_system)->material_indexes = 0;
+    out_shader_system->available_texture_indexes = 0;
+    out_shader_system->material_indexes = 0;
 
     //create our debug texture
-    (*out_shader_system)->default_texture_handle = shader_system_add_texture(&renderer->context, *out_shader_system,
-                                                       "../renderer/texture/error_texture.png");
+    out_shader_system->default_texture_handle = shader_system_add_texture(&renderer->context, out_shader_system,
+                                                                             "../renderer/texture/error_texture.png");
+
+    return out_shader_system;
 }
 
-Texture* shader_system_get_texture(Shader_System* system, Shader_Handle handle)
+Texture* shader_system_get_texture(Shader_System* system, const Shader_Handle handle)
 {
     return &system->textures[handle.handle];
 }
@@ -101,9 +102,7 @@ void material_param_data_init(Material_Param_Data* out_data)
     out_data->metallic_strength = 1.0;
     out_data->normal_strength = 1.0;
     out_data->emissive_strength = 1.0;
-
 }
-
 
 
 #endif //SHADER_SYSTEM_H

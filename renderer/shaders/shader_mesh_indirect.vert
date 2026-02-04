@@ -12,13 +12,6 @@
 
 #include "shader_includes/test_uniform.glsl"
 
-//layout(std140, set = 0, binding = 0) uniform UniformBufferObject{
-//    mat4 model;
-//    mat4 view;
-//    mat4 proj;
-//} ubo[];
-
-
 
 struct material_data{
     uint color_id;
@@ -39,8 +32,6 @@ layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
 layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_BUFFER{
     material_data color_index[];
 }MATERIAL[];
-
-
 
 
 

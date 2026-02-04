@@ -1454,10 +1454,8 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
     input_binding_description[0].stride = 12; // size of vec3
 
 
-    /*
-     *
-    *    spirv_reflect_input_variable_info* attribute_info =
-        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_texture.vert.spv");
+        spirv_reflect_input_variable_info* attribute_info =
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/shader_mesh_indirect.vert.spv");
     u32 offset_total = 0;
         VkVertexInputAttributeDescription* attribute_descriptions = malloc(
             sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
@@ -1470,13 +1468,14 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
             offset_total += attribute_info->offsets[attribute_index];
             attribute_descriptions[attribute_index].offset = offset_total;
         }
+    /*
     */
 
-    VkVertexInputAttributeDescription attribute_descriptions[1];
-    attribute_descriptions[0].binding = 0;
-    attribute_descriptions[0].location = 0;
-    attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attribute_descriptions[0].offset = 0;
+    // VkVertexInputAttributeDescription attribute_descriptions[1];
+    // attribute_descriptions[0].binding = 0;
+    // attribute_descriptions[0].location = 0;
+    // attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    // attribute_descriptions[0].offset = 0;
 
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
@@ -1484,7 +1483,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
     vertex_input_state_create_info.pVertexBindingDescriptions = input_binding_description;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = 1;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
 
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;

@@ -53,7 +53,7 @@ void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vu
 //UTILITY
 vulkan_buffer_cpu* vulkan_buffer_cpu_get(renderer* renderer, Buffer_Handle buffer_handle);
 // vulkan_buffer_cpu* vulkan_buffer_cpu_clear(renderer* renderer, Buffer_Handle buffer_handle);
-vulkan_buffer_cpu* vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer);
+void vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer);
 
 
 

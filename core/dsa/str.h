@@ -13,6 +13,7 @@
 
 //immutable string, not meant to be modified,
 //all functions that need to make modifications will return you a new string, leaving the original untouched
+//does not retain the null terminator
 typedef struct String
 {
     char* chars;
@@ -26,40 +27,14 @@ String* string_create(const char* word, const u64 length)
 
     String* str = (String*)malloc(sizeof(String));
     //memset(str, 0, sizeof(MString));
-    str->length = length - 1;
+    str->length = length;
     //important to note that we use -1 to not include the null terminated string
     str->chars = (char*)malloc(sizeof(char) * str->length);
     memset(str->chars, 0, sizeof(char) * str->length);
     memcpy(str->chars, word, sizeof(char) * str->length);
-    // for (uint32_t i = 0; i < str->length; i++)
-    // {
-    //     str->chars[i] = word[i];
-    // }
 
     return str;
 };
-
-
-
-
-String* string_create_retain_null_terminated(const char* word, const u64 length)
-{
-    String* str = (String*)malloc(sizeof(String));
-    //memset(str, 0, sizeof(MString));
-
-    str->chars = (char *) malloc(sizeof(char) * (length+1));
-    memset(str->chars, 0, sizeof(char) * length);
-
-    str->length = length;
-
-
-    memcpy(str->chars, word, sizeof(char) * length);
-    str->chars[str->length] = '\0';
-
-
-    return str;
-};
-
 
 
 
@@ -105,20 +80,15 @@ bool string_free(String* string)
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed
 #define STRING_CREATE(string) string_create(string, sizeof(string))
-//create a string from an already existing char* that excludes the null terminated string
-#define STRING_CREATE_FROM_BUFFER(string) string_create_retain_null_terminated(string, strlen(string))
+//create a string from an already existing char[]/char* that excludes the null terminated string
+#define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 
 
 //UTILITY
 void string_print(const String* str)
 {
     MASSERT(str);
-
-    for (uint32_t i = 0; i < str->length; i++)
-    {
-        printf("%c", str->chars[i]);
-    }
-    printf("\n");
+    printf("%.*s\n", (int)str->length, str->chars);
 }
 
 
@@ -210,7 +180,7 @@ String* string_slice_from(const String* s, const u64 slice_size)
         return NULL;
     }
 
-    return string_create_retain_null_terminated(s->chars, slice_size);
+    return string_create(s->chars, slice_size);
 }
 
 String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 slice_end)
@@ -425,12 +395,18 @@ void string_test()
     // string_free(str2);
 
     /***C_STRING STUFF***/
-    char char_buffer[] = "lol";
+    char char_buffer_no_null[] = "lol";
 
-    u64 size = strlen(char_buffer);
-
-    String* str_from_c_buffer = STRING_CREATE_FROM_BUFFER(char_buffer);
+    String* str_from_c_buffer = STRING_CREATE_FROM_BUFFER(char_buffer_no_null);
+    TEST_DEBUG(str_from_c_buffer->length == 3);
     string_print(str_from_c_buffer);
+
+    char char_buffer_with_null[] = "lol\0";
+
+    String* str_from_c_buffer_with_null = STRING_CREATE_FROM_BUFFER(char_buffer_with_null);
+    TEST_DEBUG(str_from_c_buffer_with_null->length == 3);
+    string_print(str_from_c_buffer_with_null);
+
 
     const char* string_before_c = "String_convert_to_C_String";
     String* string_created_from_c_string = STRING_CREATE_FROM_BUFFER(string_before_c);

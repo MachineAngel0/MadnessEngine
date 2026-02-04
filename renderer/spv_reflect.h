@@ -317,6 +317,8 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame
     INFO("STAGE TYPE %p, %s", vert_module.shader_stage, GetShaderStageName(vert_module.shader_stage));
 
 
+
+
     uint32_t input_count = 0;
     spvReflectEnumerateInputVariables(&vert_module, &input_count, NULL);
     MASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
@@ -332,6 +334,7 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame
     out_reflect_info->offsets = darray_create_reserve(u32, input_count+1); // additional index value never gets used
     darray_push(out_reflect_info->offsets, 0); //we always start at 0
 
+    u32 final_input_count = input_count;
     for (u32 i = 0; i < input_count; i++)
     {
         DEBUG("INPUT NAME %s", vert_input_variables[i]->name);
@@ -341,6 +344,12 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame
         DEBUG("OFFSET MAT ROW/COL %d %d", vert_input_variables[i]->numeric.matrix.row_count,
               vert_input_variables[i]->numeric.matrix.column_count);
 
+        //build in types have invalid locations, so we check for those and skip them
+        if (vert_input_variables[i]->location == UINT32_MAX)
+        {
+            final_input_count--;
+            continue;
+        }
 
         darray_push(out_reflect_info->locations, vert_input_variables[i]->location);
         darray_push(out_reflect_info->formats, vert_input_variables[i]->format);
@@ -359,6 +368,10 @@ spirv_reflect_input_variable_info* spriv_reflect_get_input_variable(Arena* frame
     }
 
     // free(d_sets_vert);
+
+    //update to get the proper amount of valid input counts
+    out_reflect_info->input_count = final_input_count;
+
 
     spvReflectDestroyShaderModule(&vert_module);
 

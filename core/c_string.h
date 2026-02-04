@@ -38,6 +38,30 @@ MAPI const char* c_string_concat(const char* str1, const char* str2)
 
 
 
+// Performs string formatting to dest given format string and parameters.
+MAPI char* c_string_path_strip(const char* path, Arena* arena)
+{
+    MASSERT(path);
+
+    char* new_path = NULL;
+    int i = strlen(path);
+    for (; i > 0; i--)
+    {
+        if (path[i] == '/')
+        {
+            new_path = arena_alloc(arena, i + 2);
+            memcpy(new_path, path, i + 1);
+            new_path[i + 1] = '\0';
+            return new_path;
+
+        }
+    }
+
+    //basically was not a valid path string
+    MASSERT_MSG(new_path, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+    return "";
+}
+
 
 // Case-sensitive string comparison. True if the same, otherwise false.
 MAPI bool c_strings_equal(const char* str0, const char* str1)
@@ -73,6 +97,9 @@ MAPI i32 c_string_format(char* dest, const char* format, ...)
     }
     return -1;
 }
+
+
+
 
 
 #endif //C_STRING_H

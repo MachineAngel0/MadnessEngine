@@ -27,4 +27,7 @@ bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline);
 bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline);
 
 
+
+
+
 #endif

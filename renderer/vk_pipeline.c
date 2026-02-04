@@ -198,3 +198,14 @@ void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindP
 {
     vkCmdBindPipeline(command_buffer->handle, bind_point, pipeline->handle);
 }
+
+void vulkan_pipeline_graphics_bind(vulkan_command_buffer* command_buffer,
+                          vulkan_shader_pipeline* pipeline)
+{
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle);
+}
+
+void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline)
+{
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle);
+}

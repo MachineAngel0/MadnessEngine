@@ -8,11 +8,12 @@
 
 #include "spv_reflect.h"
 #include "shader_system.h"
+#include "vk_buffer.h"
+#include "vk_pipeline.h"
 #include "mesh.h"
 #include "vk_vertex.h"
 #include "vk_vertex_buffer.h"
 #include "vk_shader.h"
-#include "vk_buffer.h"
 /*
 
 #include "text.c"
@@ -27,11 +28,11 @@
 #include "vk_swapchain.c"
 #include "vk_image.c"
 #include "vk_command_buffer.c"
-#include "vk_renderpass.c"
 #include "vk_buffer.c"
+#include "vk_renderpass.c"
+#include "vk_pipeline.c"
 #include "vk_sync.c"
 #include "vk_framebuffer.c"
-#include "vk_pipeline.c"
 #include "vk_descriptors.c"
 #include "camera.h"
 #include "lights.c"

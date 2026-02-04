@@ -535,7 +535,7 @@ vulkan_buffer_cpu* vulkan_buffer_cpu_get(renderer* renderer, Buffer_Handle buffe
     return &renderer->buffer_system->vertex_buffers[buffer_handle.handle];
 }
 
-vulkan_buffer_cpu* vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer)
+void vulkan_buffer_cpu_reset_offset(renderer* renderer, vulkan_buffer_cpu* buffer)
 {
     buffer->current_offset = 0;
 }

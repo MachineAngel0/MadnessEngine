@@ -8,6 +8,7 @@
         FATAL("VULKAN ERROR CODE: %d", expr);\
     }\
 }
+#include "str.h"
 
 
 /// HANDLES ///
@@ -97,8 +98,8 @@ typedef struct mesh
     u64 uv_bytes;
 
     Shader_Handle color_texture;
-    //whether it has index's or not // TODO: can probably move out into its own type of mesh, struct mesh_indexless
-    Pipeline_Handle pipeline;
+
+    u32 mesh_pipeline_mask; // determines what features this object has
 } mesh;
 
 
@@ -690,6 +691,55 @@ typedef struct uniform_buffer_object
 } uniform_buffer_object;
 
 
+typedef enum mesh_pipeline_flags
+{
+    MESH_PIPELINE_COLOR = BITFLAG(1),
+    MESH_PIPELINE_NORMAL = BITFLAG(2),
+    MESH_PIPELINE_EMISSIVE = BITFLAG(3),
+    MESH_PIPELINE_ROUGHNESS = BITFLAG(4),
+    MESH_PIPELINE_METALLIC = BITFLAG(5),
+    MESH_PIPELINE_AO = BITFLAG(6),
+    MESH_PIPELINE_ENUM_MAX,
+    MESH_PIPELINE_ENUM_COUNT = 6,
+} mesh_pipeline_flags;
+
+const char* mesh_pipeline_flag_names[] = {
+    "Albedo",
+    "Normal",
+    "Emissive",
+    "Roughness",
+    "Metallic",
+    "AO"
+};
+String mesh_pipeline_flag_names_string[] = {
+    { "Albedo", sizeof("Albedo") - 1 },
+    { "Normal", sizeof("Normal") - 1 },
+    { "Emissive", sizeof("Emissive") - 1 },
+    { "Roughness", sizeof("Roughness") - 1 },
+    { "Metallic", sizeof("Metallic") - 1 },
+    { "AO", sizeof("AO") - 1 },
+};
+
+typedef struct PipelinePermutation
+{
+    String* debug_shader_name;
+    uint32_t* permutation_keys; // these are just all the variation of bitmasks available
+    u32 permutations_count;
+} Mesh_Pipeline_Permutations;
+
+typedef struct mesh_permutation_draw_data
+{
+    //darray, which also stores the size
+    VkDrawIndexedIndirectCommand* indirect_draw_permutation;
+} mesh_permutation_draw_data;
+
+typedef struct mesh_uniform_constants
+{
+    u32 mask;
+} mesh_uniform_constants;
+
+
+
 typedef struct Mesh_System
 {
     //NOTE: this is just me figuring out how to handle buffers for a particular system
@@ -715,9 +765,9 @@ typedef struct Mesh_System
     Buffer_Handle bone_buffer_handle;
     Buffer_Handle wieghts_buffer_handle;
 
-
-
-
+    Mesh_Pipeline_Permutations* mesh_permutations;
+    mesh_permutation_draw_data* draw_data;
+    mesh_uniform_constants uniform_buffer_permutation;
 
 } Mesh_System;
 
@@ -733,6 +783,7 @@ typedef struct renderer
     Shader_System* shader_system;
     Buffer_System* buffer_system;
     Light_System* light_system;
+    Mesh_System* mesh_system;
 
     global_descriptor_sets global_descriptors;
 
