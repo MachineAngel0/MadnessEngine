@@ -429,8 +429,11 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
 
 void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
                                                    vulkan_bindless_descriptors* uniform_descriptors,
-                                                   vulkan_buffer_gpu* buffer, u64 data_size, u32 array_index)
+                                                   vulkan_buffer* buffer, u64 data_size, u32 array_index)
 {
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
+                "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
+
     // The buffer's information is passed using a descriptor info structure
     VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
     bufferInfo.buffer = buffer->handle;
@@ -454,7 +457,6 @@ void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
                                &write_descriptor_set, 0, 0);
     }
 }
-
 
 
 void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
@@ -516,14 +518,18 @@ void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
     // darray_free(texture_descriptors->descriptor_sets);
 }
 
+
 void update_storage_buffer_bindless_descriptor_set(vulkan_context* context,
                                                    vulkan_bindless_descriptors* storage_descriptors,
-                                                   vulkan_buffer_cpu* buffer, u64 data_size, u32 array_index)
+                                                   vulkan_buffer* buffer, u32 array_index)
 {
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_CPU_STORAGE,
+                "update_storage_buffer_bindless_descriptor_set: NOT A CPU_STORAGE BUFFER TYPE PASSED IN");
+
     // The buffer's information is passed using a descriptor info structure
     VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
     bufferInfo.buffer = buffer->handle;
-    bufferInfo.range = data_size;
+    bufferInfo.range = buffer->current_offset;
     bufferInfo.offset = 0;
 
     for (int j = 0; j < storage_descriptors->descriptor_set_count; j++)

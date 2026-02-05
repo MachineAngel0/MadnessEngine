@@ -16,7 +16,7 @@
 #define vertices_per_object 4;
 #define indices_per_object 6;
 
-void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer_cpu* vertex_buffer, vulkan_buffer_cpu* index_buffer,
+void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer* vertex_buffer, vulkan_buffer* index_buffer,
                         vertex_info* vertex_info)
 {
     // A note on memory management in Vulkan in general:
@@ -57,7 +57,7 @@ void createVertexBuffer(vulkan_context* vulkan_context, vulkan_buffer_cpu* verte
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer_cpu staging_buffer;
+    vulkan_buffer staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize + indexBufferSize;
@@ -211,7 +211,7 @@ void createVertexBufferTexture(vulkan_context* vulkan_context, vulkan_shader_tex
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer_cpu staging_buffer;
+    vulkan_buffer staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize + indexBufferSize;
@@ -722,7 +722,7 @@ void vertex_info_clear(vertex_info* vertex_info)
 
 
 
-void global_uniform_buffer_update(vulkan_context* context, vulkan_buffer_gpu* uniform_buffers, u32 image_index, float time,
+void global_uniform_buffer_update(vulkan_context* context, vulkan_buffer* uniform_buffers, u32 image_index, float time,
                            camera* camera)
 {
     uniform_buffer_object ubo = {0};
@@ -742,7 +742,7 @@ void global_uniform_buffer_update(vulkan_context* context, vulkan_buffer_gpu* un
 
 
 
-void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer_cpu* out_buffer, void* buffer_data, size_t data_size)
+void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* buffer_data, size_t data_size)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -780,7 +780,7 @@ void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_bu
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer_cpu staging_buffer;
+    vulkan_buffer staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = vertexBufferSize;
@@ -861,7 +861,7 @@ void create_buffer_device_address_mesh(vulkan_context* vulkan_context, vulkan_bu
     vkFreeMemory(device, staging_buffer.memory, vulkan_context->allocator);
 }
 
-void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer_cpu* out_buffer, void* index_buffer_data, size_t data_size)
+void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vulkan_buffer* out_buffer, void* index_buffer_data, size_t data_size)
 {
     // A note on memory management in Vulkan in general:
     //	This is a complex topic and while it's fine for an example application to small individual memory allocations that is not
@@ -899,7 +899,7 @@ void create_buffer_index_device_address_mesh(vulkan_context* vulkan_context, vul
     // To keep this sample easy to follow, there is no check for that in place
 
     // Create the host visible staging buffer that we copy vertices and indices too, and from which we copy to the device
-    vulkan_buffer_cpu staging_buffer;
+    vulkan_buffer staging_buffer;
     VkBufferCreateInfo stagingBufferCI = {0};
     stagingBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     stagingBufferCI.size = index_buffer_size;

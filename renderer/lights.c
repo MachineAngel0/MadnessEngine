@@ -30,8 +30,8 @@ void point_light_init(Point_Light* light)
 
 
     light->constant = 1.0f;
-    light->linear= 0.09f;
-    light->quadratic= 0.032f;
+    light->linear = 0.09f;
+    light->quadratic = 0.032f;
 }
 
 void spot_light_init(Spot_Light* light)
@@ -48,8 +48,8 @@ void spot_light_init(Spot_Light* light)
 
 
     light->constant = 1.0f;
-    light->linear= 0.09f;
-    light->quadratic= 0.032f;
+    light->linear = 0.09f;
+    light->quadratic = 0.032f;
 }
 
 
@@ -82,20 +82,23 @@ Light_System* light_system_init(renderer* renderer)
     out_light_system->directional_lights[0].color = (vec3){1.0f, 0.0f, 0.5f};
     out_light_system->point_lights[0].color = (vec4){1.0f, 1.0f, 0.0f, 0.0f};
 
-    vulkan_buffer_cpu_create(renderer, &out_light_system->directional_light_storage_buffer, CPU_STORAGE,
-                             sizeof(Directional_Light) * out_light_system->directional_light_count);
+    out_light_system->directional_light_storage_buffer_handle = vulkan_buffer_create(
+        renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
+        sizeof(Directional_Light) * out_light_system->directional_light_count);
 
-    vulkan_buffer_cpu_create(renderer, &out_light_system->point_light_storage_buffer, CPU_STORAGE,
-                             sizeof(Point_Light) * out_light_system->point_light_count);
+    out_light_system->point_light_storage_buffer_handle = vulkan_buffer_create(
+        renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
+        sizeof(Point_Light) * out_light_system->point_light_count);
 
 
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, &out_light_system->directional_light_storage_buffer,
-                                            out_light_system->directional_lights,
-                                            sizeof(Directional_Light) * out_light_system->directional_light_count);
+    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &out_light_system->directional_light_storage_buffer_handle,
+                                                   out_light_system->directional_lights,
+                                                   sizeof(Directional_Light) * out_light_system->
+                                                   directional_light_count);
 
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, &out_light_system->point_light_storage_buffer,
-                                            out_light_system->point_lights,
-                                            sizeof(Point_Light) * out_light_system->point_light_count);
+    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &out_light_system->point_light_storage_buffer_handle,
+                                                   out_light_system->point_lights,
+                                                   sizeof(Point_Light) * out_light_system->point_light_count);
 
 
     return out_light_system;

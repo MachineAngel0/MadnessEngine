@@ -33,8 +33,6 @@ typedef struct Array
 
 Array* _array_create(const u64 data_stride, const u64 capacity, const char* type_name)
 {
-
-
     Array* arr = (Array *) malloc(sizeof(Array));
     memset(arr, 0, sizeof(Array));
 

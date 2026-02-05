@@ -18,10 +18,8 @@ static renderer renderer_internal;
 static UI_System* UI_System_internal;
 
 
-
 bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 {
-
     vulkan_context* vk_context = &renderer_internal.context;
 
     //set up memory for the renderer
@@ -120,7 +118,7 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     {
         update_uniform_buffer_bindless_descriptor_set(
             vk_context, &renderer_internal.global_descriptors.uniform_descriptors,
-            &renderer_internal.buffer_system->global_uniform_buffer[i], sizeof(uniform_buffer_object), i);
+            &renderer_internal.buffer_system->global_uniform_buffers[i], sizeof(uniform_buffer_object), i);
     }
 
     //Shader System
@@ -129,7 +127,6 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     renderer_internal.light_system = light_system_init(&renderer_internal);
     // Mesh System
     renderer_internal.mesh_system = mesh_system_init(&renderer_internal);
-
 
 
     //TODO: should be initialized after the renderer
@@ -141,109 +138,16 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
-    renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
-                                                              "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
+
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
-                                                           // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
-    // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
-    // "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_vertex_buffer, CPU_VERTEX, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_index_buffer, CPU_INDEX, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.indirect_draw_buffer, CPU_INDIRECT, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.uv_storage_buffer, CPU_STORAGE, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.normal_storage_buffer, CPU_STORAGE, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.material_ssbo_buffer, CPU_STORAGE, MB(32));
-    vulkan_buffer_cpu_create(&renderer_internal, &renderer_internal.directional_light_storage_buffer, CPU_STORAGE,
-                             MB(32));
+    // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
 
 
-    for (u32 i = 0; i < renderer_internal.indirect_mesh->mesh_size; i++)
-    {
-        update_global_texture_bindless_descriptor_set(
-            vk_context, &renderer_internal.global_descriptors.texture_descriptors,
-            shader_system_get_texture(
-                renderer_internal.shader_system,
-                renderer_internal.indirect_mesh->mesh[i].color_texture),
-            renderer_internal.indirect_mesh->mesh[i].color_texture.handle);
-
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_vertex_buffer,
-                                                renderer_internal.indirect_mesh->mesh[i].vertices.pos,
-                                                renderer_internal.indirect_mesh->mesh[i].vertex_bytes);
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_index_buffer,
-                                                renderer_internal.indirect_mesh->mesh[i].indices,
-                                                renderer_internal.indirect_mesh->mesh[i].indices_bytes);
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.indirect_draw_buffer,
-                                                &renderer_internal.indirect_mesh->indirect_draw_array[i],
-                                                sizeof(VkDrawIndexedIndirectCommand));
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.material_ssbo_buffer,
-                                                &renderer_internal.indirect_mesh->mesh[i].color_texture.handle,
-                                                sizeof(u32));
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.uv_storage_buffer,
-                                                renderer_internal.indirect_mesh->mesh[i].vertices.uv,
-                                                renderer_internal.indirect_mesh->mesh[i].uv_bytes);
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, &renderer_internal.normal_storage_buffer,
-                                                renderer_internal.indirect_mesh->mesh[i].vertices.normal,
-                                                renderer_internal.indirect_mesh->mesh[i].normal_bytes);
-    }
-    update_storage_buffer_bindless_descriptor_set(
-        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
-        &renderer_internal.uv_storage_buffer, renderer_internal.uv_storage_buffer.current_offset, 0);
-    update_storage_buffer_bindless_descriptor_set(
-        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
-        &renderer_internal.normal_storage_buffer, renderer_internal.normal_storage_buffer.current_offset, 1);
-    update_storage_buffer_bindless_descriptor_set(
-        vk_context, &renderer_internal.global_descriptors.storage_descriptors,
-        &renderer_internal.material_ssbo_buffer, renderer_internal.material_ssbo_buffer.current_offset, 2);
-
-
-    vulkan_mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_pipeline);
-
-
-    //BUFFER ADDRESSING
-    /*
-    // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    static_mesh* test_mesh = mesh_load_gltf(&renderer_internal,
-                                            "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    // mesh* test_mesh = mesh_load_gltf(&renderer_internal, "../z_assets/models/cube_gltf/Cube.gltf");
-    vk_context->mesh_default.static_mesh = test_mesh;
-
-
-
-    for (u32 i = 0; i < test_mesh->mesh_size; i++)
-    {
-        update_global_texture_bindless_descriptor_set(
-            vk_context, &renderer_internal.global_descriptors.texture_descriptors,
-            shader_system_get_texture(
-                renderer_internal.shader_system,
-                test_mesh->mesh[i].color_texture),
-            test_mesh->mesh[i].color_texture.handle);
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->vertex_buffers,
-                                                test_mesh->mesh[i].vertices.pos,
-                                                test_mesh->mesh[i].vertex_bytes);
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->normal_buffers,
-                                                test_mesh->mesh[i].vertices.normal, test_mesh->mesh[i].normal_bytes);
-
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->tangent_buffers,
-                                                test_mesh->mesh[i].vertices.tangent, test_mesh->mesh[i].tangent_bytes);
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->uv_buffers,
-                                                test_mesh->mesh[i].vertices.uv,
-                                                test_mesh->mesh[i].uv_bytes);
-
-        vulkan_buffer_cpu_data_copy_from_offset(&renderer_internal, renderer_internal.buffer_system->index_buffers,
-                                                test_mesh->mesh[i].indices,
-                                                test_mesh->mesh[i].indices_bytes);
-    }
-
-    vulkan_mesh_bda_shader_create(&renderer_internal, &vk_context->mesh_default);
-    */
+    //TODO: move into the mesh system init
+    vulkan_mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline);
 
     //BINDLESS TEXTURE
     create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
@@ -255,11 +159,6 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
 
     update_global_texture_bindless_descriptor_set(vk_context, &renderer_internal.global_descriptors.texture_descriptors,
                                                   &vk_context->shader_texture_bindless.texture_test_object, 0);
-    /*
-    update_uniform_buffer_bindless_descriptor_set(
-        vk_context, &vk_context->global_descriptors.uniform_descriptors,
-        &renderer_internal.buffer_system->global_uniform_buffer[0], sizeof(uniform_buffer_object), 0);
-        */
 
     INFO("VULKAN RENDERER INITIALIZED");
 
@@ -277,7 +176,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     arena_clear(&renderer_internal.frame_arena);
 
     ui_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
-    UI_ID test_id = {0,0};
+    UI_ID test_id = {0, 0};
     DO_BUTTON_TEST(UI_System_internal, test_id);
     ui_system_upload_draw_data(&renderer_internal, UI_System_internal);
 
@@ -376,13 +275,14 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
                                      vk_context.framebuffer_height);
 
+
     VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                     renderer_internal.light_system->
-                                                                     directional_light_storage_buffer.handle);
+        vulkan_buffer_get(&renderer_internal,
+                              renderer_internal.light_system->directional_light_storage_buffer_handle)->handle);
 
     VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                     renderer_internal.light_system->
-                                                                     point_light_storage_buffer.handle);
+        vulkan_buffer_get(&renderer_internal,
+            renderer_internal.light_system->point_light_storage_buffer_handle)->handle);
 
     ubo.directional_lights_address = directional_light_buffer_address;
     ubo.point_lights_address = point_light_buffer_address;
@@ -391,7 +291,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.render_mode = renderer_internal.mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    memcpy(renderer_internal.buffer_system->global_uniform_buffer[vk_context.current_frame].mapped_data, &ubo,
+    memcpy(renderer_internal.buffer_system->global_uniform_buffers[vk_context.current_frame].mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
 
@@ -492,30 +392,35 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
 
+    //UBERSHADER MESH INDIRECT DRAW
+
+
 
     //INDIRECT DRAW
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer_internal.indirect_pipeline.handle);
+                      renderer_internal.indirect_mesh_pipeline.handle);
 
     //uniform
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_pipeline.pipeline_layout, 0, 1,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 0, 1,
                             &renderer_internal.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_pipeline.pipeline_layout, 1, 1,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 1, 1,
                             &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_pipeline.pipeline_layout, 2, 1,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 2, 1,
                             &renderer_internal.global_descriptors.storage_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
+    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame);
 
+    /*
     VkDeviceSize pOffsets[] = {0};
     vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1, &renderer_internal.indirect_vertex_buffer.handle,
                            pOffsets);
@@ -539,7 +444,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                                      j * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));
         }
     }
-
+*/
     /*
     //BUFFER ADDRESSING//
 
@@ -701,7 +606,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
     ui_end(UI_System_internal);
-
 }
 
 

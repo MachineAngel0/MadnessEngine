@@ -33,25 +33,14 @@ UI_System* ui_system_init(renderer* renderer)
 
     u32 ui_buffer_sizes = MB(1);
 
-    /*
-    ui_state->ui_quad_vertex_buffer_handle = vulkan_buffer_cpu_create(renderer, &ui_state->ui_quad_vertex_buffer,
-                                                                      CPU_VERTEX, ui_buffer_sizes);
-    ui_state->ui_quad_index_buffer_handle = vulkan_buffer_cpu_create(renderer, &ui_state->ui_quad_index_buffer,
-                                                                     CPU_INDEX, ui_buffer_sizes);
-    ui_state->text_vertex_buffer_handle = vulkan_buffer_cpu_create(renderer, &ui_state->text_vertex_buffer, CPU_VERTEX,
-                                                                   ui_buffer_sizes);
-    ui_state->text_index_buffer_handle = vulkan_buffer_cpu_create(renderer, &ui_state->text_index_buffer, CPU_INDEX,
-                                                                  ui_buffer_sizes);
-*/
-
-    vulkan_buffer_cpu_create(renderer, &ui_state->ui_quad_vertex_buffer,
-                             CPU_VERTEX, ui_buffer_sizes);
-    vulkan_buffer_cpu_create(renderer, &ui_state->ui_quad_index_buffer,
-                             CPU_INDEX, ui_buffer_sizes);
-    vulkan_buffer_cpu_create(renderer, &ui_state->text_vertex_buffer, CPU_VERTEX,
-                             ui_buffer_sizes);
-    vulkan_buffer_cpu_create(renderer, &ui_state->text_index_buffer, CPU_INDEX,
-                             ui_buffer_sizes);
+    ui_state->ui_quad_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_VERTEX, ui_buffer_sizes);
+    ui_state->ui_quad_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                 BUFFER_TYPE_INDEX, ui_buffer_sizes);
+    ui_state->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
+                                                               ui_buffer_sizes);
+    ui_state->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
+                                                              ui_buffer_sizes);
 
     return ui_state;
 }
@@ -107,18 +96,18 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
     ui_system->text_index_buffer_handle;
     */
 
-    vulkan_buffer_cpu_reset_offset(renderer, &ui_system->ui_quad_vertex_buffer);
-    vulkan_buffer_cpu_reset_offset(renderer, &ui_system->ui_quad_index_buffer);
-    // vulkan_buffer_cpu_reset_offset(renderer, &ui_system->text_vertex_buffer);
-    // vulkan_buffer_cpu_reset_offset(renderer, &ui_system->text_index_buffer);
+    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_vertex_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_buffer_handle);
+    // vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_buffer_handle);
+    // vulkan_buffer_reset_offset(renderer, ui_system->text_index_buffer_handle);
 
     //TODO: generate drawindirect commands
 
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, &ui_system->ui_quad_vertex_buffer,
-                                            ui_system->draw_info.quad_vertex, sizeof(Quad_Vertex) * 100);
+    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_vertex_buffer_handle,
+                                                   ui_system->draw_info.quad_vertex, sizeof(Quad_Vertex) * 100);
 
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, &ui_system->ui_quad_index_buffer,
-                                            ui_system->draw_info.quad_vertex, sizeof(u16) * 100);
+    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_index_buffer_handle,
+                                                   ui_system->draw_info.quad_vertex, sizeof(u16) * 100);
 }
 
 void update_ui_mouse_pos(UI_System* ui_system)

@@ -1471,6 +1471,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
     /*
     */
 
+
     // VkVertexInputAttributeDescription attribute_descriptions[1];
     // attribute_descriptions[0].binding = 0;
     // attribute_descriptions[0].location = 0;
@@ -1958,14 +1959,14 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
-    VkVertexInputBindingDescription binding_description = {0};
-    binding_description.binding = 0;
+    VkVertexInputBindingDescription binding_description[1] = {0};
+    binding_description[0].binding = 0;
     // binding_description.stride = sizeof(Vertex_Text);
-    binding_description.stride = 12 + 16 + 12;
-    binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    binding_description[0].stride = 12 + 16 + 12;
+    binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     spirv_reflect_input_variable_info* attribute_info =
-        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/UI.vert.spv");
+        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/text.vert.spv");
     u32 offset_total = 0;
     VkVertexInputAttributeDescription* attribute_descriptions = malloc(
         sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
@@ -1985,7 +1986,7 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of pvertexbinding descriptions
-    vertex_input_state_create_info.pVertexBindingDescriptions = &binding_description;
+    vertex_input_state_create_info.pVertexBindingDescriptions = binding_description;
     vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
 

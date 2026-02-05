@@ -107,12 +107,6 @@ typedef struct UI_System
     UI_Draw_Data draw_info;
     // Text_System text_system;
 
-    //TODO: remove buffers, leave handles, the buffer create function is somewhat incorrect
-    vulkan_buffer_cpu ui_quad_vertex_buffer;
-    vulkan_buffer_cpu ui_quad_index_buffer;
-    vulkan_buffer_cpu text_vertex_buffer;
-    vulkan_buffer_cpu text_index_buffer;
-
     Buffer_Handle ui_quad_vertex_buffer_handle;
     Buffer_Handle ui_quad_index_buffer_handle;
     Buffer_Handle text_vertex_buffer_handle;

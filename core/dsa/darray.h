@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "logger.h"
-#include "../maths/math_types.h"
 #include "misc_util.h"
 
 #include "unit_test.h"
@@ -124,6 +123,21 @@ u64 darray_get_size(void* array)
 
     return header->num_items;
 }
+
+u64 darray_get_byte_size(void* array)
+{
+    if (!array)
+    {
+        WARN("DARRAY EMPTY: Invalid Array");
+        return false;
+    }
+    //get the array header
+    u64 header_size = sizeof(array_header);
+    array_header* header = (array_header *) ((u8 *) array - header_size);
+
+    return header->num_items * header->stride;
+}
+
 
 u64 darray_get_num_count(void* array)
 {

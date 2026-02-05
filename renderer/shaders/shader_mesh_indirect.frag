@@ -23,11 +23,10 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 
-    //    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
 
 
 
-
+    /*
     // properties
     vec3 norm = normalize(in_normal);
     vec3 view_direction = normalize(ubo[nonuniformEXT(0)].camera_view_pos.xyz - in_frag_pos);
@@ -56,8 +55,10 @@ void main() {
     if (ubo[nonuniformEXT(0)].render_mode == 1){
         outColor = vec4(abs(in_normal), 1.0f);
     }
+    */
 
 
+    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
 
 
 }
