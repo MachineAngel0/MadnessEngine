@@ -61,7 +61,7 @@ typedef struct renderer_app {
     app_config app_config;
     platform_state* plat_state;
 
-    bool (*renderer_initialize)(struct renderer_app* renderer_inst, Arena*);
+    bool (*renderer_initialize)(struct renderer_app* renderer_inst);
     void (*renderer_run)(struct renderer_app* renderer_inst, Clock* clock);
     void (*renderer_shutdown)(struct renderer_app* renderer_inst);
 

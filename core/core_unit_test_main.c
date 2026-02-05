@@ -11,9 +11,15 @@
 #include "queue.h"
 #include "str_builder.h"
 #include "str.h"
+#include "memory/memory_system.h"
 
 int main(void)
 {
+    memory_tracker_init();
+    u64 memory_request_size = MB(1);
+    memory_system_init(memory_request_size);
+
+
     arena_test();
     arena_stack_test();
 
@@ -39,6 +45,7 @@ int main(void)
     string_test();
     string_builder_test();
 
+    memory_tracker_print_memory_usage();
 
 
     TEST_REPORT_TOTAL();

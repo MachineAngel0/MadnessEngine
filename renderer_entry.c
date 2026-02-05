@@ -3,7 +3,7 @@
 
 
 
-typedef bool (renderer_initialize)(renderer_app*, Arena*);
+typedef bool (renderer_initialize)(renderer_app*);
 typedef void (renderer_run)(renderer_app*, Clock* clock);
 typedef void (renderer_terminate)(renderer_app*);
 typedef void (renderer_resize)(renderer_app*, u32, u32);

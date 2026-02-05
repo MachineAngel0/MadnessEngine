@@ -15,31 +15,44 @@ submesh* submesh_init(Arena* arena)
     return m;
 }
 
+void sub_mesh_free(submesh* m)
+{
+    darray_free(m->pos);
+    darray_free(m->normal);
+    darray_free(m->uv);
+    darray_free(m->indices);
+    darray_free(m->tangent);
+    // darray_free(m->textures);
+    free(m);
+}
+
 static_mesh* static_mesh_init(Arena* arena, u32 mesh_size)
 {
     static_mesh* out_static_mesh = arena_alloc(arena, sizeof(submesh));
     out_static_mesh->mesh_size = mesh_size;
-    // for (u32 i = 0; i < mesh_size; i++)
-    // {
-    // out_static_mesh[i].mesh = arena_alloc(arena, sizeof(mesh));
-    // out_static_mesh[i].indirect_draw_array = arena_alloc(arena, sizeof(VkDrawIndexedIndirectCommand));
-    // }
+    out_static_mesh->indirect_draw_array = arena_alloc(arena, mesh_size * sizeof(VkDrawIndexedIndirectCommand));
     out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
-
 
     return out_static_mesh;
 }
 
-
-void mesh_free(submesh* m)
+static_mesh* static_mesh_free(static_mesh* static_mesh)
 {
-    darray_free(m->pos);
-    // darray_free(m->vertices.normal);
-    // darray_free(m->vertices.tex_coord);
-    darray_free(m->indices);
-    // darray_free(m->textures);
-    free(m);
+    // return to a free list of some sort
+    /*
+    for (u64 i = 0; i < static_mesh->mesh_size; i++)
+    {
+        sub_mesh_free(&static_mesh->mesh[i]);
+    }
+    static_mesh* out_static_mesh = arena_alloc(arena, sizeof(submesh));
+    out_static_mesh->mesh_size = mesh_size;
+    out_static_mesh->indirect_draw_array = arena_alloc(arena, mesh_size * sizeof(VkDrawIndexedIndirectCommand));
+    out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
+
+    return out_static_mesh;
+    */
 }
+
 
 static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
@@ -262,9 +275,276 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
         //TODO: find out the objects pipeline type
         mesh_system->vertex_byte_size += out_static_mesh->mesh[mesh_idx].vertex_bytes;
         mesh_system->index_byte_size += out_static_mesh->mesh[mesh_idx].indices_bytes;
+        mesh_system->index_count_size += out_static_mesh->mesh[mesh_idx].indices_count;
         mesh_system->normals_byte_size += out_static_mesh->mesh[mesh_idx].normal_bytes;
         mesh_system->tangent_byte_size += out_static_mesh->mesh[mesh_idx].tangent_bytes;
         mesh_system->uv_byte_size += out_static_mesh->mesh[mesh_idx].uv_bytes;
+
+        update_global_texture_bindless_descriptor_set(&renderer->context,
+                                                      &renderer->global_descriptors.texture_descriptors,
+                                                      shader_system_get_texture(
+                                                          renderer->shader_system,
+                                                          out_static_mesh->mesh[mesh_idx].color_texture),
+                                                      out_static_mesh->mesh[mesh_idx].color_texture.handle);
+    }
+
+    //load materials
+    // if (data->meshes[0].primitives->material) {
+    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
+    //     int hi = 0;
+    // }
+    // cgltf_texture_index();
+
+
+    mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
+    mesh_system->static_mesh_array_size++;
+
+    cgltf_free(data);
+    return out_static_mesh;
+}
+
+static_mesh* mesh_load_gltf_2(renderer* renderer, const char* gltf_path)
+{
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
+    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
+
+    if (result != cgltf_result_success)
+    {
+        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
+        return NULL;
+    }
+
+    result = cgltf_load_buffers(&options, data, gltf_path);
+    MASSERT(result == cgltf_result_success)
+
+    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, data->meshes_count);
+    Mesh_System* mesh_system = renderer->mesh_system;
+
+
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(gltf_path, &renderer->frame_arena);
+
+
+    //LOAD VERTEX/INDEX DATA
+    //Load Textures
+
+
+    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+    {
+        submesh* current_submesh = &out_static_mesh->mesh[mesh_idx];
+        VkDrawIndexedIndirectCommand* indirect_draw = &out_static_mesh->indirect_draw_array[mesh_idx];
+
+        /* Find position accessor */
+        const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                 cgltf_attribute_type_position,
+                                                                 0);
+        MASSERT(pos_accessor);
+        if (pos_accessor)
+        {
+            //get size information
+
+            cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
+            cgltf_size float_bytes = num_floats * sizeof(float);
+            current_submesh->vertex_bytes = float_bytes;
+
+
+            //alloc and copy data
+            float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
+            current_submesh->pos = arena_alloc(&renderer->arena, float_bytes);
+            cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+            memcpy(current_submesh->pos, pos_data, float_bytes);
+        }
+
+        // Find normal accessor
+        const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                  cgltf_attribute_type_normal,
+                                                                  0);
+        if (norm_accessor)
+        {
+            //get size information
+            cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
+            cgltf_size norm_bytes = norm_floats * sizeof(float);
+            current_submesh->normal_bytes = norm_bytes;
+
+            //alloc and copy data
+            float* normal_data = arena_alloc(&renderer->arena, norm_bytes);
+            current_submesh->normal = arena_alloc(&renderer->arena, norm_bytes);
+            cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
+            memcpy(current_submesh->normal, normal_data, norm_bytes);
+        }
+
+        //  Find tangent accessor
+        const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                     cgltf_attribute_type_tangent, 0);
+
+        if (tangent_accessor)
+        {
+            //get size information
+            cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
+            cgltf_size tangent_bytes = tangent_floats * sizeof(float);
+            current_submesh->tangent_bytes = tangent_bytes;
+
+
+            //alloc and copy data
+            float* tangent_data = arena_alloc(&renderer->arena, tangent_bytes);
+            current_submesh->tangent = arena_alloc(&renderer->arena, tangent_bytes);
+            cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
+            memcpy(current_submesh->tangent, tangent_data, tangent_bytes);
+        }
+
+        //  Find texcoord accessor
+        const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                      cgltf_attribute_type_texcoord, 0);
+        if (texcoord_accessor)
+        {
+            //get size information
+            cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
+            current_submesh->uv_bytes = uv_byte_size;
+
+
+            //alloc and copy data
+            float* uv_data = arena_alloc(&renderer->frame_arena, uv_byte_size);
+            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
+
+            current_submesh->uv = arena_alloc(&renderer->arena, uv_byte_size);
+            memcpy(current_submesh->uv, uv_data, uv_byte_size);
+        }
+
+        // Load indices
+        // SEE componentType in the specs for more detail 3.6.2
+        u8 index_stride = data->meshes[mesh_idx].primitives[0].indices->stride;
+        if (index_stride == 2)
+        {
+            current_submesh->index_type = VK_INDEX_TYPE_UINT16;
+        }
+        else if (index_stride == 4)
+        {
+            current_submesh->index_type = VK_INDEX_TYPE_UINT32;
+        }
+        else
+        {
+            WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
+        }
+
+
+        current_submesh->indices_count = data->meshes[mesh_idx].primitives->indices->count;
+        current_submesh->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
+            index_stride;
+        //TODO: there can be multiple primitices/indices, will come back to
+        current_submesh->indices = arena_alloc(&renderer->arena,
+                                               current_submesh->indices_bytes);
+
+        const uint8_t* index_buffer_data = cgltf_buffer_view_data(
+            data->meshes[mesh_idx].primitives->indices->buffer_view);
+        memcpy(current_submesh->indices, index_buffer_data,
+               current_submesh->indices_bytes);
+        /*
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
+                                      out_static_mesh->mesh[mesh_idx].indices,
+                                      index_stride,
+                                      out_static_mesh->mesh[mesh_idx].indices_count);
+        */
+
+        //LOAD TEXTURES/MATERIALS
+
+        //COLOR TEXTURE
+        cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                              base_color_texture.texture;
+        if (color_texture)
+        {
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_COLOR;
+
+            char* texture_path = arena_alloc(&renderer->frame_arena,
+                                             strlen(base_path) + strlen(color_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
+            TRACE("COLOR Texture Path:  %s", texture_path);
+
+            current_submesh->color_texture = shader_system_add_texture(
+                &renderer->context, renderer->shader_system,
+                texture_path);
+        }
+
+        //METAL-ROUGHNESS
+        cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                                        metallic_roughness_texture.texture;
+        if (metal_roughness_texture)
+        {
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_METALLIC;
+            char* texture_path = arena_alloc(&renderer->frame_arena,
+                                             strlen(base_path) + strlen(metal_roughness_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+            TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+        }
+
+        // AO
+        //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
+        cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
+        if (AO_texture)
+        {
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_AO;
+            char* texture_path = arena_alloc(&renderer->frame_arena,
+                                             strlen(base_path) + strlen(AO_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
+            TRACE("AO Texture Path:  %s", texture_path);
+        }
+
+
+        //NORMAL TEXTURE
+        // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
+        cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
+        if (normal_texture)
+        {
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_NORMAL;
+            char* texture_path = arena_alloc(&renderer->frame_arena,
+                                             strlen(base_path) + strlen(normal_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
+            TRACE("NORMAL Texture Path:  %s", texture_path);
+        }
+
+        //EMISSIVE TEXTURE
+        cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
+        if (emissive_texture)
+        {
+            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_EMISSIVE;
+            char* texture_path = arena_alloc(&renderer->frame_arena,
+                                             strlen(base_path) + strlen(emissive_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
+            TRACE("EMISSIVE Texture Path:  %s", texture_path);
+        }
+
+
+        //build the indirect draw info
+        indirect_draw->firstIndex = mesh_system->index_count_size;
+        indirect_draw->firstInstance = 0;
+        indirect_draw->indexCount = current_submesh->indices_count;
+        indirect_draw->instanceCount = 1;
+        indirect_draw->vertexOffset = mesh_system->vertex_byte_size / sizeof(vec3);
+
+        mesh_system->vertex_byte_size += current_submesh->vertex_bytes;
+        mesh_system->index_byte_size += current_submesh->indices_bytes;
+        mesh_system->index_count_size += out_static_mesh->mesh[mesh_idx].indices_count;
+        mesh_system->normals_byte_size += current_submesh->normal_bytes;
+        mesh_system->tangent_byte_size += current_submesh->tangent_bytes;
+        mesh_system->uv_byte_size += current_submesh->uv_bytes;
+
+        vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &mesh_system->vertex_buffer_handle,
+                                                       current_submesh->pos, current_submesh->vertex_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &mesh_system->index_buffer_handle,
+                                                       current_submesh->indices, current_submesh->indices_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &mesh_system->normal_buffer_handle,
+                                                       current_submesh->normal, current_submesh->normal_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &mesh_system->tangent_buffer_handle,
+                                                       current_submesh->tangent, current_submesh->tangent_bytes);
+        vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &mesh_system->uv_buffer_handle, current_submesh->uv,
+                                                       current_submesh->uv_bytes);
     }
 
     //load materials
@@ -288,12 +568,13 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     }
 
 
-    mesh_system->static_mesh_array[mesh_system->static_mesh_size] = *out_static_mesh;
-    mesh_system->static_mesh_size++;
+    mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
+    mesh_system->static_mesh_array_size++;
 
     cgltf_free(data);
     return out_static_mesh;
 }
+
 
 /*
 static_mesh* mesh_load_fbx(renderer* renderer, const char* gltf_path)
@@ -433,7 +714,7 @@ Mesh_System* mesh_system_init(renderer* renderer)
     out_mesh_system->mesh_shader_permutations->permutation_hash = hash_set_init(sizeof(u32), 100);
 
 
-    memset(out_mesh_system->static_mesh_array, 0, sizeof(out_mesh_system->static_mesh_size) * 1000);
+    memset(out_mesh_system->static_mesh_array, 0, sizeof(out_mesh_system->static_mesh_array_size) * 1000);
     out_mesh_system->static_mesh_array;
 
     out_mesh_system->vertex_byte_size = 0;
@@ -455,7 +736,6 @@ Mesh_System* mesh_system_init(renderer* renderer)
     out_mesh_system->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
                                                              MB(32));
 
-    //TODO: get a pool arena for meshes
 
     return out_mesh_system;
 }
@@ -491,14 +771,15 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
     //NOTE: in theory, this could just get tracked whenever any mesh is added or removed
 
-    vec3* vertex_data = arena_alloc(&renderer->frame_arena, mesh_system->vertex_byte_size);
-    u32* index_data = arena_alloc(&renderer->frame_arena, mesh_system->index_byte_size);
-    vec3* normals_data = arena_alloc(&renderer->frame_arena, mesh_system->normals_byte_size);
-    vec4* tangent_data = arena_alloc(&renderer->frame_arena, mesh_system->tangent_byte_size);
-    vec2* uv_data = arena_alloc(&renderer->frame_arena, mesh_system->uv_byte_size);
+    u8* vertex_data = arena_alloc(&renderer->frame_arena, mesh_system->vertex_byte_size);
+    u8* index_data = arena_alloc(&renderer->frame_arena, mesh_system->index_byte_size);
+    u8* normals_data = arena_alloc(&renderer->frame_arena, mesh_system->normals_byte_size);
+    u8* tangent_data = arena_alloc(&renderer->frame_arena, mesh_system->tangent_byte_size);
+    u8* uv_data = arena_alloc(&renderer->frame_arena, mesh_system->uv_byte_size);
 
     size_t vertex_offset = 0;
-    size_t index_offset = 0;
+    size_t index_byte_offset = 0;
+    size_t index_count_offset = 0;
     size_t normals_offset = 0;
     size_t tangent_offset = 0;
     size_t uv_offset = 0;
@@ -510,7 +791,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
 
     VkDrawIndexedIndirectCommand current_indirect_draw_info;
-    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_size; s_mesh_idx++)
+    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_array_size; s_mesh_idx++)
     {
         for (size_t submesh_idx = 0; submesh_idx < mesh_system->static_mesh_array[s_mesh_idx].mesh_size; submesh_idx++)
         {
@@ -519,7 +800,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
 
             //build the indirect draw info
-            current_indirect_draw_info.firstIndex = index_offset;
+            current_indirect_draw_info.firstIndex = index_byte_offset;
             current_indirect_draw_info.firstInstance = 0;
             current_indirect_draw_info.indexCount = current_submesh->indices_count;
             current_indirect_draw_info.instanceCount = 1;
@@ -549,17 +830,25 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
             //copy data over into buffers
             memcpy(vertex_data + vertex_offset, current_submesh->pos, current_submesh->vertex_bytes);
-            memcpy(index_data + index_offset, current_submesh->indices, current_submesh->indices_bytes);
+            memcpy(index_data + index_byte_offset, current_submesh->indices, current_submesh->indices_bytes);
             memcpy(normals_data + normals_offset, current_submesh->normal, current_submesh->normal_bytes);
             memcpy(tangent_data + tangent_offset, current_submesh->tangent, current_submesh->tangent_bytes);
             memcpy(uv_data + uv_offset, current_submesh->uv, current_submesh->uv_bytes);
 
 
             vertex_offset += current_submesh->vertex_bytes;
-            index_offset += current_submesh->indices_bytes;
+            index_byte_offset += current_submesh->indices_bytes;
+            index_count_offset += current_submesh->indices_count;
             normals_offset += current_submesh->normal_bytes;
             tangent_offset += current_submesh->tangent_bytes;
             uv_offset += current_submesh->uv_bytes;
+
+            update_global_texture_bindless_descriptor_set(
+                &renderer->context, &renderer->global_descriptors.texture_descriptors,
+                shader_system_get_texture(
+                    renderer->shader_system,
+                    current_submesh->color_texture),
+                current_submesh->color_texture.handle);
         }
     }
 
@@ -577,7 +866,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
 
     vulkan_buffer_cpu_data_copy_from_offset(renderer, vertex_buffer, vertex_data, vertex_offset);
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, index_buffer_handle, index_data, index_offset);
+    vulkan_buffer_cpu_data_copy_from_offset(renderer, index_buffer_handle, index_data, index_byte_offset);
     vulkan_buffer_cpu_data_copy_from_offset(renderer, normal_buffer_handle, normals_data, normals_offset);
     vulkan_buffer_cpu_data_copy_from_offset(renderer, tangent_buffer_handle, tangent_data, tangent_offset);
     vulkan_buffer_cpu_data_copy_from_offset(renderer, uv_buffer_handle, uv_data, uv_offset);
@@ -592,8 +881,103 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
         vulkan_buffer_get(renderer, mesh_system->material_buffer_handle), 2);
 }
 
+
+void mesh_system_generate_draw_data_2(renderer* renderer, Mesh_System* mesh_system)
+{
+    //were assuming that the data is already in the buffer,
+    // we are just generating the draw calls for the specific pipeline
+    vulkan_buffer* indirect_buffer = vulkan_buffer_get_clear(renderer, mesh_system->indirect_buffer_handle);
+
+
+    for (int i = 0; i < mesh_system->mesh_shader_permutations->permutations_count; i++)
+    {
+        darray_clear(mesh_system->mesh_shader_permutations->draw_data[i].indirect_draw_data);
+    }
+
+
+    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_array_size; s_mesh_idx++)
+    {
+        for (size_t submesh_idx = 0; submesh_idx < mesh_system->static_mesh_array[s_mesh_idx].mesh_size; submesh_idx++)
+        {
+            submesh* current_submesh = &mesh_system->static_mesh_array[s_mesh_idx].mesh[submesh_idx];
+            u32 idx = current_submesh->mesh_pipeline_mask;
+
+
+            if (!hash_set_contains(mesh_system->mesh_shader_permutations->permutation_hash, &idx))
+            {
+                hash_set_insert(mesh_system->mesh_shader_permutations->permutation_hash, &idx);
+                darray_push(mesh_system->mesh_shader_permutations->permutation_keys, idx);
+                u64 permutation = mesh_system->mesh_shader_permutations->permutations_count;
+                mesh_system->mesh_shader_permutations->draw_data[permutation].indirect_draw_data = darray_create(
+                    VkDrawIndexedIndirectCommand);
+                darray_push(mesh_system->mesh_shader_permutations->draw_data, mesh_system->mesh_shader_permutations->draw_data[permutation].indirect_draw_data);
+                mesh_system->mesh_shader_permutations->permutations_count++;
+            };
+
+            //add the draw data
+            //push the indirect draw into the draw data
+            VkDrawIndexedIndirectCommand* draw_instance = &mesh_system->static_mesh_array->indirect_draw_array[
+                submesh_idx];
+
+            for (int i = 0; i < mesh_system->mesh_shader_permutations->permutations_count; i++)
+            {
+                if (mesh_system->mesh_shader_permutations->permutation_keys[i] == idx)
+                {
+                    darray_push(mesh_system->mesh_shader_permutations->draw_data[i].indirect_draw_data,
+                                *draw_instance);
+                    break;
+                }
+            }
+        }
+    }
+
+    u64 perm_size = darray_get_size(mesh_system->mesh_shader_permutations->draw_data);
+    for (u64 p = 0; p < perm_size; p++)
+    {
+        u64 draw_data_size_hi = darray_get_size(mesh_system->mesh_shader_permutations->draw_data[p].indirect_draw_data);
+        for (u64 h = 0; h < draw_data_size_hi; h++)
+        {
+            VkDrawIndexedIndirectCommand draw_instance = mesh_system->mesh_shader_permutations->draw_data[p].
+                indirect_draw_data[h];
+            DEBUG("firstIndex: %d firstInstance: %d indexCount: %d instanceCount: %d vertexOffset: %d\n",
+                   draw_instance.firstIndex,
+                   draw_instance.firstInstance,
+                   draw_instance.indexCount,
+                   draw_instance.instanceCount,
+                   draw_instance.vertexOffset);
+        }
+    }
+    //after were done getting the data, we upload it
+    for (u32 mask_idx = 0; mask_idx < mesh_system->mesh_shader_permutations->permutations_count; mask_idx++)
+    {
+        u64 indirect_array_byte_size = darray_get_byte_size(
+            mesh_system->mesh_shader_permutations->draw_data[mask_idx].indirect_draw_data);
+
+        if (indirect_array_byte_size <= 0) { continue; }
+
+        vulkan_buffer_cpu_data_copy_from_offset(renderer, indirect_buffer,
+                                                mesh_system->mesh_shader_permutations->draw_data[mask_idx].
+                                                indirect_draw_data,
+                                                indirect_array_byte_size);
+    }
+
+
+    //it wouldn't be a bad idea to update this once per frame
+    update_storage_buffer_bindless_descriptor_set(&renderer->context, &renderer->global_descriptors.storage_descriptors,
+                                                  vulkan_buffer_get(renderer, mesh_system->uv_buffer_handle), 0);
+    update_storage_buffer_bindless_descriptor_set(
+        &renderer->context, &renderer->global_descriptors.storage_descriptors,
+        vulkan_buffer_get(renderer, mesh_system->normal_buffer_handle), 1);
+    update_storage_buffer_bindless_descriptor_set(
+        &renderer->context, &renderer->global_descriptors.storage_descriptors,
+        vulkan_buffer_get(renderer, mesh_system->material_buffer_handle), 2);
+}
+
 void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer)
 {
+    INFO("GENERATING DRAW DATA")
+
+
     //only bind the vertex and index, the storage buffers are in bindless
     vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_system->indirect_buffer_handle);
     vulkan_buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_system->vertex_buffer_handle);

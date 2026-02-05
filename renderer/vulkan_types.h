@@ -8,8 +8,10 @@
         FATAL("VULKAN ERROR CODE: %d", expr);\
     }\
 }
+#include "darray.h"
 #include "hash_set.h"
 #include "str.h"
+#include "maths/math_types.h"
 
 
 /// HANDLES ///
@@ -102,9 +104,11 @@ typedef struct submesh
     u64 tangent_bytes;
     u64 uv_bytes;
 
+
     Shader_Handle color_texture;
 
-    u32 mesh_pipeline_mask; // determines what features this object has
+    u32 mesh_pipeline_mask; // determines what material features this submesh has
+
 } submesh;
 
 
@@ -113,6 +117,8 @@ typedef struct static_mesh
     submesh* mesh;
     // the number of meshes in the model
     u32 mesh_size;
+    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
+
 } static_mesh;
 
 // TODO: skinned mesh
@@ -371,6 +377,7 @@ typedef struct Buffer_System
 
     //an array of them
     //NOTE: if we run out we can always allocate more, for now we just keep one of each
+    //TODO: create multiple buffers by default, one for each frame in flight
     vulkan_buffer* buffers;
     u32 buffers_size; // total we have
     u32 buffer_current_count; // current amount given out
@@ -705,21 +712,23 @@ String mesh_pipeline_flag_names_string[] = {
 
 typedef struct mesh_permutation_draw_data
 {
-    //darray, which also stores the number of meshes we will be drawing from the vertex buffer
-    VkDrawIndexedIndirectCommand* indirect_draw_data;
+    //which also stores the number of meshes we will be drawing from the vertex buffer
+    darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
 } mesh_permutation_draw_data;
 
 
 typedef struct PipelinePermutation
 {
     //instead of storing every permutation known to man, we just store the ones we are actually going to use
-    String* debug_shader_name;
-    uint32_t* permutation_keys; // stores the index of all permutations that are in use
+    //we could also load them from a config file later
+    darray_type(String*) debug_shader_name;
+    darray_type(uint32_t*) permutation_keys; // stores the index of all permutations that are in use
 
     // for quick lookups whether it exists or not, then to lookup the index for insertion
     hash_set* permutation_hash;
 
-    mesh_permutation_draw_data* draw_data;
+    darray_type(mesh_permutation_draw_data*) draw_data;
+
     u32 permutations_count;
 } Mesh_Pipeline_Permutations;
 
@@ -738,11 +747,12 @@ typedef struct Mesh_System
 
     //global count of all the data
     static_mesh static_mesh_array[1000];
-    u32 static_mesh_size;
+    u32 static_mesh_array_size;
 
     //total size of all mesh data
     size_t vertex_byte_size;
     size_t index_byte_size;
+    size_t index_count_size;
     size_t normals_byte_size;
     size_t tangent_byte_size;
     size_t uv_byte_size;
@@ -757,7 +767,9 @@ typedef struct Mesh_System
 
     Buffer_Handle material_buffer_handle;
 
-    Mesh_Pipeline_Permutations* mesh_shader_permutations;
+    darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
+
+
     mesh_uniform_constants uniform_buffer_permutation;
 
 

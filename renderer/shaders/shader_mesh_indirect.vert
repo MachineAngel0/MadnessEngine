@@ -53,16 +53,15 @@ void main() {
     gl_Position = ubo[nonuniformEXT(0)].proj * ubo[nonuniformEXT(0)].view * ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0);
     //    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
 
-    /*
     out_normal = NORMAL[nonuniformEXT(1)].normal[nonuniformEXT(idx)];
     out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
 
     out_uv = UV[nonuniformEXT(0)].uv[nonuniformEXT(idx)];
 
-    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(gl_DrawIDARB)].color_id;
+//    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(gl_DrawIDARB)].color_id;
+    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(0)].color_id;
 
 
     out_frag_pos = vec3(ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0));
-*/
 
 }

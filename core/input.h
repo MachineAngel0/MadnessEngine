@@ -182,15 +182,15 @@ static input_state input_system;
 
 // static input_state* wow;
 
-bool input_init(Arena* arena)
+bool input_init()
 {
     memset(&input_system, 0, sizeof(input_state));
 
     // wow = (input_state*)arena_alloc(arena, sizeof(wow));
 
     u64 input_system_mem_requirement = MB(1);
-    void* input_system_mem = arena_alloc(arena, input_system_mem_requirement);
-    arena_init(&input_system.input_system_arena, input_system_mem, input_system_mem_requirement);
+    void* input_system_mem = memory_system_alloc(input_system_mem_requirement);
+    arena_init(&input_system.input_system_arena, input_system_mem, input_system_mem_requirement, MEMORY_SUBSYSTEM_INPUT);
 
 
     return true;

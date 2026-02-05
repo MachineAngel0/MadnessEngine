@@ -145,6 +145,7 @@ void ui_end(UI_System* ui_system);
 
 //VULKAN
 void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system);
+void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer);
 
 
 

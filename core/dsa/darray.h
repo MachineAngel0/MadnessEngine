@@ -8,16 +8,27 @@
 
 #include "unit_test.h"
 #include "arena_stack.h"
-#include "memory_tracker.h"
+#include "../memory/memory_tracker.h"
 
-#define DARRAY_RESIZE_VALUE  2
-#define DARRAY_DEFAULT_CAPACITY 1
+
 
 
 /* Array layout
  * HEADER -> num_items, stride, capacity, allocator
  * void* data
  */
+
+
+#define DARRAY_RESIZE_VALUE  2
+#define DARRAY_DEFAULT_CAPACITY 1
+
+// literally does nothing, it's here just to easily see that something is a darray, without having to guess/remeber
+// example:  darray_type(int*) -> int*
+#define darray_type(type) type
+
+//there is also this version that converts the type into a pointer
+// example:  darray_type(int) -> int*
+// #define darray_type(type) type*
 
 typedef struct array_header
 {
@@ -671,21 +682,22 @@ void _darray_test()
 {
     TEST_START(DARRAY);
 
-    int* arr = darray_create(int);
+
+    darray_type(int*) arr = darray_create(int);
     darray_push(arr, 10);
     darray_push(arr, 15);
-    TEST_INFORM(darray_get_size(arr) == 2);
-    TEST_INFORM(darray_get_capacity(arr) == 2);
-    TEST_INFORM(darray_get_stride(arr) == 4);
+    TEST_DEBUG(darray_get_size(arr) == 2);
+    TEST_DEBUG(darray_get_capacity(arr) == 2);
+    TEST_DEBUG(darray_get_stride(arr) == 4);
     darray_debug_print(arr, print_int);
-    TEST_INFORM(arr[0] == 10);
-    TEST_INFORM(arr[1] == 15);
-    TEST_INFORM(darray_get_size(arr) == 2);
+    TEST_DEBUG(arr[0] == 10);
+    TEST_DEBUG(arr[1] == 15);
+    TEST_DEBUG(darray_get_size(arr) == 2);
 
     darray_pop(arr);
-    TEST_INFORM(darray_get_size(arr) == 1);
-    TEST_INFORM(darray_get_capacity(arr) == 2);
-    TEST_INFORM(darray_get_stride(arr) == 4);
+    TEST_DEBUG(darray_get_size(arr) == 1);
+    TEST_DEBUG(darray_get_capacity(arr) == 2);
+    TEST_DEBUG(darray_get_stride(arr) == 4);
 
     darray_debug_print(arr, print_int);
 
@@ -713,9 +725,9 @@ void _darray_test()
     int contain_num1 = 456;
     int contain_num2 = 80;
     int contain_num2_invalid = 99;
-    TEST_INFORM(darray_contains(arr, &contain_num1, cmp_int));
-    TEST_INFORM(!darray_contains(arr, &contain_num2_invalid, cmp_int));
-    TEST_INFORM(darray_contains(arr, &contain_num2, cmp_int));
+    TEST_DEBUG(darray_contains(arr, &contain_num1, cmp_int));
+    TEST_DEBUG(!darray_contains(arr, &contain_num2_invalid, cmp_int));
+    TEST_DEBUG(darray_contains(arr, &contain_num2, cmp_int));
 
 
     darray_pop(arr);

@@ -12,9 +12,6 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
 
-
-
-
 //fixed sized array, so no reallocating more space
 typedef struct Array
 {
@@ -30,10 +27,9 @@ typedef struct Array
 } Array;
 
 
-
 Array* _array_create(const u64 data_stride, const u64 capacity, const char* type_name)
 {
-    Array* arr = (Array *) malloc(sizeof(Array));
+    Array* arr = (Array*)malloc(sizeof(Array));
     memset(arr, 0, sizeof(Array));
 
     //alloc and zero
@@ -77,7 +73,6 @@ bool _array_type_check(Array* array, const char* type_name)
     _array_type_check(arr, #type)
 
 
-
 void array_free(Array* array)
 {
     free(array->data);
@@ -95,7 +90,7 @@ void array_print(Array* array, void (*print_func)(void*))
     {
         print_func(
             (void*)((u8*)array->data + (i * array->stride))
-                );
+        );
     }
     printf("\n");
 }
@@ -124,7 +119,7 @@ void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void
     {
         print_func(
             (void*)((u8*)array->data + (i * array->stride))
-            );
+        );
     }
     printf("\n");
 }
@@ -175,7 +170,7 @@ void array_set(Array* array, const void* data, const u64 pos)
     }
 
     //mem copy the data
-    u8* dest = (u8 *) array->data + (array->stride * pos);
+    u8* dest = (u8*)array->data + (array->stride * pos);
     memcpy(dest, data, array->stride);
 }
 
@@ -185,7 +180,7 @@ void array_fill(const Array* array, const void* data)
 {
     for (u64 i = 0; i < array->num_items; i++)
     {
-        u8* dest = (u8 *) array->data + (array->stride * i);
+        u8* dest = (u8*)array->data + (array->stride * i);
         memcpy(dest, data, array->stride);
     }
 }
@@ -209,7 +204,7 @@ void array_fill_range(Array* array, u64 start, u64 end, void* data)
 
     for (u64 i = start; i < end; i++)
     {
-        u8* dest = (u8 *) array->data + (array->stride * i);
+        u8* dest = (u8*)array->data + (array->stride * i);
         memcpy(dest, data, array->stride);
     }
 }
@@ -221,7 +216,7 @@ void array_push(Array* array, void* new_data)
         WARN("ARRAY PUSH}:  ARRAY IS FULL, CAN'T PUSH");
         return;
     }
-    u8* dest = (u8 *) array->data + (array->stride * (array->num_items));
+    u8* dest = (u8*)array->data + (array->stride * (array->num_items));
     memcpy(dest, new_data, array->stride);
 
     array->num_items++;
@@ -254,8 +249,8 @@ void array_remove(Array* array, const u64 index)
 
     //shift the array left from the index spot of removal
 
-    memcpy((u8 *) array->data + (array->stride * index),
-           (u8 *) array->data + (array->stride * (index + 1)),
+    memcpy((u8*)array->data + (array->stride * index),
+           (u8*)array->data + (array->stride * (index + 1)),
            array->stride * (array->num_items - index - 1));
 
     array->num_items--;
@@ -276,8 +271,8 @@ void array_remove_swap(Array* array, u64 index)
     };
 
     //memcpy the last item into the removal spot
-    memcpy((u8 *) array->data + (array->stride * index),
-           (u8 *) array->data + (array->stride - 1),
+    memcpy((u8*)array->data + (array->stride * index),
+           (u8*)array->data + (array->stride - 1),
            array->stride);
     //minus one cause num_items always points to a free spot/ or nothing if full
     array->num_items--;
@@ -289,8 +284,6 @@ void array_counting_sort(Array* array, int (*cmp_func)(void*, void*));
 void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
-
-
 
 
 void array_test()
@@ -377,6 +370,8 @@ void array_test()
 
     TEST_REPORT("ARRAY");
 }
+
+
 
 
 #endif //ARRAY_H

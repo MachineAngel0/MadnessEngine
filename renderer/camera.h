@@ -23,7 +23,7 @@ void camera_init(camera* out_camera)
     out_camera->viewPos = vec4_zero();
 
     out_camera->rotation_speed = SENSITIVITY;
-    out_camera->move_speed = 1.0f;
+    out_camera->move_speed = 3.5f;
 
 
     out_camera->fov = FOV;

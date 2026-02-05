@@ -110,6 +110,35 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
                                                    ui_system->draw_info.quad_vertex, sizeof(u16) * 100);
 }
 
+void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
+{
+    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_vertex_buffer_handle);
+    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_index_buffer_handle);
+
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          renderer->ui_pipeline.handle);
+
+    //TODO:
+    //textures
+    // vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            // vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
+                            // &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+                                // current_frame],
+                            // 0, 0);
+
+    VkDeviceSize offsets_bindless[1] = {0};
+    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
+                           &vert_buffer->handle, offsets_bindless);
+
+    vkCmdBindIndexBuffer(command_buffer->handle,
+                         index_buffer->handle, 0,
+                         VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(command_buffer->handle,
+                     ui_system->draw_info.index_count,
+                     1, 0, 0, 0);
+}
+
 void update_ui_mouse_pos(UI_System* ui_system)
 {
     input_get_mouse_pos(&ui_system->mouse_pos_x, &ui_system->mouse_pos_y);

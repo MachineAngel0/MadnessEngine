@@ -1,23 +1,194 @@
 ; SPIR-V
 ; Version: 1.0
 ; Generator: Khronos Glslang Reference Front End; 11
-; Bound: 173
+; Bound: 674
 ; Schema: 0
                OpCapability Shader
+               OpCapability ShaderNonUniform
+               OpCapability RuntimeDescriptorArray
+               OpCapability UniformBufferArrayNonUniformIndexing
+               OpCapability SampledImageArrayNonUniformIndexing
                OpCapability PhysicalStorageBufferAddresses
+               OpExtension "SPV_EXT_descriptor_indexing"
                OpExtension "SPV_KHR_non_semantic_info"
                OpExtension "SPV_KHR_physical_storage_buffer"
                OpExtension "SPV_KHR_relaxed_extended_instruction"
           %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
           %4 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel PhysicalStorageBuffer64 GLSL450
-               OpEntryPoint Fragment %main "main" %outColor %in_normal %in_tangent %in_tex %in_color_idx %in_frag_pos
+               OpEntryPoint Fragment %main "main" %in_normal %in_frag_pos %in_color_idx %in_tex %outColor %in_tangent
                OpExecutionMode %main OriginUpperLeft
           %2 = OpString "C:\\Users\\Adams Humbert\\Documents\\Clion\\MadnessEngine\\renderer\\shaders\\shader_mesh_indirect.frag"
           %3 = OpString "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine/renderer/shaders/shader_includes/test_uniform.glsl"
           %9 = OpString "uint"
-         %17 = OpString "main"
-         %20 = OpString "// OpModuleProcessed client vulkan100
+         %18 = OpString "float"
+         %24 = OpString "color"
+         %26 = OpString "#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout: require
+
+
+
+//NOTE: ambient can also refer to color
+struct directional_light_data{
+    vec3 direction;
+    vec3 color;
+
+    float diffuse;
+    float specular;
+
+};
+
+struct point_light_data{
+    vec4 position;
+    vec4 color;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    float diffuse;
+    float specular;
+};
+
+struct spot_light_data{
+
+    vec3 position;
+    vec3 direction;
+    float cut_off;
+    float outer_cut_off;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    vec3 color;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+layout(buffer_reference, scalar) readonly buffer DIRECTIONAL_LIGHT_BUFFER{
+    directional_light_data directional_light[];
+};
+
+layout(buffer_reference, scalar) readonly buffer POINT_LIGHT_BUFFER{
+    point_light_data point_light[];
+};
+
+layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
+    spot_light_data spot_light[];
+};
+
+layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+
+
+    DIRECTIONAL_LIGHT_BUFFER directional_lights;
+//    uint directional_light_index;
+
+
+    POINT_LIGHT_BUFFER point_lights;
+    uint point_lights_count;
+
+
+//    SPOT_LIGHT_BUFFER spot_lights;
+//    uint spot_lights_count;
+
+    vec4 camera_view_pos;
+
+    uint render_mode;
+
+} ubo[];
+
+
+vec3 calculate_directional_light(directional_light_data light, vec3 normal, vec3 view_direction)
+{
+    float specular_shininess = 32;
+
+    vec3 light_direction = normalize(-light.direction);
+    // diffuse shading
+    float diff = max(dot(normal, light_direction), 0.0);
+    // specular shading
+    vec3 reflect_direction = reflect(-light_direction, normal);
+    float spec = pow(max(dot(view_direction, reflect_direction), 0.0), specular_shininess);
+    // combine results
+    vec3 ambient  = light.color.xyz;
+    vec3 diffuse  = light.diffuse  * diff * light.color.xyz;
+    vec3 specular = light.specular * spec * light.color.xyz;
+
+    //for textures usage
+    //    vec3 ambient  = light.ambient  * vec3(texture(light.diffuse, TexCoords));
+    //    vec3 diffuse  = light.diffuse  * diff * vec3(texture(light.diffuse, TexCoords));
+    //    vec3 specular = light.specular * spec * vec3(texture(light.specular, TexCoords));
+    return (ambient + diffuse + specular);
+}
+
+vec3 calculate_point_light(point_light_data light, vec3 normal, vec3 frag_position, vec3 view_direction)
+{
+
+    float specular_shininess = 32;
+
+
+    vec3 lightDir = normalize(light.position.xyz - frag_position);
+    // diffuse shading
+    float diff = max(dot(normal, lightDir), 0.0);
+    // specular shading
+    vec3 reflect_direction = reflect(-lightDir, normal);
+    float spec = pow(max(dot(view_direction, reflect_direction), 0.0), specular_shininess);
+    // attenuation
+    float distance    = length(light.position.xyz - frag_position);
+    float attenuation = 1.0 / (light.constant + light.linear * distance +
+    light.quadratic * (distance * distance));
+    // combine results
+
+
+    vec3 ambient  = light.color.xyz;
+    vec3 diffuse  = light.diffuse * light.color.xyz;
+    vec3 specular = light.specular * spec * light.color.xyz;
+    //for textures usage
+    //    vec3 ambient  = light.ambient  * vec3(texture(material.diffuse, TexCoords));
+    //    vec3 diffuse  = light.diffuse  * diff * vec3(texture(light.diffuse, TexCoords));
+    //    vec3 specular = light.specular * spec * vec3(texture(light.specular, TexCoords));
+    ambient  *= attenuation;
+    diffuse  *= attenuation;
+    specular *= attenuation;
+    return (ambient + diffuse + specular);
+}
+
+vec3 CalcSpotLight(spot_light_data light, vec3 normal, vec3 frag_position, vec3 view_direction)
+{
+
+    float specular_shininess = 32;
+
+    vec3 lightDir = normalize(light.position - frag_position);
+    // diffuse shading
+    float diff = max(dot(normal, lightDir), 0.0);
+    // specular shading
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float spec = pow(max(dot(view_direction, reflectDir), 0.0), specular_shininess);
+    // attenuation
+    float distance = length(light.position - frag_position);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    // spotlight intensity
+    float theta = dot(lightDir, normalize(-light.direction));
+    float epsilon = light.cut_off - light.outer_cut_off;
+    float intensity = clamp((theta - light.outer_cut_off) / epsilon, 0.0, 1.0);
+    // combine results
+    vec3 ambient = light.color.xyz;
+    vec3 diffuse = light.diffuse * light.color.xyz;
+    vec3 specular = light.specular * spec * light.color.xyz;
+//    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoords));
+//    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexCoords));
+//    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexCoords));
+    ambient *= attenuation * intensity;
+    diffuse *= attenuation * intensity;
+    specular *= attenuation * intensity;
+    return (ambient + diffuse + specular);
+}"
+         %31 = OpString "specular"
+         %36 = OpString "directional_light_data"
+         %42 = OpString "// OpModuleProcessed client vulkan100
 // OpModuleProcessed target-env vulkan1.0
 // OpModuleProcessed entry-point main
 #line 1
@@ -49,7 +220,6 @@ void main() {
 
 
 
-    /*
     // properties
     vec3 norm = normalize(in_normal);
     vec3 view_direction = normalize(ubo[nonuniformEXT(0)].camera_view_pos.xyz - in_frag_pos);
@@ -78,48 +248,108 @@ void main() {
     if (ubo[nonuniformEXT(0)].render_mode == 1){
         outColor = vec4(abs(in_normal), 1.0f);
     }
-    */
 
 
-    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
+//    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
 
 
 }"
-         %30 = OpString "float"
-         %38 = OpString "outColor"
-         %50 = OpString "bool"
-         %60 = OpString "proj"
-         %66 = OpString "directional_lights"
-         %70 = OpString "point_lights"
-         %73 = OpString "render_mode"
-         %76 = OpString "camera_view_pos"
-         %80 = OpString "UniformBufferObject"
-         %85 = OpString "color"
-         %89 = OpString "specular"
-         %94 = OpString "directional_light_data"
-         %99 = OpString "directional_light"
-        %103 = OpString "DIRECTIONAL_LIGHT_BUFFER"
-        %115 = OpString "point_light_data"
-        %120 = OpString "point_light"
-        %124 = OpString "POINT_LIGHT_BUFFER"
-        %131 = OpString "ubo"
-        %134 = OpString "type.2d.image"
-        %135 = OpString "@type.2d.image"
-        %139 = OpString "type.sampled.image"
-        %140 = OpString "@type.sampled.image"
-        %147 = OpString "texture_samples"
-        %152 = OpString "in_normal"
-        %157 = OpString "in_tangent"
-        %164 = OpString "in_tex"
-        %169 = OpString "in_color_idx"
-        %172 = OpString "in_frag_pos"
+         %56 = OpString "calculate_directional_light"
+         %59 = OpString "light"
+         %65 = OpString "normal"
+         %68 = OpString "view_direction"
+         %83 = OpString "point_light_data"
+         %95 = OpString "calculate_point_light"
+        %104 = OpString "frag_position"
+        %108 = OpString "main"
+        %116 = OpString "specular_shininess"
+        %123 = OpString "light_direction"
+        %128 = OpString "int"
+        %137 = OpString "diff"
+        %148 = OpString "reflect_direction"
+        %158 = OpString "spec"
+        %170 = OpString "ambient"
+        %179 = OpString "diffuse"
+        %224 = OpString "lightDir"
+        %267 = OpString "distance"
+        %279 = OpString "attenuation"
+        %369 = OpString "norm"
+        %377 = OpString "in_normal"
+        %389 = OpString "bool"
+        %399 = OpString "proj"
+        %404 = OpString "directional_lights"
+        %407 = OpString "point_lights"
+        %410 = OpString "render_mode"
+        %413 = OpString "camera_view_pos"
+        %417 = OpString "UniformBufferObject"
+        %428 = OpString "directional_light"
+        %432 = OpString "DIRECTIONAL_LIGHT_BUFFER"
+        %446 = OpString "point_light"
+        %450 = OpString "POINT_LIGHT_BUFFER"
+        %457 = OpString "ubo"
+        %466 = OpString "in_frag_pos"
+        %472 = OpString "result"
+        %503 = OpString "i"
+        %567 = OpString "texture_result"
+        %574 = OpString "type.2d.image"
+        %575 = OpString "@type.2d.image"
+        %579 = OpString "type.sampled.image"
+        %580 = OpString "@type.sampled.image"
+        %587 = OpString "texture_samples"
+        %592 = OpString "in_color_idx"
+        %605 = OpString "in_tex"
+        %610 = OpString "final_result"
+        %644 = OpString "outColor"
+        %673 = OpString "in_tangent"
                OpSourceExtension "GL_EXT_buffer_reference"
                OpSourceExtension "GL_EXT_nonuniform_qualifier"
                OpSourceExtension "GL_EXT_scalar_block_layout"
                OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
                OpSourceExtension "GL_GOOGLE_include_directive"
                OpName %main "main"
-               OpName %outColor "outColor"
+               OpName %directional_light_data "directional_light_data"
+               OpMemberName %directional_light_data 0 "direction"
+               OpMemberName %directional_light_data 1 "color"
+               OpMemberName %directional_light_data 2 "diffuse"
+               OpMemberName %directional_light_data 3 "specular"
+               OpName %calculate_directional_light_struct_directional_light_data_vf3_vf3_f1_f11_vf3_vf3_ "calculate_directional_light(struct-directional_light_data-vf3-vf3-f1-f11;vf3;vf3;"
+               OpName %light "light"
+               OpName %normal "normal"
+               OpName %view_direction "view_direction"
+               OpName %point_light_data "point_light_data"
+               OpMemberName %point_light_data 0 "position"
+               OpMemberName %point_light_data 1 "color"
+               OpMemberName %point_light_data 2 "constant"
+               OpMemberName %point_light_data 3 "linear"
+               OpMemberName %point_light_data 4 "quadratic"
+               OpMemberName %point_light_data 5 "diffuse"
+               OpMemberName %point_light_data 6 "specular"
+               OpName %calculate_point_light_struct_point_light_data_vf4_vf4_f1_f1_f1_f1_f11_vf3_vf3_vf3_ "calculate_point_light(struct-point_light_data-vf4-vf4-f1-f1-f1-f1-f11;vf3;vf3;vf3;"
+               OpName %light_0 "light"
+               OpName %normal_0 "normal"
+               OpName %frag_position "frag_position"
+               OpName %view_direction_0 "view_direction"
+               OpName %specular_shininess "specular_shininess"
+               OpName %light_direction "light_direction"
+               OpName %diff "diff"
+               OpName %reflect_direction "reflect_direction"
+               OpName %spec "spec"
+               OpName %ambient "ambient"
+               OpName %diffuse "diffuse"
+               OpName %specular "specular"
+               OpName %specular_shininess_0 "specular_shininess"
+               OpName %lightDir "lightDir"
+               OpName %diff_0 "diff"
+               OpName %reflect_direction_0 "reflect_direction"
+               OpName %spec_0 "spec"
+               OpName %distance "distance"
+               OpName %attenuation "attenuation"
+               OpName %ambient_0 "ambient"
+               OpName %diffuse_0 "diffuse"
+               OpName %specular_0 "specular"
+               OpName %norm "norm"
+               OpName %in_normal "in_normal"
+               OpName %view_direction_1 "view_direction"
                OpName %UniformBufferObject "UniformBufferObject"
                OpMemberName %UniformBufferObject 0 "model"
                OpMemberName %UniformBufferObject 1 "view"
@@ -129,31 +359,42 @@ void main() {
                OpMemberName %UniformBufferObject 5 "point_lights_count"
                OpMemberName %UniformBufferObject 6 "camera_view_pos"
                OpMemberName %UniformBufferObject 7 "render_mode"
-               OpName %directional_light_data "directional_light_data"
-               OpMemberName %directional_light_data 0 "direction"
-               OpMemberName %directional_light_data 1 "color"
-               OpMemberName %directional_light_data 2 "diffuse"
-               OpMemberName %directional_light_data 3 "specular"
+               OpName %directional_light_data_0 "directional_light_data"
+               OpMemberName %directional_light_data_0 0 "direction"
+               OpMemberName %directional_light_data_0 1 "color"
+               OpMemberName %directional_light_data_0 2 "diffuse"
+               OpMemberName %directional_light_data_0 3 "specular"
                OpName %DIRECTIONAL_LIGHT_BUFFER "DIRECTIONAL_LIGHT_BUFFER"
                OpMemberName %DIRECTIONAL_LIGHT_BUFFER 0 "directional_light"
-               OpName %point_light_data "point_light_data"
-               OpMemberName %point_light_data 0 "position"
-               OpMemberName %point_light_data 1 "color"
-               OpMemberName %point_light_data 2 "constant"
-               OpMemberName %point_light_data 3 "linear"
-               OpMemberName %point_light_data 4 "quadratic"
-               OpMemberName %point_light_data 5 "diffuse"
-               OpMemberName %point_light_data 6 "specular"
+               OpName %point_light_data_0 "point_light_data"
+               OpMemberName %point_light_data_0 0 "position"
+               OpMemberName %point_light_data_0 1 "color"
+               OpMemberName %point_light_data_0 2 "constant"
+               OpMemberName %point_light_data_0 3 "linear"
+               OpMemberName %point_light_data_0 4 "quadratic"
+               OpMemberName %point_light_data_0 5 "diffuse"
+               OpMemberName %point_light_data_0 6 "specular"
                OpName %POINT_LIGHT_BUFFER "POINT_LIGHT_BUFFER"
                OpMemberName %POINT_LIGHT_BUFFER 0 "point_light"
                OpName %ubo "ubo"
-               OpName %texture_samples "texture_samples"
-               OpName %in_normal "in_normal"
-               OpName %in_tangent "in_tangent"
-               OpName %in_tex "in_tex"
-               OpName %in_color_idx "in_color_idx"
                OpName %in_frag_pos "in_frag_pos"
-               OpDecorate %outColor Location 0
+               OpName %result "result"
+               OpName %param "param"
+               OpName %param_0 "param"
+               OpName %param_1 "param"
+               OpName %i "i"
+               OpName %param_2 "param"
+               OpName %param_3 "param"
+               OpName %param_4 "param"
+               OpName %param_5 "param"
+               OpName %texture_result "texture_result"
+               OpName %texture_samples "texture_samples"
+               OpName %in_color_idx "in_color_idx"
+               OpName %in_tex "in_tex"
+               OpName %final_result "final_result"
+               OpName %outColor "outColor"
+               OpName %in_tangent "in_tangent"
+               OpDecorate %in_normal Location 0
                OpDecorate %UniformBufferObject Block
                OpMemberDecorate %UniformBufferObject 0 ColMajor
                OpMemberDecorate %UniformBufferObject 0 MatrixStride 16
@@ -169,35 +410,74 @@ void main() {
                OpMemberDecorate %UniformBufferObject 5 Offset 208
                OpMemberDecorate %UniformBufferObject 6 Offset 212
                OpMemberDecorate %UniformBufferObject 7 Offset 228
-               OpMemberDecorate %directional_light_data 0 Offset 0
-               OpMemberDecorate %directional_light_data 1 Offset 12
-               OpMemberDecorate %directional_light_data 2 Offset 24
-               OpMemberDecorate %directional_light_data 3 Offset 28
-               OpDecorate %_runtimearr_directional_light_data ArrayStride 32
+               OpMemberDecorate %directional_light_data_0 0 Offset 0
+               OpMemberDecorate %directional_light_data_0 1 Offset 12
+               OpMemberDecorate %directional_light_data_0 2 Offset 24
+               OpMemberDecorate %directional_light_data_0 3 Offset 28
+               OpDecorate %_runtimearr_directional_light_data_0 ArrayStride 32
                OpDecorate %DIRECTIONAL_LIGHT_BUFFER Block
                OpMemberDecorate %DIRECTIONAL_LIGHT_BUFFER 0 NonWritable
                OpMemberDecorate %DIRECTIONAL_LIGHT_BUFFER 0 Offset 0
-               OpMemberDecorate %point_light_data 0 Offset 0
-               OpMemberDecorate %point_light_data 1 Offset 16
-               OpMemberDecorate %point_light_data 2 Offset 32
-               OpMemberDecorate %point_light_data 3 Offset 36
-               OpMemberDecorate %point_light_data 4 Offset 40
-               OpMemberDecorate %point_light_data 5 Offset 44
-               OpMemberDecorate %point_light_data 6 Offset 48
-               OpDecorate %_runtimearr_point_light_data ArrayStride 52
+               OpMemberDecorate %point_light_data_0 0 Offset 0
+               OpMemberDecorate %point_light_data_0 1 Offset 16
+               OpMemberDecorate %point_light_data_0 2 Offset 32
+               OpMemberDecorate %point_light_data_0 3 Offset 36
+               OpMemberDecorate %point_light_data_0 4 Offset 40
+               OpMemberDecorate %point_light_data_0 5 Offset 44
+               OpMemberDecorate %point_light_data_0 6 Offset 48
+               OpDecorate %_runtimearr_point_light_data_0 ArrayStride 52
                OpDecorate %POINT_LIGHT_BUFFER Block
                OpMemberDecorate %POINT_LIGHT_BUFFER 0 NonWritable
                OpMemberDecorate %POINT_LIGHT_BUFFER 0 Offset 0
                OpDecorate %ubo Binding 0
                OpDecorate %ubo DescriptorSet 0
+               OpDecorate %458 NonUniform
+               OpDecorate %461 NonUniform
+               OpDecorate %462 NonUniform
+               OpDecorate %463 NonUniform
+               OpDecorate %in_frag_pos Location 4
+               OpDecorate %468 NonUniform
+               OpDecorate %476 NonUniform
+               OpDecorate %479 NonUniform
+               OpDecorate %480 NonUniform
+               OpDecorate %485 NonUniform
+               OpDecorate %487 NonUniform
+               OpDecorate %489 NonUniform
+               OpDecorate %491 NonUniform
+               OpDecorate %493 NonUniform
+               OpDecorate %518 NonUniform
+               OpDecorate %521 NonUniform
+               OpDecorate %522 NonUniform
+               OpDecorate %523 NonUniform
+               OpDecorate %524 NonUniform
+               OpDecorate %530 NonUniform
+               OpDecorate %531 NonUniform
+               OpDecorate %537 NonUniform
+               OpDecorate %539 NonUniform
+               OpDecorate %541 NonUniform
+               OpDecorate %543 NonUniform
+               OpDecorate %545 NonUniform
+               OpDecorate %547 NonUniform
+               OpDecorate %549 NonUniform
+               OpDecorate %551 NonUniform
                OpDecorate %texture_samples Binding 0
                OpDecorate %texture_samples DescriptorSet 1
-               OpDecorate %in_normal Location 0
-               OpDecorate %in_tangent Location 1
-               OpDecorate %in_tex Location 2
                OpDecorate %in_color_idx Flat
                OpDecorate %in_color_idx Location 3
-               OpDecorate %in_frag_pos Location 4
+               OpDecorate %594 NonUniform
+               OpDecorate %597 NonUniform
+               OpDecorate %598 NonUniform
+               OpDecorate %in_tex Location 2
+               OpDecorate %621 NonUniform
+               OpDecorate %625 NonUniform
+               OpDecorate %626 NonUniform
+               OpDecorate %627 NonUniform
+               OpDecorate %outColor Location 0
+               OpDecorate %649 NonUniform
+               OpDecorate %652 NonUniform
+               OpDecorate %653 NonUniform
+               OpDecorate %654 NonUniform
+               OpDecorate %in_tangent Location 1
        %void = OpTypeVoid
           %6 = OpTypeFunction %void
        %uint = OpTypeInt 32 0
@@ -207,136 +487,669 @@ void main() {
          %10 = OpExtInst %void %1 DebugTypeBasic %9 %uint_32 %uint_6 %uint_0
      %uint_3 = OpConstant %uint 3
           %7 = OpExtInst %void %1 DebugTypeFunction %uint_3 %void
-         %19 = OpExtInst %void %1 DebugSource %2 %20
-    %uint_24 = OpConstant %uint 24
-     %uint_1 = OpConstant %uint 1
-     %uint_4 = OpConstant %uint 4
-     %uint_2 = OpConstant %uint 2
-         %22 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %19 %uint_2
-         %18 = OpExtInst %void %1 DebugFunction %17 %7 %19 %uint_24 %uint_0 %22 %17 %uint_3 %uint_24
       %float = OpTypeFloat 32
-         %31 = OpExtInst %void %1 DebugTypeBasic %30 %uint_32 %uint_3 %uint_0
-    %v4float = OpTypeVector %float 4
-         %33 = OpExtInst %void %1 DebugTypeVector %31 %uint_4
-%_ptr_Output_v4float = OpTypePointer Output %v4float
-         %35 = OpExtInst %void %1 DebugTypePointer %33 %uint_3 %uint_0
-   %outColor = OpVariable %_ptr_Output_v4float Output
-    %uint_61 = OpConstant %uint 61
-     %uint_8 = OpConstant %uint 8
-         %37 = OpExtInst %void %1 DebugGlobalVariable %38 %33 %19 %uint_61 %uint_0 %22 %38 %outColor %uint_8
-    %float_1 = OpConstant %float 1
-  %float_0_5 = OpConstant %float 0.5
-         %43 = OpConstantComposite %v4float %float_1 %float_0_5 %float_0_5 %float_1
-    %uint_64 = OpConstant %uint 64
-%mat4v4float = OpTypeMatrix %v4float 4
-       %bool = OpTypeBool
-         %51 = OpExtInst %void %1 DebugTypeBasic %50 %uint_32 %uint_2 %uint_0
-       %true = OpConstantTrue %bool
-         %48 = OpExtInst %void %1 DebugTypeMatrix %33 %uint_4 %true
-               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER PhysicalStorageBuffer
-  %uint_5349 = OpConstant %uint 5349
-         %55 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %102 %uint_5349 %uint_0
-               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER PhysicalStorageBuffer
-         %57 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %123 %uint_5349 %uint_0
-%UniformBufferObject = OpTypeStruct %mat4v4float %mat4v4float %mat4v4float %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %uint %v4float %uint
-    %uint_59 = OpConstant %uint 59
-    %uint_10 = OpConstant %uint 10
-         %59 = OpExtInst %void %1 DebugTypeMember %60 %48 %19 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-         %63 = OpExtInst %void %1 DebugTypeMember %60 %48 %19 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-         %64 = OpExtInst %void %1 DebugTypeMember %60 %48 %19 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-    %uint_62 = OpConstant %uint 62
-    %uint_30 = OpConstant %uint 30
-         %65 = OpExtInst %void %1 DebugTypeMember %66 %55 %19 %uint_62 %uint_30 %uint_0 %uint_0 %uint_3
-    %uint_66 = OpConstant %uint 66
-         %69 = OpExtInst %void %1 DebugTypeMember %70 %57 %19 %uint_66 %uint_24 %uint_0 %uint_0 %uint_3
-    %uint_75 = OpConstant %uint 75
-         %72 = OpExtInst %void %1 DebugTypeMember %73 %10 %19 %uint_75 %uint_10 %uint_0 %uint_0 %uint_3
-    %uint_73 = OpConstant %uint 73
-         %75 = OpExtInst %void %1 DebugTypeMember %76 %33 %19 %uint_73 %uint_10 %uint_0 %uint_0 %uint_3
-         %78 = OpExtInst %void %1 DebugTypeMember %73 %10 %19 %uint_75 %uint_10 %uint_0 %uint_0 %uint_3
-         %79 = OpExtInst %void %1 DebugTypeComposite %80 %uint_1 %19 %uint_64 %uint_0 %22 %80 %uint_0 %uint_3 %59 %63 %64 %65 %69 %72 %75 %78
+         %19 = OpExtInst %void %1 DebugTypeBasic %18 %uint_32 %uint_3 %uint_0
     %v3float = OpTypeVector %float 3
-         %82 = OpExtInst %void %1 DebugTypeVector %31 %uint_3
+         %21 = OpExtInst %void %1 DebugTypeVector %19 %uint_3
 %directional_light_data = OpTypeStruct %v3float %v3float %float %float
+         %25 = OpExtInst %void %1 DebugSource %3 %26
      %uint_9 = OpConstant %uint 9
-         %84 = OpExtInst %void %1 DebugTypeMember %85 %82 %19 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
-         %87 = OpExtInst %void %1 DebugTypeMember %85 %82 %19 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_10 = OpConstant %uint 10
+         %23 = OpExtInst %void %1 DebugTypeMember %24 %21 %25 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+         %29 = OpExtInst %void %1 DebugTypeMember %24 %21 %25 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
     %uint_12 = OpConstant %uint 12
     %uint_11 = OpConstant %uint 11
-         %88 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
-         %92 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
-         %93 = OpExtInst %void %1 DebugTypeComposite %94 %uint_1 %19 %uint_64 %uint_0 %22 %94 %uint_0 %uint_3 %84 %87 %88 %92
-%_runtimearr_directional_light_data = OpTypeRuntimeArray %directional_light_data
-         %96 = OpExtInst %void %1 DebugTypeArray %93 %uint_0
-%DIRECTIONAL_LIGHT_BUFFER = OpTypeStruct %_runtimearr_directional_light_data
-    %uint_45 = OpConstant %uint 45
-    %uint_28 = OpConstant %uint 28
-         %98 = OpExtInst %void %1 DebugTypeMember %99 %96 %19 %uint_45 %uint_28 %uint_0 %uint_0 %uint_3
-        %102 = OpExtInst %void %1 DebugTypeComposite %103 %uint_1 %19 %uint_64 %uint_0 %22 %103 %uint_0 %uint_3 %98
-%_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER = OpTypePointer PhysicalStorageBuffer %DIRECTIONAL_LIGHT_BUFFER
+         %30 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
+         %34 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
+     %uint_1 = OpConstant %uint 1
+    %uint_80 = OpConstant %uint 80
+     %uint_4 = OpConstant %uint 4
+         %41 = OpExtInst %void %1 DebugSource %2 %42
+     %uint_2 = OpConstant %uint 2
+         %39 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %41 %uint_2
+         %35 = OpExtInst %void %1 DebugTypeComposite %36 %uint_1 %25 %uint_80 %uint_0 %39 %36 %uint_0 %uint_3 %23 %29 %30 %34
+%_ptr_Function_directional_light_data = OpTypePointer Function %directional_light_data
+     %uint_7 = OpConstant %uint 7
+         %46 = OpExtInst %void %1 DebugTypePointer %35 %uint_7 %uint_0
+%_ptr_Function_v3float = OpTypePointer Function %v3float
+         %48 = OpExtInst %void %1 DebugTypePointer %21 %uint_7 %uint_0
+         %49 = OpTypeFunction %v3float %_ptr_Function_directional_light_data %_ptr_Function_v3float %_ptr_Function_v3float
+         %50 = OpExtInst %void %1 DebugTypeFunction %uint_3 %21 %35 %21 %21
+         %57 = OpExtInst %void %1 DebugFunction %56 %50 %25 %uint_80 %uint_0 %39 %56 %uint_3 %uint_80
+         %58 = OpExtInst %void %1 DebugLocalVariable %59 %35 %25 %uint_80 %uint_0 %57 %uint_4 %uint_1
+         %61 = OpExtInst %void %1 DebugExpression
+         %64 = OpExtInst %void %1 DebugLocalVariable %65 %21 %25 %uint_80 %uint_0 %57 %uint_4 %uint_2
+         %67 = OpExtInst %void %1 DebugLocalVariable %68 %21 %25 %uint_80 %uint_0 %57 %uint_4 %uint_3
+    %v4float = OpTypeVector %float 4
+         %71 = OpExtInst %void %1 DebugTypeVector %19 %uint_4
 %point_light_data = OpTypeStruct %v4float %v4float %float %float %float %float %float
     %uint_18 = OpConstant %uint 18
-        %105 = OpExtInst %void %1 DebugTypeMember %85 %33 %19 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
-        %107 = OpExtInst %void %1 DebugTypeMember %85 %33 %19 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
+         %73 = OpExtInst %void %1 DebugTypeMember %24 %71 %25 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
+         %75 = OpExtInst %void %1 DebugTypeMember %24 %71 %25 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
     %uint_25 = OpConstant %uint 25
-        %108 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
-        %110 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
-        %111 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
-        %112 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
-        %113 = OpExtInst %void %1 DebugTypeMember %89 %31 %19 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
-        %114 = OpExtInst %void %1 DebugTypeComposite %115 %uint_1 %19 %uint_64 %uint_0 %22 %115 %uint_0 %uint_3 %105 %107 %108 %110 %111 %112 %113
-%_runtimearr_point_light_data = OpTypeRuntimeArray %point_light_data
-        %117 = OpExtInst %void %1 DebugTypeArray %114 %uint_0
-%POINT_LIGHT_BUFFER = OpTypeStruct %_runtimearr_point_light_data
+         %76 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+         %78 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+         %79 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+         %80 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+         %81 = OpExtInst %void %1 DebugTypeMember %31 %19 %25 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+   %uint_102 = OpConstant %uint 102
+         %82 = OpExtInst %void %1 DebugTypeComposite %83 %uint_1 %25 %uint_102 %uint_0 %39 %83 %uint_0 %uint_3 %73 %75 %76 %78 %79 %80 %81
+%_ptr_Function_point_light_data = OpTypePointer Function %point_light_data
+         %86 = OpExtInst %void %1 DebugTypePointer %82 %uint_7 %uint_0
+         %87 = OpTypeFunction %v3float %_ptr_Function_point_light_data %_ptr_Function_v3float %_ptr_Function_v3float %_ptr_Function_v3float
+         %88 = OpExtInst %void %1 DebugTypeFunction %uint_3 %21 %82 %21 %21 %21
+         %96 = OpExtInst %void %1 DebugFunction %95 %88 %25 %uint_102 %uint_0 %39 %95 %uint_3 %uint_102
+         %97 = OpExtInst %void %1 DebugLocalVariable %59 %82 %25 %uint_102 %uint_0 %96 %uint_4 %uint_1
+        %101 = OpExtInst %void %1 DebugLocalVariable %65 %21 %25 %uint_102 %uint_0 %96 %uint_4 %uint_2
+        %103 = OpExtInst %void %1 DebugLocalVariable %104 %21 %25 %uint_102 %uint_0 %96 %uint_4 %uint_3
+        %106 = OpExtInst %void %1 DebugLocalVariable %68 %21 %25 %uint_102 %uint_0 %96 %uint_4 %uint_4
+    %uint_24 = OpConstant %uint 24
+        %109 = OpExtInst %void %1 DebugFunction %108 %7 %41 %uint_24 %uint_0 %39 %108 %uint_3 %uint_24
+%_ptr_Function_float = OpTypePointer Function %float
+        %113 = OpExtInst %void %1 DebugTypePointer %19 %uint_7 %uint_0
+    %uint_82 = OpConstant %uint 82
+        %115 = OpExtInst %void %1 DebugLocalVariable %116 %19 %25 %uint_82 %uint_0 %57 %uint_4
+   %float_32 = OpConstant %float 32
+    %uint_84 = OpConstant %uint 84
+        %122 = OpExtInst %void %1 DebugLocalVariable %123 %21 %25 %uint_84 %uint_0 %57 %uint_4
+        %int = OpTypeInt 32 1
+        %129 = OpExtInst %void %1 DebugTypeBasic %128 %uint_32 %uint_4 %uint_0
+      %int_0 = OpConstant %int 0
+    %uint_86 = OpConstant %uint 86
+        %136 = OpExtInst %void %1 DebugLocalVariable %137 %19 %25 %uint_86 %uint_0 %57 %uint_4
+    %float_0 = OpConstant %float 0
+    %uint_88 = OpConstant %uint 88
+        %147 = OpExtInst %void %1 DebugLocalVariable %148 %21 %25 %uint_88 %uint_0 %57 %uint_4
+    %uint_89 = OpConstant %uint 89
+        %157 = OpExtInst %void %1 DebugLocalVariable %158 %19 %25 %uint_89 %uint_0 %57 %uint_4
+    %uint_91 = OpConstant %uint 91
+        %169 = OpExtInst %void %1 DebugLocalVariable %170 %21 %25 %uint_91 %uint_0 %57 %uint_4
+      %int_1 = OpConstant %int 1
+    %uint_92 = OpConstant %uint 92
+        %178 = OpExtInst %void %1 DebugLocalVariable %179 %21 %25 %uint_92 %uint_0 %57 %uint_4
+      %int_2 = OpConstant %int 2
+    %uint_93 = OpConstant %uint 93
+        %192 = OpExtInst %void %1 DebugLocalVariable %31 %21 %25 %uint_93 %uint_0 %57 %uint_4
+      %int_3 = OpConstant %int 3
+    %uint_99 = OpConstant %uint 99
+   %uint_100 = OpConstant %uint 100
+   %uint_105 = OpConstant %uint 105
+        %218 = OpExtInst %void %1 DebugLocalVariable %116 %19 %25 %uint_105 %uint_0 %96 %uint_4
+   %uint_108 = OpConstant %uint 108
+        %223 = OpExtInst %void %1 DebugLocalVariable %224 %21 %25 %uint_108 %uint_0 %96 %uint_4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+        %229 = OpExtInst %void %1 DebugTypePointer %71 %uint_7 %uint_0
+   %uint_110 = OpConstant %uint 110
+        %237 = OpExtInst %void %1 DebugLocalVariable %137 %19 %25 %uint_110 %uint_0 %96 %uint_4
+   %uint_112 = OpConstant %uint 112
+        %246 = OpExtInst %void %1 DebugLocalVariable %148 %21 %25 %uint_112 %uint_0 %96 %uint_4
+   %uint_113 = OpConstant %uint 113
+        %255 = OpExtInst %void %1 DebugLocalVariable %158 %19 %25 %uint_113 %uint_0 %96 %uint_4
+   %uint_115 = OpConstant %uint 115
+        %266 = OpExtInst %void %1 DebugLocalVariable %267 %19 %25 %uint_115 %uint_0 %96 %uint_4
+   %uint_116 = OpConstant %uint 116
+        %278 = OpExtInst %void %1 DebugLocalVariable %279 %19 %25 %uint_116 %uint_0 %96 %uint_4
+    %float_1 = OpConstant %float 1
+      %int_4 = OpConstant %int 4
+   %uint_117 = OpConstant %uint 117
+   %uint_121 = OpConstant %uint 121
+        %304 = OpExtInst %void %1 DebugLocalVariable %170 %21 %25 %uint_121 %uint_0 %96 %uint_4
+   %uint_122 = OpConstant %uint 122
+        %312 = OpExtInst %void %1 DebugLocalVariable %179 %21 %25 %uint_122 %uint_0 %96 %uint_4
+      %int_5 = OpConstant %int 5
+   %uint_123 = OpConstant %uint 123
+        %324 = OpExtInst %void %1 DebugLocalVariable %31 %21 %25 %uint_123 %uint_0 %96 %uint_4
+      %int_6 = OpConstant %int 6
+   %uint_128 = OpConstant %uint 128
+   %uint_129 = OpConstant %uint 129
+   %uint_130 = OpConstant %uint 130
+   %uint_131 = OpConstant %uint 131
+   %uint_132 = OpConstant %uint 132
+    %uint_30 = OpConstant %uint 30
+        %368 = OpExtInst %void %1 DebugLocalVariable %369 %21 %41 %uint_30 %uint_0 %109 %uint_4
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+        %374 = OpExtInst %void %1 DebugTypePointer %21 %uint_1 %uint_0
+  %in_normal = OpVariable %_ptr_Input_v3float Input
+     %uint_8 = OpConstant %uint 8
+        %376 = OpExtInst %void %1 DebugGlobalVariable %377 %21 %41 %uint_30 %uint_0 %39 %377 %in_normal %uint_8
+    %uint_31 = OpConstant %uint 31
+        %382 = OpExtInst %void %1 DebugLocalVariable %68 %21 %41 %uint_31 %uint_0 %109 %uint_4
+%mat4v4float = OpTypeMatrix %v4float 4
+       %bool = OpTypeBool
+        %390 = OpExtInst %void %1 DebugTypeBasic %389 %uint_32 %uint_2 %uint_0
+       %true = OpConstantTrue %bool
+        %387 = OpExtInst %void %1 DebugTypeMatrix %71 %uint_4 %true
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER PhysicalStorageBuffer
+  %uint_5349 = OpConstant %uint 5349
+        %394 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %431 %uint_5349 %uint_0
+               OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER PhysicalStorageBuffer
+        %396 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %449 %uint_5349 %uint_0
+%UniformBufferObject = OpTypeStruct %mat4v4float %mat4v4float %mat4v4float %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %uint %v4float %uint
+    %uint_59 = OpConstant %uint 59
+        %398 = OpExtInst %void %1 DebugTypeMember %399 %387 %41 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
+        %401 = OpExtInst %void %1 DebugTypeMember %399 %387 %41 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
+        %402 = OpExtInst %void %1 DebugTypeMember %399 %387 %41 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_62 = OpConstant %uint 62
+        %403 = OpExtInst %void %1 DebugTypeMember %404 %394 %41 %uint_62 %uint_30 %uint_0 %uint_0 %uint_3
+    %uint_66 = OpConstant %uint 66
+        %406 = OpExtInst %void %1 DebugTypeMember %407 %396 %41 %uint_66 %uint_24 %uint_0 %uint_0 %uint_3
+    %uint_75 = OpConstant %uint 75
+        %409 = OpExtInst %void %1 DebugTypeMember %410 %10 %41 %uint_75 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_73 = OpConstant %uint 73
+        %412 = OpExtInst %void %1 DebugTypeMember %413 %71 %41 %uint_73 %uint_10 %uint_0 %uint_0 %uint_3
+        %415 = OpExtInst %void %1 DebugTypeMember %410 %10 %41 %uint_75 %uint_10 %uint_0 %uint_0 %uint_3
+        %416 = OpExtInst %void %1 DebugTypeComposite %417 %uint_1 %41 %uint_31 %uint_0 %39 %417 %uint_0 %uint_3 %398 %401 %402 %403 %406 %409 %412 %415
+%directional_light_data_0 = OpTypeStruct %v3float %v3float %float %float
+        %419 = OpExtInst %void %1 DebugTypeMember %24 %21 %41 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %420 = OpExtInst %void %1 DebugTypeMember %24 %21 %41 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %421 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
+        %422 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_12 %uint_11 %uint_0 %uint_0 %uint_3
+        %423 = OpExtInst %void %1 DebugTypeComposite %36 %uint_1 %41 %uint_31 %uint_0 %39 %36 %uint_0 %uint_3 %419 %420 %421 %422
+%_runtimearr_directional_light_data_0 = OpTypeRuntimeArray %directional_light_data_0
+        %425 = OpExtInst %void %1 DebugTypeArray %423 %uint_0
+%DIRECTIONAL_LIGHT_BUFFER = OpTypeStruct %_runtimearr_directional_light_data_0
+    %uint_45 = OpConstant %uint 45
+    %uint_28 = OpConstant %uint 28
+        %427 = OpExtInst %void %1 DebugTypeMember %428 %425 %41 %uint_45 %uint_28 %uint_0 %uint_0 %uint_3
+        %431 = OpExtInst %void %1 DebugTypeComposite %432 %uint_1 %41 %uint_31 %uint_0 %39 %432 %uint_0 %uint_3 %427
+%_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER = OpTypePointer PhysicalStorageBuffer %DIRECTIONAL_LIGHT_BUFFER
+%point_light_data_0 = OpTypeStruct %v4float %v4float %float %float %float %float %float
+        %434 = OpExtInst %void %1 DebugTypeMember %24 %71 %41 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
+        %435 = OpExtInst %void %1 DebugTypeMember %24 %71 %41 %uint_18 %uint_10 %uint_0 %uint_0 %uint_3
+        %436 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+        %437 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+        %438 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+        %439 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+        %440 = OpExtInst %void %1 DebugTypeMember %31 %19 %41 %uint_25 %uint_11 %uint_0 %uint_0 %uint_3
+        %441 = OpExtInst %void %1 DebugTypeComposite %83 %uint_1 %41 %uint_31 %uint_0 %39 %83 %uint_0 %uint_3 %434 %435 %436 %437 %438 %439 %440
+%_runtimearr_point_light_data_0 = OpTypeRuntimeArray %point_light_data_0
+        %443 = OpExtInst %void %1 DebugTypeArray %441 %uint_0
+%POINT_LIGHT_BUFFER = OpTypeStruct %_runtimearr_point_light_data_0
     %uint_49 = OpConstant %uint 49
     %uint_22 = OpConstant %uint 22
-        %119 = OpExtInst %void %1 DebugTypeMember %120 %117 %19 %uint_49 %uint_22 %uint_0 %uint_0 %uint_3
-        %123 = OpExtInst %void %1 DebugTypeComposite %124 %uint_1 %19 %uint_64 %uint_0 %22 %124 %uint_0 %uint_3 %119
+        %445 = OpExtInst %void %1 DebugTypeMember %446 %443 %41 %uint_49 %uint_22 %uint_0 %uint_0 %uint_3
+        %449 = OpExtInst %void %1 DebugTypeComposite %450 %uint_1 %41 %uint_31 %uint_0 %39 %450 %uint_0 %uint_3 %445
 %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER = OpTypePointer PhysicalStorageBuffer %POINT_LIGHT_BUFFER
-%_arr_UniformBufferObject_uint_1 = OpTypeArray %UniformBufferObject %uint_1
-        %126 = OpExtInst %void %1 DebugTypeArray %79 %uint_1
-%_ptr_Uniform__arr_UniformBufferObject_uint_1 = OpTypePointer Uniform %_arr_UniformBufferObject_uint_1
-        %128 = OpExtInst %void %1 DebugTypePointer %126 %uint_2 %uint_0
-        %ubo = OpVariable %_ptr_Uniform__arr_UniformBufferObject_uint_1 Uniform
-        %130 = OpExtInst %void %1 DebugGlobalVariable %131 %126 %19 %uint_64 %uint_0 %22 %131 %ubo %uint_8
-        %132 = OpTypeImage %float 2D 0 0 0 1 Unknown
-        %136 = OpExtInst %void %1 DebugInfoNone
-        %133 = OpExtInst %void %1 DebugTypeComposite %134 %uint_0 %19 %uint_64 %uint_0 %22 %135 %136 %uint_3
-        %137 = OpTypeSampledImage %132
-        %138 = OpExtInst %void %1 DebugTypeComposite %139 %uint_0 %19 %uint_64 %uint_0 %22 %140 %136 %uint_3
-%_arr_137_uint_1 = OpTypeArray %137 %uint_1
-        %142 = OpExtInst %void %1 DebugTypeArray %138 %uint_1
-%_ptr_UniformConstant__arr_137_uint_1 = OpTypePointer UniformConstant %_arr_137_uint_1
-        %144 = OpExtInst %void %1 DebugTypePointer %142 %uint_0 %uint_0
-%texture_samples = OpVariable %_ptr_UniformConstant__arr_137_uint_1 UniformConstant
-        %146 = OpExtInst %void %1 DebugGlobalVariable %147 %142 %19 %uint_64 %uint_0 %22 %147 %texture_samples %uint_8
-%_ptr_Input_v3float = OpTypePointer Input %v3float
-        %149 = OpExtInst %void %1 DebugTypePointer %82 %uint_1 %uint_0
-  %in_normal = OpVariable %_ptr_Input_v3float Input
-        %151 = OpExtInst %void %1 DebugGlobalVariable %152 %82 %19 %uint_64 %uint_0 %22 %152 %in_normal %uint_8
-%_ptr_Input_v4float = OpTypePointer Input %v4float
-        %154 = OpExtInst %void %1 DebugTypePointer %33 %uint_1 %uint_0
- %in_tangent = OpVariable %_ptr_Input_v4float Input
-        %156 = OpExtInst %void %1 DebugGlobalVariable %157 %33 %19 %uint_64 %uint_0 %22 %157 %in_tangent %uint_8
-    %v2float = OpTypeVector %float 2
-        %159 = OpExtInst %void %1 DebugTypeVector %31 %uint_2
-%_ptr_Input_v2float = OpTypePointer Input %v2float
-        %161 = OpExtInst %void %1 DebugTypePointer %159 %uint_1 %uint_0
-     %in_tex = OpVariable %_ptr_Input_v2float Input
-        %163 = OpExtInst %void %1 DebugGlobalVariable %164 %159 %19 %uint_64 %uint_0 %22 %164 %in_tex %uint_8
-%_ptr_Input_uint = OpTypePointer Input %uint
-        %166 = OpExtInst %void %1 DebugTypePointer %10 %uint_1 %uint_0
-%in_color_idx = OpVariable %_ptr_Input_uint Input
-        %168 = OpExtInst %void %1 DebugGlobalVariable %169 %10 %19 %uint_64 %uint_0 %22 %169 %in_color_idx %uint_8
+%_runtimearr_UniformBufferObject = OpTypeRuntimeArray %UniformBufferObject
+        %452 = OpExtInst %void %1 DebugTypeArray %416 %uint_0
+%_ptr_Uniform__runtimearr_UniformBufferObject = OpTypePointer Uniform %_runtimearr_UniformBufferObject
+        %454 = OpExtInst %void %1 DebugTypePointer %452 %uint_2 %uint_0
+        %ubo = OpVariable %_ptr_Uniform__runtimearr_UniformBufferObject Uniform
+        %456 = OpExtInst %void %1 DebugGlobalVariable %457 %452 %41 %uint_31 %uint_0 %39 %457 %ubo %uint_8
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+        %460 = OpExtInst %void %1 DebugTypePointer %71 %uint_2 %uint_0
 %in_frag_pos = OpVariable %_ptr_Input_v3float Input
-        %171 = OpExtInst %void %1 DebugGlobalVariable %172 %82 %19 %uint_64 %uint_0 %22 %172 %in_frag_pos %uint_8
+        %465 = OpExtInst %void %1 DebugGlobalVariable %466 %21 %41 %uint_31 %uint_0 %39 %466 %in_frag_pos %uint_8
+    %uint_34 = OpConstant %uint 34
+        %471 = OpExtInst %void %1 DebugLocalVariable %472 %21 %41 %uint_34 %uint_0 %109 %uint_4
+%_ptr_Uniform__ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER = OpTypePointer Uniform %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER
+        %478 = OpExtInst %void %1 DebugTypePointer %394 %uint_2 %uint_0
+%_ptr_PhysicalStorageBuffer_directional_light_data_0 = OpTypePointer PhysicalStorageBuffer %directional_light_data_0
+        %483 = OpExtInst %void %1 DebugTypePointer %423 %uint_5349 %uint_0
+%_ptr_Function_int = OpTypePointer Function %int
+        %500 = OpExtInst %void %1 DebugTypePointer %129 %uint_7 %uint_0
+    %uint_36 = OpConstant %uint 36
+        %502 = OpExtInst %void %1 DebugLocalVariable %503 %129 %41 %uint_36 %uint_0 %109 %uint_4
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+        %520 = OpExtInst %void %1 DebugTypePointer %10 %uint_2 %uint_0
+    %uint_37 = OpConstant %uint 37
+%_ptr_Uniform__ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER = OpTypePointer Uniform %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER
+        %529 = OpExtInst %void %1 DebugTypePointer %396 %uint_2 %uint_0
+%_ptr_PhysicalStorageBuffer_point_light_data_0 = OpTypePointer PhysicalStorageBuffer %point_light_data_0
+        %535 = OpExtInst %void %1 DebugTypePointer %441 %uint_5349 %uint_0
+    %uint_43 = OpConstant %uint 43
+        %566 = OpExtInst %void %1 DebugLocalVariable %567 %71 %41 %uint_43 %uint_0 %109 %uint_4
+        %572 = OpTypeImage %float 2D 0 0 0 1 Unknown
+        %576 = OpExtInst %void %1 DebugInfoNone
+        %573 = OpExtInst %void %1 DebugTypeComposite %574 %uint_0 %41 %uint_43 %uint_0 %39 %575 %576 %uint_3
+        %577 = OpTypeSampledImage %572
+        %578 = OpExtInst %void %1 DebugTypeComposite %579 %uint_0 %41 %uint_43 %uint_0 %39 %580 %576 %uint_3
+%_runtimearr_577 = OpTypeRuntimeArray %577
+        %582 = OpExtInst %void %1 DebugTypeArray %578 %uint_0
+%_ptr_UniformConstant__runtimearr_577 = OpTypePointer UniformConstant %_runtimearr_577
+        %584 = OpExtInst %void %1 DebugTypePointer %582 %uint_0 %uint_0
+%texture_samples = OpVariable %_ptr_UniformConstant__runtimearr_577 UniformConstant
+        %586 = OpExtInst %void %1 DebugGlobalVariable %587 %582 %41 %uint_43 %uint_0 %39 %587 %texture_samples %uint_8
+%_ptr_Input_uint = OpTypePointer Input %uint
+        %589 = OpExtInst %void %1 DebugTypePointer %10 %uint_1 %uint_0
+%in_color_idx = OpVariable %_ptr_Input_uint Input
+        %591 = OpExtInst %void %1 DebugGlobalVariable %592 %10 %41 %uint_43 %uint_0 %39 %592 %in_color_idx %uint_8
+%_ptr_UniformConstant_577 = OpTypePointer UniformConstant %577
+        %596 = OpExtInst %void %1 DebugTypePointer %578 %uint_0 %uint_0
+    %v2float = OpTypeVector %float 2
+        %600 = OpExtInst %void %1 DebugTypeVector %19 %uint_2
+%_ptr_Input_v2float = OpTypePointer Input %v2float
+        %602 = OpExtInst %void %1 DebugTypePointer %600 %uint_1 %uint_0
+     %in_tex = OpVariable %_ptr_Input_v2float Input
+        %604 = OpExtInst %void %1 DebugGlobalVariable %605 %600 %41 %uint_43 %uint_0 %39 %605 %in_tex %uint_8
+    %uint_44 = OpConstant %uint 44
+        %609 = OpExtInst %void %1 DebugLocalVariable %610 %71 %41 %uint_44 %uint_0 %109 %uint_4
+    %uint_47 = OpConstant %uint 47
+      %int_7 = OpConstant %int 7
+    %uint_48 = OpConstant %uint 48
+        %630 = OpExtInst %void %1 DebugLexicalBlock %41 %uint_48 %uint_22 %109
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+        %641 = OpExtInst %void %1 DebugTypePointer %71 %uint_3 %uint_0
+   %outColor = OpVariable %_ptr_Output_v4float Output
+    %uint_50 = OpConstant %uint 50
+        %643 = OpExtInst %void %1 DebugGlobalVariable %644 %71 %41 %uint_50 %uint_0 %39 %644 %outColor %uint_8
+    %uint_54 = OpConstant %uint 54
+    %uint_55 = OpConstant %uint 55
+        %657 = OpExtInst %void %1 DebugLexicalBlock %41 %uint_55 %uint_18 %109
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+        %670 = OpExtInst %void %1 DebugTypePointer %71 %uint_1 %uint_0
+ %in_tangent = OpVariable %_ptr_Input_v4float Input
+        %672 = OpExtInst %void %1 DebugGlobalVariable %673 %71 %41 %uint_62 %uint_0 %39 %673 %in_tangent %uint_8
        %main = OpFunction %void None %6
          %16 = OpLabel
-         %27 = OpExtInst %void %1 DebugScope %18
-         %28 = OpExtInst %void %1 DebugLine %19 %uint_24 %uint_24 %uint_0 %uint_0
-         %26 = OpExtInst %void %1 DebugFunctionDefinition %18 %main
-         %44 = OpExtInst %void %1 DebugLine %19 %uint_61 %uint_61 %uint_0 %uint_0
-               OpStore %outColor %43
-         %45 = OpExtInst %void %1 DebugLine %19 %uint_64 %uint_64 %uint_0 %uint_0
+       %norm = OpVariable %_ptr_Function_v3float Function
+%view_direction_1 = OpVariable %_ptr_Function_v3float Function
+     %result = OpVariable %_ptr_Function_v3float Function
+      %param = OpVariable %_ptr_Function_directional_light_data Function
+    %param_0 = OpVariable %_ptr_Function_v3float Function
+    %param_1 = OpVariable %_ptr_Function_v3float Function
+          %i = OpVariable %_ptr_Function_int Function
+    %param_2 = OpVariable %_ptr_Function_point_light_data Function
+    %param_3 = OpVariable %_ptr_Function_v3float Function
+    %param_4 = OpVariable %_ptr_Function_v3float Function
+    %param_5 = OpVariable %_ptr_Function_v3float Function
+%texture_result = OpVariable %_ptr_Function_v4float Function
+%final_result = OpVariable %_ptr_Function_v4float Function
+        %365 = OpExtInst %void %1 DebugScope %109
+        %366 = OpExtInst %void %1 DebugLine %41 %uint_24 %uint_24 %uint_0 %uint_0
+        %364 = OpExtInst %void %1 DebugFunctionDefinition %109 %main
+        %372 = OpExtInst %void %1 DebugLine %41 %uint_30 %uint_30 %uint_0 %uint_0
+        %371 = OpExtInst %void %1 DebugDeclare %368 %norm %61
+        %379 = OpLoad %v3float %in_normal
+        %380 = OpExtInst %v3float %4 Normalize %379
+               OpStore %norm %380
+        %385 = OpExtInst %void %1 DebugLine %41 %uint_31 %uint_31 %uint_0 %uint_0
+        %384 = OpExtInst %void %1 DebugDeclare %382 %view_direction_1 %61
+        %458 = OpCopyObject %int %int_0
+        %461 = OpAccessChain %_ptr_Uniform_v4float %ubo %458 %int_6
+        %462 = OpLoad %v4float %461
+        %463 = OpVectorShuffle %v3float %462 %462 0 1 2
+        %467 = OpLoad %v3float %in_frag_pos
+        %468 = OpFSub %v3float %463 %467
+        %469 = OpExtInst %v3float %4 Normalize %468
+               OpStore %view_direction_1 %469
+        %475 = OpExtInst %void %1 DebugLine %41 %uint_34 %uint_34 %uint_0 %uint_0
+        %474 = OpExtInst %void %1 DebugDeclare %471 %result %61
+        %476 = OpCopyObject %int %int_0
+        %479 = OpAccessChain %_ptr_Uniform__ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %ubo %476 %int_3
+        %480 = OpLoad %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %479
+        %484 = OpAccessChain %_ptr_PhysicalStorageBuffer_directional_light_data_0 %480 %int_0 %int_0
+        %485 = OpLoad %directional_light_data_0 %484 Aligned 16
+        %486 = OpCompositeExtract %v3float %485 0
+        %487 = OpAccessChain %_ptr_Function_v3float %param %int_0
+               OpStore %487 %486
+        %488 = OpCompositeExtract %v3float %485 1
+        %489 = OpAccessChain %_ptr_Function_v3float %param %int_1
+               OpStore %489 %488
+        %490 = OpCompositeExtract %float %485 2
+        %491 = OpAccessChain %_ptr_Function_float %param %int_2
+               OpStore %491 %490
+        %492 = OpCompositeExtract %float %485 3
+        %493 = OpAccessChain %_ptr_Function_float %param %int_3
+               OpStore %493 %492
+        %495 = OpLoad %v3float %norm
+               OpStore %param_0 %495
+        %497 = OpLoad %v3float %view_direction_1
+               OpStore %param_1 %497
+        %498 = OpFunctionCall %v3float %calculate_directional_light_struct_directional_light_data_vf3_vf3_f1_f11_vf3_vf3_ %param %param_0 %param_1
+               OpStore %result %498
+        %506 = OpExtInst %void %1 DebugLine %41 %uint_36 %uint_36 %uint_0 %uint_0
+        %505 = OpExtInst %void %1 DebugDeclare %502 %i %61
+               OpStore %i %int_0
+               OpBranch %507
+        %507 = OpLabel
+        %511 = OpExtInst %void %1 DebugScope %109
+        %512 = OpExtInst %void %1 DebugLine %41 %uint_36 %uint_36 %uint_0 %uint_0
+               OpLoopMerge %509 %510 None
+               OpBranch %513
+        %513 = OpLabel
+        %515 = OpExtInst %void %1 DebugScope %109
+        %516 = OpExtInst %void %1 DebugLine %41 %uint_36 %uint_36 %uint_0 %uint_0
+        %514 = OpLoad %int %i
+        %517 = OpBitcast %uint %514
+        %518 = OpCopyObject %int %int_0
+        %521 = OpAccessChain %_ptr_Uniform_uint %ubo %518 %int_5
+        %522 = OpLoad %uint %521
+        %523 = OpULessThan %bool %517 %522
+               OpBranchConditional %523 %508 %509
+        %508 = OpLabel
+        %525 = OpExtInst %void %1 DebugScope %109
+        %526 = OpExtInst %void %1 DebugLine %41 %uint_37 %uint_37 %uint_0 %uint_0
+        %524 = OpCopyObject %int %int_0
+        %530 = OpAccessChain %_ptr_Uniform__ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %ubo %524 %int_4
+        %531 = OpLoad %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %530
+        %532 = OpLoad %int %i
+        %536 = OpAccessChain %_ptr_PhysicalStorageBuffer_point_light_data_0 %531 %int_0 %532
+        %537 = OpLoad %point_light_data_0 %536 Aligned 4
+        %538 = OpCompositeExtract %v4float %537 0
+        %539 = OpAccessChain %_ptr_Function_v4float %param_2 %int_0
+               OpStore %539 %538
+        %540 = OpCompositeExtract %v4float %537 1
+        %541 = OpAccessChain %_ptr_Function_v4float %param_2 %int_1
+               OpStore %541 %540
+        %542 = OpCompositeExtract %float %537 2
+        %543 = OpAccessChain %_ptr_Function_float %param_2 %int_2
+               OpStore %543 %542
+        %544 = OpCompositeExtract %float %537 3
+        %545 = OpAccessChain %_ptr_Function_float %param_2 %int_3
+               OpStore %545 %544
+        %546 = OpCompositeExtract %float %537 4
+        %547 = OpAccessChain %_ptr_Function_float %param_2 %int_4
+               OpStore %547 %546
+        %548 = OpCompositeExtract %float %537 5
+        %549 = OpAccessChain %_ptr_Function_float %param_2 %int_5
+               OpStore %549 %548
+        %550 = OpCompositeExtract %float %537 6
+        %551 = OpAccessChain %_ptr_Function_float %param_2 %int_6
+               OpStore %551 %550
+        %553 = OpLoad %v3float %norm
+               OpStore %param_3 %553
+        %555 = OpLoad %v3float %in_frag_pos
+               OpStore %param_4 %555
+        %557 = OpLoad %v3float %view_direction_1
+               OpStore %param_5 %557
+        %558 = OpFunctionCall %v3float %calculate_point_light_struct_point_light_data_vf4_vf4_f1_f1_f1_f1_f11_vf3_vf3_vf3_ %param_2 %param_3 %param_4 %param_5
+        %559 = OpLoad %v3float %result
+        %560 = OpFAdd %v3float %559 %558
+               OpStore %result %560
+               OpBranch %510
+        %510 = OpLabel
+        %562 = OpExtInst %void %1 DebugScope %109
+        %563 = OpExtInst %void %1 DebugLine %41 %uint_36 %uint_36 %uint_0 %uint_0
+        %561 = OpLoad %int %i
+        %564 = OpIAdd %int %561 %int_1
+               OpStore %i %564
+               OpBranch %507
+        %509 = OpLabel
+        %570 = OpExtInst %void %1 DebugScope %109
+        %571 = OpExtInst %void %1 DebugLine %41 %uint_43 %uint_43 %uint_0 %uint_0
+        %569 = OpExtInst %void %1 DebugDeclare %566 %texture_result %61
+        %593 = OpLoad %uint %in_color_idx
+        %594 = OpCopyObject %uint %593
+        %597 = OpAccessChain %_ptr_UniformConstant_577 %texture_samples %594
+        %598 = OpLoad %577 %597
+        %606 = OpLoad %v2float %in_tex
+        %607 = OpImageSampleImplicitLod %v4float %598 %606
+               OpStore %texture_result %607
+        %613 = OpExtInst %void %1 DebugLine %41 %uint_44 %uint_44 %uint_0 %uint_0
+        %612 = OpExtInst %void %1 DebugDeclare %609 %final_result %61
+        %614 = OpLoad %v3float %result
+        %615 = OpCompositeExtract %float %614 0
+        %616 = OpCompositeExtract %float %614 1
+        %617 = OpCompositeExtract %float %614 2
+        %618 = OpCompositeConstruct %v4float %615 %616 %617 %float_1
+        %619 = OpLoad %v4float %texture_result
+        %620 = OpFMul %v4float %618 %619
+               OpStore %final_result %620
+        %622 = OpExtInst %void %1 DebugLine %41 %uint_47 %uint_47 %uint_0 %uint_0
+        %621 = OpCopyObject %int %int_0
+        %625 = OpAccessChain %_ptr_Uniform_uint %ubo %621 %int_7
+        %626 = OpLoad %uint %625
+        %627 = OpIEqual %bool %626 %uint_2
+               OpSelectionMerge %629 None
+               OpBranchConditional %627 %628 %629
+        %628 = OpLabel
+        %633 = OpExtInst %void %1 DebugScope %630
+        %634 = OpExtInst %void %1 DebugLine %41 %uint_48 %uint_48 %uint_0 %uint_0
+        %632 = OpLoad %v3float %result
+        %635 = OpCompositeExtract %float %632 0
+        %636 = OpCompositeExtract %float %632 1
+        %637 = OpCompositeExtract %float %632 2
+        %638 = OpCompositeConstruct %v4float %635 %636 %637 %float_1
+        %639 = OpVectorTimesScalar %v4float %638 %float_1
+               OpStore %final_result %639
+               OpBranch %629
+        %629 = OpLabel
+        %647 = OpExtInst %void %1 DebugScope %109
+        %648 = OpExtInst %void %1 DebugLine %41 %uint_50 %uint_50 %uint_0 %uint_0
+        %646 = OpLoad %v4float %final_result
+               OpStore %outColor %646
+        %650 = OpExtInst %void %1 DebugLine %41 %uint_54 %uint_54 %uint_0 %uint_0
+        %649 = OpCopyObject %int %int_0
+        %652 = OpAccessChain %_ptr_Uniform_uint %ubo %649 %int_7
+        %653 = OpLoad %uint %652
+        %654 = OpIEqual %bool %653 %uint_1
+               OpSelectionMerge %656 None
+               OpBranchConditional %654 %655 %656
+        %655 = OpLabel
+        %660 = OpExtInst %void %1 DebugScope %657
+        %661 = OpExtInst %void %1 DebugLine %41 %uint_55 %uint_55 %uint_0 %uint_0
+        %659 = OpLoad %v3float %in_normal
+        %662 = OpExtInst %v3float %4 FAbs %659
+        %663 = OpCompositeExtract %float %662 0
+        %664 = OpCompositeExtract %float %662 1
+        %665 = OpCompositeExtract %float %662 2
+        %666 = OpCompositeConstruct %v4float %663 %664 %665 %float_1
+               OpStore %outColor %666
+               OpBranch %656
+        %656 = OpLabel
+        %667 = OpExtInst %void %1 DebugScope %109
+        %668 = OpExtInst %void %1 DebugLine %41 %uint_62 %uint_62 %uint_0 %uint_0
                OpReturn
+               OpFunctionEnd
+%calculate_directional_light_struct_directional_light_data_vf3_vf3_f1_f11_vf3_vf3_ = OpFunction %v3float None %49
+      %light = OpFunctionParameter %_ptr_Function_directional_light_data
+     %normal = OpFunctionParameter %_ptr_Function_v3float
+%view_direction = OpFunctionParameter %_ptr_Function_v3float
+         %55 = OpLabel
+%specular_shininess = OpVariable %_ptr_Function_float Function
+%light_direction = OpVariable %_ptr_Function_v3float Function
+       %diff = OpVariable %_ptr_Function_float Function
+%reflect_direction = OpVariable %_ptr_Function_v3float Function
+       %spec = OpVariable %_ptr_Function_float Function
+    %ambient = OpVariable %_ptr_Function_v3float Function
+    %diffuse = OpVariable %_ptr_Function_v3float Function
+   %specular = OpVariable %_ptr_Function_v3float Function
+         %62 = OpExtInst %void %1 DebugScope %57
+         %63 = OpExtInst %void %1 DebugLine %25 %uint_80 %uint_80 %uint_0 %uint_0
+         %60 = OpExtInst %void %1 DebugDeclare %58 %light %61
+         %66 = OpExtInst %void %1 DebugDeclare %64 %normal %61
+         %69 = OpExtInst %void %1 DebugDeclare %67 %view_direction %61
+        %111 = OpExtInst %void %1 DebugFunctionDefinition %57 %calculate_directional_light_struct_directional_light_data_vf3_vf3_f1_f11_vf3_vf3_
+        %119 = OpExtInst %void %1 DebugLine %25 %uint_82 %uint_82 %uint_0 %uint_0
+        %118 = OpExtInst %void %1 DebugDeclare %115 %specular_shininess %61
+               OpStore %specular_shininess %float_32
+        %126 = OpExtInst %void %1 DebugLine %25 %uint_84 %uint_84 %uint_0 %uint_0
+        %125 = OpExtInst %void %1 DebugDeclare %122 %light_direction %61
+        %131 = OpAccessChain %_ptr_Function_v3float %light %int_0
+        %132 = OpLoad %v3float %131
+        %133 = OpFNegate %v3float %132
+        %134 = OpExtInst %v3float %4 Normalize %133
+               OpStore %light_direction %134
+        %140 = OpExtInst %void %1 DebugLine %25 %uint_86 %uint_86 %uint_0 %uint_0
+        %139 = OpExtInst %void %1 DebugDeclare %136 %diff %61
+        %141 = OpLoad %v3float %normal
+        %142 = OpLoad %v3float %light_direction
+        %143 = OpDot %float %141 %142
+        %145 = OpExtInst %float %4 FMax %143 %float_0
+               OpStore %diff %145
+        %151 = OpExtInst %void %1 DebugLine %25 %uint_88 %uint_88 %uint_0 %uint_0
+        %150 = OpExtInst %void %1 DebugDeclare %147 %reflect_direction %61
+        %152 = OpLoad %v3float %light_direction
+        %153 = OpFNegate %v3float %152
+        %154 = OpLoad %v3float %normal
+        %155 = OpExtInst %v3float %4 Reflect %153 %154
+               OpStore %reflect_direction %155
+        %161 = OpExtInst %void %1 DebugLine %25 %uint_89 %uint_89 %uint_0 %uint_0
+        %160 = OpExtInst %void %1 DebugDeclare %157 %spec %61
+        %162 = OpLoad %v3float %view_direction
+        %163 = OpLoad %v3float %reflect_direction
+        %164 = OpDot %float %162 %163
+        %165 = OpExtInst %float %4 FMax %164 %float_0
+        %166 = OpLoad %float %specular_shininess
+        %167 = OpExtInst %float %4 Pow %165 %166
+               OpStore %spec %167
+        %173 = OpExtInst %void %1 DebugLine %25 %uint_91 %uint_91 %uint_0 %uint_0
+        %172 = OpExtInst %void %1 DebugDeclare %169 %ambient %61
+        %175 = OpAccessChain %_ptr_Function_v3float %light %int_1
+        %176 = OpLoad %v3float %175
+               OpStore %ambient %176
+        %182 = OpExtInst %void %1 DebugLine %25 %uint_92 %uint_92 %uint_0 %uint_0
+        %181 = OpExtInst %void %1 DebugDeclare %178 %diffuse %61
+        %184 = OpAccessChain %_ptr_Function_float %light %int_2
+        %185 = OpLoad %float %184
+        %186 = OpLoad %float %diff
+        %187 = OpFMul %float %185 %186
+        %188 = OpAccessChain %_ptr_Function_v3float %light %int_1
+        %189 = OpLoad %v3float %188
+        %190 = OpVectorTimesScalar %v3float %189 %187
+               OpStore %diffuse %190
+        %195 = OpExtInst %void %1 DebugLine %25 %uint_93 %uint_93 %uint_0 %uint_0
+        %194 = OpExtInst %void %1 DebugDeclare %192 %specular %61
+        %197 = OpAccessChain %_ptr_Function_float %light %int_3
+        %198 = OpLoad %float %197
+        %199 = OpLoad %float %spec
+        %200 = OpFMul %float %198 %199
+        %201 = OpAccessChain %_ptr_Function_v3float %light %int_1
+        %202 = OpLoad %v3float %201
+        %203 = OpVectorTimesScalar %v3float %202 %200
+               OpStore %specular %203
+        %205 = OpExtInst %void %1 DebugLine %25 %uint_99 %uint_99 %uint_0 %uint_0
+        %204 = OpLoad %v3float %ambient
+        %207 = OpLoad %v3float %diffuse
+        %208 = OpFAdd %v3float %204 %207
+        %209 = OpLoad %v3float %specular
+        %210 = OpFAdd %v3float %208 %209
+               OpReturnValue %210
+               OpFunctionEnd
+%calculate_point_light_struct_point_light_data_vf4_vf4_f1_f1_f1_f1_f11_vf3_vf3_vf3_ = OpFunction %v3float None %87
+    %light_0 = OpFunctionParameter %_ptr_Function_point_light_data
+   %normal_0 = OpFunctionParameter %_ptr_Function_v3float
+%frag_position = OpFunctionParameter %_ptr_Function_v3float
+%view_direction_0 = OpFunctionParameter %_ptr_Function_v3float
+         %94 = OpLabel
+%specular_shininess_0 = OpVariable %_ptr_Function_float Function
+   %lightDir = OpVariable %_ptr_Function_v3float Function
+     %diff_0 = OpVariable %_ptr_Function_float Function
+%reflect_direction_0 = OpVariable %_ptr_Function_v3float Function
+     %spec_0 = OpVariable %_ptr_Function_float Function
+   %distance = OpVariable %_ptr_Function_float Function
+%attenuation = OpVariable %_ptr_Function_float Function
+  %ambient_0 = OpVariable %_ptr_Function_v3float Function
+  %diffuse_0 = OpVariable %_ptr_Function_v3float Function
+ %specular_0 = OpVariable %_ptr_Function_v3float Function
+         %99 = OpExtInst %void %1 DebugScope %96
+        %100 = OpExtInst %void %1 DebugLine %25 %uint_102 %uint_102 %uint_0 %uint_0
+         %98 = OpExtInst %void %1 DebugDeclare %97 %light_0 %61
+        %102 = OpExtInst %void %1 DebugDeclare %101 %normal_0 %61
+        %105 = OpExtInst %void %1 DebugDeclare %103 %frag_position %61
+        %107 = OpExtInst %void %1 DebugDeclare %106 %view_direction_0 %61
+        %216 = OpExtInst %void %1 DebugFunctionDefinition %96 %calculate_point_light_struct_point_light_data_vf4_vf4_f1_f1_f1_f1_f11_vf3_vf3_vf3_
+        %221 = OpExtInst %void %1 DebugLine %25 %uint_105 %uint_105 %uint_0 %uint_0
+        %220 = OpExtInst %void %1 DebugDeclare %218 %specular_shininess_0 %61
+               OpStore %specular_shininess_0 %float_32
+        %227 = OpExtInst %void %1 DebugLine %25 %uint_108 %uint_108 %uint_0 %uint_0
+        %226 = OpExtInst %void %1 DebugDeclare %223 %lightDir %61
+        %230 = OpAccessChain %_ptr_Function_v4float %light_0 %int_0
+        %231 = OpLoad %v4float %230
+        %232 = OpVectorShuffle %v3float %231 %231 0 1 2
+        %233 = OpLoad %v3float %frag_position
+        %234 = OpFSub %v3float %232 %233
+        %235 = OpExtInst %v3float %4 Normalize %234
+               OpStore %lightDir %235
+        %240 = OpExtInst %void %1 DebugLine %25 %uint_110 %uint_110 %uint_0 %uint_0
+        %239 = OpExtInst %void %1 DebugDeclare %237 %diff_0 %61
+        %241 = OpLoad %v3float %normal_0
+        %242 = OpLoad %v3float %lightDir
+        %243 = OpDot %float %241 %242
+        %244 = OpExtInst %float %4 FMax %243 %float_0
+               OpStore %diff_0 %244
+        %249 = OpExtInst %void %1 DebugLine %25 %uint_112 %uint_112 %uint_0 %uint_0
+        %248 = OpExtInst %void %1 DebugDeclare %246 %reflect_direction_0 %61
+        %250 = OpLoad %v3float %lightDir
+        %251 = OpFNegate %v3float %250
+        %252 = OpLoad %v3float %normal_0
+        %253 = OpExtInst %v3float %4 Reflect %251 %252
+               OpStore %reflect_direction_0 %253
+        %258 = OpExtInst %void %1 DebugLine %25 %uint_113 %uint_113 %uint_0 %uint_0
+        %257 = OpExtInst %void %1 DebugDeclare %255 %spec_0 %61
+        %259 = OpLoad %v3float %view_direction_0
+        %260 = OpLoad %v3float %reflect_direction_0
+        %261 = OpDot %float %259 %260
+        %262 = OpExtInst %float %4 FMax %261 %float_0
+        %263 = OpLoad %float %specular_shininess_0
+        %264 = OpExtInst %float %4 Pow %262 %263
+               OpStore %spec_0 %264
+        %270 = OpExtInst %void %1 DebugLine %25 %uint_115 %uint_115 %uint_0 %uint_0
+        %269 = OpExtInst %void %1 DebugDeclare %266 %distance %61
+        %271 = OpAccessChain %_ptr_Function_v4float %light_0 %int_0
+        %272 = OpLoad %v4float %271
+        %273 = OpVectorShuffle %v3float %272 %272 0 1 2
+        %274 = OpLoad %v3float %frag_position
+        %275 = OpFSub %v3float %273 %274
+        %276 = OpExtInst %float %4 Length %275
+               OpStore %distance %276
+        %282 = OpExtInst %void %1 DebugLine %25 %uint_116 %uint_116 %uint_0 %uint_0
+        %281 = OpExtInst %void %1 DebugDeclare %278 %attenuation %61
+        %284 = OpAccessChain %_ptr_Function_float %light_0 %int_2
+        %285 = OpLoad %float %284
+        %286 = OpAccessChain %_ptr_Function_float %light_0 %int_3
+        %287 = OpLoad %float %286
+        %288 = OpLoad %float %distance
+        %289 = OpFMul %float %287 %288
+        %290 = OpFAdd %float %285 %289
+        %293 = OpExtInst %void %1 DebugLine %25 %uint_117 %uint_117 %uint_0 %uint_0
+        %292 = OpAccessChain %_ptr_Function_float %light_0 %int_4
+        %295 = OpLoad %float %292
+        %296 = OpLoad %float %distance
+        %297 = OpLoad %float %distance
+        %298 = OpFMul %float %296 %297
+        %299 = OpFMul %float %295 %298
+        %300 = OpFAdd %float %290 %299
+        %301 = OpFDiv %float %float_1 %300
+        %302 = OpExtInst %void %1 DebugLine %25 %uint_116 %uint_116 %uint_0 %uint_0
+               OpStore %attenuation %301
+        %307 = OpExtInst %void %1 DebugLine %25 %uint_121 %uint_121 %uint_0 %uint_0
+        %306 = OpExtInst %void %1 DebugDeclare %304 %ambient_0 %61
+        %308 = OpAccessChain %_ptr_Function_v4float %light_0 %int_1
+        %309 = OpLoad %v4float %308
+        %310 = OpVectorShuffle %v3float %309 %309 0 1 2
+               OpStore %ambient_0 %310
+        %315 = OpExtInst %void %1 DebugLine %25 %uint_122 %uint_122 %uint_0 %uint_0
+        %314 = OpExtInst %void %1 DebugDeclare %312 %diffuse_0 %61
+        %317 = OpAccessChain %_ptr_Function_float %light_0 %int_5
+        %318 = OpLoad %float %317
+        %319 = OpAccessChain %_ptr_Function_v4float %light_0 %int_1
+        %320 = OpLoad %v4float %319
+        %321 = OpVectorShuffle %v3float %320 %320 0 1 2
+        %322 = OpVectorTimesScalar %v3float %321 %318
+               OpStore %diffuse_0 %322
+        %327 = OpExtInst %void %1 DebugLine %25 %uint_123 %uint_123 %uint_0 %uint_0
+        %326 = OpExtInst %void %1 DebugDeclare %324 %specular_0 %61
+        %329 = OpAccessChain %_ptr_Function_float %light_0 %int_6
+        %330 = OpLoad %float %329
+        %331 = OpLoad %float %spec_0
+        %332 = OpFMul %float %330 %331
+        %333 = OpAccessChain %_ptr_Function_v4float %light_0 %int_1
+        %334 = OpLoad %v4float %333
+        %335 = OpVectorShuffle %v3float %334 %334 0 1 2
+        %336 = OpVectorTimesScalar %v3float %335 %332
+               OpStore %specular_0 %336
+        %338 = OpExtInst %void %1 DebugLine %25 %uint_128 %uint_128 %uint_0 %uint_0
+        %337 = OpLoad %float %attenuation
+        %340 = OpLoad %v3float %ambient_0
+        %341 = OpVectorTimesScalar %v3float %340 %337
+               OpStore %ambient_0 %341
+        %343 = OpExtInst %void %1 DebugLine %25 %uint_129 %uint_129 %uint_0 %uint_0
+        %342 = OpLoad %float %attenuation
+        %345 = OpLoad %v3float %diffuse_0
+        %346 = OpVectorTimesScalar %v3float %345 %342
+               OpStore %diffuse_0 %346
+        %348 = OpExtInst %void %1 DebugLine %25 %uint_130 %uint_130 %uint_0 %uint_0
+        %347 = OpLoad %float %attenuation
+        %350 = OpLoad %v3float %specular_0
+        %351 = OpVectorTimesScalar %v3float %350 %347
+               OpStore %specular_0 %351
+        %353 = OpExtInst %void %1 DebugLine %25 %uint_131 %uint_131 %uint_0 %uint_0
+        %352 = OpLoad %v3float %ambient_0
+        %355 = OpLoad %v3float %diffuse_0
+        %356 = OpFAdd %v3float %352 %355
+        %357 = OpLoad %v3float %specular_0
+        %358 = OpFAdd %v3float %356 %357
+               OpReturnValue %358
                OpFunctionEnd

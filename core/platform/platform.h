@@ -35,15 +35,11 @@ bool platform_audio_shutdown(platform_state* plat_state);
 //MEMORY
 void* platform_allocate(u64 size, b8 aligned);
 
-
-void platform_free(void* block, b8 aligned);
-
+void platform_free(void* block);
 
 void* platform_zero_memory(void* block, u64 size);
 
-
 void* platform_copy_memory(void* dest, const void* source, u64 size);
-
 
 void* platform_set_memory(void* dest, i32 value, u64 size);
 

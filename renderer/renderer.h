@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "../app_types.h"
 
-MAPI bool renderer_init(struct renderer_app* renderer_inst, Arena* arena);
+MAPI bool renderer_init(struct renderer_app* renderer_inst);
 
 MAPI void renderer_update(struct renderer_app* renderer_inst, Clock* clock);
 

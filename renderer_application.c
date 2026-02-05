@@ -7,8 +7,6 @@ typedef struct application_state
 
     platform_state platform;
 
-    Arena* application_memory_arena;
-
     Clock clock;
 
     b8 is_running;
@@ -37,18 +35,23 @@ bool application_renderer_create(struct renderer_app* renderer)
     //set the renderer
     app_state.renderer = renderer;
 
-    //on the stack, we want this first to make sure everything else if working
+    //initalize the applications memory
+    // Memory_System_Config memory_config;
+    // memory_config.memory_request_size = GB(4);
+    // memory_config.file_config = "What's up Boy";
+
+    u64 memory_request_size = GB(4);
+    memory_system_init(memory_request_size);
+
     memory_tracker_init();
 
-    u64 application_memory_requirments = GB(4);
-    app_state.application_memory_arena = arena_init_malloc(application_memory_requirments);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 
     app_state.is_running = true;
 
     // Initialize subsystems.
-    event_init(app_state.application_memory_arena);
-    input_init(app_state.application_memory_arena);
+    event_init();
+    input_init();
     audio_system_init();
 
 
@@ -71,7 +74,7 @@ bool application_renderer_create(struct renderer_app* renderer)
     }
     app_state.renderer->plat_state = &app_state.platform;
 
-    if (!app_state.renderer->renderer_initialize(app_state.renderer, app_state.application_memory_arena))
+    if (!app_state.renderer->renderer_initialize(app_state.renderer))
     {
         FATAL("Failed to initialize the renderer")
         return false;
@@ -97,9 +100,8 @@ bool application_renderer_create(struct renderer_app* renderer)
     event_shutdown();
 
 
-    arena_free(app_state.application_memory_arena);
     memory_tracker_shutdown();
-
+    memory_system_shutdown();
 
     return true;
 }

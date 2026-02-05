@@ -7,7 +7,7 @@
 #include "input.h"
 #include "core/platform/platform.h"
 #include "game_entry.c"
-#include "memory_tracker.h"
+#include "core/memory/memory_tracker.h"
 
 typedef struct application_state
 {

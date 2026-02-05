@@ -2,6 +2,7 @@
 #define EVENT_H
 #include "arena.h"
 #include "array.h"
+#include "memory/memory_system.h"
 
 
 typedef enum event_type
@@ -89,13 +90,13 @@ typedef struct event_system
 static bool is_event_system_init = false;
 static event_system event_system_internal;
 
-bool event_init(Arena* arena)
+bool event_init()
 {
     INFO("EVENT SYSTEM INIT")
 
     u64 event_system_mem_requirement = MB(1);
-    void* event_system_mem = arena_alloc(arena, event_system_mem_requirement);
-    arena_init(&event_system_internal.event_system_arena, event_system_mem, event_system_mem_requirement);
+    void* event_system_mem = memory_system_alloc(event_system_mem_requirement);
+    arena_init(&event_system_internal.event_system_arena, event_system_mem, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
 
 
     if (is_event_system_init == true) { return false; }

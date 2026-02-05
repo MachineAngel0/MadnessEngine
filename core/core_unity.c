@@ -14,9 +14,8 @@
 #include "../core/logger.h"
 #include "../core/maths/math_types.h"
 #include "../core/misc_util.h"
-#include "maths/math_lib.h"
+#include "../core/maths/math_lib.h"
 #include "../core/unit_test.h"
-#include "../core/memory_tracker.h"
 #include "../core/c_string.h"
 #include "../core/id_gen.h"
 
@@ -39,6 +38,10 @@
 #elif defined(__linux__)
 #include "../core/platform/platform_linux.c"
 #endif
+
+//CORE - MEMORY
+#include "../core/memory/memory_tracker.h"
+#include "../core/memory/memory_system.h"
 
 
 //CORE - DSA

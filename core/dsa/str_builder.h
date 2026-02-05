@@ -120,7 +120,7 @@ String* string_builder_to_c_string(const String_Builder* builder)
 
 void string_builder_test()
 {
-    TEST_START("STRING BUILDER");
+    TEST_START(STRING BUILDER);
 
     const char* HI = "HI";
 
@@ -143,7 +143,7 @@ void string_builder_test()
 
 
 
-    TEST_END("STRING BUILDER");
+    TEST_END(STRING BUILDER);
 }
 
 

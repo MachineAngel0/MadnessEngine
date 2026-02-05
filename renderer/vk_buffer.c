@@ -512,6 +512,12 @@ void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer* 
 void vulkan_buffer_cpu_data_copy_from_offset_handle(renderer* renderer, Buffer_Handle* buffer_handle, void* data,
                                                     u64 data_size)
 {
+    if (data_size <= 0)
+    {
+        WARN("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
+        return;
+    }
+
     //get buffer from handle
     vulkan_buffer* buffer = &renderer->buffer_system->buffers[buffer_handle->handle];
 
@@ -519,17 +525,10 @@ void vulkan_buffer_cpu_data_copy_from_offset_handle(renderer* renderer, Buffer_H
     //TODO: grab an available staging buffer
     vulkan_buffer* staging_buffer = &renderer->buffer_system->staging_buffer_ring[0];
 
-    // Debug 1: Check source data
-    float* src = (float*)data;
-    // DEBUG("Source data before memcpy: %f, %f\n", src[0], src[1]);
-
     //copy data into the staging buffer
     memcpy(staging_buffer->mapped_data, data, data_size);
 
-    // Debug 2: Check staging buffer after memcpy
-    float* staging = (float*)staging_buffer->mapped_data;
-    // DEBUG("Staging buffer after memcpy: %f, %f\n", staging[0], staging[1]);
-
+    /*
     // Flush the mapped memory to make it visible to the GPU
     VkMappedMemoryRange range = {0};
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -537,7 +536,7 @@ void vulkan_buffer_cpu_data_copy_from_offset_handle(renderer* renderer, Buffer_H
     range.offset = 0;
     range.size = VK_WHOLE_SIZE;
     vkFlushMappedMemoryRanges(device, 1, &range);
-
+    */
 
     //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
 

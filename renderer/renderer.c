@@ -18,18 +18,18 @@ static renderer renderer_internal;
 static UI_System* UI_System_internal;
 
 
-bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
+bool renderer_init(struct renderer_app* renderer_inst)
 {
     vulkan_context* vk_context = &renderer_internal.context;
 
     //set up memory for the renderer
-    u64 renderer_system_mem_requirement = GB(1);
-    void* renderer_system_mem = arena_alloc(arena, renderer_system_mem_requirement);
-    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement);
+    u64 renderer_system_mem_requirement = GB(0.5);
+    void* renderer_system_mem = memory_system_alloc(renderer_system_mem_requirement);
+    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
 
     u64 frame_arena_mem_size = GB(0.5);
-    void* frame_arena_mem = arena_alloc(&renderer_internal.arena, frame_arena_mem_size);
-    arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size);
+    void* frame_arena_mem = memory_system_alloc(renderer_system_mem_requirement);
+    arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size, MEMORY_SUBSYSTEM_RENDERER);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -138,9 +138,10 @@ bool renderer_init(struct renderer_app* renderer_inst, Arena* arena)
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
-    mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
+    // mesh_load_gltf_2(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh_load_gltf_2(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    mesh_load_gltf_2(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    mesh_system_generate_draw_data_2(&renderer_internal, renderer_internal.mesh_system);
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -294,6 +295,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     memcpy(renderer_internal.buffer_system->global_uniform_buffers[vk_context.current_frame].mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
+    // mesh_system_generate_draw_data_2(&renderer_internal, renderer_internal.mesh_system);
+
+
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
@@ -392,11 +396,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
 
-    //UBERSHADER MESH INDIRECT DRAW
 
 
 
-    //INDIRECT DRAW
+    //UBER SHADER MESH INDIRECT DRAW
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer_internal.indirect_mesh_pipeline.handle);
 
@@ -545,6 +548,15 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     vkCmdDrawIndexed(command_buffer_current_frame->handle,
                      (u32)vk_context.shader_texture_bindless.vertex_info.indices_size,
                      1, 0, 0, 0);
+
+
+
+    //UI
+    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+
+
+
+
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
 

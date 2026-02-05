@@ -8,7 +8,7 @@
 
 #include "unit_test.h"
 #include "arena_stack.h"
-#include "memory_tracker.h"
+#include "../memory/memory_tracker.h"
 
 
 
@@ -16,6 +16,11 @@
  * HEADER -> num_items, stride, capacity, allocator
  * void* data
  */
+
+
+// literally does nothing, it's here just to easily see that something is a array, without having to guess/remember
+#define array_type(type) type
+
 
 typedef struct array_new_header
 {
@@ -695,5 +700,57 @@ void _array_new_test()
 
     TEST_REPORT(array_new);
 }
+
+
+
+//NEW ARRAY TESTING THINGGY
+void _karray_init(u32 length, u32 stride, u32* out_length, u32* out_stride, void** block);
+void _karray_free(u32* length, u32* stride, void** block);
+
+void _array_super_new_create(const u64 data_stride, const u64 capacity, u64* out_stride, u64* out_capacity, void** mem_block)
+{
+    *out_capacity = capacity;
+    *out_stride = data_stride;
+    *mem_block = malloc(data_stride * capacity);
+}
+
+void _karray_free(u32* length, u32* stride, void** block) {
+    free(*block);
+    *length =0;
+    *stride = 0;
+}
+
+#define ARRAY_TYPE_NAMED(type, name) \
+    typedef struct name##_array{ \
+        u64 capacity; \
+        u64 stride; \
+        type* data;\
+    }name##_array; \
+\
+    name##_array name##_array_create(u64 capacity) \
+    { \
+        name##_array arr; \
+        _array_super_new_create(sizeof(type), capacity, &arr.stride, &arr.capacity,  (void**)&arr.data); \
+        return arr; \
+    };
+
+
+#define ARRAY_TYPE(type) ARRAY_TYPE_NAMED(type, type)
+
+ARRAY_TYPE(u8)
+ARRAY_TYPE(u16)
+ARRAY_TYPE(u32)
+ARRAY_TYPE(u64)
+
+ARRAY_TYPE(i8)
+ARRAY_TYPE(i16)
+ARRAY_TYPE(i32)
+ARRAY_TYPE(i64)
+
+ARRAY_TYPE(f32)
+ARRAY_TYPE(f64)
+
+ARRAY_TYPE(bool)
+
 
 #endif

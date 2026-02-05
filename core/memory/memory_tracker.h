@@ -1,21 +1,19 @@
 ﻿#ifndef MEMORY_H
 #define MEMORY_H
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "logger.h"
-#include "defines.h"
+#include "../logger.h"
+#include "../defines.h"
 
 //TODO: quick unit test
+//TODO: hook up to the containers
 
-//TODO: at least hook this up to the containers
 
 //used for containers like arrays
 typedef enum memory_container_type
 {
-    MEMORY_CONTAINER_APPLICATION_ARENA,
     MEMORY_CONTAINER_ARENA,
     MEMORY_CONTAINER_ARENA_STACK,
     MEMORY_CONTAINER_ARENA_POOl,
@@ -34,7 +32,6 @@ typedef enum memory_container_type
 
 static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 {
-    "MEMORY_CONTAINER_APPLICATION_ARENA",
     "MEMORY_CONTAINER_ARENA",
     "MEMORY_CONTAINER_ARENA_STACK",
     "MEMORY_CONTAINER_ARENA_POOl",
@@ -52,6 +49,7 @@ static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 //used for subsystems like the render or entity systems
 typedef enum memory_subsystem_type
 {
+    MEMORY_SUBSYSTEM_APPLICATION_ARENA,
     MEMORY_SUBSYSTEM_GAME,
     MEMORY_SUBSYSTEM_ENTITY,
     MEMORY_SUBSYSTEM_ANIMATION,
@@ -65,6 +63,7 @@ typedef enum memory_subsystem_type
 //used for subsystems like animation or entity subsystems
 static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
 {
+    "MEMORY_SUBSYSTEM_APPLICATION_ARENA",
     "MEMORY_GAME",
     "MEMORY_ENTITY",
     "MEMORY_ANIMATION",
@@ -198,7 +197,9 @@ void memory_tracker_print_memory_usage()
             FATAL("MEMORY CONTAINER PRINT ERROR");
         }
     }
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu HB", (memory.memory_container_size / GB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu MB", (memory.memory_container_size / MB(1)));
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu KB", (memory.memory_container_size / KB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu BYTES\n", memory.memory_container_size);
 
 
@@ -230,8 +231,11 @@ void memory_tracker_print_memory_usage()
             FATAL("MEMORY SUBSYSTEM PRINT ERROR");
         }
     }
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu MB", (memory.memory_subsystem_size / MB(1)));
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", memory.memory_subsystem_size);
+    u64 mem_size = memory.memory_subsystem_size;
+    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu GB", (mem_size / GB(1)));
+    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu MB", (mem_size / MB(1)));
+    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu KB", (mem_size / KB(1)));
+;    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", mem_size);
 }
 
 void memory_tracker_unit_test()
