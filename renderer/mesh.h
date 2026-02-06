@@ -916,7 +916,7 @@ void mesh_system_generate_draw_data_2(renderer* renderer, Mesh_System* mesh_syst
 
             //add the draw data
             //push the indirect draw into the draw data
-            VkDrawIndexedIndirectCommand* draw_instance = &mesh_system->static_mesh_array->indirect_draw_array[
+            VkDrawIndexedIndirectCommand* draw_instance = &mesh_system->static_mesh_array[s_mesh_idx].indirect_draw_array[
                 submesh_idx];
 
             for (int i = 0; i < mesh_system->mesh_shader_permutations->permutations_count; i++)

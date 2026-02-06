@@ -139,7 +139,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
     //INDIRECT DRAW
     // mesh_load_gltf_2(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
-    // mesh_load_gltf_2(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    mesh_load_gltf_2(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     mesh_load_gltf_2(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     mesh_system_generate_draw_data_2(&renderer_internal, renderer_internal.mesh_system);
 
