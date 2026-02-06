@@ -25,7 +25,7 @@ typedef struct Memory_System
 static Memory_System memory_system;
 
 
-Memory_System* memory_system_init(u64 memory_request_size)
+void memory_system_init(u64 memory_request_size)
 {
     void* memory = platform_allocate(memory_request_size, true);
     //this should absolutely hard crash

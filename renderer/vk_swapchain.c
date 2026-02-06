@@ -115,11 +115,12 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
 
     //create the swapchain image and image view
 
-    swapchain_out->image_count = 0;
-    VK_CHECK(
+    // swapchain_out->image_count = 0;
+    VkResult get_result =
         vkGetSwapchainImagesKHR(context->device.logical_device, swapchain_out->swapchain_handle, &swapchain_out->
             image_count,
-            0));
+            0);
+    VK_CHECK(get_result);
     //NOTE: these might fail, idk why
     if (!swapchain_out->images)
     {

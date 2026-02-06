@@ -1,7 +1,7 @@
 ; SPIR-V
 ; Version: 1.0
 ; Generator: Khronos Glslang Reference Front End; 11
-; Bound: 55
+; Bound: 56
 ; Schema: 0
                OpCapability Shader
                OpExtension "SPV_KHR_non_semantic_info"
@@ -21,6 +21,7 @@
 
 
 layout(location = 0) in vec3 fragColor;
+
 layout(location = 0) out vec4 outColor;
 
 
@@ -29,7 +30,7 @@ void main() {
 }"
          %29 = OpString "float"
          %37 = OpString "outColor"
-         %45 = OpString "fragColor"
+         %46 = OpString "fragColor"
                OpName %main "main"
                OpName %outColor "outColor"
                OpName %fragColor "fragColor"
@@ -45,12 +46,12 @@ void main() {
      %uint_3 = OpConstant %uint 3
           %6 = OpExtInst %void %1 DebugTypeFunction %uint_3 %void
          %18 = OpExtInst %void %1 DebugSource %2 %19
-     %uint_8 = OpConstant %uint 8
+     %uint_9 = OpConstant %uint 9
      %uint_1 = OpConstant %uint 1
      %uint_4 = OpConstant %uint 4
      %uint_2 = OpConstant %uint 2
          %21 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %18 %uint_2
-         %17 = OpExtInst %void %1 DebugFunction %16 %6 %18 %uint_8 %uint_0 %21 %16 %uint_3 %uint_8
+         %17 = OpExtInst %void %1 DebugFunction %16 %6 %18 %uint_9 %uint_0 %21 %16 %uint_3 %uint_9
       %float = OpTypeFloat 32
          %30 = OpExtInst %void %1 DebugTypeBasic %29 %uint_32 %uint_3 %uint_0
     %v4float = OpTypeVector %float 4
@@ -58,28 +59,29 @@ void main() {
 %_ptr_Output_v4float = OpTypePointer Output %v4float
          %34 = OpExtInst %void %1 DebugTypePointer %32 %uint_3 %uint_0
    %outColor = OpVariable %_ptr_Output_v4float Output
-     %uint_9 = OpConstant %uint 9
-         %36 = OpExtInst %void %1 DebugGlobalVariable %37 %32 %18 %uint_9 %uint_0 %21 %37 %outColor %uint_8
-    %v3float = OpTypeVector %float 3
-         %40 = OpExtInst %void %1 DebugTypeVector %30 %uint_3
-%_ptr_Input_v3float = OpTypePointer Input %v3float
-         %42 = OpExtInst %void %1 DebugTypePointer %40 %uint_1 %uint_0
-  %fragColor = OpVariable %_ptr_Input_v3float Input
-         %44 = OpExtInst %void %1 DebugGlobalVariable %45 %40 %18 %uint_9 %uint_0 %21 %45 %fragColor %uint_8
-    %float_1 = OpConstant %float 1
     %uint_10 = OpConstant %uint 10
+     %uint_8 = OpConstant %uint 8
+         %36 = OpExtInst %void %1 DebugGlobalVariable %37 %32 %18 %uint_10 %uint_0 %21 %37 %outColor %uint_8
+    %v3float = OpTypeVector %float 3
+         %41 = OpExtInst %void %1 DebugTypeVector %30 %uint_3
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+         %43 = OpExtInst %void %1 DebugTypePointer %41 %uint_1 %uint_0
+  %fragColor = OpVariable %_ptr_Input_v3float Input
+         %45 = OpExtInst %void %1 DebugGlobalVariable %46 %41 %18 %uint_10 %uint_0 %21 %46 %fragColor %uint_8
+    %float_1 = OpConstant %float 1
+    %uint_11 = OpConstant %uint 11
        %main = OpFunction %void None %5
          %15 = OpLabel
          %26 = OpExtInst %void %1 DebugScope %17
-         %27 = OpExtInst %void %1 DebugLine %18 %uint_8 %uint_8 %uint_0 %uint_0
+         %27 = OpExtInst %void %1 DebugLine %18 %uint_9 %uint_9 %uint_0 %uint_0
          %25 = OpExtInst %void %1 DebugFunctionDefinition %17 %main
-         %47 = OpExtInst %void %1 DebugLine %18 %uint_9 %uint_9 %uint_0 %uint_0
-         %46 = OpLoad %v3float %fragColor
-         %49 = OpCompositeExtract %float %46 0
-         %50 = OpCompositeExtract %float %46 1
-         %51 = OpCompositeExtract %float %46 2
-         %52 = OpCompositeConstruct %v4float %49 %50 %51 %float_1
-               OpStore %outColor %52
-         %53 = OpExtInst %void %1 DebugLine %18 %uint_10 %uint_10 %uint_0 %uint_0
+         %48 = OpExtInst %void %1 DebugLine %18 %uint_10 %uint_10 %uint_0 %uint_0
+         %47 = OpLoad %v3float %fragColor
+         %50 = OpCompositeExtract %float %47 0
+         %51 = OpCompositeExtract %float %47 1
+         %52 = OpCompositeExtract %float %47 2
+         %53 = OpCompositeConstruct %v4float %50 %51 %52 %float_1
+               OpStore %outColor %53
+         %54 = OpExtInst %void %1 DebugLine %18 %uint_11 %uint_11 %uint_0 %uint_0
                OpReturn
                OpFunctionEnd

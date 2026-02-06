@@ -15,7 +15,7 @@ bool vulkan_graphics_pipeline_create(
     VkPipelineShaderStageCreateInfo* stages,
     VkViewport viewport,
     VkRect2D scissor,
-    b8 is_wireframe,
+    bool is_wireframe,
     vulkan_shader_pipeline* out_pipeline);
 
 void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline);

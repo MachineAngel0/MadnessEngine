@@ -12,7 +12,7 @@ typedef struct platform_state
 } platform_state;
 
 
-b8 platform_startup(
+bool platform_startup(
     platform_state* plat_state,
     const char* application_name,
     i32 x, i32 y,
@@ -22,7 +22,7 @@ b8 platform_startup(
 void platform_shutdown(platform_state* plat_state);
 
 
-b8 platform_pump_messages(platform_state* plat_state);
+bool platform_pump_messages(platform_state* plat_state);
 
 
 
@@ -33,7 +33,7 @@ bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_
 bool platform_audio_shutdown(platform_state* plat_state);
 
 //MEMORY
-void* platform_allocate(u64 size, b8 aligned);
+void* platform_allocate(u64 size, bool aligned);
 
 void platform_free(void* block);
 

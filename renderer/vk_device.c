@@ -547,7 +547,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
         vulkan_physical_device_queue_family_info queue_info = {};
-        b8 result = physical_device_meets_requirements(
+        bool result = physical_device_meets_requirements(
             physical_devices[i],
             vulkan_context->surface,
             &vulkan_context->device.properties,
@@ -768,7 +768,7 @@ bool physical_device_meets_requirements(
                 u32 required_extension_count = darray_get_size(requirements->device_extension_names);
                 for (u32 i = 0; i < required_extension_count; ++i)
                 {
-                    b8 found = FALSE;
+                    bool found = FALSE;
                     for (u32 j = 0; j < available_extension_count; ++j)
                     {
                         if (strcmp(requirements->device_extension_names[i], available_extensions[j].extensionName))

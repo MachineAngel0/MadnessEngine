@@ -28,25 +28,13 @@ void vulkan_renderpass_create(
 void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* renderpass);
 
 
-void vulkan_renderpass_begin(
-    vulkan_command_buffer* command_buffer,
-    vulkan_renderpass* renderpass,
-    VkFramebuffer frame_buffer);
+void vulkan_renderpass_begin(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_end(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
 
 
-void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass);
+void vulkan_renderpass_UI_begin(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_UI_end(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
 
-
-// void renderpass_create(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
-//                        Graphics_Context& graphics_context, unsigned char clear_flags, bool has_prev_pass,
-//                        bool has_next_pass);
-//
-//
-// void renderpass_begin(vulkan_context& vulkan_context, Swapchain_Context& swapchain_context,
-//                       Command_Buffer_Context* command_buffer,
-//                       Graphics_Context& graphics_context, uint32_t image_index, unsigned char clear_flags);
-//
-// void renderpass_end(Command_Buffer_Context* command_buffer, uint32_t frame);
 
 
 #endif //VK_RENDERPASS_H

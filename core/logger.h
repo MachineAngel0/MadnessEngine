@@ -70,7 +70,7 @@ void log_output(log_level level, const char *message, ...)
     sprintf(out_message2, "%s%s\n", log_level_string[level], out_message);
 
 
-    b8 is_error = (level == LOG_LEVEL_ERROR || level == LOG_LEVEL_FATAL);
+    bool is_error = (level == LOG_LEVEL_ERROR || level == LOG_LEVEL_FATAL);
     FILE* console_handle = is_error ? stderr : stdout;
 
     //print message

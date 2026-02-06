@@ -45,22 +45,26 @@ UI_System* ui_system_init(renderer* renderer)
     return ui_state;
 }
 
-void ui_begin(UI_System* ui_state, i32 screen_size_x, i32 screen_size_y)
+void ui_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y)
 {
     //clear draw info and reset the hot id
 
     //std::cout << "MOUSE STATE:" << ui_state.mouse_down << '\n';
 
-    ui_state->screen_size.x = screen_size_x;
-    ui_state->screen_size.y = screen_size_y;
+    ui_system->screen_size.x = screen_size_x;
+    ui_system->screen_size.y = screen_size_y;
 
     //TODO: clear vertex and index data for UI and TEXT
     // clear_vertex_info(ui_state->draw_info.vertex_info);
     // ui_state->draw_info.UI_Objects.clear();
+    ui_system->draw_info.quad_vertex_bytes = 0;
+    ui_system->draw_info.index_bytes = 0;
+    ui_system->draw_info.index_count = 0;
 
-    ui_state->hot.ID = -1;
-    ui_state->hot.layer = -1;
 
+    ui_system->hot.ID = -1;
+    ui_system->hot.ID = -1;
+    ui_system->hot.layer = -1;
 
     //TODO: UPDATE TEXT
     // text_update(ui_state->text_system);
@@ -83,31 +87,25 @@ void ui_end(UI_System* ui_system)
 
     //update mouse state
     ui_system->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
+    DEBUG("MOUSE DOWN %d", ui_system->mouse_down)
     //update mouse pos
     update_ui_mouse_pos(ui_system);
 }
 
 void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
 {
-    /* TODO: another time
-    ui_system->ui_quad_vertex_buffer_handle;
-    ui_system->ui_quad_index_buffer_handle;
-    ui_system->text_vertex_buffer_handle;
-    ui_system->text_index_buffer_handle;
-    */
-
     vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_vertex_buffer_handle);
     vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_buffer_handle);
     // vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_buffer_handle);
     // vulkan_buffer_reset_offset(renderer, ui_system->text_index_buffer_handle);
 
-    //TODO: generate drawindirect commands
+    //TODO: generate draw indirect commands
 
     vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_vertex_buffer_handle,
-                                                   ui_system->draw_info.quad_vertex, sizeof(Quad_Vertex) * 100);
+                                                   ui_system->draw_info.quad_vertex, ui_system->draw_info.quad_vertex_bytes);
 
     vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_index_buffer_handle,
-                                                   ui_system->draw_info.quad_vertex, sizeof(u16) * 100);
+                                                   ui_system->draw_info.indices, ui_system->draw_info.index_bytes);
 }
 
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
@@ -118,7 +116,7 @@ void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buf
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           renderer->ui_pipeline.handle);
 
-    //TODO:
+    //TODO: realistically textures is the only thing the UI needs for me, for now
     //textures
     // vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             // vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
@@ -132,11 +130,16 @@ void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buf
 
     vkCmdBindIndexBuffer(command_buffer->handle,
                          index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT32);
+                         VK_INDEX_TYPE_UINT16);
 
+    // vkCmdDrawIndexed(command_buffer->handle,
+                     // ui_system->draw_info.index_count,
+                     // 1, 0, 0, 0);
     vkCmdDrawIndexed(command_buffer->handle,
-                     ui_system->draw_info.index_count,
-                     1, 0, 0, 0);
+                 ui_system->draw_info.index_count,
+                 1, 0, 0, 0);
+
+
 }
 
 void update_ui_mouse_pos(UI_System* ui_system)
@@ -145,24 +148,20 @@ void update_ui_mouse_pos(UI_System* ui_system)
 }
 
 
-Quad_Vertex* UI_create_quad(vec2 pos, vec2 size, vec3 color)
+Quad_Vertex* UI_create_quad(UI_System* ui_system, vec2 pos, vec2 size, vec3 color)
 {
-    WARN(false, "UI_CREATE_QUAD LIKELY WILL CRASH")
+    Quad_Vertex* out_vertex = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
 
-    Quad_Vertex out_vertex[] = {
-        {.pos = {pos.x, pos.y}, .color = color},
-        {.pos = {pos.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y + size.y}, .color = color},
-        {.pos = {pos.x + size.x, pos.y}, .color = color},
-    };
-
+    out_vertex[0] = (Quad_Vertex){.pos = {pos.x, pos.y}, .color = color};
+    out_vertex[1] = (Quad_Vertex){.pos = {pos.x, pos.y + size.y}, .color = color};
+    out_vertex[2] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y + size.y}, .color = color};
+    out_vertex[3] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y}, .color = color};
 
     return out_vertex;
 }
 
 Quad_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, vec2 size, vec3 color)
 {
-    WARN("UI_CREATE_QUAD_SCEEN_PERCENTAGE LIKELY WILL CRASH")
 
     Quad_Vertex* out_vertex = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
 
@@ -335,6 +334,10 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
     vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
     vec2 converted_size = vec2_div_scalar(screen_percentage, 100.0f);
 
+    // vec2 converted_pos2 = vec2_mul(pos, ui_system->screen_size);
+    // vec2 converted_pos3 = vec2_div(pos, ui_system->screen_size);
+
+    /*
     vec2 final_pos = {
         ui_system->screen_size.x * converted_pos.x,
         ui_system->screen_size.y * converted_pos.y
@@ -342,6 +345,24 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
     vec2 final_size = {
         (ui_system->screen_size.x * converted_size.x) / 2,
         (ui_system->screen_size.y * converted_size.y) / 2
+    };*/
+
+     vec2 final_pos = {
+         converted_pos.x,
+         converted_pos.y
+     };
+     vec2 final_size = {
+         converted_size.x/2,
+         converted_size.y/2,
+     };
+
+    vec2 mouse_hit_pos = {
+        ui_system->screen_size.x * converted_pos.x,
+         ui_system->screen_size.y *converted_pos.y
+    };
+    vec2 mouse_hit_size = {
+        ui_system->screen_size.x * converted_size.x/2,
+        ui_system->screen_size.y * converted_size.y/2,
     };
 
 
@@ -350,7 +371,7 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
     int mesh_id = ui_system->id_generation_number++;
 
     //check if button is hot and active
-    if (region_hit(ui_system, final_pos, final_size))
+    if (region_hit(ui_system, mouse_hit_pos, mouse_hit_size))
     {
         set_hot(ui_system, id);
 
@@ -392,22 +413,21 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
 
 
     /*SET DRAW INFO*/
-    // create indices (two triangles per quad)
-    uint16_t quad_indices[6];
-    memcpy(quad_indices, default_quad_indices, sizeof(uint16_t) * 6);
-
 
     // Add vertices
-    memcpy(ui_system->draw_info.quad_vertex + ui_system->draw_info.quad_vertex_byte_offset, new_quad,
-           sizeof(Quad_Vertex) * 4);
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_byte_offset, quad_indices, sizeof(uint16_t) * 6);
+    memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
+
+    // create indices (two triangles per quad)
+    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices, sizeof(default_quad_indices));
 
     //increase by count
-    ui_system->draw_info.quad_vertex_byte_offset += sizeof(Quad_Vertex) * 4;
-    ui_system->draw_info.quad_vertex_count += 4;
+    ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
     //increase by bytes
-    ui_system->draw_info.index_byte_offset += sizeof(uint16_t) * 6;
-    ui_system->draw_info.index_count += 6;
+    ui_system->draw_info.index_bytes += sizeof(default_quad_indices);
+    ui_system->draw_info.index_count += ARRAY_SIZE(default_quad_indices);
+
+    //check if we clicked the button
+    if (use_button_new(ui_system, id, final_pos, final_size)) return true;
 
     //check if we clicked the button
     if (use_button(ui_system, id, final_pos, final_size)) return true;
@@ -438,7 +458,6 @@ bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
     vec2 converted_size = vec2_div_scalar(size, 100.0f);
 
     //TODO: this realistically can be moved out to the ui_state struct
-    //TODO: THIS IS COMPLETELY WRONG and does not work how i think it does
     float quarter_size_x = ui_system->screen_size.x * 0.25;
     float quarter_size_y = ui_system->screen_size.y * 0.25;
     float half_size_x = ui_system->screen_size.x * 0.5;
@@ -523,19 +542,19 @@ bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
 
 
     /*SET DRAW INFO*/
-    // create indices (two triangles per quad)
-    uint16_t quad_indices[6];
-    memcpy(quad_indices, default_quad_indices, sizeof(uint16_t) * 6);
-
 
     // Add vertices
-    ui_system->draw_info.quad_vertex[ui_system->draw_info.quad_vertex_byte_offset] = *new_quad;
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_byte_offset, quad_indices, sizeof(uint16_t) * 6);
+    memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
+
+    // create indices (two triangles per quad)
+    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices, sizeof(default_quad_indices));
 
     //increase by count
-    ui_system->draw_info.quad_vertex_byte_offset += 1;
+    ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
     //increase by bytes
-    ui_system->draw_info.index_byte_offset += sizeof(uint16_t) * 6;
+    ui_system->draw_info.index_bytes += sizeof(default_quad_indices);
+    ui_system->draw_info.index_count += ARRAY_SIZE(default_quad_indices);
+
 
     //check if we clicked the button
     if (use_button_new(ui_system, id, final_pos, final_size)) return true;

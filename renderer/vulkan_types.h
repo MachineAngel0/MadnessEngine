@@ -221,16 +221,16 @@ typedef struct vulkan_device
 
 typedef struct vulkan_physical_device_requirements
 {
-    b8 graphics;
-    b8 present;
-    b8 compute;
-    b8 transfer;
+    bool graphics;
+    bool present;
+    bool compute;
+    bool transfer;
 
     // darray
     const char** device_extension_names;
 
-    b8 sampler_anisotropy;
-    b8 discrete_gpu;
+    bool sampler_anisotropy;
+    bool discrete_gpu;
 } vulkan_physical_device_requirements;
 
 typedef struct vulkan_physical_device_queue_family_info

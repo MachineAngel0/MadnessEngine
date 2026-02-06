@@ -116,147 +116,140 @@ void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* rende
     }
 }
 
-void vulkan_renderpass_begin(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass,
-                             VkFramebuffer frame_buffer)
+void vulkan_renderpass_begin(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
 {
-    VkRenderPassBeginInfo begin_info = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-    begin_info.renderPass = renderpass->handle;
-    begin_info.framebuffer = frame_buffer;
-    begin_info.renderArea.offset.x = renderpass->screen_pos.x;
-    begin_info.renderArea.offset.y = renderpass->screen_pos.y;
-    begin_info.renderArea.extent.width = renderpass->screen_pos.z;
-    begin_info.renderArea.extent.height = renderpass->screen_pos.w;
+    // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
+    insertImageMemoryBarrier(command_buffer->handle,
+                             renderer->context.swapchain.images[current_frame],
+                             0,
+                             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+    );
+    insertImageMemoryBarrier(command_buffer->handle,
+                             renderer->context.swapchain.depth_attachment.handle,
+                             0,
+                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                             (VkImageSubresourceRange){
+                                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+                             }
+    );
 
-    VkClearValue clear_values[2] = {0};
+    //
+    // // Begin the render pass.
+    // vulkan_renderpass_begin(
+    //     command_buffer_current_frame,
+    //     &vk_context.main_renderpass,
+    //     vk_context.swapchain.framebuffers[image_index].framebuffer_handle);
 
-    clear_values[0].color.float32[0] = renderpass->clear_color.r;
-    clear_values[0].color.float32[1] = renderpass->clear_color.g;
-    clear_values[0].color.float32[2] = renderpass->clear_color.b;
-    clear_values[0].color.float32[3] = renderpass->clear_color.a;
-    clear_values[1].depthStencil.depth = renderpass->depth;
-    clear_values[1].depthStencil.stencil = renderpass->stencil;
+    //with dynamic rendering we need to add a layout transition, using barriers
 
-    begin_info.clearValueCount = 2;
-    begin_info.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(command_buffer->handle, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+    // Set up the rendering attachment info
+    VkRenderingAttachmentInfo color_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = renderer->context.swapchain.image_views[current_frame],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue.color = {0.0f, 0.0f, 0.2f, 0.0f},
+    };
+
+    VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {
+            .offset = {0, 0},
+            .extent = {renderer->context.framebuffer_width, renderer->context.framebuffer_height}
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment,
+    };
+    vkCmdBeginRendering(command_buffer->handle, &rendering_info);
 }
 
-void vulkan_renderpass_end(vulkan_command_buffer* command_buffer, vulkan_renderpass* renderpass)
+
+void vulkan_renderpass_end(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
 {
-    vkCmdEndRenderPass(command_buffer->handle);
+    // Finish the current dynamic rendering section
+    vkCmdEndRendering(command_buffer->handle);
+
+    // End renderpass
 }
 
-
-/*
-void renderpass_create(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
-                       Graphics_Context& graphics_context, unsigned char clear_flags, bool has_prev_pass, bool has_next_pass)
+void vulkan_renderpass_UI_begin(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
 {
-    //TODO: CHANGE TO DYNAMIC RENDERING AND REPLACES RENDER PASS AND FRAME BUFFer
-    //RESOURCE: https://www.youtube.com/watch?v=m1RHLavNjKo&t=624s
-    //VkPipelineRenderingCreateInfo
-    //VK_KHR_dynamic_rendering_local_read dynamic_render;
+    // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
+    VkImageSubresourceRange image_subresource_range = {0};
+    image_subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_subresource_range.baseMipLevel = 0;
+    image_subresource_range.levelCount = 1;
+    image_subresource_range.baseArrayLayer = 0;
+    image_subresource_range.layerCount = 1;
 
 
-    //VkPipelineLayout pipelineLayout; idk what this is here for
+    insertImageMemoryBarrier(command_buffer->handle,
+                             renderer->context.swapchain.images[current_frame],
+                             0,
+                             VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                             VK_IMAGE_LAYOUT_UNDEFINED,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             image_subresource_range
+    );
 
-    unsigned char do_clear_color = (clear_flags & RENDER_PASS_CLEAR_COLOR_BUFFER_FLAG) != 0;
+    //
+    // // Begin the render pass.
+    // vulkan_renderpass_begin(
+    //     command_buffer_current_frame,
+    //     &vk_context.main_renderpass,
+    //     vk_context.swapchain.framebuffers[image_index].framebuffer_handle);
 
-    //TODO: multisampling
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapchain_context.surface_format.format;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    //if our clear flag is true, then we clear the screen
-    colorAttachment.loadOp = do_clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD; // we could use this as well
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //if coming from a previous pass, then we want to be in color_attachment otherwise undefiend
-    colorAttachment.initialLayout = has_prev_pass ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED; // we could use this as well
-    // if we are the last renderpass, then we want to display the image, otherwise, color attachment
-    colorAttachment.finalLayout = has_next_pass ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // we could use this as well
-
-    VkAttachmentReference colorAttachmentRef{};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    //with dynamic rendering we need to add a layout transition, using barriers
 
 
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
+    // Set up the rendering attachment info
+    VkRenderingAttachmentInfo color_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = renderer->context.swapchain.image_views[current_frame],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE, // might not need to be store, can just be none if its lasts in the pipeline
+        .clearValue.color = {0.0f, 0.0f, 0.2f, 0.0f},
+    };
 
-    //TODO:
-    //VkAttachmentDescription depth_attachment{};
-    //VkAttachmentReference depth_attachment{};
-
-
-    if (vkCreateRenderPass(vulkan_context.logical_device, &renderPassInfo, nullptr,
-                           &graphics_context.render_pass) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create render pass!");
-    }
-
-    std::cout << "CREATED RENDERPASS SUCCESS\n";
+    VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {
+            .offset = {0, 0},
+            .extent = {renderer->context.framebuffer_width, renderer->context.framebuffer_height}
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment,
+    };
+    vkCmdBeginRendering(command_buffer->handle, &rendering_info);
 }
 
-void renderpass_begin(Vulkan_Context& vulkan_context, Swapchain_Context& swapchain_context,
-    Command_Buffer_Context* command_buffer, Graphics_Context& graphics_context, uint32_t image_index,
-    unsigned char clear_flags)
+void vulkan_renderpass_UI_end(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
 {
+    // Finish the current dynamic rendering section
+    vkCmdEndRendering(command_buffer->handle);
 
-    //start the render pass
-    VkRenderPassBeginInfo render_pass_info{};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_info.renderPass = graphics_context.render_pass;
-    render_pass_info.framebuffer = graphics_context.frame_buffers[image_index];
-    render_pass_info.renderArea.offset = {0, 0};
-    render_pass_info.renderArea.extent = swapchain_context.surface_capabilities.currentExtent;
+    // End renderpass
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}}; //black color
-    render_pass_info.clearValueCount = 1;
-    render_pass_info.pClearValues = &clearColor;
-
-
-    //unsigned char do_clear_colour = (clear_flags & RENDER_PASS_CLEAR_COLOR_BUFFER_FLAG) != 0;
-    //if (do_clear_colour) {
-    //    kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, renderpass->clear_colour.elements, sizeof(float) * 4);
-    //    begin_info.clearValueCount++;
-    //}
-
-    //unsigned char do_clear_depth = (clear_flags & RENDER_PASS_CLEAR_DEPTH_BUFFER_FLAG) != 0;
-    //if (do_clear_depth) {
-    //    kcopy_memory(clear_values[begin_info.clearValueCount].color.float32, renderpass->clear_colour.elements, sizeof(f32) * 4);
-    //    clear_values[begin_info.clearValueCount].depthStencil.depth = renderpass->depth;
-//
-  //      b8 do_clear_stencil = (renderpass->clear_flags & RENDERPASS_CLEAR_STENCIL_BUFFER_FLAG) != 0;
-    //    clear_values[begin_info.clearValueCount].depthStencil.stencil = do_clear_stencil ? renderpass->stencil : 0;
-      //  begin_info.clearValueCount++;
-    //}
-
-
-    vkCmdBeginRenderPass(command_buffer->command_buffer[image_index], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    // This barrier prepares the color image for presentation, we don't need to care for the depth image
+    insertImageMemoryBarrier(command_buffer->handle,
+                             renderer->context.swapchain.images[current_frame], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
+                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 }
-
-void renderpass_end(Command_Buffer_Context* command_buffer, uint32_t frame)
-{
-    vkCmdEndRenderPass(command_buffer->command_buffer[frame]);
-}
-*/

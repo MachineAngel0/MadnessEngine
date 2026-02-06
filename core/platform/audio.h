@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include "../maths/math_lib.h"
 
-//TODO: remove when i implement audio myself
+//TODO: remove when I implement audio myself
 #define MA_IMPLEMENTATION
 #include "miniaudio.h"
 

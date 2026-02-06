@@ -37,7 +37,7 @@ static LARGE_INTEGER start_time;
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
-b8 platform_startup(platform_state* plat_state,
+bool platform_startup(platform_state* plat_state,
                     const char* application_name,
                     i32 x, i32 y,
                     i32 width, i32 height)
@@ -151,7 +151,7 @@ void platform_shutdown(platform_state* plat_state)
     }
 }
 
-b8 platform_pump_messages(platform_state* plat_state)
+bool platform_pump_messages(platform_state* plat_state)
 {
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE))
@@ -297,7 +297,7 @@ bool platform_audio_shutdown(platform_state* plat_state)
 }
 
 
-void* platform_allocate(u64 size, b8 aligned)
+void* platform_allocate(u64 size, bool aligned)
 {
     return malloc(size);
 }
@@ -372,7 +372,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_SYSKEYUP:
         {
             // Key pressed/released
-            b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             keys key = (u16) w_param;
 
             //if alt
@@ -443,8 +443,29 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         case WM_MBUTTONUP:
         case WM_RBUTTONUP:
         {
-            //b8 pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
-            // TODO: input processing.
+            bool pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
+            mouse_buttons mouse_button = MOUSE_BUTTON_MAX_BUTTONS;
+            switch (msg)
+            {
+            case WM_LBUTTONUP:
+            case WM_LBUTTONDOWN:
+                mouse_button = MOUSE_BUTTON_LEFT;
+                break;
+            case WM_RBUTTONUP:
+            case WM_RBUTTONDOWN:
+                mouse_button = MOUSE_BUTTON_RIGHT;
+                break;
+            case WM_MBUTTONUP:
+            case WM_MBUTTONDOWN:
+                mouse_button = MOUSE_BUTTON_MIDDLE;
+                break;
+            default: break;
+            }
+
+            if (mouse_button != MOUSE_BUTTON_MAX_BUTTONS)
+            {
+                input_process_mouse_button(mouse_button, pressed);
+            }
         }
         break;
     }

@@ -9,9 +9,9 @@ typedef struct application_state
 
     Clock clock;
 
-    b8 is_running;
+    bool is_running;
     //rn used for when the window is minimized
-    b8 is_suspended;
+    bool is_suspended;
 
     i16 width;
     i16 height;

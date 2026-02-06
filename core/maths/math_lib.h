@@ -1248,7 +1248,7 @@ MINLINE mat4 quat_to_rotation_matrix(quat q, vec3 center)
 }
 
 // Creates a quaternion from the given axis and angle.
-MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const b8 normalize)
+MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const bool normalize)
 {
     const f32 half_angle = 0.5f * angle;
 

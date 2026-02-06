@@ -67,13 +67,12 @@ typedef struct
 
 typedef struct UI_Draw_Data
 {
-    //the 100 is temporary
+    //TODO: the 100 is temporary
     Quad_Vertex quad_vertex[100];
-    u32 quad_vertex_byte_offset;
-    u32 quad_vertex_count;
+    u32 quad_vertex_bytes;
 
     u16 indices[100];
-    u32 index_byte_offset;
+    u32 index_bytes;
     u32 index_count;
 
     UI_BUTTON* UI_Objects; // darray or maybe even an allocator
@@ -97,8 +96,8 @@ typedef struct UI_System
 
     int id_generation_number;
 
-    int mouse_down;
-    int mouse_released;
+    bool mouse_down;
+    bool mouse_released;
     i16 mouse_pos_x;
     i16 mouse_pos_y;
 
@@ -139,7 +138,7 @@ typedef struct Transform_2D
 UI_System* ui_system_init(renderer* renderer);
 
 //pass in the size every frame, in the event the size changes
-void ui_begin(UI_System* ui_state, i32 screen_size_x, i32 screen_size_y);
+void ui_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y);
 void ui_end(UI_System* ui_system);
 
 
@@ -151,7 +150,7 @@ void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buf
 
 
 //for drawing
-Quad_Vertex* UI_create_quad(vec2 pos, vec2 size, vec3 color);
+Quad_Vertex* UI_create_quad(UI_System* ui_system, vec2 pos, vec2 size, vec3 color);
 
 
 Quad_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, vec2 size, vec3 color);

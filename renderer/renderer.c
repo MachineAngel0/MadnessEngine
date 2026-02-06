@@ -77,8 +77,6 @@ bool renderer_init(struct renderer_app* renderer_inst)
         vk_context->framebuffer_width,
         vk_context->framebuffer_height,
         &vk_context->swapchain);
-
-
     // Main Renderpass
     vulkan_renderpass_create(
         vk_context,
@@ -86,10 +84,10 @@ bool renderer_init(struct renderer_app* renderer_inst)
         (vec4){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
         (vec4){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
 
-
     // Swapchain framebuffers.
     vk_context->swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context->swapchain.image_count);
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
+
 
 
     // Create command buffers.
@@ -133,15 +131,16 @@ bool renderer_init(struct renderer_app* renderer_inst)
     UI_System_internal = ui_system_init(&renderer_internal);
 
 
+
     //Pipelines
     ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline);
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
-    // mesh_load_gltf_2(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
-    mesh_load_gltf_2(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    mesh_load_gltf_2(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    mesh_system_generate_draw_data_2(&renderer_internal, renderer_internal.mesh_system);
+    mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
+    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -163,6 +162,8 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
     INFO("VULKAN RENDERER INITIALIZED");
 
+
+
     return TRUE;
 }
 
@@ -178,7 +179,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     ui_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
     UI_ID test_id = {0, 0};
-    DO_BUTTON_TEST(UI_System_internal, test_id);
+    //DO_BUTTON_TEST(UI_System_internal, test_id);
+    do_button(UI_System_internal, test_id, (vec2){1,1}, (vec2) {50,50},
+               (vec3){1.0,0.0,0.0}, (vec3) {0.0f,1.0f,0.0f}, (vec3) {0.0f,0.0f,1.0f});
     ui_system_upload_draw_data(&renderer_internal, UI_System_internal);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -552,7 +555,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
 
     //UI
-    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+    // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
 
 
 
@@ -563,8 +566,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // Finish the current dynamic rendering section
     vkCmdEndRendering(command_buffer_current_frame->handle);
 
-    // End renderpass
-    // vulkan_renderpass_end(command_buffer_current_frame, &vk_context.main_renderpass);
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     insertImageMemoryBarrier(command_buffer_current_frame->handle,
@@ -572,6 +573,14 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                              VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
                              (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+
+    // End renderpass
+
+
+    vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);
+    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+    vulkan_renderpass_UI_end(&renderer_internal, command_buffer_current_frame, image_index);
+
 
 
     //End DRAW COMMAND
@@ -617,6 +626,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
+    //TODO: renable
     ui_end(UI_System_internal);
 }
 
@@ -729,10 +739,10 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
 void renderer_on_resize(struct renderer_app* renderer_inst, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
-    vulkan_context vk_context = renderer_internal.context;
+    vulkan_context* vk_context = &renderer_internal.context;
 
 
-    if (!vk_context.is_init)
+    if (!vk_context->is_init)
     {
         INFO("cant resize window yet, not initialized");
         return;
@@ -740,8 +750,8 @@ void renderer_on_resize(struct renderer_app* renderer_inst, u32 width, u32 heigh
 
     //NOTE: doesn't actually resize anything here, just flags the renderer for a resize
     INFO("VULKAN RENDERER RESIZE HAS BEEN CALLED: new width: %d, height: %d", width, height);
-    vk_context.framebuffer_width_new = width;
-    vk_context.framebuffer_height_new = height;
+    vk_context->framebuffer_width_new = width;
+    vk_context->framebuffer_height_new = height;
 
-    recreate_swapchain(&vk_context);
+    recreate_swapchain(vk_context);
 }

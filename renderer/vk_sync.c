@@ -53,7 +53,7 @@ void init_per_frame_sync(vulkan_context* context)
 }
 
 
-b8 vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
+bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
 {
     // if (!fence->is_signaled)
     // {

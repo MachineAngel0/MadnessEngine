@@ -22,7 +22,6 @@ typedef double f64;
 
 // Boolean types
 typedef int b32;
-typedef bool b8; // there is bool but idk if i want to use it
 
 
 // Properly define static assertions.

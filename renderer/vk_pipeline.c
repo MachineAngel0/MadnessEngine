@@ -11,7 +11,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
                                      VkPipelineShaderStageCreateInfo* stages,
                                      VkViewport viewport,
                                      VkRect2D scissor,
-                                     b8 is_wireframe,
+                                     bool is_wireframe,
                                      vulkan_shader_pipeline* out_pipeline)
 {
     // Viewport state

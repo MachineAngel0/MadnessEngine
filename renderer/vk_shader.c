@@ -1463,7 +1463,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
         {
             attribute_descriptions[attribute_index].binding = 0;
             attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
-            attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
+            attribute_descriptions[attribute_index].format = (VkFormat)attribute_info->formats[attribute_index];
 
             offset_total += attribute_info->offsets[attribute_index];
             attribute_descriptions[attribute_index].offset = offset_total;
@@ -1636,16 +1636,18 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeli
 bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline)
 {
     // Pipeline layout creation
-    VkDescriptorSetLayout set_layouts[3] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.storage_descriptors.descriptor_set_layout,
-    };
+    // VkDescriptorSetLayout set_layouts[3] = {
+        // renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
+        // renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
+        // renderer->global_descriptors.storage_descriptors.descriptor_set_layout,
+    // };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
-    pipeline_layout_info.pSetLayouts = set_layouts;
+    // pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
+    // pipeline_layout_info.pSetLayouts = set_layouts;
+    pipeline_layout_info.setLayoutCount = 0;
+    pipeline_layout_info.pSetLayouts = NULL;
     pipeline_layout_info.pushConstantRangeCount = 0;
     pipeline_layout_info.pPushConstantRanges = NULL;
 
@@ -1702,7 +1704,8 @@ bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline)
     //vertex
     input_binding_description[0].binding = 0;
     input_binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2
+    // input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2
+    input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2 + vec3
 
 
     spirv_reflect_input_variable_info* attribute_info =
@@ -1974,7 +1977,7 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
     {
         attribute_descriptions[attribute_index].binding = 0;
         attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
-        attribute_descriptions[attribute_index].format = attribute_info->formats[attribute_index];
+        attribute_descriptions[attribute_index].format = (VkFormat)attribute_info->formats[attribute_index];
 
         offset_total += attribute_info->offsets[attribute_index];
         attribute_descriptions[attribute_index].offset = offset_total;

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "event.h"
 
+//TODO: add support for mouse dragging (when mouse button is down and there is movement)
 
 typedef enum mouse_buttons
 {
@@ -12,6 +13,7 @@ typedef enum mouse_buttons
     MOUSE_BUTTON_MIDDLE,
     MOUSE_BUTTON_MAX_BUTTONS
 } mouse_buttons;
+
 
 
 #define DEFINE_KEY(name, code) KEY_##name = code
@@ -145,6 +147,7 @@ typedef enum keys
     DEFINE_KEY(SLASH, 0xBF),
     DEFINE_KEY(GRAVE, 0xC0),
 
+
     KEYS_MAX_KEYS
 } keys;
 
@@ -211,7 +214,7 @@ void input_update()
 }
 
 
-void input_process_key(uint8_t key, bool pressed)
+void input_process_key(keys key, bool pressed)
 {
     // Only handle this if the state actually changed.
     if (input_system.keyboard_current.keys[key] != pressed)
@@ -232,7 +235,7 @@ void input_process_mouse_move(i16 x, i16 y)
     if (input_system.mouse_current.x != x || input_system.mouse_current.y != y)
     {
         // NOTE: Enable this if debugging.
-        //KDEBUG("Mouse pos: %i, %i!", x, y);
+        //DEBUG("Mouse pos: %i, %i!", x, y);
 
         // Update internal state.
         input_system.mouse_current.x = x;
@@ -254,6 +257,22 @@ void input_process_mouse_wheel(i8 z_delta)
     event_context context;
     context.data.u8[0] = z_delta;
     event_fire(EVENT_MOUSE_WHEEL, 0, context);
+}
+
+void input_process_mouse_button(mouse_buttons button, bool pressed)
+{
+
+    // Only handle this if the state actually changed.
+    if (input_system.mouse_current.buttons[button] != pressed)
+    {
+        // Update internal state.
+        input_system.mouse_current.buttons[button] = pressed;
+
+        // Fire off an event for immediate processing.
+        event_context context;
+        context.data.u16[0] = button;
+        event_fire(pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, 0, context);
+    }
 }
 
 
@@ -318,22 +337,22 @@ void input_get_mouse_change(i16* out_x, i16* out_y)
 }
 
 
-bool input_is_mouse_button_pressed(uint8_t key)
+bool input_is_mouse_button_pressed(mouse_buttons key)
 {
     return input_system.mouse_current.buttons[key] == true;
 }
 
-bool input_is_mouse_button_released(uint8_t key)
+bool input_is_mouse_button_released(mouse_buttons key)
 {
     return input_system.mouse_current.buttons[key] == false;
 }
 
-bool input_was_mouse_button_pressed(uint8_t key)
+bool input_was_mouse_button_pressed(mouse_buttons key)
 {
     return input_system.mouse_previous.buttons[key] == true;
 }
 
-bool input_was_mouse_button_released(uint8_t key)
+bool input_was_mouse_button_released(mouse_buttons key)
 {
     return input_system.mouse_previous.buttons[key] == false;
 }
