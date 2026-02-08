@@ -1,5 +1,4 @@
-﻿#include "spv_reflect.h"
-
+﻿
 #define max_bindless_resources 4096u
 #define max_bindless_bindings 16;
 
@@ -17,7 +16,7 @@ VkDescriptorType descriptor_type_lookup[descriptor_type_max] = {
 };
 
 
-void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
+Descriptor_System* descriptor_pool_allocator_init(renderer* renderer)
 {
     /* list of all available types
         VK_DESCRIPTOR_TYPE_SAMPLER = 0,
@@ -44,6 +43,12 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
         VK_DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
         */
 
+    Descriptor_System* descriptor_system = arena_alloc(&renderer->arena, sizeof(Descriptor_System));
+
+    descriptor_system->max_count = max_bindless_resources;
+    descriptor_system->uniform_count = max_bindless_resources;
+    descriptor_system->texture_count = max_bindless_resources;
+    descriptor_system->storage_count = max_bindless_resources;
 
     //BINDLESS
 
@@ -71,23 +76,39 @@ void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_all
     bindless_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
     // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
-    VkResult bindless_result = vkCreateDescriptorPool(context->device.logical_device, &bindless_pool_info,
-                                                      context->allocator,
-                                                      &descriptor_pools->bindless_descriptor_pool);
+    VkResult bindless_result = vkCreateDescriptorPool(renderer->context.device.logical_device, &bindless_pool_info,
+                                                      renderer->context.allocator,
+                                                      &descriptor_system->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
+
+    create_bindless_uniform_buffer_descriptor_set(renderer,
+                                                  descriptor_system,
+                                                  &descriptor_system->uniform_descriptors);
+
+    create_texture_bindless_descriptor_set(renderer,
+                                           descriptor_system,
+                                           &descriptor_system->texture_descriptors);
+
+    create_bindless_storage_buffer_descriptor_set(renderer,
+                                                  descriptor_system,
+                                                  &descriptor_system->storage_descriptors);
+
+    return descriptor_system;
 }
 
-void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
+void descriptor_pool_allocator_destroy(renderer* renderer, Descriptor_System* descriptor_system)
 {
-    vkDestroyDescriptorPool(context->device.logical_device, descriptor_pools->descriptor_pool, NULL);
+    vkDestroyDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, NULL);
 }
 
-void descriptor_pool_allocator_clear(vulkan_context* context, descriptor_pool_allocator* descriptor_pools)
+void descriptor_pool_allocator_clear(renderer* renderer, Descriptor_System* descriptor_system)
 {
-    VK_CHECK(vkResetDescriptorPool(context->device.logical_device, descriptor_pools->descriptor_pool, 0));
+    VK_CHECK(
+        vkResetDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, 0));
 }
 
-void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
+
+void descriptor_pool_alloc_bindless(renderer* renderer, Descriptor_System* descriptor_system,
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors)
 {
@@ -101,12 +122,13 @@ void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_all
 
     VkDescriptorSetAllocateInfo alloc_info = {0};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = descriptor_pools->bindless_descriptor_pool;
+    alloc_info.descriptorPool = descriptor_system->bindless_descriptor_pool;
     alloc_info.descriptorSetCount = *descriptor_set_count;
     alloc_info.pSetLayouts = set_layout;
     alloc_info.pNext = &count_info;
 
-    VkResult alloc_result = vkAllocateDescriptorSets(context->device.logical_device, &alloc_info, out_descriptors);
+    VkResult alloc_result = vkAllocateDescriptorSets(renderer->context.device.logical_device, &alloc_info,
+                                                     out_descriptors);
 
     if (alloc_result == VK_ERROR_OUT_OF_POOL_MEMORY || alloc_result == VK_ERROR_FRAGMENTED_POOL)
     {
@@ -277,13 +299,13 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
 */
 
 
-void create_texture_bindless_descriptor_set(vulkan_context* context,
-                                            descriptor_pool_allocator* descriptor_pool_allocator,
+void create_texture_bindless_descriptor_set(renderer* renderer,
+                                            Descriptor_System* descriptor_pool_allocator,
                                             vulkan_bindless_descriptors* texture_descriptors)
 {
     texture_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, context->swapchain.max_frames_in_flight);
-    texture_descriptors->descriptor_set_count = (u32)context->swapchain.max_frames_in_flight;
+        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
+    texture_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
@@ -318,7 +340,7 @@ void create_texture_bindless_descriptor_set(vulkan_context* context,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
         &texture_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -327,7 +349,7 @@ void create_texture_bindless_descriptor_set(vulkan_context* context,
     for (u32 i = 0; i < texture_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(context, descriptor_pool_allocator, &texture_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &texture_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &texture_descriptors->descriptor_sets[i]);
     }
@@ -337,43 +359,15 @@ void create_texture_bindless_descriptor_set(vulkan_context* context,
     // darray_free(texture_descriptors->descriptor_sets);
 }
 
-void update_global_texture_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* texture_descriptors,
-                                                   Texture* texture, u32 array_index)
-{
-    //TODO: update vulkan_shader_texture* test_texture, to a Texture* struct type
-
-    VkDescriptorImageInfo image_info = {0}; // for textures
-    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = texture->texture_image_view;
-    image_info.sampler = texture->texture_sampler;
-
-    for (int i = 0; i < texture_descriptors->descriptor_set_count; i++)
-    {
-        VkWriteDescriptorSet write_descriptor_set = {0};
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.dstSet = texture_descriptors->descriptor_sets[i];
-        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_descriptor_set.dstBinding = 0;
-        // write_descriptor_set.descriptorCount = max_bindless_resources;
-        write_descriptor_set.descriptorCount = 1;
-        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
-        write_descriptor_set.dstArrayElement = array_index; // starting element of the array
-        write_descriptor_set.pImageInfo = &image_info;
-        //
-        vkUpdateDescriptorSets(context->device.logical_device, 1,
-                               &write_descriptor_set, 0, 0);
-    }
-}
 
 
-void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
-                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+void create_bindless_uniform_buffer_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* uniform_descriptors)
 {
     uniform_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, context->swapchain.max_frames_in_flight);
-    uniform_descriptors->descriptor_set_count = (u32)context->swapchain.max_frames_in_flight;
+        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
+    uniform_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
@@ -407,7 +401,7 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
         &uniform_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -416,7 +410,7 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
     for (int i = 0; i < uniform_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(context, descriptor_pool_allocator, &uniform_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &uniform_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &uniform_descriptors->descriptor_sets[i]);
     }
@@ -426,45 +420,15 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
     // darray_free(texture_descriptors->descriptor_sets);
 }
 
-void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* uniform_descriptors,
-                                                   vulkan_buffer* buffer, u64 data_size, u32 array_index)
-{
-    MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
-                "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
-
-    // The buffer's information is passed using a descriptor info structure
-    VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
-    bufferInfo.buffer = buffer->handle;
-    bufferInfo.range = data_size;
-    bufferInfo.offset = 0;
-
-    for (int j = 0; j < uniform_descriptors->descriptor_set_count; j++)
-    {
-        VkWriteDescriptorSet write_descriptor_set = {0};
-        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.dstSet = uniform_descriptors->descriptor_sets[j];
-        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write_descriptor_set.dstBinding = 0;
-        // write_descriptor_set.descriptorCount = max_bindless_resources;
-        write_descriptor_set.descriptorCount = 1;
-        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
-        write_descriptor_set.dstArrayElement = array_index; // starting element of the array
-        write_descriptor_set.pBufferInfo = &bufferInfo;
-        //
-        vkUpdateDescriptorSets(context->device.logical_device, 1,
-                               &write_descriptor_set, 0, 0);
-    }
-}
 
 
-void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
-                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+void create_bindless_storage_buffer_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* storage_descriptors)
 {
     storage_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, context->swapchain.max_frames_in_flight);
-    storage_descriptors->descriptor_set_count = (u32)context->swapchain.max_frames_in_flight;
+        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
+    storage_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
@@ -498,7 +462,7 @@ void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(context->device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
         &storage_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -507,7 +471,7 @@ void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
     for (int i = 0; i < storage_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(context, descriptor_pool_allocator, &storage_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &storage_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &storage_descriptors->descriptor_sets[i]);
     }
@@ -518,33 +482,109 @@ void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
 }
 
 
-void update_storage_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* storage_descriptors,
-                                                   vulkan_buffer* buffer, u32 array_index)
+void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
+                                                   Buffer_Handle buffer_handle,
+                                                   u32 binding_index)
 {
-    MASSERT_MSG(buffer->type == BUFFER_TYPE_CPU_STORAGE,
-                "update_storage_buffer_bindless_descriptor_set: NOT A CPU_STORAGE BUFFER TYPE PASSED IN");
+
+    vulkan_buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
+                "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
 
     // The buffer's information is passed using a descriptor info structure
     VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
     bufferInfo.buffer = buffer->handle;
-    bufferInfo.range = buffer->current_offset;
+    bufferInfo.range = buffer->capacity; // use capacity here as we usually wish to update the whole whing
+    // bufferInfo.range = VK_WHOLE_SIZE; // this does functionally the same thing
     bufferInfo.offset = 0;
 
-    for (int j = 0; j < storage_descriptors->descriptor_set_count; j++)
+    for (int j = 0; j < descriptor_system->uniform_descriptors.descriptor_set_count; j++)
     {
         VkWriteDescriptorSet write_descriptor_set = {0};
         write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_descriptor_set.dstSet = storage_descriptors->descriptor_sets[j];
+        write_descriptor_set.dstSet = descriptor_system->uniform_descriptors.descriptor_sets[j];
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write_descriptor_set.dstBinding = 0;
+        // write_descriptor_set.descriptorCount = max_bindless_resources;
+        write_descriptor_set.descriptorCount = 1;
+        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
+        write_descriptor_set.dstArrayElement = buffer_handle.handle; // starting element of the array
+        write_descriptor_set.pBufferInfo = &bufferInfo;
+        //
+        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
+                               &write_descriptor_set, 0, 0);
+    }
+}
+
+
+void update_texture_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
+                                                   Texture_Handle texture_handle,
+                                                   u32 binding_index)
+{
+    //TODO: update vulkan_shader_texture* test_texture, to a Texture* struct type
+
+    Texture* texture = shader_system_get_texture(renderer->shader_system, texture_handle);
+    MASSERT(texture);
+
+
+    VkDescriptorImageInfo image_info = {0}; // for textures
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = texture->texture_image_view;
+    image_info.sampler = texture->texture_sampler;
+
+    for (int i = 0; i < descriptor_system->texture_descriptors.descriptor_set_count; i++)
+    {
+        VkWriteDescriptorSet write_descriptor_set = {0};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = descriptor_system->texture_descriptors.descriptor_sets[i];
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.dstBinding = 0;
+        // write_descriptor_set.descriptorCount = max_bindless_resources;
+        write_descriptor_set.descriptorCount = 1;
+        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
+        write_descriptor_set.dstArrayElement = texture_handle.handle; // starting element of the array
+        write_descriptor_set.pImageInfo = &image_info;
+        //
+        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
+                               &write_descriptor_set, 0, 0);
+    }
+}
+
+void update_storage_buffer_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
+                                                   Buffer_Handle buffer_handle,
+                                                   u32 binding_index)
+{
+    vulkan_buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
+
+
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_CPU_STORAGE,
+                "update_storage_buffer_bindless_descriptor_set: NOT A CPU_STORAGE BUFFER TYPE PASSED IN");
+
+
+    // The buffer's information is passed using a descriptor info structure
+    VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
+    bufferInfo.buffer = buffer->handle;
+    bufferInfo.range = buffer->capacity;
+    // bufferInfo.range = buffer->current_offset;
+    bufferInfo.offset = 0;
+
+    for (int j = 0; j < descriptor_system->storage_descriptors.descriptor_set_count; j++)
+    {
+        VkWriteDescriptorSet write_descriptor_set = {0};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = descriptor_system->storage_descriptors.descriptor_sets[j];
         write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         write_descriptor_set.dstBinding = 0;
         // write_descriptor_set.descriptorCount = max_bindless_resources;
         write_descriptor_set.descriptorCount = 1;
         // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
-        write_descriptor_set.dstArrayElement = array_index; // starting element of the array
+        write_descriptor_set.dstArrayElement = buffer_handle.handle; // starting element of the array
         write_descriptor_set.pBufferInfo = &bufferInfo;
         //
-        vkUpdateDescriptorSets(context->device.logical_device, 1,
+        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
                                &write_descriptor_set, 0, 0);
     }
 }

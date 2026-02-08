@@ -68,6 +68,8 @@ typedef struct Texture
 
 typedef struct Material_Param_Data
 {
+    u32 feature_mask;
+
     vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
     //ALL FROM RANGES 0-1
     float ambient_strength; // optional for now we can remove it later
@@ -83,7 +85,9 @@ typedef struct Material_Param_Data
     u32 roughness_index;
     u32 ambient_occlusion_index;
     u32 emissive_index;
-
+    u32 _padding0;
+    u32 _padding1;
+    u32 _padding2;
 } Material_Param_Data;
 
 
@@ -98,17 +102,19 @@ typedef struct vertex_mesh
     // vec4* color; //might not support
 } vertex_mesh;
 
-typedef struct pc_mesh
+typedef struct PC_Mesh
 {
-    // NOTE: VkDeviceAddress just a typedef of a u64
-    VkDeviceAddress pos_address;
-    VkDeviceAddress normal_index;
-    VkDeviceAddress tangent_index;
-    VkDeviceAddress uv_index;
+    //per instance data change
+    u32 ubo_buffer_idx;
+    u32 normal_buffer_idx;
+    u32 tangent_buffer_idx;
+    u32 uv_buffer_idx;
+    u32 transform_buffer_idx;
+    u32 material_buffer_idx;
+    u32 _padding;
+    u32 _padding1;
 
-    u32 albedo_material_index;
-    uint32_t _padding;
-} pc_mesh;
+} PC_Mesh;
 
 
 typedef struct submesh
@@ -352,7 +358,6 @@ typedef struct vulkan_shader_pipeline
 } vulkan_shader_pipeline;
 
 
-
 typedef struct Shader_System
 {
     Texture default_texture;
@@ -379,20 +384,19 @@ typedef struct Shader_System
 
 
     u32 max_indexes;
-
-
 } Shader_System;
 
 
 typedef struct Buffer_System
 {
-    //GLOBAL BUFFERS
-    vulkan_buffer* global_uniform_buffers;
-    u32 global_uniform_buffer_size;
+    u32 frames_in_flight;
+
+    //NOTE: buffers are handles to the first instance of them, multiple are created for each frame in flight
+    // but when we get them from the system, they are offset by the current frame
+
+    Buffer_Handle global_ubo_handle;
 
     //an array of them
-    //NOTE: if we run out we can always allocate more, for now we just keep one of each
-    //TODO: create multiple buffers by default, one for each frame in flight
     vulkan_buffer* buffers;
     u32 buffers_size; // total we have
     u32 buffer_current_count; // current amount given out
@@ -478,18 +482,14 @@ typedef struct vulkan_shader_texture
 } vulkan_shader_texture;
 
 
-typedef struct descriptor_pool_allocator
-{
-    VkDescriptorPool descriptor_pool;
-    VkDescriptorPool bindless_descriptor_pool;
-} descriptor_pool_allocator;
-
 typedef struct global_descriptor_sets
 {
     vulkan_bindless_descriptors uniform_descriptors;
     vulkan_bindless_descriptors texture_descriptors;
     vulkan_bindless_descriptors storage_descriptors;
 } global_descriptor_sets;
+
+
 
 
 typedef struct vulkan_context
@@ -526,8 +526,6 @@ typedef struct vulkan_context
     VkCommandPool graphics_command_pool;
     vulkan_command_buffer* graphics_command_buffer; // darray
 
-    //global_descriptor_pool
-    descriptor_pool_allocator global_descriptor_pool;
 
 
     //TODO: Clean this up
@@ -727,11 +725,6 @@ String mesh_pipeline_flag_names_string[] = {
     {"AO", sizeof("AO") - 1},
 };
 
-typedef struct mesh_permutation_draw_data
-{
-    //which also stores the number of meshes we will be drawing from the vertex buffer
-    darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
-} mesh_permutation_draw_data;
 
 
 typedef struct PipelinePermutation
@@ -740,20 +733,28 @@ typedef struct PipelinePermutation
     //we could also load them from a config file later
     darray_type(String*) debug_shader_name;
     darray_type(uint32_t*) permutation_keys; // stores the index of all permutations that are in use
-
-    // for quick lookups whether it exists or not, then to lookup the index for insertion
-    hash_set* permutation_hash;
-
-    darray_type(mesh_permutation_draw_data*) draw_data;
-
     u32 permutations_count;
+
+
+
 } Mesh_Pipeline_Permutations;
 
 
-typedef struct mesh_uniform_constants
+
+typedef struct Descriptor_System
 {
-    u32 mask;
-} mesh_uniform_constants;
+    VkDescriptorPool bindless_descriptor_pool;
+
+    vulkan_bindless_descriptors uniform_descriptors;
+    vulkan_bindless_descriptors texture_descriptors;
+    vulkan_bindless_descriptors storage_descriptors;
+
+    u32 uniform_count;
+    u32 texture_count;
+    u32 storage_count;
+
+    u32 max_count;
+} Descriptor_System;
 
 
 typedef struct Mesh_System
@@ -764,6 +765,7 @@ typedef struct Mesh_System
     //global count of all the data
     static_mesh static_mesh_array[1000];
     u32 static_mesh_array_size;
+    u32 static_mesh_submesh_size;
 
     //total size of all mesh data
     size_t vertex_byte_size;
@@ -786,15 +788,18 @@ typedef struct Mesh_System
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
 
 
-    mesh_uniform_constants uniform_buffer_permutation;
-
-
     //NOTE: NOT IN USE
     skinned_mesh* skinned_meshes;
     u32 skinned_mesh_size;
 
+
     Buffer_Handle bone_buffer_handle;
-    Buffer_Handle wieghts_buffer_handle;
+    Buffer_Handle weights_buffer_handle;
+
+    // darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
+    u32 indirect_draw_count;
+
+    PC_Mesh pc_mesh;
 } Mesh_System;
 
 
@@ -810,8 +815,8 @@ typedef struct renderer
     Buffer_System* buffer_system;
     Light_System* light_system;
     Mesh_System* mesh_system;
+    Descriptor_System* descriptor_system;
 
-    global_descriptor_sets global_descriptors;
 
     //mesh system
     //animation system

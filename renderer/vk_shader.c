@@ -572,8 +572,8 @@ bool vulkan_mesh_shader_create(renderer* renderer, vulkan_mesh_default* mesh_dat
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout
+        renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->texture_descriptors.descriptor_set_layout
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -854,8 +854,8 @@ bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_te
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->texture_descriptors.descriptor_set_layout,
     };
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1128,14 +1128,14 @@ bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_te
 bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data)
 {
     VkPushConstantRange push_constants = {0};
-    push_constants.size = sizeof(pc_mesh);
+    push_constants.size = sizeof(PC_Mesh);
     push_constants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constants.offset = 0;
 
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[2] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout
+        renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->texture_descriptors.descriptor_set_layout
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -1382,18 +1382,22 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_sy
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.storage_descriptors.descriptor_set_layout,
-        // mesh_system->global_descriptors.storage_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->texture_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->storage_descriptors.descriptor_set_layout,
     };
+
+    VkPushConstantRange push_constant = {0};
+    push_constant.offset = 0;
+    push_constant.size = sizeof(PC_Mesh);
+    push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
     pipeline_layout_info.pSetLayouts = set_layouts;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = NULL;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant;
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
@@ -1904,9 +1908,9 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
-        renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
-        renderer->global_descriptors.storage_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->texture_descriptors.descriptor_set_layout,
+        renderer->descriptor_system->storage_descriptors.descriptor_set_layout,
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};

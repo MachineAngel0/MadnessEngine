@@ -5,17 +5,17 @@
 //TODO: it would probably just be better to pass in a buffer handle and have the update take care of the rest
 //TODO: have descripor pool allocator keep track of all its global descripors and remove them from the render structs concerns
 
-void descriptor_pool_allocator_init(vulkan_context* context, descriptor_pool_allocator* descriptor_pools);
+Descriptor_System* descriptor_pool_allocator_init(renderer* renderer);
 
-void descriptor_pool_allocator_destroy(vulkan_context* context, descriptor_pool_allocator* descriptor_pools);
+void descriptor_pool_allocator_destroy(renderer* renderer, Descriptor_System* descriptor_system);
 
-void descriptor_pool_allocator_clear(vulkan_context* context, descriptor_pool_allocator* descriptor_pools);
+void descriptor_pool_allocator_clear(renderer* renderer, Descriptor_System* descriptor_system);
 
-void descriptor_pool_alloc(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
+void descriptor_pool_alloc(renderer* renderer, Descriptor_System* descriptor_system,
                            VkDescriptorSetLayout* set_layout, const u32* descriptor_set_count,
                            VkDescriptorSet* out_descriptors);
 
-void descriptor_pool_alloc_bindless(vulkan_context* context, descriptor_pool_allocator* descriptor_pools,
+void descriptor_pool_alloc_bindless(renderer* renderer, Descriptor_System* descriptor_system,
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors);
 
@@ -31,48 +31,37 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
 
 
 // CREATE
-void create_texture_bindless_descriptor_set(vulkan_context* context,
-                                            descriptor_pool_allocator* descriptor_pool_allocator,
-                                            vulkan_bindless_descriptors* texture_descriptors);
-
-void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
-                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+void create_bindless_uniform_buffer_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* uniform_descriptors);
 
-void create_bindless_storage_buffer_descriptor_set(vulkan_context* context,
-                                                   descriptor_pool_allocator* descriptor_pool_allocator,
+void create_texture_bindless_descriptor_set(renderer* renderer,
+                                            Descriptor_System* descriptor_pool_allocator,
+                                            vulkan_bindless_descriptors* texture_descriptors);
+
+void create_bindless_storage_buffer_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* storage_descriptors);
 
 // UPDATE
-void update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* uniform_descriptors,
-                                                   vulkan_buffer* buffer, u64 data_size, u32 array_index);
-
-void update_global_texture_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* texture_descriptors,
-                                                   Texture* texture, u32 array_index);
-
-void update_storage_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* storage_descriptors,
-                                                   vulkan_buffer* buffer,
-                                                   u32 array_index);
-
-
-void _update_uniform_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* uniform_descriptors,
-                                                   vulkan_buffer* buffer, u64 data_size, u32 array_index);
-
-void _update_global_texture_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* texture_descriptors,
-                                                   Texture* texture, u32 array_index);
-
-void _update_storage_buffer_bindless_descriptor_set(vulkan_context* context,
-                                                   vulkan_bindless_descriptors* storage_descriptors,
+//NOTE: BINDING INDEX IS NOT IN USE RN
+void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index);
 
-//TODO: we need a function of some sort to return a handle so that we can use it for later updates
-//NOTE: one isn't needed for textures because the shader_system handles that
-// descriptor_uniform_handle descriptors_retrieve_uniform_available_handle(renderer* renderer);
+
+void update_texture_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
+                                                   Texture_Handle texture_handle,
+                                                   u32 binding_index);
+
+void update_storage_buffer_bindless_descriptor_set(renderer* renderer,
+                                                   Descriptor_System* descriptor_system,
+                                                   Buffer_Handle buffer_handle,
+                                                   u32 binding_index);
+
+
+
 
 #endif

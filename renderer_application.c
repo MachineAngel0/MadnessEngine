@@ -124,7 +124,7 @@ void application_renderer_run()
 
         clock_update_frame_start(&app_state.clock);
 
-        // clock_print_info(&app_state.clock);
+        clock_print_info(&app_state.clock);
 
         app_state.renderer->renderer_run(app_state.renderer, &app_state.clock);
 

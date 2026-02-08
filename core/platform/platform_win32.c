@@ -333,9 +333,6 @@ f64 platform_get_absolute_time()
 void platform_sleep(u64 ms)
 {
     Sleep(ms);
-    int a = 0;
-    int n = 0;
-    int b = 0;
 }
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)

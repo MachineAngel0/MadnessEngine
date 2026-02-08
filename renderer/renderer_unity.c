@@ -14,6 +14,8 @@
 #include "vk_vertex.h"
 #include "vk_vertex_buffer.h"
 #include "vk_shader.h"
+#include "vk_descriptors.h"
+
 /*
 
 #include "text.c"

@@ -1,29 +1,30 @@
 ﻿#include "vk_buffer.h"
 
 
-//
-#define max_buffers_available 1024lu
+//NOTE: this should change so that its consistent with the amount given out in by the descriptor pools
+#define max_buffers_available 1024u
 
-Buffer_System* buffer_system_init(renderer* renderer)
+Buffer_System* buffer_system_init(renderer* renderer, const u32 frames_in_flight)
 {
     Buffer_System* out_buffer_system = arena_alloc(&renderer->arena, sizeof(Buffer_System));
-
-    out_buffer_system->global_uniform_buffer_size = renderer->context.swapchain.max_frames_in_flight;
-    out_buffer_system->global_uniform_buffers = arena_alloc(&renderer->arena,
-                                                            out_buffer_system->global_uniform_buffer_size
-                                                            * sizeof(vulkan_buffer));
-
-    for (u32 i = 0; i < out_buffer_system->global_uniform_buffer_size; i++)
-    {
-        _vulkan_buffer_create_internal(renderer, &out_buffer_system->global_uniform_buffers[i], BUFFER_TYPE_UNIFORM,
-                                       sizeof(uniform_buffer_object));
-    }
-
+    out_buffer_system->frames_in_flight = frames_in_flight;
+    renderer->buffer_system = out_buffer_system;
 
     //these get handed out as handles to other systems that need them
     out_buffer_system->buffers_size = max_buffers_available;
     out_buffer_system->buffer_current_count = 0;
     out_buffer_system->buffers = arena_alloc(&renderer->arena, out_buffer_system->buffers_size * sizeof(vulkan_buffer));
+
+    out_buffer_system->global_ubo_handle = vulkan_buffer_create(renderer, out_buffer_system, BUFFER_TYPE_UNIFORM,
+                                                                sizeof(uniform_buffer_object));
+
+    for (u32 i = 0; i < out_buffer_system->frames_in_flight; i++)
+    {
+        Buffer_Handle temp_buffer_handle = out_buffer_system->global_ubo_handle;
+        temp_buffer_handle.handle += i;
+        update_uniform_buffer_bindless_descriptor_set(
+            &renderer_internal, renderer_internal.descriptor_system, temp_buffer_handle, 0);
+    }
 
 
     //STAGING BUFFERS
@@ -207,105 +208,136 @@ Buffer_Handle vulkan_buffer_create(renderer* renderer,
                                    Buffer_System* buffer_system,
                                    vulkan_buffer_type buffer_type, u64 data_size)
 {
-    //grab an available buffer
-    vulkan_buffer* buffer_in_use = &buffer_system->buffers[buffer_system->buffer_current_count];
+    MASSERT(data_size > 0);
+
+    //we pass out the index which we stared at
     Buffer_Handle out_handle = {buffer_system->buffer_current_count};
 
-    //do a large allocation upfront
-    buffer_in_use->capacity = data_size;
-    buffer_in_use->current_offset = 0;
-    buffer_in_use->type = buffer_type;
-
-    VkDevice device = renderer->context.device.logical_device;
-
-
-    //for Buffer device addressing
-    VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
-    allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
-    allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
-
-    VkMemoryAllocateInfo memAlloc = {0};
-    memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memAlloc.pNext = &allocFlagsInfo;
-
-    VkMemoryRequirements memReqs;
-
-
-    VkBufferCreateInfo out_buffer_create_info = {0};
-    out_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    out_buffer_create_info.size = buffer_in_use->capacity;
-    out_buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // look into later
-
-
-    // intended to be used as the destination of a copy from a staging buffer
-    switch (buffer_type)
+    //create one for each frame in flight
+    for (u32 frame_num = 0; frame_num < buffer_system->frames_in_flight; frame_num++)
     {
-    case BUFFER_TYPE_VERTEX:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    case BUFFER_TYPE_INDEX:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    case BUFFER_TYPE_CPU_STORAGE:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    case BUFFER_TYPE_INDIRECT:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    case BUFFER_TYPE_GPU_STORAGE:
-        /*might need a transfer source maybe??? but not really since we can just write into it*/
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
-    case BUFFER_TYPE_STAGING:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        memAlloc.pNext = NULL;
-        break;
-    case BUFFER_TYPE_UNIFORM:
-        out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
-        break;
+        //for the bindless storage descriptors
+        Buffer_Handle current_handle = {buffer_system->buffer_current_count};
+
+        //grab an available buffer
+        vulkan_buffer* buffer_in_use = &buffer_system->buffers[buffer_system->buffer_current_count];
+
+        //do a large allocation upfront
+        buffer_in_use->capacity = data_size;
+        buffer_in_use->current_offset = 0;
+        buffer_in_use->type = buffer_type;
+
+        VkDevice device = renderer->context.device.logical_device;
+
+
+        //for Buffer device addressing
+        VkMemoryAllocateFlagsInfoKHR allocFlagsInfo = {0};
+        allocFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO_KHR;
+        allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+        VkMemoryAllocateInfo memAlloc = {0};
+        memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memAlloc.pNext = &allocFlagsInfo;
+
+        VkMemoryRequirements memReqs;
+
+
+        VkBufferCreateInfo out_buffer_create_info = {0};
+        out_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        out_buffer_create_info.size = buffer_in_use->capacity;
+        out_buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // look into later
+
+
+        // intended to be used as the destination of a copy from a staging buffer
+        switch (buffer_type)
+        {
+        case BUFFER_TYPE_VERTEX:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+            break;
+        case BUFFER_TYPE_INDEX:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            break;
+        case BUFFER_TYPE_CPU_STORAGE:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+            break;
+        case BUFFER_TYPE_INDIRECT:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+            break;
+        case BUFFER_TYPE_GPU_STORAGE:
+            /*might need a transfer source maybe??? but not really since we can just write into it*/
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+            break;
+        case BUFFER_TYPE_STAGING:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            memAlloc.pNext = NULL;
+            break;
+        case BUFFER_TYPE_UNIFORM:
+            out_buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+            break;
+        default:
+            MASSERT(false)
+            break;
+        }
+
+
+        // Create a host-visible buffer to copy the vertex data to (staging buffer)
+        VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_in_use->handle));
+        vkGetBufferMemoryRequirements(device, buffer_in_use->handle, &memReqs);
+        memAlloc.allocationSize = memReqs.size;
+
+        //cpu means that a staging buffer is needed to send data to the gpu, typically for large data sets
+        //gpu means that no staging buffer is needed and can be  updated direct and will be mapped as well
+        VkMemoryPropertyFlags cpu_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        VkMemoryPropertyFlags gpu_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        VkMemoryPropertyFlags mem_properties;
+        if (buffer_type == BUFFER_TYPE_GPU_STORAGE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
+            BUFFER_TYPE_UNIFORM)
+        {
+            mem_properties = gpu_properties;
+        }
+        else
+        {
+            mem_properties = cpu_properties;
+        }
+        memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
+                                                    mem_properties);
+
+        VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &buffer_in_use->memory));
+        VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
+
+        //host visible should be mapped to a specific region of memory
+        if (buffer_type == BUFFER_TYPE_GPU_STORAGE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
+            BUFFER_TYPE_UNIFORM)
+        {
+            VK_CHECK(
+                vkMapMemory(device, buffer_in_use->memory, 0, memAlloc.allocationSize, 0, (void**)& buffer_in_use->
+                    mapped_data));
+        }
+
+        switch (buffer_in_use->type)
+        {
+        case BUFFER_TYPE_CPU_STORAGE:
+            update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
+                                                          current_handle, 0);
+            break;
+        case BUFFER_TYPE_UNIFORM:
+            update_uniform_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
+                                                          current_handle, 0);
+            break;
+        default: break;
+        }
+
+
+        buffer_system->buffer_current_count++;
     }
 
 
-    // Create a host-visible buffer to copy the vertex data to (staging buffer)
-    VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_in_use->handle));
-    vkGetBufferMemoryRequirements(device, buffer_in_use->handle, &memReqs);
-    memAlloc.allocationSize = memReqs.size;
-
-    //cpu means that a staging buffer is needed to send data to the gpu, typically for large data sets
-    //gpu means that no staging buffer is needed and can be  updated direct and will be mapped as well
-    VkMemoryPropertyFlags cpu_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    VkMemoryPropertyFlags gpu_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    VkMemoryPropertyFlags mem_properties;
-    if (buffer_type == BUFFER_TYPE_GPU_STORAGE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
-        BUFFER_TYPE_UNIFORM)
-    {
-        mem_properties = gpu_properties;
-    }
-    else
-    {
-        mem_properties = cpu_properties;
-    }
-    memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
-                                                mem_properties);
-
-    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &buffer_in_use->memory));
-    VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
-
-    //host visible should be mapped to a specific region of memory
-    if (buffer_type == BUFFER_TYPE_GPU_STORAGE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
-        BUFFER_TYPE_UNIFORM)
-    {
-        VK_CHECK(
-            vkMapMemory(device, buffer_in_use->memory, 0, memAlloc.allocationSize, 0, (void**)& buffer_in_use->
-                mapped_data));
-    }
-
-    buffer_system->buffer_current_count++;
     return out_handle;
 }
 
@@ -408,6 +440,7 @@ void _vulkan_buffer_create_internal(renderer* renderer, vulkan_buffer* out_buffe
                 mapped_data));
     }
 
+    renderer->buffer_system->buffer_current_count++;
 }
 
 bool vulkan_buffer_free(renderer* renderer, vulkan_buffer* vk_buffer)
@@ -419,12 +452,13 @@ bool vulkan_buffer_free(renderer* renderer, vulkan_buffer* vk_buffer)
 
 vulkan_buffer* vulkan_buffer_get(renderer* renderer, Buffer_Handle buffer_handle)
 {
-    return &renderer->buffer_system->buffers[buffer_handle.handle];
+    //get the index plus the current frame number
+    return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
 }
 
 vulkan_buffer* vulkan_buffer_get_clear(renderer* renderer, Buffer_Handle buffer_handle)
 {
-    vulkan_buffer* out_buffer = &renderer->buffer_system->buffers[buffer_handle.handle];
+    vulkan_buffer* out_buffer = vulkan_buffer_get(renderer, buffer_handle);
     out_buffer->current_offset = 0;
     return out_buffer;
 }
@@ -438,6 +472,18 @@ void vulkan_buffer_reset_offset(renderer* renderer, Buffer_Handle buffer_handle)
 void vulkan_buffer_cpu_data_copy_from_offset(renderer* renderer, vulkan_buffer* buffer,
                                              void* data, u64 data_size)
 {
+    //TODO: these should be asserts
+    if (!data)
+    {
+        WARN("vulkan_buffer_cpu_data_copy_from_offset: INVALID DATA");
+        return;
+    }
+    if (data_size <= 0)
+    {
+        WARN("vulkan_buffer_cpu_data_copy_from_offset: DATA SIZE IF TOO SMALL");
+        return;
+    }
+
     VkDevice device = renderer->context.device.logical_device;
     //TODO: grab an available buffer
     vulkan_buffer staging_buffer = renderer->buffer_system->staging_buffer_ring[0];

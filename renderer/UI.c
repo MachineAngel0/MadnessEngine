@@ -98,7 +98,7 @@ void ui_system_end(UI_System* ui_system)
 
     //update mouse state
     ui_system->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
-    DEBUG("MOUSE DOWN %d", ui_system->mouse_down)
+    // DEBUG("MOUSE DOWN %d", ui_system->mouse_down)
     //update mouse pos
     update_ui_mouse_pos(ui_system);
 }
@@ -282,7 +282,7 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
 
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
 {
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_vertex_buffer_handle);
+    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer,ui_system->ui_quad_vertex_buffer_handle);
     vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_index_buffer_handle);
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,

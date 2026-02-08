@@ -99,25 +99,18 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
     // Create Descriptor Pool
-    descriptor_pool_allocator_init(vk_context, &vk_context->global_descriptor_pool);
-    //TODO: move functions into the init of pool allocator
-    create_texture_bindless_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
-                                           &renderer_internal.global_descriptors.texture_descriptors);
-    create_bindless_uniform_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
-                                                  &renderer_internal.global_descriptors.uniform_descriptors);
-    create_bindless_storage_buffer_descriptor_set(vk_context, &vk_context->global_descriptor_pool,
-                                                  &renderer_internal.global_descriptors.storage_descriptors);
+    renderer_internal.descriptor_system = descriptor_pool_allocator_init(&renderer_internal);
 
 
     //BUFFER SYSTEM
-    //Allocate buffers up front
-    renderer_internal.buffer_system = buffer_system_init(&renderer_internal);
-    for (u32 i = 0; i < renderer_internal.buffer_system->global_uniform_buffer_size; i++)
+    renderer_internal.buffer_system = buffer_system_init(&renderer_internal, renderer_internal.context.swapchain.max_frames_in_flight);
+    /*for (u32 i = 0; i < renderer_internal.buffer_system->frames_in_flight; i++)
     {
+        Buffer_Handle temp_buffer_handle = renderer_internal.buffer_system->global_ubo_handle;
+        temp_buffer_handle.handle += i;
         update_uniform_buffer_bindless_descriptor_set(
-            vk_context, &renderer_internal.global_descriptors.uniform_descriptors,
-            &renderer_internal.buffer_system->global_uniform_buffers[i], sizeof(uniform_buffer_object), i);
-    }
+            &renderer_internal, renderer_internal.descriptor_system, temp_buffer_handle, 0);
+    }*/
 
     //Shader System
     renderer_internal.shader_system = shader_system_init(&renderer_internal);
@@ -140,7 +133,6 @@ bool renderer_init(struct renderer_app* renderer_inst)
     mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
     mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -149,16 +141,6 @@ bool renderer_init(struct renderer_app* renderer_inst)
     //TODO: move into the mesh system init
     vulkan_mesh_indirect_shader_create(&renderer_internal, renderer_internal.mesh_system, &renderer_internal.indirect_mesh_pipeline);
 
-    //BINDLESS TEXTURE
-    create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
-                         &vk_context->shader_texture_bindless.texture_test_object);
-
-
-    vulkan_bindless_textured_shader_create(&renderer_internal, &vk_context->shader_texture_bindless);
-    createVertexBufferTexture(vk_context, &vk_context->shader_texture_bindless);
-
-    update_global_texture_bindless_descriptor_set(vk_context, &renderer_internal.global_descriptors.texture_descriptors,
-                                                  &vk_context->shader_texture_bindless.texture_test_object, 0);
 
     INFO("VULKAN RENDERER INITIALIZED");
 
@@ -282,11 +264,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
         vulkan_buffer_get(&renderer_internal,
-                              renderer_internal.light_system->directional_light_storage_buffer_handle)->handle);
+                          renderer_internal.light_system->directional_light_storage_buffer_handle)->handle);
 
     VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
         vulkan_buffer_get(&renderer_internal,
-            renderer_internal.light_system->point_light_storage_buffer_handle)->handle);
+                          renderer_internal.light_system->point_light_storage_buffer_handle)->handle);
 
     ubo.directional_lights_address = directional_light_buffer_address;
     ubo.point_lights_address = point_light_buffer_address;
@@ -295,10 +277,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.render_mode = renderer_internal.mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    memcpy(renderer_internal.buffer_system->global_uniform_buffers[vk_context.current_frame].mapped_data, &ubo,
+    vulkan_buffer* ubo_buffer = vulkan_buffer_get(&renderer_internal, renderer_internal.buffer_system->global_ubo_handle);
+    memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    // mesh_system_generate_draw_data_2(&renderer_internal, renderer_internal.mesh_system);
+    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
 
 
 
@@ -410,53 +393,24 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //uniform
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer_internal.indirect_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer_internal.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
+                            &renderer_internal.descriptor_system->uniform_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer_internal.indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+                            &renderer_internal.descriptor_system->texture_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer_internal.indirect_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer_internal.global_descriptors.storage_descriptors.descriptor_sets[vk_context.
+                            &renderer_internal.descriptor_system->storage_descriptors.descriptor_sets[vk_context.
                                 current_frame], 0, 0);
 
-    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame);
+    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame, &renderer_internal.indirect_mesh_pipeline);
 
-
-    //DRAW BINDLESS textured triangle
-    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      vk_context.shader_texture_bindless.shader_texture_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 0, 1,
-                            &renderer_internal.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
-                                current_frame],
-                            0, 0);
-    //textures
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
-                            &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
-                                current_frame],
-                            0, 0);
-
-
-    VkDeviceSize offsets_bindless[1] = {0};
-    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1,
-                           &vk_context.shader_texture_bindless.vertex_buffer.handle, offsets_bindless);
-
-    vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
-                         vk_context.shader_texture_bindless.index_buffer.handle, 0,
-                         VK_INDEX_TYPE_UINT32);
-
-    vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                     (u32)vk_context.shader_texture_bindless.vertex_info.indices_size,
-                     1, 0, 0, 0);
+    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
 
 
     // vkCmdDrawIndexedIndirect()
@@ -476,9 +430,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // End renderpass
 
 
-    vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);
-    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
-    vulkan_renderpass_UI_end(&renderer_internal, command_buffer_current_frame, image_index);
+    // vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);
+    // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+    // vulkan_renderpass_UI_end(&renderer_internal, command_buffer_current_frame, image_index);
 
 
 
@@ -525,7 +479,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
-    //TODO: renable
     ui_system_end(UI_System_internal);
 }
 

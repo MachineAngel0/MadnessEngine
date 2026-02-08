@@ -6,6 +6,7 @@
 #extension GL_EXT_buffer_reference : require
 
 #include "shader_includes/test_uniform.glsl"
+#include "shader_includes/mesh_structs.glsl"
 
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 
