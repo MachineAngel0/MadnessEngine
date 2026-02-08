@@ -5,6 +5,7 @@
 #define HASH_MAP_DEFAULT_CAPACITY 100
 #include <time.h>
 
+#include "misc_util.h"
 #include "dsa_utility.h"
 
 //NOTE: rn im just using open addressing,
@@ -235,7 +236,7 @@ void hash_table_copy(hash_map* h1, hash_map* h2);
 hash_map* hash_table_merge(hash_map* h1, hash_map* h2); // should pass back a new hash table
 
 
-void hash_map_test()
+void hash_map_test(void)
 {
     hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
     // hash_map* h = hash_map_init(sizeof(int), HASH_MAP_DEFAULT_CAPACITY);

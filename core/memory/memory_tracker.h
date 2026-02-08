@@ -86,7 +86,7 @@ typedef struct memory_tracker
 static memory_tracker memory;
 static bool memory_tracker_initialized = false;
 
-bool memory_tracker_init()
+bool memory_tracker_init(void)
 {
     memset(&memory, 0, sizeof(memory_tracker));
     memory.memory_container_size = 0;
@@ -95,7 +95,7 @@ bool memory_tracker_init()
     return true;
 }
 
-bool memory_tracker_shutdown()
+bool memory_tracker_shutdown(void)
 {
     if (!memory_tracker_initialized)
     {
@@ -161,7 +161,7 @@ bool memory_subsystem_free(const memory_subsystem_type type, const u64 size)
 }
 
 
-void memory_tracker_print_memory_usage()
+void memory_tracker_print_memory_usage(void)
 {
     if (!memory_tracker_initialized)
     {
@@ -238,7 +238,7 @@ void memory_tracker_print_memory_usage()
 ;    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", mem_size);
 }
 
-void memory_tracker_unit_test()
+void memory_tracker_unit_test(void)
 {
     //insta fail
     TEST_INFORM(memory_tracker_initialized);

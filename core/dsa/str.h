@@ -34,7 +34,7 @@ String* string_create(const char* word, const u64 length)
     memcpy(str->chars, word, sizeof(char) * str->length);
 
     return str;
-};
+}
 
 
 
@@ -51,7 +51,7 @@ String* string_create_internal(const String* s)
 
 
     return out_str;
-};
+}
 
 bool string_free(String* string)
 {
@@ -307,7 +307,7 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
             }
         }
 
-        for (int i = 0; i < delimiter_array->length; i++)
+        for (u64 i = 0; i < delimiter_array->length; i++)
         {
 
             if (s->chars[index] == delimiter_array->chars[i])
@@ -345,7 +345,7 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
 
 void string_tokenizer_print(const String_Tokenizer* str_tokens)
 {
-    for (int i = 0; i < str_tokens->number_of_strings; i++)
+    for (u64 i = 0; i < str_tokens->number_of_strings; i++)
     {
         string_print(str_tokens->strings[i]);
     }
@@ -357,7 +357,7 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens)
 //returns copy of the strings
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
 
-void string_test()
+void string_test(void)
 {
     TEST_START("STRING");
 
@@ -453,7 +453,7 @@ void string_test()
 
 
     TEST_REPORT("STRING");
-};
+}
 
 
 #endif

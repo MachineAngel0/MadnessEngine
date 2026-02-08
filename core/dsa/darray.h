@@ -678,7 +678,7 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 // void darray_radix_sort(void* array);
 
 
-void _darray_test()
+void _darray_test(void)
 {
     TEST_START(DARRAY);
 

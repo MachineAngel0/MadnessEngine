@@ -228,7 +228,7 @@ void hash_set_copy(hash_set* hash_from, hash_set* hash_to);
 hash_set* hash_set_merge(hash_set* h1, hash_set* h2);
 
 
-void hash_set_test()
+void hash_set_test(void)
 {
     hash_set* h = hash_set_init(sizeof(int), HASH_SET_DEFAULT_CAPACITY);
     // hash_set* h = hash_set_init(sizeof(int), HASH_SET_DEFAULT_CAPACITY);

@@ -31,12 +31,12 @@ typedef enum log_level
     LOG_LEVEL_TRACE = 5,
 }log_level;
 
-bool logger_init()
+bool logger_init(void)
 {
     //TODO: LOG FILE
     return true;
 }
-void logger_shutdown()
+void logger_shutdown(void)
 {
 
 }
@@ -130,7 +130,7 @@ void report_unreachable(const char* file, int32_t line)
 
 
 
-void log_test()
+void log_test(void)
 {
     FATAL("FATAL TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");
     M_ERROR("ERROR TEST MESSAGE %d, %f, %c, %s", 3, 10.0f, 'C', "STRING");

@@ -38,7 +38,7 @@ void test_expr(const bool val, const char* msg, const char* file, const int line
     }
 }
 
-void test_print_normal()
+void test_print_normal(void)
 {
     printf("PASSING: %d, FAILING: %d\n", passing, failing);
 }
@@ -66,7 +66,7 @@ void test_report_print(const char* test_name)
 
 }
 
-void test_report_final_total()
+void test_report_final_total(void)
 {
     printf("\n"ASCII_MAGENTA_BOLD "FINAL: " ASCII_END
         ASCII_BOLD "TOTAL PASSING: " ASCII_GREEN_BOLD "%d, "ASCII_END ASCII_BOLD "TOTAL FAILING: " ASCII_RED_BOLD "%d" ASCII_END
@@ -76,7 +76,7 @@ void test_report_final_total()
 
 
 //TODO (MAYBE???): go through the platform print colors
-void test_print_platform()
+void test_print_platform(void)
 {
     return;
 }

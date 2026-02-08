@@ -149,7 +149,7 @@ void temp_arena_memory_end(Arena_Temp temp)
 }
 
 
-void arena_test()
+void arena_test(void)
 {
     TEST_START("ARENA");
     Arena a = {0};

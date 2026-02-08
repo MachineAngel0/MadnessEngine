@@ -44,12 +44,18 @@ void* platform_copy_memory(void* dest, const void* source, u64 size);
 void* platform_set_memory(void* dest, i32 value, u64 size);
 
 //TIME
-f64 platform_get_absolute_time();
+f64 platform_get_absolute_time(void);
 
 // Sleep on the thread for the provided ms. This blocks the main thread.
 // Should only be used for giving time back to the OS for unused update power.
 // Therefore it is not exported.
 void platform_sleep(u64 ms);
+
+
+//DLL
+char* platform_get_dll_extension(void);
+char* platform_dll_load(const char* file_name);
+char* platform_dll_unload(const char* file_name);
 
 
 // RENDERER

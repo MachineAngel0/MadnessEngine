@@ -188,7 +188,7 @@ void arena_stack_debug_print(Arena_Stack* a)
 }
 
 
-void arena_stack_test()
+void arena_stack_test(void)
 {
     TEST_START("ARENA STACK");
 

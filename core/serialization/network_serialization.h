@@ -127,7 +127,7 @@ void unpack(uint8_t* buf, char* format, ...);
 uint32_t get_size(char* format);
 
 
-void pack_unpack_test();
+void pack_unpack_test(void);
 
 
 

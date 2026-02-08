@@ -96,7 +96,7 @@ float deserialize_f32(byte_buffer* buffer);
 double deserialize_f64(byte_buffer* buffer);
 
 //TODO: write this test
-void serialization_test();
+void serialization_test(void);
 
 
 #endif //FILE_SERIALIZATION_H
