@@ -8,7 +8,7 @@
 #define MA_IMPLEMENTATION
 #include "miniaudio.h"
 
-typedef struct sound_data
+typedef struct Sound_Data
 {
     uint32_t samples;
     uint32_t data_size;
@@ -21,19 +21,14 @@ ma_engine engine;
 bool audio_system_init(void)
 {
     //TODO:
-    //just here as a place holder until i write my own audio platform independant system later
+    //just here as a place holder until i write my own audio platform independant system way later
 
     // https://github.com/mackron/miniaudio
 
     ma_result result;
 
     result = ma_engine_init(NULL, &engine);
-    if (result != MA_SUCCESS)
-    {
-        FATAL("ma_engine_init FAILED");
-        return false;
-    }
-
+    MASSERT_MSG(result == MA_SUCCESS, "ma_engine_init failed");
 
     //NOTE: these will play at the same time
     // ma_engine_play_sound(&engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
@@ -113,9 +108,7 @@ bool wav_file_load(const char* file_path, Sound_Data* out_sound_data)
     uint32_t data_size; // DataSize
     //we pass out the actual data
 
-    //TODO: test file, replace with file path when done
-    // FILE* wav_file = fopen(file_path, 'rb');
-    FILE* wav_file = fopen("../platform/file_example_WAV_1MG.wav", "rb");
+    FILE* wav_file = fopen(file_path, "rb");
     if (!wav_file)
     {
         WARN("Failed to open wave file");

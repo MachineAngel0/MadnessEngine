@@ -25,8 +25,6 @@ void platform_shutdown(platform_state* plat_state);
 bool platform_pump_messages(platform_state* plat_state);
 
 
-
-
 //AUDIO
 bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_t samples_per_second);
 
@@ -51,11 +49,29 @@ f64 platform_get_absolute_time(void);
 // Therefore it is not exported.
 void platform_sleep(u64 ms);
 
+typedef struct DLL_HANDLE
+{
+    uint64_t handle;
+    const char* file_name;
+    const char* function_name;
+} DLL_HANDLE;
 
 //DLL
-char* platform_get_dll_extension(void);
-char* platform_dll_load(const char* file_name);
-char* platform_dll_unload(const char* file_name);
+char* platform_get_dynamic_library_extension(void);
+char* platform_get_static_library_extension(void);
+
+DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name);
+bool platform_dll_unload(DLL_HANDLE handle);
+bool platform_dll_reload(DLL_HANDLE handle);
+
+
+//has to get cast into the function pointer
+void* platform_get_function_address(DLL_HANDLE handle, const char* function_name);
+
+//FILE SYSTEM
+void platform_file_watch(const char* file_name);
+bool platform_has_filed_changed(const char* file_name);
+bool platform_file_copy(const char* source_file, char* new_file);
 
 
 // RENDERER

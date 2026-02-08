@@ -90,9 +90,11 @@ void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)
     //TODO:
 }
 
-Texture_Handle* shader_system_update_texture(renderer* renderer, Shader_System* system, Texture_Handle* handle,
+Texture_Handle shader_system_update_texture(renderer* renderer, Shader_System* system, Texture_Handle* handle,
                                   const char* filepath)
 {
+    //overwrite if neccessary
+    Texture_Handle out_texture_handle = *handle;
 
     // create texture if it's not already loaded
     // update descriptor set
@@ -108,6 +110,10 @@ Texture_Handle* shader_system_update_texture(renderer* renderer, Shader_System* 
     update_descriptors_texture_reflect_test(&renderer->context, &renderer->context.global_descriptor_pool,
                                             &renderer->context.shader_texture); // need to update the need for a shader texture
                                             */
+
+
+
+    return out_texture_handle;
 }
 
 //pass out the texture index

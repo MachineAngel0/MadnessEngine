@@ -4,7 +4,6 @@
 #if MPLATFORM_WINDOWS
 
 #include <dsound.h>
-#include <math.h>
 
 #include "logger.h"
 
@@ -38,12 +37,12 @@ static LARGE_INTEGER start_time;
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
 bool platform_startup(platform_state* plat_state,
-                    const char* application_name,
-                    i32 x, i32 y,
-                    i32 width, i32 height)
+                      const char* application_name,
+                      i32 x, i32 y,
+                      i32 width, i32 height)
 {
     plat_state->internal_state = malloc(sizeof(internal_state));
-    internal_state* state = (internal_state *) plat_state->internal_state;
+    internal_state* state = (internal_state*)plat_state->internal_state;
 
     state->h_instance = GetModuleHandleA(0);
 
@@ -128,7 +127,7 @@ bool platform_startup(platform_state* plat_state,
     // Clock setup
     LARGE_INTEGER frequency;
     QueryPerformanceFrequency(&frequency);
-    clock_frequency = 1.0 / (f64) frequency.QuadPart;
+    clock_frequency = 1.0 / (f64)frequency.QuadPart;
     QueryPerformanceCounter(&start_time);
 
 
@@ -141,7 +140,7 @@ bool platform_startup(platform_state* plat_state,
 void platform_shutdown(platform_state* plat_state)
 {
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state *) plat_state->internal_state;
+    internal_state* state = (internal_state*)plat_state->internal_state;
     timeEndPeriod(1);; // Set system timer resolution to 1 ms
 
     if (state->hwnd)
@@ -161,139 +160,6 @@ bool platform_pump_messages(platform_state* plat_state)
     }
 
     return TRUE;
-}
-
-typedef HRESULT WINAPI DSoundCreate(LPCGUID, LPDIRECTSOUND*, LPUNKNOWN);
-
-#define DirectSoundCreate DSoundCreate
-
-bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_t samples_per_second)
-{
-    //get the state
-    internal_state* state = (internal_state *) plat_state->internal_state;
-
-    WAVEFORMATEX wformat = {0};
-    ZeroMemory(&wformat, sizeof(wformat));
-    wformat.wFormatTag = WAVE_FORMAT_PCM;
-    wformat.nChannels = 2;
-    wformat.nSamplesPerSec = samples_per_second;
-    wformat.wBitsPerSample = 16;
-    wformat.nBlockAlign = (wformat.nChannels * wformat.wBitsPerSample) / 8;
-    wformat.nAvgBytesPerSec = wformat.nSamplesPerSec * wformat.nBlockAlign;
-    wformat.cbSize = wformat.nChannels * 2;
-
-
-    HMODULE DirectSoundLib = LoadLibrary("dsound.dll");
-    if (!DirectSoundLib)
-    {
-        WARN("Failed to load dsound.dll");
-        return false;
-    }
-    DirectSoundCreate* dsound_func = (DSoundCreate *) GetProcAddress(DirectSoundLib, "DirectSoundCreate");
-
-    LPDIRECTSOUND dsound;
-    if (!SUCCEEDED(dsound_func(0, &dsound, 0)))
-    {
-        WARN("Failed to init Direct Sound");
-        return false;
-    }
-    dsound->lpVtbl->SetCooperativeLevel(dsound, state->hwnd, DSSCL_PRIORITY);
-
-    DSBUFFERDESC buffer_desc = {0};
-    ZeroMemory(&buffer_desc, sizeof(buffer_desc));
-    buffer_desc.dwSize = sizeof(buffer_desc);
-    buffer_desc.dwFlags = DSBCAPS_PRIMARYBUFFER;
-    LPDIRECTSOUNDBUFFER primary_buffer = NULL;
-    if (!SUCCEEDED(IDirectSound_CreateSoundBuffer(dsound, &buffer_desc, &primary_buffer, 0)))
-    {
-        WARN("FAILED TO CREATE PRIMARY BUFFER");
-        return false;
-    }
-    //the macro is just shortening the lpvtbl part
-    // dsound->lpVtbl->CreateSoundBuffer(dsound, &buffer_desc, &primary_buffer, 0);
-
-
-    buffer_desc.dwBufferBytes = buffer_size;
-    primary_buffer->lpVtbl->SetFormat(primary_buffer, &wformat);
-    IDirectSoundBuffer_SetFormat(primary_buffer, &wformat);
-
-    DSBUFFERDESC buffer_desc2 = {};
-    buffer_desc2.dwSize = sizeof(buffer_desc);
-    buffer_desc2.dwFlags = 0;
-    buffer_desc2.dwBufferBytes = buffer_size;
-    buffer_desc2.lpwfxFormat = &wformat;
-
-    LPDIRECTSOUNDBUFFER secondary_buffer = NULL;
-    if (!SUCCEEDED(IDirectSound_CreateSoundBuffer(dsound, &buffer_desc, &secondary_buffer, 0)))
-    {
-        WARN("FAILED TO CREATE SECONDARY BUFFER");
-        return false;
-    };
-    // secondary_buffer->lpVtbl->SetFormat(secondary_buffer, &wformat);
-    IDirectSoundBuffer_SetFormat(secondary_buffer, &wformat);
-
-
-    //
-    // Fill the secondary buffer with a test tone
-    //
-    VOID* region1 = NULL;
-    DWORD region1_size = 0;
-    VOID* region2 = NULL;
-    DWORD region2_size = 0;
-
-    if (SUCCEEDED(secondary_buffer->lpVtbl->Lock(
-        secondary_buffer, 0, buffer_size,
-        &region1, &region1_size,
-        &region2, &region2_size,
-        0)))
-    {
-        int16_t* sample = (int16_t *) region1;
-        int total_samples = region1_size / sizeof(int16_t);
-        float tone_hz = 440.0f;
-        float phase = 0.0f;
-        float phase_inc = 3.14f * 2 * tone_hz / (float) samples_per_second;
-
-        for (int i = 0; i < total_samples; i += 2)
-        {
-            float sample_val = sinf(phase) * 3000.0f;
-            sample[i + 0] = (int16_t) sample_val; // Left
-            sample[i + 1] = (int16_t) sample_val; // Right
-            phase += phase_inc;
-            if (phase > 3.14f * 2) phase -= 3.14f * 2;
-        }
-
-        if (region2)
-        {
-            int16_t* sample2 = (int16_t *) region2;
-            int total_samples2 = region2_size / sizeof(int16_t);
-            phase = 0.0f;
-            for (int i = 0; i < total_samples2; i += 2)
-            {
-                float sample_val = sinf(phase) * 3000.0f;
-                sample2[i + 0] = (int16_t) sample_val;
-                sample2[i + 1] = (int16_t) sample_val;
-                phase += phase_inc;
-                if (phase > 3.14f * 2) phase -= 3.14f * 2;
-            }
-        }
-
-        secondary_buffer->lpVtbl->Unlock(
-            secondary_buffer,
-            region1, region1_size,
-            region2, region2_size);
-    }
-
-    // Start playback looping
-    secondary_buffer->lpVtbl->Play(secondary_buffer, 0, 0, DSBPLAY_LOOPING);
-
-
-    return true;
-}
-
-bool platform_audio_shutdown(platform_state* plat_state)
-{
-    //TODO:
-    return true;
 }
 
 
@@ -327,7 +193,7 @@ f64 platform_get_absolute_time()
 {
     LARGE_INTEGER now_time;
     QueryPerformanceCounter(&now_time);
-    return (f64) now_time.QuadPart * clock_frequency;
+    return (f64)now_time.QuadPart * clock_frequency;
 }
 
 void platform_sleep(u64 ms)
@@ -339,17 +205,17 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 {
     switch (msg)
     {
-        case WM_ERASEBKGND:
-            // Notify the OS that erasing will be handled by the application to prevent flicker.
-            return 1;
-        case WM_CLOSE:
-            event_context data = {};
-            event_fire(EVENT_APP_QUIT, 0, data);
-            return true;
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
-        case WM_SIZE:
+    case WM_ERASEBKGND:
+        // Notify the OS that erasing will be handled by the application to prevent flicker.
+        return 1;
+    case WM_CLOSE:
+        event_context data = {};
+        event_fire(EVENT_APP_QUIT, 0, data);
+        return true;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    case WM_SIZE:
         {
             RECT r;
             GetClientRect(hwnd, &r);
@@ -358,19 +224,19 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             // Fire the event. The application layer should pick this up, but not handle it
             // as it shouldn't be visible to other parts of the application.
             event_context context;
-            context.data.u16[0] = (u16) width;
-            context.data.u16[1] = (u16) height;
+            context.data.u16[0] = (u16)width;
+            context.data.u16[1] = (u16)height;
             event_fire(EVENT_APP_RESIZE, 0, context);
         }
         break;
-        case WM_KEYDOWN:
-        case WM_SYSKEYDOWN:
-        case WM_KEYUP:
-        case WM_SYSKEYUP:
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
         {
             // Key pressed/released
             bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-            keys key = (u16) w_param;
+            keys key = (u16)w_param;
 
             //if alt
             if (w_param == VK_MENU)
@@ -413,7 +279,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             input_process_key(key, pressed);
         }
         break;
-        case WM_MOUSEMOVE:
+    case WM_MOUSEMOVE:
         {
             // Mouse move
             i32 x_position = GET_X_LPARAM(l_param);
@@ -422,7 +288,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             input_process_mouse_move(x_position, y_position);
         }
         break;
-        case WM_MOUSEWHEEL:
+    case WM_MOUSEWHEEL:
         {
             i32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
             if (z_delta != 0)
@@ -433,12 +299,12 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             }
         }
         break;
-        case WM_LBUTTONDOWN:
-        case WM_MBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_MBUTTONUP:
-        case WM_RBUTTONUP:
+    case WM_LBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    case WM_RBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_MBUTTONUP:
+    case WM_RBUTTONUP:
         {
             bool pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
             mouse_buttons mouse_button = MOUSE_BUTTON_MAX_BUTTONS;
@@ -471,6 +337,90 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 }
 
 
+typedef struct windows_file_handle
+{
+    HMODULE dll_handle;
+} windows_file_handle;
+
+windows_file_handle file_handles[100];
+
+char* platform_get_dynamic_library_extension(void)
+{
+    return ".dll";
+}
+
+char* platform_get_static_library_extension(void)
+{
+    return ".lib";
+}
+
+DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name)
+{
+    //probably gonna have to have some sort of internal index for this
+    windows_file_handle file_info = file_handles[0];
+
+    if (file_info.dll_handle)
+    {
+        if (FreeLibrary(file_info.dll_handle) == 0)
+        {
+            WARN("FAILED TO UNLOAD DLL\n")
+            WARN("%d", GetLastError());
+        }
+    }
+
+
+    //TODO:
+    // file_name + temp + dll
+    const char* temp_dll_name = "temp_filename.dll";
+
+    CopyFile(file_name, temp_dll_name, 0);
+    // {
+    // WARN("FAILED TO COPY DLL from %s to %s. Error: %d", dll_file_name, temp_dll_name, GetLastError());
+    // return false;
+    // }
+
+    file_info.dll_handle = LoadLibraryA(temp_dll_name);
+    //TODO: Temp code
+    return (DLL_HANDLE){0, 0, 0};
+}
+
+bool platform_dll_unload(DLL_HANDLE handle)
+{
+    windows_file_handle file = file_handles[handle.handle];
+    if (file.dll_handle)
+    {
+        if (FreeLibrary(file.dll_handle) == 0)
+        {
+            WARN("FAILED TO UNLOAD DLL\n")
+            WARN("%d", GetLastError());
+            return false;
+        }
+    }
+    return true;
+}
+
+bool platform_dll_reload(DLL_HANDLE handle)
+{
+    platform_dll_unload(handle);
+    platform_dll_load(handle.file_name, handle.function_name);
+    return true;
+}
+
+
+void* platform_get_function_address(DLL_HANDLE handle, const char* function_name)
+{
+    //get whatever
+    windows_file_handle file_handle = file_handles[handle.handle];
+    return GetProcAddress(file_handle.dll_handle, function_name);
+}
+
+bool platform_file_copy(const char* source_file, char* new_file)
+{
+    CopyFile(source_file, new_file, 0);
+    return true;
+}
+
+
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
@@ -481,7 +431,7 @@ bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* 
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state *) plat_state->internal_state;
+    internal_state* state = (internal_state*)plat_state->internal_state;
 
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;

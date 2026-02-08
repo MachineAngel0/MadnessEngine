@@ -17,8 +17,8 @@ typedef struct application_state
     platform_state platform;
     Arena* application_memory_arena;
 
-    b8 is_running;
-    b8 is_suspended;
+    bool is_running;
+    bool is_suspended;
 
     i16 width;
     i16 height;
@@ -106,7 +106,6 @@ bool has_file_changed(const char* filename, FILETIME* last_write_time)
     WIN32_FILE_ATTRIBUTE_DATA file_info;
     if (!GetFileAttributesExA(filename, GetFileExInfoStandard, &file_info))
         return false;
-
     //an alternative way of doing this
     // WIN32_FIND_DATA find_data;
     // FindFirstFileA(filename, &find_data);
@@ -133,7 +132,7 @@ void application_game_run()
         {
             INFO("File changed! Reloading...\n");
             game_reload(app_state.game);
-            Sleep(1000);
+            platform_sleep(1000);
             continue;
         }
 

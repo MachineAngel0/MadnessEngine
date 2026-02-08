@@ -36,7 +36,7 @@ void clock_update_frame_end(Clock* clock)
      if (remaining_time <= frame_time)
      {
          // printf("sleeping\n");
-         DWORD sleep_ms = (DWORD)(1000.f*(frame_time - remaining_time));
+         u64 sleep_ms = (u64)(1000.f*(frame_time - remaining_time));
          if (sleep_ms > 0)
          {
              platform_sleep(sleep_ms);
