@@ -5,6 +5,24 @@
 #include "vk_buffer.h"
 #include "vk_descriptors.h"
 
+
+//per instance data change
+struct push_constant_mesh
+{
+    u32 mesh; // these would be the same
+    u32 transform_index;
+    u32 material_index;
+    vec4 _padding0;
+    vec4 _padding1;
+    vec4 _padding2;
+    vec4 _padding3;
+    vec4 _padding4;
+    vec4 _padding5;
+    vec4 _padding6;
+    u32 _padding7;
+};
+
+
 submesh* submesh_init(Arena* arena)
 {
     submesh* m = arena_alloc(arena, sizeof(submesh));
@@ -53,7 +71,6 @@ void static_mesh_free(static_mesh* static_mesh)
     return out_static_mesh;
     */
 }
-
 
 
 static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
@@ -218,6 +235,7 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             current_submesh->color_texture = shader_system_add_texture(
                 &renderer->context, renderer->shader_system,
                 texture_path);
+            current_submesh->material_params.color_index = current_submesh->color_texture.handle;
         }
 
         //METAL-ROUGHNESS
@@ -232,6 +250,15 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
             TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+
+
+            current_submesh->metallic_texture = shader_system_add_texture(
+                &renderer->context, renderer->shader_system,
+                texture_path);
+            current_submesh->roughness_texture = current_submesh->metallic_texture;
+
+            current_submesh->material_params.metallic_index = current_submesh->metallic_texture.handle;
+            current_submesh->material_params.roughness_index = current_submesh->roughness_texture.handle;
         }
 
         // AO
@@ -245,6 +272,12 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
             TRACE("AO Texture Path:  %s", texture_path);
+
+            current_submesh->ambient_occlusion_texture = shader_system_add_texture(
+                &renderer->context, renderer->shader_system,
+                texture_path);
+            current_submesh->material_params.ambient_occlusion_index = current_submesh->ambient_occlusion_texture.
+                handle;
         }
 
 
@@ -259,6 +292,12 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
+
+            current_submesh->normal_texture = shader_system_add_texture(
+                &renderer->context, renderer->shader_system,
+                texture_path);
+            current_submesh->material_params.normal_index = current_submesh->normal_texture.
+                                                                             handle;
         }
 
         //EMISSIVE TEXTURE
@@ -271,6 +310,12 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
+
+            current_submesh->emissive_texture = shader_system_add_texture(
+                &renderer->context, renderer->shader_system,
+                texture_path);
+            current_submesh->material_params.emissive_index = current_submesh->emissive_texture.
+                                                                               handle;
         }
 
 
@@ -522,14 +567,16 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
                 u64 permutation = mesh_system->mesh_shader_permutations->permutations_count;
                 mesh_system->mesh_shader_permutations->draw_data[permutation].indirect_draw_data = darray_create(
                     VkDrawIndexedIndirectCommand);
-                darray_push(mesh_system->mesh_shader_permutations->draw_data, mesh_system->mesh_shader_permutations->draw_data[permutation].indirect_draw_data);
+                darray_push(mesh_system->mesh_shader_permutations->draw_data,
+                            mesh_system->mesh_shader_permutations->draw_data[permutation].indirect_draw_data);
                 mesh_system->mesh_shader_permutations->permutations_count++;
             };
 
             //add the draw data
             //push the indirect draw into the draw data
-            VkDrawIndexedIndirectCommand* draw_instance = &mesh_system->static_mesh_array[s_mesh_idx].indirect_draw_array[
-                submesh_idx];
+            VkDrawIndexedIndirectCommand* draw_instance = &mesh_system->static_mesh_array[s_mesh_idx].
+                indirect_draw_array[
+                    submesh_idx];
 
             for (int i = 0; i < mesh_system->mesh_shader_permutations->permutations_count; i++)
             {
@@ -589,8 +636,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 
 void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer)
 {
-    INFO("GENERATING DRAW DATA")
-
+    INFO("MESH SYSTEM DRAW CALLS")
 
     //only bind the vertex and index, the storage buffers are in bindless
     vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_system->indirect_buffer_handle);
@@ -636,6 +682,91 @@ void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_comma
         }
     }
 }
+
+
+void mesh_system_draw2(renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer)
+{
+    INFO("MESH SYSTEM DRAW CALLS")
+
+    //only bind the vertex and index, the storage buffers are in bindless
+    vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_system->indirect_buffer_handle);
+    vulkan_buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_system->vertex_buffer_handle);
+    vulkan_buffer* index_buffer_handle = vulkan_buffer_get(renderer, mesh_system->index_buffer_handle);
+
+
+    VkDeviceSize pOffsets[] = {0};
+
+    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
+                           pOffsets);
+
+    vkCmdBindIndexBuffer(command_buffer->handle, index_buffer_handle->handle, 0,
+                         VK_INDEX_TYPE_UINT16);
+
+
+    for (int i = 0; i < mesh_system->mesh_shader_permutations->permutations_count; i++)
+    {
+        //TODO:
+        // mesh_uniform_constants uniform_constants;
+        // uniform_constants.mask = i;
+        // memcpy(&mesh_system->uniform_buffer_permutation, &uniform_constants, sizeof(mesh_uniform_constants));
+
+        if (renderer->context.device.features.multiDrawIndirect)
+        {
+            vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                     indirect_buffer->handle, 0,
+                                     darray_get_size(
+                                         mesh_system->mesh_shader_permutations->draw_data[i].indirect_draw_data),
+                                     sizeof(VkDrawIndexedIndirectCommand));
+        }
+        else
+        {
+            // If multi draw is not available, we must issue separate draw commands
+            for (auto j = 0; j < darray_get_size(
+                     mesh_system->mesh_shader_permutations->draw_data[i].indirect_draw_data); j++)
+            {
+                vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                         indirect_buffer->handle,
+                                         j * sizeof(VkDrawIndexedIndirectCommand), 1,
+                                         sizeof(VkDrawIndexedIndirectCommand));
+            }
+        }
+    }
+}
+
+
+/*
+void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Frame_Arena* frame_arena)
+{
+    //TODO: in general this is for another time, when i need the performance and i know what my engine should look like
+
+    //TODO: so the problem is how i want to structure the data, if we even want to allow submeshes, probably
+    const char* testing_asset_format_file_path = "../renderer/asset_format/";
+    const char* final_path = c_string_concat(testing_asset_format_file_path, file_name);
+    FILE* fptr = fopen(final_path, "wb");
+
+    fseek(fptr, 0, SEEK_END);
+    u64 file_size = ftell(fptr);
+    fseek(fptr, 0, SEEK_SET);
+
+
+
+    for (u64 i = 0; i < s_mesh->mesh_size; i++)
+    {
+        s_mesh->mesh[i].vertex_bytes;
+        s_mesh->mesh[i].indices_bytes;
+        s_mesh->mesh[i].normal_bytes;
+        s_mesh->mesh[i].tangent_bytes;
+        s_mesh->mesh[i].uv_bytes;
+
+        ////////////////
+    }
+
+    // fwrite(); for writing binary data to a file
+
+
+    fclose(fptr);
+
+}*/
 
 
 #endif

@@ -74,6 +74,13 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
 
     uint render_mode;
 
+    uint _padding0;
+    uint _padding1;
+    uint _padding2;
+    uint _padding3;
+    uint _padding4;
+    uint _padding5;
+
 } ubo[];
 
 

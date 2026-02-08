@@ -1,43 +1,13 @@
-﻿//
-// Created by Adams Humbert on 9/10/2025.
-//
+﻿
 
 #ifndef TEXT_H
 #define TEXT_H
 
 
-typedef struct Vertex_Text
-{
-    vec2 pos;
-    vec3 color;
-    vec2 tex;
-}Vertex_Text;
 
-Vertex_Text text_verticies[]= {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-};
 
-typedef struct Glyph {
-    int width, height;
-    int xoff, yoff;
-    float advance;
-    float u0, v0, u1, v1; // UV coordinates in atlas
-}Glyph;
 
-typedef struct Text_System
-{
-    stbtt_fontinfo font;
-    float default_font_size; // the larger the more clear the text looks
-    Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
-    Texture font_texture;
 
-    Vertex_Text* dynamic_vertices;
-    uint16_t* dynamic_indices;
-
-}Text_System;
 
 void text_system_init(Text_System& text_system);
 

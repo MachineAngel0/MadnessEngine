@@ -3,16 +3,50 @@
 
 //IMMEDIATE MODE UI
 
+//Vertex Data
+
+typedef struct Quad_Vertex
+{
+    vec2 pos;
+    vec3 color;
+} Quad_Vertex;
+
+typedef struct Quad_Texture
+{
+    vec2 pos;
+    vec2 tex;
+}Quad_Texture;
 
 
+//Text
+
+typedef struct Glyph {
+    int width, height;
+    int xoff, yoff;
+    float advance;
+    float u0, v0, u1, v1; // UV coordinates in atlas
+}Glyph;
+
+typedef struct Font{
+    stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
+    float font_size; // the larger the more clear the text looks
+    //NOTE: this will have to be larger if i support other languages
+    Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
+    Texture font_texture;
+}Font;
+
+
+//UI
 typedef enum UI_Alignment
 {
     UI_ALIGNMENT_CENTER,
     UI_ALIGNMENT_LEFT,
     UI_ALIGNMENT_RIGHT,
-    //JUSTIFIED,
+    //JUSTIFIED, ?????
     UI_ALIGNMENT_MAX,
 } UI_Alignment;
+
+
 
 typedef struct UI_ID
 {
@@ -32,26 +66,32 @@ typedef struct UI_BUTTON
     int _padding;
 } UI_BUTTON;
 
-
-typedef struct Quad_Vertex
+typedef struct UI_TEXTURED_BUTTON
 {
-    vec2 pos;
-    vec3 color;
-} Quad_Vertex;
+    UI_ID id;
+    vec2 position;
+    vec2 screen_percentage;
+    Texture_Handle color;
+    Texture_Handle hover_color;
+    Texture_Handle pressed_color;
+} UI_TEXTURED_BUTTON;
 
-typedef struct Quad_Textured_Vertex
+
+typedef struct Font_Handle
 {
-    vec2 pos;
-    vec2 tex_coord;
-} Quad_Textured_Vertex;
+    u32 handle;
+}Font_Handle;
 
 
-Quad_Vertex default_quad_vertex[4]= {
+//auto has the default uv's
+Quad_Texture default_quad_texture_vertex[4]= {
     {{-0.5f, -0.5f},  {1.0f, 0.0f}},
     {{0.5f, -0.5f},  {0.0f, 0.0f}},
     {{0.5f, 0.5f},  {0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f}}
 };
+
+
 uint16_t default_quad_indices[6] = {
     0, 1, 2, 2, 3, 0
 };
@@ -67,6 +107,13 @@ typedef struct
 
 typedef struct UI_Draw_Data
 {
+
+
+    //u16
+    VkIndexType index_type;
+
+    //UI
+
     //TODO: the 100 is temporary
     Quad_Vertex quad_vertex[100];
     u32 quad_vertex_bytes;
@@ -75,7 +122,29 @@ typedef struct UI_Draw_Data
     u32 index_bytes;
     u32 index_count;
 
-    UI_BUTTON* UI_Objects; // darray or maybe even an allocator
+    //UI - with texture
+
+    /*
+    //TODO: the 100 is temporary
+    Quad_Texture quad_texture_vertex[100];
+    u32 quad_texture_vertex_bytes;
+
+    u16 quad_texture_indices[100];
+    u32 quad_texture_index_bytes;
+    u32 quad_texture_index_count;
+    */
+
+    //TEXT
+
+    //TODO: the 100 is temporary
+    Quad_Texture text_vertex[100];
+    u32 text_vertex_bytes;
+
+    u16 text_indices[100];
+    u32 text_index_bytes;
+    u32 text_index_count;
+
+
 } UI_Draw_Data;
 
 
@@ -84,12 +153,19 @@ typedef enum UI_Type
 {
     color,
     texture,
+    // text,??????
 } UI_Type;
 
 
 typedef struct UI_System
 {
+    Arena* arena; // rn mainly just for loading fonts, would be better a pool arena
     Frame_Arena* frame_arena;
+
+    //this should be an array at some point
+    Font default_font;
+    float default_font_size;
+    // Font fonts[100];
 
     UI_ID hot;
     UI_ID active;
@@ -104,6 +180,7 @@ typedef struct UI_System
     vec2 screen_size;
 
     UI_Draw_Data draw_info;
+    UI_BUTTON* UI_Objects; // darray or maybe even an allocator
     // Text_System text_system;
 
     Buffer_Handle ui_quad_vertex_buffer_handle;
@@ -113,39 +190,19 @@ typedef struct UI_System
 
 } UI_System;
 
-/* TODO: make sense to pass in as a param for the UI at some point
-typedef struct Transform_2D
-{
-    vec2 translation{};
-    float rotation{};
-    vec2 scale{1.0f, 1.0f};
-
-    mat2 _mat2()
-    {
-        float s = sin(rotation);
-        float c = cos(rotation);
-        mat2 rotMatrix = (mat2){{scale.x, s}, {c, scale.y}};
-
-        mat2 scaleMat = (mat2){{scale.x, 0.0f}, {0.0f, scale.y}};
-        return rotMatrix * scaleMat;
-    }
-} Transform_2D;
-*/
-
-
 //NOTE: Remove the renderer from the init, these should not be coupled
 //I should only have to pass the vertex/index data to the renderer for drawing
 UI_System* ui_system_init(renderer* renderer);
 
 //pass in the size every frame, in the event the size changes
-void ui_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y);
-void ui_end(UI_System* ui_system);
+void ui_system_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y);
+void ui_system_end(UI_System* ui_system);
 
-
+//Text
+Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* filepath);
 //VULKAN
 void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system);
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer);
-
 
 
 

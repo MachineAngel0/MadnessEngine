@@ -55,7 +55,7 @@ void regenerate_framebuffer(vulkan_context* context, vulkan_swapchain* swapchain
         u32 attachment_count = 2;
         VkImageView attachments[] = {
             swapchain->image_views[i],
-            swapchain->depth_attachment.view
+            swapchain->depth_attachment.texture_image_view
         };
         vulkan_framebuffer_create(
             context,

@@ -11,6 +11,16 @@
 
 
 #include "shader_includes/test_uniform.glsl"
+#include "shader_includes/material_uniform.glsl"
+
+
+layout(push_constant) uniform pc_mesh{
+    uint uv_buffer_idx;
+    uint normal_buffer_idx;
+    uint transform_buffer_idx;
+    uint material_buffer_idx;
+    uint material_idx;
+}pc_mesh;
 
 
 struct material_data{
@@ -60,6 +70,8 @@ void main() {
 
 //    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(gl_DrawIDARB)].color_id;
     out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(0)].color_id;
+
+//    out_color_idx = MATERIAL[nonuniformEXT(2)].color_index[nonuniformEXT(0)].color_id;
 
 
     out_frag_pos = vec3(ubo[nonuniformEXT(0)].model * vec4(in_pos, 1.0));

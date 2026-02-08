@@ -15,6 +15,17 @@
 
 
 /// HANDLES ///
+
+typedef struct Texture_Handle
+{
+    u32 handle;
+} Texture_Handle;
+
+typedef struct Material_Handle
+{
+    u32 handle;
+} Material_Handle;
+
 typedef struct Shader_Handle
 {
     u32 handle;
@@ -30,34 +41,50 @@ typedef struct Buffer_Handle
     u32 handle;
 } Buffer_Handle;
 
-typedef struct light_buffer_handle
+typedef struct Descriptor_Handle
 {
     u32 handle;
-    u32 offset;
-    u32 index;
-} light_buffer_handle;
+} Descriptor_Handle;
 
-typedef struct mesh_handle
+typedef struct Mesh_Handle
 {
     u32 handle;
 } Mesh_Handle;
 
 
-typedef struct vulkan_image
+typedef struct Texture
 {
-    VkImage handle;
-    VkDeviceMemory memory;
-    VkImageView view;
-    // VkSampler texture_sampler; // NOTE: should probably be here
-    u32 width;
-    u32 height;
-} vulkan_image;
+    VkImage texture_image;
+    VkDeviceMemory texture_image_memory;
+    VkImageView texture_image_view;
+    VkSampler texture_sampler;
+    // u32 width;
+    // u32 height;
 
+    //idk if i would want this
+    // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
+    // vk_image_type image_type;
+} Texture;
 
+typedef struct Material_Param_Data
+{
+    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
+    //ALL FROM RANGES 0-1
+    float ambient_strength; // optional for now we can remove it later
+    float roughness_strength;
+    float metallic_strength;
+    float normal_strength;
+    float ambient_occlusion_strength;
+    float emissive_strength;
 
+    u32 color_index;
+    u32 normal_index;
+    u32 metallic_index;
+    u32 roughness_index;
+    u32 ambient_occlusion_index;
+    u32 emissive_index;
 
-/// UI ///
-
+} Material_Param_Data;
 
 
 /// MESH ///
@@ -104,11 +131,18 @@ typedef struct submesh
     u64 tangent_bytes;
     u64 uv_bytes;
 
+    Material_Param_Data material_params;
+    Texture_Handle color_texture;
+    Texture_Handle normal_texture;
+    Texture_Handle metallic_texture;
+    Texture_Handle roughness_texture;
+    Texture_Handle ambient_occlusion_texture;
+    Texture_Handle emissive_texture;
 
-    Shader_Handle color_texture;
+    u32 offset_into_material_data_buffer;
+
 
     u32 mesh_pipeline_mask; // determines what material features this submesh has
-
 } submesh;
 
 
@@ -118,7 +152,6 @@ typedef struct static_mesh
     // the number of meshes in the model
     u32 mesh_size;
     VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
-
 } static_mesh;
 
 // TODO: skinned mesh
@@ -174,7 +207,7 @@ typedef struct vulkan_swapchain
     VkImage* images;
     VkImageView* image_views;
 
-    vulkan_image depth_attachment;
+    Texture depth_attachment;
 
     // framebuffers used for on-screen rendering.
     vulkan_framebuffer* framebuffers;
@@ -276,9 +309,7 @@ typedef enum vulkan_cpu_buffer_type
     BUFFER_TYPE_GPU_STORAGE,
     BUFFER_TYPE_STAGING,
     BUFFER_TYPE_UNIFORM,
-
 } vulkan_buffer_type;
-
 
 
 typedef struct vulkan_buffer
@@ -296,6 +327,24 @@ typedef struct vulkan_buffer
 } vulkan_buffer;
 
 
+typedef enum vulkan_shader_pipeline_type
+{
+    //EXAMPLE OF HOW I MIGHT DYNAMICALLY CONSTRUCT A PIPELINE
+    //TODO: should error out if there are more than 4 descriptors set(not bits) are set, since I am only limited to 4
+    //the first 3 could honestly be static for a given type like mesh,
+    //will always need global ubo, materials, and ssbo's, but the 4th is custom
+    PIPELINE_TYPE_GLOBAL_UBO = BITFLAG(1),
+    PIPELINE_TYPE_MESH = BITFLAG(2),
+    PIPELINE_TYPE_MATERIAL = BITFLAG(3),
+    PIPELINE_TYPE_BUFFERS = BITFLAG(4),
+
+    //this is more describing what the pipeline is, rather than what it requires
+    PIPELINE_TYPE_OPAQUE = BITFLAG(5),
+    PIPELINE_TYPE_TRANSPARENCY = BITFLAG(6),
+    PIPELINE_TYPE_LIGHTS = BITFLAG(7),
+    PIPELINE_TYPE_TERRAIN = BITFLAG(8),
+} vulkan_shader_pipeline_type;
+
 typedef struct vulkan_shader_pipeline
 {
     VkPipelineLayout pipeline_layout;
@@ -303,70 +352,36 @@ typedef struct vulkan_shader_pipeline
 } vulkan_shader_pipeline;
 
 
-typedef struct Texture
-{
-    VkImage texture_image;
-    VkDeviceMemory texture_image_memory;
-    VkImageView texture_image_view;
-    VkSampler texture_sampler;
-} Texture;
-
-
-typedef struct Material
-{
-    u32 texture_indexes[10]; //TODO: could be more but fine for now
-    u32 pipeline_indexes;
-} Material;
-
-
-typedef struct Material_Index_Data
-{
-    u32 color_index;
-
-    // u32 roughness_index;
-    // u32 metallic_index;
-    // u32 specular_index;
-    // u32 emissive_index;
-    // u32 ambient_occlusion_index;
-    // u32 normal_index;
-} Material_Index_Data;
-
-
-
-
-
-
-typedef struct Material_Param_Data
-{
-    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
-    //ALL FROM RANGES 0-1
-    float ambient_strength; // optional for now we can remove it later
-    float roughness_strength;
-    float metallic_strength;
-    float normal_strength;
-    float emissive_strength;
-} Material_Param_Data;
-
 
 typedef struct Shader_System
 {
-    Texture error_texture;
+    Texture default_texture;
     Texture textures[100];
-    u32 available_texture_indexes; // count up for now, releasing is another issue
-    // u32 texture_usage_count[100]; // how many things are referencing this texture, so when it hits 0, we can add it to the free list
-    // u32 free_list_texture_indexes[100];
+    // count up for now, releasing is another issue
+    u32 available_texture_indexes;
 
-    Material material_references[100];
-    u32 material_indexes;
+
     vulkan_shader_pipeline pipeline_references[100];
+    u32 pipeline_indexes;
 
-    Shader_Handle default_texture_handle;
+    Texture_Handle default_texture_handle;
+    Material_Handle default_material_handle;
+
+    //idk if i need these two rn
+    Shader_Handle default_shader_handle;
+    Pipeline_Handle default_pipeline_handle;
 
     Material_Param_Data material_params[100];
-    // Material_Index_Data material_index[100]; // idk about this one
+    u32 material_param_indexes;
+
+    //TODO: this should hold all the global buffers and things for descriptor set
+    Buffer_Handle material_mesh_ssbo_handle;
+
+
+    u32 max_indexes;
+
+
 } Shader_System;
-
-
 
 
 typedef struct Buffer_System
@@ -448,8 +463,8 @@ typedef struct vulkan_bindless_descriptors
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSet* descriptor_sets; //darray, the number of max frames in use
     u32 descriptor_set_count;
+    // Descriptor_Type descriptor_type; // uniform, textures, sbo
 } vulkan_bindless_descriptors;
-
 
 typedef struct vulkan_shader_texture
 {
@@ -592,8 +607,6 @@ typedef struct Directional_Light
     //strength values
     float diffuse;
     float specular;
-
-
 } Directional_Light;
 
 typedef struct Point_Light
@@ -612,7 +625,6 @@ typedef struct Point_Light
     float specular;
     // float intensity;
     // float radius;
-
 } Point_Light;
 
 typedef struct Spot_Light
@@ -649,7 +661,6 @@ typedef struct Light_System
 
     Buffer_Handle directional_light_storage_buffer_handle;
     Buffer_Handle point_light_storage_buffer_handle;
-
 } Light_System;
 
 typedef enum Render_Mode
@@ -658,7 +669,7 @@ typedef enum Render_Mode
     RENDER_MODE_NORMAL,
     RENDER_MODE_LIGHTING,
     RENDER_MODE_MAX,
-}Render_Mode;
+} Render_Mode;
 
 typedef struct uniform_buffer_object
 {
@@ -678,6 +689,12 @@ typedef struct uniform_buffer_object
 
     Render_Mode render_mode;
 
+    u32 _padding0;
+    u32 _padding1;
+    u32 _padding2;
+    u32 _padding3;
+    u32 _padding4;
+    u32 _padding5;
 } uniform_buffer_object;
 
 
@@ -702,12 +719,12 @@ const char* mesh_pipeline_flag_names[] = {
     "AO"
 };
 String mesh_pipeline_flag_names_string[] = {
-    { "Albedo", sizeof("Albedo") - 1 },
-    { "Normal", sizeof("Normal") - 1 },
-    { "Emissive", sizeof("Emissive") - 1 },
-    { "Roughness", sizeof("Roughness") - 1 },
-    { "Metallic", sizeof("Metallic") - 1 },
-    { "AO", sizeof("AO") - 1 },
+    {"Albedo", sizeof("Albedo") - 1},
+    {"Normal", sizeof("Normal") - 1},
+    {"Emissive", sizeof("Emissive") - 1},
+    {"Roughness", sizeof("Roughness") - 1},
+    {"Metallic", sizeof("Metallic") - 1},
+    {"AO", sizeof("AO") - 1},
 };
 
 typedef struct mesh_permutation_draw_data
@@ -739,7 +756,6 @@ typedef struct mesh_uniform_constants
 } mesh_uniform_constants;
 
 
-
 typedef struct Mesh_System
 {
     //NOTE: this is just me figuring out how to handle buffers for a particular system
@@ -763,8 +779,8 @@ typedef struct Mesh_System
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
-    Buffer_Handle transform_buffer_handle;
 
+    Buffer_Handle transform_buffer_handle;
     Buffer_Handle material_buffer_handle;
 
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
@@ -773,17 +789,12 @@ typedef struct Mesh_System
     mesh_uniform_constants uniform_buffer_permutation;
 
 
-
-
     //NOTE: NOT IN USE
     skinned_mesh* skinned_meshes;
     u32 skinned_mesh_size;
 
     Buffer_Handle bone_buffer_handle;
     Buffer_Handle wieghts_buffer_handle;
-
-
-
 } Mesh_System;
 
 
@@ -813,10 +824,6 @@ typedef struct renderer
     vulkan_shader_pipeline indirect_mesh_pipeline;
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
-
-
-
-
 } renderer;
 
 

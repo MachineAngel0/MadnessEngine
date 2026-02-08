@@ -119,7 +119,7 @@ void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* rende
 void vulkan_renderpass_begin(renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
 {
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
-    insertImageMemoryBarrier(command_buffer->handle,
+    image_insert_memory_barrier(command_buffer->handle,
                              renderer->context.swapchain.images[current_frame],
                              0,
                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -129,8 +129,8 @@ void vulkan_renderpass_begin(renderer* renderer, vulkan_command_buffer* command_
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                              (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
-    insertImageMemoryBarrier(command_buffer->handle,
-                             renderer->context.swapchain.depth_attachment.handle,
+    image_insert_memory_barrier(command_buffer->handle,
+                             renderer->context.swapchain.depth_attachment.texture_image,
                              0,
                              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                              VK_IMAGE_LAYOUT_UNDEFINED,
@@ -195,7 +195,7 @@ void vulkan_renderpass_UI_begin(renderer* renderer, vulkan_command_buffer* comma
     image_subresource_range.layerCount = 1;
 
 
-    insertImageMemoryBarrier(command_buffer->handle,
+    image_insert_memory_barrier(command_buffer->handle,
                              renderer->context.swapchain.images[current_frame],
                              0,
                              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -247,7 +247,7 @@ void vulkan_renderpass_UI_end(renderer* renderer, vulkan_command_buffer* command
     // End renderpass
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
-    insertImageMemoryBarrier(command_buffer->handle,
+    image_insert_memory_barrier(command_buffer->handle,
                              renderer->context.swapchain.images[current_frame], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
                              VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,

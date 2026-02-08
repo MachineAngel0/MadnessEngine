@@ -20,7 +20,7 @@ bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_te
 
 bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
 
-bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline);
+bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_system, vulkan_shader_pipeline* mesh_indirect_pipeline);
 
 //NOTE: Might be able to change these into more generic sprites
 bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline);

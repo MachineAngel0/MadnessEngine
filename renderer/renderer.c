@@ -147,7 +147,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
     //TODO: move into the mesh system init
-    vulkan_mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline);
+    vulkan_mesh_indirect_shader_create(&renderer_internal, renderer_internal.mesh_system, &renderer_internal.indirect_mesh_pipeline);
 
     //BINDLESS TEXTURE
     create_texture_image(vk_context, vk_context->graphics_command_buffer, "../renderer/texture/error_texture.png",
@@ -177,7 +177,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     arena_clear(&renderer_internal.frame_arena);
 
-    ui_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
+    ui_system_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
     UI_ID test_id = {0, 0};
     //DO_BUTTON_TEST(UI_System_internal, test_id);
     do_button(UI_System_internal, test_id, (vec2){1,1}, (vec2) {50,50},
@@ -309,7 +309,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
-    insertImageMemoryBarrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(command_buffer_current_frame->handle,
                              vk_context.swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                              VK_IMAGE_LAYOUT_UNDEFINED,
                              VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -317,8 +317,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                              (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
-    insertImageMemoryBarrier(command_buffer_current_frame->handle,
-                             vk_context.swapchain.depth_attachment.handle, 0,
+    image_insert_memory_barrier(command_buffer_current_frame->handle,
+                             vk_context.swapchain.depth_attachment.texture_image, 0,
                              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                              VK_IMAGE_LAYOUT_UNDEFINED,
                              VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -392,10 +392,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // SET 1: TEXTURE
     // THE ABOVE IS FOR EVERYTHING
     // DRAW LOOP:
+    //      bind pipeline
     //      bind vertex and index buffer
-    //      for(pipeline_type):
-    //            Bind: PIPELINE_TYPE
-    //            SET 2 : MESH SHADER DATA
+    //      for(pipeline_mask):
+    //            bind and update ubo with pipeline mask
+    //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
 
@@ -426,102 +427,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame);
 
-    /*
-    VkDeviceSize pOffsets[] = {0};
-    vkCmdBindVertexBuffers(command_buffer_current_frame->handle, 0, 1, &renderer_internal.indirect_vertex_buffer.handle,
-                           pOffsets);
 
-    vkCmdBindIndexBuffer(command_buffer_current_frame->handle, renderer_internal.indirect_index_buffer.handle, 0,
-                         renderer_internal.indirect_mesh->mesh[0].index_type);
-
-    if (renderer_internal.context.device.features.multiDrawIndirect)
-    {
-        vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
-                                 renderer_internal.indirect_draw_buffer.handle, 0,
-                                 renderer_internal.indirect_mesh->mesh_size, sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (auto j = 0; j < renderer_internal.indirect_mesh->mesh_size; j++)
-        {
-            vkCmdDrawIndexedIndirect(command_buffer_current_frame->handle,
-                                     renderer_internal.indirect_draw_buffer.handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));
-        }
-    }
-*/
-    /*
-    //BUFFER ADDRESSING//
-
-
-    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      vk_context.mesh_default.mesh_shader_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 0, 1,
-                            &renderer_internal.global_descriptors.uniform_descriptors.descriptor_sets[vk_context.
-                                current_frame], 0, 0);
-
-    VkDeviceAddress position_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                        renderer_internal.buffer_system->vertex_buffers
-                                                                        ->handle);
-    VkDeviceAddress uv_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                  renderer_internal.buffer_system->uv_buffers->handle);
-    VkDeviceAddress normal_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                      renderer_internal.buffer_system->normal_buffers->
-                                                                      handle);
-    VkDeviceAddress tangent_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                       renderer_internal.buffer_system->tangent_buffers
-                                                                       ->handle);
-
-    //textures
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout, 1, 1,
-                            &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
-                                current_frame],
-                            0, 0);
-
-    u32 vertex_bytes = 0;
-    u32 uv_bytes = 0;
-    u32 index_bytes = 0;
-    u32 tangent_bytes = 0;
-    u32 normal_bytes = 0;
-    for (u64 i = 0; i < vk_context.mesh_default.static_mesh->mesh_size; i++)
-    {
-        // PUSH CONSTANT with DEVICE BUFFER ADDRESS's
-        pc_mesh temp_pc_mesh = {
-            .pos_address = position_buffer_address + vertex_bytes,
-            .normal_index = normal_buffer_address + normal_bytes,
-            .tangent_index = tangent_buffer_address + tangent_bytes,
-            .uv_index = uv_buffer_address + uv_bytes,
-            .albedo_material_index = vk_context.mesh_default.static_mesh->mesh[i].color_texture.handle,
-        };
-        vkCmdPushConstants(command_buffer_current_frame->handle,
-                           vk_context.mesh_default.mesh_shader_pipeline.pipeline_layout,
-                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                           sizeof(pc_mesh), &temp_pc_mesh);
-        // vkCmdPushConstants2() // TODO: look into
-
-
-        //dont need to bind vertex buffer since we are passing its address instead
-        vkCmdBindIndexBuffer(command_buffer_current_frame->handle,
-                             renderer_internal.buffer_system->index_buffers->handle, index_bytes,
-                             vk_context.mesh_default.static_mesh->mesh[i].index_type);
-        // // allows better validation and allows partial binding, such as rendering a certain amount of meshes
-        // vkCmdBindIndexBuffer2();
-        vkCmdDrawIndexed(command_buffer_current_frame->handle,
-                         (u32)vk_context.mesh_default.static_mesh->mesh[i].indices_count,
-                         1, 0, 0, 0);
-
-        vertex_bytes += vk_context.mesh_default.static_mesh->mesh[i].vertex_bytes;
-        uv_bytes += vk_context.mesh_default.static_mesh->mesh[i].uv_bytes;
-        index_bytes += vk_context.mesh_default.static_mesh->mesh[i].indices_bytes;
-        tangent_bytes += vk_context.mesh_default.static_mesh->mesh[i].tangent_bytes;
-        normal_bytes += vk_context.mesh_default.static_mesh->mesh[i].normal_bytes;
-    }
-*/
     //DRAW BINDLESS textured triangle
     vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       vk_context.shader_texture_bindless.shader_texture_pipeline.handle);
@@ -553,13 +459,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                      1, 0, 0, 0);
 
 
-
-    //UI
-    // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
-
-
-
-
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
 
@@ -568,7 +467,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
-    insertImageMemoryBarrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(command_buffer_current_frame->handle,
                              vk_context.swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
                              VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
@@ -627,7 +526,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
     //TODO: renable
-    ui_end(UI_System_internal);
+    ui_system_end(UI_System_internal);
 }
 
 

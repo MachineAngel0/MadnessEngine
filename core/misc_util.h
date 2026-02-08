@@ -140,4 +140,5 @@ u64 calculate_permutations_amount(u64 number_of_objects)
 
 
 
+
 #endif //MISC_UTIL_H

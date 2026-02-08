@@ -1378,13 +1378,14 @@ bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh
     return true;
 }
 
-bool vulkan_mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline)
+bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_system, vulkan_shader_pipeline* mesh_indirect_pipeline)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
         renderer->global_descriptors.uniform_descriptors.descriptor_set_layout,
         renderer->global_descriptors.texture_descriptors.descriptor_set_layout,
         renderer->global_descriptors.storage_descriptors.descriptor_set_layout,
+        // mesh_system->global_descriptors.storage_descriptors.descriptor_set_layout,
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};

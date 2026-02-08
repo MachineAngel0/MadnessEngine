@@ -5,11 +5,11 @@
 void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkFormat format,
                          VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_flags,
                          b32 create_view,
-                         VkImageAspectFlags view_aspect_flags, vulkan_image* out_image)
+                         VkImageAspectFlags view_aspect_flags, Texture* out_texture)
 {
     // Copy params
-    out_image->width = width;
-    out_image->height = height;
+    // out_image->width = width;
+    // out_image->height = height;
 
 
     // Creation info.
@@ -28,12 +28,12 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
-    VK_CHECK(vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_image->handle));
+    VK_CHECK(vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->texture_image));
 
 
     // Query memory requirements.
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_image->handle, &memory_requirements);
+    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
 
     // i32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
     i32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, memory_flags);
@@ -48,28 +48,28 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_image->memory
+        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->texture_image_memory
         ));
 
 
     // Bind the memory
-    VK_CHECK(vkBindImageMemory(context->device.logical_device, out_image->handle, out_image->memory, 0));
+    VK_CHECK(vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory, 0));
     // TODO: configurable memory offset.
 
     // Create view
     if (create_view)
     {
-        out_image->view = 0;
-        vulkan_image_view_create(context, format, &out_image->handle, &out_image->view, view_aspect_flags);
+        out_texture->texture_image_view = 0;
+        vulkan_image_view_create(context, format, view_aspect_flags, out_texture);
     }
 }
 
 
-void vulkan_image_view_create(vulkan_context* context, VkFormat format, VkImage* handle, VkImageView* view,
-                              VkImageAspectFlags aspect_flags)
+void vulkan_image_view_create(vulkan_context* context, VkFormat format,
+                              VkImageAspectFlags aspect_flags, Texture* texture)
 {
     VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    view_create_info.image = *handle;
+    view_create_info.image = texture->texture_image;
     view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // TODO: Make configurable.
     view_create_info.format = format;
     view_create_info.subresourceRange.aspectMask = aspect_flags;
@@ -79,28 +79,28 @@ void vulkan_image_view_create(vulkan_context* context, VkFormat format, VkImage*
     view_create_info.subresourceRange.baseArrayLayer = 0;
     view_create_info.subresourceRange.layerCount = 1;
 
-    VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, view));
+    VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &texture->texture_image_view));
 }
 
 
-void vulkan_image_destroy(vulkan_context* context, vulkan_image* image)
+void vulkan_image_destroy(vulkan_context* context, Texture* image)
 {
-    if (image->view)
+    if (image->texture_image_view)
     {
-        vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
-        image->view = 0;
+        vkDestroyImageView(context->device.logical_device, image->texture_image_view, context->allocator);
+        image->texture_image_view = 0;
     }
 
-    if (image->memory)
+    if (image->texture_image_memory)
     {
-        vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
-        image->memory = 0;
+        vkFreeMemory(context->device.logical_device, image->texture_image_memory, context->allocator);
+        image->texture_image_memory = 0;
     }
 
-    if (image->handle)
+    if (image->texture_image)
     {
-        vkDestroyImage(context->device.logical_device, image->handle, context->allocator);
-        image->handle = 0;
+        vkDestroyImage(context->device.logical_device, image->texture_image, context->allocator);
+        image->texture_image = 0;
     }
 }
 
@@ -196,8 +196,7 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     // TODO: configurable memory offset.
     // Create view
     out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, &out_texture->texture_image,
-                             &out_texture->texture_image_view, VK_IMAGE_ASPECT_COLOR_BIT);
+    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
 
 
     VkSamplerCreateInfo sampler_info = {0};
@@ -354,7 +353,40 @@ void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* co
                                          vulkan_context->device.graphics_queue);
 }
 
-void insertImageMemoryBarrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
+void create_texture_sampler(renderer* renderer, Texture* texture)
+{
+    VkSamplerCreateInfo samplerInfo = {0};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    /*
+    * VK_SAMPLER_ADDRESS_MODE_REPEAT: Repeat the texture when going beyond the image dimensions.
+    *VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT: Like repeat, but inverts the coordinates to mirror the image when going beyond the dimensions.
+    *VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE: Take the color of the edge closest to the coordinate beyond the image dimensions.
+    *VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE: Like clamp to edge, but instead uses the edge opposite to the closest edge.
+    *VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER: Return a solid color when sampling beyond the dimensions of the image.
+     */
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    //get maxAnisotropy
+    VkPhysicalDeviceProperties properties = {0};
+    vkGetPhysicalDeviceProperties(renderer->context.device.physical_device, &properties);
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    VK_CHECK(vkCreateSampler(renderer->context.device.logical_device, &samplerInfo, NULL, &texture->texture_sampler));
+}
+
+void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
                               VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
                               VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
                               VkImageSubresourceRange subresourceRange)

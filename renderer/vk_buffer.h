@@ -27,6 +27,7 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 Buffer_Handle vulkan_buffer_create(renderer* renderer, Buffer_System* buffer_system,
                                    vulkan_buffer_type buffer_type, u64 data_size);
 
+
 void _vulkan_buffer_create_internal(renderer* renderer, vulkan_buffer* out_buffer, vulkan_buffer_type buffer_type,
                                     u64 data_size);
 

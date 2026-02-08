@@ -1,6 +1,6 @@
 ﻿#include "spv_reflect.h"
 
-#define max_bindless_resources 4092u
+#define max_bindless_resources 4096u
 #define max_bindless_bindings 16;
 
 
@@ -383,7 +383,6 @@ void create_bindless_uniform_buffer_descriptor_set(vulkan_context* context,
 
     //SET 0, Layout 0
     VkDescriptorSetLayoutBinding layout_binding = {0};
-    //image sampler
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_binding.binding = 0;
     layout_binding.descriptorCount = max_bindless_resources;
