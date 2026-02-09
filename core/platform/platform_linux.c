@@ -190,6 +190,7 @@ void platform_shutdown(platform_state* plat_state)
 
 bool platform_pump_messages(platform_state* plat_state)
 {
+    //comment
     // Simply cold-cast to the known type.
     internal_state* state = (internal_state*)plat_state->internal_state;
 
