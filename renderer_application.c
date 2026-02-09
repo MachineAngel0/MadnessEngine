@@ -1,5 +1,8 @@
 ﻿#include "app_types.h"
-
+#include "platform/platform.h"
+#include "clock.h"
+#include "event.h"
+#include "input.h"
 
 typedef struct application_state
 {
@@ -19,11 +22,11 @@ typedef struct application_state
 
 static application_state app_state;
 
-bool application_on_event(const event_type code, void* sender, void* listener_inst, event_context context);
+bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
-bool application_on_key(const event_type code, void* sender, void* listener_inst, event_context context);
+bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
-bool application_on_resized(u16 code, void* sender, void* listener_inst, event_context context);
+bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
 
 
 bool application_renderer_create(struct renderer_app* renderer)
@@ -134,7 +137,7 @@ void application_renderer_run()
 }
 
 
-bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context)
+bool application_on_event(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
     switch (code)
     {
@@ -147,7 +150,7 @@ bool application_on_event(event_type code, void* sender, void* listener_inst, ev
 }
 
 
-bool application_on_key(event_type code, void* sender, void* listener_inst, event_context context)
+bool application_on_key(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
     if (code == EVENT_KEY_PRESSED)
     {
@@ -162,7 +165,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
             event_fire(EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
-            return TRUE;
+            return true;
         }
         if (key_code == KEY_M)
         {
@@ -185,7 +188,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
 }
 
 
-bool application_on_resized(u16 code, void* sender, void* listener_inst, event_context context)
+bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
     if (code == EVENT_APP_RESIZE)
     {
@@ -205,15 +208,15 @@ bool application_on_resized(u16 code, void* sender, void* listener_inst, event_c
             if (width == 0 || height == 0)
             {
                 INFO("Window minimized, suspending application.");
-                app_state.is_suspended = TRUE;
-                return TRUE;
+                app_state.is_suspended = true;
+                return true;
             }
             else
             {
                 if (app_state.is_suspended)
                 {
                     INFO("Window restored, resuming application.");
-                    app_state.is_suspended = FALSE;
+                    app_state.is_suspended = false;
                 }
 
                 app_state.renderer->on_resize(app_state.renderer, width, height);
