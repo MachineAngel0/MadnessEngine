@@ -189,7 +189,7 @@ void* platform_set_memory(void* dest, i32 value, u64 size)
 }
 
 
-f64 platform_get_absolute_time()
+f64 platform_get_absolute_time(void)
 {
     LARGE_INTEGER now_time;
     QueryPerformanceCounter(&now_time);

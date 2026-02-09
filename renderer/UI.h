@@ -15,25 +15,28 @@ typedef struct Quad_Texture
 {
     vec2 pos;
     vec2 tex;
-}Quad_Texture;
+} Quad_Texture;
 
 
 //Text
 
-typedef struct Glyph {
+typedef struct Glyph
+{
     int width, height;
     int xoff, yoff;
     float advance;
     float u0, v0, u1, v1; // UV coordinates in atlas
-}Glyph;
+} Glyph;
 
-typedef struct Madness_Font{
+//called Madness font cause a linux library uses the struct font
+typedef struct Madness_Font
+{
     stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
     float font_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages
     Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
     Texture font_texture;
-}Madness_Font;
+} Madness_Font;
 
 
 //UI
@@ -45,7 +48,6 @@ typedef enum UI_Alignment
     //JUSTIFIED, ?????
     UI_ALIGNMENT_MAX,
 } UI_Alignment;
-
 
 
 typedef struct UI_ID
@@ -80,14 +82,14 @@ typedef struct UI_TEXTURED_BUTTON
 typedef struct Font_Handle
 {
     u32 handle;
-}Font_Handle;
+} Font_Handle;
 
 
 //auto has the default uv's
-Quad_Texture default_quad_texture_vertex[4]= {
-    {{-0.5f, -0.5f},  {1.0f, 0.0f}},
-    {{0.5f, -0.5f},  {0.0f, 0.0f}},
-    {{0.5f, 0.5f},  {0.0f, 1.0f}},
+Quad_Texture default_quad_texture_vertex[4] = {
+    {{-0.5f, -0.5f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f}}
 };
 
@@ -107,8 +109,6 @@ typedef struct
 
 typedef struct UI_Draw_Data
 {
-
-
     //u16
     VkIndexType index_type;
 
@@ -143,10 +143,7 @@ typedef struct UI_Draw_Data
     u16 text_indices[100];
     u32 text_index_bytes;
     u32 text_index_count;
-
-
 } UI_Draw_Data;
-
 
 
 typedef enum UI_Type
@@ -187,7 +184,6 @@ typedef struct UI_System
     Buffer_Handle ui_quad_index_buffer_handle;
     Buffer_Handle text_vertex_buffer_handle;
     Buffer_Handle text_index_buffer_handle;
-
 } UI_System;
 
 //NOTE: Remove the renderer from the init, these should not be coupled
@@ -203,7 +199,6 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
 //VULKAN
 void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system);
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer);
-
 
 
 //for drawing
@@ -264,27 +259,14 @@ bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
 #define DO_BUTTON_TEST(UI_SYSTEM, UI_ID) do_button(UI_SYSTEM, UI_ID, (vec2){0.0f,0.0f}, (vec2){10.0f,10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f});
 
 
-/*
-bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
-               vec3 color = {1.0f, 1.0f, 1.0f}, vec3 hovered_color = {1.0f, 1.0f, 1.0f},
-               vec3 pressed_color = {1.0f, 1.0f, 1.0f});
-
-
-bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
-                   UI_Alignment alignment = UI_Alignment::UI_ALIGNMENT_LEFT, vec3 color = {1.0f, 1.0f, 1.0f},
-                   vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
-                   pressed_color = {1.0f, 1.0f, 1.0f});
-*/
-
-/* TODO: after everything else is sorted
-bool do_button_new_text(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size, String text,
-                        vec2 text_padding = {0.0f, 0.0f}, vec3 color = {1.0f, 1.0f, 1.0f},
-                        vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
-                        pressed_color = {1.0f, 1.0f, 1.0f});
+bool do_button_new_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
+                        vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
 
 bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 screen_percentage,
-                    vec3 color = {1.0f, 1.0f, 1.0f}, vec3 hovered_color = {1.0f, 1.0f, 1.0f}, vec3
-                    pressed_color = {1.0f, 1.0f, 1.0f});
-*/
+                    vec3 color, vec3 hovered_color, vec3 pressed_color);
+
+void do_text_screen_percentage(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
+                               vec3 color, float font_size);
+
 
 #endif //UI_H

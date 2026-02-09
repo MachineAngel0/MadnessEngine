@@ -43,13 +43,13 @@ void main() {
     //final color
     vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
     vec4 final_result = vec4(result,1.0) * texture_result;
+    outColor = final_result;
 
     //LIGHTING INFO
     if (ubo[nonuniformEXT(0)].render_mode == 2){
         final_result = vec4(result, 1.0) * (in_normal,1.0);
+        outColor = final_result;
     }
-    outColor = final_result;
-
 
     //NORMALS INFO
     if (ubo[nonuniformEXT(0)].render_mode == 1){

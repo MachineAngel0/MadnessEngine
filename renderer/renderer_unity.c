@@ -16,11 +16,7 @@
 #include "vk_shader.h"
 #include "vk_descriptors.h"
 
-/*
 
-#include "text.c"
-#include "text.h"
-*/
 #include "UI.h"
 #include "UI.c"
 

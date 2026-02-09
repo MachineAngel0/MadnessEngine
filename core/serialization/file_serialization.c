@@ -43,7 +43,7 @@ void byte_buffer_free_arena(byte_buffer* buffer)
 
 void byte_buffer_print_info(const byte_buffer* buffer)
 {
-    printf("WRITE: %lu, READ: %lu\n", buffer->write_offset, buffer->write_offset);
+    printf("WRITE: %llu, READ: %llu\n", buffer->write_offset, buffer->write_offset);
 }
 
 /***SERIALIZE***/

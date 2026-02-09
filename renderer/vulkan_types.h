@@ -12,6 +12,7 @@
 #include "hash_set.h"
 #include "str.h"
 #include "maths/math_types.h"
+#include "maths/transforms.h"
 
 
 /// HANDLES ///
@@ -117,8 +118,12 @@ typedef struct PC_Mesh
 } PC_Mesh;
 
 
+
+
 typedef struct submesh
 {
+    Transform transform;
+
     // vertex_mesh vertices;
     vec3* pos;
     vec3* normal;
@@ -157,7 +162,9 @@ typedef struct static_mesh
     submesh* mesh;
     // the number of meshes in the model
     u32 mesh_size;
-    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
+
+    //
+
 } static_mesh;
 
 // TODO: skinned mesh

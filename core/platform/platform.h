@@ -3,7 +3,7 @@
 
 
 #include "vk_device.h"
-#include "defines.h"
+
 
 
 typedef struct platform_state

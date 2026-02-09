@@ -268,8 +268,8 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
 {
     vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_vertex_buffer_handle);
     vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_buffer_handle);
-    // vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_buffer_handle);
-    // vulkan_buffer_reset_offset(renderer, ui_system->text_index_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_index_buffer_handle);
 
     //TODO: generate draw indirect commands
 
@@ -278,6 +278,10 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
 
     vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_index_buffer_handle,
                                                    ui_system->draw_info.indices, ui_system->draw_info.index_bytes);
+
+
+
+
 }
 
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
@@ -735,37 +739,11 @@ bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
 }
 
 /*
-bool do_button_new_text(UI_System* ui_system, UI_ID id, glm::vec2 pos, glm::vec2 size, String text,
-                        glm::vec2 text_padding = {0.0f, 0.0f}, glm::vec3 color = {1.0f, 1.0f, 1.0f},
-                        glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
-                        pressed_color = {1.0f, 1.0f, 1.0f})
+bool do_button_new_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
+                        vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
 {
-    //validation
-    if (size.x > 100 || size.x < 0 || size.y > 100 || size.y < 0)
-    {
-        printf("SIZE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
 
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-
-    // POS AND SIZE CALCULATIONS
-
-    vec2 converted_pos = pos / 100.0f;
-    vec2 converted_size = size / 100.0f;
-
-    vec2 final_pos = {
-        ui_system->screen_size.x * converted_pos.x,
-        ui_system->screen_size.y * converted_pos.y,
-    };
-
-    vec2 final_size = {
-        (ui_system->screen_size.x * converted_size.x),
-        (ui_system->screen_size.y * converted_size.y),
-    };
+    do_button()
 
     do_text(ui_system, text, pos + text_padding, vec3{1.0, 1.0, 0.0});
 
@@ -845,10 +823,8 @@ bool do_button_new_text(UI_System* ui_system, UI_ID id, glm::vec2 pos, glm::vec2
     return false;
 }
 
-bool do_button_text(UI_System* ui_system, UI_ID id, String text, glm::vec2 pos, glm::vec2 screen_percentage,
-                    glm::vec3 color = {1.0f, 1.0f, 1.0f}, glm::vec3 hovered_color = {1.0f, 1.0f, 1.0f}, glm::vec3
-                    pressed_color = {1.0f, 1.0f, 1.0f})
-{
+bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 screen_percentage,
+                    vec3 color, vec3 hovered_color, vec3 pressed_color);
     //validation
 
     if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
@@ -862,8 +838,8 @@ bool do_button_text(UI_System* ui_system, UI_ID id, String text, glm::vec2 pos, 
 
     //POS AND SIZE CALCULATIONS
 
-    glm::vec2 converted_pos = pos / 100.0f;
-    glm::vec2 converted_size = screen_percentage / 100.0f;
+    vec2 converted_pos = pos / 100.0f;
+    vec2 converted_size = screen_percentage / 100.0f;
 
     glm::vec2 final_pos = {
         ui_system->push_constants.screenSize.x * converted_pos.x,
@@ -951,5 +927,124 @@ bool do_button_text(UI_System* ui_system, UI_ID id, String text, glm::vec2 pos, 
     if (use_button(ui_system, id, final_pos, final_size)) return true;
 
     return false;
+}
+
+void do_text_screen_percentage(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
+                               vec3 color, float font_size)
+{
+
+ //tells us how much of the screen we want based on the size percentage
+    if (screen_percentage_size.x > 100 || screen_percentage_size.x < 0 || screen_percentage_size.y > 100 ||
+        screen_percentage_size.y < 0)
+    {
+        printf("YOU ARE STUPID: TEXT");
+    }
+    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
+    {
+        printf("YOU ARE STUPID 2: TEXT");
+    }
+
+    //std::vector<Vertex_Text> new_quad = text_create_quad({0.5f,0.5f}, {0.1f,0.1f}, {1.0f,1.0f,1.0f});
+
+    //move to the shader as a push constant
+    float screen_width = ui_system->screen_size.x;
+    float screen_height = ui_system->screen_size.y;
+
+    //convert 0-00 -> 0-1
+    vec2 converted_pos = pos / 100.0f;
+    vec2 converted_size = screen_percentage_size / 100.0f;
+
+    vec2 final_pos = {
+        screen_width * converted_pos.x,
+        screen_height * converted_pos.y
+    };
+    vec2 final_size = {
+        (screen_width * converted_size.x),
+        (screen_height * converted_size.y)
+    };
+
+    //We take the desired font size, scale it down proportional to the font size we created it at
+    //final size of the font ex: 36/48 = 0.75, 48*0.75 = 36
+    float font_scalar = font_size / ui_system->default_font_size;
+
+    for (const char& c : text)
+    {
+        if (c < 32 || c >= 128) continue; // skip unsupported characters
+        Glyph& g = ui_system->default_font.glyphs[c - 32];
+
+
+        //take the x position and move it left based on the size we wanted it at
+        float xpos = (final_pos.x - final_size.x + g.xoff);
+        float ypos = (final_pos.y + g.yoff);
+
+        //scales the texture
+        float w = (float) g.width * font_scalar;
+        float h = (float) g.height * font_scalar;
+
+        //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
+
+
+        // Convert screen coords to NDC [-1,1]
+        float ndc_x0 = ((xpos) / screen_width) * 2.0f - 1.0f;
+        float ndc_x1 = (((xpos + w)) / screen_width) * 2.0f - 1.0f;
+        float ndc_y0 = ((ypos) / screen_height) * 2.0f - 1.0f; // invert Y
+        float ndc_y1 = (((ypos + h)) / screen_height) * 2.0f - 1.0f;
+
+        // Convert screen coords to NDC [-1,1]
+        //float ndc_x0 = ((xpos - final_size.x)/ screen_width) * 2.0f - 1.0f;
+        //float ndc_x1 = (((xpos + w) + final_size.x) / screen_width) * 2.0f - 1.0f;
+        //float ndc_y0 = ((ypos - final_size.x) / screen_height) * 2.0f- 1.0f; // invert Y
+        //float ndc_y1 = (((ypos + h) - final_size.x) / screen_height) * 2.0f - 1.0f;
+
+        //  here for reference
+        // {{pos.x - size.x, pos.y - size.y}, {color}},
+        // {{pos.x - size.x, pos.y + size.y}, {color}},
+        // {{pos.x + size.x, pos.y + size.y}, {color}},
+        // {{pos.x + size.x, pos.y - size.y}, {color}}
+        //
+
+        // UVs from the atlas
+        vec2 uv0 = {g.u0, g.v0};
+        vec2 uv1 = {g.u1, g.v1};
+
+
+        std::vector<Vertex_Text> new_quad = {
+            {{ndc_x0, ndc_y0}, color, {uv0.x, uv0.y}},
+            {{ndc_x0, ndc_y1}, color, {uv0.x, uv1.y}},
+            {{ndc_x1, ndc_y1}, color, {uv1.x, uv1.y}},
+            {{ndc_x1, ndc_y0}, color, {uv1.x, uv0.y}},
+        };
+
+         // TODO:  fruity colors, maybe ill make a seperate function that allows you to color each edge, cause its kinda cool, realistically you can just overlay another texture but that's fucking lame
+        // std::vector<Vertex_Text> new_quad = {
+            // {{ndc_x0, ndc_y0}, {0.0f,1.0f,1.0f}, {uv0.x, uv0.y}},
+            // {{ndc_x0, ndc_y1}, {1.0f,0.0f,1.0f}, {uv0.x, uv1.y}},
+            // {{ndc_x1, ndc_y1}, {1.0f,1.0f,1.0f}, {uv1.x, uv1.y}},
+            // {{ndc_x1, ndc_y0}, {1.0f,1.0f,0.0f}, {uv1.x, uv0.y}},
+        // };
+
+        uint16_t base_index = (uint16_t)(ui_system->text_system.dynamic_vertices.size());
+
+        // create indices (two triangles per quad)
+        std::vector<uint16_t> quad_indices = {
+            static_cast<uint16_t>(base_index + 0),
+            static_cast<uint16_t>(base_index + 1),
+            static_cast<uint16_t>(base_index + 2),
+            static_cast<uint16_t>(base_index + 2),
+            static_cast<uint16_t>(base_index + 3),
+            static_cast<uint16_t>(base_index + 0)
+        };
+
+        // Add vertices
+        ui_system->text_system.dynamic_vertices.insert(ui_system->text_system.dynamic_vertices.end(), new_quad.begin(),
+                                                      new_quad.end());
+
+        // Add indices
+        ui_system->text_system.dynamic_indices.insert(ui_system->text_system.dynamic_indices.end(),
+                                                     quad_indices.begin(), quad_indices.end());
+
+        final_pos.x += g.advance * font_scalar; // move offset forward
+    }
+
 }
 */

@@ -31,7 +31,6 @@ static_mesh* static_mesh_init(Arena* arena, u32 mesh_size)
 {
     static_mesh* out_static_mesh = arena_alloc(arena, sizeof(submesh));
     out_static_mesh->mesh_size = mesh_size;
-    out_static_mesh->indirect_draw_array = arena_alloc(arena, mesh_size * sizeof(VkDrawIndexedIndirectCommand));
     out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
 
     return out_static_mesh;
@@ -86,7 +85,6 @@ static_mesh* mesh_load_gltf(renderer* renderer, const char* gltf_path)
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
         submesh* current_submesh = &out_static_mesh->mesh[mesh_idx];
-        VkDrawIndexedIndirectCommand* indirect_draw = &out_static_mesh->indirect_draw_array[mesh_idx];
 
         /* Find position accessor */
         const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
@@ -500,11 +498,9 @@ Mesh_System* mesh_system_init(renderer* renderer)
                                                                   BUFFER_TYPE_CPU_STORAGE,MB(32));
     out_mesh_system->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
                                                              MB(32));
-    out_mesh_system->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                         MB(32));
-
-
-
+    out_mesh_system->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_CPU_STORAGE,
+                                                                   MB(32));
 
 
     return out_mesh_system;
@@ -562,16 +558,13 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
             //add the draw data
             //push the indirect draw into the draw data
             vulkan_buffer_cpu_data_copy_from_offset(renderer, indirect_buffer,
-                                                       &indirect_draw,
-                                                       sizeof(VkDrawIndexedIndirectCommand));
+                                                    &indirect_draw,
+                                                    sizeof(VkDrawIndexedIndirectCommand));
             vulkan_buffer_cpu_data_copy_from_offset(renderer, material_buffer,
                                                     &current_submesh->material_params,
                                                     sizeof(Material_Param_Data));
         }
     }
-
-
-
 
 
     //it wouldn't be a bad idea to update this once per frame

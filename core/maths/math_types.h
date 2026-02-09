@@ -184,6 +184,18 @@ typedef enum Direction
     DIRECTION_RIGHT,
 } Direction;
 
+
+
+typedef struct Transform_SOA
+{
+    vec3* position;
+    quat* rotation;
+    vec3* scale;
+    mat4* local;
+}Transform_SOA;
+
+
+
 #define MATH_E		2.7182818284590452354
 #define LOG2E		1.4426950408889634074
 #define LOG10E	    0.43429448190325182765

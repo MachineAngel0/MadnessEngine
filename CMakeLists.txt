@@ -108,7 +108,6 @@ if (WIN32)
             Vulkan::Vulkan
             Xinput
             winmm
-            xaudio2
             ole32
     )
 

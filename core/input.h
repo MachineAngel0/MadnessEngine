@@ -1,8 +1,5 @@
 ﻿#ifndef INPUT_H
 #define INPUT_H
-#include <stdbool.h>
-#include <stdint.h>
-#include "event.h"
 
 //TODO: add support for mouse dragging (when mouse button is down and there is movement)
 
