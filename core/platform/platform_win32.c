@@ -342,7 +342,8 @@ typedef struct windows_file_handle
     HMODULE dll_handle;
 } windows_file_handle;
 
-windows_file_handle file_handles[100];
+static windows_file_handle file_handles[100];
+static u32 file_handle_count = 0;
 
 char* platform_get_dynamic_library_extension(void)
 {
@@ -354,14 +355,20 @@ char* platform_get_static_library_extension(void)
     return ".lib";
 }
 
-DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name)
-{
-    //probably gonna have to have some sort of internal index for this
-    windows_file_handle file_info = file_handles[0];
 
-    if (file_info.dll_handle)
+
+DLL_HANDLE platform_load_dynamic_library(const char* file_name)
+{
+    //its assumed the file does not have an extension name
+
+    DLL_HANDLE out_handle = {0, file_name};
+
+    //probably gonna have to have some sort of internal index for this
+    windows_file_handle* file_info = &file_handles[file_handle_count];
+    file_handle_count++;
+    if (file_info->dll_handle)
     {
-        if (FreeLibrary(file_info.dll_handle) == 0)
+        if (FreeLibrary(file_info->dll_handle) == 0)
         {
             WARN("FAILED TO UNLOAD DLL\n")
             WARN("%d", GetLastError());
@@ -371,20 +378,27 @@ DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name)
 
     //TODO:
     // file_name + temp + dll
-    const char* temp_dll_name = "temp_filename.dll";
+    // DLL_HANDLE render_lib_handle = platform_load_dynamic_library("libMADNESSRENDERER.dll", "libMADNESSRENDERER_TEMP.dll");
 
-    CopyFile(file_name, temp_dll_name, 0);
+    const char* dll_extension_name = platform_get_dynamic_library_extension();
+
+    const char* intermediate_temp_name = c_string_concat(file_name, "_TEMP");
+
+    const char* final_file_name = c_string_concat(file_name, dll_extension_name);
+    const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name);
+
+    CopyFile(final_file_name, temp_dll_name, 0);
     // {
     // WARN("FAILED TO COPY DLL from %s to %s. Error: %d", dll_file_name, temp_dll_name, GetLastError());
     // return false;
     // }
 
-    file_info.dll_handle = LoadLibraryA(temp_dll_name);
+    file_info->dll_handle = LoadLibraryA(temp_dll_name);
     //TODO: Temp code
-    return (DLL_HANDLE){0, 0, 0};
+    return out_handle;
 }
 
-bool platform_dll_unload(DLL_HANDLE handle)
+bool platform_unload_dynamic_library(DLL_HANDLE handle)
 {
     windows_file_handle file = file_handles[handle.handle];
     if (file.dll_handle)
@@ -399,10 +413,10 @@ bool platform_dll_unload(DLL_HANDLE handle)
     return true;
 }
 
-bool platform_dll_reload(DLL_HANDLE handle)
+bool platform_reload_dynamic_library(DLL_HANDLE handle)
 {
-    platform_dll_unload(handle);
-    platform_dll_load(handle.file_name, handle.function_name);
+    platform_unload_dynamic_library(handle);
+    platform_load_dynamic_library(handle.file_name);
     return true;
 }
 

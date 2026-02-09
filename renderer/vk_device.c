@@ -220,6 +220,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
             TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
     }
+    return VK_FALSE;
+
 }
 
 bool vulkan_instance_destroy(vulkan_context* vulkan_context)

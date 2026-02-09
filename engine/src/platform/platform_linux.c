@@ -179,7 +179,7 @@ typedef struct linux_file_handle
 
 linux_file_handle file_handles[100];
 
-DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name)
+DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 {
     //probably gonna have to have some sort of internal index for this
     linux_file_handle file_info = file_handles[0];
@@ -200,7 +200,7 @@ DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name)
     return (DLL_HANDLE){0, 0, 0};
 }
 
-bool platform_dll_unload(DLL_HANDLE handle)
+bool platform_unload_dynamic_library(DLL_HANDLE handle)
 {
     linux_file_handle file = file_handles[handle.handle];
     if (file.dll_handle)
@@ -212,7 +212,7 @@ bool platform_dll_unload(DLL_HANDLE handle)
 
 }
 
-bool platform_dll_reload(DLL_HANDLE handle)
+bool platform_reload_dynamic_library(DLL_HANDLE handle)
 {
     platform_dll_unload(handle);
     platform_dll_load(handle.file_name, handle.function_name);

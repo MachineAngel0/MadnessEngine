@@ -53,16 +53,15 @@ typedef struct DLL_HANDLE
 {
     uint64_t handle;
     const char* file_name;
-    const char* function_name;
 } DLL_HANDLE;
 
 //DLL
 char* platform_get_dynamic_library_extension(void);
 char* platform_get_static_library_extension(void);
 
-DLL_HANDLE platform_dll_load(const char* file_name, const char* function_name);
-bool platform_dll_unload(DLL_HANDLE handle);
-bool platform_dll_reload(DLL_HANDLE handle);
+DLL_HANDLE platform_load_dynamic_library(const char* file_name);
+bool platform_unload_dynamic_library(DLL_HANDLE handle);
+bool platform_reload_dynamic_library(DLL_HANDLE handle);
 
 
 //has to get cast into the function pointer

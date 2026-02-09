@@ -1,13 +1,11 @@
 ﻿#include "renderer_entry.h"
 
 
-
 typedef bool (renderer_initialize)(renderer_app*);
 typedef void (renderer_run)(renderer_app*, Clock* clock);
 typedef void (renderer_terminate)(renderer_app*);
 typedef void (renderer_resize)(renderer_app*, u32, u32);
 
-static HMODULE renderer_dll_handle;
 
 
 void create_renderer(struct renderer_app* renderer_out)
@@ -18,12 +16,13 @@ void create_renderer(struct renderer_app* renderer_out)
     renderer_out->app_config.start_height = 720;
     renderer_out->app_config.name = "Madness Engine Renderer";
 
-    load_dll("libMADNESSRENDERER.dll", "libMADNESSRENDERER_TEMP.dll", &renderer_dll_handle);
 
-    renderer_out->renderer_initialize = (renderer_initialize *) GetProcAddress(renderer_dll_handle, "renderer_init");
-    renderer_out->renderer_run = (renderer_run *) GetProcAddress(renderer_dll_handle, "renderer_update");
-    renderer_out->renderer_shutdown = (renderer_terminate *) GetProcAddress(renderer_dll_handle, "renderer_shutdown");
-    renderer_out->on_resize = (renderer_resize *) GetProcAddress(renderer_dll_handle, "renderer_on_resize");
+    DLL_HANDLE render_lib_handle = platform_load_dynamic_library("libMADNESSRENDERER.dll");
+
+    renderer_out->renderer_initialize = (renderer_initialize *) platform_get_function_address(render_lib_handle, "renderer_init");
+    renderer_out->renderer_run = (renderer_run *) platform_get_function_address(render_lib_handle, "renderer_update");
+    renderer_out->renderer_shutdown = platform_get_function_address(render_lib_handle,"renderer_shutdown");
+    renderer_out->on_resize = (renderer_resize *) platform_get_function_address(render_lib_handle, "renderer_on_resize");
     if (!renderer_out->renderer_initialize)
     {
         FATAL("FAILED TO SET FUNCTION POINTER RENDER INITIALIZATION")
