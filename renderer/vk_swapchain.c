@@ -173,7 +173,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        TRUE,
+        true,
         VK_IMAGE_ASPECT_DEPTH_BIT,
         &swapchain_out->depth_attachment);
 
@@ -254,11 +254,11 @@ bool recreate_swapchain(vulkan_context* context)
     if (context->recreating_swapchain)
     {
         DEBUG("recreate_swapchain called when already recreating. Booting.");
-        return FALSE;
+        return false;
     }
 
     // Mark as recreating if the dimensions are valid.
-    context->recreating_swapchain = TRUE;
+    context->recreating_swapchain = true;
 
     // Wait for any operations to complete.
     vkDeviceWaitIdle(context->device.logical_device);
@@ -307,7 +307,7 @@ bool recreate_swapchain(vulkan_context* context)
     vulkan_renderer_command_buffers_create(context);
 
     // Clear the recreating flag.
-    context->recreating_swapchain = FALSE;
+    context->recreating_swapchain = false;
 
-    return TRUE;
+    return true;
 }

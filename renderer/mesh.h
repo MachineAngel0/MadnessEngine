@@ -641,7 +641,7 @@ void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_comma
     else
     {
         // If multi draw is not available, we must issue separate draw commands
-        for (auto j = 0; j < mesh_system->indirect_draw_count; j++)
+        for (u64 j = 0; j < mesh_system->indirect_draw_count; j++)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      indirect_buffer->handle,

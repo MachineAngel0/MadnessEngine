@@ -33,10 +33,13 @@
 #include "../core/platform/hot_reload.h"
 #include "../core/platform/platform.h"
 #include "../core/platform/filesystem.c"
-#if defined(_WIN32)
+#if MPLATFORM_WINDOWS
 #include "../core/platform/platform_win32.c"
-#elif defined(__linux__)
+#include "../core/platform/gamepad_win32.c"
+#elif MPLATFORM_LINUX
 #include "../core/platform/platform_linux.c"
+#include "../core/platform/gamepad_linux.c"
+
 #endif
 
 //CORE - MEMORY

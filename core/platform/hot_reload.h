@@ -2,13 +2,11 @@
 #define HOT_RELOAD_H
 
 
-#define MEXPORT
-#include <windows.h>
 #include "defines.h"
 #include "array.h"
 #include <stdio.h>
 
-
+/*
 //FUTURE: rn its just for windows, linux at a later time
 // the only thing i would want to abstract out is the dll reload, and having the dll handles stored somewhere
 // but the setting of the function pointers need to be manually done
@@ -122,5 +120,5 @@ void* reload_dll_and_function(const char* dll_file_name, const char* temp_dll_na
     return GetProcAddress(dll_handle, function_name);
 }
 
-
+*/
 #endif //HOT_RELOAD_H

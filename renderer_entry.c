@@ -2,7 +2,6 @@
 
 
 
-
 typedef bool (renderer_initialize)(renderer_app*);
 typedef void (renderer_run)(renderer_app*, Clock* clock);
 typedef void (renderer_terminate)(renderer_app*);
@@ -18,7 +17,6 @@ void create_renderer(struct renderer_app* renderer_out)
     renderer_out->app_config.start_width = 1280;
     renderer_out->app_config.start_height = 720;
     renderer_out->app_config.name = "Madness Engine Renderer";
-
 
     load_dll("libMADNESSRENDERER.dll", "libMADNESSRENDERER_TEMP.dll", &renderer_dll_handle);
 

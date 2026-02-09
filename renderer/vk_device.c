@@ -1,5 +1,6 @@
 ﻿#include "vk_device.h"
-
+#include "array.h"
+#include "platform/platform.h"
 
 
 bool get_vulkan_api_version(u32* apiVersion,
@@ -219,7 +220,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
             TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
             break;
     }
-    return VK_FALSE;
 }
 
 bool vulkan_instance_destroy(vulkan_context* vulkan_context)
@@ -457,7 +457,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     darray_free(queue_create_infos);
     hash_set_free(indices);
 
-    return TRUE;
+    return true;
 }
 
 bool vulkan_device_destroy(vulkan_context* vulkan_context)
@@ -519,7 +519,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
     if (physical_device_count == 0)
     {
         FATAL("No devices which support Vulkan were found.");
-        return FALSE;
+        return false;
     }
 
     //twice for the devices
@@ -536,13 +536,13 @@ bool select_physical_device(vulkan_context* vulkan_context)
         // TODO: These requirements should probably be driven by engine
         // configuration.
         vulkan_physical_device_requirements requirements = {};
-        requirements.graphics = TRUE;
-        requirements.present = TRUE;
-        requirements.transfer = TRUE;
-        requirements.compute = TRUE;
+        requirements.graphics = true;
+        requirements.present = true;
+        requirements.transfer = true;
+        requirements.compute = true;
 
-        requirements.sampler_anisotropy = TRUE;
-        requirements.discrete_gpu = TRUE;
+        requirements.sampler_anisotropy = true;
+        requirements.discrete_gpu = true;
         requirements.device_extension_names = darray_create(const char*);
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
@@ -622,13 +622,13 @@ bool select_physical_device(vulkan_context* vulkan_context)
     if (!vulkan_context->device.physical_device)
     {
         M_ERROR("No physical devices were found which meet the requirements.");
-        return FALSE;
+        return false;
     }
 
 
 
     INFO("Physical device selected.");
-    return TRUE;
+    return true;
 }
 
 bool physical_device_meets_requirements(
@@ -652,7 +652,7 @@ bool physical_device_meets_requirements(
         if (properties->deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             INFO("Device is not a discrete GPU, and one is required. Skipping.");
-            return FALSE;
+            return false;
         }
     }
 
@@ -743,7 +743,7 @@ bool physical_device_meets_requirements(
                 free(out_swapchain_support->present_modes);
             }
             INFO("Required swapchain support not present, skipping device.");
-            return FALSE;
+            return false;
         }
 
         // Device extensions.
@@ -768,12 +768,12 @@ bool physical_device_meets_requirements(
                 u32 required_extension_count = darray_get_size(requirements->device_extension_names);
                 for (u32 i = 0; i < required_extension_count; ++i)
                 {
-                    bool found = FALSE;
+                    bool found = false;
                     for (u32 j = 0; j < available_extension_count; ++j)
                     {
                         if (strcmp(requirements->device_extension_names[i], available_extensions[j].extensionName))
                         {
-                            found = TRUE;
+                            found = true;
                             break;
                         }
                     }
@@ -783,7 +783,7 @@ bool physical_device_meets_requirements(
                         INFO("Required extension not found: '%s', skipping device.",
                              requirements->device_extension_names[i]);
                         darray_free(available_extensions);
-                        return FALSE;
+                        return false;
                     }
                 }
             }
@@ -794,14 +794,14 @@ bool physical_device_meets_requirements(
         if (requirements->sampler_anisotropy && !features->samplerAnisotropy)
         {
             INFO("Device does not support samplerAnisotropy, skipping.");
-            return FALSE;
+            return false;
         }
 
         // Device meets all requirements.
-        return TRUE;
+        return true;
     }
 
-    return FALSE;
+    return false;
 }
 
 
@@ -876,17 +876,17 @@ bool vulkan_device_detect_depth_format(vulkan_device* device)
         if ((format_properties.linearTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
-            return TRUE;
+            return true;
         }
         else if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
-            return TRUE;
+            return true;
         }
     }
 
 
-    return FALSE;
+    return false;
 }
 
 
@@ -910,15 +910,15 @@ bool vulkan_device_detect_depth_stencil_format(vulkan_device* device)
         if ((format_properties.linearTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
-            return TRUE;
+            return true;
         }
         else if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
             device->depth_format = candidates[i];
-            return TRUE;
+            return true;
         }
     }
 
 
-    return FALSE;
+    return false;
 }

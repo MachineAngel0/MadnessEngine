@@ -94,5 +94,5 @@ bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
     // return TRUE;
     // }
 
-    return FALSE;
+    return false;
 }

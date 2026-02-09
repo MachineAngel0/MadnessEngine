@@ -19,9 +19,9 @@ typedef struct application_state
 
 static application_state app_state;
 
-bool application_on_event(event_type code, void* sender, void* listener_inst, event_context context);
+bool application_on_event(const event_type code, void* sender, void* listener_inst, event_context context);
 
-bool application_on_key(event_type code, void* sender, void* listener_inst, event_context context);
+bool application_on_key(const event_type code, void* sender, void* listener_inst, event_context context);
 
 bool application_on_resized(u16 code, void* sender, void* listener_inst, event_context context);
 

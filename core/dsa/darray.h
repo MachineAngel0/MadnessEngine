@@ -529,7 +529,7 @@ bool darray_contains_or_add_other(void* array, void* key)
     array_header* header = (array_header *) ((u8 *) array - header_size);
 
     //check if we have the value, otherwise return false
-    for (int i = 0; i < header->num_items; i++)
+    for (u64 i = 0; i < header->num_items; i++)
     {
         void* element = (u8*)array + (i * header->stride);
         //0 means they are equal to each other, which means we can exit

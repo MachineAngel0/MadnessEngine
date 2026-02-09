@@ -27,13 +27,13 @@ typedef struct Glyph {
     float u0, v0, u1, v1; // UV coordinates in atlas
 }Glyph;
 
-typedef struct Font{
+typedef struct Madness_Font{
     stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
     float font_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages
     Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
     Texture font_texture;
-}Font;
+}Madness_Font;
 
 
 //UI
@@ -163,7 +163,7 @@ typedef struct UI_System
     Frame_Arena* frame_arena;
 
     //this should be an array at some point
-    Font default_font;
+    Madness_Font default_font;
     float default_font_size;
     // Font fonts[100];
 

@@ -1662,7 +1662,7 @@ void cartesian_to_spherical(const float x, const float y, const float z, float* 
 
 
 /*COLOR*/
-static const vec3 COLOR_BLACK = {0.0f, 0.0f, 0.0f};
+static const vec3 COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
 static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
 static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
 static const vec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};

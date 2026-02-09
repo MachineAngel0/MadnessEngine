@@ -58,7 +58,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     // get surface from the platform layer, needed before device creation
     if (!platform_create_vulkan_surface(renderer_inst->plat_state, vk_context))
     {
-        return FALSE;
+        return false;
     }
 
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
@@ -68,7 +68,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     if (!vulkan_device_create(vk_context))
     {
         M_ERROR("Failed to create device!");
-        return FALSE;
+        return false;
     }
 
     // Swapchain
@@ -146,7 +146,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
 
-    return TRUE;
+    return true;
 }
 
 

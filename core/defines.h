@@ -68,7 +68,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #endif
 #elif defined(__linux__) || defined(__gnu_linux__)
 // Linux OS
-#define KPLATFORM_LINUX 1
+#define MPLATFORM_LINUX 1
 #if defined(__ANDROID__)
 #define KPLATFORM_ANDROID 1
 #endif
@@ -140,6 +140,12 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 // #define MNOINLINE
 // #endif
 
+#if MPLATFORM_WINDOWS
+
+#elif MPLATFORM_LINUX
+#endif
+
+
 //TODO: the defer macro
 
 #define macro_var(name) concat(name, __LINE__)
@@ -154,6 +160,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 // file = file_open()
 // scope(file_close()) {...}
+
+
 
 
 #endif //DEFINES_H

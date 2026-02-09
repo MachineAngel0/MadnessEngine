@@ -106,7 +106,7 @@ void ui_system_end(UI_System* ui_system)
 Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* filepath)
 {
     //TODO: rn only loads the default font, should get an available font at startup
-    Font* font_structure = &ui_system->default_font;
+    Madness_Font* font_structure = &ui_system->default_font;
 
     Font_Handle out_handle = {-1};
 

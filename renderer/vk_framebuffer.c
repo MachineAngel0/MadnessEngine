@@ -15,13 +15,15 @@ void vulkan_framebuffer_create(vulkan_context* context, vulkan_renderpass* rende
 
 
     // Creation info
-    VkFramebufferCreateInfo framebuffer_create_info = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+    VkFramebufferCreateInfo framebuffer_create_info = {0};
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_create_info.renderPass = renderpass->handle;
     framebuffer_create_info.attachmentCount = attachment_count;
     framebuffer_create_info.pAttachments = out_framebuffer->attachments;
     framebuffer_create_info.width = width;
     framebuffer_create_info.height = height;
     framebuffer_create_info.layers = 1;
+    framebuffer_create_info.pNext = NULL;
 
 
     VK_CHECK(vkCreateFramebuffer(

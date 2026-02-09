@@ -43,7 +43,7 @@ void byte_buffer_free_arena(byte_buffer* buffer)
 
 void byte_buffer_print_info(const byte_buffer* buffer)
 {
-    printf("WRITE: %llu, READ: %llu\n", buffer->write_offset, buffer->write_offset);
+    printf("WRITE: %lu, READ: %lu\n", buffer->write_offset, buffer->write_offset);
 }
 
 /***SERIALIZE***/
@@ -192,7 +192,7 @@ double deserialize_f64(byte_buffer* buffer)
     return val;
 }
 
-void serialization_test()
+void serialization_test(void)
 {
     byte_buffer* buffer = byte_buffer_init(10000);
 
