@@ -2,8 +2,8 @@
 #define DEFINES_H
 
 
-#include <stdbool.h>
 #include <stdint.h>
+
 
 // Unsigned int types.
 typedef uint8_t u8;

@@ -5,20 +5,18 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
-
 
 //CORE - Top Level
 #include "../core/defines.h"
+#include "../core/unit_test.h"
 #include "../core/color_asci.h"
-#include "../core/event.h"
-#include "../core/input.h"
+#include "../core/platform/event.h"
+#include "../core/platform/input.h"
 #include "../core/logger.h"
 #include "../core/maths/math_types.h"
 #include "../core/misc_util.h"
 #include "../core/maths/math_lib.h"
 #include "../core/maths/transforms.h"
-#include "../core/unit_test.h"
 #include "../core/c_string.h"
 #include "../core/id_gen.h"
 
@@ -33,17 +31,8 @@
 #include "../core/platform/audio.h"
 #include "../core/platform/clock.h"
 #include "../core/platform/gamepad.h"
-#include "../core/platform/hot_reload.h"
 #include "../core/platform/platform.h"
 #include "../core/platform/filesystem.h"
-#if MPLATFORM_WINDOWS
-#include "../core/platform/platform_win32.c"
-#include "../core/platform/gamepad_win32.c"
-#elif MPLATFORM_LINUX
-#include "../core/platform/platform_linux.c"
-#include "../core/platform/gamepad_linux.c"
-
-#endif
 
 //CORE - MEMORY
 #include "../core/memory/memory_tracker.h"
@@ -74,12 +63,3 @@
 
 
 
-
-// SOURCE
-
-//CORE - PLATFORM
-#include "../core/platform/filesystem.c"
-
-//CORE - SERIALIZATION
-#include "../core/serialization/network_serialization.c"
-#include "../core/serialization/file_serialization.c"

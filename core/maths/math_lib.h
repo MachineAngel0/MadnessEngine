@@ -2,11 +2,8 @@
 #define MATH_LIB_H
 
 
-#include "math.h"
-#include "../defines.h"
-#include <float.h>
+#include <math.h>
 #include "platform.h"
-
 
 //FUTURE: rn im not using glm/cglm, should probably switch
 //NOTE: Y Up, left handed
@@ -1718,7 +1715,7 @@ uint32_t randi()
 {
     if (!rand_seeded)
     {
-        srand((u32)platform_get_absolute_time());
+        srand(platform_get_absolute_time());
         rand_seeded = true;
     }
     return rand();
@@ -1728,7 +1725,7 @@ uint32_t rand_range_i(uint32_t min, uint32_t max)
 {
     if (!rand_seeded)
     {
-        srand((u32)platform_get_absolute_time());
+        srand(platform_get_absolute_time());
         rand_seeded = true;
     }
     return (rand() % (max - min + 1)) + min;

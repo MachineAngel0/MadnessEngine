@@ -1,7 +1,8 @@
 
 
 //CORE
-#include "core/core_unity.c"
+#include "core/build_core.h"
+#include "core/build_core.c"
 
 
 //LIB
@@ -23,7 +24,8 @@
 
 
 //Renderer
-#include "renderer/renderer_unity.c"
+#include "renderer/build_renderer.h"
+#include "renderer/build_renderer.c"
 
 
 

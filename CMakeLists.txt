@@ -93,8 +93,9 @@ add_executable(MadnessEngine_editor
 
 ### CORE ###
 add_executable(CORE_UNIT_TEST
+        core/build_core.h
+        core/build_core.c
         core/core_unit_test_main.c
-        core/core_unity.c
 )
 
 

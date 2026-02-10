@@ -3,7 +3,6 @@
 #ifndef COLOR_ASCI_H
 #define COLOR_ASCI_H
 
-#include <stdio.h>
 
 //shout out to this repository
 // https://gist.github.com/RabaDabaDoba/145049536f815903c79944599c6f952a

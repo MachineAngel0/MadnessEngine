@@ -2,7 +2,7 @@
 #define MATH_TYPES_H
 
 
-#include "../defines.h"
+#include "defines.h"
 
 
 typedef union vec2f
@@ -184,15 +184,6 @@ typedef enum Direction
     DIRECTION_RIGHT,
 } Direction;
 
-
-
-typedef struct Transform_SOA
-{
-    vec3* position;
-    quat* rotation;
-    vec3* scale;
-    mat4* local;
-}Transform_SOA;
 
 
 

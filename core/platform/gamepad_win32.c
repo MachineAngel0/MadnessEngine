@@ -5,7 +5,7 @@
 
 
 #include "logger.h"
-#include "../core/event.h"
+#include "../core/platform/event.h"
 
 
 #include <windows.h>

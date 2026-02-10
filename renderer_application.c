@@ -1,8 +1,8 @@
 ﻿#include "app_types.h"
 #include "platform/platform.h"
 #include "clock.h"
-#include "event.h"
-#include "input.h"
+#include "core/platform/event.h"
+#include "core/platform/input.h"
 
 typedef struct application_state
 {

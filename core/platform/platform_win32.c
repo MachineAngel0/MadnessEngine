@@ -3,8 +3,6 @@
 // Windows platform layer.
 #if MPLATFORM_WINDOWS
 
-#include <dsound.h>
-
 #include "logger.h"
 
 #include <windows.h>
@@ -13,11 +11,7 @@
 #include <stdlib.h>
 #include <mmsystem.h>
 
-#include "darray.h"
-#include "input.h"
-
 //renderer
-
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
 #include "vk_device.h"

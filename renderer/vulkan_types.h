@@ -8,6 +8,10 @@
         FATAL("VULKAN ERROR CODE: %d", expr);\
     }\
 }
+
+
+
+#include "camera.h"
 #include "darray.h"
 #include "hash_set.h"
 #include "str.h"
@@ -565,44 +569,7 @@ typedef struct vulkan_context
 } vulkan_context;
 
 
-/* CAMERA */
-typedef enum Camera_Movement
-{
-    CAMERA_MOVEMENT_FORWARD,
-    CAMERA_MOVEMENT_BACKWARD,
-    CAMERA_MOVEMENT_LEFT,
-    CAMERA_MOVEMENT_RIGHT
-} Camera_Movement;
 
-
-typedef struct camera
-{
-    vec3 rotation;
-    vec3 pos;
-    vec4 viewPos;
-
-    float rotation_speed;
-    float move_speed;
-
-    //perspective options
-    float fov;
-    float znear;
-    float zfar;
-
-    mat4 projection;
-    mat4 view;
-
-    //fps
-    float pitch;
-    float yaw;
-} camera;
-
-struct camera_arrays
-{
-    camera lookat_cameras[10];
-    camera fps_cameras[10];
-    camera arcball_cameras[10];
-};
 
 typedef struct Directional_Light
 {

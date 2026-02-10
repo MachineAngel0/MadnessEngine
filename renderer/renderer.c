@@ -1,6 +1,6 @@
 ﻿#include "renderer.h"
 #include "camera.h"
-#include "lights.c"
+#include "lights.h"
 #include "mesh.h"
 #include "shader_system.h"
 #include "UI.h"
@@ -10,7 +10,6 @@
 #include "vk_renderpass.h"
 #include "vk_shader.h"
 #include "vk_sync.h"
-#include "vk_vertex_buffer.h"
 
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct

@@ -1,8 +1,9 @@
-﻿#include "file_serialization.h"
-
+﻿
+#include <float.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "file_serialization.h"
 #include "unit_test.h"
 
 byte_buffer* byte_buffer_init(uint32_t capacity)

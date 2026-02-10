@@ -2,7 +2,7 @@
 #define GAMEPAD_H
 
 #include "logger.h"
-#include "../core/event.h"
+#include "event.h"
 
 
 

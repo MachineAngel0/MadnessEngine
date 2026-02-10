@@ -1,56 +1,5 @@
-﻿#ifndef LIGHTS_H
-#define LIGHTS_H
-
-
-#include "vk_buffer.h"
-
-
-//TODO: light buffer, and add it to the global uniform buffer
-
-
-void directional_light_init(Directional_Light* light)
-{
-    light->direction = vec3_zero();
-    light->color = vec3_zero();
-
-    light->diffuse = 0.5f;
-    light->specular = 0.5f;
-}
-
-void point_light_init(Point_Light* light)
-{
-    light->position = vec4_zero();
-    light->color = vec4_one();
-
-    light->diffuse = 0.5f;
-    light->specular = 0.5f;
-
-    // light->intensity = 1.0f;
-    // light->radius = 1.0f;
-
-
-    light->constant = 1.0f;
-    light->linear = 0.09f;
-    light->quadratic = 0.032f;
-}
-
-void spot_light_init(Spot_Light* light)
-{
-    light->position = vec4_zero();
-    light->color = vec4_one();
-    light->direction = vec3_one();
-
-    light->diffuse = 0.5f;
-    light->specular = 0.5f;
-
-    // light->intensity = 1.0f;
-    // light->radius = 1.0f;
-
-
-    light->constant = 1.0f;
-    light->linear = 0.09f;
-    light->quadratic = 0.032f;
-}
+﻿
+#include "lights.h"
 
 
 Light_System* light_system_init(renderer* renderer)
@@ -105,4 +54,49 @@ Light_System* light_system_init(renderer* renderer)
 }
 
 
-#endif //LIGHTS_H
+
+void directional_light_init(Directional_Light* light)
+{
+    light->direction = vec3_zero();
+    light->color = vec3_zero();
+
+    light->diffuse = 0.5f;
+    light->specular = 0.5f;
+}
+
+void point_light_init(Point_Light* light)
+{
+    light->position = vec4_zero();
+    light->color = vec4_one();
+
+    light->diffuse = 0.5f;
+    light->specular = 0.5f;
+
+    // light->intensity = 1.0f;
+    // light->radius = 1.0f;
+
+
+    light->constant = 1.0f;
+    light->linear = 0.09f;
+    light->quadratic = 0.032f;
+}
+
+void spot_light_init(Spot_Light* light)
+{
+    light->position = vec4_zero();
+    light->color = vec4_one();
+    light->direction = vec3_one();
+
+    light->diffuse = 0.5f;
+    light->specular = 0.5f;
+
+    // light->intensity = 1.0f;
+    // light->radius = 1.0f;
+
+
+    light->constant = 1.0f;
+    light->linear = 0.09f;
+    light->quadratic = 0.032f;
+}
+
+

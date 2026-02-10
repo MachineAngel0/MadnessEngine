@@ -292,9 +292,11 @@ Buffer_Handle vulkan_buffer_create(renderer* renderer,
 
         //cpu means that a staging buffer is needed to send data to the gpu, typically for large data sets
         //gpu means that no staging buffer is needed and can be  updated direct and will be mapped as well
+
         VkMemoryPropertyFlags cpu_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         VkMemoryPropertyFlags gpu_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
         VkMemoryPropertyFlags mem_properties;
         if (buffer_type == BUFFER_TYPE_GPU_STORAGE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
             BUFFER_TYPE_UNIFORM)

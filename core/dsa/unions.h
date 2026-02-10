@@ -1,8 +1,4 @@
-﻿//
-// Created by Adams Humbert on 9/21/2025.
-//
-
-#ifndef UNIONS_H
+﻿#ifndef UNIONS_H
 #define UNIONS_H
 
 

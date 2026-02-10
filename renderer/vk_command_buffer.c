@@ -145,6 +145,15 @@ void vulkan_command_buffer_end_single_use(vulkan_context* context, VkCommandPool
     vulkan_command_buffer_free(context, pool, command_buffer);
 }
 
+VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer)
+{
+    VkBufferDeviceAddressInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = buffer
+    };
+    return vkGetBufferDeviceAddress(device, &info);
+}
+
 
 /*
 void command_pool_allocate(vulkan_context* vulkan_context, Command_Buffer_Context* command_buffer_context)
