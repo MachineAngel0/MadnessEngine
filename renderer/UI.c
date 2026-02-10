@@ -15,7 +15,7 @@ UI_System* ui_system_init(renderer* renderer)
     ui_system->draw_info.index_type = VK_INDEX_TYPE_UINT16;
 
     ui_system->default_font_size = 128.0f;
-    
+
     ui_system->active.ID = -1;
     ui_system->active.layer = -1;
     ui_system->hot.ID = -1;
@@ -39,18 +39,27 @@ UI_System* ui_system_init(renderer* renderer)
     u32 ui_buffer_sizes = MB(1);
 
     ui_system->ui_quad_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_VERTEX, ui_buffer_sizes);
+                                                                   BUFFER_TYPE_VERTEX, ui_buffer_sizes);
     ui_system->ui_quad_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_INDEX, ui_buffer_sizes);
+                                                                  BUFFER_TYPE_INDEX, ui_buffer_sizes);
     ui_system->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                               ui_buffer_sizes);
+                                                                ui_buffer_sizes);
     ui_system->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                              ui_buffer_sizes);
+                                                               ui_buffer_sizes);
+
+
+    ui_system->ui_quad_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    ui_system->ui_quad_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    ui_system->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
+                                                                ui_buffer_sizes);
+    ui_system->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
+                                                               ui_buffer_sizes);
 
 
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX0
     font_init(renderer, ui_system, "c:/windows/fonts/arialbd.ttf");
-
 
 
     return ui_system;
@@ -138,7 +147,7 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
     float scale = stbtt_ScaleForPixelHeight(&font_structure->font_info, ui_system->default_font_size);
     int atlasWidth = 1024 * 4;
     int atlasHeight = 1024 * 4;
-    char* atlasPixels = arena_alloc(ui_system->arena, atlasWidth* atlasHeight);
+    char* atlasPixels = arena_alloc(ui_system->arena, atlasWidth * atlasHeight);
 
     int x = 0, y = 0, rowHeight = 0;
 
@@ -191,7 +200,7 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
 
 
         // Calculate UV coordinates
-        g.u0 = (float) (x / atlasWidth);
+        g.u0 = (float)(x / atlasWidth);
         g.v0 = (float)(y / atlasHeight);
         g.u1 = (float)((x + width) / atlasWidth);
         g.v1 = ((float)(y + height) / atlasHeight);
@@ -261,44 +270,44 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
     printf("Font loaded successfully: %s\n", filepath);
 
     return out_handle;
-
 }
 
 void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
 {
-    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_vertex_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_system->text_index_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_vertex_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_index_staging_buffer_handle);
 
     //TODO: generate draw indirect commands
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->ui_quad_vertex_buffer_handle,
+                                       ui_system->ui_quad_vertex_staging_buffer_handle,
+                                       ui_system->draw_info.quad_vertex,
+                                       ui_system->draw_info.quad_vertex_bytes);
 
-    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_vertex_buffer_handle,
-                                                   ui_system->draw_info.quad_vertex, ui_system->draw_info.quad_vertex_bytes);
-
-    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &ui_system->ui_quad_index_buffer_handle,
-                                                   ui_system->draw_info.indices, ui_system->draw_info.index_bytes);
-
-
-
-
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->ui_quad_index_buffer_handle,
+                                       ui_system->ui_quad_index_staging_buffer_handle,
+                                       ui_system->draw_info.indices,
+                                       ui_system->draw_info.index_bytes);
 }
 
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
 {
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer,ui_system->ui_quad_vertex_buffer_handle);
+    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_vertex_buffer_handle);
     vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_system->ui_quad_index_buffer_handle);
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          renderer->ui_pipeline.handle);
+                      renderer->ui_pipeline.handle);
 
     //TODO: realistically textures is the only thing the UI needs for me, for now
     //textures
     // vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            // vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
-                            // &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
-                                // current_frame],
-                            // 0, 0);
+    // vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
+    // &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+    // current_frame],
+    // 0, 0);
 
     VkDeviceSize offsets_bindless[1] = {0};
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
@@ -307,15 +316,14 @@ void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buf
     vkCmdBindIndexBuffer(command_buffer->handle,
                          index_buffer->handle, 0,
                          ui_system->draw_info.index_type
-);
+    );
 
     // vkCmdDrawIndexed(command_buffer->handle,
-                     // ui_system->draw_info.index_count,
-                     // 1, 0, 0, 0);
+    // ui_system->draw_info.index_count,
+    // 1, 0, 0, 0);
     vkCmdDrawIndexed(command_buffer->handle,
-                 ui_system->draw_info.index_count,
-                 1, 0, 0, 0);
-
+                     ui_system->draw_info.index_count,
+                     1, 0, 0, 0);
 }
 
 void update_ui_mouse_pos(UI_System* ui_system)
@@ -338,7 +346,6 @@ Quad_Vertex* UI_create_quad(UI_System* ui_system, vec2 pos, vec2 size, vec3 colo
 
 Quad_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, vec2 size, vec3 color)
 {
-
     Quad_Vertex* out_vertex = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
 
     out_vertex[0] = (Quad_Vertex){.pos = {pos.x - size.x, pos.y - size.y}, .color = color};
@@ -523,22 +530,22 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
         (ui_system->screen_size.y * converted_size.y) / 2
     };*/
 
-     vec2 final_pos = {
-         converted_pos.x,
-         converted_pos.y
-     };
-     vec2 final_size = {
-         converted_size.x/2,
-         converted_size.y/2,
-     };
+    vec2 final_pos = {
+        converted_pos.x,
+        converted_pos.y
+    };
+    vec2 final_size = {
+        converted_size.x / 2,
+        converted_size.y / 2,
+    };
 
     vec2 mouse_hit_pos = {
         ui_system->screen_size.x * converted_pos.x,
-         ui_system->screen_size.y *converted_pos.y
+        ui_system->screen_size.y * converted_pos.y
     };
     vec2 mouse_hit_size = {
-        ui_system->screen_size.x * converted_size.x/2,
-        ui_system->screen_size.y * converted_size.y/2,
+        ui_system->screen_size.x * converted_size.x / 2,
+        ui_system->screen_size.y * converted_size.y / 2,
     };
 
 
@@ -594,7 +601,8 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
     memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
 
     // create indices (two triangles per quad)
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices, sizeof(default_quad_indices));
+    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices,
+           sizeof(default_quad_indices));
 
     //increase by count
     ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
@@ -723,7 +731,8 @@ bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
     memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
 
     // create indices (two triangles per quad)
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices, sizeof(default_quad_indices));
+    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices,
+           sizeof(default_quad_indices));
 
     //increase by count
     ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;

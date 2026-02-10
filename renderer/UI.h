@@ -184,6 +184,13 @@ typedef struct UI_System
     Buffer_Handle ui_quad_index_buffer_handle;
     Buffer_Handle text_vertex_buffer_handle;
     Buffer_Handle text_index_buffer_handle;
+
+
+    Buffer_Handle ui_quad_vertex_staging_buffer_handle;
+    Buffer_Handle ui_quad_index_staging_buffer_handle;
+    Buffer_Handle text_vertex_staging_buffer_handle;
+    Buffer_Handle text_index_staging_buffer_handle;
+
 } UI_System;
 
 //NOTE: Remove the renderer from the init, these should not be coupled

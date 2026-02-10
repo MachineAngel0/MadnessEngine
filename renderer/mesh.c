@@ -338,56 +338,56 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 void mesh_load_fbx(renderer* renderer, const char* gltf_path)
 {
     UNIMPLEMENTED();
-/*
-    //NOTE: use this when ready to test
-    mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+    /*
+        //NOTE: use this when ready to test
+        mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
 
-    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
-    // https://ufbx.github.io/ - online docs
+        // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
+        // https://ufbx.github.io/ - online docs
 
-    ufbx_load_opts opts = { 0 }; // Optional, pass NULL for defaults
-    ufbx_error error; // Optional, pass NULL if you don't care about errors
-    ufbx_scene *scene = ufbx_load_file("thing.fbx", &opts, &error);
-    if (!scene) {
-        fprintf(stderr, "Failed to load: %s\n", error.description.data);
-        exit(1);
-    }
-
-    // Use and inspect `scene`, it's just plain data!
-    // Let's just list all objects within the scene for example:
-    for (size_t i = 0; i < scene->nodes.count; i++) {
-        ufbx_node *node = scene->nodes.data[i];
-        if (node->is_root) continue;
-
-        printf("Object: %s\n", node->name.data);
-        if (node->mesh) {
-            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
+        ufbx_load_opts opts = { 0 }; // Optional, pass NULL for defaults
+        ufbx_error error; // Optional, pass NULL if you don't care about errors
+        ufbx_scene *scene = ufbx_load_file("thing.fbx", &opts, &error);
+        if (!scene) {
+            fprintf(stderr, "Failed to load: %s\n", error.description.data);
+            exit(1);
         }
-    }
+
+        // Use and inspect `scene`, it's just plain data!
+        // Let's just list all objects within the scene for example:
+        for (size_t i = 0; i < scene->nodes.count; i++) {
+            ufbx_node *node = scene->nodes.data[i];
+            if (node->is_root) continue;
+
+            printf("Object: %s\n", node->name.data);
+            if (node->mesh) {
+                printf("-> mesh with %zu faces\n", node->mesh->faces.count);
+            }
+        }
 
 
 
-    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->nodes.count);
+        static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->nodes.count);
 
-    // GET BASE PATH
+        // GET BASE PATH
 
-    char* base_path = NULL;
-    int i = strlen(gltf_path);
-    for (; i > 0; i--)
-    {
-        if (gltf_path[i] == '/')
+        char* base_path = NULL;
+        int i = strlen(gltf_path);
+        for (; i > 0; i--)
         {
-            base_path = arena_alloc(&renderer->frame_arena, i + 2);
-            memcpy(base_path, gltf_path, i + 1);
-            base_path[i + 1] = '\0';
+            if (gltf_path[i] == '/')
+            {
+                base_path = arena_alloc(&renderer->frame_arena, i + 2);
+                memcpy(base_path, gltf_path, i + 1);
+                base_path[i + 1] = '\0';
 
-            break;
+                break;
+            }
         }
-    }
 
-    ufbx_free_scene(scene);
-    return out_static_mesh;
-*/
+        ufbx_free_scene(scene);
+        return out_static_mesh;
+    */
 }
 
 
@@ -496,6 +496,25 @@ Mesh_System* mesh_system_init(renderer* renderer)
                                                                    BUFFER_TYPE_CPU_STORAGE,
                                                                    MB(32));
 
+    out_mesh_system->vertex_staging_buffer_handle = vulkan_buffer_create(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
+        MB(32));
+    out_mesh_system->index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                        BUFFER_TYPE_STAGING,
+                                                                        MB(32));
+    out_mesh_system->indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                           BUFFER_TYPE_STAGING,MB(32));
+    out_mesh_system->normal_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                         BUFFER_TYPE_STAGING,MB(32));
+    out_mesh_system->tangent_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                          BUFFER_TYPE_STAGING,MB(32));
+    out_mesh_system->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_STAGING,
+                                                                     MB(32));
+    out_mesh_system->material_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                           BUFFER_TYPE_STAGING,
+                                                                           MB(32));
+
 
     return out_mesh_system;
 }
@@ -503,16 +522,17 @@ Mesh_System* mesh_system_init(renderer* renderer)
 
 void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system)
 {
+    vulkan_buffer_reset_offset(renderer, mesh_system->vertex_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->index_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->indirect_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->normal_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->uv_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->material_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_system->tangent_staging_buffer_handle);
+
     mesh_system->indirect_draw_count = 0;
     //were assuming that the data is already in the buffer,
     // we are just generating the draw calls for the specific pipeline
-    vulkan_buffer* vertex_buffer = vulkan_buffer_get_clear(renderer, mesh_system->vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get_clear(renderer, mesh_system->index_buffer_handle);
-    vulkan_buffer* indirect_buffer = vulkan_buffer_get_clear(renderer, mesh_system->indirect_buffer_handle);
-    vulkan_buffer* uv_buffer = vulkan_buffer_get_clear(renderer, mesh_system->uv_buffer_handle);
-    vulkan_buffer* tangent_buffer = vulkan_buffer_get_clear(renderer, mesh_system->tangent_buffer_handle);
-    vulkan_buffer* normal_buffer = vulkan_buffer_get_clear(renderer, mesh_system->normal_buffer_handle);
-    vulkan_buffer* material_buffer = vulkan_buffer_get_clear(renderer, mesh_system->material_buffer_handle);
 
     size_t vertex_byte_size = 0;
     size_t index_count_size = 0;
@@ -537,45 +557,39 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
             mesh_system->indirect_draw_count++;
 
             //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, vertex_buffer,
-                                                    current_submesh->pos,
-                                                    current_submesh->vertex_bytes);
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, index_buffer,
-                                                    current_submesh->indices,
-                                                    current_submesh->indices_bytes);
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, normal_buffer,
-                                                    current_submesh->normal,
-                                                    current_submesh->normal_bytes);
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, uv_buffer,
-                                                    current_submesh->uv,
-                                                    current_submesh->uv_bytes);
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->vertex_staging_buffer_handle,
+                                                current_submesh->pos,
+                                                current_submesh->vertex_bytes);
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->index_staging_buffer_handle,
+                                                current_submesh->indices,
+                                                current_submesh->indices_bytes);
+
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->normal_staging_buffer_handle,
+                                                current_submesh->normal,
+                                                current_submesh->normal_bytes);
+
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->uv_staging_buffer_handle,
+                                                current_submesh->uv,
+                                                current_submesh->uv_bytes);
             //add the draw data
             //push the indirect draw into the draw data
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, indirect_buffer,
-                                                    &indirect_draw,
-                                                    sizeof(VkDrawIndexedIndirectCommand));
-            vulkan_buffer_cpu_data_copy_from_offset(renderer, material_buffer,
-                                                    &current_submesh->material_params,
-                                                    sizeof(Material_Param_Data));
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->indirect_staging_buffer_handle,
+                                                &indirect_draw,
+                                                sizeof(VkDrawIndexedIndirectCommand));
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->material_staging_buffer_handle,
+                                                &current_submesh->material_params,
+                                                sizeof(Material_Param_Data));
         }
     }
 
 
-    //it wouldn't be a bad idea to update this once per frame
-    //
-    // update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
-    //                                               mesh_system->uv_buffer_handle, 0);
-    // update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
-    //                                               mesh_system->normal_buffer_handle, 0);
-    // update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
-    //                                               mesh_system->material_buffer_handle, 0);
-    // update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
-    //                                               mesh_system->tangent_buffer_handle, 0);
-
-    /* TODO:
-    update_storage_buffer_bindless_descriptor_set(
-    &renderer->context, &renderer->global_descriptors.storage_descriptors,
-    vulkan_buffer_get(renderer, mesh_system->tangent_buffer_handle), ???);*/
+    vulkan_buffer_copy(renderer, mesh_system->vertex_buffer_handle, mesh_system->vertex_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->index_buffer_handle, mesh_system->index_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->indirect_buffer_handle, mesh_system->indirect_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->normal_buffer_handle, mesh_system->normal_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->uv_buffer_handle, mesh_system->uv_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->material_buffer_handle, mesh_system->material_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_system->tangent_buffer_handle, mesh_system->tangent_staging_buffer_handle);
 }
 
 
@@ -653,7 +667,6 @@ void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Fra
     fseek(fptr, 0, SEEK_SET);
 
 
-
     for (u64 i = 0; i < s_mesh->mesh_size; i++)
     {
         s_mesh->mesh[i].vertex_bytes;
@@ -669,7 +682,4 @@ void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Fra
 
 
     fclose(fptr);
-
 }
-
-

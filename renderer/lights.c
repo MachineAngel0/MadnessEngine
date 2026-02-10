@@ -1,5 +1,4 @@
-﻿
-#include "lights.h"
+﻿#include "lights.h"
 
 
 Light_System* light_system_init(renderer* renderer)
@@ -31,6 +30,8 @@ Light_System* light_system_init(renderer* renderer)
     out_light_system->directional_lights[0].color = (vec3){1.0f, 0.0f, 0.5f};
     out_light_system->point_lights[0].color = (vec4){1.0f, 1.0f, 0.0f, 0.0f};
 
+
+    //TODO: allocate larger sizes for the buffers
     out_light_system->directional_light_storage_buffer_handle = vulkan_buffer_create(
         renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
         sizeof(Directional_Light) * out_light_system->directional_light_count);
@@ -40,19 +41,52 @@ Light_System* light_system_init(renderer* renderer)
         sizeof(Point_Light) * out_light_system->point_light_count);
 
 
-    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &out_light_system->directional_light_storage_buffer_handle,
-                                                   out_light_system->directional_lights,
-                                                   sizeof(Directional_Light) * out_light_system->
-                                                   directional_light_count);
+    out_light_system->directional_light_staging_buffer_handle = vulkan_buffer_create(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
+        sizeof(Directional_Light) * out_light_system->directional_light_count);
 
-    vulkan_buffer_cpu_data_copy_from_offset_handle(renderer, &out_light_system->point_light_storage_buffer_handle,
-                                                   out_light_system->point_lights,
-                                                   sizeof(Point_Light) * out_light_system->point_light_count);
+    out_light_system->point_light_staging_buffer_handle = vulkan_buffer_create(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
+        sizeof(Point_Light) * out_light_system->point_light_count);
+
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       out_light_system->directional_light_storage_buffer_handle,
+                                       out_light_system->directional_light_staging_buffer_handle,
+                                       out_light_system->directional_lights,
+                                       sizeof(Directional_Light) * out_light_system->directional_light_count);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       out_light_system->point_light_storage_buffer_handle,
+                                       out_light_system->point_light_staging_buffer_handle,
+                                       out_light_system->point_lights,
+                                       sizeof(Point_Light) * out_light_system->point_light_count);
 
 
     return out_light_system;
 }
 
+void light_system_update(renderer* renderer, Light_System* light_system)
+{
+    //TODO: data upload of any lights and replace the function calls in vulkan buffer data copy
+
+    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
+
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       light_system->directional_light_storage_buffer_handle,
+                                       light_system->point_light_staging_buffer_handle,
+                                       light_system->directional_lights,
+                                       sizeof(Directional_Light) * light_system->directional_light_count);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       light_system->point_light_storage_buffer_handle,
+                                       light_system->point_light_staging_buffer_handle,
+                                       light_system->point_lights,
+                                       sizeof(Point_Light) * light_system->point_light_count);
+
+}
 
 
 void directional_light_init(Directional_Light* light)
@@ -98,5 +132,3 @@ void spot_light_init(Spot_Light* light)
     light->linear = 0.09f;
     light->quadratic = 0.032f;
 }
-
-

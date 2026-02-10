@@ -1,5 +1,7 @@
 ﻿#include "shader_system.h"
 
+#include "vk_buffer.h"
+
 
 Shader_System* shader_system_init(renderer* renderer)
 {
@@ -20,7 +22,8 @@ Shader_System* shader_system_init(renderer* renderer)
 
     out_shader_system->material_mesh_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                         BUFFER_TYPE_CPU_STORAGE,
-                                                                        sizeof(Material_Param_Data) * out_shader_system->max_indexes);
+                                                                        sizeof(Material_Param_Data) * out_shader_system
+                                                                        ->max_indexes);
 
 
     return out_shader_system;
@@ -37,6 +40,7 @@ Texture* shader_system_get_texture(Shader_System* system, const Texture_Handle h
 {
     return &system->textures[handle.handle];
 }
+
 Texture* shader_system_get_default_texture(Shader_System* system)
 {
     return &system->default_texture;
@@ -44,12 +48,19 @@ Texture* shader_system_get_default_texture(Shader_System* system)
 
 void shader_system_update(renderer* renderer, Shader_System* system)
 {
+    //TODO: not in use rn, but idk if i really want to control material uploads here, they should be handled by the system there in
     //updates all the material data, every frame, since they are bound to change possibly every frame
     //or we could just update at a given index, since the offsets are the same
-    vulkan_buffer* mesh_ssbo_buffer = vulkan_buffer_get_clear(renderer, system->material_mesh_ssbo_handle);
 
-    vulkan_buffer_cpu_data_copy_from_offset(renderer, mesh_ssbo_buffer, system->material_params, sizeof(Material_Param_Data) * system->material_param_indexes);
+    /*
+    vulkan_buffer_reset_offset(renderer, system->material_mesh_ssbo_handle);
 
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       system->material_mesh_ssbo_handle,
+                                       system->material_mesh_staging_handle,
+                                       system->material_params,
+                                       sizeof(Material_Param_Data) * system->material_param_indexes);
+                                       */
 }
 
 //pass out the texture index
@@ -75,7 +86,7 @@ void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)
 }
 
 Texture_Handle shader_system_update_texture(renderer* renderer, Shader_System* system, Texture_Handle* handle,
-                                  const char* filepath)
+                                            const char* filepath)
 {
     //overwrite if neccessary
     Texture_Handle out_texture_handle = *handle;
@@ -96,7 +107,6 @@ Texture_Handle shader_system_update_texture(renderer* renderer, Shader_System* s
                                             */
 
 
-
     return out_texture_handle;
 }
 
@@ -112,7 +122,6 @@ Material_Handle shader_system_add_material(vulkan_context* context, Shader_Syste
 
 void shader_system_remove_material(Shader_System* system, Texture_Handle* handle)
 {
-
 }
 
 
@@ -127,7 +136,6 @@ Material_Param_Data* shader_system_get_unused_material_param(Shader_System* syst
     // return &system->material_params[available_count];
     return NULL;
 }
-
 
 
 void material_param_data_init(Material_Param_Data* out_data)
@@ -147,5 +155,3 @@ void material_param_data_init(Material_Param_Data* out_data)
     out_data->ambient_occlusion_index = 0;
     out_data->emissive_index = 0;
 }
-
-

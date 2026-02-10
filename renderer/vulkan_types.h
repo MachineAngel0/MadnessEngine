@@ -392,6 +392,7 @@ typedef struct Shader_System
 
     //TODO: this should hold all the global buffers and things for descriptor set
     Buffer_Handle material_mesh_ssbo_handle;
+    Buffer_Handle material_mesh_staging_handle;
 
 
     u32 max_indexes;
@@ -409,12 +410,15 @@ typedef struct Buffer_System
 
     //an array of them
     vulkan_buffer* buffers;
-    u32 buffers_size; // total we have
+    u32 buffers_size; // total we have to be given out
     u32 buffer_current_count; // current amount given out
     //add a linked list in later for buffers we free
 
-    vulkan_buffer* staging_buffer_ring;
-    u32 staging_buffer_count;
+    //we can have a one to one mapping from buffers -> staging buffers
+    //given how we might use this, it would be ok to have holes in the array
+    vulkan_buffer* staging_buffers;
+    u32 staging_buffers_size; // total we have to be given out
+    u32 staging_buffer_current_count; // current amount given out
 
 
     //TODO: queries for size
@@ -633,6 +637,10 @@ typedef struct Light_System
 
     Buffer_Handle directional_light_storage_buffer_handle;
     Buffer_Handle point_light_storage_buffer_handle;
+
+    Buffer_Handle directional_light_staging_buffer_handle;
+    Buffer_Handle point_light_staging_buffer_handle;
+
 } Light_System;
 
 typedef enum Render_Mode
@@ -751,13 +759,25 @@ typedef struct Mesh_System
 
     Buffer_Handle vertex_buffer_handle;
     Buffer_Handle index_buffer_handle;
-    Buffer_Handle indirect_buffer_handle; // basically our draw data
+    Buffer_Handle indirect_buffer_handle;
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
 
     Buffer_Handle transform_buffer_handle;
     Buffer_Handle material_buffer_handle;
+
+
+    //copy data into these buffers, and then eventually copy them into the device local buffer
+    Buffer_Handle vertex_staging_buffer_handle;
+    Buffer_Handle index_staging_buffer_handle;
+    Buffer_Handle indirect_staging_buffer_handle;
+    Buffer_Handle normal_staging_buffer_handle;
+    Buffer_Handle uv_staging_buffer_handle;
+    Buffer_Handle tangent_staging_buffer_handle;
+
+    Buffer_Handle transform_staging_buffer_handle;
+    Buffer_Handle material_staging_buffer_handle;
 
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
 
