@@ -129,6 +129,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
+    mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
     mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
     mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");

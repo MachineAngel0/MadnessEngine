@@ -335,59 +335,73 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 }
 
 
-void mesh_load_fbx(renderer* renderer, const char* gltf_path)
+void mesh_load_fbx(renderer* renderer, const char* fbx_path)
 {
-    UNIMPLEMENTED();
-    /*
-        //NOTE: use this when ready to test
-        mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
+    // https://ufbx.github.io/ - online docs
 
-        // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
-        // https://ufbx.github.io/ - online docs
+    //NOTE: uses malloc under the hood which we can override
 
-        ufbx_load_opts opts = { 0 }; // Optional, pass NULL for defaults
-        ufbx_error error; // Optional, pass NULL if you don't care about errors
-        ufbx_scene *scene = ufbx_load_file("thing.fbx", &opts, &error);
-        if (!scene) {
-            fprintf(stderr, "Failed to load: %s\n", error.description.data);
-            exit(1);
-        }
-
-        // Use and inspect `scene`, it's just plain data!
-        // Let's just list all objects within the scene for example:
-        for (size_t i = 0; i < scene->nodes.count; i++) {
-            ufbx_node *node = scene->nodes.data[i];
-            if (node->is_root) continue;
-
-            printf("Object: %s\n", node->name.data);
-            if (node->mesh) {
-                printf("-> mesh with %zu faces\n", node->mesh->faces.count);
-            }
-        }
+    ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
+    ufbx_error error; // Optional, pass NULL if you don't care about errors
+    ufbx_scene* scene = ufbx_load_file(fbx_path, &opts, &error);
+    if (!scene)
+    {
+        fprintf(stderr, "Failed to load: %s\n", error.description.data);
+        MASSERT(scene);
+    }
 
 
+    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->meshes.count);
+    Mesh_System* mesh_system = renderer->mesh_system;
 
-        static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->nodes.count);
 
-        // GET BASE PATH
+    // Use and inspect `scene`, it's just plain data!
+    // Let's just list all objects within the scene for example:
+    for (size_t i = 0; i < scene->nodes.count; i++)
+    {
+        ufbx_node* node = scene->nodes.data[i];
+        if (node->is_root) continue;
 
-        char* base_path = NULL;
-        int i = strlen(gltf_path);
-        for (; i > 0; i--)
+        printf("Object: %s\n", node->name.data);
+        if (node->mesh)
         {
-            if (gltf_path[i] == '/')
-            {
-                base_path = arena_alloc(&renderer->frame_arena, i + 2);
-                memcpy(base_path, gltf_path, i + 1);
-                base_path[i + 1] = '\0';
-
-                break;
-            }
+            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
         }
+    }
 
-        ufbx_free_scene(scene);
-        return out_static_mesh;
-    */
+
+    for (size_t mesh_idx = 0; mesh_idx < scene->meshes.count; mesh_idx++)
+    {
+        ufbx_mesh* mesh = scene->meshes.data[mesh_idx];
+        for (size_t i = 0; i < mesh->faces.count; i++) {
+            ufbx_face face = mesh->faces.data[i];
+
+            // Loop through the corners of the polygon.
+            for (uint32_t corner = 0; corner < face.num_indices; corner++) {
+
+                // Faces are defined by consecutive indices, one for each corner.
+                uint32_t index = face.index_begin + corner;
+
+                // Retrieve the position, normal and uv for the vertex.
+                ufbx_vec3 position = ufbx_get_vertex_vec3(&mesh->vertex_position, index);
+                ufbx_vec3 normal = ufbx_get_vertex_vec3(&mesh->vertex_normal, index);
+                ufbx_vec2 uv = ufbx_get_vertex_vec2(&mesh->vertex_uv, index);
+
+            }
+
+        }
+    }
+
+
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(fbx_path, &renderer->frame_arena);
+
+
+    ufbx_free_scene(scene);
+
+    mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
+    mesh_system->static_mesh_array_size++;
 }
 
 

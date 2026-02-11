@@ -82,7 +82,6 @@ add_executable(MadnessEngine_renderer
 )
 add_library(MADNESSRENDERER SHARED
         unity_build_renderer.c
-
 )
 
 ### EDITOR ###

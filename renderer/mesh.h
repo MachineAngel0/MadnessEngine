@@ -11,7 +11,7 @@ void static_mesh_free(static_mesh* static_mesh);
 
 void mesh_load_gltf(renderer* renderer, const char* gltf_path);
 
-void mesh_load_fbx(renderer* renderer, const char* gltf_path);
+void mesh_load_fbx(renderer* renderer, const char* fbx_path);
 
 void mesh_load_obj(const char* obj_path, renderer* renderer);
 
