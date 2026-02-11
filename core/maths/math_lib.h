@@ -1128,7 +1128,7 @@ MINLINE quat quat_identity()
 
 MINLINE f32 quat_normal(const quat q)
 {
-    return sqrt(
+    return (float)sqrt(
         q.x * q.x +
         q.y * q.y +
         q.z * q.z +
@@ -1444,7 +1444,7 @@ void print_vec4(void* data)
 }
 
 // POLAR COORDINATES
-void polar_canonical_form(float in_radius, float in_theta)
+inline void polar_canonical_form(float in_radius, float in_theta)
 {
     MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
     // POLAR COORDINATES
@@ -1492,7 +1492,7 @@ void polar_canonical_form(float in_radius, float in_theta)
     }
 }
 
-void polar_to_cartesian(float in_radius, float in_theta, float* out_x, float* out_y)
+inline void polar_to_cartesian(float in_radius, float in_theta, float* out_x, float* out_y)
 {
     MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
     // Theta Angle in RADIANS
@@ -1501,7 +1501,7 @@ void polar_to_cartesian(float in_radius, float in_theta, float* out_x, float* ou
     *out_y = in_radius * sin(in_theta);
 }
 
-void cartesian_to_polar(float in_x, float in_y, float* out_radius, float* out_theta)
+inline void cartesian_to_polar(float in_x, float in_y, float* out_radius, float* out_theta)
 {
     MASSERT_MSG_FALSE("DO NOT USE THIS FUNCTION")
     // Input: Cartesian coordinates
@@ -1523,7 +1523,7 @@ void cartesian_to_polar(float in_x, float in_y, float* out_radius, float* out_th
     }
 }
 
-void spherical_canonical_form(float* r, float* heading, float* pitch)
+inline void spherical_canonical_form(float* r, float* heading, float* pitch)
 {
     // Radial distance
     // float r;
@@ -1603,8 +1603,8 @@ void spherical_canonical_form(float* r, float* heading, float* pitch)
     }
 }
 
-void spherical_to_cartesian(float* out_x, float* out_y, float* out_z,
-                            const float radius, const float theta, const float phi)
+inline void spherical_to_cartesian(float* out_x, float* out_y, float* out_z,
+                                   const float radius, const float theta, const float phi)
 {
     //phi = books calls its p for pitch
     //theta = books calls it h for heading
@@ -1614,8 +1614,8 @@ void spherical_to_cartesian(float* out_x, float* out_y, float* out_z,
     *out_z = -radius * cos(phi) * cos(theta);
 }
 
-void cartesian_to_spherical(const float x, const float y, const float z, float* out_radius, float* out_theta,
-                            float* out_phi)
+inline void cartesian_to_spherical(const float x, const float y, const float z, float* out_radius, float* out_theta,
+                                   float* out_phi)
 {
     // Input Cartesian coordinates
     // float x,y,z;

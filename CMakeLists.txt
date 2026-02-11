@@ -38,8 +38,13 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
     #LINUX
     #if(UNIX AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU") # for some reason gnu not working
     if (UNIX) # for some reason gnu not working
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+#        https://www.jetbrains.com/help/clion/google-sanitizers.html#CompilerFlags
+#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
+#        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
     endif ()
 endif ()
 

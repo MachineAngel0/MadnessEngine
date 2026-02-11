@@ -1,12 +1,11 @@
 ﻿#ifndef AUDIO_H
 #define AUDIO_H
 
-#include "defines.h"
-#include "logger.h"
 #include <stdbool.h>
 
 #define MA_IMPLEMENTATION
 #include "miniaudio.h"
+
 
 typedef struct Sound_Data
 {
@@ -17,7 +16,7 @@ typedef struct Sound_Data
 } Sound_Data;
 
 
-ma_engine engine;
+static ma_engine engine;
 
 bool audio_system_init(void);
 
