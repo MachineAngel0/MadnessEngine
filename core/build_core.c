@@ -35,6 +35,8 @@
 //CORE - PLATFORM
 #include "../core/platform/event.c"
 #include "../core/platform/input.c"
+#include "../core/color_asci.c"
+#include "../core/logger.c"
 #include "../core/platform/audio.c"
 #include "../core/platform/clock.c"
 #include "../core/platform/filesystem.c"

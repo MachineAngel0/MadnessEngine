@@ -8,7 +8,7 @@ set(CMAKE_C_EXTENSIONS ON)
 #generate a compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
+#set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
         MadnessEngine
@@ -120,7 +120,18 @@ if (WIN32)
     target_link_libraries(CORE_UNIT_TEST PRIVATE ${MADNESS_WIN_LIBS})
 endif ()
 if (UNIX)
-    SET(MADNESS_UNIX_LIBS Vulkan::Vulkan)
+    SET(MADNESS_UNIX_LIBS
+            Vulkan::Vulkan
+            X11
+            X11-xcb
+            xcb
+    )
+    target_link_libraries(MadnessEngine PRIVATE ${MADNESS_UNIX_LIBS})
+    target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_UNIX_LIBS})
+    target_link_libraries(MADNESSGAME PRIVATE ${MADNESS_UNIX_LIBS})
+    target_link_libraries(MadnessEngine_renderer PRIVATE ${MADNESS_UNIX_LIBS})
+    target_link_libraries(MADNESSRENDERER PRIVATE ${MADNESS_UNIX_LIBS})
+    target_link_libraries(CORE_UNIT_TEST PRIVATE ${MADNESS_UNIX_LIBS})
 endif ()
 
 

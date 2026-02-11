@@ -1,4 +1,21 @@
 ﻿
+#include "arena.h"
+#include "arena_stack.h"
+#include "array.h"
+#include "binary_tree.h"
+#include "darray.h"
+#include "defines.h"
+#include "hash_map.h"
+#include "hash_map_string.h"
+#include "hash_set.h"
+#include "linked_list.h"
+#include "queue.h"
+#include "stack.h"
+#include "str.h"
+#include "str_builder.h"
+#include "memory/memory_system.h"
+#include "memory/memory_tracker.h"
+
 int main(void)
 {
     memory_tracker_init();

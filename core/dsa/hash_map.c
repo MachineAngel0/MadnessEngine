@@ -1,5 +1,7 @@
 ﻿#include "hash_map.h"
 
+#include <time.h>
+
 hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity)
 {
     hash_map* h = malloc(sizeof(hash_map));
@@ -204,9 +206,9 @@ void hash_map_test(void)
     hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
     // hash_map* h = hash_map_init(sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
 
-    srand((uint64_t)time(NULL));
+    srand((u64)time(NULL));
 
-    for (uint64_t i = 0; i < HASH_MAP_DEFAULT_CAPACITY; i++)
+    for (u64 i = 0; i < HASH_MAP_DEFAULT_CAPACITY; i++)
     {
         int key = (int)(rand() % HASH_MAP_DEFAULT_CAPACITY);
         int val = (int)(rand() % HASH_MAP_DEFAULT_CAPACITY);

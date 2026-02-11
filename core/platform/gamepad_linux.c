@@ -14,7 +14,7 @@
 #include <linux/input.h>
 
 
-void testing_boy()
+void testing_boy(void)
 {
     struct input_event event;
 

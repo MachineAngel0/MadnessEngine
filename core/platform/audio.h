@@ -1,8 +1,8 @@
 ﻿#ifndef AUDIO_H
 #define AUDIO_H
 
-#include "../defines.h"
-#include "../logger.h"
+#include "defines.h"
+#include "logger.h"
 #include <stdbool.h>
 
 #define MA_IMPLEMENTATION
