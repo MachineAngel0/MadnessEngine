@@ -1,8 +1,10 @@
 ﻿#include "input.h"
 
+#include "arena.h"
+#include "logger.h"
+#include "event.h"
 
-
-bool input_init()
+bool input_init(void)
 {
     memset(&input_system, 0, sizeof(input_state));
 
@@ -16,14 +18,14 @@ bool input_init()
     return true;
 }
 
-void input_shutdown()
+void input_shutdown(void)
 {
     //TODO: if needed
     INFO("INPUT SYSTEM SHUTDOWN")
     arena_clear(&input_system.input_system_arena);
 }
 
-void input_update()
+void input_update(void)
 {
     // Copy current states to previous states.
     memcpy(&input_system.keyboard_previous, &input_system.keyboard_current, sizeof(keyboard_state));

@@ -181,11 +181,11 @@ static input_state input_system;
 
 // static input_state* wow;
 
-bool input_init();
+bool input_init(void);
 
-void input_shutdown();
+void input_shutdown(void);
 
-void input_update();
+void input_update(void);
 
 void input_process_key(keys key, bool pressed);
 
