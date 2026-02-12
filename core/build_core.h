@@ -54,7 +54,7 @@
 #include "../core/dsa/dsa_utility.h"
 #include "../core/dsa/hash_map.h"
 #include "../core/dsa/hash_set.h"
-#include "../core/dsa/hash_map_string.h"
+#include "../core/dsa/hash_table.h"
 #include "../core/dsa/heap.h"
 #include "../core/dsa/linked_list.h"
 #include "../core/dsa/queue.h"

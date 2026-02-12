@@ -8,6 +8,8 @@
 //NOTE: rn im just using open addressing,
 // until i have the need for larger data sets, then I will implement a closed addressing hash
 
+
+
 typedef enum hash_map_state
 {
     HASH_MAP_EMPTY,
@@ -16,12 +18,15 @@ typedef enum hash_map_state
 } hash_map_state;
 
 
+
+#define HASH_MAP(key, value) hash_map*
+
 typedef struct hash_map
 {
-    uint64_t key_data_size;
-    uint64_t value_data_size;
-    uint64_t capacity;
-    uint64_t num_entries;
+    u64 key_data_size;
+    u64 value_data_size;
+    u64 capacity;
+    u64 num_entries;
 
     //SOA
     hash_map_state* state;
@@ -55,9 +60,7 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
 //     return h;
 // }
 
-
 void hash_map_free(hash_map* h);
-
 
 void hash_map_insert(hash_map* h, void* key, void* value);
 
@@ -67,7 +70,6 @@ void* hash_map_get(hash_map* h, void* key);
 
 bool hash_map_contains(hash_map* h, void* key);
 
-
 void hash_map_rehash(hash_map* h);
 
 void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_func_value)(void*));
@@ -76,7 +78,6 @@ uint64_t hash_map_size(hash_map* h);
 //TODO:
 // void hash_table_copy(hash_map* h1, hash_map* h2);
 // hash_map* hash_table_merge(hash_map* h1, hash_map* h2); // should pass back a new hash table
-
 
 void hash_map_test(void);
 

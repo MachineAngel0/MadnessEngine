@@ -2,6 +2,7 @@
 
 #include <time.h>
 
+
 hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity)
 {
     hash_map* h = malloc(sizeof(hash_map));
@@ -203,6 +204,7 @@ uint64_t hash_map_size(hash_map* h)
 
 void hash_map_test(void)
 {
+    TEST_START(HASH_MAP);
     hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
     // hash_map* h = hash_map_init(sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
 
@@ -229,5 +231,97 @@ void hash_map_test(void)
 
 
     hash_map_free(h);
-}
 
+    struct hash_test_key
+    {
+        int a;
+        bool c;
+    };
+    struct hash_test_value
+    {
+        u16 a;
+        u64 c;
+    };
+
+    hash_map* hash_2 = hash_map_init(sizeof(struct hash_test_key), sizeof(struct hash_test_value),
+                                     HASH_MAP_DEFAULT_CAPACITY);
+
+    struct hash_test_key hi = {10, true};
+    struct hash_test_key hi1 = {12, false};
+    struct hash_test_key hi2 = {9, false};
+    struct hash_test_key hi3 = {654654, true};
+
+    struct hash_test_value bye = {13, 123};
+    struct hash_test_value bye1 = {64, 54};
+    struct hash_test_value bye2 = {1981, 777};
+
+
+    hash_map_insert(h, &hi, &bye);
+    hash_map_insert(h, &hi1, &bye1);
+    hash_map_insert(h, &hi2, &bye2);
+
+
+    if (hash_map_contains(h, &hi))
+    {
+        printf("contains hi 0\n");
+    };
+    if (hash_map_contains(h, &hi1))
+    {
+        printf("contains hi 1\n");
+    };
+    if (hash_map_contains(h, &hi2))
+    {
+        printf("contains hi 2\n");
+    };
+    if (hash_map_contains(h, &hi3))
+    {
+        //should not contain
+        printf("contains hi 3\n");
+    }
+    else
+    {
+        printf("test passed does not contain hi 3\n");
+    }
+
+    free(hash_2);
+
+
+    hash_map* hash_char = hash_map_init(sizeof(char), sizeof(int),
+                                        HASH_MAP_DEFAULT_CAPACITY);
+    const char* char1 = "iahsdoi";
+    const char* char2 = "whats up";
+    const char* char3 = "down and out";
+    const char* char10 = "otherwise";
+    int val1 = 10;
+    int val2 = 184;
+    int val3 = 97;
+
+    hash_map_insert(hash_char, &char1, &val1);
+    hash_map_insert(hash_char, &char2, &val2);
+    hash_map_insert(hash_char, &char3, &val3);
+
+    if (hash_map_contains(hash_char, &char1))
+    {
+        printf("contains char 1\n");
+    }
+    if (hash_map_contains(hash_char, &char2))
+    {
+        printf("contains char 2\n");
+    }
+    if (hash_map_contains(hash_char, &char3))
+    {
+        printf("contains char 3\n");
+    }
+
+    if (hash_map_contains(hash_char, &char10))
+    {
+        printf("TEST FAILED contains char 10\n");
+    }
+    else
+    {
+        printf("TEST PASSED does not contain char 10\n");
+    }
+
+
+    TEST_REPORT(HASH_MAP);
+}

@@ -1,8 +1,8 @@
-﻿#include "hash_map_string.h"
+﻿#include "hash_table.h"
 
-hash_map_string* _hash_map_string_create(u64 value_data_size, u64 capacity)
+hash_table* _hash_table_string_create(u64 value_data_size, u64 capacity)
 {
-    hash_map_string* h = malloc(sizeof(hash_map_string));
+    hash_table* h = malloc(sizeof(hash_table));
 
     h->capacity = capacity;
     h->value_data_size = value_data_size;
@@ -22,7 +22,7 @@ hash_map_string* _hash_map_string_create(u64 value_data_size, u64 capacity)
     return h;
 }
 
-void hash_map_string_destroy(hash_map_string* h)
+void hash_table_destroy(hash_table* h)
 {
     for (int i = 0; i < h->capacity; i++)
     {
@@ -36,7 +36,7 @@ void hash_map_string_destroy(hash_map_string* h)
     free(h);
 }
 
-void hash_map_string_insert(hash_map_string* h, char* key_str, void* value)
+void hash_table_insert(hash_table* h, char* key_str, void* value)
 {
     MASSERT_MSG(h, "HASH MAP STRING INSERT: INVALID PARAMS")
     MASSERT_MSG(key_str, "HASH MAP STRING INSERT: INVALID PARAMS");
@@ -66,7 +66,7 @@ void hash_map_string_insert(hash_map_string* h, char* key_str, void* value)
     WARN("HASH MAP STRING INSERT: NO INSERT SPOT");
 }
 
-void hash_map_string_remove(hash_map_string* h, char* key_str)
+void hash_table_remove(hash_table* h, char* key_str)
 {
     MASSERT_MSG(h && key_str && key_str, "HASH MAP STRING DELETE: INVALID PARAMS");
 
@@ -96,7 +96,7 @@ void hash_map_string_remove(hash_map_string* h, char* key_str)
     WARN("HASH MAP STRING REMOVE: COULD NOT FIND STRING");
 }
 
-bool hash_map_string_contains(hash_map_string* h, char* key_str)
+bool hash_table_contains(hash_table* h, char* key_str)
 {
     MASSERT_MSG(h, "HASH MAP STRING DELETE: INVALID PARAMS");
 
@@ -122,7 +122,7 @@ bool hash_map_string_contains(hash_map_string* h, char* key_str)
     return false;
 }
 
-void hash_map_string_set(hash_map_string* h, char* key_str, void* value)
+void hash_table_set(hash_table* h, char* key_str, void* value)
 {
     MASSERT_MSG(h && key_str && value, "HASH MAP STRING SET: INVALID PARAMS");
 
@@ -149,7 +149,7 @@ void hash_map_string_set(hash_map_string* h, char* key_str, void* value)
     return;
 }
 
-void* hash_map_string_get(hash_map_string* h, char* key_str)
+void* hash_table_get(hash_table* h, char* key_str)
 {
     MASSERT_MSG(h && key_str, "HASH MAP STRING SET: INVALID PARAMS");
 
@@ -177,7 +177,7 @@ void* hash_map_string_get(hash_map_string* h, char* key_str)
     return NULL;
 }
 
-void hash_map_string_print(hash_map_string* h, void (*print_func_value)(void*))
+void hash_table_print(hash_table* h, void (*print_func_value)(void*))
 {
     DEBUG("HASH MAP STRING DEBUG PRINT");
     for (u64 i = 0; i < h->capacity; i++)
@@ -194,36 +194,36 @@ void hash_map_string_print(hash_map_string* h, void (*print_func_value)(void*))
 }
 
 
-void hash_map_string_test()
+void hash_table_test()
 {
-    TEST_START("HASH MAP STRING");
-    hash_map_string* hm_test = HASH_MAP_STRING_CREATE(i32, HM_STRING_TEST_CAPACITY);
+    TEST_START("HASH TABLE");
+    hash_table* hm_test = HASH_MAP_STRING_CREATE(i32, HM_STRING_TEST_CAPACITY);
 
     i32 val = 100;
-    hash_map_string_insert(hm_test, "key", &val);
+    hash_table_insert(hm_test, "key", &val);
 
-    hash_map_string_remove(hm_test, "key");
+    hash_table_remove(hm_test, "key");
 
 
     i32 val2 = 101;
-    hash_map_string_insert(hm_test, "key2", &val2);
+    hash_table_insert(hm_test, "key2", &val2);
 
     i32* check_value;
-    check_value = (i32*)hash_map_string_get(hm_test, "key2");
+    check_value = (i32*)hash_table_get(hm_test, "key2");
     TEST_INFORM(*check_value == val2);
 
-    hash_map_string_set(hm_test, "key2", &val);
-    check_value = (i32*)hash_map_string_get(hm_test, "key2");
+    hash_table_set(hm_test, "key2", &val);
+    check_value = (i32*)hash_table_get(hm_test, "key2");
     TEST_INFORM(*check_value == val);
 
-    hash_map_string_set(hm_test, "key2", &val2);
-    check_value = (i32*)hash_map_string_get(hm_test, "key2");
+    hash_table_set(hm_test, "key2", &val2);
+    check_value = (i32*)hash_table_get(hm_test, "key2");
     TEST_INFORM(*check_value == val2);
 
-    hash_map_string_print(hm_test, print_int);
+    hash_table_print(hm_test, print_int);
 
-    hash_map_string_destroy(hm_test);
-    TEST_END("HASH MAP STRING");
+    hash_table_destroy(hm_test);
+    TEST_END("HASH TABLE");
 }
 
 

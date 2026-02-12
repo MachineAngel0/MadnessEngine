@@ -72,6 +72,9 @@ void* free_list_free(Free_List* fl, void* ptr);
 
 void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node);
 
+void free_list_test();
+
+
 
 #endif
 

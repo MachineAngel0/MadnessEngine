@@ -9,7 +9,7 @@
 #include "../core/dsa/darray.c"
 #include "../core/dsa/hash_map.c"
 #include "../core/dsa/hash_set.c"
-#include "../core/dsa/hash_map_string.c"
+#include "../core/dsa/hash_table.c"
 #include "../core/dsa/heap.c"
 #include "../core/dsa/linked_list.c"
 #include "../core/dsa/queue.c"
