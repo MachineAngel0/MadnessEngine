@@ -1,26 +1,11 @@
 ﻿
-#include "arena.h"
-#include "arena_stack.h"
-#include "array.h"
-#include "binary_tree.h"
-#include "darray.h"
-#include "defines.h"
-#include "hash_map.h"
-#include "hash_map_string.h"
-#include "hash_set.h"
-#include "linked_list.h"
-#include "queue.h"
-#include "stack.h"
-#include "str.h"
-#include "str_builder.h"
-#include "memory/memory_system.h"
-#include "memory/memory_tracker.h"
-
 int main(void)
 {
     memory_tracker_init();
     u64 memory_request_size = MB(1);
     memory_system_init(memory_request_size);
+
+    free_list_test();
 
 
     arena_test();
@@ -49,6 +34,12 @@ int main(void)
     string_builder_test();
 
     memory_tracker_print_memory_usage();
+
+
+
+    memory_tracker_shutdown();
+
+    memory_system_shutdown();
 
 
     TEST_REPORT_TOTAL();

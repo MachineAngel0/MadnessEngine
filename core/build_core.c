@@ -1,8 +1,4 @@
-﻿//EXTERNAL LIBRARIES
-#include "build_lib.c"
-
-
-//CORE - DSA
+﻿//CORE - DSA
 #include "../core/dsa/arena.c"
 #include "../core/dsa/arena_stack.c"
 #include "../core/dsa/arena_freelist.c"

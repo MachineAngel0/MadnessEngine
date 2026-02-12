@@ -23,7 +23,7 @@ void* _darray_create(const u64 capacity, const u64 stride)
     }
     memset(new_array, 0, header_size + array_size);
 
-    memory_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
+    memory_tracker_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
 
 
     array_header* header = new_array;
@@ -42,7 +42,7 @@ void* _darray_create_arena(const u64 intial_capacity, const u64 stride, Arena_St
     void* new_array = arena_stack_alloc(arena, header_size + array_size);;
     memset(new_array, 0, header_size + array_size);
 
-    memory_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
+    memory_tracker_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
 
     array_header* header = new_array;
     header->num_items = 0;
@@ -72,7 +72,7 @@ void darray_free(void* array)
     //get the array header
     array_header* header = (array_header *) ((u8 *) array - header_size);
 
-    memory_container_free(MEMORY_CONTAINER_DARRAY, header->capacity + header_size);
+    memory_tracker_container_free(MEMORY_CONTAINER_DARRAY, header->capacity + header_size);
 
     free(header);
     array = NULL;

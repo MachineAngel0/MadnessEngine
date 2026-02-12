@@ -1,5 +1,5 @@
-﻿#ifndef HEALTH_H
-#define HEALTH_H
+﻿#ifndef HEALTH_COMPONENT_H
+#define HEALTH_COMPONENT_H
 #include "maths/math_lib.h"
 
 

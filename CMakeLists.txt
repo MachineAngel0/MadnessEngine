@@ -70,29 +70,36 @@ include_directories(MadnessEngine ./z_assets/)
 add_executable(MadnessEngine
         main.c
         unity_build_game.c
+        lib/build_lib.c
 )
 
 ### GAME ###
 add_executable(MadnessEngine_game
         unity_build_game.c
+        lib/build_lib.c
 )
 add_library(MADNESSGAME SHARED
         unity_build_game.c
+        lib/build_lib.c
 )
 
 ### RENDERER ###
 
 add_executable(MadnessEngine_renderer
         unity_build_renderer.c
+        lib/build_lib.c
 )
 add_library(MADNESSRENDERER SHARED
         unity_build_renderer.c
+        lib/build_lib.c
 )
 
 ### EDITOR ###
 add_executable(MadnessEngine_editor
         editor_entry.h
         unity_build_game.c
+        lib/build_lib.c
+
 )
 
 ### CORE ###
@@ -100,6 +107,7 @@ add_executable(CORE_UNIT_TEST
         core/build_core.h
         core/build_core.c
         core/core_unit_test_main.c
+        lib/build_lib.c
 )
 
 

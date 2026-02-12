@@ -1,5 +1,7 @@
 ﻿#include "mesh.h"
 
+#include "cgltf.h"
+
 
 submesh* submesh_init(Arena* arena)
 {

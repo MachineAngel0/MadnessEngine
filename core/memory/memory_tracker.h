@@ -88,14 +88,14 @@ bool memory_tracker_init(void)
 
 bool memory_tracker_shutdown(void);
 
-bool memory_container_alloc(const memory_container_type type, const u64 size);
+bool memory_tracker_container_alloc(const memory_container_type type, const u64 size);
 
 
-bool memory_container_free(const memory_container_type type, const u64 size);
+bool memory_tracker_container_free(const memory_container_type type, const u64 size);
 
-bool memory_subsystem_alloc(const memory_subsystem_type type, const u64 size);
+bool memory_tracker_subsystem_alloc(const memory_subsystem_type type, const u64 size);
 
-bool memory_subsystem_free(const memory_subsystem_type type, const u64 size);
+bool memory_tracker_subsystem_free(const memory_subsystem_type type, const u64 size);
 
 
 void memory_tracker_print_memory_usage(void);

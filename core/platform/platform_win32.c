@@ -159,6 +159,7 @@ bool platform_pump_messages(platform_state* plat_state)
 
 void* platform_allocate(u64 size, bool aligned)
 {
+    // VirtualAlloc(); //TODO:
     return malloc(size);
 }
 

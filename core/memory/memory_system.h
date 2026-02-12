@@ -25,7 +25,7 @@ static Memory_System memory_system;
 
 void memory_system_init(u64 memory_request_size);
 //should be the last system shutdown
-void memory_system_shutdown();
+void memory_system_shutdown(void);
 //should only be called by larger subsystems like the renderer
 void* memory_system_alloc(const u64 memory_request_size);
 

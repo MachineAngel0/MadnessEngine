@@ -1,6 +1,6 @@
 ﻿#ifndef AUDIO_H
 #define AUDIO_H
-
+#include "miniaudio.h"
 
 
 typedef struct Sound_Data

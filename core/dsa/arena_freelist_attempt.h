@@ -1,6 +1,7 @@
-#ifndef ARENA_FREELIST_H
-#define ARENA_FREELIST_H
+#ifndef ARENA_huh_H
+#define ARENA_huh_H
 
+#include "asserts.h"
 
 //RED BLACK TREE OPTIMIZATION, if i feel up for it some day
 // https://www.gingerbill.org/article/2021/11/30/memory-allocation-strategies-005/
@@ -46,33 +47,53 @@ struct Free_List
 };
 
 
-void free_list_node_insert(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* new_node);
+void free_list_node_insert(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* new_node)
+{
+}
 
-void free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* del_node);
+void free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* del_node)
+{
+}
 
-void free_list_free_all(Free_List* fl);
+void free_list_free_all(Free_List* fl)
+{
+}
 
-void free_list_init(Free_List* fl, void* data, size_t size);
+void free_list_init(Free_List* fl, void* data, size_t size)
+{
+}
 
 
 // Defined Memory Allocation Strategies Part 3: /article/2019/02/15/memory-allocation-strategies-003/#alloc
-size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size);
+size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
+{
+}
 
 Free_List_Node* free_list_find_first(Free_List* fl, size_t size, size_t alignment, size_t* padding_,
-                                     Free_List_Node** prev_node_);
+                                     Free_List_Node** prev_node_)
+{
+}
 
 Free_List_Node* free_list_find_best(Free_List* fl, size_t size, size_t alignment, size_t* padding_,
-                                    Free_List_Node** prev_node_);
+                                    Free_List_Node** prev_node_)
+{
+}
 
-void* free_list_alloc(Free_List* fl, size_t size, size_t alignment);
+void* free_list_alloc(Free_List* fl, size_t size, size_t alignment)
+{
+}
 
-void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node);
+void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node)
+{
+}
 
-void* free_list_free(Free_List* fl, void* ptr);
+void* free_list_free(Free_List* fl, void* ptr)
+{
+}
 
-void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node);
+void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node)
+{
+}
 
 
 #endif
-
-

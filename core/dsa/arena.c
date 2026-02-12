@@ -31,7 +31,7 @@ void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, c
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
 
-    memory_subsystem_alloc(subsystem_type, a->capacity);
+    memory_tracker_subsystem_alloc(subsystem_type, a->capacity);
 }
 
 
@@ -44,7 +44,7 @@ void arena_clear(Arena* a)
 //Should only ever be called if we own the memory, which is most likely only the application arena
 void arena_free(Arena* a)
 {
-    memory_subsystem_free(MEMORY_SUBSYSTEM_APPLICATION_ARENA, a->capacity);
+    memory_tracker_subsystem_free(MEMORY_SUBSYSTEM_APPLICATION_ARENA, a->capacity);
     free(a->memory);
     free(a);
 }
@@ -72,7 +72,7 @@ void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
     // Zero new memory by default
     memset(ptr, 0, mem_request); // already offset so no need to include it
 
-    memory_container_alloc(MEMORY_CONTAINER_ARENA, mem_request);
+    memory_tracker_container_alloc(MEMORY_CONTAINER_ARENA, mem_request);
 
     return ptr; // return the memory
 }

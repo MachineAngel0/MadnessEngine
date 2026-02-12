@@ -585,6 +585,11 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
 
     DEBUG("Destroying Vulkan instance...");
     vkDestroyInstance(vk_context.instance, vk_context.allocator);
+
+
+    INFO("RENDERER SHUTDOWN");
+
+
 }
 
 

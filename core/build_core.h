@@ -1,4 +1,5 @@
-﻿
+﻿//NOTE: the order here literally does not matter, only in the c file
+
 //C- STD library
 #include <stdlib.h>
 #include <string.h>
