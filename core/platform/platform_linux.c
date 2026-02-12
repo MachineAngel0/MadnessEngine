@@ -331,6 +331,82 @@ void platform_sleep(u64 ms)
 #endif
 }
 
+char* platform_get_dynamic_library_extension(void)
+{
+    return ".so";
+}
+char* platform_get_static_library_extension(void)
+{
+    return ".a";
+}
+
+typedef struct linux_file_handle
+{
+    void* file_handle;
+    const char* file_name;
+}linux_file_handle;
+
+linux_file_handle file_handles[100];
+
+DLL_HANDLE platform_load_dynamic_library(const char* file_name)
+{
+    //probably gonna have to have some sort of internal index for this
+    linux_file_handle file_info = file_handles[0];
+
+    //TODO: generate file path
+    const char* file_path = "file_name_with_dll";
+    // Load the library, and look up the module_main() function pointer.
+    void* module = dlopen( file_path, RTLD_NOW);
+    module_main_func* module_main = dlsym(module, "module_main");
+
+    // Run the module's code, and save a reference to it's heap data.
+    //TODO: need a way to pass this out
+    // state = module_main(state);
+
+    // Get ready to hot-load the module again by first closing the library.
+    // dlclose(module);
+
+    return (DLL_HANDLE){0, 0, 0};
+}
+
+bool platform_unload_dynamic_library(DLL_HANDLE handle)
+{
+    linux_file_handle file = file_handles[handle.handle];
+    if (file.dll_handle)
+    {
+        dlclose(module);
+        return true;
+    }
+    return false;
+
+}
+
+bool platform_reload_dynamic_library(DLL_HANDLE handle)
+{
+    platform_dll_unload(handle);
+    platform_dll_load(handle.file_name, handle.function_name);
+}
+
+void* platform_get_function_address(DLL_HANDLE handle, const char* function_name)
+{
+    linux_file_handle file = file_handles[handle.handle];
+
+    return function_ptr = dlsym(file.file_handle, function_name);
+}
+
+bool platform_file_copy(const char* source_file, char* new_file)
+{
+    //TODO: these are suppose to be file pointers, meaning i have to do a file open on them
+    size_t offset 0;
+    size_t file_copy_byte_size;
+    ssize_t bytes_copied = sendfile(source_file, new_file, offset,file_copy_byte_size);
+    perror ("sendfile");
+    // if(errno == ????)
+
+
+}
+
+
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
