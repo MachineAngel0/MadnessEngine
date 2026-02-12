@@ -12,34 +12,34 @@
 // Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)
 
 // VEC2
-MINLINE vec2 vec2_zero()
+MINLINE vec2 vec2_zero(void)
 {
-    return (vec2){0.0f, 0.0f};
+    return (vec2){.x = 0.0f, .y = 0.0f};
 }
 
-MINLINE vec2 vec2_one()
+MINLINE vec2 vec2_one(void)
 {
-    return (vec2){1.0f, 1.0f};
+    return (vec2){.x = 1.0f, .y = 1.0f};
 }
 
-MINLINE vec2 vec2_up()
+MINLINE vec2 vec2_up(void)
 {
-    return (vec2){0.0f, 1.0f};
+    return (vec2){.x = 0.0f, .y = 1.0f};
 }
 
-MINLINE vec2 vec2_down()
+MINLINE vec2 vec2_down(void)
 {
-    return (vec2){0.0f, -1.0f};
+    return (vec2){.x = 0.0f, .y = -1.0f};
 }
 
-MINLINE vec2 vec2_left()
+MINLINE vec2 vec2_left(void)
 {
-    return (vec2){-1.0f, 0.0f};
+    return (vec2){.x = -1.0f, .y = 0.0f};
 }
 
-MINLINE vec2 vec2_right()
+MINLINE vec2 vec2_right(void)
 {
-    return (vec2){1.0f, 0.0f};
+    return (vec2){.x = 1.0f, .y = 0.0f};
 }
 
 
@@ -113,43 +113,43 @@ MINLINE float vec2_distance(const vec2 a, const vec2 b)
 }
 
 // VEC3
-MINLINE vec3 vec3_zero()
+MINLINE vec3 vec3_zero(void)
 {
     return (vec3){0.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_one()
+MINLINE vec3 vec3_one(void)
 {
     return (vec3){1.0f, 1.0f, 1.0f};
 }
 
 
-MINLINE vec3 vec3_up()
+MINLINE vec3 vec3_up(void)
 {
     return (vec3){0.0f, 1.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_down()
+MINLINE vec3 vec3_down(void)
 {
     return (vec3){0.0f, -1.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_left()
+MINLINE vec3 vec3_left(void)
 {
     return (vec3){-1.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_right()
+MINLINE vec3 vec3_right(void)
 {
     return (vec3){1.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_forward()
+MINLINE vec3 vec3_forward(void)
 {
     return (vec3){0.0f, 0.0f, 1.0f};
 }
 
-MINLINE vec3 vec3_back()
+MINLINE vec3 vec3_back(void)
 {
     return (vec3){0.0f, 0.0f, -1.0f};
 }
@@ -241,6 +241,7 @@ MINLINE float vec3_magnitude(const vec3 v)
 {
     return vec3_length(v);
 }
+
 MINLINE float vec3_magnitude_squared(const vec3 v)
 {
     return vec3_length_squared(v);
@@ -291,19 +292,19 @@ MINLINE float vec3_distance(const vec3 a, const vec3 b)
 
 //VEC4
 
-MINLINE vec4 vec4_zero()
+MINLINE vec4 vec4_zero(void)
 {
     return (vec4){0.0f, 0.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec4 vec4_one()
+MINLINE vec4 vec4_one(void)
 {
     return (vec4){1.0f, 1.0f, 1.0f, 1.0f,};
 }
 
 MINLINE vec4 vec4_add(const vec4 a, const vec4 b)
 {
-    vec4 result;
+    vec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] + b.elements[i];
@@ -313,7 +314,7 @@ MINLINE vec4 vec4_add(const vec4 a, const vec4 b)
 
 MINLINE vec4 vec4_sub(const vec4 a, const vec4 b)
 {
-    vec4 result;
+    vec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] - b.elements[i];
@@ -323,7 +324,7 @@ MINLINE vec4 vec4_sub(const vec4 a, const vec4 b)
 
 MINLINE vec4 vec4_mul(const vec4 a, const vec4 b)
 {
-    vec4 result;
+    vec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] * b.elements[i];
@@ -333,7 +334,7 @@ MINLINE vec4 vec4_mul(const vec4 a, const vec4 b)
 
 MINLINE vec4 vec4_div(const vec4 a, const vec4 b)
 {
-    vec4 result;
+    vec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] / b.elements[i];
@@ -386,9 +387,9 @@ MINLINE f32 vec4_dot_f32(const f32 a0, const f32 a1, const f32 a2, const f32 a3,
 
 // MATRIX3*3
 
-MINLINE mat3 mat3_identity()
+MINLINE mat3 mat3_identity(void)
 {
-    mat3 out_mat3;
+    mat3 out_mat3 = {0};
     // mat3 out_mat3 = {0};
     memset(&out_mat3, 0, sizeof(float) * 9);
     out_mat3.data[0] = 1.0f;
@@ -718,13 +719,13 @@ MINLINE void mat4_set_value(mat4 matrix, const u8 row, const u8 col, const float
 }
 
 
-MINLINE mat4 mat4_zero()
+MINLINE mat4 mat4_zero(void)
 {
     mat4 out_mat4 = {0};
     return out_mat4;
 }
 
-MINLINE mat4 mat4_identity()
+MINLINE mat4 mat4_identity(void)
 {
     mat4 out_mat4;
     memset(&out_mat4, 0, sizeof(float) * 16);
@@ -1121,7 +1122,7 @@ MINLINE vec3 mat4_right(const mat4 matrix)
 
 
 // QUATERNIONS
-MINLINE quat quat_identity()
+MINLINE quat quat_identity(void)
 {
     return (quat){0, 0, 0, 1.0f};
 }
@@ -1712,7 +1713,7 @@ float min_f(const float a, const float b)
 static bool rand_seeded = false;
 
 //TODO: rand func
-uint32_t randi()
+uint32_t randi(void)
 {
     if (!rand_seeded)
     {
