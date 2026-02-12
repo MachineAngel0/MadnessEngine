@@ -1,10 +1,12 @@
-﻿//C- STD library
+﻿
+//C- STD library
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
 
 //CORE - Top Level
 #include "../core/defines.h"
@@ -60,6 +62,5 @@
 #include "../core/dsa/str_builder.h"
 #include "../core/dsa/queue.h"
 #include "../core/dsa/unions.h"
-
 
 

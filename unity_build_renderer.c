@@ -4,15 +4,7 @@
 #include "core/build_core.h"
 #include "core/build_core.c"
 
-
-//LIB
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
-
-#include "lib/stb_impl.c"
-
-#include <ft2build.h>
-
+//VULKAN
 #include <vulkan/vulkan.h>
 
 #include "SPIRV-Reflect-main/spirv_reflect.h"

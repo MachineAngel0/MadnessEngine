@@ -129,6 +129,7 @@ if (UNIX)
             X11
             X11-xcb
             xcb
+            m #linux math library
     )
     target_link_libraries(MadnessEngine PRIVATE ${MADNESS_UNIX_LIBS})
     target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_UNIX_LIBS})

@@ -2,8 +2,9 @@
 #define MATH_LIB_H
 
 
-#include <math.h>
 #include "platform.h"
+#include <math.h>
+
 
 //FUTURE: rn im not using glm/cglm, should probably switch
 //NOTE: Y Up, left handed

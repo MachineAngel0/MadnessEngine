@@ -1,10 +1,6 @@
 ﻿#ifndef AUDIO_H
 #define AUDIO_H
 
-#include <stdbool.h>
-
-#define MA_IMPLEMENTATION
-#include "miniaudio.h"
 
 
 typedef struct Sound_Data
@@ -14,7 +10,6 @@ typedef struct Sound_Data
     int16_t* data;
     // Audio_Type* audio_type; AUDIO TYPE - wav, mp3, etc..
 } Sound_Data;
-
 
 static ma_engine engine;
 
