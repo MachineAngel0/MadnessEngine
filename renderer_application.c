@@ -3,6 +3,7 @@
 #include "clock.h"
 #include "core/platform/event.h"
 #include "core/platform/input.h"
+#include "core/platform/audio.h"
 
 typedef struct application_state
 {
@@ -55,7 +56,7 @@ bool application_renderer_create(struct renderer_app* renderer)
     // Initialize subsystems.
     event_init();
     input_init();
-    audio_system_init();
+    // audio_system_init();
 
 
     event_register(EVENT_APP_QUIT, 10, application_on_event);

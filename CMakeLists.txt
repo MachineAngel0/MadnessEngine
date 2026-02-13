@@ -8,9 +8,10 @@ set(CMAKE_C_EXTENSIONS ON)
 #generate a compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
+#set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
+        CORE_UNIT_TEST
         MadnessEngine
         MadnessEngine_game
         MADNESSGAME
@@ -38,13 +39,13 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
     #LINUX
     #if(UNIX AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU") # for some reason gnu not working
     if (UNIX) # for some reason gnu not working
-#        https://www.jetbrains.com/help/clion/google-sanitizers.html#CompilerFlags
-#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
-#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
-#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
-#        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
-#        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        #        https://www.jetbrains.com/help/clion/google-sanitizers.html#CompilerFlags
+        #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+        #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+        #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+        #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+        #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
+        #        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
     endif ()
 endif ()
 
@@ -52,19 +53,19 @@ endif ()
 find_package(Vulkan REQUIRED)
 include_directories(${Vulkan_INCLUDE_DIRS})
 
-include_directories(MadnessEngine ./core/)
-include_directories(MadnessEngine ./core/dsa/)
-include_directories(MadnessEngine ./core/platform/)
-include_directories(MadnessEngine ./core/serialization/)
-include_directories(MadnessEngine ./editor/)
-include_directories(MadnessEngine ./renderer/)
-include_directories(MadnessEngine ./renderer/shaders)
-include_directories(MadnessEngine ./game/)
-include_directories(MadnessEngine ./lib/)
-include_directories(MadnessEngine ./lib/cgltf-master)
-include_directories(MadnessEngine ./lib/ufbx)
-include_directories(MadnessEngine ./lib/freetype)
-include_directories(MadnessEngine ./z_assets/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/dsa/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/platform/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/serialization/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/editor/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/renderer/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/renderer/shaders)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/game/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/cgltf-master)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/ufbx)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/freetype)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 
 
 add_executable(MadnessEngine
@@ -93,6 +94,7 @@ add_library(MADNESSRENDERER SHARED
         unity_build_renderer.c
         lib/build_lib.c
 )
+
 
 ### EDITOR ###
 add_executable(MadnessEngine_editor
@@ -158,12 +160,12 @@ endif ()
 
 
 #equivalent of above
-foreach(tgt IN LISTS MADNESS_BUILD_TARGETS)
+foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
     target_compile_definitions(${tgt} PRIVATE
             $<$<CONFIG:Debug>:DEBUG_BUILD>
             $<$<CONFIG:Release>:RELEASE_BUILD>
     )
-endforeach()
+endforeach ()
 
 
 # pretty sure the above does not work, if you want to check if we are in debug, refer to the examples below
@@ -181,21 +183,24 @@ if (MINGW)
 endif ()
 
 #BUILDS SHADERS TO SPIRV BEFORE BUILD
-foreach(tgt IN LISTS MADNESS_BUILD_TARGETS)
-    if(WIN32)
+foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+    if (WIN32)
         add_custom_command(TARGET ${tgt} PRE_BUILD
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
                 COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.bat  # or .bat on Windows
                 COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.bat # or .bat on Windows
                 COMMENT "BUILDING SHADERS SCRIPT"
         )
-    endif()
+    endif ()
     #TODO: linux version
-    # if(UNIX)
-    #add_custom_command(TARGET ${tgt} PRE_BUILD
-    #        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
-    #        COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.sh  # or .bat on Windows
-    #        COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.sh # or .bat on Windows
-    #        COMMENT "BUILDING SHADERS SCRIPT"
-    #)
-endforeach()
+    if (UNIX)
+#        add_custom_command(TARGET ${tgt} PRE_BUILD
+#                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
+#                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.sh  # or .bat on Windows
+#                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.sh # or .bat on Windows
+#                COMMENT "BUILDING SHADERS SCRIPT"
+#        )
+    endif ()
+endforeach ()
+
+

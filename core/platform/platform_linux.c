@@ -23,6 +23,11 @@
 #include <string.h>
 #include "darray.h"
 #include "input.h"
+#include "event.h"
+#include "c_string.h"
+
+#include <sys/sendfile.h>
+#include <dlfcn.h>
 
 // For surface creation
 #define VK_USE_PLATFORM_XCB_KHR
@@ -343,66 +348,82 @@ char* platform_get_static_library_extension(void)
 typedef struct linux_file_handle
 {
     void* file_handle;
-    const char* file_name;
+    const char* file_name; //doesnt seem super needed
 }linux_file_handle;
 
 linux_file_handle file_handles[100];
+static u32 file_handle_count = 0;
+
 
 DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 {
+
+    DLL_HANDLE out_handle = {file_handle_count, file_name};
+
     //probably gonna have to have some sort of internal index for this
-    linux_file_handle file_info = file_handles[0];
+    linux_file_handle* file_info = &file_handles[file_handle_count];
+    file_info->file_name = file_name;
+    file_handle_count++;
 
-    //TODO: generate file path
-    const char* file_path = "file_name_with_dll";
-    // Load the library, and look up the module_main() function pointer.
-    void* module = dlopen( file_path, RTLD_NOW);
-    module_main_func* module_main = dlsym(module, "module_main");
+    const char* dll_extension_name = platform_get_dynamic_library_extension();
+    const char* final_file_name = c_string_concat(file_name, dll_extension_name);
 
-    // Run the module's code, and save a reference to it's heap data.
-    //TODO: need a way to pass this out
-    // state = module_main(state);
+    // Load the library
+    file_info->file_handle = dlopen(final_file_name, RTLD_NOW);
+    if (!file_info->file_handle ) {
+        const char* err = dlerror();
+        fprintf(stderr, "dlopen failed: %s\n", err);
+    }
 
-    // Get ready to hot-load the module again by first closing the library.
-    // dlclose(module);
+    out_handle.file_name = file_info->file_name;
 
-    return (DLL_HANDLE){0, 0, 0};
+    return out_handle;
 }
 
 bool platform_unload_dynamic_library(DLL_HANDLE handle)
 {
-    linux_file_handle file = file_handles[handle.handle];
-    if (file.dll_handle)
+    linux_file_handle* file = &file_handles[handle.handle];
+    if (file->file_handle)
     {
-        dlclose(module);
+        dlclose(file->file_handle);
         return true;
     }
+
+    WARN("LINUX: UNLOAD DYNAMIC LIBRARY, not a valid file handle")
     return false;
 
 }
 
 bool platform_reload_dynamic_library(DLL_HANDLE handle)
 {
-    platform_dll_unload(handle);
-    platform_dll_load(handle.file_name, handle.function_name);
+    platform_unload_dynamic_library(handle);
+    platform_load_dynamic_library(handle.file_name);
 }
 
 void* platform_get_function_address(DLL_HANDLE handle, const char* function_name)
 {
-    linux_file_handle file = file_handles[handle.handle];
+    linux_file_handle* file = &file_handles[handle.handle];
+    void* out_data = dlsym(file->file_handle, function_name);
+    const char* err = dlerror();
+    if (err) {
+        fprintf(stderr, "dlsym failed: %s\n", err);
+    }
 
-    return function_ptr = dlsym(file.file_handle, function_name);
+    return out_data;
 }
 
 bool platform_file_copy(const char* source_file, char* new_file)
 {
+    //mostly just a windows thing
+    /*
     //TODO: these are suppose to be file pointers, meaning i have to do a file open on them
-    size_t offset 0;
+    size_t offset = 0;
     size_t file_copy_byte_size;
     ssize_t bytes_copied = sendfile(source_file, new_file, offset,file_copy_byte_size);
     perror ("sendfile");
     // if(errno == ????)
 
+    */
 
 }
 

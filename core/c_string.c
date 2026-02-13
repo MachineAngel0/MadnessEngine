@@ -1,6 +1,5 @@
-﻿
-#include "c_string.h"
-
+﻿#include "c_string.h"
+#include "defines.h"
 
 
 // Returns the length of the given string.
@@ -16,7 +15,7 @@ MAPI char* c_string_duplicate(const char* str)
     char* copy = malloc(length + 1);
     memcpy(copy, str, length + 1);
     return copy;
-};
+}
 
 
 MAPI const char* c_string_concat(const char* str1, const char* str2)
@@ -28,12 +27,11 @@ MAPI const char* c_string_concat(const char* str1, const char* str2)
     //+1 for the null char
     char* out_str = malloc(str1_length + str2_length + 1);
     memcpy(out_str, str1, str1_length);
-    memcpy(out_str, str2, str1_length + str2_length);
+    memcpy(out_str + str1_length, str2, str2_length);
     out_str[str1_length + str2_length + 1] = '\0';
 
     return out_str;
 };
-
 
 
 // Performs string formatting to dest given format string and parameters.
@@ -51,7 +49,6 @@ MAPI char* c_string_path_strip(const char* path, Arena* arena)
             memcpy(new_path, path, i + 1);
             new_path[i + 1] = '\0';
             return new_path;
-
         }
     }
 
@@ -70,7 +67,8 @@ MAPI bool c_strings_equal(const char* str0, const char* str1)
 // Performs variadic string formatting to dest given format string and va_list.
 MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list)
 {
-    if (dest) {
+    if (dest)
+    {
         // Big, but can fit on the stack.
         char buffer[32000];
         i32 written = vsnprintf(buffer, 32000, format, va_list);
@@ -86,7 +84,8 @@ MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list)
 // Performs string formatting to dest given format string and parameters.
 MAPI i32 c_string_format(char* dest, const char* format, ...)
 {
-    if (dest) {
+    if (dest)
+    {
         va_list arg_ptr;
         va_start(arg_ptr, format);
         i32 written = c_string_format_v(dest, format, arg_ptr);
@@ -95,8 +94,3 @@ MAPI i32 c_string_format(char* dest, const char* format, ...)
     }
     return -1;
 }
-
-
-
-
-
