@@ -52,9 +52,8 @@ void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
 
 
 void update_texture_bindless_descriptor_set(renderer* renderer,
-                                                   Descriptor_System* descriptor_system,
-                                                   Texture_Handle texture_handle,
-                                                   u32 binding_index);
+                                            Descriptor_System* descriptor_system,
+                                            Texture_Handle texture_handle);
 
 void update_storage_buffer_bindless_descriptor_set(renderer* renderer,
                                                    Descriptor_System* descriptor_system,

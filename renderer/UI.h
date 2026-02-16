@@ -6,6 +6,7 @@
 
 //Vertex Data
 
+//TODO: change into vec3's
 typedef struct Quad_Vertex
 {
     vec2 pos;
@@ -14,13 +15,26 @@ typedef struct Quad_Vertex
 
 typedef struct Quad_Texture
 {
+    //will be used for text and for anything else 2d that needs a texture
     vec2 pos;
+    vec3 color;
     vec2 tex;
 } Quad_Texture;
 
 
-//Text
+typedef struct PC_2D
+{
+    u32 material_buffer_idx;
+} PC_2D;
 
+typedef struct Material_2D_Param_Data
+{
+    u32 feature_mask;
+    u32 texture_index;
+} Material_2D_Param_Data;
+
+
+//Text
 typedef struct Glyph
 {
     int width, height;
@@ -33,16 +47,20 @@ typedef struct Glyph
 typedef struct Madness_Font
 {
     stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
-    float font_size; // the larger the more clear the text looks
-    //NOTE: this will have to be larger if i support other languages
+    // NOTE: we make all font default size and scale up or down
+    // float font_size; // the larger the more clear the text looks
+    //NOTE: this will have to be larger if i support other languages or non standard characters
     Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
-    Texture font_texture;
+    Texture_Handle font_texture_handle;
 } Madness_Font;
 
+#define DEFAULT_FONT_CREATION_SIZE 128.0f
+#define DEFAULT_FONT_SIZE 48.0f
 
 //UI
 typedef enum UI_Alignment
 {
+    //NOTE: WE MIGHT WANT TO DO A NINE SLICE
     UI_ALIGNMENT_CENTER,
     UI_ALIGNMENT_LEFT,
     UI_ALIGNMENT_RIGHT,
@@ -108,12 +126,10 @@ typedef struct
     VkDrawIndexedIndirectCommand* indirect_draw_array;
 } UI_Draw_data_new;
 
-typedef struct UI_Draw_Data
+typedef struct UI_Quad_Draw_Data
 {
     //u16
     VkIndexType index_type;
-
-    //UI
 
     //TODO: the 100 is temporary
     Quad_Vertex quad_vertex[100];
@@ -123,19 +139,20 @@ typedef struct UI_Draw_Data
     u32 index_bytes;
     u32 index_count;
 
-    //UI - with texture
+    u32 quad_draw_count;
 
-    /*
-    //TODO: the 100 is temporary
-    Quad_Texture quad_texture_vertex[100];
-    u32 quad_texture_vertex_bytes;
+    PC_2D pc_2d_quad;
+} UI_Quad_Draw_Data;
 
-    u16 quad_texture_indices[100];
-    u32 quad_texture_index_bytes;
-    u32 quad_texture_index_count;
-    */
+typedef struct UI_Text_Draw_Data
+{
 
-    //TEXT
+    //every triangle is 4quad textures and 6 indices
+    //index += 6 + 6
+    //index_count += 6 every mesh
+
+    //u16
+    VkIndexType index_type;
 
     //TODO: the 100 is temporary
     Quad_Texture text_vertex[100];
@@ -144,7 +161,17 @@ typedef struct UI_Draw_Data
     u16 text_indices[100];
     u32 text_index_bytes;
     u32 text_index_count;
-} UI_Draw_Data;
+
+
+    Material_2D_Param_Data text_material_params[100];
+    u32 text_material_param_current_size;
+
+    u32 text_draw_count;
+
+    PC_2D pc_2d_text;
+} UI_Text_Draw_Data;
+
+
 
 
 typedef enum UI_Type
@@ -177,26 +204,40 @@ typedef struct UI_System
 
     vec2 screen_size;
 
-    UI_Draw_Data draw_info;
+    UI_Quad_Draw_Data quad_draw_info;
+    UI_Text_Draw_Data text_draw_info;
     UI_BUTTON* UI_Objects; // darray or maybe even an allocator
     // Text_System text_system;
 
+    //
     Buffer_Handle ui_quad_vertex_buffer_handle;
     Buffer_Handle ui_quad_index_buffer_handle;
+
     Buffer_Handle text_vertex_buffer_handle;
     Buffer_Handle text_index_buffer_handle;
+    Buffer_Handle text_material_ssbo_handle;
+    Buffer_Handle text_indirect_buffer_handle;
+
+    // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
+    // Buffer_Handle ui_quad_texture_index_buffer_handle;
 
 
+    //HANDLES
     Buffer_Handle ui_quad_vertex_staging_buffer_handle;
     Buffer_Handle ui_quad_index_staging_buffer_handle;
+
     Buffer_Handle text_vertex_staging_buffer_handle;
     Buffer_Handle text_index_staging_buffer_handle;
+    Buffer_Handle text_material_staging_ssbo_handle;
+    Buffer_Handle text_indirect_staging_buffer_handle;
+
 
 } UI_System;
 
 //NOTE: Remove the renderer from the init, these should not be coupled
 //I should only have to pass the vertex/index data to the renderer for drawing
 UI_System* ui_system_init(renderer* renderer);
+//TODO: UI_System* ui_system_shutdown(renderer* renderer);
 
 //pass in the size every frame, in the event the size changes
 void ui_system_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y);
@@ -257,24 +298,20 @@ bool is_hot(UI_System* ui_state, UI_ID id);
 
 
 //API
+//TODO: add UI_Alignment
 bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
                vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
-                   UI_Alignment alignment, vec3 color,
-                   vec3 hovered_color, vec3 pressed_color);
 
 #define DO_BUTTON_TEST(UI_SYSTEM, UI_ID) do_button(UI_SYSTEM, UI_ID, (vec2){0.0f,0.0f}, (vec2){10.0f,10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f});
 
 
-bool do_button_new_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
-                        vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
+bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
+                    vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 screen_percentage,
-                    vec3 color, vec3 hovered_color, vec3 pressed_color);
+void do_text(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
+             vec3 color, float font_size);
 
-void do_text_screen_percentage(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
-                               vec3 color, float font_size);
-
+void ui_test();
 
 #endif //UI_H

@@ -139,7 +139,6 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     stbi_image_free(pixels);
 
     //create texture image
-
     VkImageCreateInfo image_create_info = {0};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
     image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future

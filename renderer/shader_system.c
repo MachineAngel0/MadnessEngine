@@ -6,6 +6,7 @@
 Shader_System* shader_system_init(renderer* renderer)
 {
     Shader_System* out_shader_system = arena_alloc(&renderer->arena, sizeof(Shader_System));
+    renderer->shader_system = out_shader_system;
 
     out_shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
@@ -17,7 +18,7 @@ Shader_System* shader_system_init(renderer* renderer)
     out_shader_system->material_param_indexes = 0;
 
     //create our debug texture
-    out_shader_system->default_texture_handle = shader_system_add_texture(&renderer->context, out_shader_system,
+    out_shader_system->default_texture_handle = shader_system_add_texture(renderer, out_shader_system,
                                                                           "../renderer/texture/error_texture.png");
 
     out_shader_system->material_mesh_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -25,6 +26,7 @@ Shader_System* shader_system_init(renderer* renderer)
                                                                         sizeof(Material_Param_Data) * out_shader_system
                                                                         ->max_indexes);
 
+    INFO("SHADER SYSTEM CREATED")
 
     return out_shader_system;
 }
@@ -64,7 +66,7 @@ void shader_system_update(renderer* renderer, Shader_System* system)
 }
 
 //pass out the texture index
-Texture_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath)
+Texture_Handle shader_system_add_texture(renderer* renderer, Shader_System* system, char const* filepath)
 {
     //get an available index
     Texture_Handle out_texture_handle;
@@ -72,13 +74,36 @@ Texture_Handle shader_system_add_texture(vulkan_context* context, Shader_System*
 
     //create the texture
     Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(context, context->graphics_command_buffer, filepath, out_texture);
+    create_texture_image(&renderer->context, renderer->context.graphics_command_buffer, filepath, out_texture);
 
     //increment index for next usage
     system->available_texture_indexes++;
 
+    //TODO: batch this upload once a frame
+    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle);
+
     return out_texture_handle;
 }
+
+Texture_Handle shader_system_add_texture_font(renderer* renderer, Shader_System* system, void* pixel_data, u32 width, u32 height)
+{
+    //get an available index
+    Texture_Handle out_texture_handle;
+    out_texture_handle.handle = system->available_texture_indexes;
+
+    //create the texture
+    Texture* out_texture = &system->textures[out_texture_handle.handle];
+    create_texture_glyph(renderer, renderer->context.graphics_command_buffer, out_texture, pixel_data, width, height);
+
+    //increment index for next usage
+    system->available_texture_indexes++;
+
+    //TODO: batch this upload once a frame
+    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle);
+
+    return out_texture_handle;
+}
+
 
 void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)
 {

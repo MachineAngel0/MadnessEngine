@@ -25,6 +25,8 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 //new API
 
 
+//NOTE: since basically every buffer needs a staging buffer (except uniform), might as well create them upfront without asking, unless otherwise specified
+// and it would be fine if we have holes in our arrays staging buffers array, since we only need to access them by index, not by looping
 Buffer_Handle vulkan_buffer_create(renderer* renderer, Buffer_System* buffer_system,
                                    vulkan_buffer_type buffer_type, u64 data_size);
 

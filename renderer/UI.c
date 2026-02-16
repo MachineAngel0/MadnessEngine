@@ -12,9 +12,12 @@ UI_System* ui_system_init(renderer* renderer)
     ui_system->arena = &renderer->arena;
     ui_system->frame_arena = &renderer->frame_arena;
 
-    ui_system->draw_info.index_type = VK_INDEX_TYPE_UINT16;
+    ui_system->quad_draw_info.index_type = VK_INDEX_TYPE_UINT16;
+    ui_system->text_draw_info.index_type = VK_INDEX_TYPE_UINT16;
 
-    ui_system->default_font_size = 128.0f;
+    ui_system->text_draw_info.text_material_param_current_size = 0;
+
+    ui_system->default_font_size = DEFAULT_FONT_CREATION_SIZE;
 
     ui_system->active.ID = -1;
     ui_system->active.layer = -1;
@@ -34,8 +37,7 @@ UI_System* ui_system_init(renderer* renderer)
     ui_system->screen_size = (vec2){800.0f, 600.0f};
 
 
-    // text_system_init(ui_system->text_system);
-
+    //TODO: i should replace this with object counts // like max 1000 UI's on screen until i need to otherwise
     u32 ui_buffer_sizes = MB(1);
 
     ui_system->ui_quad_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -46,22 +48,35 @@ UI_System* ui_system_init(renderer* renderer)
                                                                 ui_buffer_sizes);
     ui_system->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                ui_buffer_sizes);
+    ui_system->text_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                BUFFER_TYPE_CPU_STORAGE,
+                                                                ui_buffer_sizes);
+    ui_system->text_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_INDIRECT,
+                                                                  ui_buffer_sizes);
 
 
     ui_system->ui_quad_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_STAGING, ui_buffer_sizes);
+                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
     ui_system->ui_quad_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    ui_system->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-                                                                ui_buffer_sizes);
-    ui_system->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-                                                               ui_buffer_sizes);
+                                                                          BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    ui_system->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                        BUFFER_TYPE_STAGING,
+                                                                        ui_buffer_sizes);
+    ui_system->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                       BUFFER_TYPE_STAGING,
+                                                                       ui_buffer_sizes);
+    ui_system->text_material_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                        BUFFER_TYPE_STAGING,
+                                                                        ui_buffer_sizes);
+    ui_system->text_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                          BUFFER_TYPE_STAGING,
+                                                                          ui_buffer_sizes);
 
-
-    //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX0
+    //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
     font_init(renderer, ui_system, "c:/windows/fonts/arialbd.ttf");
 
-
+    INFO("UI SYSTEM CREATED");
     return ui_system;
 }
 
@@ -77,17 +92,21 @@ void ui_system_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y)
     //TODO: clear vertex and index data for UI and TEXT
     // clear_vertex_info(ui_system->draw_info.vertex_info);
     // ui_system->draw_info.UI_Objects.clear();
-    ui_system->draw_info.quad_vertex_bytes = 0;
-    ui_system->draw_info.index_bytes = 0;
-    ui_system->draw_info.index_count = 0;
+    ui_system->quad_draw_info.quad_vertex_bytes = 0;
+    ui_system->quad_draw_info.index_bytes = 0;
+    ui_system->quad_draw_info.index_count = 0;
+    ui_system->quad_draw_info.quad_draw_count = 0;
 
+
+    ui_system->text_draw_info.text_vertex_bytes = 0;
+    ui_system->text_draw_info.text_index_bytes = 0;
+    ui_system->text_draw_info.text_index_count = 0;
+    ui_system->text_draw_info.text_material_param_current_size = 0;
+    ui_system->text_draw_info.text_draw_count = 0;
 
     ui_system->hot.ID = -1;
     ui_system->hot.ID = -1;
     ui_system->hot.layer = -1;
-
-    //TODO: UPDATE TEXT
-    // text_update(ui_system->text_system);
 }
 
 void ui_system_end(UI_System* ui_system)
@@ -138,7 +157,7 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
     // Initialize stb_truetype
     if (!stbtt_InitFont(&font_structure->font_info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
     {
-        printf("Failed to initialize font\n");
+        WARN("Failed to initialize font\n");
         free(ttf_buffer);
         return out_handle;
     }
@@ -173,7 +192,7 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
 
         if (y + height > atlasHeight)
         {
-            printf("Error: Texture atlas too small!\n");
+            WARN("Error: Texture atlas too small!\n");
             stbtt_FreeBitmap(bitmap, NULL);
             free(ttf_buffer);
             return out_handle;
@@ -188,22 +207,22 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
 
 
         // Store glyph metrics
-        Glyph g = font_structure->glyphs[c - 32];
-        g.width = width;
-        g.height = height;
-        g.xoff = xoff;
-        g.yoff = baseline + yoff; // Adjust for baseline
+        Glyph* g = &font_structure->glyphs[c - 32];
+        g->width = width;
+        g->height = height;
+        g->xoff = xoff;
+        g->yoff = baseline + yoff; // Adjust for baseline
 
         int advance, lsb;
         stbtt_GetCodepointHMetrics(&font_structure->font_info, c, &advance, &lsb);
-        g.advance = advance * scale;
+        g->advance = advance * scale;
 
 
         // Calculate UV coordinates
-        g.u0 = (float)(x / atlasWidth);
-        g.v0 = (float)(y / atlasHeight);
-        g.u1 = (float)((x + width) / atlasWidth);
-        g.v1 = ((float)(y + height) / atlasHeight);
+        g->u0 = (float)x / (float)atlasWidth;
+        g->v0 = (float)y / (float)atlasHeight;
+        g->u1 = (float)(x + width) / (float)atlasWidth;
+        g->v1 = (float)(y + height) / (float)atlasHeight;
 
         /*printf("Glyph '%c': size=(%d,%d), offset=(%d,%.1f), advance=%.1f, UV=(%.3f,%.3f)-(%.3f,%.3f)\n",
                c, width, height, xoff, g.yoff, g.advance, g.u0, g.v0, g.u1, g.v1);
@@ -235,7 +254,8 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
     if (debug_file)
     {
         // Write PPM header (P6 format for RGB)
-        fprintf(debug_file, "P6\n%d %d\n255\n", atlasWidth, atlasHeight);
+        // DEBUG(debug_file, "P6\n%d %d\n255\n", atlasWidth, atlasHeight);
+        DEBUG("P6\n%d %d\n255\n", atlasWidth, atlasHeight);
 
         // Write RGB data to PPM filing using the debug data, which is basically not flipped
         for (int i = 0; i < atlasWidth * atlasHeight; i++)
@@ -245,7 +265,7 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
             fwrite(&atlasPixels[i], 1, 1, debug_file); // B
         }
         fclose(debug_file);
-        printf("Font atlas saved to: %s\n", debug_filename);
+        DEBUG("Font atlas saved to: %s\n", debug_filename);
     }
     else
     {
@@ -255,19 +275,28 @@ Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* file
     // Also save as raw RGBA data
     const char* raw_filename = "font_atlas_debug.raw";
     FILE* raw_file = fopen(raw_filename, "wb");
-    if (raw_file)
+    if (!raw_file)
     {
-        fwrite(atlas_RGBA, 1, atlasRGBA_size, raw_file);
+        WARN("FONT_INIT: COULDN'T OPEN FONT ATLAS DEBUG RAW");
         fclose(raw_file);
-        printf("Raw RGBA atlas data saved to: %s (%dx%d RGBA)\n",
-               raw_filename, atlasWidth, atlasHeight);
     }
 
-    // Upload to Vulkan texture
-    create_texture_glyph(renderer, renderer->context.graphics_command_buffer, &font_structure->font_texture,
-                         atlas_RGBA, atlasWidth, atlasHeight);
+    fwrite(atlas_RGBA, 1, atlasRGBA_size, raw_file);
+    DEBUG("Raw RGBA atlas data saved to: %s (%dx%d RGBA)\n",
+          raw_filename, atlasWidth, atlasHeight);
+    fclose(raw_file);
 
-    printf("Font loaded successfully: %s\n", filepath);
+    // Upload to Vulkan texture
+    ui_system->default_font.font_texture_handle = shader_system_add_texture_font(
+        renderer, renderer->shader_system, atlas_RGBA, atlasWidth, atlasHeight);
+    /*update_texture_bindless_descriptor_set(renderer,
+                                           renderer->descriptor_system,
+                                           ui_system->default_font.font_texture_handle);*/
+
+    // create_texture_glyph(renderer, renderer->context.graphics_command_buffer, &font_structure->font_texture,
+    // atlas_RGBA, atlasWidth, atlasHeight);
+
+    DEBUG("Font loaded successfully: %s\n", filepath);
 
     return out_handle;
 }
@@ -278,20 +307,68 @@ void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system)
     vulkan_buffer_reset_offset(renderer, ui_system->ui_quad_index_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, ui_system->text_vertex_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, ui_system->text_index_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_material_staging_ssbo_handle);
+    vulkan_buffer_reset_offset(renderer, ui_system->text_indirect_staging_buffer_handle);
 
     //TODO: generate draw indirect commands
+    //UI Render
     vulkan_buffer_data_copy_and_upload(renderer,
                                        ui_system->ui_quad_vertex_buffer_handle,
                                        ui_system->ui_quad_vertex_staging_buffer_handle,
-                                       ui_system->draw_info.quad_vertex,
-                                       ui_system->draw_info.quad_vertex_bytes);
+                                       ui_system->quad_draw_info.quad_vertex,
+                                       ui_system->quad_draw_info.quad_vertex_bytes);
 
     vulkan_buffer_data_copy_and_upload(renderer,
                                        ui_system->ui_quad_index_buffer_handle,
                                        ui_system->ui_quad_index_staging_buffer_handle,
-                                       ui_system->draw_info.indices,
-                                       ui_system->draw_info.index_bytes);
+                                       ui_system->quad_draw_info.indices,
+                                       ui_system->quad_draw_info.index_bytes);
+
+    //TEXT Render
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->text_vertex_buffer_handle,
+                                       ui_system->text_vertex_staging_buffer_handle,
+                                       ui_system->text_draw_info.text_vertex,
+                                       ui_system->text_draw_info.text_vertex_bytes);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->text_index_buffer_handle,
+                                       ui_system->text_index_staging_buffer_handle,
+                                       ui_system->text_draw_info.text_indices,
+                                       ui_system->text_draw_info.text_index_bytes);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->text_material_ssbo_handle,
+                                       ui_system->text_material_staging_ssbo_handle,
+                                       ui_system->text_draw_info.text_material_params,
+                                       ui_system->text_draw_info.text_material_param_current_size * sizeof(
+                                           Material_2D_Param_Data));
+
+    //generate indirect draws
+    VkDrawIndexedIndirectCommand* indirect_draw = arena_alloc(ui_system->frame_arena,
+                                                              sizeof(VkDrawIndexedIndirectCommand) * ui_system->
+                                                              text_draw_info.text_draw_count);
+    for (u32 i = 0; i < ui_system->text_draw_info.text_draw_count; i++)
+    {
+        //since we know that quads are always 6 indices and 4 vec2 coordinates, this can easily be calculated
+        u32 index_count = ARRAY_SIZE(default_quad_indices);
+        indirect_draw[i].firstIndex = i * index_count; // total up to this point
+        indirect_draw[i].firstInstance = 0;
+        indirect_draw[i].indexCount = index_count; // always 6
+        indirect_draw[i].instanceCount = 1;
+        indirect_draw[i].vertexOffset = i  * 4 ; // count for every quad we wish to draw which is 4
+        // indirect_draw->vertexOffset = vertex_byte_count / sizeof(vec3); // total up to this point
+
+    }
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_system->text_indirect_buffer_handle,
+                                       ui_system->text_indirect_staging_buffer_handle,
+                                       indirect_draw,
+                                       sizeof(VkDrawIndexedIndirectCommand) * ui_system->text_draw_info.
+                                       text_draw_count);
 }
+
 
 void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer)
 {
@@ -315,15 +392,94 @@ void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buf
 
     vkCmdBindIndexBuffer(command_buffer->handle,
                          index_buffer->handle, 0,
-                         ui_system->draw_info.index_type
+                         ui_system->quad_draw_info.index_type
     );
 
     // vkCmdDrawIndexed(command_buffer->handle,
     // ui_system->draw_info.index_count,
     // 1, 0, 0, 0);
     vkCmdDrawIndexed(command_buffer->handle,
-                     ui_system->draw_info.index_count,
+                     ui_system->quad_draw_info.index_count,
                      1, 0, 0, 0);
+
+
+    //TEXT
+    vulkan_buffer* text_vert_buffer = vulkan_buffer_get(renderer, ui_system->text_vertex_buffer_handle);
+    vulkan_buffer* text_index_buffer = vulkan_buffer_get(renderer, ui_system->text_index_buffer_handle);
+    vulkan_buffer* text_indirect = vulkan_buffer_get(renderer, ui_system->text_indirect_buffer_handle);
+
+
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      renderer->text_pipeline.handle);
+
+    //uniform
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.text_pipeline.pipeline_layout, 0, 1,
+                            &renderer_internal.descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.text_pipeline.pipeline_layout, 1, 1,
+                            &renderer_internal.descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
+
+    //storage buffers
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.text_pipeline.pipeline_layout, 2, 1,
+                            &renderer_internal.descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
+
+
+    //grab material_handle
+    ui_system->text_draw_info.pc_2d_text.material_buffer_idx = ui_system->text_material_ssbo_handle.handle;
+
+    VkPushConstantsInfo push_constant_info = {0};
+    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_info.layout = renderer->text_pipeline.pipeline_layout;
+    push_constant_info.offset = 0;
+    push_constant_info.size = sizeof(PC_2D);
+    push_constant_info.pValues = &ui_system->text_draw_info.pc_2d_text;
+    push_constant_info.pNext = NULL;
+
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
+
+
+    //TODO: realistically textures is the only thing the UI needs for me, for now
+    //textures
+    // vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    // vk_context.shader_texture_bindless.shader_texture_pipeline.pipeline_layout, 1, 1,
+    // &renderer_internal.global_descriptors.texture_descriptors.descriptor_sets[vk_context.
+    // current_frame],
+    // 0, 0);
+
+
+    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
+                           &text_vert_buffer->handle, offsets_bindless);
+
+    vkCmdBindIndexBuffer(command_buffer->handle,
+                         text_index_buffer->handle, 0,
+                         ui_system->text_draw_info.index_type);
+
+    if (renderer->context.device.features.multiDrawIndirect)
+    {
+        vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                 text_indirect->handle, 0,
+                                 ui_system->text_draw_info.text_draw_count,
+                                 sizeof(VkDrawIndexedIndirectCommand));
+    }
+    else
+    {
+        // If multi draw is not available, we must issue separate draw commands
+        for (u64 j = 0; j < ui_system->text_draw_info.text_draw_count; j++)
+        {
+            vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                     text_indirect->handle,
+                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
+                                     sizeof(VkDrawIndexedIndirectCommand));
+        }
+    }
 }
 
 void update_ui_mouse_pos(UI_System* ui_system)
@@ -352,6 +508,33 @@ Quad_Vertex* UI_create_quad_screen_percentage(UI_System* ui_system, vec2 pos, ve
     out_vertex[1] = (Quad_Vertex){.pos = {pos.x - size.x, pos.y + size.y}, .color = color};
     out_vertex[2] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y + size.y}, .color = color};
     out_vertex[3] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y - size.y}, .color = color};
+
+    return out_vertex;
+}
+
+Quad_Vertex* UI_create_quad_screen_percentage_top_left(UI_System* ui_system, vec2 pos, vec2 size, vec3 color)
+{
+    //THIS IS THE CORRECT VERSION, GIVEN WE START AT THE TOP LEFT or TOP LEFT ALIGNED
+    Quad_Vertex* out_vertex = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
+
+    //coordinate: top left -> bottom left -> bottom right -> top right
+    out_vertex[0] = (Quad_Vertex){.pos = {pos.x, pos.y}, .color = color};
+    out_vertex[1] = (Quad_Vertex){.pos = {pos.x, pos.y + size.y}, .color = color};
+    out_vertex[2] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y + size.y}, .color = color};
+    out_vertex[3] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y}, .color = color};
+
+    return out_vertex;
+}
+
+
+Quad_Texture* UI_create_quad_textured(UI_System* ui_system, vec2 pos, vec2 size, vec3 color, vec2 uv0, vec2 uv1)
+{
+    Quad_Texture* out_vertex = arena_alloc(ui_system->frame_arena, sizeof(Quad_Texture) * 4);
+
+    out_vertex[0] = (Quad_Texture){.pos = {pos.x - size.x, pos.y - size.y}, .color = color, .tex = {uv0.x, uv0.y}};
+    out_vertex[1] = (Quad_Texture){.pos = {pos.x - size.x, pos.y + size.y}, .color = color, .tex = {uv0.x, uv1.y}};
+    out_vertex[2] = (Quad_Texture){.pos = {pos.x + size.x, pos.y + size.y}, .color = color, .tex = {uv1.x, uv1.y}};
+    out_vertex[3] = (Quad_Texture){.pos = {pos.x + size.x, pos.y - size.y}, .color = color, .tex = {uv1.x, uv0.y}};
 
     return out_vertex;
 }
@@ -575,7 +758,8 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
 
 
     /*SET DRAW COLOR Based on the state*/
-    Quad_Vertex* new_quad = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
+    Quad_Vertex* new_quad;
+    // = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex) * 4);
 
     //set color
     //active state
@@ -598,17 +782,17 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
     /*SET DRAW INFO*/
 
     // Add vertices
-    memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
+    memcpy(ui_system->quad_draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
 
     // create indices (two triangles per quad)
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices,
+    memcpy(ui_system->quad_draw_info.indices + ui_system->quad_draw_info.index_bytes, default_quad_indices,
            sizeof(default_quad_indices));
 
     //increase by count
-    ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
+    ui_system->quad_draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
     //increase by bytes
-    ui_system->draw_info.index_bytes += sizeof(default_quad_indices);
-    ui_system->draw_info.index_count += ARRAY_SIZE(default_quad_indices);
+    ui_system->quad_draw_info.index_bytes += sizeof(default_quad_indices);
+    ui_system->quad_draw_info.index_count += ARRAY_SIZE(default_quad_indices);
 
     //check if we clicked the button
     if (use_button_new(ui_system, id, final_pos, final_size)) return true;
@@ -620,329 +804,20 @@ bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
 }
 
 
-bool do_button_new(UI_System* ui_system, UI_ID id, vec2 pos, vec2 size,
-                   UI_Alignment alignment, vec3 color,
-                   vec3 hovered_color, vec3 pressed_color)
+bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
+                    vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color)
 {
-    /*validation*/
-    if (size.x > 100 || size.x < 0 || size.y > 100 || size.y < 0)
-    {
-        printf("SIZE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-
-    /*POS AND SIZE CALCULATIONS*/
-
-    vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
-    vec2 converted_size = vec2_div_scalar(size, 100.0f);
-
-    //TODO: this realistically can be moved out to the ui_system struct
-    float quarter_size_x = ui_system->screen_size.x * 0.25;
-    float quarter_size_y = ui_system->screen_size.y * 0.25;
-    float half_size_x = ui_system->screen_size.x * 0.5;
-    float half_size_y = ui_system->screen_size.y * 0.5;
-    vec2 final_pos;
-
-    switch (alignment)
-    {
-    case UI_ALIGNMENT_CENTER:
-        final_pos = (vec2){
-            .x = {ui_system->screen_size.x * converted_pos.x - quarter_size_x},
-            .y = {ui_system->screen_size.y * converted_pos.y - quarter_size_y},
-        };
-        break;
-    case UI_ALIGNMENT_LEFT:
-        final_pos = (vec2){
-            .x = {ui_system->screen_size.x * converted_pos.x},
-            .y = {ui_system->screen_size.y * converted_pos.y},
-        };
-        break;
-    case UI_ALIGNMENT_RIGHT:
-        final_pos = (vec2){
-            .x = {ui_system->screen_size.x * converted_pos.x + half_size_x},
-            .y = {ui_system->screen_size.y * converted_pos.y},
-        };
-        break;
-    case UI_ALIGNMENT_MAX:
-        MASSERT(false);
-        break;
-    }
-
-
-    vec2 final_size = {
-        (ui_system->screen_size.x * converted_size.x),
-        (ui_system->screen_size.y * converted_size.y),
-    };
-
-    /*SET UI STATE*/
-
-    int mesh_id = ui_system->id_generation_number++;
-
-    //check if button is hot and active
-    if (region_hit_new(ui_system, final_pos, final_size))
-    {
-        set_hot(ui_system, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_system))
-        {
-            set_active(ui_system, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    //SET DRAW COLOR Based on the state
-    Quad_Vertex* new_quad = arena_alloc(ui_system->frame_arena, sizeof(Quad_Vertex));
-
-    //set color
-    //active state
-    if (is_active(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system, final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system, final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad_screen_percentage(ui_system, final_pos, final_size, color);
-    }
-
-
-    /*SET DRAW INFO*/
-
-    // Add vertices
-    memcpy(ui_system->draw_info.quad_vertex, new_quad, sizeof(Quad_Vertex) * 4);
-
-    // create indices (two triangles per quad)
-    memcpy(ui_system->draw_info.indices + ui_system->draw_info.index_bytes, default_quad_indices,
-           sizeof(default_quad_indices));
-
-    //increase by count
-    ui_system->draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
-    //increase by bytes
-    ui_system->draw_info.index_bytes += sizeof(default_quad_indices);
-    ui_system->draw_info.index_count += ARRAY_SIZE(default_quad_indices);
-
-
-    //check if we clicked the button
-    if (use_button_new(ui_system, id, final_pos, final_size)) return true;
+    // do_text();
+    // if (do_button()) return true;
 
     return false;
 }
 
-/*
-bool do_button_new_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
-                        vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
+
+void do_text(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
+             vec3 color, float font_size)
 {
-
-    do_button()
-
-    do_text(ui_system, text, pos + text_padding, vec3{1.0, 1.0, 0.0});
-
-
-    //SET UI STATE
-
-    int mesh_id = ui_system->draw_info.vertex_info.mesh_id++;
-
-    //check if button is hot and active
-    if (region_hit_new(ui_system, final_pos, final_size))
-    {
-        set_hot(ui_system, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_system))
-        {
-            set_active(ui_system, id);
-        }
-    }
-
-    //else
-    //{
-     //   printf("is not hot\n");
-    //}
-
-
-    //SET DRAW COLOR Based on the state
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_system, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_system, id))
-    {
-        new_quad = UI_create_quad(final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad(final_pos, final_size, color);
-    }
-
-
-    // SET DRAW INFO
-
-    uint16_t base_index =
-    <uint16_t > (ui_system->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t > (base_index + 0),
-        <uint16_t > (base_index + 1),
-        <uint16_t > (base_index + 2),
-        <uint16_t > (base_index + 2),
-        <uint16_t > (base_index + 3),
-        <uint16_t > (base_index + 0)
-    };
-
-    // Add vertices
-    ui_system->draw_info.vertex_info.dynamic_vertices.insert(ui_system->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_system->draw_info.vertex_info.dynamic_indices.insert(ui_system->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button_new(ui_system, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 screen_percentage,
-                    vec3 color, vec3 hovered_color, vec3 pressed_color);
-    //validation
-
-    if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
-    {
-        printf("SCREEN PERCENTAGE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-    }
-
-    //POS AND SIZE CALCULATIONS
-
-    vec2 converted_pos = pos / 100.0f;
-    vec2 converted_size = screen_percentage / 100.0f;
-
-    glm::vec2 final_pos = {
-        ui_system->push_constants.screenSize.x * converted_pos.x,
-        ui_system->push_constants.screenSize.y * converted_pos.y
-    };
-    glm::vec2 final_size = {
-        (ui_system->push_constants.screenSize.x * converted_size.x) / 2,
-        (ui_system->push_constants.screenSize.y * converted_size.y) / 2
-    };
-
-    //do_text(ui_system, text, final_pos, {1.0f,1.0f,1.0f});
-    do_text_screen_percentage(ui_system, text, pos, screen_percentage, {0.0f, 0.0f, 1.0f}, 48);
-
-
-    //SET UI STATE
-
-    int mesh_id = ui_system->draw_info.vertex_info.mesh_id++;
-
-    //check if button is hot and active
-    if (region_hit(ui_system, final_pos, final_size))
-    {
-        set_hot(ui_system, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(ui_system))
-        {
-            set_active(ui_system, id);
-        }
-    }
-
-    //else
-    //{
-    //    printf("is not hot\n");
-    //}
-
-
-    //SET DRAW COLOR Based on the state
-    std::vector<Vertex> new_quad;
-
-    //set color
-    //active state
-    if (is_active(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, pressed_color);
-    }
-    //hot state
-    else if (is_hot(ui_system, id))
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, hovered_color);
-    }
-    // normal state
-    else
-    {
-        new_quad = UI_create_quad_screen_percentage(final_pos, final_size, color);
-    }
-
-
-    //SET DRAW INFO
-
-    uint16_t base_index =
-    <uint16_t > (ui_system->draw_info.vertex_info.dynamic_vertices.size());
-
-    // create indices (two triangles per quad)
-    std::vector<uint16_t> quad_indices = {
-        <uint16_t > (base_index + 0),
-        <uint16_t > (base_index + 1),
-        <uint16_t > (base_index + 2),
-        <uint16_t > (base_index + 2),
-        <uint16_t > (base_index + 3),
-        <uint16_t > (base_index + 0)
-    };
-
-    // Add vertices
-    ui_system->draw_info.vertex_info.dynamic_vertices.insert(ui_system->draw_info.vertex_info.dynamic_vertices.end(),
-                                                            new_quad.begin(),
-                                                            new_quad.end());
-    // Add indices
-    ui_system->draw_info.vertex_info.dynamic_indices.insert(ui_system->draw_info.vertex_info.dynamic_indices.end(),
-                                                           quad_indices.begin(), quad_indices.end());
-
-    //check if we clicked the button
-    if (use_button(ui_system, id, final_pos, final_size)) return true;
-
-    return false;
-}
-
-void do_text_screen_percentage(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
-                               vec3 color, float font_size)
-{
-
- //tells us how much of the screen we want based on the size percentage
+    //tells us how much of the screen we want based on the size percentage
     if (screen_percentage_size.x > 100 || screen_percentage_size.x < 0 || screen_percentage_size.y > 100 ||
         screen_percentage_size.y < 0)
     {
@@ -955,105 +830,116 @@ void do_text_screen_percentage(UI_System* ui_system, String text, vec2 pos, vec2
 
     //std::vector<Vertex_Text> new_quad = text_create_quad({0.5f,0.5f}, {0.1f,0.1f}, {1.0f,1.0f,1.0f});
 
+
     //move to the shader as a push constant
+    vec2 screen_dimensions = {ui_system->screen_size.x, ui_system->screen_size.y};
+
     float screen_width = ui_system->screen_size.x;
     float screen_height = ui_system->screen_size.y;
 
-    //convert 0-00 -> 0-1
-    vec2 converted_pos = pos / 100.0f;
-    vec2 converted_size = screen_percentage_size / 100.0f;
+    //convert 0-100 -> 0-1
+    vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
+    vec2 converted_size = vec2_div_scalar(screen_percentage_size, 100.0f);
 
-    vec2 final_pos = {
-        screen_width * converted_pos.x,
-        screen_height * converted_pos.y
+    /*POS AND SIZE CALCULATIONS*/
+    //0 - n(screen size) positions
+    vec2 screen_position = {
+        converted_pos.x * screen_dimensions.x,
+        converted_pos.y * screen_dimensions.y
     };
-    vec2 final_size = {
-        (screen_width * converted_size.x),
-        (screen_height * converted_size.y)
+    vec2 screen_size = {
+        converted_size.x * screen_width / 2,
+        converted_size.y * screen_height / 2,
     };
+
 
     //We take the desired font size, scale it down proportional to the font size we created it at
     //final size of the font ex: 36/48 = 0.75, 48*0.75 = 36
-    float font_scalar = font_size / ui_system->default_font_size;
+    f32 font_scalar = font_size / ui_system->default_font_size;
 
-    for (const char& c : text)
+    for (u64 i = 0; i < text.length+1; i++)
+    // for (const char& c : text)
     {
+        const char c = text.chars[i];
+
         if (c < 32 || c >= 128) continue; // skip unsupported characters
-        Glyph& g = ui_system->default_font.glyphs[c - 32];
+        Glyph* g = &ui_system->default_font.glyphs[c - 32];
 
+        // Quad position in screen coords nand scaled by the font scalar
+        f32 x_position = screen_position.x + ((float)g->xoff * font_scalar);
+        f32 y_position = screen_position.y + ((float)g->yoff * font_scalar);
 
-        //take the x position and move it left based on the size we wanted it at
-        float xpos = (final_pos.x - final_size.x + g.xoff);
-        float ypos = (final_pos.y + g.yoff);
-
-        //scales the texture
-        float w = (float) g.width * font_scalar;
-        float h = (float) g.height * font_scalar;
+        f32 x_width = ((f32)g->width * font_scalar);
+        f32 y_height = ((f32)g->height * font_scalar);
 
         //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
 
-
-        // Convert screen coords to NDC [-1,1]
-        float ndc_x0 = ((xpos) / screen_width) * 2.0f - 1.0f;
-        float ndc_x1 = (((xpos + w)) / screen_width) * 2.0f - 1.0f;
-        float ndc_y0 = ((ypos) / screen_height) * 2.0f - 1.0f; // invert Y
-        float ndc_y1 = (((ypos + h)) / screen_height) * 2.0f - 1.0f;
-
-        // Convert screen coords to NDC [-1,1]
-        //float ndc_x0 = ((xpos - final_size.x)/ screen_width) * 2.0f - 1.0f;
-        //float ndc_x1 = (((xpos + w) + final_size.x) / screen_width) * 2.0f - 1.0f;
-        //float ndc_y0 = ((ypos - final_size.x) / screen_height) * 2.0f- 1.0f; // invert Y
-        //float ndc_y1 = (((ypos + h) - final_size.x) / screen_height) * 2.0f - 1.0f;
-
-        //  here for reference
-        // {{pos.x - size.x, pos.y - size.y}, {color}},
-        // {{pos.x - size.x, pos.y + size.y}, {color}},
-        // {{pos.x + size.x, pos.y + size.y}, {color}},
-        // {{pos.x + size.x, pos.y - size.y}, {color}}
-        //
+        // Convert screen coords to NDC [0,1] -> vulkan is [-1,1] which is handled in the shader
+        f32 ndc_x0 = ((x_position) / screen_width);
+        f32 ndc_x1 = (((x_position + x_width)) / screen_width);
+        f32 ndc_y0 = ((y_position) / screen_height); // invert Y
+        f32 ndc_y1 = (((y_position + y_height)) / screen_height);
 
         // UVs from the atlas
-        vec2 uv0 = {g.u0, g.v0};
-        vec2 uv1 = {g.u1, g.v1};
+        vec2 uv0 = {g->u0, g->v0};
+        vec2 uv1 = {g->u1, g->v1};
 
+        //SET DRAW COLOR Based on the state
+        // vec2 temp_pos = {0.5f, 0.5f};
+        // vec2 temp_size = {0.1f, 0.1f};
+        // Quad_Texture* new_quad = UI_create_quad_textured(ui_system, temp_pos, temp_size, color, uv0, uv1);
+        // Quad_Texture* new_quad = UI_create_quad_textured(ui_system, new_final_pos, final_size, color, uv0, uv1);
 
-        std::vector<Vertex_Text> new_quad = {
+        // Quad_Texture* new_quad = UI_create_quad_textured(ui_system, temp_pos, quad_size, color, uv0, uv1);
+        Quad_Texture new_quad[4] = {
             {{ndc_x0, ndc_y0}, color, {uv0.x, uv0.y}},
             {{ndc_x0, ndc_y1}, color, {uv0.x, uv1.y}},
             {{ndc_x1, ndc_y1}, color, {uv1.x, uv1.y}},
             {{ndc_x1, ndc_y0}, color, {uv1.x, uv0.y}},
         };
 
-         // TODO:  fruity colors, maybe ill make a seperate function that allows you to color each edge, cause its kinda cool, realistically you can just overlay another texture but that's fucking lame
-        // std::vector<Vertex_Text> new_quad = {
-            // {{ndc_x0, ndc_y0}, {0.0f,1.0f,1.0f}, {uv0.x, uv0.y}},
-            // {{ndc_x0, ndc_y1}, {1.0f,0.0f,1.0f}, {uv0.x, uv1.y}},
-            // {{ndc_x1, ndc_y1}, {1.0f,1.0f,1.0f}, {uv1.x, uv1.y}},
-            // {{ndc_x1, ndc_y0}, {1.0f,1.0f,0.0f}, {uv1.x, uv0.y}},
-        // };
 
-        uint16_t base_index = (uint16_t)(ui_system->text_system.dynamic_vertices.size());
+        /*SET DRAW INFO*/
+
+        // Add text vertices
+        memcpy((u8*)ui_system->text_draw_info.text_vertex + ui_system->text_draw_info.text_vertex_bytes, new_quad, sizeof(Quad_Texture) * 4);
 
         // create indices (two triangles per quad)
-        std::vector<uint16_t> quad_indices = {
-            static_cast<uint16_t>(base_index + 0),
-            static_cast<uint16_t>(base_index + 1),
-            static_cast<uint16_t>(base_index + 2),
-            static_cast<uint16_t>(base_index + 2),
-            static_cast<uint16_t>(base_index + 3),
-            static_cast<uint16_t>(base_index + 0)
-        };
+        memcpy((u8*)ui_system->text_draw_info.text_indices + ui_system->text_draw_info.text_index_bytes,
+               default_quad_indices,
+               sizeof(default_quad_indices));
 
-        // Add vertices
-        ui_system->text_system.dynamic_vertices.insert(ui_system->text_system.dynamic_vertices.end(), new_quad.begin(),
-                                                      new_quad.end());
+        //increase by count
+        ui_system->text_draw_info.text_vertex_bytes += sizeof(Quad_Texture) * 4;
+        //increase by bytes
+        ui_system->text_draw_info.text_index_bytes += sizeof(default_quad_indices);
+        ui_system->text_draw_info.text_index_count += ARRAY_SIZE(default_quad_indices);
 
-        // Add indices
-        ui_system->text_system.dynamic_indices.insert(ui_system->text_system.dynamic_indices.end(),
-                                                     quad_indices.begin(), quad_indices.end());
+        //add to material params
+        //TODO: this logic is just temporary
+        Material_2D_Param_Data* material_info = &ui_system->text_draw_info.text_material_params[ui_system->
+            text_draw_info.text_material_param_current_size];
+        ui_system->text_draw_info.text_material_param_current_size++;
+        material_info->feature_mask = 0;
+        material_info->texture_index = ui_system->default_font.font_texture_handle.handle;
 
-        final_pos.x += g.advance * font_scalar; // move offset forward
+        ui_system->text_draw_info.text_draw_count++;
+
+        screen_position.x += (g->advance) * font_scalar; // move offset forward
     }
-
 }
-*/
+
+
+void ui_test()
+{
+    UI_ID test_id = {0, 0};
+    //DO_BUTTON_TEST(UI_System_internal, test_id);
+    do_button(UI_System_internal, test_id, (vec2){1, 1}, (vec2){50, 50},
+              (vec3){1.0, 0.0, 0.0}, (vec3){0.0f, 1.0f, 0.0f}, (vec3){0.0f, 0.0f, 1.0f});
+
+    do_text(UI_System_internal, STRING("Game Over"), (vec2){50, 50}, (vec2){10, 10},
+            COLOR_RED, DEFAULT_FONT_SIZE);
+
+
+    ui_system_upload_draw_data(&renderer_internal, UI_System_internal);
+}

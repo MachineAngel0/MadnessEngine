@@ -62,6 +62,7 @@ Light_System* light_system_init(renderer* renderer)
                                        out_light_system->point_lights,
                                        sizeof(Point_Light) * out_light_system->point_light_count);
 
+    INFO("LIGHT SYSTEM CREATED")
 
     return out_light_system;
 }

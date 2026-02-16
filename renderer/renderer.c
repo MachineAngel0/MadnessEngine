@@ -129,10 +129,10 @@ bool renderer_init(struct renderer_app* renderer_inst)
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
 
     //INDIRECT DRAW
-    mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
-    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    // mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+    // mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    // mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -160,11 +160,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     arena_clear(&renderer_internal.frame_arena);
 
     ui_system_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
-    UI_ID test_id = {0, 0};
-    //DO_BUTTON_TEST(UI_System_internal, test_id);
-    do_button(UI_System_internal, test_id, (vec2){1,1}, (vec2) {50,50},
-               (vec3){1.0,0.0,0.0}, (vec3) {0.0f,1.0f,0.0f}, (vec3) {0.0f,0.0f,1.0f});
-    ui_system_upload_draw_data(&renderer_internal, UI_System_internal);
+    //TODO: remove the test later on
+    ui_test();
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 

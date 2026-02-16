@@ -211,7 +211,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             TRACE("COLOR Texture Path:  %s", texture_path);
 
             current_submesh->color_texture = shader_system_add_texture(
-                &renderer->context, renderer->shader_system,
+                renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.color_index = current_submesh->color_texture.handle;
         }
@@ -231,7 +231,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
 
             current_submesh->metallic_texture = shader_system_add_texture(
-                &renderer->context, renderer->shader_system,
+                renderer, renderer->shader_system,
                 texture_path);
             current_submesh->roughness_texture = current_submesh->metallic_texture;
 
@@ -252,7 +252,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             TRACE("AO Texture Path:  %s", texture_path);
 
             current_submesh->ambient_occlusion_texture = shader_system_add_texture(
-                &renderer->context, renderer->shader_system,
+               renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.ambient_occlusion_index = current_submesh->ambient_occlusion_texture.
                 handle;
@@ -272,7 +272,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             TRACE("NORMAL Texture Path:  %s", texture_path);
 
             current_submesh->normal_texture = shader_system_add_texture(
-                &renderer->context, renderer->shader_system,
+               renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.normal_index = current_submesh->normal_texture.
                                                                              handle;
@@ -290,7 +290,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
             current_submesh->emissive_texture = shader_system_add_texture(
-                &renderer->context, renderer->shader_system,
+                renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.emissive_index = current_submesh->emissive_texture.
                                                                                handle;
@@ -320,14 +320,13 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
     //TODO: push static mesh into mesh system
     // upload textures and descriptors to shader_system
-
-    for (u32 i = 0; i < out_static_mesh->mesh_size; i++)
-    {
-        update_texture_bindless_descriptor_set(renderer,
-                                               renderer->descriptor_system,
-                                               out_static_mesh->mesh[i].color_texture,
-                                               out_static_mesh->mesh[i].color_texture.handle);
-    }
+    //
+    // for (u32 i = 0; i < out_static_mesh->mesh_size; i++)
+    // {
+    //     update_texture_bindless_descriptor_set(renderer,
+    //                                            renderer->descriptor_system,
+    //                                            out_static_mesh->mesh[i].color_texture);
+    // }
 
 
     mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
@@ -531,6 +530,7 @@ Mesh_System* mesh_system_init(renderer* renderer)
                                                                            BUFFER_TYPE_STAGING,
                                                                            MB(32));
 
+    INFO("MESH SYSTEM CREATED")
 
     return out_mesh_system;
 }
@@ -565,7 +565,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
             indirect_draw.firstInstance = 0;
             indirect_draw.indexCount = current_submesh->indices_count;
             indirect_draw.instanceCount = 1;
-            indirect_draw.vertexOffset = vertex_byte_size / sizeof(vec3);
+            indirect_draw.vertexOffset = vertex_byte_size / sizeof(vec3); // in counts
 
             vertex_byte_size += current_submesh->vertex_bytes;
             index_count_size += current_submesh->indices_count;

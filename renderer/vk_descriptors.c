@@ -93,6 +93,8 @@ Descriptor_System* descriptor_pool_allocator_init(renderer* renderer)
                                                   descriptor_system,
                                                   &descriptor_system->storage_descriptors);
 
+    INFO("BINDLESS DESCRIPTOR POOLS CREATED")
+
     return descriptor_system;
 }
 
@@ -519,9 +521,8 @@ void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
 
 
 void update_texture_bindless_descriptor_set(renderer* renderer,
-                                                   Descriptor_System* descriptor_system,
-                                                   Texture_Handle texture_handle,
-                                                   u32 binding_index)
+                                            Descriptor_System* descriptor_system,
+                                            Texture_Handle texture_handle)
 {
     //TODO: update vulkan_shader_texture* test_texture, to a Texture* struct type
 

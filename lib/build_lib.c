@@ -7,5 +7,9 @@
 
 #include <ft2build.h>
 
+#define CLAY_IMPLEMENTATION
+#include "clay.h"
+
+
 
 

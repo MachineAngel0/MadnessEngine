@@ -1669,6 +1669,9 @@ static const vec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
 
 static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const vec4 COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
+static const vec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
+static const vec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 
 
 /*** MAX/MIN FUNCTIONS ***/

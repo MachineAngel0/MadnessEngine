@@ -1,6 +1,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_buffer_reference : require
+#extension GL_ARB_shader_draw_parameters : enable
 
 
 layout(push_constant, scalar) uniform PC_MESH{
@@ -38,10 +39,6 @@ struct Material_Param_Data {
     uint _padding2;
 
 };
-
-layout (buffer_reference, scalar) readonly buffer MaterialsDataBuffer {
-    Material_Param_Data material_data[];
-} Material_Data;
 
 
 // binding 0 stores our textures

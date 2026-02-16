@@ -25,7 +25,7 @@ Texture* shader_system_get_default_texture(Shader_System* system);
 void shader_system_update(renderer* renderer, Shader_System* system);
 
 //pass out the texture index
-Texture_Handle shader_system_add_texture(vulkan_context* context, Shader_System* system, char const* filepath);
+Texture_Handle shader_system_add_texture(renderer* renderer, Shader_System* system, char const* filepath);
 
 void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle);
 
