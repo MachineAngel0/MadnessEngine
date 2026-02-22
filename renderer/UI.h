@@ -269,35 +269,34 @@ typedef struct UI_System
     Buffer_Handle text_index_staging_buffer_handle;
     Buffer_Handle text_material_staging_ssbo_handle;
     Buffer_Handle text_indirect_staging_buffer_handle;
-} UI_System;
+} Madness_UI_Context;
 
 
 
-static UI_System* Madness_UI;
+static Madness_UI_Context* Madness_UI;
 
 //NOTE: Remove the renderer from the init, these should not be coupled
 //I should only have to pass the vertex/index data to the renderer for drawing
-UI_System* ui_system_init(renderer* renderer);
+bool madness_ui_init(renderer* renderer);
 //TODO: UI_System* ui_system_shutdown(renderer* renderer);
 
 //pass in the size every frame, in the event the size changes
-void ui_system_begin(UI_System* ui_system, i32 screen_size_x, i32 screen_size_y);
-void ui_system_end(UI_System* ui_system);
+void madness_ui_begin(i32 screen_size_x, i32 screen_size_y);
+void madness_ui_end(void);
 
 //Text
-Font_Handle font_init(renderer* renderer, UI_System* ui_system, const char* filepath);
+Font_Handle font_init(renderer* renderer, const char* filepath);
 //VULKAN
-void ui_system_upload_draw_data(renderer* renderer, UI_System* ui_system);
-void ui_system_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer);
+void madness_ui_upload_draw_data(renderer* renderer);
 
 
-bool is_ui_hot(UI_System* ui_state, int id);
+bool is_ui_hot(int id);
 
-bool is_ui_active(UI_System* ui_state, int id);
+bool is_ui_active(int id);
 
-bool region_hit(UI_System* ui_system, vec2 pos, vec2 size);
+bool region_hit(vec2 pos, vec2 size);
 
-bool region_hit_new(UI_System* ui_state, vec2 pos, vec2 size);
+bool region_hit_new(vec2 pos, vec2 size);
 
 /*
 bool button(UI_STATE& ui_state, int id, int x, int y)
@@ -313,51 +312,50 @@ bool button(UI_STATE& ui_state, int id, int x, int y)
 
 //UTILITY
 
-void update_ui_mouse_pos(UI_System* ui_system);
+void update_ui_mouse_pos(void);
 
 //check if we can use the button
-bool use_button(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size);
+bool use_button(UI_ID id, vec2 pos, vec2 size);
 
-bool use_button_new(UI_System* ui_state, UI_ID id, vec2 pos, vec2 size);
+bool use_button_new(UI_ID id, vec2 pos, vec2 size);
 
-int generate_id(UI_System* ui_state);
+int generate_id(void);
 
-void set_hot(UI_System* ui_state, UI_ID id);
+void set_hot(UI_ID id);
 
-void set_active(UI_System* ui_state, UI_ID id);
+void set_active(UI_ID id);
 
-bool can_be_active(UI_System* ui_state);
-bool is_active(UI_System* ui_state, UI_ID id);
+bool can_be_active(void);
+bool is_active(UI_ID id);
 
-bool is_hot(UI_System* ui_state, UI_ID id);
+bool is_hot(UI_ID id);
 
 
 //API
 //TODO: add UI_Alignment
-bool do_button(UI_System* ui_system, UI_ID id, vec2 pos, vec2 screen_percentage,
+bool do_button(UI_ID id, vec2 pos, vec2 screen_percentage,
                vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-bool do_button_config(UI_System* ui_system, UI_ID id, UI_Config ui_config);
+bool do_button_config(UI_ID id, UI_Config ui_config);
 
-
-#define DO_BUTTON_TEST(UI_SYSTEM, UI_ID) do_button(UI_SYSTEM, UI_ID, (vec2){0.0f,0.0f}, (vec2){10.0f,10.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f}, (vec3){1.0f, 1.0f, 1.0f});
-
-
-bool do_button_text(UI_System* ui_state, UI_ID id, String text, vec2 pos, vec2 size,
+bool do_button_text(UI_ID id, String text, vec2 pos, vec2 size,
                     vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-void do_text(UI_System* ui_system, String text, vec2 pos, vec2 screen_percentage_size,
+void do_text(String text, vec2 pos, vec2 screen_percentage_size,
              vec3 color, float font_size);
 
-void ui_test();
-void ui_test2(renderer* renderer, UI_System* ui_system);
+void madness_ui_add_quad_vertex(Quad_Vertex* new_quad);
 
-void ui_open_node(UI_System* ui_system, const char* id, UI_Config config);
-void ui_close_node(UI_System* ui_system, const char* id);
-void ui_calculate_positions(UI_System* ui_system);
-void ui_generate_draw_data(UI_System* ui_system);
-void ui_draw(renderer* renderer, UI_System* ui_system, vulkan_command_buffer* command_buffer);
+void madness_ui_test();
+void madness_ui_test2(renderer* renderer);
 
-void ui_generate_debug_data(UI_System* ui_system);
+void madness_ui_open_node(const char* id, UI_Config config);
+void madness_ui_close_node(const char* id);
+void madness_ui_calculate_positions(void);
+void madness_ui_generate_draw_data(void);
+
+//Vulkan
+void madness_ui_draw(renderer* renderer, vulkan_command_buffer* command_buffer);
+void madness_ui_generate_debug_data(void);
 
 #endif //UI_H

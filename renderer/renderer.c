@@ -119,7 +119,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
     //TODO: should be initialized after the renderer
-    Madness_UI = ui_system_init(&renderer_internal);
+    madness_ui_init(&renderer_internal);
 
 
 
@@ -160,9 +160,9 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     arena_clear(&renderer_internal.frame_arena);
 
-    ui_system_begin(Madness_UI, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
+    madness_ui_begin(vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
     //TODO: remove the test later on
-    ui_test();
+    madness_ui_test();
     //create the draw info
     // ui_system_upload_draw_data(&renderer_internal, Madness_UI);
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -383,7 +383,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame, &renderer_internal.indirect_mesh_pipeline);
 
-    ui_draw(&renderer_internal, Madness_UI, command_buffer_current_frame);
+    madness_ui_draw(&renderer_internal, command_buffer_current_frame);
     // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
 
 
@@ -453,7 +453,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
-    ui_system_end(Madness_UI);
+    madness_ui_end();
 }
 
 
