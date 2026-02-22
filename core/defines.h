@@ -45,6 +45,7 @@ STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
 STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
 STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
+#define MADNESS_DEFAULT_STRUCT {0}
 #define BITFLAG(x) (1 << (x))
 
 

@@ -21,7 +21,7 @@ void main() {
     //outColor = vec4(fragColor, 1.0);
     //outColor = vec4(fragTexCoord, 0.0, 1.0); // useful for debugging
     //outColor = texture(texSampler, fragTexCoord);
-    outColor = texture(texture_samples[(nonuniformEXT(in_material_idx))], in_tex); // if we want colors overlayed
+    outColor = vec4(in_color, 1.0f) * texture(texture_samples[(nonuniformEXT(in_material_idx))], in_tex); // if we want colors overlayed
 
     //creates greyish outline, but looks bad
     //vec4 texel = texture(texSampler, fragTexCoord);      // sample atlas RGBA

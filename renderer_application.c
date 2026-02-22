@@ -115,10 +115,11 @@ void application_renderer_run()
 {
     while (app_state.is_running)
     {
+        clock_update_frame_start(&app_state.clock);
+        clock_print_info(&app_state.clock);
 
         input_update();
         platform_pump_messages(&app_state.platform);
-
 
         //vulkan will crash if you minimize the window
         if (app_state.is_suspended)
@@ -126,9 +127,8 @@ void application_renderer_run()
             continue;
         }
 
-        clock_update_frame_start(&app_state.clock);
 
-        clock_print_info(&app_state.clock);
+
 
         app_state.renderer->renderer_run(app_state.renderer, &app_state.clock);
 

@@ -36,6 +36,7 @@
 #include "../core/platform/gamepad.h"
 #include "../core/platform/platform.h"
 #include "../core/platform/filesystem.h"
+#include "../core/platform/thread_madness.h"
 
 //CORE - MEMORY
 #include "../core/memory/memory_tracker.h"

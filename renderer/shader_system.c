@@ -18,7 +18,7 @@ Shader_System* shader_system_init(renderer* renderer)
     out_shader_system->material_param_indexes = 0;
 
     //create our debug texture
-    out_shader_system->default_texture_handle = shader_system_add_texture(renderer, out_shader_system,
+    out_shader_system->default_texture_handle = shader_system_add_texture_file(renderer, out_shader_system,
                                                                           "../renderer/texture/error_texture.png");
 
     out_shader_system->material_mesh_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -66,7 +66,7 @@ void shader_system_update(renderer* renderer, Shader_System* system)
 }
 
 //pass out the texture index
-Texture_Handle shader_system_add_texture(renderer* renderer, Shader_System* system, char const* filepath)
+Texture_Handle shader_system_add_texture_file(renderer* renderer, Shader_System* system, char const* filepath)
 {
     //get an available index
     Texture_Handle out_texture_handle;

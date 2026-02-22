@@ -1,6 +1,7 @@
 ﻿#include "mesh.h"
 
 #include "cgltf.h"
+#include "c_string.h"
 
 
 submesh* submesh_init(Arena* arena)
@@ -54,6 +55,13 @@ void static_mesh_free(static_mesh* static_mesh)
 
 void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 {
+    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
+    {
+        FATAL("DID NOT PASS IN A GLTF FILE");
+        return;
+    }
+
+
     cgltf_options options = {0};
     cgltf_data* data = NULL;
     cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
@@ -63,7 +71,6 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
         fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
         return;
     }
-
     result = cgltf_load_buffers(&options, data, gltf_path);
     MASSERT(result == cgltf_result_success)
 
@@ -200,7 +207,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
         //COLOR TEXTURE
         cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
                                                               base_color_texture.texture;
-        if (color_texture)
+        if (color_texture && color_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_COLOR;
 
@@ -210,7 +217,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
             TRACE("COLOR Texture Path:  %s", texture_path);
 
-            current_submesh->color_texture = shader_system_add_texture(
+            current_submesh->color_texture = shader_system_add_texture_file(
                 renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.color_index = current_submesh->color_texture.handle;
@@ -221,28 +228,39 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
                                                                         metallic_roughness_texture.texture;
         if (metal_roughness_texture)
         {
-            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
-            current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_METALLIC;
-            char* texture_path = arena_alloc(&renderer->frame_arena,
-                                             strlen(base_path) + strlen(metal_roughness_texture->image->uri));
-            // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
-            TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+
+            if (metal_roughness_texture->image->uri)
+            {
+                current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
+                current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_METALLIC;
+                char* texture_path = arena_alloc(&renderer->frame_arena,
+                                                 strlen(base_path) + strlen(metal_roughness_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+                TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
 
-            current_submesh->metallic_texture = shader_system_add_texture(
-                renderer, renderer->shader_system,
-                texture_path);
-            current_submesh->roughness_texture = current_submesh->metallic_texture;
+                current_submesh->metallic_texture = shader_system_add_texture_file(
+                    renderer, renderer->shader_system,
+                    texture_path);
+                current_submesh->roughness_texture = current_submesh->metallic_texture;
 
-            current_submesh->material_params.metallic_index = current_submesh->metallic_texture.handle;
-            current_submesh->material_params.roughness_index = current_submesh->roughness_texture.handle;
+                current_submesh->material_params.metallic_index = current_submesh->metallic_texture.handle;
+                current_submesh->material_params.roughness_index = current_submesh->roughness_texture.handle;
+            }
+            if (metal_roughness_texture->image->buffer_view)
+            {
+                //TODO: load texture data from the shader system
+                INFO("WHOA A BUFFER VIEW ");
+                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(metal_roughness_texture->image->buffer_view);
+                INFO("WHOA A BUFFER VIEW ");
+            }
         }
 
         // AO
         //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
         cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
-        if (AO_texture)
+        if (AO_texture && AO_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_AO;
             char* texture_path = arena_alloc(&renderer->frame_arena,
@@ -251,8 +269,8 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
             TRACE("AO Texture Path:  %s", texture_path);
 
-            current_submesh->ambient_occlusion_texture = shader_system_add_texture(
-               renderer, renderer->shader_system,
+            current_submesh->ambient_occlusion_texture = shader_system_add_texture_file(
+                renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.ambient_occlusion_index = current_submesh->ambient_occlusion_texture.
                 handle;
@@ -262,7 +280,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
         //NORMAL TEXTURE
         // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
         cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
-        if (normal_texture)
+        if (normal_texture  && normal_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_NORMAL;
             char* texture_path = arena_alloc(&renderer->frame_arena,
@@ -271,8 +289,8 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
 
-            current_submesh->normal_texture = shader_system_add_texture(
-               renderer, renderer->shader_system,
+            current_submesh->normal_texture = shader_system_add_texture_file(
+                renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.normal_index = current_submesh->normal_texture.
                                                                              handle;
@@ -280,7 +298,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
         //EMISSIVE TEXTURE
         cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
-        if (emissive_texture)
+        if (emissive_texture && emissive_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_EMISSIVE;
             char* texture_path = arena_alloc(&renderer->frame_arena,
@@ -289,7 +307,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-            current_submesh->emissive_texture = shader_system_add_texture(
+            current_submesh->emissive_texture = shader_system_add_texture_file(
                 renderer, renderer->shader_system,
                 texture_path);
             current_submesh->material_params.emissive_index = current_submesh->emissive_texture.
@@ -336,8 +354,16 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 }
 
 
+
+
 void mesh_load_fbx(renderer* renderer, const char* fbx_path)
 {
+    if (!c_string_path_is_extension(fbx_path, ".fbx"))
+    {
+        FATAL("DID NOT PASS IN A FBX FILE");
+        return;
+    }
+
     // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
     // https://ufbx.github.io/ - online docs
 
@@ -375,12 +401,13 @@ void mesh_load_fbx(renderer* renderer, const char* fbx_path)
     for (size_t mesh_idx = 0; mesh_idx < scene->meshes.count; mesh_idx++)
     {
         ufbx_mesh* mesh = scene->meshes.data[mesh_idx];
-        for (size_t i = 0; i < mesh->faces.count; i++) {
+        for (size_t i = 0; i < mesh->faces.count; i++)
+        {
             ufbx_face face = mesh->faces.data[i];
 
             // Loop through the corners of the polygon.
-            for (uint32_t corner = 0; corner < face.num_indices; corner++) {
-
+            for (uint32_t corner = 0; corner < face.num_indices; corner++)
+            {
                 // Faces are defined by consecutive indices, one for each corner.
                 uint32_t index = face.index_begin + corner;
 
@@ -388,9 +415,7 @@ void mesh_load_fbx(renderer* renderer, const char* fbx_path)
                 ufbx_vec3 position = ufbx_get_vertex_vec3(&mesh->vertex_position, index);
                 ufbx_vec3 normal = ufbx_get_vertex_vec3(&mesh->vertex_normal, index);
                 ufbx_vec2 uv = ufbx_get_vertex_vec2(&mesh->vertex_uv, index);
-
             }
-
         }
     }
 
@@ -621,6 +646,29 @@ void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_comma
 
 
     VkDeviceSize pOffsets[] = {0};
+
+
+    //UBER SHADER MESH INDIRECT DRAW
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      renderer_internal.indirect_mesh_pipeline.handle);
+
+    //uniform
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 0, 1,
+                            &renderer_internal.descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 1, 1,
+                            &renderer_internal.descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
+
+    //storage buffers
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 2, 1,
+                            &renderer_internal.descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                                current_frame], 0, 0);
 
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
                            pOffsets);

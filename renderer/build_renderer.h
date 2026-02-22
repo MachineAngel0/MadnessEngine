@@ -8,6 +8,7 @@
 #include "lights.h"
 #include "mesh.h"
 #include "shader_system.h"
+#include "sprite.h"
 #include "UI.h"
 #include "vk_buffer.h"
 #include "vk_command_buffer.h"

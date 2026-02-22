@@ -18,6 +18,9 @@
 //the max number of pieces a tetromino can be made out of
 #define TETROMINO_SIZE 4
 
+#include <stdbool.h>
+
+#include "arena.h"
 #include "maths/math_types.h"
 
 
@@ -103,34 +106,79 @@ TETRIS_COLOR TETROMINO_COLOR_LOOKUP[] = {
 };
 
 
-
 //so this rn is just one piece
 typedef struct Tetromino
 {
     Tetris_Grid_Position grid_position; // the offset from (0,0)
     Tetris_Grid_Position tetromino_default_position; // the position of each block relative to (0,0)
-}Tetromino;
+} Tetromino;
 
 
-typedef struct Tetromino_Piece{
+typedef struct Tetromino_Piece
+{
     Tetromino tetrominos[TETROMINO_SIZE];
     Tetromino_Type type;
     vec3 color;
     int rotation_state = 0;
-}Tetromino_collection;
+} Tetromino_Collection;
 
 
-inline Tetris_Grid create_grid(VERTEX_DYNAMIC_INFO& vertex_info, int column, int row)
+
+
+typedef struct Tetris_Clock
 {
-    Tetris_Grid new_grid{};
-    new_grid.column = column;
-    new_grid.row = row;
+    float accumulated_time; //adding time
+    float move_block_trigger_seconds = 5.0f; //in seconds - when we want to move the block down // in seconds
+} Tetris_Clock;
 
-    for (int i = 0; i < GRID_ROW;
-         i++
-    )
+typedef enum Tetris_State
+{
+    Tetris_State_Start, // when we first boot up
+    Tetris_State_Play, // while the game is playing
+    Tetris_State_Game_Over, // when the player game overs, and we allow them to replay the game
+} Tetris_State;
+
+typedef struct Tetris_Game_State
+{
+    Tetris_State tetris_state;
+    Tetris_Clock* tetris_clock;
+    Tetris_Grid* tetris_grid;
+    Tetromino_Collection current_tetromino;
+} Tetris_Game_State;
+
+//NEW API
+Tetris_Game_State* tetris_init(Arena* arena, Frame_Arena* frame_arena)
+{
+    Tetris_Game_State* tetris_game_state = arena_alloc(frame_arena, sizeof(Tetris_Game_State));
+    tetris_game_state->tetris_state = Tetris_State_Start;
+    tetris_game_state->tetris_clock = tetris_clock_init();
+    tetris_game_state->tetris_grid = tetris_grid_init();
+}
+void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
+void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
+void tetris_update(Tetris_Game_State* tetris);
+void tetris_shutdown(Tetris_Game_State* tetris);
+
+void tetris_upload_draw(Tetris_Game_State* tetris);
+void tetris_update_grid(Tetris_Game_State* tetris);
+void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
+
+void tetris_spawn_block();
+void tetris_move_block();
+void tetris_can_block();
+void tetris_rotate_block();
+
+
+//OLD
+inline Tetris_Grid create_grid(int column_size, int row_size)
+{
+    Tetris_Grid new_grid = {0};
+    new_grid.column = column_size;
+    new_grid.row = row_size;
+
+    for (int i = 0; i < new_grid.row; i++)
     {
-        for (int j = 0; j < GRID_COLUMN;
+        for (int j = 0; j < new_grid.column;
              j++
         )
         {
@@ -143,8 +191,8 @@ inline Tetris_Grid create_grid(VERTEX_DYNAMIC_INFO& vertex_info, int column, int
             vec3 grey{0.5, 0.5, 0.5};
             vec3 color = white;
             //color the edges
-            if (i == 0 || i == GRID_ROW
-                - 1 || j == 0 || j == GRID_COLUMN
+            if (i == 0 || i == new_grid.row
+                - 1 || j == 0 || j == new_grid.column
                 - 1
             )
             {
@@ -168,11 +216,10 @@ inline Tetris_Grid create_grid(VERTEX_DYNAMIC_INFO& vertex_info, int column, int
 }
 
 
-
-inline void refresh_grid(Tetris_Grid& tetris_grid, Tetromino current_tetromino, VERTEX_DYNAMIC_INFO& vertex_info)
+inline void refresh_grid(Tetris_Grid& tetris_grid, Tetromino current_tetromino)
 {
     //reset our vertex buffer data
-    clear_vertex_info(vertex_info);
+    // clear_vertex_info(vertex_info);
 
     TETRIS_COLOR Grid_Color = TETROMINO_COLOR_LOOKUP[current_tetromino.type];
 
@@ -675,8 +722,7 @@ inline bool move_block(Tetris_Grid& tetris_grid, Tetromino& tetromino, Tetris_Di
 }
 
 
-inline void update_grid_representation(Tetris_Grid& tetris_grid, Tetromino& current_tetromino,
-                                       VERTEX_DYNAMIC_INFO& vertex_info)
+inline void update_grid_representation(Tetris_Grid& tetris_grid, Tetromino& current_tetromino)
 {
     current_tetromino.grid_position.x = 0;
 }
@@ -685,12 +731,12 @@ inline void update_grid_representation(Tetris_Grid& tetris_grid, Tetromino& curr
 struct Tetris_Clock
 {
     float accumulated_time; //adding time
-    float move_block_trigger = SECONDS(5.0f); //when we want to move the block down // in seconds
+    float move_block_trigger_seconds = SECONDS(5.0f); //when we want to move the block down // in seconds
 };
 
 inline void tetris_clock_init(Tetris_Clock& tetris_clock)
 {
-    tetris_clock.accumulated_time = tetris_clock.move_block_trigger;
+    tetris_clock.accumulated_time = tetris_clock.move_block_trigger_seconds;
 };
 
 inline void tetris_clock_update(Tetris_Clock& tetris_clock, float delta_time)
@@ -703,7 +749,7 @@ inline bool should_move_block_time_trigger(Tetris_Clock& tetris_clock)
 {
     if (tetris_clock.accumulated_time <= 0)
     {
-        tetris_clock.accumulated_time = tetris_clock.move_block_trigger;
+        tetris_clock.accumulated_time = tetris_clock.move_block_trigger_seconds;
         return true;
     }
     return false;
@@ -813,7 +859,7 @@ inline void init_play_state(Game_State* game_state, VERTEX_DYNAMIC_INFO& vertex_
 
     Tetris_Clock tetris_clock;
     game_state->tetris_clock = tetris_clock;
-    tetris_clock_init(game_state->tetris_clock);
+    tetris_clock_init(game_state->tetris_clock, TODO, TODO);
 
     vertex_info.vertex_buffer_should_update = true;
 }

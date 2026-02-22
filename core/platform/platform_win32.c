@@ -124,10 +124,6 @@ bool platform_startup(platform_state* plat_state,
     clock_frequency = 1.0 / (f64)frequency.QuadPart;
     QueryPerformanceCounter(&start_time);
 
-
-    //Audio
-    // platform_audio_init(plat_state, 4000,4000);
-
     return TRUE;
 }
 

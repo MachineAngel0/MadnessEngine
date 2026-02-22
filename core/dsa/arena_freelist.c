@@ -203,6 +203,7 @@ void* free_list_free(Free_List* fl, void* ptr)
     fl->used -= free_node->block_size;
 
     free_list_coalescence(fl, prev_node, free_node);
+    return NULL;
 }
 
 void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node)

@@ -36,7 +36,7 @@ void hash_table_destroy(hash_table* h)
     free(h);
 }
 
-void hash_table_insert(hash_table* h, char* key_str, void* value)
+void hash_table_insert(hash_table* h, const char* key_str, void* value)
 {
     MASSERT_MSG(h, "HASH MAP STRING INSERT: INVALID PARAMS")
     MASSERT_MSG(key_str, "HASH MAP STRING INSERT: INVALID PARAMS");
@@ -66,7 +66,7 @@ void hash_table_insert(hash_table* h, char* key_str, void* value)
     WARN("HASH MAP STRING INSERT: NO INSERT SPOT");
 }
 
-void hash_table_remove(hash_table* h, char* key_str)
+void hash_table_remove(hash_table* h, const char* key_str)
 {
     MASSERT_MSG(h && key_str && key_str, "HASH MAP STRING DELETE: INVALID PARAMS");
 
@@ -96,7 +96,7 @@ void hash_table_remove(hash_table* h, char* key_str)
     WARN("HASH MAP STRING REMOVE: COULD NOT FIND STRING");
 }
 
-bool hash_table_contains(hash_table* h, char* key_str)
+bool hash_table_contains(hash_table* h, const char* key_str)
 {
     MASSERT_MSG(h, "HASH MAP STRING DELETE: INVALID PARAMS");
 
@@ -122,7 +122,7 @@ bool hash_table_contains(hash_table* h, char* key_str)
     return false;
 }
 
-void hash_table_set(hash_table* h, char* key_str, void* value)
+void hash_table_set(hash_table* h, const char* key_str, void* value)
 {
     MASSERT_MSG(h && key_str && value, "HASH MAP STRING SET: INVALID PARAMS");
 
@@ -149,7 +149,7 @@ void hash_table_set(hash_table* h, char* key_str, void* value)
     return;
 }
 
-void* hash_table_get(hash_table* h, char* key_str)
+void* hash_table_get(hash_table* h, const char* key_str)
 {
     MASSERT_MSG(h && key_str, "HASH MAP STRING SET: INVALID PARAMS");
 
@@ -179,7 +179,7 @@ void* hash_table_get(hash_table* h, char* key_str)
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*))
 {
-    DEBUG("HASH MAP STRING DEBUG PRINT");
+    // DEBUG("HASH MAP STRING DEBUG PRINT");
     for (u64 i = 0; i < h->capacity; i++)
     {
         if (h->key_str_data[i] == NULL)
@@ -201,8 +201,10 @@ void hash_table_test()
 
     i32 val = 100;
     hash_table_insert(hm_test, "key", &val);
+    hash_table_print(hm_test, print_int);
 
     hash_table_remove(hm_test, "key");
+    hash_table_print(hm_test, print_int);
 
 
     i32 val2 = 101;
@@ -210,15 +212,15 @@ void hash_table_test()
 
     i32* check_value;
     check_value = (i32*)hash_table_get(hm_test, "key2");
-    TEST_INFORM(*check_value == val2);
+    TEST_DEBUG(*check_value == val2);
 
     hash_table_set(hm_test, "key2", &val);
     check_value = (i32*)hash_table_get(hm_test, "key2");
-    TEST_INFORM(*check_value == val);
+    TEST_DEBUG(*check_value == val);
 
     hash_table_set(hm_test, "key2", &val2);
     check_value = (i32*)hash_table_get(hm_test, "key2");
-    TEST_INFORM(*check_value == val2);
+    TEST_DEBUG(*check_value == val2);
 
     hash_table_print(hm_test, print_int);
 

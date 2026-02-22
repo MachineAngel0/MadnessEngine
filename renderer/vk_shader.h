@@ -3,22 +3,12 @@
 
 VkShaderModule create_shader_module(const vulkan_context* context, const char* shader_bytes, u64 shader_size);
 
-bool vulkan_default_shader_create(vulkan_context* context, vulkan_shader_default* pipeline);
 
 void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline,
                                    VkDescriptorSetLayout* descriptor_set_layout);
 
 void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
 
-
-bool vulkan_textured_shader_create(vulkan_context* context, vulkan_shader_texture* textured_shader,
-                                    VkDescriptorSetLayout* descriptor_layout);
-
-bool vulkan_mesh_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
-
-bool vulkan_bindless_textured_shader_create(renderer* renderer, vulkan_shader_texture* textured_shader);
-
-bool vulkan_mesh_bda_shader_create(renderer* renderer, vulkan_mesh_default* mesh_data);
 
 bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_system, vulkan_shader_pipeline* mesh_indirect_pipeline);
 

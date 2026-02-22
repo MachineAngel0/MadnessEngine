@@ -42,9 +42,12 @@
 #if MPLATFORM_WINDOWS
 #include "../core/platform/platform_win32.c"
 #include "../core/platform/gamepad_win32.c"
+#include "../core/platform/thread_win32.c"
 #elif MPLATFORM_LINUX
 #include "../core/platform/platform_linux.c"
 #include "../core/platform/gamepad_linux.c"
+#include "../core/platform/thread_linux.c"
+
 #endif
 
 

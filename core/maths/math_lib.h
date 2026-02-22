@@ -1666,6 +1666,9 @@ static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
 static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
 static const vec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};
 static const vec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
+static const vec3 COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
+static const vec3 COLOR_PURPLE = {1.0f, 0.0f, 1.0f};
+static const vec3 COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
 
 static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};

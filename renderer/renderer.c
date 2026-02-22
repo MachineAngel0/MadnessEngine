@@ -14,7 +14,6 @@
 
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static renderer renderer_internal;
-static UI_System* UI_System_internal;
 
 
 bool renderer_init(struct renderer_app* renderer_inst)
@@ -120,7 +119,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
     //TODO: should be initialized after the renderer
-    UI_System_internal = ui_system_init(&renderer_internal);
+    Madness_UI = ui_system_init(&renderer_internal);
 
 
 
@@ -133,6 +132,8 @@ bool renderer_init(struct renderer_app* renderer_inst)
     // mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
     // mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     // mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    // mesh_load_gltf(&renderer_internal, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
+    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -159,10 +160,11 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     arena_clear(&renderer_internal.frame_arena);
 
-    ui_system_begin(UI_System_internal, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
+    ui_system_begin(Madness_UI, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
     //TODO: remove the test later on
     ui_test();
-
+    //create the draw info
+    // ui_system_upload_draw_data(&renderer_internal, Madness_UI);
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
@@ -379,35 +381,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-
-
-
-
-    //UBER SHADER MESH INDIRECT DRAW
-    vkCmdBindPipeline(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer_internal.indirect_mesh_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer_internal.descriptor_system->uniform_descriptors.descriptor_sets[vk_context.
-                                current_frame], 0, 0);
-
-    //textures
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer_internal.descriptor_system->texture_descriptors.descriptor_sets[vk_context.
-                                current_frame], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer_current_frame->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer_internal.descriptor_system->storage_descriptors.descriptor_sets[vk_context.
-                                current_frame], 0, 0);
-
     mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame, &renderer_internal.indirect_mesh_pipeline);
 
-    ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+    ui_draw(&renderer_internal, Madness_UI, command_buffer_current_frame);
+    // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
 
 
     // vkCmdDrawIndexedIndirect()
@@ -476,7 +453,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
-    ui_system_end(UI_System_internal);
+    ui_system_end(Madness_UI);
 }
 
 

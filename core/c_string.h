@@ -13,6 +13,10 @@ MAPI const char* c_string_concat(const char* str1, const char* str2);
 MAPI char* c_string_path_strip(const char* path, Arena* arena);
 
 
+MAPI char* c_string_path_get_extension(const char* path, Arena* arena);
+MAPI bool c_string_path_is_extension(const char* path, const char* extensions_name);
+
+
 // Case-sensitive string comparison. True if the same, otherwise false.
 MAPI bool c_strings_equal(const char* str0, const char* str1);
 

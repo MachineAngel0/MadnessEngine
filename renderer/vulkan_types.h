@@ -166,9 +166,6 @@ typedef struct static_mesh
     submesh* mesh;
     // the number of meshes in the model
     u32 mesh_size;
-
-    //
-
 } static_mesh;
 
 // TODO: skinned mesh
@@ -458,23 +455,7 @@ typedef struct vertex_tex
     vec2 texture;
 } vertex_tex;
 
-typedef struct vertex_info
-{
-    //TODO: they should be darrays or arenas, but for now its fine
-    vertex_3d vertices[1000];
-    u64 vertices_size;
-    u16 indices[1000];
-    u64 indices_size;
-} vertex_info;
 
-typedef struct vulkan_mesh_default
-{
-    static_mesh* static_mesh;
-
-    vulkan_shader_pipeline mesh_shader_pipeline;
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
-} vulkan_mesh_default;
 
 
 typedef struct vulkan_bindless_descriptors
@@ -485,16 +466,6 @@ typedef struct vulkan_bindless_descriptors
     // Descriptor_Type descriptor_type; // uniform, textures, sbo
 } vulkan_bindless_descriptors;
 
-typedef struct vulkan_shader_texture
-{
-    Texture texture_test_object;
-
-    vulkan_shader_pipeline shader_texture_pipeline;
-
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
-    vertex_info vertex_info;
-} vulkan_shader_texture;
 
 
 typedef struct global_descriptor_sets
@@ -541,22 +512,6 @@ typedef struct vulkan_context
     VkCommandPool graphics_command_pool;
     vulkan_command_buffer* graphics_command_buffer; // darray
 
-
-
-    //TODO: Clean this up
-    vulkan_buffer vertex_buffer;
-    vulkan_buffer index_buffer;
-    vertex_info default_vertex_info;
-    vulkan_shader_default default_shader_info;
-
-
-    //textured triangle
-    vulkan_shader_texture shader_texture;
-    vulkan_shader_texture shader_texture_bindless;
-
-
-    //temp
-    vulkan_mesh_default mesh_default;
 
 
     //Semaphores and Fences

@@ -7,6 +7,7 @@
 #include "lights.c"
 #include "mesh.c"
 #include "shader_system.c"
+#include "sprite.c"
 #include "UI.c"
 #include "vk_buffer.c"
 #include "vk_command_buffer.c"
@@ -19,3 +20,4 @@
 #include "vk_shader.c"
 #include "vk_swapchain.c"
 #include "vk_sync.c"
+
