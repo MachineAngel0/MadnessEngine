@@ -3,6 +3,7 @@
 #include "../core/dsa/arena_stack.c"
 #include "../core/dsa/arena_freelist.c"
 #include "../core/dsa/arena_pool.c"
+#include "../core/dsa/array_new.c"
 #include "../core/dsa/array.c"
 #include "../core/dsa/b_tree_red_black.c"
 #include "../core/dsa/binary_tree.c"

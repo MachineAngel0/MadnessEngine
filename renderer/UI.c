@@ -22,9 +22,8 @@ bool madness_ui_init(renderer* renderer)
     Madness_UI->ui_stack_count = 0;
     Madness_UI->ui_stack_capacity = MAX_UI_NODE_COUNT;
     Madness_UI->ui_stack = arena_alloc(Madness_UI->arena, sizeof(UI_Node*) * MAX_UI_NODE_COUNT);
-    Madness_UI->ui_nodes_array_count = 0;
-    Madness_UI->ui_nodes_array_capacity = MAX_UI_NODE_COUNT;
-    Madness_UI->ui_nodes_array = arena_alloc(Madness_UI->arena, sizeof(UI_Node) * MAX_UI_NODE_COUNT);
+    Madness_UI->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT);
+
 
     // for (u64 ui_node_index = 0; ui_node_index < MAX_UI_NODE_COUNT; ui_node_index++)
     // {
@@ -117,18 +116,14 @@ void madness_ui_begin(i32 screen_size_x, i32 screen_size_y)
     Madness_UI->quad_draw_info.quad_draw_count = 0;
 
 
-    for (u64 ui_node_index = 0; ui_node_index < Madness_UI->ui_nodes_array_count; ui_node_index++)
+    for (u64 ui_node_index = 0; ui_node_index < Madness_UI->ui_nodes->num_items; ui_node_index++)
     {
-        Madness_UI->ui_nodes_array[ui_node_index].children_length = 0;
+        Madness_UI->ui_nodes->data[ui_node_index].children_length = 0;
     }
+    UI_Node_array_zero(Madness_UI->ui_nodes);
+    UI_Node_array_clear(Madness_UI->ui_nodes);
 
-    memset(Madness_UI->ui_nodes_array, 0, sizeof(UI_Node) * Madness_UI->ui_nodes_array_capacity);
-    for (u64 ui_node_index = 0; ui_node_index < Madness_UI->ui_nodes_array_count; ui_node_index++)
-    {
-        Madness_UI->ui_nodes_array[ui_node_index].children_length = 0;
-    }
     Madness_UI->ui_stack_count = 0;
-    Madness_UI->ui_nodes_array_count = 0;
 
     Madness_UI->text_draw_info.text_vertex_bytes = 0;
     Madness_UI->text_draw_info.text_index_bytes = 0;
@@ -971,8 +966,12 @@ void madness_ui_test()
     // do_button(Madness_UI_internal, test_id2, (vec2){50, 50}, (vec2){20, 20},
     // COLOR_YELLOW, COLOR_GREEN, COLOR_BLUE);
 
+    // Source - https://stackoverflow.com/a/15736518
+    // Posted by Stuart P. Bentley, modified by community. See post 'Timeline' for change history
+    // Retrieved 2026-02-22, License - CC BY-SA 4.0
 
-    do_text(STRING("The quick brown fox jumps over the lazy dog"), (vec2){50, 50}, (vec2){10, 10},
+
+    do_text(STRING("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"), (vec2){0, 70}, (vec2){10, 10},
             COLOR_WHITE,
             DEFAULT_FONT_SIZE);
 
@@ -986,8 +985,9 @@ void madness_ui_open_node(const char* id, UI_Config config)
 {
     DEBUG("UI OPEN NODE: %s", id)
     //grab an available node
-    UI_Node* new_node = &Madness_UI->ui_nodes_array[Madness_UI->ui_nodes_array_count];
-    Madness_UI->ui_nodes_array_count++;
+    UI_Node* new_node = &Madness_UI->ui_nodes->data[Madness_UI->ui_nodes->num_items];
+    Madness_UI->ui_nodes->num_items++;
+
     DEBUG("UI OPEN NODE OBTAINED: %s", new_node->debug_id)
     new_node->debug_id = id;
     new_node->config = config;
@@ -1179,9 +1179,9 @@ void madness_ui_calculate_positions(void)
         }
     }*/
 
-    for (u64 node_index = 0; node_index < Madness_UI->ui_nodes_array_count; node_index++)
+    for (u64 node_index = 0; node_index < Madness_UI->ui_nodes->num_items; node_index++)
     {
-        UI_Node* parent_node = &Madness_UI->ui_nodes_array[node_index];
+        UI_Node* parent_node = &Madness_UI->ui_nodes->data[node_index];
 
         float horizontal_padding = parent_node->config.padding.left;
         float vertical_padding = parent_node->config.padding.top;
@@ -1212,9 +1212,9 @@ void madness_ui_calculate_positions(void)
 
 void madness_ui_generate_draw_data(void)
 {
-    for (u32 i = 0; i < Madness_UI->ui_nodes_array_count; i++)
+    for (u32 i = 0; i < Madness_UI->ui_nodes->num_items; i++)
     {
-        UI_Node* node_to_draw = &Madness_UI->ui_nodes_array[i];
+        UI_Node* node_to_draw = &Madness_UI->ui_nodes->data[i];
 
         Quad_Vertex* new_quad = quad_create_screen_size(Madness_UI->frame_arena,
                                                         (vec2){node_to_draw->pos_x, node_to_draw->pos_y},
@@ -1226,9 +1226,9 @@ void madness_ui_generate_draw_data(void)
 
 void madness_ui_generate_debug_data(void)
 {
-    for (u64 i = 0; i < Madness_UI->ui_nodes_array_count; i++)
+    for (u64 i = 0; i < Madness_UI->ui_nodes->num_items; i++)
     {
-        UI_Node* node_to_debug = &Madness_UI->ui_nodes_array[i];
+        UI_Node* node_to_debug = &Madness_UI->ui_nodes->data[i];
         DEBUG(
             "UI NODE INFO ID %s: SIZE X %f, SIZE Y %f, POS X %f, POS Y %f\n CONFIG: SIZE X %f, SIZE Y %f, ALIGNMENT %d",
             node_to_debug->debug_id,

@@ -1,10 +1,7 @@
 ﻿#ifndef ARRAY_H
 #define ARRAY_H
 
-
-#include "logger.h"
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-
 
 //fixed sized array, so no reallocating more space
 typedef struct Array
@@ -73,6 +70,15 @@ void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 
 void array_test();
+
+
+// #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
+// // #define array_new_contains_or_add_test(array, value)    \
+// {                                                     \
+//     temp_value = (void*) STBDS_ADDRESSOF((array, (value)) \
+//     array_new_contains_or_add_other(array, temp_value); \
+// }
+
 
 
 #endif //ARRAY_H

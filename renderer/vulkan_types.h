@@ -752,6 +752,24 @@ typedef struct Mesh_System
 } Mesh_System;
 
 
+typedef struct pipeline_cache_file_header
+{
+    u32 magic; // an arbitrary magic header to make sure this is actually our file
+    u32 data_size; // equal to *pDataSize returned by vkGetPipelineCacheData
+
+    u32 vendor_id; // equal to VkPhysicalDeviceProperties::vendorID
+    u32 device_id; // equal to VkPhysicalDeviceProperties::deviceID
+    u32 driver_version; // equal to VkPhysicalDeviceProperties::driverVersion
+    u32 driver_abi; // equal to sizeof(void*)
+
+    u8 uuid[VK_UUID_SIZE]; // equal to VkPhysicalDeviceProperties::pipelineCacheUUID
+} pipeline_cache_file_header;
+
+typedef struct vulkan_pipeline_cache
+{
+    VkPipelineCache handle;
+} vulkan_pipeline_cache;
+
 typedef struct renderer
 {
     camera main_camera;
@@ -775,6 +793,8 @@ typedef struct renderer
     vulkan_context context;
 
     //pipelines
+    vulkan_pipeline_cache* pipeline_cache;
+
     vulkan_shader_pipeline indirect_mesh_pipeline;
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;

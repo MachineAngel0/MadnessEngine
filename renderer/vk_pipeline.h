@@ -2,8 +2,6 @@
 #define VK_PIPELINE_H
 
 
-
-
 bool vulkan_graphics_pipeline_create(
     vulkan_context* context,
     vulkan_renderpass* renderpass,
@@ -24,6 +22,17 @@ void vulkan_pipeline_graphics_bind(vulkan_command_buffer* command_buffer, vulkan
 
 void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
 
+
+
+const char* pipeline_cache_file_path = "../renderer/pipeline_cache.bin";
+
+u32 pipeline_cache_magic_number = 42069;
+
+void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_cache* pipeline_info, u8** pipeline_cache_data, size_t* pipeline_cache_size);
+
+vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer);
+
+void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cache* pipeline_cache);
 
 
 #endif

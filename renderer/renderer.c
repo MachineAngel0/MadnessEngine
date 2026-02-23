@@ -7,6 +7,7 @@
 #include "vk_command_buffer.h"
 #include "vk_framebuffer.h"
 #include "vk_image.h"
+#include "vk_pipeline.h"
 #include "vk_renderpass.h"
 #include "vk_shader.h"
 #include "vk_sync.h"
@@ -118,14 +119,18 @@ bool renderer_init(struct renderer_app* renderer_inst)
     renderer_internal.mesh_system = mesh_system_init(&renderer_internal);
 
 
-    //TODO: should be initialized after the renderer
+    //TODO: should be initialized outside and after the renderer
     madness_ui_init(&renderer_internal);
 
-
+    renderer_internal.pipeline_cache = vulkan_pipeline_cache_initialize(&renderer_internal);
 
     //Pipelines
-    ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline);
-    text_shader_create(&renderer_internal, &renderer_internal.text_pipeline);
+    ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline, renderer_internal.pipeline_cache);
+    text_shader_create(&renderer_internal, &renderer_internal.text_pipeline, renderer_internal.pipeline_cache);
+    mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline, renderer_internal.pipeline_cache);
+    //Pipeline Cache
+    vulkan_pipeline_cache_write_to_file(&renderer_internal, renderer_internal.pipeline_cache);
+
 
     //INDIRECT DRAW
     // mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
@@ -139,12 +144,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
 
 
-    //TODO: move into the mesh system init
-    vulkan_mesh_indirect_shader_create(&renderer_internal, renderer_internal.mesh_system, &renderer_internal.indirect_mesh_pipeline);
-
-
     INFO("VULKAN RENDERER INITIALIZED");
-
 
 
     return true;

@@ -10,11 +10,12 @@ void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeli
 void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, vulkan_shader_pipeline* pipeline);
 
 
-bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_system, vulkan_shader_pipeline* mesh_indirect_pipeline);
+bool mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
+                                 pipeline_cache);
 
 //NOTE: Might be able to change these into more generic sprites
-bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline);
-bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline);
+bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache);
+bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache);
 
 
 

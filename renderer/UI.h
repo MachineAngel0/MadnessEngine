@@ -211,6 +211,7 @@ typedef struct UI_Text_Draw_Data
 } UI_Text_Draw_Data;
 
 
+ARRAY_GENERATE_TYPE(UI_Node)
 
 typedef struct UI_System
 {
@@ -225,9 +226,7 @@ typedef struct UI_System
     UI_Node** ui_stack;
     u32 ui_stack_count;
     u32 ui_stack_capacity;
-    UI_Node* ui_nodes_array;
-    u32 ui_nodes_array_count;
-    u32 ui_nodes_array_capacity;
+    UI_Node_array* ui_nodes;
 
 
     UI_ID hot;
@@ -240,7 +239,7 @@ typedef struct UI_System
     i16 mouse_pos_x;
     i16 mouse_pos_y;
 
-    vec2 screen_size;
+    vec2 screen_size; // this gets queried every frame
 
     UI_Quad_Draw_Data quad_draw_info;
     UI_Text_Draw_Data text_draw_info;

@@ -49,6 +49,7 @@
 #include "../core/dsa/arena_freelist.h"
 #include "../core/dsa/arena_pool.h"
 #include "../core/dsa/array.h"
+#include "../core/dsa/array_new.h"
 #include "../core/dsa/b_tree_red_black.h"
 #include "../core/dsa/binary_tree.h"
 #include "../core/dsa/darray.h"

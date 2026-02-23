@@ -26,7 +26,6 @@ Array* _array_create(const u64 data_stride, const u64 capacity, const char* type
 }
 
 
-
 bool _array_type_check(Array* array, const char* type_name)
 {
 #ifndef NDEBUG
@@ -262,10 +261,12 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 
+
+
+
 void array_test()
 {
     TEST_START("ARRAY");
-
 
     Array* balling_arr = array_create(int, 10);
     array_type_check(balling_arr, int);
@@ -346,5 +347,3 @@ void array_test()
 
     TEST_REPORT("ARRAY");
 }
-
-

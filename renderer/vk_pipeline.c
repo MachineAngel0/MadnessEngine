@@ -209,3 +209,169 @@ void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_
 {
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle);
 }
+
+void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_cache* pipeline_info,
+                                          u8** pipeline_cache_data, size_t* pipeline_cache_size)
+{
+    pipeline_cache_file_header pipeline_cache_prefix_header; //TODO: load data from file if any are available, and verify if the pipeline caches are the same
+    FILE* fptr = fopen(pipeline_cache_file_path, "rb");
+    if (!fptr)
+    {
+        WARN("VULKAN_PIPELINE_CACHE_READ_FROM_FILE: COULD NOT OPEN FILE")
+        return;
+    }
+
+    bool is_valid_cache_data = true;
+    //read in the header
+    size_t read_size = fread(
+        &pipeline_cache_prefix_header, 1, sizeof(pipeline_cache_file_header),
+         fptr);
+
+    if (read_size != sizeof(pipeline_cache_file_header))
+    {
+        fclose(fptr);
+        return;
+    }
+
+    //file verification
+    //valid the pipeline header and pipeline info, if everything is fine we can read in the pipeline cache data
+    if (pipeline_cache_prefix_header.magic != pipeline_cache_magic_number)
+    {
+        is_valid_cache_data = false;
+    }
+    if (pipeline_cache_prefix_header.data_size < 0)
+    {
+        is_valid_cache_data = false;
+    }
+    if (pipeline_cache_prefix_header.vendor_id != renderer->context.device.properties.vendorID)
+    {
+        is_valid_cache_data = false;
+    }
+    if (pipeline_cache_prefix_header.device_id != renderer->context.device.properties.deviceID)
+    {
+        is_valid_cache_data = false;
+    }
+    if (pipeline_cache_prefix_header.driver_version != renderer->context.device.properties.
+                                                                 driverVersion)
+    {
+        is_valid_cache_data = false;
+    }
+    if (pipeline_cache_prefix_header.driver_abi != sizeof(void*))
+    {
+        is_valid_cache_data = false;
+    }
+    if (memcmp(pipeline_cache_prefix_header.uuid, renderer->context.device.properties.pipelineCacheUUID, sizeof(pipeline_cache_prefix_header.uuid)) != 0)
+    {
+        is_valid_cache_data = false;
+    }
+
+    if (!is_valid_cache_data)
+    {
+        INFO("INVALID PIPELINE CACHE LOADED");
+        fclose(fptr);
+        return;
+    }
+    INFO("VALID PIPELINE CACHE LOADED");
+
+    //read in the data
+    *pipeline_cache_size = pipeline_cache_prefix_header.data_size;
+    *pipeline_cache_data = arena_alloc(&renderer->arena, pipeline_cache_prefix_header.data_size);
+    size_t read_size2 = fread(*pipeline_cache_data, 1, pipeline_cache_prefix_header.data_size, fptr);
+    if (read_size2 != pipeline_cache_prefix_header.data_size)
+    {
+        WARN("VULKAN PIPELINE system init: didn't read correct amount of data from the file")
+        pipeline_cache_size = 0;
+        *pipeline_cache_data = NULL;
+    }
+
+    fclose(fptr);
+
+
+
+}
+
+vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer)
+{
+    vulkan_pipeline_cache* pipeline_info = arena_alloc(&renderer->arena, sizeof(vulkan_pipeline_cache));
+
+    u8* pipeline_cache_data = NULL;
+    size_t pipeline_cache_data_size = 0;
+
+    //check if we have a valid pipeline
+    vulkan_pipeline_cache_read_from_file(renderer, pipeline_info, &pipeline_cache_data, &pipeline_cache_data_size);
+
+
+    VkPipelineCacheCreateInfo pipeline_cache_create_info = {0};
+    pipeline_cache_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    //these params are for when we load already existing data from a file
+    pipeline_cache_create_info.flags = 0;
+    pipeline_cache_create_info.pNext = NULL;
+    pipeline_cache_create_info.initialDataSize = pipeline_cache_data_size;
+    pipeline_cache_create_info.pInitialData = pipeline_cache_data;
+
+    VkResult result = vkCreatePipelineCache(
+        renderer->context.device.logical_device,
+        &pipeline_cache_create_info,
+        renderer->context.allocator,
+        &pipeline_info->handle);
+
+    VK_CHECK(result)
+
+    INFO("PIPELINE CACHE INITIALIZED");
+
+    return pipeline_info;
+}
+
+void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cache* pipeline_cache)
+{
+    //get the pipeline cache data, and write it out to a file
+
+    //must be called twice, once to get the data size, and second to get the data
+    size_t data_size; // in bytes
+    u8* data;
+    VkResult result = vkGetPipelineCacheData(renderer->context.device.logical_device, pipeline_cache->handle,
+                                             &data_size,
+                                             NULL);
+    VK_CHECK(result)
+
+    data = arena_alloc(&renderer->frame_arena, data_size);
+
+    VkResult result2 = vkGetPipelineCacheData(renderer->context.device.logical_device, pipeline_cache->handle,
+                                              &data_size,
+                                              data);
+    VK_CHECK(result2)
+
+
+    //generate new header data, even if we do technically have a valid one if was loaded on startup
+    pipeline_cache_file_header new_file_header;
+    new_file_header.magic = pipeline_cache_magic_number;
+    new_file_header.data_size = data_size;
+    new_file_header.device_id = renderer->context.device.properties.deviceID;
+    new_file_header.driver_version = renderer->context.device.properties.driverVersion;
+    new_file_header.driver_abi = sizeof(void*);
+    new_file_header.vendor_id =  renderer->context.device.properties.vendorID;
+    memcpy(new_file_header.uuid, renderer->context.device.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
+
+    //write into the file
+    FILE* fptr = fopen(pipeline_cache_file_path, "wb");
+    if (!fptr)
+    {
+        WARN("VULKAN PIPELINE CACHE WRITE TO FILE: COULDNT OPEN FILE")
+        fclose(fptr);
+        return;
+    }
+
+    //write header into the file
+    size_t header_data_written = fwrite(&new_file_header, 1, sizeof(new_file_header), fptr);
+
+    //write data into the file
+    while (data_size > 0)
+    {
+        size_t data_written = fwrite(data, 1, data_size, fptr);
+        data_size -= data_written;
+    }
+
+    fclose(fptr);
+    INFO("PIPELINE CACHE WRITTEN TO FILE");
+
+}

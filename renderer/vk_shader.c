@@ -21,7 +21,8 @@ VkShaderModule create_shader_module(const vulkan_context* context, const char* s
     return shader_module;
 }
 
-bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_system, vulkan_shader_pipeline* mesh_indirect_pipeline)
+bool mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
+                                 pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -262,7 +263,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_sy
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &mesh_indirect_pipeline->handle);
 
@@ -281,7 +282,7 @@ bool vulkan_mesh_indirect_shader_create(renderer* renderer, Mesh_System* mesh_sy
     return true;
 }
 
-bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline)
+bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -519,7 +520,7 @@ bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline)
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &ui_pipeline->handle);
     if (graphics_result != VK_SUCCESS)
@@ -546,7 +547,7 @@ bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline)
 }
 
 
-bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline)
+bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -793,7 +794,7 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, VK_NULL_HANDLE, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &text_pipeline->handle);
 

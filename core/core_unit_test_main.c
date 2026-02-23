@@ -11,9 +11,10 @@ int main(void)
     arena_test();
     arena_stack_test();
 
+    array_macro_test();
 
-    _darray_test();
     array_test();
+    _darray_test();
 
     //TODO: units tests and finish up the dsa's remaining
     // arena_test();
