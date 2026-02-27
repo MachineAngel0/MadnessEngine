@@ -16,7 +16,7 @@ bool mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mes
 //NOTE: Might be able to change these into more generic sprites
 bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache);
 bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache);
-
+bool sprite_shader_create(renderer* renderer, vulkan_shader_pipeline* sprite_pipeline, vulkan_pipeline_cache* pipeline_cache);
 
 
 

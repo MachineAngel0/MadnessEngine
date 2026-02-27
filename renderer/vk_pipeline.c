@@ -1,7 +1,6 @@
 ﻿#include "vk_pipeline.h"
 
 
-
 bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass* renderpass,
                                      u32 attribute_count,
                                      VkVertexInputAttributeDescription* attributes,
@@ -66,7 +65,7 @@ bool vulkan_graphics_pipeline_create(vulkan_context* context, vulkan_renderpass*
     color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
 
     color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO
@@ -200,7 +199,7 @@ void vulkan_pipeline_bind(vulkan_command_buffer* command_buffer, VkPipelineBindP
 }
 
 void vulkan_pipeline_graphics_bind(vulkan_command_buffer* command_buffer,
-                          vulkan_shader_pipeline* pipeline)
+                                   vulkan_shader_pipeline* pipeline)
 {
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle);
 }
@@ -213,7 +212,8 @@ void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_
 void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_cache* pipeline_info,
                                           u8** pipeline_cache_data, size_t* pipeline_cache_size)
 {
-    pipeline_cache_file_header pipeline_cache_prefix_header; //TODO: load data from file if any are available, and verify if the pipeline caches are the same
+    pipeline_cache_file_header pipeline_cache_prefix_header;
+    //TODO: load data from file if any are available, and verify if the pipeline caches are the same
     FILE* fptr = fopen(pipeline_cache_file_path, "rb");
     if (!fptr)
     {
@@ -225,7 +225,7 @@ void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_ca
     //read in the header
     size_t read_size = fread(
         &pipeline_cache_prefix_header, 1, sizeof(pipeline_cache_file_header),
-         fptr);
+        fptr);
 
     if (read_size != sizeof(pipeline_cache_file_header))
     {
@@ -235,32 +235,18 @@ void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_ca
 
     //file verification
     //valid the pipeline header and pipeline info, if everything is fine we can read in the pipeline cache data
-    if (pipeline_cache_prefix_header.magic != pipeline_cache_magic_number)
+    if (pipeline_cache_prefix_header.magic != pipeline_cache_magic_number ||
+        pipeline_cache_prefix_header.data_size < 0 ||
+        pipeline_cache_prefix_header.vendor_id != renderer->context.device.properties.vendorID ||
+        pipeline_cache_prefix_header.device_id != renderer->context.device.properties.deviceID ||
+        pipeline_cache_prefix_header.driver_version != renderer->context.device.properties.driverVersion ||
+        pipeline_cache_prefix_header.driver_abi != sizeof(void*))
     {
         is_valid_cache_data = false;
     }
-    if (pipeline_cache_prefix_header.data_size < 0)
-    {
-        is_valid_cache_data = false;
-    }
-    if (pipeline_cache_prefix_header.vendor_id != renderer->context.device.properties.vendorID)
-    {
-        is_valid_cache_data = false;
-    }
-    if (pipeline_cache_prefix_header.device_id != renderer->context.device.properties.deviceID)
-    {
-        is_valid_cache_data = false;
-    }
-    if (pipeline_cache_prefix_header.driver_version != renderer->context.device.properties.
-                                                                 driverVersion)
-    {
-        is_valid_cache_data = false;
-    }
-    if (pipeline_cache_prefix_header.driver_abi != sizeof(void*))
-    {
-        is_valid_cache_data = false;
-    }
-    if (memcmp(pipeline_cache_prefix_header.uuid, renderer->context.device.properties.pipelineCacheUUID, sizeof(pipeline_cache_prefix_header.uuid)) != 0)
+
+    if (memcmp(pipeline_cache_prefix_header.uuid, renderer->context.device.properties.pipelineCacheUUID,
+               sizeof(pipeline_cache_prefix_header.uuid)) != 0)
     {
         is_valid_cache_data = false;
     }
@@ -285,9 +271,6 @@ void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_ca
     }
 
     fclose(fptr);
-
-
-
 }
 
 vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer)
@@ -349,7 +332,7 @@ void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cac
     new_file_header.device_id = renderer->context.device.properties.deviceID;
     new_file_header.driver_version = renderer->context.device.properties.driverVersion;
     new_file_header.driver_abi = sizeof(void*);
-    new_file_header.vendor_id =  renderer->context.device.properties.vendorID;
+    new_file_header.vendor_id = renderer->context.device.properties.vendorID;
     memcpy(new_file_header.uuid, renderer->context.device.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
 
     //write into the file
@@ -373,5 +356,4 @@ void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cac
 
     fclose(fptr);
     INFO("PIPELINE CACHE WRITTEN TO FILE");
-
 }

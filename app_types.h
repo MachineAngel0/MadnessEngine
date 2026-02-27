@@ -25,6 +25,21 @@ typedef struct app_config
 }app_config;
 
 
+typedef struct application_base
+{
+    app_config app_config;
+    platform_state* plat_state;
+}application_base;
+
+
+
+
+
+
+
+//TODO: everything below is old and should be replace
+
+
 typedef struct game_app {
     // The application configuration.
     app_config app_config;

@@ -413,10 +413,10 @@ typedef struct Buffer_System
 
     //we can have a one to one mapping from buffers -> staging buffers
     //given how we might use this, it would be ok to have holes in the array
+    //TODO: freelist instead of keeping a count, and we might want to differentiate these by size
     vulkan_buffer* staging_buffers;
     u32 staging_buffers_size; // total we have to be given out
     u32 staging_buffer_current_count; // current amount given out
-
 
     //TODO: queries for size
     /*
@@ -798,6 +798,7 @@ typedef struct renderer
     vulkan_shader_pipeline indirect_mesh_pipeline;
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
+    vulkan_shader_pipeline sprite_pipeline;
 } renderer;
 
 

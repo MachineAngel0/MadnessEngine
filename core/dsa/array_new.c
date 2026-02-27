@@ -13,6 +13,11 @@ typedef struct u8_internal_array
 
 u8_internal_array* _u8_internal_array_create(u64 capacity)
 {
+    if (capacity <= 0)
+    {
+        WARN("ARRAY MACRO CREATE: INVALID CAPACITY")
+        return NULL;
+    }
     u8_internal_array* arr = malloc(sizeof(u8_internal_array));
     memset(arr, 0, sizeof(u8_internal_array));
     arr->data = malloc(sizeof(u8) * capacity);
@@ -74,6 +79,20 @@ void _u8_internal_array_zero(u8_internal_array* array)
     memset(array->data, 0, array->stride * array->capacity);
 }
 
+u64 _u8_internal_array_get_bytes_used(u8_internal_array* array)
+{
+    if (!array)
+    {
+        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")
+        return 0;
+    }
+    return array->num_items * array->stride;
+}
+
+
+
+
+
 
 typedef struct u8_internal_array_slice
 {
@@ -88,7 +107,7 @@ u8_internal_array_slice _u8_internal_array_slice_create(u8_internal_array* array
 }
 
 u8_internal_array_slice _u8_internal_array_slice_create_offset(u8_internal_array* array, u64 slice_start,
-                                                              u64 slice_length)
+                                                               u64 slice_length)
 {
     MASSERT(slice_start < array->capacity)
     MASSERT(slice_length <= array->capacity);
@@ -120,9 +139,12 @@ void array_macro_test()
         _u8_internal_array_push(arr_internal, &val);
     }
 
+    TEST_DEBUG((sizeof(u8) * test_capacity) == _u8_internal_array_get_bytes_used(arr_internal));
+    TEST_DEBUG((sizeof(u8) * test_capacity) == u8_array_get_bytes_used(arr));
+
     for (int i = 0; i < test_capacity; i++)
     {
-        TEST_DEBUG(arr->data[i] == arr_internal->data[i] );
+        TEST_DEBUG(arr->data[i] == arr_internal->data[i]);
     }
 
     for (int i = 0; i < test_capacity; i++)
@@ -148,11 +170,11 @@ void array_macro_test()
 
     for (u64 i = 0; i < slice.length; i++)
     {
-        TEST_DEBUG(slice.ptr[i] ==  slice_internal.ptr[i] );
+        TEST_DEBUG(slice.ptr[i] == slice_internal.ptr[i]);
     }
     for (u64 i = 0; i < slice_internal.length; i++)
     {
-        TEST_DEBUG(slice.ptr[i] ==  slice_internal.ptr[i] );
+        TEST_DEBUG(slice.ptr[i] == slice_internal.ptr[i]);
     }
 
 

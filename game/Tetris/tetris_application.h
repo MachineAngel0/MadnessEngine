@@ -1,9 +1,9 @@
-﻿#include "app_types.h"
-#include "platform/platform.h"
+﻿
 #include "clock.h"
-#include "core/platform/event.h"
-#include "core/platform/input.h"
-#include "core/platform/audio.h"
+#include "event.h"
+#include "input.h"
+#include "Tetris.h"
+#include "memory/memory_system.h"
 
 typedef struct application_state
 {
@@ -30,7 +30,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, ev
 bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
 
 
-bool application_renderer_create(struct renderer_app* renderer)
+bool tetris_application_create(struct renderer_app* renderer)
 {
     //TODO: refactored out, just here now for testing
     // init_windows_audio();
@@ -76,6 +76,9 @@ bool application_renderer_create(struct renderer_app* renderer)
     {
         return false;
     }
+
+
+
     app_state.renderer->plat_state = &app_state.platform;
 
     if (!app_state.renderer->renderer_initialize(app_state.renderer))
@@ -90,7 +93,7 @@ bool application_renderer_create(struct renderer_app* renderer)
 
     clock_start(&app_state.clock);
 
-    application_renderer_run();
+    tetris_application_update();
 
 
     /***SHUTDOWN***/
@@ -99,7 +102,7 @@ bool application_renderer_create(struct renderer_app* renderer)
 
 
     //shutdown subsystems
-    audio_system_shutdown();
+    // audio_system_shutdown();
     input_shutdown();
     event_shutdown();
 
@@ -111,7 +114,7 @@ bool application_renderer_create(struct renderer_app* renderer)
 }
 
 
-void application_renderer_run()
+void tetris_application_update()
 {
     while (app_state.is_running)
     {
@@ -120,6 +123,8 @@ void application_renderer_run()
 
         input_update();
         platform_pump_messages(&app_state.platform);
+
+        tetris_update();
 
         //vulkan will crash if you minimize the window
         if (app_state.is_suspended)
@@ -228,45 +233,4 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
 
     // Event purposely not handled to allow other listeners to get this.
     return false;
-}
-
-
-typedef bool (renderer_initialize)(renderer_app*);
-typedef void (renderer_run)(renderer_app*, Clock* clock);
-typedef void (renderer_terminate)(renderer_app*);
-typedef void (renderer_resize)(renderer_app*, u32, u32);
-
-
-
-void create_renderer(struct renderer_app* renderer_out)
-{
-    renderer_out->app_config.start_pos_x = 100;
-    renderer_out->app_config.start_pos_y = 100;
-    renderer_out->app_config.start_width = 1280;
-    renderer_out->app_config.start_height = 720;
-    renderer_out->app_config.name = "Madness Engine Renderer";
-
-
-    DLL_HANDLE render_lib_handle = platform_load_dynamic_library("./libMADNESSRENDERER");
-
-    renderer_out->renderer_initialize = (renderer_initialize *) platform_get_function_address(render_lib_handle, "renderer_init");
-    renderer_out->renderer_run = (renderer_run *) platform_get_function_address(render_lib_handle, "renderer_update");
-    renderer_out->renderer_shutdown = (renderer_terminate *)platform_get_function_address(render_lib_handle,"renderer_shutdown");
-    renderer_out->on_resize = (renderer_resize *) platform_get_function_address(render_lib_handle, "renderer_on_resize");
-    if (!renderer_out->renderer_initialize)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER INITIALIZATION")
-    }
-    if (!renderer_out->renderer_run)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER RUN")
-    }
-    if (!renderer_out->renderer_shutdown)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER SHUTDOWN")
-    }
-    if (!renderer_out->on_resize)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER RESIZE")
-    }
 }

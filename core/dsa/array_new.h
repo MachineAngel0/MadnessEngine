@@ -17,6 +17,11 @@
 #define _array_create_macro(type)\
     type##_array* type##_array_create(u64 capacity) \
     { \
+        if (capacity <= 0)\
+        {\
+            WARN("ARRAY MACRO CREATE: INVALID CAPACITY")\
+            return NULL;\
+        } \
         type##_array* arr = malloc(sizeof(type##_array)); \
         memset(arr, 0, sizeof(type##_array)); \
         arr->data = malloc(sizeof(type) * capacity); \
@@ -79,8 +84,16 @@
         }\
         memset(array->data, 0, array->stride * array->capacity);\
     }
-
-
+#define _array_get_bytes_used(type)\
+    u64 type##_array_get_bytes_used(type##_array* array)\
+    {\
+        if (!array)\
+        {\
+        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")\
+        return 0;\
+        }\
+        return array->num_items * array->stride;\
+    }
 #define _array_slice_macro(type) \
     typedef struct type##_array_slice{\
         u64 length;\
@@ -109,6 +122,7 @@
     _array_pop_macro(type)\
     _array_clear_macro(type)\
     _array_zero_macro(type)\
+    _array_get_bytes_used(type) \
     \
     _array_slice_macro(type)
 
@@ -134,9 +148,6 @@ ARRAY_GENERATE_TYPE(bool)
 
 
 void array_macro_test();
-
-
-
 
 
 #endif

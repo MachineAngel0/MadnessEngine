@@ -143,6 +143,8 @@ typedef struct UI_Node
     const char* debug_id;
 } UI_Node;
 
+ARRAY_GENERATE_TYPE(UI_Node)
+
 typedef struct UI_ID
 {
     int ID;
@@ -211,7 +213,6 @@ typedef struct UI_Text_Draw_Data
 } UI_Text_Draw_Data;
 
 
-ARRAY_GENERATE_TYPE(UI_Node)
 
 typedef struct UI_System
 {
@@ -351,9 +352,9 @@ void madness_ui_test2(renderer* renderer);
 void madness_ui_open_node(const char* id, UI_Config config);
 void madness_ui_close_node(const char* id);
 void madness_ui_calculate_positions(void);
-void madness_ui_generate_draw_data(void);
 
 //Vulkan
+void madness_ui_generate_draw_data(void);
 void madness_ui_draw(renderer* renderer, vulkan_command_buffer* command_buffer);
 void madness_ui_generate_debug_data(void);
 

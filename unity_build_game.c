@@ -2,7 +2,8 @@
 
 
 //CORE
-#include "core/core_unity.c"
+#include "core/build_core.h"
+#include "core/build_core.c"
 
 //GAME
 #include "game/game_unity.c"

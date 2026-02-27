@@ -24,7 +24,8 @@ bool renderer_init(struct renderer_app* renderer_inst)
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
     void* renderer_system_mem = memory_system_alloc(renderer_system_mem_requirement);
-    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
+    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement,
+               MEMORY_SUBSYSTEM_RENDERER);
 
     u64 frame_arena_mem_size = GB(0.5);
     void* frame_arena_mem = memory_system_alloc(renderer_system_mem_requirement);
@@ -88,7 +89,6 @@ bool renderer_init(struct renderer_app* renderer_inst)
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
 
-
     // Create command buffers.
     vulkan_renderer_command_buffers_create(vk_context);
 
@@ -102,7 +102,8 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 
     //BUFFER SYSTEM
-    renderer_internal.buffer_system = buffer_system_init(&renderer_internal, renderer_internal.context.swapchain.max_frames_in_flight);
+    renderer_internal.buffer_system = buffer_system_init(&renderer_internal,
+                                                         renderer_internal.context.swapchain.max_frames_in_flight);
     /*for (u32 i = 0; i < renderer_internal.buffer_system->frames_in_flight; i++)
     {
         Buffer_Handle temp_buffer_handle = renderer_internal.buffer_system->global_ubo_handle;
@@ -127,7 +128,9 @@ bool renderer_init(struct renderer_app* renderer_inst)
     //Pipelines
     ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline, renderer_internal.pipeline_cache);
     text_shader_create(&renderer_internal, &renderer_internal.text_pipeline, renderer_internal.pipeline_cache);
-    mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline, renderer_internal.pipeline_cache);
+    sprite_shader_create(&renderer_internal, &renderer_internal.sprite_pipeline, renderer_internal.pipeline_cache);
+    mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline,
+                                renderer_internal.pipeline_cache);
     //Pipeline Cache
     vulkan_pipeline_cache_write_to_file(&renderer_internal, renderer_internal.pipeline_cache);
 
@@ -138,7 +141,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     // mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     // mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh_load_gltf(&renderer_internal, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
-    mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
+    mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -266,8 +269,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
                           renderer_internal.light_system->directional_light_storage_buffer_handle)->handle);
 
     VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-        vulkan_buffer_get(&renderer_internal,
-                          renderer_internal.light_system->point_light_storage_buffer_handle)->handle);
+                                                                           vulkan_buffer_get(&renderer_internal,
+                                                                               renderer_internal.light_system->
+                                                                               point_light_storage_buffer_handle)->
+                                                                           handle);
 
     ubo.directional_lights_address = directional_light_buffer_address;
     ubo.point_lights_address = point_light_buffer_address;
@@ -276,12 +281,12 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     ubo.render_mode = renderer_internal.mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    vulkan_buffer* ubo_buffer = vulkan_buffer_get(&renderer_internal, renderer_internal.buffer_system->global_ubo_handle);
+    vulkan_buffer* ubo_buffer = vulkan_buffer_get(&renderer_internal,
+                                                  renderer_internal.buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
     mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
-
 
 
     // Begin recording commands.
@@ -292,23 +297,23 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                             vk_context.swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                             VK_IMAGE_LAYOUT_UNDEFINED,
-                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
+                                vk_context.swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                             vk_context.swapchain.depth_attachment.texture_image, 0,
-                             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                             VK_IMAGE_LAYOUT_UNDEFINED,
-                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                             (VkImageSubresourceRange){
-                                 VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
-                             }
+                                vk_context.swapchain.depth_attachment.texture_image, 0,
+                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                (VkImageSubresourceRange){
+                                    VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+                                }
     );
 
     //
@@ -381,7 +386,8 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame, &renderer_internal.indirect_mesh_pipeline);
+    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame,
+                     &renderer_internal.indirect_mesh_pipeline);
 
     madness_ui_draw(&renderer_internal, command_buffer_current_frame);
     // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
@@ -396,10 +402,10 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                             vk_context.swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
-                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
-                             (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+                                vk_context.swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
+                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+                                (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
     // End renderpass
 
@@ -407,7 +413,6 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
     // vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);
     // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
     // vulkan_renderpass_UI_end(&renderer_internal, command_buffer_current_frame, image_index);
-
 
 
     //End DRAW COMMAND
@@ -562,8 +567,6 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
 
 
     INFO("RENDERER SHUTDOWN");
-
-
 }
 
 
