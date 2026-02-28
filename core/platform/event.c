@@ -2,12 +2,12 @@
 
 
 
-bool event_init()
+bool event_init(Memory_System* memory_system)
 {
     INFO("EVENT SYSTEM INIT")
 
     u64 event_system_mem_requirement = MB(1);
-    void* event_system_mem = memory_system_alloc(event_system_mem_requirement);
+    void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement);
     arena_init(&event_system_internal.event_system_arena, event_system_mem, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
 
 

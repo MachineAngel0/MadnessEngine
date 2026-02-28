@@ -219,6 +219,9 @@ typedef struct UI_System
     Arena* arena; // rn mainly just for loading fonts, would be better a pool arena
     Frame_Arena* frame_arena;
 
+
+    Input_System* input_system_reference; // does not own memory
+
     //this should be an array at some point
     Madness_Font default_font;
     float default_font_size;

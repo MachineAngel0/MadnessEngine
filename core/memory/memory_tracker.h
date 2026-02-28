@@ -70,32 +70,31 @@ static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
 };
 
 
-typedef struct memory_tracker
+typedef struct Memory_Tracker
 {
     //keep track of memory in use
     u64 memory_container_usage[MEMORY_CONTAINER_MAX];
     u64 memory_container_size;
     u64 memory_subsystem_usage[MEMORY_SUBSYSTEM_MAX];
     u64 memory_subsystem_size;
-} memory_tracker;
+} Memory_Tracker;
 
 
-static memory_tracker memory;
+static Memory_Tracker memory_tracker;
 static bool memory_tracker_initialized = false;
 
-bool memory_tracker_init(void)
-;
+bool memory_tracker_init(void);
 
 bool memory_tracker_shutdown(void);
 
-bool memory_tracker_container_alloc(const memory_container_type type, const u64 size);
+bool memory_tracker_container_alloc(memory_container_type type, u64 size);
 
 
-bool memory_tracker_container_free(const memory_container_type type, const u64 size);
+bool memory_tracker_container_free(memory_container_type type, u64 size);
 
-bool memory_tracker_subsystem_alloc(const memory_subsystem_type type, const u64 size);
+bool memory_tracker_subsystem_alloc(memory_subsystem_type type, u64 size);
 
-bool memory_tracker_subsystem_free(const memory_subsystem_type type, const u64 size);
+bool memory_tracker_subsystem_free(memory_subsystem_type type, u64 size);
 
 
 void memory_tracker_print_memory_usage(void);

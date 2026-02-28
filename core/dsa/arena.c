@@ -27,7 +27,7 @@ void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, c
 {
     //we pass in an already allocated chunk of memory in the event,
     //we want to pass in an already allocated arena memory, say a global arena, and then one for audio for something similar
-    a->memory = (uint8_t *) backing_buffer;
+    a->memory = (u8*) backing_buffer;
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
 

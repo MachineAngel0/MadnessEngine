@@ -47,7 +47,7 @@ bool tetris_application_create(struct renderer_app* renderer)
     u64 memory_request_size = GB(4);
     memory_system_init(memory_request_size);
 
-    memory_tracker_init();
+    memory_tracker_init(TODO);
 
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 

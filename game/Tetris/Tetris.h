@@ -58,15 +58,15 @@ typedef enum Tetromino_Type
 
 typedef enum TETRIS_COLOR
 {
-    WHITE,
-    BLUE_LIGHT,
-    YELLOW,
-    PURPLE,
-    GREEN,
-    RED,
-    ORANGE,
-    BLUE_DARK,
-    GREY,
+    TETRIS_COLOR_WHITE,
+    TETRIS_COLOR_BLUE_LIGHT,
+    TETRIS_COLOR_YELLOW,
+    TETRIS_COLOR_PURPLE,
+    TETRIS_COLOR_GREEN,
+    TETRIS_COLOR_RED,
+    TETRIS_COLOR_ORANGE,
+    TETRIS_COLOR_BLUE_DARK,
+    TETRIS_COLOR_GREY,
     TETRIS_COLOR_MAX,
 } TETRIS_COLOR;
 
@@ -81,26 +81,26 @@ typedef struct Tetris_Grid
 
 
 vec3 tetris_color_look_up_table[TETRIS_COLOR_MAX] = {
-    [WHITE] = COLOR_WHITE,
-    [BLUE_LIGHT] = vec3{0.0, 1.0, 1.0},
-    [YELLOW] = vec3{1.0, 1.0, 0.0},
-    [PURPLE] = vec3{0.5, 0.0, 1.0},
-    [GREEN] = vec3{0.0, 1.0, 0.0},
-    [RED] = vec3{1.0, 0.0, 0.0},
-    [ORANGE] = vec3{1.0, 0.5, 0.0},
-    [BLUE_DARK] = vec3{0.0, 0.0, 1.0},
-    [GREY] = vec3{0.5, 0.5, 0.5},
+    [TETRIS_COLOR_WHITE] = {1.0f, 1.0f, 1.0f},
+    [TETRIS_COLOR_BLUE_LIGHT] = {0.0f, 1.0f, 1.0f},
+    [TETRIS_COLOR_YELLOW] = {1.0f, 1.0f, 0.0f},
+    [TETRIS_COLOR_PURPLE] = {0.5f, 0.0f, 1.0f},
+    [TETRIS_COLOR_GREEN] = {0.0f, 1.0f, 0.0f},
+    [TETRIS_COLOR_RED] = {1.0f, 0.0f, 0.0f},
+    [TETRIS_COLOR_ORANGE] = {1.0f, 0.5f, 0.0f},
+    [TETRIS_COLOR_BLUE_DARK] = {0.0f, 0.0f, 1.0f},
+    [TETRIS_COLOR_GREY] = {0.5f, 0.5f, 0.5f},
 };
 
 
 TETRIS_COLOR TETROMINO_COLOR_LOOKUP[] = {
-    [Tetromino_Type_I] = BLUE_LIGHT,
-    [Tetromino_Type_O] = YELLOW,
-    [Tetromino_Type_T] = PURPLE,
-    [Tetromino_Type_S] = GREEN,
-    [Tetromino_Type_Z] = RED,
-    [Tetromino_Type_J] = ORANGE,
-    [Tetromino_Type_L] = BLUE_DARK,
+    [Tetromino_Type_I] = TETRIS_COLOR_BLUE_LIGHT,
+    [Tetromino_Type_O] = TETRIS_COLOR_YELLOW,
+    [Tetromino_Type_T] = TETRIS_COLOR_PURPLE,
+    [Tetromino_Type_S] = TETRIS_COLOR_GREEN,
+    [Tetromino_Type_Z] = TETRIS_COLOR_RED,
+    [Tetromino_Type_J] = TETRIS_COLOR_ORANGE,
+    [Tetromino_Type_L] = TETRIS_COLOR_BLUE_DARK,
 };
 
 

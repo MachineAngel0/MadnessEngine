@@ -20,23 +20,21 @@ typedef struct Memory_System
 } Memory_System;
 
 
-static Memory_System memory_system;
 
-
-void memory_system_init(u64 memory_request_size);
+MAPI void memory_system_init(Memory_System* memory_system, u64 memory_request_size);
 //should be the last system shutdown
-void memory_system_shutdown(void);
+MAPI void memory_system_shutdown(Memory_System* memory_system);
 //should only be called by larger subsystems like the renderer
-void* memory_system_alloc(const u64 memory_request_size);
+MAPI void* memory_system_alloc(Memory_System* memory_system,u64 memory_request_size);
 
 
-void memory_system_zero_memory(void* memory, u64 size);
+MAPI void memory_system_zero_memory(void* memory, u64 size);
 
 
-void memory_system_copy(void* dest, void* source, u64 size);
+MAPI void memory_system_copy(void* dest, void* source, u64 size);
 
 
-void memory_system_set(void* dest, i32 val, u64 size);
+MAPI void memory_system_set(void* dest, i32 val, u64 size);
 
 
 #endif //MEMORY_SYSTEM_H

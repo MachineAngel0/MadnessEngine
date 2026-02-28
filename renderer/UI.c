@@ -12,6 +12,8 @@ bool madness_ui_init(renderer* renderer)
     Madness_UI->arena = &renderer->arena;
     Madness_UI->frame_arena = &renderer->frame_arena;
 
+    Madness_UI->input_system_reference = renderer->input_system_debug;
+
     Madness_UI->quad_draw_info.index_type = VK_INDEX_TYPE_UINT16;
     Madness_UI->text_draw_info.index_type = VK_INDEX_TYPE_UINT16;
 
@@ -54,42 +56,42 @@ bool madness_ui_init(renderer* renderer)
     u32 ui_buffer_sizes = MB(1);
 
     Madness_UI->ui_quad_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_VERTEX, ui_buffer_sizes);
+                                                                    BUFFER_TYPE_VERTEX, ui_buffer_sizes);
     Madness_UI->ui_quad_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_INDEX, ui_buffer_sizes);
+                                                                   BUFFER_TYPE_INDEX, ui_buffer_sizes);
     Madness_UI->ui_quad_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_INDIRECT, ui_buffer_sizes);
+                                                                      BUFFER_TYPE_INDIRECT, ui_buffer_sizes);
     Madness_UI->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                ui_buffer_sizes);
+                                                                 ui_buffer_sizes);
     Madness_UI->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                               ui_buffer_sizes);
-    Madness_UI->text_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_CPU_STORAGE,
                                                                 ui_buffer_sizes);
+    Madness_UI->text_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                 BUFFER_TYPE_CPU_STORAGE,
+                                                                 ui_buffer_sizes);
     Madness_UI->text_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_INDIRECT,
-                                                                  ui_buffer_sizes);
+                                                                   BUFFER_TYPE_INDIRECT,
+                                                                   ui_buffer_sizes);
 
 
     Madness_UI->ui_quad_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
+                                                                            BUFFER_TYPE_STAGING, ui_buffer_sizes);
     Madness_UI->ui_quad_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING, ui_buffer_sizes);
+                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
     Madness_UI->ui_quad_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_STAGING, ui_buffer_sizes);
+                                                                              BUFFER_TYPE_STAGING, ui_buffer_sizes);
 
     Madness_UI->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        ui_buffer_sizes);
+                                                                         BUFFER_TYPE_STAGING,
+                                                                         ui_buffer_sizes);
     Madness_UI->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING,
-                                                                       ui_buffer_sizes);
-    Madness_UI->text_material_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                         BUFFER_TYPE_STAGING,
                                                                         ui_buffer_sizes);
+    Madness_UI->text_material_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                         BUFFER_TYPE_STAGING,
+                                                                         ui_buffer_sizes);
     Madness_UI->text_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING,
-                                                                          ui_buffer_sizes);
+                                                                           BUFFER_TYPE_STAGING,
+                                                                           ui_buffer_sizes);
 
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
     font_init(renderer, "c:/windows/fonts/arialbd.ttf");
@@ -145,7 +147,7 @@ void madness_ui_end(void)
     //printf("HOT ID: %d, HOT LAYER: %d\n", Madness_UI->hot.ID, Madness_UI->hot.layer);
     //printf("ACTIVE ID: %d, ACTIVE LAYER: %d\n", Madness_UI->active.ID, Madness_UI->active.layer);
 
-    if (input_is_mouse_button_released(MOUSE_BUTTON_LEFT))
+    if (input_is_mouse_button_released(Madness_UI->input_system_reference, MOUSE_BUTTON_LEFT))
     {
         //std::cout << "mouse released\n";
         Madness_UI->active.ID = -1;
@@ -153,7 +155,7 @@ void madness_ui_end(void)
 
 
     //update mouse state
-    Madness_UI->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
+    Madness_UI->mouse_down = input_is_mouse_button_pressed(Madness_UI->input_system_reference, MOUSE_BUTTON_LEFT);
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
     update_ui_mouse_pos();
@@ -423,11 +425,9 @@ void madness_ui_upload_draw_data(renderer* renderer)
 }
 
 
-
-
 void update_ui_mouse_pos(void)
 {
-    input_get_mouse_pos(&Madness_UI->mouse_pos_x, &Madness_UI->mouse_pos_y);
+    input_get_mouse_pos(Madness_UI->input_system_reference, &Madness_UI->mouse_pos_x, &Madness_UI->mouse_pos_y);
 }
 
 
@@ -971,9 +971,11 @@ void madness_ui_test()
     // Retrieved 2026-02-22, License - CC BY-SA 4.0
 
 
-    do_text(STRING("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"), (vec2){0, 70}, (vec2){10, 10},
-            COLOR_WHITE,
-            DEFAULT_FONT_SIZE);
+    do_text(
+        STRING("!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"),
+        (vec2){0, 70}, (vec2){10, 10},
+        COLOR_WHITE,
+        DEFAULT_FONT_SIZE);
 
     madness_ui_test2(&renderer_internal);
 
@@ -1131,21 +1133,21 @@ void madness_ui_test2(renderer* renderer)
     // ui_close_node(Madness_UI);
     // ui_close_node(Madness_UI);
 
-    Madness_UI( "1", parent1)
+    Madness_UI("1", parent1)
     {
-        Madness_UI( "2", child1)
+        Madness_UI("2", child1)
         {
         }
-        Madness_UI( "3", child2)
+        Madness_UI("3", child2)
         {
-            Madness_UI( "4", subchild)
+            Madness_UI("4", subchild)
             {
             }
-            Madness_UI( "5", subchild2)
+            Madness_UI("5", subchild2)
             {
             }
         }
-        Madness_UI( "3", child3)
+        Madness_UI("3", child3)
         {
         }
     }

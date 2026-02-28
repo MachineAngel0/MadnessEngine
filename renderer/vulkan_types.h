@@ -778,6 +778,9 @@ typedef struct renderer
     Arena arena; // total memory for the entire renderer
     Arena frame_arena;
 
+
+    Input_System* input_system_debug; //meant only to be used for debugging
+
     Shader_System* shader_system;
     Buffer_System* buffer_system;
     Light_System* light_system;

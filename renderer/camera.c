@@ -115,35 +115,35 @@ void process_mouse_scroll(camera* cam, float y_offset)
 void camera_update(camera* cam, float dt)
 {
     //TODO: This will need to be configurable at some point
-    if (input_is_key_pressed(KEY_W))
+    if (input_is_key_pressed(renderer_internal.input_system_debug, KEY_W))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_FORWARD, dt);
     }
-    if (input_is_key_pressed(KEY_S))
+    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_S))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_BACKWARD, dt);
     }
-    if (input_is_key_pressed(KEY_A))
+    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_A))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_LEFT, dt);
     }
-    if (input_is_key_pressed(KEY_D))
+    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_D))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_RIGHT, dt);
     }
 
     i16 x;
     i16 y;
-    input_get_mouse_change(&x, &y);
+    input_get_mouse_change(renderer_internal.input_system_debug,&x, &y);
     camera_process_mouse_movement(cam, dt, -x, -y, true);
 
 
     //TODO:this is bugged, its acting like on pressed
-    if (input_key_released_unique(KEY_Q))
+    if (input_key_released_unique(renderer_internal.input_system_debug,KEY_Q))
     {
         process_mouse_scroll(cam, -10.0f);
     }
-    if (input_key_released_unique(KEY_E))
+    if (input_key_released_unique(renderer_internal.input_system_debug,KEY_E))
     {
         process_mouse_scroll(cam, 10.0f);
     }

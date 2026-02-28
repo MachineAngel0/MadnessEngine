@@ -54,7 +54,7 @@ bool application_game_create(struct game_app* game)
 
 
     //on the stack, we want this first to make sure everything else if working
-    memory_tracker_init();
+    memory_tracker_init(TODO);
 
     app_state.application_memory_arena = arena_init_malloc(MB(64));
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")

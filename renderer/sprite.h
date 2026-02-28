@@ -72,6 +72,7 @@ typedef struct Sprite_Instance_Data
     //will be used for text and for anything else 2d that needs a texture
     // Transform transform; //TODO: when i make this more robust
     vec2 pos;
+    float rotation; // a float since we only rotate on one dimension, we can always change it later
     vec2 scale;
 
     // offset into a texture atlas if using one, otherwise {0, 0}

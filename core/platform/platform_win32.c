@@ -30,13 +30,22 @@ static LARGE_INTEGER start_time;
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
-bool platform_startup(platform_state* plat_state,
-                      const char* application_name,
-                      i32 x, i32 y,
-                      i32 width, i32 height)
+bool platform_startup(
+    platform_state* plat_state,
+    Input_System* input_system_reference,
+    const char* application_name,
+    i32 x, i32 y,
+    i32 width, i32 height)
 {
+
+
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state* state = (internal_state*)plat_state->internal_state;
+
+    if (input_system_reference)
+    {
+        plat_state->input_system = input_system_reference;
+    }
 
     state->h_instance = GetModuleHandleA(0);
 
@@ -57,7 +66,7 @@ bool platform_startup(platform_state* plat_state,
     if (!RegisterClassA(&wc))
     {
         MessageBoxA(0, "Window registration failed", "Error", MB_ICONEXCLAMATION | MB_OK);
-        return FALSE;
+        return false;
     }
 
     // Create window
@@ -93,14 +102,14 @@ bool platform_startup(platform_state* plat_state,
     HWND handle = CreateWindowExA(
         window_ex_style, "kohi_window_class", application_name,
         window_style, window_x, window_y, window_width, window_height,
-        0, 0, state->h_instance, 0);
+        0, 0, state->h_instance, plat_state);
 
     if (handle == 0)
     {
         MessageBoxA(NULL, "Window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
 
         FATAL("Window creation failed!");
-        return FALSE;
+        return false;
     }
     else
     {
@@ -124,7 +133,7 @@ bool platform_startup(platform_state* plat_state,
     clock_frequency = 1.0 / (f64)frequency.QuadPart;
     QueryPerformanceCounter(&start_time);
 
-    return TRUE;
+    return true;
 }
 
 void platform_shutdown(platform_state* plat_state)
@@ -155,7 +164,7 @@ bool platform_pump_messages(platform_state* plat_state)
 
 void* platform_allocate(u64 size, bool aligned)
 {
-    // VirtualAlloc(); //TODO:
+    // VirtualAlloc();
     return malloc(size);
 }
 
@@ -194,6 +203,27 @@ void platform_sleep(u64 ms)
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
+
+    //all this code before actually processing the message is to make sure the input system is getting any inputs
+    platform_state* plat_state = 0;
+    if (msg == WM_NCCREATE)
+    {
+        CREATESTRUCTA* create = (CREATESTRUCTA*)l_param;
+        plat_state = (platform_state*)create->lpCreateParams;
+        SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)plat_state);
+    }
+    else
+    {
+        plat_state = (platform_state*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    }
+
+    if (!plat_state)
+    {
+        return DefWindowProcA(hwnd, msg, w_param, l_param);
+    }
+
+    Input_System* input_system = plat_state->input_system;
+
     switch (msg)
     {
     case WM_ERASEBKGND:
@@ -267,7 +297,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
                 }
             }
 
-            input_process_key(key, pressed);
+            input_process_key(input_system, key, pressed);
         }
         break;
     case WM_MOUSEMOVE:
@@ -276,7 +306,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             i32 x_position = GET_X_LPARAM(l_param);
             i32 y_position = GET_Y_LPARAM(l_param);
 
-            input_process_mouse_move(x_position, y_position);
+            input_process_mouse_move(input_system,x_position, y_position);
         }
         break;
     case WM_MOUSEWHEEL:
@@ -286,7 +316,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             {
                 // Flatten the input to an OS-independent (-1, 1)
                 z_delta = (z_delta < 0) ? -1 : 1;
-                input_process_mouse_wheel(z_delta);
+                input_process_mouse_wheel(input_system,z_delta);
             }
         }
         break;
@@ -318,7 +348,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
             if (mouse_button != MOUSE_BUTTON_MAX_BUTTONS)
             {
-                input_process_mouse_button(mouse_button, pressed);
+                input_process_mouse_button(input_system,mouse_button, pressed);
             }
         }
         break;
@@ -334,7 +364,7 @@ typedef struct windows_file_handle
 } windows_file_handle;
 
 static windows_file_handle file_handles[100];
-static u32 file_handle_count = 0;
+static u32 file_handle_count = 1;
 
 char* platform_get_dynamic_library_extension(void)
 {
@@ -352,7 +382,7 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 {
     //its assumed the file does not have an extension name
 
-    DLL_HANDLE out_handle = {0, file_name};
+    DLL_HANDLE out_handle = {file_handle_count, file_name};
 
     //probably gonna have to have some sort of internal index for this
     windows_file_handle* file_info = &file_handles[file_handle_count];
@@ -367,10 +397,6 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
     }
 
 
-    //TODO:
-    // file_name + temp + dll
-    // DLL_HANDLE render_lib_handle = platform_load_dynamic_library("libMADNESSRENDERER.dll", "libMADNESSRENDERER_TEMP.dll");
-
     const char* dll_extension_name = platform_get_dynamic_library_extension();
 
     const char* intermediate_temp_name = c_string_concat(file_name, "_TEMP");
@@ -378,14 +404,17 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
     const char* final_file_name = c_string_concat(file_name, dll_extension_name);
     const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name);
 
-    CopyFile(final_file_name, temp_dll_name, 0);
-    // {
-    // WARN("FAILED TO COPY DLL from %s to %s. Error: %d", dll_file_name, temp_dll_name, GetLastError());
-    // return false;
-    // }
+    if (!CopyFile(final_file_name, temp_dll_name, 0))
+    {
+        WARN("FAILED TO COPY DLL from %s to %s. Error: %d", final_file_name, temp_dll_name, GetLastError());
+    }
 
     file_info->dll_handle = LoadLibraryA(temp_dll_name);
-    //TODO: Temp code
+    if (!file_info->dll_handle)
+    {
+        FATAL("FAILED TO LOAD DLL: %s. Error: %d", temp_dll_name, GetLastError());
+        out_handle.handle = 0;
+    }
     return out_handle;
 }
 

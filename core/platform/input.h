@@ -161,7 +161,7 @@ typedef struct mouse_state
     uint8_t buttons[MOUSE_BUTTON_MAX_BUTTONS];
 } mouse_state;
 
-typedef struct input_state
+typedef struct Input_System
 {
     keyboard_state keyboard_current;
     keyboard_state keyboard_previous;
@@ -172,64 +172,59 @@ typedef struct input_state
     // mouse_wheel_state mouse_wheel_current;
     // mouse_wheel_state mouse_wheel_previous;
 
-
     Arena input_system_arena;
-} input_state;
+} Input_System;
 
 
-static input_state input_system;
+MAPI bool input_init(Input_System* input_system, Memory_System* memory_system);
 
-// static input_state* wow;
+MAPI void input_shutdown(Input_System* input_system);
 
-bool input_init(void);
+MAPI void input_update(Input_System* input_system);
 
-void input_shutdown(void);
+MAPI void input_process_key(Input_System* input_system, keys key, bool pressed);
 
-void input_update(void);
+MAPI void input_process_mouse_move(Input_System* input_system, i16 x, i16 y);
 
-void input_process_key(keys key, bool pressed);
+MAPI void input_process_mouse_wheel(Input_System* input_system, i8 z_delta);
 
-void input_process_mouse_move(i16 x, i16 y);
-
-void input_process_mouse_wheel(i8 z_delta);
-
-void input_process_mouse_button(mouse_buttons button, bool pressed);
+MAPI void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed);
 
 
 //key related
 
 
-bool input_is_key_pressed(uint8_t key);
+MAPI bool input_is_key_pressed(Input_System* input_system, uint8_t key);
 
 //NOTE: this literally means the key isn't pressed, not that it was just released
-bool input_is_key_released(uint8_t key);
+MAPI bool input_is_key_released(Input_System* input_system, uint8_t key);
 
-bool input_was_key_pressed(uint8_t key);
+MAPI bool input_was_key_pressed(Input_System* input_system, uint8_t key);
 
-bool input_was_key_released(uint8_t key);
+MAPI bool input_was_key_released(Input_System* input_system, uint8_t key);
 
 //checking for a one time press
-bool input_key_pressed_unique(uint8_t key);
+MAPI bool input_key_pressed_unique(Input_System* input_system, uint8_t key);
 
 //checking for a one time release
-bool input_key_released_unique(uint8_t key);
+MAPI bool input_key_released_unique(Input_System* input_system, uint8_t key);
 
 
 //mouse related
-void input_get_mouse_pos(i16* out_x, i16* out_y);
+MAPI void input_get_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
 
-void input_get_previous_mouse_pos(i16* out_x, i16* out_y);
+MAPI void input_get_previous_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
 
-void input_get_mouse_change(i16* out_x, i16* out_y);
+MAPI void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y);
 
 
-bool input_is_mouse_button_pressed(mouse_buttons key);
+MAPI bool input_is_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
 
-bool input_is_mouse_button_released(mouse_buttons key);
+MAPI bool input_is_mouse_button_released(Input_System* input_system, mouse_buttons key);
 
-bool input_was_mouse_button_pressed(mouse_buttons key);
+MAPI bool input_was_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
 
-bool input_was_mouse_button_released(mouse_buttons key);
+MAPI bool input_was_mouse_button_released(Input_System* input_system, mouse_buttons key);
 
 
 #endif //INPUT_H

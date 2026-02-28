@@ -17,18 +17,25 @@
 static renderer renderer_internal;
 
 
-bool renderer_init(struct renderer_app* renderer_inst)
+bool renderer_init(Application_Base* application_base)
 {
+
     vulkan_context* vk_context = &renderer_internal.context;
+
+    //grab the input system if its valid
+    if (&application_base->input_system)
+    {
+        renderer_internal.input_system_debug = &application_base->input_system;
+    }
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
-    void* renderer_system_mem = memory_system_alloc(renderer_system_mem_requirement);
+    void* renderer_system_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
     arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement,
                MEMORY_SUBSYSTEM_RENDERER);
 
     u64 frame_arena_mem_size = GB(0.5);
-    void* frame_arena_mem = memory_system_alloc(renderer_system_mem_requirement);
+    void* frame_arena_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
     arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size, MEMORY_SUBSYSTEM_RENDERER);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -40,11 +47,11 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
     //get the size for the default window from the app config
     //if these aren't set we use 800/600 for default
-    vk_context->framebuffer_width = (renderer_inst->app_config.start_width != 0)
-                                        ? renderer_inst->app_config.start_width
+    vk_context->framebuffer_width = (application_base->app_config.start_width != 0)
+                                        ? application_base->app_config.start_width
                                         : 600;
-    vk_context->framebuffer_height = (renderer_inst->app_config.start_height != 0)
-                                         ? renderer_inst->app_config.start_height
+    vk_context->framebuffer_height = (application_base->app_config.start_height != 0)
+                                         ? application_base->app_config.start_height
                                          : 600;
     //set this as well
     vk_context->framebuffer_width_new = vk_context->framebuffer_width;
@@ -56,7 +63,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
     vulkan_instance_create(vk_context);
 
     // get surface from the platform layer, needed before device creation
-    if (!platform_create_vulkan_surface(renderer_inst->plat_state, vk_context))
+    if (!platform_create_vulkan_surface(&application_base->plat_state, vk_context))
     {
         return false;
     }
@@ -156,7 +163,7 @@ bool renderer_init(struct renderer_app* renderer_inst)
 
 static bool texture_flip = false;
 
-void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
+void renderer_update(Clock* clock)
 {
     vulkan_context vk_context = renderer_internal.context;
 
@@ -172,7 +179,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 
 
     //TODO: test code, can remove later
-    if (input_key_released_unique(KEY_U))
+    if (input_key_released_unique(renderer_internal.input_system_debug, KEY_U))
     {
         //TODO: MOVE OUT LATER
         renderer_internal.mode = (renderer_internal.mode + 1) % RENDER_MODE_MAX;
@@ -462,7 +469,7 @@ void renderer_update(struct renderer_app* renderer_inst, Clock* clock)
 }
 
 
-void renderer_shutdown(struct renderer_app* renderer_inst)
+void renderer_shutdown(void)
 {
     vulkan_context vk_context = renderer_internal.context;
 
@@ -570,7 +577,7 @@ void renderer_shutdown(struct renderer_app* renderer_inst)
 }
 
 
-void renderer_on_resize(struct renderer_app* renderer_inst, u32 width, u32 height)
+void renderer_on_resize(u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
     vulkan_context* vk_context = &renderer_internal.context;

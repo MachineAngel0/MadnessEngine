@@ -83,13 +83,13 @@ typedef struct event_system
     subscriber_list events_table[MAX_EVENTS];
 
     Arena event_system_arena;
-} event_system;
+} Event_System;
 
 //someone that registers to receive the events
 static bool is_event_system_init = false;
-static event_system event_system_internal;
+static Event_System event_system_internal;
 
-bool event_init();
+bool event_init(Memory_System* memory_system);
 
 bool event_shutdown();
 

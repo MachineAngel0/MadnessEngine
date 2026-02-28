@@ -1,7 +1,7 @@
 ﻿
 int main(void)
 {
-    memory_tracker_init();
+    memory_tracker_init(TODO);
     u64 memory_request_size = MB(1);
     memory_system_init(memory_request_size);
 

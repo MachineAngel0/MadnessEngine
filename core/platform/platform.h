@@ -9,11 +9,13 @@
 typedef struct platform_state
 {
     void* internal_state;
+    Input_System* input_system; // just a pointer, does not own the memory
 } platform_state;
 
 
 bool platform_startup(
     platform_state* plat_state,
+    Input_System* input_system_reference,
     const char* application_name,
     i32 x, i32 y,
     i32 width, i32 height);
