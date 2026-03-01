@@ -57,7 +57,7 @@ Quad_Texture* quad_create_textured(Frame_Arena* frame_arena, vec2 pos, vec2 size
 
 
 
-void sprite_system_init(renderer* renderer)
+void sprite_system_init(Sprite_System* sprite_system, renderer* renderer)
 {
     sprite_system = arena_alloc(&renderer->arena, sizeof(Sprite_System));
     sprite_system->frame_arena = &renderer->frame_arena;
@@ -97,7 +97,7 @@ void sprite_system_init(renderer* renderer)
         renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, memory_capacity);
 }
 
-void sprite_begin(const i32 screen_size_x, const i32 screen_size_y)
+void sprite_begin(Sprite_System* sprite_system,i32 screen_size_x, i32 screen_size_y)
 {
     sprite_system->screen_size.x = (float)screen_size_x;
     sprite_system->screen_size.y = (float)screen_size_y;
@@ -106,7 +106,7 @@ void sprite_begin(const i32 screen_size_x, const i32 screen_size_y)
 }
 
 
-void sprite_upload_draw_data(renderer* renderer)
+void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer)
 {
     vulkan_buffer_data_copy_and_upload(renderer, sprite_system->sprite_vertex_buffer,
                                        sprite_system->sprite_vertex_staging_buffer,
@@ -143,7 +143,7 @@ void sprite_upload_draw_data(renderer* renderer)
                                        sizeof(VkDrawIndexedIndirectCommand));
 }
 
-void sprite_draw(renderer* renderer, vulkan_command_buffer* command_buffer)
+void sprite_draw(Sprite_System* sprite_system,renderer* renderer, vulkan_command_buffer* command_buffer)
 {
 
     vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_system->sprite_vertex_buffer);
@@ -206,7 +206,7 @@ void sprite_draw(renderer* renderer, vulkan_command_buffer* command_buffer)
 
 
 //sprites will only last for the frame, modify this is for another time
-void sprite_create(vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
+void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
                          Sprite_Pipeline_Flags material_flags)
 {
     Sprite_Instance_Data* data = &sprite_system->sprites_instance_data->data[sprite_system->sprites_instance_data->

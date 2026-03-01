@@ -13,9 +13,35 @@
 #include "vk_sync.h"
 
 
+
 //NOTE: static/global for now, most likely gonna move it into the renderer struct
 static renderer renderer_internal;
 
+typedef enum Results
+{
+    RESULT_VALID,
+    RESULT_INBETWEEN,
+    RESULT_INVALID,
+    RESULT_MEMORY,
+    RESULT_INIT,
+    RESULT_SHUTDOWN,
+}Results;
+
+typedef enum ErrorCode
+{
+    ErrorCode_VALID,
+    ErrorCode_INBETWEEN,
+    ErrorCode_INVALID,
+    ErrorCode_MEMORY,
+    ErrorCode_INIT,
+    ErrorCode_SHUTDOWN,
+}ErrorCode;
+
+struct renderer_init_result
+{
+    renderer* renderer;
+
+};
 
 bool renderer_init(Application_Base* application_base)
 {

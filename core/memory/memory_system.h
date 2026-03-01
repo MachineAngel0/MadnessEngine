@@ -26,6 +26,8 @@ MAPI void memory_system_init(Memory_System* memory_system, u64 memory_request_si
 MAPI void memory_system_shutdown(Memory_System* memory_system);
 //should only be called by larger subsystems like the renderer
 MAPI void* memory_system_alloc(Memory_System* memory_system,u64 memory_request_size);
+//do not keep a reference to the pointer
+MAPI Arena* memory_system_get_arena(Memory_System* memory_system);
 
 
 MAPI void memory_system_zero_memory(void* memory, u64 size);

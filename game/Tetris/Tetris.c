@@ -1,17 +1,18 @@
 ﻿#include "Tetris.h"
 
-#include "sprite.h"
 
-Tetris_Game_State* tetris_init(Arena* arena, Frame_Arena* frame_arena)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Sprite_System* sprite_system)
 {
-    Tetris_Game_State* tetris_game_state = arena_alloc(arena, sizeof(Tetris_Game_State));
+    Tetris_Game_State* tetris_game_state = arena_alloc(&memory_system->application_arena, sizeof(Tetris_Game_State));
     tetris_game_state->tetris_state = Tetris_State_Start;
-    tetris_clock_init(tetris_game_state, 5.0f, arena);
-    tetris_grid_init(tetris_game_state, arena, GRID_COLUMN, GRID_ROW);
+    tetris_game_state->sprite_system_reference = sprite_system;
+    tetris_clock_init(tetris_game_state, 5.0f, &memory_system->application_arena);
+    tetris_grid_init(tetris_game_state, &memory_system->application_arena, GRID_COLUMN, GRID_ROW);
 
     //spawn block
     Tetromino_Type type_to_spawn = pick_new_tetromino_type();
     tetris_spawn_block(tetris_game_state, type_to_spawn);
+    return tetris_game_state;
 }
 
 void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena)
@@ -35,12 +36,12 @@ void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int r
             if (i == 0 || i == tetris->tetris_grid->row - 1 || j == 0 || j == tetris->tetris_grid->column - 1
             )
             {
-                tetris->tetris_grid->grid_color[i][j] = GREY; //give the edge a custom color
+                tetris->tetris_grid->grid_color[i][j] = TETRIS_COLOR_GREY; //give the edge a custom color
             }
             else
             {
                 //if not an edge, just color it white
-                tetris->tetris_grid->grid_color[i][j] = WHITE;
+                tetris->tetris_grid->grid_color[i][j] = TETRIS_COLOR_WHITE;
             }
         }
     }
@@ -63,7 +64,7 @@ void tetris_update(Tetris_Game_State* tetris, float delta_time)
             {
                 //printf("you lost\n");
                 //clear_vertex_info(vertex_dynamic_info); // dont clear this
-                tetris->tetris_state == Tetris_State_Game_Over;
+                tetris->tetris_state = Tetris_State_Game_Over;
                 return;
             }
 
@@ -76,6 +77,12 @@ void tetris_update(Tetris_Game_State* tetris, float delta_time)
             tetris_spawn_block(tetris, type_to_spawn);
         }
     }
+
+
+     //update the draw
+     tetris_generate_draw(tetris);
+
+
 }
 
 void tetris_shutdown(Tetris_Game_State* tetris)
@@ -97,7 +104,7 @@ void tetris_generate_draw(Tetris_Game_State* tetris)
 
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
-            sprite_create((vec2){x, y}, (vec2){BLOCK_SCALE, BLOCK_SCALE}, sprite_color, (Texture_Handle){0},
+            sprite_create(tetris->sprite_system_reference, (vec2){x, y}, (vec2){BLOCK_SCALE, BLOCK_SCALE}, sprite_color, (Texture_Handle){0},
                           SPRITE_PIPELINE_COLOR);
         }
     }
@@ -111,7 +118,7 @@ void tetris_generate_draw(Tetris_Game_State* tetris)
             YOFFSET + ((cur_tetromino.tetromino_default_position[i].y + cur_tetromino.grid_position.y) * CELL_SIZE),
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
-        sprite_create(pos, size, tetris_color_look_up_table[cur_tetromino.type], (Texture_Handle){0},
+        sprite_create(tetris->sprite_system_reference, pos, size, tetris_color_look_up_table[cur_tetromino.type], (Texture_Handle){0},
                       SPRITE_PIPELINE_COLOR);
     }
 }
@@ -142,9 +149,9 @@ void tetris_update_grid(Tetris_Game_State* tetris)
         {
             if (j == 0 || j == GRID_COLUMN - 1)
                 continue;
-            if (tetris->tetris_grid->grid_color[i][j] == GREY) continue;
+            if (tetris->tetris_grid->grid_color[i][j] == TETRIS_COLOR_GREY) continue;
 
-            if (tetris->tetris_grid->grid_color[i][j] == WHITE)
+            if (tetris->tetris_grid->grid_color[i][j] == TETRIS_COLOR_WHITE)
             {
                 clear_row = false;
             }
@@ -159,9 +166,9 @@ void tetris_update_grid(Tetris_Game_State* tetris)
             {
                 if (i == 0 || i == GRID_ROW - 1 || j == 0 || j == GRID_COLUMN - 1)
                     continue;
-                if (tetris->tetris_grid->grid_color[i][j] == GREY) continue;
+                if (tetris->tetris_grid->grid_color[i][j] == TETRIS_COLOR_GREY) continue;
 
-                tetris->tetris_grid->grid_color[i][j] = WHITE;
+                tetris->tetris_grid->grid_color[i][j] = TETRIS_COLOR_WHITE;
             }
         }
         else
@@ -173,7 +180,7 @@ void tetris_update_grid(Tetris_Game_State* tetris)
             {
                 if (i == 0 || i == GRID_ROW - 1 || j == 0 || j == GRID_COLUMN - 1)
                     continue;
-                if (tetris->tetris_grid->grid_color[i][j] == GREY) continue;
+                if (tetris->tetris_grid->grid_color[i][j] == TETRIS_COLOR_GREY) continue;
 
                 tetris->tetris_grid->grid_color[i + complete][j] = tetris->tetris_grid->grid_color[i][j];
             }
@@ -246,7 +253,7 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
     case Tetris_Direction_DOWN:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
                                   tetris->current_tetromino.tetromino_default_position,
-                                  vec2{0, 1}))
+                                  (vec2){0, 1}))
         {
             tetris->current_tetromino.grid_position.y++;
         }
@@ -257,14 +264,14 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
         break;
     case Tetris_Direction_RIGHT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, vec2{1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (vec2){1, 0}))
         {
             tetris->current_tetromino.grid_position.x++;
         }
         break;
     case Tetris_Direction_LEFT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, vec2{-1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (vec2){-1, 0}))
         {
             tetris->current_tetromino.grid_position.x--;
         }
@@ -308,8 +315,8 @@ bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetro
             return false;
         }
         //check for a colored block and also if we are above the grids top row
-        if (tetris->tetris_grid->grid_color[y_check][x_check] != WHITE && tetris->tetris_grid->grid_color[y_check][
-                x_check] != GREY &&
+        if (tetris->tetris_grid->grid_color[y_check][x_check] != TETRIS_COLOR_WHITE && tetris->tetris_grid->grid_color[y_check][
+                x_check] != TETRIS_COLOR_GREY &&
             y_check > 0)
         {
             //printf("IS A COLORED BLOCK\n");
@@ -363,7 +370,8 @@ void tetris_rotate_block(Tetris_Game_State* tetris)
 
 
     //check if we can rotate at all
-    if (tetris_can_move_block(tetris, cur_tetromino->grid_position, new_tetromino_grid_position, {0, 0}))
+    if (tetris_can_move_block(tetris, cur_tetromino->grid_position, new_tetromino_grid_position,
+        (vec2){0, 0}))
     {
         //if we can rotate we set tetromino to temp, as it contains the new positions
         memcpy(cur_tetromino->tetromino_default_position, new_tetromino_grid_position,

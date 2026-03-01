@@ -18,6 +18,7 @@ set(MADNESS_BUILD_TARGETS
         MadnessEngine_renderer
         MADNESSRENDERER
         MadnessEngine_editor
+        Tetris
 )
 
 
@@ -61,6 +62,7 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/editor/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/renderer/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/renderer/shaders)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/game/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/game/Tetris)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/cgltf-master)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/ufbx)
@@ -83,6 +85,13 @@ add_library(MADNESSGAME SHARED
         unity_build_game.c
         lib/build_lib.c
 )
+
+#Tetris
+add_executable(Tetris
+        unity_build_tetris.c
+        lib/build_lib.c
+)
+
 
 ### RENDERER ###
 
@@ -125,13 +134,9 @@ if (WIN32)
             winmm
             ole32
     )
-
-    target_link_libraries(MadnessEngine PRIVATE ${MADNESS_WIN_LIBS})
-    target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_WIN_LIBS})
-    target_link_libraries(MADNESSGAME PRIVATE ${MADNESS_WIN_LIBS})
-    target_link_libraries(MadnessEngine_renderer PRIVATE ${MADNESS_WIN_LIBS})
-    target_link_libraries(MADNESSRENDERER PRIVATE ${MADNESS_WIN_LIBS})
-    target_link_libraries(CORE_UNIT_TEST PRIVATE ${MADNESS_WIN_LIBS})
+    foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+        target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})
+    endforeach ()
 endif ()
 if (UNIX)
     SET(MADNESS_UNIX_LIBS
@@ -141,12 +146,9 @@ if (UNIX)
             xcb
             m #linux math library
     )
-    target_link_libraries(MadnessEngine PRIVATE ${MADNESS_UNIX_LIBS})
-    target_link_libraries(MadnessEngine_game PRIVATE ${MADNESS_UNIX_LIBS})
-    target_link_libraries(MADNESSGAME PRIVATE ${MADNESS_UNIX_LIBS})
-    target_link_libraries(MadnessEngine_renderer PRIVATE ${MADNESS_UNIX_LIBS})
-    target_link_libraries(MADNESSRENDERER PRIVATE ${MADNESS_UNIX_LIBS})
-    target_link_libraries(CORE_UNIT_TEST PRIVATE ${MADNESS_UNIX_LIBS})
+    foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+        target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})
+    endforeach ()
 endif ()
 
 

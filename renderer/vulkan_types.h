@@ -14,6 +14,7 @@
 #include "camera.h"
 #include "darray.h"
 #include "hash_set.h"
+#include "input.h"
 #include "str.h"
 #include "maths/math_types.h"
 #include "maths/transforms.h"
@@ -786,6 +787,9 @@ typedef struct renderer
     Light_System* light_system;
     Mesh_System* mesh_system;
     Descriptor_System* descriptor_system;
+
+
+    // Sprite_System* sprite_system;
 
 
     //mesh system

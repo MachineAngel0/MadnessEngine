@@ -17,13 +17,7 @@
 
 //the max number of pieces a tetromino can be made out of
 #define TETROMINO_SIZE 4
-
-#include <stdbool.h>
-#include <time.h>
-
-#include "arena.h"
-#include "maths/math_lib.h"
-#include "maths/math_types.h"
+#include "sprite.h"
 
 
 typedef enum Tetris_Direction
@@ -138,38 +132,46 @@ typedef struct Tetris_Game_State
     Tetris_Clock* tetris_clock;
     Tetris_Grid* tetris_grid;
     Tetromino current_tetromino;
+
+    Sprite_System* sprite_system_reference; // does not own this, just a ref
 } Tetris_Game_State;
 
-//NEW API
+
+
+
 //NOTE: the sprite system handles the drawing
-Tetris_Game_State* tetris_init(Arena* arena, Frame_Arena* frame_arena);
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Sprite_System* sprite_system);
 
-void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
-void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
-void tetris_shutdown(Tetris_Game_State* tetris);
+MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
+MAPI void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
+MAPI void tetris_shutdown(Tetris_Game_State* tetris);
 
-void tetris_update(Tetris_Game_State* tetris, float delta_time);
-void tetris_update_grid(Tetris_Game_State* tetris);
-void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
+MAPI void tetris_update(Tetris_Game_State* tetris, float delta_time);
+MAPI void tetris_update_grid(Tetris_Game_State* tetris);
+MAPI void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
 
-void tetris_generate_draw(Tetris_Game_State* tetris);
+MAPI void tetris_generate_draw(Tetris_Game_State* tetris);
 
 Tetromino_Type pick_new_tetromino_type(void);
-bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);
-void tetris_spawn_block(Tetris_Game_State* tetris, Tetromino_Type tetromino_type);
-bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction);
-bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetromino_grid_position,
+MAPI bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);
+MAPI void tetris_spawn_block(Tetris_Game_State* tetris, Tetromino_Type tetromino_type);
+MAPI bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction);
+MAPI bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetromino_grid_position,
                            Tetris_Grid_Position* tetromino_grid_default_position, vec2 direction_vector);
-void tetris_rotate_block(Tetris_Game_State* tetris);
+MAPI void tetris_rotate_block(Tetris_Game_State* tetris);
 
 
-void L_Block(Tetris_Grid_Position* default_position, int position);
-void J_Block(Tetris_Grid_Position* default_position, int position);
-void O_Block(Tetris_Grid_Position* default_position);
-void S_Block(Tetris_Grid_Position* default_position, int position);
-void T_Block(Tetris_Grid_Position* default_position, int position);
-void Z_Block(Tetris_Grid_Position* default_position, int position);
-void I_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void L_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void J_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void O_Block(Tetris_Grid_Position* default_position);
+MAPI void S_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void T_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void Z_Block(Tetris_Grid_Position* default_position, int position);
+MAPI void I_Block(Tetris_Grid_Position* default_position, int position);
+
+
+
+MAPI void tetris_update_new_idk_i_hate_everything(Tetris_Game_State* tetris, float delta_time);
 
 
 #endif //TETRIS_H

@@ -1,6 +1,5 @@
 ﻿#ifndef SPRITE_H
 #define SPRITE_H
-#include "vk_buffer.h"
 
 
 typedef enum Sprite_Pipeline_Flags
@@ -127,20 +126,17 @@ typedef struct Sprite_System
     Buffer_Handle sprite_indirect_staging_buffer;
 } Sprite_System;
 
-Sprite_System* sprite_system;
+void sprite_system_init(Sprite_System* sprite_system, renderer* renderer);
 
-void sprite_system_init(renderer* renderer);
+void sprite_begin(Sprite_System* sprite_system,i32 screen_size_x, i32 screen_size_y);
 
-void sprite_begin(i32 screen_size_x, i32 screen_size_y);
+void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer);
 
-void sprite_upload_draw_data(renderer* renderer);
-
-void sprite_draw(renderer* renderer, vulkan_command_buffer* command_buffer);
+void sprite_draw(Sprite_System* sprite_system,renderer* renderer, vulkan_command_buffer* command_buffer);
 
 
 //sprites will only last for the frame, modify this is for another time
-void sprite_create(vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
+void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
                          Sprite_Pipeline_Flags material_flags);
-
 
 #endif //SPRITE_H

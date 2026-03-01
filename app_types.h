@@ -33,9 +33,11 @@ typedef struct Application_Base
     platform_state plat_state;
     Clock clock;
 
-    //TODO: static global for memory system is causing a bug as the dll is keeping a copy of the data that is zerod
     Memory_System memory_system;
     Memory_Tracker memory_tracker;
+    //TODO: event and input might need to be application specific,
+    // say if we want the renderer and the ui to respond to specific events and input from specific windows,
+    // rn its not an issue so im just leaving it here
     Event_System event_system;
     Input_System input_system;
 

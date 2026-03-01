@@ -37,6 +37,11 @@ void* memory_system_alloc(Memory_System* memory_system,u64 memory_request_size)
     return arena_alloc(&memory_system->application_arena, memory_request_size);
 }
 
+Arena* memory_system_get_arena(Memory_System* memory_system)
+{
+    return &memory_system->application_arena;
+}
+
 void memory_system_zero_memory(void* memory, u64 size)
 {
     platform_zero_memory(memory, size);

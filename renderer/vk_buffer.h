@@ -1,6 +1,7 @@
 ﻿#ifndef VK_BUFFER_H
 #define VK_BUFFER_H
 
+#include "vulkan_types.h"
 
 //TODO: at some point it would make sense to allocate something between 32-128mb of vertex buffers
 // at any one time and keep a bunch of them allocated in some sort of free list ready to be used or make them on the fly
