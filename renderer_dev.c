@@ -47,6 +47,7 @@ bool renderer_dev_run()
 
     Renderer_Dev_Application* app = &app_internal;
     application_base_init(&app->application_base);
+    Renderer* renderer = &app->renderer_application.renderer;
 
     //initialize the applications memory
     // Memory_System_Config memory_config;
@@ -88,12 +89,14 @@ bool renderer_dev_run()
     }
 
     //start the renderer
-    if (!app->renderer_application.renderer_initialize(&app->application_base))
+    if (!app->renderer_application.renderer_initialize(renderer, &app->application_base))
     {
         FATAL("Failed to initialize the renderer")
         return false;
     };
-    // renderer_init(app_state.renderer); // here for debugging
+
+    Madness_UI* madness_ui = NULL;
+    madness_ui_init(madness_ui, renderer);
 
     //run the renderer
     //MAIN LOOP
@@ -105,17 +108,20 @@ bool renderer_dev_run()
         clock_update_frame_start(&app->application_base.clock);
         clock_print_info(&app->application_base.clock);
 
-        input_update(&app->application_base.input_system);
         platform_pump_messages(&app->application_base.plat_state);
+        input_update(&app->application_base.input_system);
 
         //vulkan will crash if you minimize the window
         if (app->application_base.is_suspended)
         {
             continue;
         }
+        madness_ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        madness_ui_test(madness_ui);
 
-        app->renderer_application.renderer_run(&app->application_base.clock);
+        app->renderer_application.renderer_run(renderer, app_internal.renderer_application.render_packet, &app->application_base.clock);
 
+        madness_ui_end(madness_ui);
         clock_update_frame_end(&app->application_base.clock);
 
     }
@@ -123,11 +129,16 @@ bool renderer_dev_run()
 
     /***SHUTDOWN***/
     //NOTE: (go in reverse order)
-    app->renderer_application.renderer_terminate();
+
+    madness_ui_shutdown(madness_ui, renderer);
+
+
+    app->renderer_application.renderer_terminate(&app_internal.renderer_application.renderer);
 
 
     //shutdown subsystems
     // audio_system_shutdown();
+
     input_shutdown(&app->application_base.input_system);
     event_shutdown();
 
@@ -221,7 +232,7 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
                     app_internal.application_base.is_suspended = false;
                 }
 
-                app_internal.renderer_application.renderer_resize(width, height);
+                app_internal.renderer_application.renderer_resize(&app_internal.renderer_application.renderer, width, height);
             }
         }
     }

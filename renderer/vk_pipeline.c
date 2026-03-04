@@ -209,7 +209,7 @@ void vulkan_pipeline_compute_bind(vulkan_command_buffer* command_buffer, vulkan_
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->handle);
 }
 
-void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_cache* pipeline_info,
+void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_cache* pipeline_info,
                                           u8** pipeline_cache_data, size_t* pipeline_cache_size)
 {
     pipeline_cache_file_header pipeline_cache_prefix_header;
@@ -273,7 +273,7 @@ void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_ca
     fclose(fptr);
 }
 
-vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer)
+vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
 {
     vulkan_pipeline_cache* pipeline_info = arena_alloc(&renderer->arena, sizeof(vulkan_pipeline_cache));
 
@@ -305,7 +305,7 @@ vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer)
     return pipeline_info;
 }
 
-void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cache* pipeline_cache)
+void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cache* pipeline_cache)
 {
     //get the pipeline cache data, and write it out to a file
 

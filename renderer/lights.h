@@ -2,7 +2,7 @@
 #define LIGHTS_H
 
 
-Light_System* light_system_init(renderer* renderer);
+Light_System* light_system_init(Renderer* renderer);
 
 void directional_light_init(Directional_Light* light);
 void point_light_init(Point_Light* light);

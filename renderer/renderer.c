@@ -12,11 +12,6 @@
 #include "vk_shader.h"
 #include "vk_sync.h"
 
-
-
-//NOTE: static/global for now, most likely gonna move it into the renderer struct
-static renderer renderer_internal;
-
 typedef enum Results
 {
     RESULT_VALID,
@@ -25,7 +20,7 @@ typedef enum Results
     RESULT_MEMORY,
     RESULT_INIT,
     RESULT_SHUTDOWN,
-}Results;
+} Results;
 
 typedef enum ErrorCode
 {
@@ -35,39 +30,37 @@ typedef enum ErrorCode
     ErrorCode_MEMORY,
     ErrorCode_INIT,
     ErrorCode_SHUTDOWN,
-}ErrorCode;
+} ErrorCode;
 
 struct renderer_init_result
 {
-    renderer* renderer;
-
+    Renderer* renderer;
 };
 
-bool renderer_init(Application_Base* application_base)
+bool renderer_init(Renderer* renderer, Application_Base* application_base)
 {
-
-    vulkan_context* vk_context = &renderer_internal.context;
+    vulkan_context* vk_context = &renderer->context;
 
     //grab the input system if its valid
     if (&application_base->input_system)
     {
-        renderer_internal.input_system_debug = &application_base->input_system;
+        renderer->input_system_debug = &application_base->input_system;
     }
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
     void* renderer_system_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
-    arena_init(&renderer_internal.arena, renderer_system_mem, renderer_system_mem_requirement,
+    arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
                MEMORY_SUBSYSTEM_RENDERER);
 
     u64 frame_arena_mem_size = GB(0.5);
     void* frame_arena_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
-    arena_init(&renderer_internal.frame_arena, frame_arena_mem, frame_arena_mem_size, MEMORY_SUBSYSTEM_RENDERER);
+    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, MEMORY_SUBSYSTEM_RENDERER);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
-    camera_init(&renderer_internal.main_camera);
+    camera_init(&renderer->main_camera);
     vk_context->is_init = false;
     // vulkan_context vulkan_context;
 
@@ -83,7 +76,7 @@ bool renderer_init(Application_Base* application_base)
     vk_context->framebuffer_width_new = vk_context->framebuffer_width;
     vk_context->framebuffer_height_new = vk_context->framebuffer_height;
 
-    renderer_internal.mode = RENDER_MODE_NONE;
+    renderer->mode = RENDER_MODE_NONE;
 
     //create the instance
     vulkan_instance_create(vk_context);
@@ -131,12 +124,12 @@ bool renderer_init(Application_Base* application_base)
 
 
     // Create Descriptor Pool
-    renderer_internal.descriptor_system = descriptor_pool_allocator_init(&renderer_internal);
+    renderer->descriptor_system = descriptor_pool_allocator_init(renderer);
 
 
     //BUFFER SYSTEM
-    renderer_internal.buffer_system = buffer_system_init(&renderer_internal,
-                                                         renderer_internal.context.swapchain.max_frames_in_flight);
+    renderer->buffer_system = buffer_system_init(renderer,
+                                                 renderer->context.swapchain.max_frames_in_flight);
     /*for (u32 i = 0; i < renderer_internal.buffer_system->frames_in_flight; i++)
     {
         Buffer_Handle temp_buffer_handle = renderer_internal.buffer_system->global_ubo_handle;
@@ -146,35 +139,36 @@ bool renderer_init(Application_Base* application_base)
     }*/
 
     //Shader System
-    renderer_internal.shader_system = shader_system_init(&renderer_internal);
+    renderer->shader_system = shader_system_init(renderer);
     // Light System
-    renderer_internal.light_system = light_system_init(&renderer_internal);
+    renderer->light_system = light_system_init(renderer);
     // Mesh System
-    renderer_internal.mesh_system = mesh_system_init(&renderer_internal);
+    renderer->mesh_system = mesh_system_init(renderer);
+    // Sprite System
+    renderer->sprite_system = sprite_system_init(renderer);
 
 
-    //TODO: should be initialized outside and after the renderer
-    madness_ui_init(&renderer_internal);
 
-    renderer_internal.pipeline_cache = vulkan_pipeline_cache_initialize(&renderer_internal);
+
+    renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
     //Pipelines
-    ui_shader_create(&renderer_internal, &renderer_internal.ui_pipeline, renderer_internal.pipeline_cache);
-    text_shader_create(&renderer_internal, &renderer_internal.text_pipeline, renderer_internal.pipeline_cache);
-    sprite_shader_create(&renderer_internal, &renderer_internal.sprite_pipeline, renderer_internal.pipeline_cache);
-    mesh_indirect_shader_create(&renderer_internal, &renderer_internal.indirect_mesh_pipeline,
-                                renderer_internal.pipeline_cache);
+    ui_shader_create(renderer, &renderer->ui_pipeline, renderer->pipeline_cache);
+    text_shader_create(renderer, &renderer->text_pipeline, renderer->pipeline_cache);
+    sprite_shader_create(renderer, &renderer->sprite_pipeline, renderer->pipeline_cache);
+    mesh_indirect_shader_create(renderer, &renderer->indirect_mesh_pipeline,
+                                renderer->pipeline_cache);
     //Pipeline Cache
-    vulkan_pipeline_cache_write_to_file(&renderer_internal, renderer_internal.pipeline_cache);
+    vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
 
     //INDIRECT DRAW
-    // mesh_load_fbx(&renderer_internal, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    // mesh_load_gltf(&renderer_internal,"../z_assets/models/cube_gltf/Cube.gltf");
-    // mesh_load_gltf(&renderer_internal,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    // mesh_load_gltf(&renderer_internal, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    // mesh_load_gltf(&renderer_internal, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
-    mesh_load_gltf(&renderer_internal, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
+    // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+    // mesh_load_gltf(renderer,"../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh_load_gltf(renderer,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
+    // mesh_load_gltf(renderer, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    // mesh_load_gltf(renderer, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
+    mesh_load_gltf(renderer, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -189,27 +183,21 @@ bool renderer_init(Application_Base* application_base)
 
 static bool texture_flip = false;
 
-void renderer_update(Clock* clock)
+void renderer_update(Renderer* renderer, Render_Packet* render_packets, Clock* clock)
 {
-    vulkan_context vk_context = renderer_internal.context;
+    vulkan_context vk_context = renderer->context;
 
 
-    arena_clear(&renderer_internal.frame_arena);
+    arena_clear(&renderer->frame_arena);
 
-    madness_ui_begin(vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
-    //TODO: remove the test later on
-    madness_ui_test();
-    //create the draw info
-    // ui_system_upload_draw_data(&renderer_internal, Madness_UI);
-    // vulkan_context vk_context = renderer_internal.vulkan_context;
-
+    sprite_begin(renderer->sprite_system, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
 
     //TODO: test code, can remove later
-    if (input_key_released_unique(renderer_internal.input_system_debug, KEY_U))
+    if (input_key_released_unique(renderer->input_system_debug, KEY_U))
     {
         //TODO: MOVE OUT LATER
-        renderer_internal.mode = (renderer_internal.mode + 1) % RENDER_MODE_MAX;
-        FATAL("RENDER_MODE: %d", renderer_internal.mode)
+        renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
+        FATAL("RENDER_MODE: %d", renderer->mode)
         if (texture_flip)
         {
             /* TODO:
@@ -283,7 +271,7 @@ void renderer_update(Clock* clock)
     //                       1.0f, &camera_to_remove);
     // Update the uniform buffer for the next frame
 
-    camera_update(&renderer_internal.main_camera, clock->delta_time);
+    camera_update(renderer->input_system_debug, &renderer->main_camera, clock->delta_time);
 
     uniform_buffer_object ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
@@ -291,35 +279,35 @@ void renderer_update(Clock* clock)
     ubo.model = mat4_identity();
     // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // ubo.view = camera_get_view_matrix(&main_camera);
-    ubo.view = camera_get_fps_view_matrix(&renderer_internal.main_camera);
+    ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
     // Perspective
-    ubo.proj = camera_get_projection(&renderer_internal.main_camera, vk_context.framebuffer_width,
+    ubo.proj = camera_get_projection(&renderer->main_camera, vk_context.framebuffer_width,
                                      vk_context.framebuffer_height);
 
 
     VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-        vulkan_buffer_get(&renderer_internal,
-                          renderer_internal.light_system->directional_light_storage_buffer_handle)->handle);
+        vulkan_buffer_get(renderer,
+                          renderer->light_system->directional_light_storage_buffer_handle)->handle);
 
     VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
-                                                                           vulkan_buffer_get(&renderer_internal,
-                                                                               renderer_internal.light_system->
+                                                                           vulkan_buffer_get(renderer,
+                                                                               renderer->light_system->
                                                                                point_light_storage_buffer_handle)->
                                                                            handle);
 
     ubo.directional_lights_address = directional_light_buffer_address;
     ubo.point_lights_address = point_light_buffer_address;
-    ubo.point_lights_count = renderer_internal.light_system->point_light_count;
-    ubo.camera_position = renderer_internal.main_camera.viewPos;
-    ubo.render_mode = renderer_internal.mode;
+    ubo.point_lights_count = renderer->light_system->point_light_count;
+    ubo.camera_position = renderer->main_camera.viewPos;
+    ubo.render_mode = renderer->mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    vulkan_buffer* ubo_buffer = vulkan_buffer_get(&renderer_internal,
-                                                  renderer_internal.buffer_system->global_ubo_handle);
+    vulkan_buffer* ubo_buffer = vulkan_buffer_get(renderer,
+                                                  renderer->buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    mesh_system_generate_draw_data(&renderer_internal, renderer_internal.mesh_system);
+    mesh_system_generate_draw_data(renderer, renderer->mesh_system);
 
 
     // Begin recording commands.
@@ -419,12 +407,12 @@ void renderer_update(Clock* clock)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_system_draw(&renderer_internal, renderer_internal.mesh_system, command_buffer_current_frame,
-                     &renderer_internal.indirect_mesh_pipeline);
+    mesh_system_draw(renderer, renderer->mesh_system, command_buffer_current_frame,
+                     &renderer->indirect_mesh_pipeline);
 
-    madness_ui_draw(&renderer_internal, command_buffer_current_frame);
-    // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
+    madness_ui_draw(NULL, renderer, command_buffer_current_frame);
 
+    sprite_draw(renderer->sprite_system, renderer, command_buffer_current_frame);
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
@@ -491,13 +479,12 @@ void renderer_update(Clock* clock)
 
     // Increment (and loop) the frame index.
     vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
-    madness_ui_end();
 }
 
 
-void renderer_shutdown(void)
+void renderer_shutdown(Renderer* renderer)
 {
-    vulkan_context vk_context = renderer_internal.context;
+    vulkan_context vk_context = renderer->context;
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -603,10 +590,10 @@ void renderer_shutdown(void)
 }
 
 
-void renderer_on_resize(u32 width, u32 height)
+void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
-    vulkan_context* vk_context = &renderer_internal.context;
+    vulkan_context* vk_context = &renderer->context;
 
 
     if (!vk_context->is_init)

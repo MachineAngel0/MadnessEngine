@@ -1,11 +1,17 @@
 ﻿#include "Tetris.h"
 
 
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Sprite_System* sprite_system)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Renderer* renderer)
 {
     Tetris_Game_State* tetris_game_state = arena_alloc(&memory_system->application_arena, sizeof(Tetris_Game_State));
+
+    u64  frame_arena_size = MB(1);
+    void* mem_block = arena_alloc(&memory_system->application_arena, frame_arena_size);
+    arena_init(&tetris_game_state->frame_arena, mem_block, frame_arena_size, MEMORY_SUBSYSTEM_GAME);
+
+
     tetris_game_state->tetris_state = Tetris_State_Start;
-    tetris_game_state->sprite_system_reference = sprite_system;
+    tetris_game_state->renderer = renderer;
     tetris_clock_init(tetris_game_state, 5.0f, &memory_system->application_arena);
     tetris_grid_init(tetris_game_state, &memory_system->application_arena, GRID_COLUMN, GRID_ROW);
 
@@ -47,7 +53,7 @@ void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int r
     }
 }
 
-void tetris_update(Tetris_Game_State* tetris, float delta_time)
+Renderer_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))
@@ -65,22 +71,24 @@ void tetris_update(Tetris_Game_State* tetris, float delta_time)
                 //printf("you lost\n");
                 //clear_vertex_info(vertex_dynamic_info); // dont clear this
                 tetris->tetris_state = Tetris_State_Game_Over;
-                return;
+
             }
+            else
+            {
+                //printf("%d%d\n", game_state->current_tetromino.grid_position.x, game_state->current_tetromino.grid_position.y);
+                tetris_update_grid(tetris);
 
-            //printf("%d%d\n", game_state->current_tetromino.grid_position.x, game_state->current_tetromino.grid_position.y);
-            tetris_update_grid(tetris);
-
-            //set new tetromino
-            //get a random type and spawn it in/ set the current tetromino data for it
-            Tetromino_Type type_to_spawn = pick_new_tetromino_type();
-            tetris_spawn_block(tetris, type_to_spawn);
+                //set new tetromino
+                //get a random type and spawn it in/ set the current tetromino data for it
+                Tetromino_Type type_to_spawn = pick_new_tetromino_type();
+                tetris_spawn_block(tetris, type_to_spawn);
+            }
         }
     }
 
 
-     //update the draw
-     tetris_generate_draw(tetris);
+     //update and return the draw data
+     return tetris_generate_draw(tetris);
 
 
 }
@@ -90,7 +98,7 @@ void tetris_shutdown(Tetris_Game_State* tetris)
     //do nothing, it will deallocate when the arena clears itself
 }
 
-void tetris_generate_draw(Tetris_Game_State* tetris)
+Renderer_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
 {
     // we only need to generate the draw data for the grid layout, grid with the pieces and for the current tetromino
     for (int i = 0; i < tetris->tetris_grid->row; i++)
@@ -104,7 +112,7 @@ void tetris_generate_draw(Tetris_Game_State* tetris)
 
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
-            sprite_create(tetris->sprite_system_reference, (vec2){x, y}, (vec2){BLOCK_SCALE, BLOCK_SCALE}, sprite_color, (Texture_Handle){0},
+            sprite_create(tetris->renderer->sprite_system, (vec2){x, y}, (vec2){BLOCK_SCALE, BLOCK_SCALE}, sprite_color, (Texture_Handle){0},
                           SPRITE_PIPELINE_COLOR);
         }
     }
@@ -118,9 +126,15 @@ void tetris_generate_draw(Tetris_Game_State* tetris)
             YOFFSET + ((cur_tetromino.tetromino_default_position[i].y + cur_tetromino.grid_position.y) * CELL_SIZE),
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
-        sprite_create(tetris->sprite_system_reference, pos, size, tetris_color_look_up_table[cur_tetromino.type], (Texture_Handle){0},
+        sprite_create(tetris->renderer->sprite_system, pos, size, tetris_color_look_up_table[cur_tetromino.type], (Texture_Handle){0},
                       SPRITE_PIPELINE_COLOR);
     }
+
+    // tetris->tetris_render_packet->sprite_data;
+    // tetris->tetris_render_packet->sprite_data_size;
+
+    //TODO:
+    return tetris->tetris_render_packet;
 }
 
 
@@ -192,6 +206,7 @@ void tetris_update_clock(Tetris_Game_State* tetris, float delta_time)
 {
     tetris->tetris_clock->accumulated_time -= 1.0f * delta_time;
 }
+
 
 bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris)
 {

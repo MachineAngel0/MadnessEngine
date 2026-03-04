@@ -28,11 +28,11 @@ const char* pipeline_cache_file_path = "../renderer/pipeline_cache.bin";
 
 u32 pipeline_cache_magic_number = 42069;
 
-void vulkan_pipeline_cache_read_from_file(renderer* renderer, vulkan_pipeline_cache* pipeline_info, u8** pipeline_cache_data, size_t* pipeline_cache_size);
+void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_cache* pipeline_info, u8** pipeline_cache_data, size_t* pipeline_cache_size);
 
-vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(renderer* renderer);
+vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer);
 
-void vulkan_pipeline_cache_write_to_file(renderer* renderer, vulkan_pipeline_cache* pipeline_cache);
+void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cache* pipeline_cache);
 
 
 #endif

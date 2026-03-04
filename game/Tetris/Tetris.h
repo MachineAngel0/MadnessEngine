@@ -133,26 +133,29 @@ typedef struct Tetris_Game_State
     Tetris_Grid* tetris_grid;
     Tetromino current_tetromino;
 
-    Sprite_System* sprite_system_reference; // does not own this, just a ref
+    Frame_Arena frame_arena;
+    Sprite_Data* tetris_sprite_data; // info gets cleared every frame
+
+    Renderer* renderer; // does not own this, just a ref for making api calls
 } Tetris_Game_State;
 
 
 
 
 //NOTE: the sprite system handles the drawing
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Sprite_System* sprite_system);
+MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Renderer* renderer);
 
 MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
 MAPI void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
 MAPI void tetris_shutdown(Tetris_Game_State* tetris);
 
-MAPI void tetris_update(Tetris_Game_State* tetris, float delta_time);
+MAPI tetris_update(Tetris_Game_State* tetris, float delta_time, Render_Packet* renderer_packet);
 MAPI void tetris_update_grid(Tetris_Game_State* tetris);
 MAPI void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
 
-MAPI void tetris_generate_draw(Tetris_Game_State* tetris);
+MAPI void tetris_generate_draw(Tetris_Game_State* tetris, Render_Packet* renderer_packet);
 
-Tetromino_Type pick_new_tetromino_type(void);
+MAPI Tetromino_Type pick_new_tetromino_type(void);
 MAPI bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);
 MAPI void tetris_spawn_block(Tetris_Game_State* tetris, Tetromino_Type tetromino_type);
 MAPI bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction);

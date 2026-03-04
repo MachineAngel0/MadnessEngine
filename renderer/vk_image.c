@@ -353,7 +353,7 @@ void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* co
                                          vulkan_context->device.graphics_queue);
 }
 
-void create_texture_sampler(renderer* renderer, Texture* texture)
+void create_texture_sampler(Renderer* renderer, Texture* texture)
 {
     VkSamplerCreateInfo samplerInfo = {0};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

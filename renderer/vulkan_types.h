@@ -18,6 +18,7 @@
 #include "str.h"
 #include "maths/math_types.h"
 #include "maths/transforms.h"
+#include "array_new.h"
 
 
 /// HANDLES ///
@@ -57,6 +58,11 @@ typedef struct Mesh_Handle
     u32 handle;
 } Mesh_Handle;
 
+
+typedef struct Sprite_Handle
+{
+    u32 handle;
+} Sprite_Handle;
 
 typedef struct Texture
 {
@@ -771,6 +777,60 @@ typedef struct vulkan_pipeline_cache
     VkPipelineCache handle;
 } vulkan_pipeline_cache;
 
+typedef struct Sprite
+{
+    vec2 pos;
+    vec2 tex;
+} Sprite;
+
+typedef struct Sprite_Data
+{
+    //will be in a per instance storage buffer
+    u32 flags;
+
+    //will be used for text and for anything else 2d that needs a texture
+    // Transform transform; //TODO: when i make this more robust
+    vec2 pos;
+    float rotation; // a float since we only rotate on one dimension, we can always change it later
+    vec2 scale;
+
+    // offset into a texture atlas if using one, otherwise {0, 0}
+    vec2 uv_offset;
+    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
+    vec2 uv_size;
+
+    //material data here
+    vec3 color;
+    u32 texture_index;
+} Sprite_Data;
+
+ARRAY_GENERATE_TYPE(Sprite_Data)
+
+typedef struct Sprite_System
+{
+    Frame_Arena* frame_arena;
+    vec2 screen_size; // grab every frame on start
+
+
+    Sprite sprites[4]; // literally just need one quad for a vertex buffer
+    Sprite_Data_array* sprites_data;
+    u16 sprite_indices[6];
+
+    VkIndexType index_type;
+
+    Buffer_Handle sprite_vertex_buffer;
+    Buffer_Handle sprite_index_buffer;
+    Buffer_Handle sprite_indirect_buffer;
+    Buffer_Handle sprite_instance_buffer;
+
+    Buffer_Handle sprite_vertex_staging_buffer;
+    Buffer_Handle sprite_index_staging_buffer;
+    Buffer_Handle sprite_instance_staging_buffer;
+    Buffer_Handle sprite_indirect_staging_buffer;
+} Sprite_System;
+
+
+
 typedef struct renderer
 {
     camera main_camera;
@@ -789,7 +849,7 @@ typedef struct renderer
     Descriptor_System* descriptor_system;
 
 
-    // Sprite_System* sprite_system;
+    Sprite_System* sprite_system;
 
 
     //mesh system
@@ -806,7 +866,7 @@ typedef struct renderer
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;
-} renderer;
+} Renderer;
 
 
 #endif //VULKAN_TYPES_H

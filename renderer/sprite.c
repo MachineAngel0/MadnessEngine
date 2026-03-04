@@ -56,10 +56,9 @@ Quad_Texture* quad_create_textured(Frame_Arena* frame_arena, vec2 pos, vec2 size
 }
 
 
-
-void sprite_system_init(Sprite_System* sprite_system, renderer* renderer)
+Sprite_System* sprite_system_init(Renderer* renderer)
 {
-    sprite_system = arena_alloc(&renderer->arena, sizeof(Sprite_System));
+    Sprite_System* sprite_system = arena_alloc(&renderer->arena, sizeof(Sprite_System));
     sprite_system->frame_arena = &renderer->frame_arena;
     sprite_system->index_type = VK_INDEX_TYPE_UINT16;
 
@@ -69,12 +68,12 @@ void sprite_system_init(Sprite_System* sprite_system, renderer* renderer)
     memcpy(sprite_system->sprite_indices, default_sprite_indices, sizeof(default_sprite_indices));
 
 
-    sprite_system->sprites_instance_data = Sprite_Instance_Data_array_create(MAX_SPRITE_COUNT);
+    sprite_system->sprites_data = Sprite_Data_array_create(MAX_SPRITE_COUNT);
     //TODO: replace with a fill function later
-    Sprite_Instance_Data instance_data = {0};
-    for (u64 i = 0; i < sprite_system->sprites_instance_data->capacity; i++)
+    Sprite_Data instance_data = {0};
+    for (u64 i = 0; i < sprite_system->sprites_data->capacity; i++)
     {
-        sprite_system->sprites_instance_data->data[i] = instance_data;
+        sprite_system->sprites_data->data[i] = instance_data;
     }
 
 
@@ -95,19 +94,23 @@ void sprite_system_init(Sprite_System* sprite_system, renderer* renderer)
                                                                       BUFFER_TYPE_STAGING, memory_capacity);
     sprite_system->sprite_indirect_staging_buffer = vulkan_buffer_create(
         renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, memory_capacity);
+    return sprite_system;
+
 }
 
-void sprite_begin(Sprite_System* sprite_system,i32 screen_size_x, i32 screen_size_y)
+void sprite_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 screen_size_y)
 {
+    MASSERT(sprite_system)
     sprite_system->screen_size.x = (float)screen_size_x;
     sprite_system->screen_size.y = (float)screen_size_y;
 
-    Sprite_Instance_Data_array_clear(sprite_system->sprites_instance_data);
+    Sprite_Data_array_clear(sprite_system->sprites_data);
 }
 
 
-void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer)
+void sprite_upload_draw_data(Renderer* renderer, Sprite_System* sprite_system)
 {
+    MASSERT(sprite_system)
     vulkan_buffer_data_copy_and_upload(renderer, sprite_system->sprite_vertex_buffer,
                                        sprite_system->sprite_vertex_staging_buffer,
                                        &sprite_system->sprites, sizeof(Sprite) * 4);
@@ -119,8 +122,8 @@ void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer)
 
     vulkan_buffer_data_copy_and_upload(renderer, sprite_system->sprite_instance_buffer,
                                        sprite_system->sprite_instance_staging_buffer,
-                                       sprite_system->sprites_instance_data->data,
-                                       Sprite_Instance_Data_array_get_bytes_used(sprite_system->sprites_instance_data));
+                                       sprite_system->sprites_data->data,
+                                       Sprite_Data_array_get_bytes_used(sprite_system->sprites_data));
 
 
     //generate indirect draw data
@@ -128,7 +131,7 @@ void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer)
 
     //literally only need one
     VkDrawIndexedIndirectCommand sprite_indirect_draw;
-    u64 sprite_count = sprite_system->sprites_instance_data->num_items;
+    u64 sprite_count = sprite_system->sprites_data->num_items;
 
     sprite_indirect_draw.firstIndex = 0;
     sprite_indirect_draw.firstInstance = 0;
@@ -143,9 +146,9 @@ void sprite_upload_draw_data(Sprite_System* sprite_system,renderer* renderer)
                                        sizeof(VkDrawIndexedIndirectCommand));
 }
 
-void sprite_draw(Sprite_System* sprite_system,renderer* renderer, vulkan_command_buffer* command_buffer)
+void sprite_draw(Sprite_System* sprite_system, Renderer* renderer, vulkan_command_buffer* command_buffer)
 {
-
+    MASSERT(sprite_system)
     vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_system->sprite_vertex_buffer);
     vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, sprite_system->sprite_index_buffer);
     vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, sprite_system->sprite_indirect_buffer);
@@ -181,7 +184,7 @@ void sprite_draw(Sprite_System* sprite_system,renderer* renderer, vulkan_command
                          sprite_system->index_type
     );
 
-    u64 sprite_count = sprite_system->sprites_instance_data->num_items;
+    u64 sprite_count = sprite_system->sprites_data->num_items;
 
     if (renderer->context.device.features.multiDrawIndirect)
     {
@@ -201,16 +204,19 @@ void sprite_draw(Sprite_System* sprite_system,renderer* renderer, vulkan_command
                                      sizeof(VkDrawIndexedIndirectCommand));
         }
     }
-
 }
 
 
 //sprites will only last for the frame, modify this is for another time
 void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
-                         Sprite_Pipeline_Flags material_flags)
+                   Sprite_Pipeline_Flags material_flags)
 {
-    Sprite_Instance_Data* data = &sprite_system->sprites_instance_data->data[sprite_system->sprites_instance_data->
-        num_items];
+    MASSERT(sprite_system);
+
+    //TODO: technically this line should not be happening in the sense that the sprite system does not own any sprite data,
+    // but gets passed the data throught a render packet, this create function should just pass back out a sprite_data*
+    Sprite_Data* data = &sprite_system->sprites_data->data[sprite_system->sprites_data->
+                                                                          num_items];
     data->flags = material_flags;
     data->pos = pos;
     data->scale = size;
@@ -218,6 +224,15 @@ void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color
     data->texture_index = texture.handle;
 }
 
-
-
-
+Sprite_Data* sprite_create_new(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
+                               Sprite_Pipeline_Flags material_flags)
+{
+    //TODO: textures should probably be handled differently, or maybe not, loading a texture is a separate thing
+    Sprite_Data* data = arena_alloc(frame_arena, sizeof(Sprite_Data));
+    data->flags = material_flags;
+    data->pos = pos;
+    data->scale = size;
+    data->color = color;
+    data->texture_index = texture.handle;
+    return data;
+}

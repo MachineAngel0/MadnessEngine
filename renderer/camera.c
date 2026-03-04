@@ -39,13 +39,12 @@ void camera_init(camera* out_camera)
 }
 
 
-
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, float deltaTime)
 {
     float velocity = cam->move_speed * deltaTime;
     float pitch = deg_to_rad(cam->pitch);
-    float yaw   = deg_to_rad(cam->yaw);
+    float yaw = deg_to_rad(cam->yaw);
 
     float cos_pitch = cosf(pitch);
     float sin_pitch = sinf(pitch);
@@ -53,10 +52,10 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    vec3 forward = { cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw };
+    vec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
     forward = vec3_normalize_functional(forward);
 
-    vec3 right =  vec3_normalize_functional(vec3_cross( forward, vec3_up()));
+    vec3 right = vec3_normalize_functional(vec3_cross(forward, vec3_up()));
 
     if (movement_direction == CAMERA_MOVEMENT_FORWARD)
     {
@@ -70,12 +69,12 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
     }
     if (movement_direction == CAMERA_MOVEMENT_LEFT)
     {
-        vec3 t = vec3_mul_scalar(right , velocity);
+        vec3 t = vec3_mul_scalar(right, velocity);
         cam->pos = vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_RIGHT)
     {
-        vec3 t = vec3_mul_scalar(right , velocity);
+        vec3 t = vec3_mul_scalar(right, velocity);
         cam->pos = vec3_sub(cam->pos, t);
     }
 }
@@ -84,7 +83,6 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
 // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
 void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
 {
-
     cam->yaw += x_offset * dt * cam->rotation_speed;
     cam->pitch += y_offset * dt * cam->rotation_speed;
 
@@ -97,7 +95,6 @@ void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float 
     cam->yaw = clamp_float(cam->yaw, 0.0f, 360.0f);
 
     // DEBUG("PITCH: %f, YAW: %f", cam->pitch, cam->yaw);
-
 }
 
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
@@ -112,43 +109,41 @@ void process_mouse_scroll(camera* cam, float y_offset)
 }
 
 
-void camera_update(camera* cam, float dt)
+void camera_update(Input_System* input_system, camera* cam, float dt)
 {
-    //TODO: This will need to be configurable at some point
-    if (input_is_key_pressed(renderer_internal.input_system_debug, KEY_W))
+    //TODO: will need to remove the input system at some point
+    if (input_is_key_pressed(input_system, KEY_W))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_FORWARD, dt);
     }
-    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_S))
+    if (input_is_key_pressed(input_system, KEY_S))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_BACKWARD, dt);
     }
-    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_A))
+    if (input_is_key_pressed(input_system, KEY_A))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_LEFT, dt);
     }
-    if (input_is_key_pressed(renderer_internal.input_system_debug,KEY_D))
+    if (input_is_key_pressed(input_system, KEY_D))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_RIGHT, dt);
     }
 
     i16 x;
     i16 y;
-    input_get_mouse_change(renderer_internal.input_system_debug,&x, &y);
+    input_get_mouse_change(input_system, &x, &y);
     camera_process_mouse_movement(cam, dt, -x, -y, true);
 
 
     //TODO:this is bugged, its acting like on pressed
-    if (input_key_released_unique(renderer_internal.input_system_debug,KEY_Q))
+    if (input_key_released_unique(input_system, KEY_Q))
     {
         process_mouse_scroll(cam, -10.0f);
     }
-    if (input_key_released_unique(renderer_internal.input_system_debug,KEY_E))
+    if (input_key_released_unique(input_system, KEY_E))
     {
         process_mouse_scroll(cam, 10.0f);
     }
-
-
 }
 
 mat4 camera_get_view_matrix(camera* cam)
@@ -160,7 +155,7 @@ mat4 camera_get_view_matrix(camera* cam)
 mat4 camera_get_fps_view_matrix(camera* cam)
 {
     float pitch = deg_to_rad(cam->pitch);
-    float yaw   = deg_to_rad(cam->yaw);
+    float yaw = deg_to_rad(cam->yaw);
 
     float cos_pitch = cosf(pitch);
     float sin_pitch = sinf(pitch);
@@ -168,19 +163,19 @@ mat4 camera_get_fps_view_matrix(camera* cam)
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    vec3 forward = { cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw };
+    vec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
     forward = vec3_normalize_functional(forward);
 
     // Compute right & up
     vec3 worldUp = vec3_up();
-    vec3 right   = vec3_normalize_functional(vec3_cross(worldUp, forward));
-    vec3 up      = vec3_cross(forward, right);
+    vec3 right = vec3_normalize_functional(vec3_cross(worldUp, forward));
+    vec3 up = vec3_cross(forward, right);
 
     // Build view matrix directly
     mat4 view = (mat4){
-        .rows[0] = (vec4){ right.x,   up.x,   forward.x,   0.0f },
-        .rows[1] = (vec4){ right.y,   up.y,   forward.y,   0.0f },
-        .rows[2] = (vec4){ right.z,   up.z,   forward.z,   0.0f },
+        .rows[0] = (vec4){right.x, up.x, forward.x, 0.0f},
+        .rows[1] = (vec4){right.y, up.y, forward.y, 0.0f},
+        .rows[2] = (vec4){right.z, up.z, forward.z, 0.0f},
         .rows[3] = (vec4){
             -vec3_dot(right, cam->pos),
             -vec3_dot(up, cam->pos),
@@ -195,7 +190,7 @@ mat4 camera_get_fps_view_matrix(camera* cam)
 
 mat4 camera_get_projection(camera* cam, const float width, const float height)
 {
-    return mat4_perspective(cam->fov, (float) (width / height), cam->znear, cam->zfar);
+    return mat4_perspective(cam->fov, (float)(width / height), cam->znear, cam->zfar);
     // float fov = 1.5;
     // return mat4_orthographic(-10 * fov, 10 * fov, -10 * fov, 10 * fov, cam->znear, cam->zfar);
 }

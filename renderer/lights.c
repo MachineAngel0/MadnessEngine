@@ -1,7 +1,7 @@
 ﻿#include "lights.h"
 
 
-Light_System* light_system_init(renderer* renderer)
+Light_System* light_system_init(Renderer* renderer)
 {
     Light_System* out_light_system = arena_alloc(&renderer->arena, sizeof(Light_System));
 
@@ -67,7 +67,7 @@ Light_System* light_system_init(renderer* renderer)
     return out_light_system;
 }
 
-void light_system_update(renderer* renderer, Light_System* light_system)
+void light_system_update(Renderer* renderer, Light_System* light_system)
 {
     //TODO: data upload of any lights and replace the function calls in vulkan buffer data copy
 

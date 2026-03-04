@@ -3,7 +3,7 @@
 #include "vk_buffer.h"
 
 
-Shader_System* shader_system_init(renderer* renderer)
+Shader_System* shader_system_init(Renderer* renderer)
 {
     Shader_System* out_shader_system = arena_alloc(&renderer->arena, sizeof(Shader_System));
     renderer->shader_system = out_shader_system;
@@ -48,7 +48,7 @@ Texture* shader_system_get_default_texture(Shader_System* system)
     return &system->default_texture;
 }
 
-void shader_system_update(renderer* renderer, Shader_System* system)
+void shader_system_update(Renderer* renderer, Shader_System* system)
 {
     //TODO: not in use rn, but idk if i really want to control material uploads here, they should be handled by the system there in
     //updates all the material data, every frame, since they are bound to change possibly every frame
@@ -66,7 +66,7 @@ void shader_system_update(renderer* renderer, Shader_System* system)
 }
 
 //pass out the texture index
-Texture_Handle shader_system_add_texture_file(renderer* renderer, Shader_System* system, char const* filepath)
+Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System* system, char const* filepath)
 {
     //get an available index
     Texture_Handle out_texture_handle;
@@ -85,7 +85,7 @@ Texture_Handle shader_system_add_texture_file(renderer* renderer, Shader_System*
     return out_texture_handle;
 }
 
-Texture_Handle shader_system_add_texture_font(renderer* renderer, Shader_System* system, void* pixel_data, u32 width, u32 height)
+Texture_Handle shader_system_add_texture_font(Renderer* renderer, Shader_System* system, void* pixel_data, u32 width, u32 height)
 {
     //get an available index
     Texture_Handle out_texture_handle;
@@ -110,7 +110,7 @@ void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)
     //TODO:
 }
 
-Texture_Handle shader_system_update_texture(renderer* renderer, Shader_System* system, Texture_Handle* handle,
+Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* system, Texture_Handle* handle,
                                             const char* filepath)
 {
     //overwrite if neccessary

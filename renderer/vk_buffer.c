@@ -4,7 +4,7 @@
 //NOTE: this should change so that its consistent with the amount given out in by the descriptor pools
 #define max_buffers_available 1024u
 
-Buffer_System* buffer_system_init(renderer* renderer, const u32 frames_in_flight)
+Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight)
 {
     Buffer_System* out_buffer_system = arena_alloc(&renderer->arena, sizeof(Buffer_System));
     out_buffer_system->frames_in_flight = frames_in_flight;
@@ -23,7 +23,7 @@ Buffer_System* buffer_system_init(renderer* renderer, const u32 frames_in_flight
         Buffer_Handle temp_buffer_handle = out_buffer_system->global_ubo_handle;
         temp_buffer_handle.handle += i;
         update_uniform_buffer_bindless_descriptor_set(
-            &renderer_internal, renderer_internal.descriptor_system, temp_buffer_handle, 0);
+            renderer, renderer->descriptor_system, temp_buffer_handle, 0);
     }
 
     return out_buffer_system;
@@ -190,7 +190,7 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 }
 
 
-Buffer_Handle vulkan_buffer_create(renderer* renderer,
+Buffer_Handle vulkan_buffer_create(Renderer* renderer,
                                    Buffer_System* buffer_system,
                                    vulkan_buffer_type buffer_type, u64 data_size)
 {
@@ -272,7 +272,8 @@ Buffer_Handle vulkan_buffer_create(renderer* renderer,
 
 
         // Create a host-visible buffer to copy the vertex data to (staging buffer)
-        VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_in_use->handle));
+        VkResult buffer_result = vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_in_use->handle);
+        VK_CHECK(buffer_result)
         vkGetBufferMemoryRequirements(device, buffer_in_use->handle, &memReqs);
         memAlloc.allocationSize = memReqs.size;
 
@@ -329,7 +330,7 @@ Buffer_Handle vulkan_buffer_create(renderer* renderer,
     return out_handle;
 }
 
-void _vulkan_buffer_create_internal(renderer* renderer, vulkan_buffer* out_buffer, vulkan_buffer_type buffer_type,
+void _vulkan_buffer_create_internal(Renderer* renderer, vulkan_buffer* out_buffer, vulkan_buffer_type buffer_type,
                                     u64 data_size)
 {
     //it has to be allocated before hand
@@ -431,32 +432,32 @@ void _vulkan_buffer_create_internal(renderer* renderer, vulkan_buffer* out_buffe
     renderer->buffer_system->buffer_current_count++;
 }
 
-bool vulkan_buffer_free(renderer* renderer, vulkan_buffer* vk_buffer)
+bool vulkan_buffer_free(Renderer* renderer, vulkan_buffer* vk_buffer)
 {
     vkFreeMemory(renderer->context.device.logical_device, vk_buffer->memory, NULL);
     vkDestroyBuffer(renderer->context.device.logical_device, vk_buffer->handle, NULL);
     return true;
 }
 
-vulkan_buffer* vulkan_buffer_get(renderer* renderer, Buffer_Handle buffer_handle)
+vulkan_buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     //get the index plus the current frame number
     return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
 }
 
-vulkan_buffer* vulkan_buffer_get_clear(renderer* renderer, Buffer_Handle buffer_handle)
+vulkan_buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     vulkan_buffer* out_buffer = vulkan_buffer_get(renderer, buffer_handle);
     out_buffer->current_offset = 0;
     return out_buffer;
 }
 
-void vulkan_buffer_reset_offset(renderer* renderer, Buffer_Handle buffer_handle)
+void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     vulkan_buffer_get(renderer, buffer_handle)->current_offset = 0;
 }
 
-void vulkan_buffer_data_copy_from_offset(renderer* renderer, Buffer_Handle staging_buffer_handle,
+void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle staging_buffer_handle,
                                          void* data, u64 data_size)
 {
 
@@ -478,7 +479,7 @@ void vulkan_buffer_data_copy_from_offset(renderer* renderer, Buffer_Handle stagi
 }
 
 
-void vulkan_buffer_copy(renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle)
+void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle)
 {
     vulkan_buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
     vulkan_buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
@@ -546,7 +547,7 @@ void vulkan_buffer_copy(renderer* renderer, Buffer_Handle buffer_handle, Buffer_
 
 }
 
-void vulkan_buffer_data_copy_and_upload(renderer* renderer, Buffer_Handle buffer_handle,
+void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,
                                         Buffer_Handle staging_buffer_handle, void* data, u64 data_size)
 {
     vulkan_buffer_data_copy_from_offset(renderer, staging_buffer_handle,

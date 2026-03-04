@@ -53,7 +53,7 @@ void static_mesh_free(static_mesh* static_mesh)
 }
 
 
-void mesh_load_gltf(renderer* renderer, const char* gltf_path)
+void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
 {
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -356,7 +356,7 @@ void mesh_load_gltf(renderer* renderer, const char* gltf_path)
 
 
 
-void mesh_load_fbx(renderer* renderer, const char* fbx_path)
+void mesh_load_fbx(Renderer* renderer, const char* fbx_path)
 {
     if (!c_string_path_is_extension(fbx_path, ".fbx"))
     {
@@ -431,7 +431,7 @@ void mesh_load_fbx(renderer* renderer, const char* fbx_path)
 }
 
 
-void mesh_load_obj(const char* obj_path, renderer* renderer)
+void mesh_load_obj(const char* obj_path, Renderer* renderer)
 {
     UNIMPLEMENTED();
     /*
@@ -504,7 +504,7 @@ void mesh_load_obj(const char* obj_path, renderer* renderer)
 }
 
 
-Mesh_System* mesh_system_init(renderer* renderer)
+Mesh_System* mesh_system_init(Renderer* renderer)
 {
     Mesh_System* out_mesh_system = arena_alloc(&renderer->arena, sizeof(Mesh_System));
     out_mesh_system->mesh_shader_permutations = arena_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
@@ -561,7 +561,7 @@ Mesh_System* mesh_system_init(renderer* renderer)
 }
 
 
-void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system)
+void mesh_system_generate_draw_data(Renderer* renderer, Mesh_System* mesh_system)
 {
     vulkan_buffer_reset_offset(renderer, mesh_system->vertex_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, mesh_system->index_staging_buffer_handle);
@@ -634,7 +634,7 @@ void mesh_system_generate_draw_data(renderer* renderer, Mesh_System* mesh_system
 }
 
 
-void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer,
+void mesh_system_draw(Renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer,
                       vulkan_shader_pipeline* pipeline)
 {
     INFO("MESH SYSTEM DRAW CALLS")
@@ -650,24 +650,24 @@ void mesh_system_draw(renderer* renderer, Mesh_System* mesh_system, vulkan_comma
 
     //UBER SHADER MESH INDIRECT DRAW
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer_internal.indirect_mesh_pipeline.handle);
+                      renderer->indirect_mesh_pipeline.handle);
 
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer_internal.descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                            renderer->indirect_mesh_pipeline.pipeline_layout, 0, 1,
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
                                 current_frame], 0, 0);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer_internal.descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
+                            renderer->indirect_mesh_pipeline.pipeline_layout, 1, 1,
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
                                 current_frame], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer_internal.indirect_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer_internal.descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                            renderer->indirect_mesh_pipeline.pipeline_layout, 2, 1,
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
                                 current_frame], 0, 0);
 
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,

@@ -21,7 +21,7 @@ VkShaderModule create_shader_module(const vulkan_context* context, const char* s
     return shader_module;
 }
 
-bool mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
+bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
                                  pipeline_cache)
 {
     // Pipeline layout creation
@@ -282,7 +282,7 @@ bool mesh_indirect_shader_create(renderer* renderer, vulkan_shader_pipeline* mes
     return true;
 }
 
-bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -547,7 +547,7 @@ bool ui_shader_create(renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
 }
 
 
-bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -813,7 +813,7 @@ bool text_shader_create(renderer* renderer, vulkan_shader_pipeline* text_pipelin
     return true;
 }
 
-bool sprite_shader_create(renderer* renderer, vulkan_shader_pipeline* sprite_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
   // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {

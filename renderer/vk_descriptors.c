@@ -16,7 +16,7 @@ VkDescriptorType descriptor_type_lookup[descriptor_type_max] = {
 };
 
 
-Descriptor_System* descriptor_pool_allocator_init(renderer* renderer)
+Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
 {
     /* list of all available types
         VK_DESCRIPTOR_TYPE_SAMPLER = 0,
@@ -98,19 +98,19 @@ Descriptor_System* descriptor_pool_allocator_init(renderer* renderer)
     return descriptor_system;
 }
 
-void descriptor_pool_allocator_destroy(renderer* renderer, Descriptor_System* descriptor_system)
+void descriptor_pool_allocator_destroy(Renderer* renderer, Descriptor_System* descriptor_system)
 {
     vkDestroyDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, NULL);
 }
 
-void descriptor_pool_allocator_clear(renderer* renderer, Descriptor_System* descriptor_system)
+void descriptor_pool_allocator_clear(Renderer* renderer, Descriptor_System* descriptor_system)
 {
     VK_CHECK(
         vkResetDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, 0));
 }
 
 
-void descriptor_pool_alloc_bindless(renderer* renderer, Descriptor_System* descriptor_system,
+void descriptor_pool_alloc_bindless(Renderer* renderer, Descriptor_System* descriptor_system,
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors)
 {
@@ -301,7 +301,7 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
 */
 
 
-void create_texture_bindless_descriptor_set(renderer* renderer,
+void create_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_pool_allocator,
                                             vulkan_bindless_descriptors* texture_descriptors)
 {
@@ -363,7 +363,7 @@ void create_texture_bindless_descriptor_set(renderer* renderer,
 
 
 
-void create_bindless_uniform_buffer_descriptor_set(renderer* renderer,
+void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* uniform_descriptors)
 {
@@ -424,7 +424,7 @@ void create_bindless_uniform_buffer_descriptor_set(renderer* renderer,
 
 
 
-void create_bindless_storage_buffer_descriptor_set(renderer* renderer,
+void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_pool_allocator,
                                                    vulkan_bindless_descriptors* storage_descriptors)
 {
@@ -484,7 +484,7 @@ void create_bindless_storage_buffer_descriptor_set(renderer* renderer,
 }
 
 
-void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
+void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_system,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index)
@@ -520,7 +520,7 @@ void update_uniform_buffer_bindless_descriptor_set(renderer* renderer,
 }
 
 
-void update_texture_bindless_descriptor_set(renderer* renderer,
+void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
                                             Texture_Handle texture_handle)
 {
@@ -553,7 +553,7 @@ void update_texture_bindless_descriptor_set(renderer* renderer,
     }
 }
 
-void update_storage_buffer_bindless_descriptor_set(renderer* renderer,
+void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_system,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index)

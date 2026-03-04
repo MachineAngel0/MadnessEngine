@@ -1,5 +1,8 @@
 ﻿#ifndef CAMERA_H
 #define CAMERA_H
+#include "input.h"
+#include "maths/math_types.h"
+
 
 /* CAMERA */
 typedef enum Camera_Movement
@@ -58,7 +61,7 @@ void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float 
 void process_mouse_scroll(camera* cam, float y_offset);
 
 
-void camera_update(camera* cam, float dt);
+void camera_update(Input_System* input_syste, camera* cam, float dt);
 
 mat4 camera_get_view_matrix(camera* cam);
 mat4 camera_get_fps_view_matrix(camera* cam);

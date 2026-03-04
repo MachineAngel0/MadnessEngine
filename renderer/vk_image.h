@@ -29,7 +29,7 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
 void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
     VkImage image, uint32_t width, uint32_t height);
 
-void create_texture_sampler(renderer* renderer, Texture* texture);
+void create_texture_sampler(Renderer* renderer, Texture* texture);
 
 void image_insert_memory_barrier(
     VkCommandBuffer cmdbuffer,
@@ -42,7 +42,7 @@ void image_insert_memory_barrier(
     VkPipelineStageFlags dstStageMask,
     VkImageSubresourceRange subresourceRange);
 
-void create_texture_glyph(renderer* renderer, vulkan_command_buffer* command_buffer,
+void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buffer,
                           Texture* texture, const unsigned char* pixel_data, uint32_t width, uint32_t height)
 {
 
