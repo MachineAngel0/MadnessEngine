@@ -1,15 +1,15 @@
-﻿
-#include "renderer_packet.h"
+﻿#include "renderer_packet.h"
 
-
-void render_packet_add_sprite_data(Render_Packet* renderer_packets, Sprite_Packet* Sprite_Packet)
+Render_Packet* render_packet_init(Arena* arena)
 {
-   Sprite_Packet_array_push(renderer_packets->Sprite_packet, Sprite_Packet);
+    MASSERT(arena);
+    Render_Packet* render_packet = arena_alloc(arena, sizeof(Render_Packet));
+    return render_packet;
 }
 
-void Render_packet_add_UI_data(Render_Packet* renderer_packets, UI_Packet* UI_Packet)
+void render_packet_clear(Render_Packet* renderer_packets)
 {
-   UI_Packet_array_push(renderer_packets->UI_packets, UI_Packet);
+    memset(renderer_packets, 0, sizeof(Render_Packet));
 }
 
 

@@ -147,6 +147,8 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
     // Sprite System
     renderer->sprite_system = sprite_system_init(renderer);
 
+    //System specific draws
+    renderer->ui_renderer = ui_render_init(renderer);
 
 
 
@@ -308,6 +310,7 @@ void renderer_update(Renderer* renderer, Render_Packet* render_packets, Clock* c
            sizeof(uniform_buffer_object));
 
     mesh_system_generate_draw_data(renderer, renderer->mesh_system);
+    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
     // Begin recording commands.
@@ -410,9 +413,9 @@ void renderer_update(Renderer* renderer, Render_Packet* render_packets, Clock* c
     mesh_system_draw(renderer, renderer->mesh_system, command_buffer_current_frame,
                      &renderer->indirect_mesh_pipeline);
 
-    madness_ui_draw(NULL, renderer, command_buffer_current_frame);
+    ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);
 
-    sprite_draw(renderer->sprite_system, renderer, command_buffer_current_frame);
+    // sprite_draw(renderer->sprite_system, renderer, command_buffer_current_frame);
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//

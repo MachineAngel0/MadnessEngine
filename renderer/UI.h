@@ -1,7 +1,6 @@
 ﻿#ifndef UI_H
 #define UI_H
 
-#include "sprite.h"
 #include "stb_truetype.h"
 
 //IMMEDIATE MODE UI
@@ -166,56 +165,10 @@ typedef struct
     VkDrawIndexedIndirectCommand* indirect_draw_array;
 } UI_Draw_data_new;
 
-typedef struct UI_Quad_Draw_Data
-{
-    //u16
-    VkIndexType index_type;
-
-    //TODO: the 100 is temporary
-    Quad_Vertex quad_vertex[1000];
-    u32 quad_vertex_bytes;
-
-    u16 indices[1000];
-    u32 index_bytes;
-    u32 index_count;
-
-    u32 quad_draw_count;
-
-    PC_2D pc_2d_quad;
-} UI_Quad_Draw_Data;
-
-typedef struct UI_Text_Draw_Data
-{
-    //every triangle is 4quad textures and 6 indices
-    //index += 6 + 6
-    //index_count += 6 every mesh
-
-    //u16
-    VkIndexType index_type;
-
-    //TODO: the 100 is temporary
-    Quad_Texture text_vertex[1000];
-    u32 text_vertex_bytes;
-
-    u16 text_indices[1000];
-    u32 text_index_bytes;
-    u32 text_index_count;
-
-
-    Material_2D_Param_Data text_material_params[1000];
-    u32 text_material_param_current_size;
-
-    u32 text_draw_count;
-
-    PC_2D pc_2d_text;
-} UI_Text_Draw_Data;
-
-
 typedef struct Madness_UI
 {
-    Arena* arena; // rn mainly just for loading fonts, would be better a pool arena
+    Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Arena* frame_arena;
-
 
     Input_System* input_system_reference; // does not own memory
 
@@ -242,66 +195,23 @@ typedef struct Madness_UI
 
     vec2 screen_size; // this gets queried every frame
 
-    UI_Quad_Draw_Data quad_draw_info;
-    UI_Text_Draw_Data text_draw_info;
-    // Text_System text_system;
 
-    //
-    Buffer_Handle ui_quad_vertex_buffer_handle;
-    Buffer_Handle ui_quad_index_buffer_handle;
-    Buffer_Handle ui_quad_indirect_buffer_handle;
+    //TODO: the 100 is temporary
+    Sprite_Data_array* ui_data;
+    Sprite_Data_array* text_data;
 
-    Buffer_Handle text_vertex_buffer_handle;
-    Buffer_Handle text_index_buffer_handle;
-    Buffer_Handle text_material_ssbo_handle;
-    Buffer_Handle text_indirect_buffer_handle;
-
-    // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
-    // Buffer_Handle ui_quad_texture_index_buffer_handle;
-
-
-    //HANDLES
-    Buffer_Handle ui_quad_vertex_staging_buffer_handle;
-    Buffer_Handle ui_quad_index_staging_buffer_handle;
-    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
-
-    Buffer_Handle text_vertex_staging_buffer_handle;
-    Buffer_Handle text_index_staging_buffer_handle;
-    Buffer_Handle text_material_staging_ssbo_handle;
-    Buffer_Handle text_indirect_staging_buffer_handle;
+    //TODO: move these out of the UI
+    PC_2D pc_2d_text;
+    PC_2D pc_2d_quad;
+    //u16
+    VkIndexType index_type;
 } Madness_UI;
 
-
-typedef struct Madness_UI_Renderer_Info
-{
-    Buffer_Handle ui_quad_vertex_buffer_handle;
-    Buffer_Handle ui_quad_index_buffer_handle;
-    Buffer_Handle ui_quad_indirect_buffer_handle;
-
-    Buffer_Handle text_vertex_buffer_handle;
-    Buffer_Handle text_index_buffer_handle;
-    Buffer_Handle text_material_ssbo_handle;
-    Buffer_Handle text_indirect_buffer_handle;
-
-    // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
-    // Buffer_Handle ui_quad_texture_index_buffer_handle;
-
-
-    //HANDLES
-    Buffer_Handle ui_quad_vertex_staging_buffer_handle;
-    Buffer_Handle ui_quad_index_staging_buffer_handle;
-    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
-
-    Buffer_Handle text_vertex_staging_buffer_handle;
-    Buffer_Handle text_index_staging_buffer_handle;
-    Buffer_Handle text_material_staging_ssbo_handle;
-    Buffer_Handle text_indirect_staging_buffer_handle;
-}Madness_UI_Renderer_Info;
 
 
 //NOTE: Remove the renderer from the init, these should not be coupled
 //I should only have to pass the vertex/index data to the renderer for drawing
-MAPI bool madness_ui_init(Madness_UI* madness_ui, Renderer* renderer);
+MAPI Madness_UI* madness_ui_init(Renderer* renderer);
 MAPI bool madness_ui_shutdown(Madness_UI* madness_ui, Renderer* renderer);
 
 //pass in the size every frame, in the event the size changes
@@ -310,8 +220,7 @@ MAPI void madness_ui_end(Madness_UI* madness_ui);
 
 //Text
 Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* filepath);
-//VULKAN
-void madness_ui_upload_draw_data(Madness_UI* madness_ui, Renderer* renderer);
+
 
 
 bool is_ui_hot(Madness_UI* madness_ui, int id);
@@ -368,8 +277,6 @@ bool do_button_text(Madness_UI* madness_ui, UI_ID id, String text, vec2 pos, vec
 void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percentage_size,
              vec3 color, float font_size);
 
-void madness_ui_add_quad_vertex(Madness_UI* madness_ui, Quad_Vertex* new_quad);
-
 void madness_ui_test(Madness_UI* madness_ui);
 void madness_ui_test2(Madness_UI* madness_ui);
 
@@ -377,9 +284,15 @@ void madness_ui_open_node(Madness_UI* madness_ui, const char* id, UI_Config conf
 void madness_ui_close_node(Madness_UI* madness_ui, const char* id);
 void madness_ui_calculate_positions(Madness_UI* madness_ui);
 
-//Vulkan
-void madness_ui_generate_draw_data(Madness_UI* madness_ui);
-void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_buffer* command_buffer);
 void madness_ui_generate_debug_data(Madness_UI* madness_ui);
+
+//Vulkan
+
+
+UI_Renderer_Backend* ui_render_init(Renderer* renderer);
+
+void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* render_packet);
+void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Render_Packet* render_packet);
+void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer, Render_Packet* render_packet);
 
 #endif //UI_H

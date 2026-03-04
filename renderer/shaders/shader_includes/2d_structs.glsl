@@ -4,12 +4,21 @@
 
 
 layout(push_constant, scalar) uniform PushConstant_2D{
-    uint material_buffer_idx;
+    uint instance_buffer_idx;
 }PC_2D;
 
 
-struct Material_2D_Param_Data {
-    uint feature_mask;
+struct Sprite_Data {
+    uint flags;
+
+    vec2 pos;
+    vec2 size;
+    float rotation;
+
+    vec2 uv_offset;
+    vec2 uv_size;
+
+    vec3 color;
     uint texture_index;
 };
 
@@ -24,6 +33,6 @@ layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
 //layout (set = 1, binding = 1) uniform sampler samplers[];
 
 // binding 2 stores all our buffers
-layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_2D_BUFFER{
-    Material_2D_Param_Data material_data[];
-}MATERIAL_2D[];
+layout(set = 2, binding = 0, scalar) readonly buffer SPRITE_INSTANCE_BUFFER{
+    Sprite_Data sprite_instance_data[];
+}Sprite_Instance_Buffer[];

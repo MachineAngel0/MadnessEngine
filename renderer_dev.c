@@ -47,6 +47,8 @@ bool renderer_dev_run()
 
     Renderer_Dev_Application* app = &app_internal;
     application_base_init(&app->application_base);
+
+    //just for convience
     Renderer* renderer = &app->renderer_application.renderer;
 
     //initialize the applications memory
@@ -59,6 +61,10 @@ bool renderer_dev_run()
     memory_tracker_init();
 
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+
+
+
+
 
     app->application_base.is_running = true;
 
@@ -88,6 +94,10 @@ bool renderer_dev_run()
         return false;
     }
 
+    //init the render packets
+    app->renderer_application.render_packet = render_packet_init(&app->application_base.memory_system.application_arena);
+    Render_Packet* render_packet = app->renderer_application.render_packet;
+
     //start the renderer
     if (!app->renderer_application.renderer_initialize(renderer, &app->application_base))
     {
@@ -95,8 +105,7 @@ bool renderer_dev_run()
         return false;
     };
 
-    Madness_UI* madness_ui = NULL;
-    madness_ui_init(madness_ui, renderer);
+    Madness_UI* madness_ui = madness_ui_init(renderer);
 
     //run the renderer
     //MAIN LOOP
@@ -119,7 +128,15 @@ bool renderer_dev_run()
         madness_ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
         madness_ui_test(madness_ui);
 
+
+        //Grab all the render data
+        render_packet_clear(render_packet);
+        madness_ui_generate_render_data(madness_ui, render_packet);
+
+        //render
         app->renderer_application.renderer_run(renderer, app_internal.renderer_application.render_packet, &app->application_base.clock);
+
+
 
         madness_ui_end(madness_ui);
         clock_update_frame_end(&app->application_base.clock);

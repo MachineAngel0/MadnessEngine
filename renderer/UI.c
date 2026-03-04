@@ -1,11 +1,16 @@
 ﻿#include "UI.h"
 
 #include "logger.h"
+#include "sprite.h"
 
 
-bool madness_ui_init(Madness_UI* madness_ui, Renderer* renderer)
+#define MAX_UI_SPRITE_COUNT 1000
+#define MAX_TEXT_SPRITE_COUNT 1000
+
+
+Madness_UI* madness_ui_init(Renderer* renderer)
 {
-    madness_ui = arena_alloc(&renderer->arena, sizeof(Madness_UI));
+    Madness_UI* madness_ui = arena_alloc(&renderer->arena, sizeof(Madness_UI));
 
     //TODO: TEMPORARY, request memory from the memory_system
     madness_ui->arena = &renderer->arena;
@@ -13,10 +18,10 @@ bool madness_ui_init(Madness_UI* madness_ui, Renderer* renderer)
 
     madness_ui->input_system_reference = renderer->input_system_debug;
 
-    madness_ui->quad_draw_info.index_type = VK_INDEX_TYPE_UINT16;
-    madness_ui->text_draw_info.index_type = VK_INDEX_TYPE_UINT16;
+    madness_ui->index_type = VK_INDEX_TYPE_UINT16;
 
-    madness_ui->text_draw_info.text_material_param_current_size = 0;
+    madness_ui->ui_data = Sprite_Data_array_create(MAX_UI_SPRITE_COUNT);
+    madness_ui->text_data = Sprite_Data_array_create(MAX_TEXT_SPRITE_COUNT);
 
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
 
@@ -51,52 +56,11 @@ bool madness_ui_init(Madness_UI* madness_ui, Renderer* renderer)
     madness_ui->screen_size = (vec2){800.0f, 600.0f};
 
 
-    //TODO: i should replace this with object counts // like max 1000 UI's on screen until i need to otherwise
-    u32 ui_buffer_sizes = MB(1);
-
-    madness_ui->ui_quad_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_VERTEX, ui_buffer_sizes);
-    madness_ui->ui_quad_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_INDEX, ui_buffer_sizes);
-    madness_ui->ui_quad_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                      BUFFER_TYPE_INDIRECT, ui_buffer_sizes);
-    madness_ui->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                 ui_buffer_sizes);
-    madness_ui->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                                ui_buffer_sizes);
-    madness_ui->text_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_CPU_STORAGE,
-                                                                 ui_buffer_sizes);
-    madness_ui->text_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_INDIRECT,
-                                                                   ui_buffer_sizes);
-
-
-    madness_ui->ui_quad_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                            BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    madness_ui->ui_quad_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    madness_ui->ui_quad_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                              BUFFER_TYPE_STAGING, ui_buffer_sizes);
-
-    madness_ui->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STAGING,
-                                                                         ui_buffer_sizes);
-    madness_ui->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        ui_buffer_sizes);
-    madness_ui->text_material_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STAGING,
-                                                                         ui_buffer_sizes);
-    madness_ui->text_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,
-                                                                           ui_buffer_sizes);
-
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
     font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
 
     INFO("UI SYSTEM CREATED");
-    return true;
+    return madness_ui;
 }
 
 bool madness_ui_shutdown(Madness_UI* madness_ui, Renderer* renderer)
@@ -113,30 +77,18 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->screen_size.x = screen_size_x;
     madness_ui->screen_size.y = screen_size_y;
 
-    //TODO: clear vertex and index data for UI and TEXT
-    // clear_vertex_info(Madness_UI->draw_info.vertex_info);
-    // Madness_UI->draw_info.UI_Objects.clear();
-    madness_ui->quad_draw_info.quad_vertex_bytes = 0;
-    madness_ui->quad_draw_info.index_bytes = 0;
-    madness_ui->quad_draw_info.index_count = 0;
-    madness_ui->quad_draw_info.quad_draw_count = 0;
-
+    Sprite_Data_array_clear(madness_ui->ui_data);
+    Sprite_Data_array_clear(madness_ui->text_data);
 
     for (u64 ui_node_index = 0; ui_node_index < madness_ui->ui_nodes->num_items; ui_node_index++)
     {
         madness_ui->ui_nodes->data[ui_node_index].children_length = 0;
     }
+
     UI_Node_array_zero(madness_ui->ui_nodes);
     UI_Node_array_clear(madness_ui->ui_nodes);
 
     madness_ui->ui_stack_count = 0;
-
-    madness_ui->text_draw_info.text_vertex_bytes = 0;
-    madness_ui->text_draw_info.text_index_bytes = 0;
-    madness_ui->text_draw_info.text_index_count = 0;
-    madness_ui->text_draw_info.text_material_param_current_size = 0;
-    madness_ui->text_draw_info.text_draw_count = 0;
-
 
     madness_ui->hot.ID = -1;
     madness_ui->hot.ID = -1;
@@ -336,98 +288,7 @@ Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* fi
     return out_handle;
 }
 
-void madness_ui_upload_draw_data(Madness_UI* madness_ui, Renderer* renderer)
-{
-    // UI Quad
-    vulkan_buffer_reset_offset(renderer, madness_ui->ui_quad_vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, madness_ui->ui_quad_index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, madness_ui->ui_quad_indirect_staging_buffer_handle);
-    //text
-    vulkan_buffer_reset_offset(renderer, madness_ui->text_vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, madness_ui->text_index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, madness_ui->text_indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, madness_ui->text_material_staging_ssbo_handle);
 
-    //UI Render
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->ui_quad_vertex_buffer_handle,
-                                       madness_ui->ui_quad_vertex_staging_buffer_handle,
-                                       madness_ui->quad_draw_info.quad_vertex,
-                                       madness_ui->quad_draw_info.quad_vertex_bytes);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->ui_quad_index_buffer_handle,
-                                       madness_ui->ui_quad_index_staging_buffer_handle,
-                                       madness_ui->quad_draw_info.indices,
-                                       madness_ui->quad_draw_info.index_bytes);
-
-    //generate indirect draws for ui
-    VkDrawIndexedIndirectCommand* indirect_draw_ui = arena_alloc(madness_ui->frame_arena,
-                                                                 sizeof(VkDrawIndexedIndirectCommand) * madness_ui->
-                                                                 text_draw_info.text_draw_count);
-    for (u32 i = 0; i < madness_ui->quad_draw_info.quad_draw_count; i++)
-    {
-        //since we know that quads are always 6 indices and 4 vec2 coordinates, this can easily be calculated
-        u32 index_count = ARRAY_SIZE(default_quad_indices);
-        indirect_draw_ui[i].firstIndex = i * index_count; // total up to this point
-        indirect_draw_ui[i].firstInstance = 0;
-        indirect_draw_ui[i].indexCount = index_count; // always 6
-        indirect_draw_ui[i].instanceCount = 1;
-        indirect_draw_ui[i].vertexOffset = i * 4; // count for every quad we wish to draw which is 4
-        // indirect_draw->vertexOffset = vertex_byte_count / sizeof(vec3); // total up to this point
-    }
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->ui_quad_indirect_buffer_handle,
-                                       madness_ui->ui_quad_indirect_staging_buffer_handle,
-                                       indirect_draw_ui,
-                                       sizeof(VkDrawIndexedIndirectCommand) * madness_ui->quad_draw_info.quad_draw_count
-    );
-
-
-    //TEXT Render
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->text_vertex_buffer_handle,
-                                       madness_ui->text_vertex_staging_buffer_handle,
-                                       madness_ui->text_draw_info.text_vertex,
-                                       madness_ui->text_draw_info.text_vertex_bytes);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->text_index_buffer_handle,
-                                       madness_ui->text_index_staging_buffer_handle,
-                                       madness_ui->text_draw_info.text_indices,
-                                       madness_ui->text_draw_info.text_index_bytes);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->text_material_ssbo_handle,
-                                       madness_ui->text_material_staging_ssbo_handle,
-                                       madness_ui->text_draw_info.text_material_params,
-                                       madness_ui->text_draw_info.text_material_param_current_size * sizeof(
-                                           Material_2D_Param_Data));
-
-    //generate indirect draws for tex
-    VkDrawIndexedIndirectCommand* indirect_draw_text = arena_alloc(madness_ui->frame_arena,
-                                                                   sizeof(VkDrawIndexedIndirectCommand) * madness_ui->
-                                                                   text_draw_info.text_draw_count);
-    for (u32 i = 0; i < madness_ui->text_draw_info.text_draw_count; i++)
-    {
-        //since we know that quads are always 6 indices and 4 vec2 coordinates, this can easily be calculated
-        u32 index_count = ARRAY_SIZE(default_quad_indices);
-        indirect_draw_text[i].firstIndex = i * index_count; // total up to this point
-        indirect_draw_text[i].firstInstance = 0;
-        indirect_draw_text[i].indexCount = index_count; // always 6
-        indirect_draw_text[i].instanceCount = 1;
-        indirect_draw_text[i].vertexOffset = i * 4; // count for every quad we wish to draw which is 4
-        // indirect_draw->vertexOffset = vertex_byte_count / sizeof(vec3); // total up to this point
-    }
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       madness_ui->text_indirect_buffer_handle,
-                                       madness_ui->text_indirect_staging_buffer_handle,
-                                       indirect_draw_text,
-                                       sizeof(VkDrawIndexedIndirectCommand) * madness_ui->text_draw_info.
-                                       text_draw_count);
-}
 
 
 void update_ui_mouse_pos(Madness_UI* madness_ui)
@@ -573,24 +434,6 @@ bool is_hot(Madness_UI* madness_ui, UI_ID id)
     return madness_ui->hot.ID == id.ID;
 }
 
-void madness_ui_add_quad_vertex(Madness_UI* madness_ui, Quad_Vertex* new_quad)
-{
-    // Add vertices
-    memcpy((u8*)madness_ui->quad_draw_info.quad_vertex + madness_ui->quad_draw_info.quad_vertex_bytes, new_quad,
-           sizeof(Quad_Vertex) * 4);
-
-    // create indices (two triangles per quad)
-    memcpy((u8*)madness_ui->quad_draw_info.indices + madness_ui->quad_draw_info.index_bytes, default_quad_indices,
-           sizeof(default_quad_indices));
-
-    //increase by count
-    madness_ui->quad_draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
-    //increase by bytes
-    madness_ui->quad_draw_info.index_bytes += sizeof(default_quad_indices);
-    madness_ui->quad_draw_info.index_count += ARRAY_SIZE(default_quad_indices);
-    madness_ui->quad_draw_info.quad_draw_count += 1;
-}
-
 
 bool do_button(Madness_UI* madness_ui, UI_ID id, vec2 pos, vec2 screen_percentage,
                vec3 color, vec3 hovered_color, vec3 pressed_color)
@@ -672,29 +515,38 @@ bool do_button(Madness_UI* madness_ui, UI_ID id, vec2 pos, vec2 screen_percentag
 
 
     /*SET DRAW COLOR Based on the state*/
-    Quad_Vertex* new_quad;
-    // = arena_alloc(Madness_UI->frame_arena, sizeof(Quad_Vertex) * 4);
+    Sprite_Pipeline_Flags ui_pipeline_flags;
+    ui_pipeline_flags |= SPRITE_PIPELINE_COLOR;
+    // Sprite_Data* sprite_data = sprite_create(madness_ui->frame_arena, final_pos, final_size, ui_config.color, ( Texture_Handle ){0},
+    // ui_pipeline_flags);
+    Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
+    sprite_data->pos = final_pos;
+    sprite_data->size = final_size;
+    sprite_data->color = color;
+    sprite_data->uv_offset = (vec2){0, 0};
+    sprite_data->uv_size = final_size;
+    sprite_data->flags = ui_pipeline_flags;
 
-    //set color
+
     //active state
     if (is_active(madness_ui, id))
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size, pressed_color);
+        sprite_data->color = pressed_color;
     }
     //hot state
     else if (is_hot(madness_ui, id))
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size, hovered_color);
+        sprite_data->color = hovered_color;
     }
     // normal state
     else
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size, color);
+        sprite_data->color = color;
     }
 
 
-    /*SET DRAW INFO*/
-    madness_ui_add_quad_vertex(madness_ui, new_quad);
+    /*Add to draw info*/
+    Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
 
     //check if we clicked the button
     if (use_button_new(madness_ui, id, final_pos, final_size)) return true;
@@ -782,47 +634,39 @@ bool do_button_config(Madness_UI* madness_ui, UI_ID id, UI_Config ui_config)
         printf("is not hot\n");
     }*/
 
-
     /*SET DRAW COLOR Based on the state*/
-    Quad_Vertex* new_quad;
-    // = arena_alloc(Madness_UI->frame_arena, sizeof(Quad_Vertex) * 4);
+    Sprite_Pipeline_Flags ui_pipeline_flags;
+    ui_pipeline_flags |= SPRITE_PIPELINE_COLOR;
+    // Sprite_Data* sprite_data = sprite_create(madness_ui->frame_arena, final_pos, final_size, ui_config.color, ( Texture_Handle ){0},
+    // ui_pipeline_flags);
+    Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
+    sprite_data->pos = final_pos;
+    sprite_data->size = final_size;
+    sprite_data->color = ui_config.color;
+    sprite_data->uv_offset = (vec2){0, 0};
+    sprite_data->uv_size = final_size;
+    sprite_data->flags = ui_pipeline_flags;
 
-    //set color
+
     //active state
     if (is_active(madness_ui, id))
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size,
-                                                 ui_config.pressed_color);
+        sprite_data->color = ui_config.pressed_color;
     }
     //hot state
     else if (is_hot(madness_ui, id))
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size,
-                                                 ui_config.hovered_color);
+        sprite_data->color = ui_config.hovered_color;
     }
     // normal state
     else
     {
-        new_quad = quad_create_screen_percentage(madness_ui->frame_arena, final_pos, final_size, ui_config.color);
+        sprite_data->color = ui_config.color;
     }
 
 
-    /*SET DRAW INFO*/
-
-    // Add vertices
-    memcpy((u8*)madness_ui->quad_draw_info.quad_vertex + madness_ui->quad_draw_info.quad_vertex_bytes, new_quad,
-           sizeof(Quad_Vertex) * 4);
-
-    // create indices (two triangles per quad)
-    memcpy((u8*)madness_ui->quad_draw_info.indices + madness_ui->quad_draw_info.index_bytes, default_quad_indices,
-           sizeof(default_quad_indices));
-
-    //increase by count
-    madness_ui->quad_draw_info.quad_vertex_bytes += sizeof(Quad_Vertex) * 4;
-    //increase by bytes
-    madness_ui->quad_draw_info.index_bytes += sizeof(default_quad_indices);
-    madness_ui->quad_draw_info.index_count += ARRAY_SIZE(default_quad_indices);
-    madness_ui->quad_draw_info.quad_draw_count += 1;
+    /*Add to draw info*/
+    Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
 
     //check if we clicked the button
     if (use_button_new(madness_ui, id, final_pos, final_size)) return true;
@@ -905,14 +749,16 @@ void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percenta
         //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
 
         // Convert screen coords to NDC [0,1] -> vulkan is [-1,1] which is handled in the shader
+        //pos
         f32 ndc_x0 = ((x_position) / screen_width);
+        f32 ndc_y0 = ((y_position) / screen_height);
+        //size
         f32 ndc_x1 = (((x_position + x_width)) / screen_width);
-        f32 ndc_y0 = ((y_position) / screen_height); // invert Y
         f32 ndc_y1 = (((y_position + y_height)) / screen_height);
 
         // UVs from the atlas
-        vec2 uv0 = {g->u0, g->v0};
-        vec2 uv1 = {g->u1, g->v1};
+        vec2 uv0 = {g->u0, g->v0}; // uv pos/offset
+        vec2 uv1 = {g->u1, g->v1}; // uv size
 
         //SET DRAW COLOR Based on the state
         // vec2 temp_pos = {0.5f, 0.5f};
@@ -920,40 +766,13 @@ void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percenta
         // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, temp_pos, temp_size, color, uv0, uv1);
         // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, new_final_pos, final_size, color, uv0, uv1);
 
-        Quad_Texture new_quad[4] = {
-            {{ndc_x0, ndc_y0}, color, {uv0.x, uv0.y}},
-            {{ndc_x0, ndc_y1}, color, {uv0.x, uv1.y}},
-            {{ndc_x1, ndc_y1}, color, {uv1.x, uv1.y}},
-            {{ndc_x1, ndc_y0}, color, {uv1.x, uv0.y}},
-        };
+        Sprite_Data* text_sprite = sprite_create_minimal(madness_ui->frame_arena);
+        text_sprite->pos = (vec2){ndc_x0, ndc_y0};
+        text_sprite->size = (vec2){ndc_x1, ndc_y1};
+        text_sprite->uv_offset = (vec2){g->u0, g->v0};
+        text_sprite->size = (vec2){g->u1, g->v1};
 
-
-        /*SET DRAW INFO*/
-
-        // Add text vertices
-        memcpy((u8*)madness_ui->text_draw_info.text_vertex + madness_ui->text_draw_info.text_vertex_bytes, new_quad,
-               sizeof(Quad_Texture) * 4);
-
-        // create indices (two triangles per quad)
-        memcpy((u8*)madness_ui->text_draw_info.text_indices + madness_ui->text_draw_info.text_index_bytes,
-               default_quad_indices,
-               sizeof(default_quad_indices));
-
-        //increase by count
-        madness_ui->text_draw_info.text_vertex_bytes += sizeof(Quad_Texture) * 4;
-        //increase by bytes
-        madness_ui->text_draw_info.text_index_bytes += sizeof(default_quad_indices);
-        madness_ui->text_draw_info.text_index_count += ARRAY_SIZE(default_quad_indices);
-
-        //add to material params
-        //TODO: this logic is just temporary
-        Material_2D_Param_Data* material_info = &madness_ui->text_draw_info.text_material_params[madness_ui->
-            text_draw_info.text_material_param_current_size];
-        madness_ui->text_draw_info.text_material_param_current_size++;
-        material_info->feature_mask = 0;
-        material_info->texture_index = madness_ui->default_font.font_texture_handle.handle;
-
-        madness_ui->text_draw_info.text_draw_count++;
+        Sprite_Data_array_push(madness_ui->text_data, text_sprite);
 
         screen_position.x += (g->advance) * font_scalar; // move offset forward
     }
@@ -1158,7 +977,6 @@ void madness_ui_test2(Madness_UI* madness_ui)
     }
 
     madness_ui_calculate_positions(madness_ui);
-    madness_ui_generate_draw_data(madness_ui);
     madness_ui_generate_debug_data(madness_ui);
 }
 
@@ -1216,19 +1034,84 @@ void madness_ui_calculate_positions(Madness_UI* madness_ui)
     }
 }
 
-
-void madness_ui_generate_draw_data(Madness_UI* madness_ui)
+UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 {
+    UI_Renderer_Backend* UI_Render_Info = arena_alloc(&renderer->arena, sizeof(UI_Renderer_Backend));
+
+    //TODO: i should replace this with object counts // like max 1000 UI's on screen until i need to otherwise
+    u32 ui_buffer_sizes = MB(1);
+
+    UI_Render_Info->ui_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_VERTEX, ui_buffer_sizes);
+    UI_Render_Info->ui_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_INDEX, ui_buffer_sizes);
+    UI_Render_Info->ui_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_INDIRECT, ui_buffer_sizes);
+    UI_Render_Info->ui_instance_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_CPU_STORAGE,
+                                                                   ui_buffer_sizes);
+    UI_Render_Info->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_VERTEX,
+                                                                     ui_buffer_sizes);
+    UI_Render_Info->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                    BUFFER_TYPE_INDEX,
+                                                                    ui_buffer_sizes);
+    UI_Render_Info->text_instance_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     ui_buffer_sizes);
+    UI_Render_Info->text_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                       BUFFER_TYPE_INDIRECT,
+                                                                       ui_buffer_sizes);
+
+
+    UI_Render_Info->ui_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    UI_Render_Info->ui_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                          BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    UI_Render_Info->ui_quad_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+        BUFFER_TYPE_STAGING, ui_buffer_sizes);
+
+    UI_Render_Info->ui_instance_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_STAGING,
+                                                                   ui_buffer_sizes);
+
+
+    UI_Render_Info->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                             BUFFER_TYPE_STAGING,
+                                                                             ui_buffer_sizes);
+    UI_Render_Info->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                            BUFFER_TYPE_STAGING,
+                                                                            ui_buffer_sizes);
+    UI_Render_Info->text_instance_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                             BUFFER_TYPE_STAGING,
+                                                                             ui_buffer_sizes);
+    UI_Render_Info->text_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                               BUFFER_TYPE_STAGING,
+                                                                               ui_buffer_sizes);
+    return UI_Render_Info;
+}
+
+
+void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* render_packet)
+{
+    f32 screen_width = madness_ui->screen_size.x;
+    f32 screen_height = madness_ui->screen_size.y;
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
         UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
+        Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
+        sprite_data->pos = (vec2){node_to_draw->pos_x/screen_width, node_to_draw->pos_y/screen_height};
+        sprite_data->size = (vec2){node_to_draw->size_x/screen_width, node_to_draw->size_y/screen_height};
+        sprite_data->color = node_to_draw->config.color;
 
-        Quad_Vertex* new_quad = quad_create_screen_size(madness_ui->frame_arena,
-                                                        (vec2){node_to_draw->pos_x, node_to_draw->pos_y},
-                                                        (vec2){node_to_draw->size_x, node_to_draw->size_y},
-                                                        node_to_draw->config.color, madness_ui->screen_size);
-        madness_ui_add_quad_vertex(madness_ui, new_quad);
+        Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
     }
+
+    render_packet->ui_data_packet.ui_data_packet = madness_ui->ui_data;
+    render_packet->ui_data_packet.text_data_packet = madness_ui->text_data;
+    render_packet->ui_data_packet.text_index_type = madness_ui->index_type;
+    render_packet->ui_data_packet.ui_index_type = madness_ui->index_type;
+    render_packet->ui_data_packet.system_name = "MADNESS UI";
 }
 
 void madness_ui_generate_debug_data(Madness_UI* madness_ui)
@@ -1249,18 +1132,104 @@ void madness_ui_generate_debug_data(Madness_UI* madness_ui)
     }
 }
 
-
-void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_buffer* command_buffer)
+void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Render_Packet* render_packet)
 {
-    //generate draw data
-    madness_ui_upload_draw_data(madness_ui, renderer);
+    // UI
+    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_index_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_quad_indirect_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_instance_staging_ssbo_handle);
+    //text
+    vulkan_buffer_reset_offset(renderer, ui_renderer->text_vertex_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->text_index_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->text_indirect_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->text_instance_staging_ssbo_handle);
 
+    //UI Render
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->ui_vertex_buffer_handle,
+                                       ui_renderer->ui_vertex_staging_buffer_handle,
+                                       default_sprite,
+                                       sizeof(Sprite) * 4);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->ui_index_buffer_handle,
+                                       ui_renderer->ui_index_staging_buffer_handle,
+                                       default_sprite_indices,
+                                       sizeof(u16) * 6);
+    //material data
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->ui_instance_ssbo_handle,
+                                       ui_renderer->ui_instance_staging_ssbo_handle,
+                                       render_packet->ui_data_packet.ui_data_packet->data,
+                                       Sprite_Data_array_get_bytes_used(
+                                           render_packet->ui_data_packet.ui_data_packet));
+    //literally only need one
+    VkDrawIndexedIndirectCommand indirect_draw_ui;
+
+    indirect_draw_ui.firstIndex = 0;
+    indirect_draw_ui.firstInstance = 0;
+    indirect_draw_ui.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
+    indirect_draw_ui.indexCount = ARRAY_SIZE(default_sprite_indices);
+    indirect_draw_ui.instanceCount = render_packet->ui_data_packet.ui_data_packet->num_items;
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->ui_indirect_buffer_handle,
+                                       ui_renderer->ui_quad_indirect_staging_buffer_handle,
+                                       &indirect_draw_ui,
+                                       sizeof(VkDrawIndexedIndirectCommand)
+    );
+
+
+    //TEXT Render
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->text_vertex_buffer_handle,
+                                       ui_renderer->text_vertex_staging_buffer_handle,
+                                       default_sprite,
+                                       sizeof(Sprite) * 4);
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->text_index_buffer_handle,
+                                       ui_renderer->text_index_staging_buffer_handle,
+                                       default_sprite_indices,
+                                       sizeof(u16) * 6);
+    //material data
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->text_instance_ssbo_handle,
+                                       ui_renderer->text_instance_staging_ssbo_handle,
+                                       render_packet->ui_data_packet.text_data_packet->data,
+                                       Sprite_Data_array_get_bytes_used(render_packet->ui_data_packet.text_data_packet));
+
+    //generate indirect draws for text
+    //literally only need one
+    VkDrawIndexedIndirectCommand indirect_draw_text;
+
+    indirect_draw_text.firstIndex = 0;
+    indirect_draw_text.firstInstance = 0;
+    indirect_draw_text.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
+    indirect_draw_text.indexCount = ARRAY_SIZE(default_sprite_indices);
+    indirect_draw_text.instanceCount = render_packet->ui_data_packet.text_data_packet->num_items;
+
+
+    vulkan_buffer_data_copy_and_upload(renderer,
+                                       ui_renderer->text_indirect_buffer_handle,
+                                       ui_renderer->text_indirect_staging_buffer_handle,
+                                       &indirect_draw_text,
+                                       sizeof(VkDrawIndexedIndirectCommand));
+}
+void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
+                      Render_Packet* render_packet)
+{
     //does the draw
+    u64 ui_draw_count = render_packet->ui_data_packet.ui_data_packet->num_items;
+    u64 text_draw_count = render_packet->ui_data_packet.text_data_packet->num_items;
 
     // UI
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, madness_ui->ui_quad_vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, madness_ui->ui_quad_index_buffer_handle);
-    vulkan_buffer* quad_indirect_buffer = vulkan_buffer_get(renderer, madness_ui->ui_quad_indirect_buffer_handle);
+    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
+    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
+    vulkan_buffer* quad_indirect_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_indirect_buffer_handle);
+
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->ui_pipeline.handle);
@@ -1284,13 +1253,30 @@ void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_
                                 current_frame], 0, 0);
 
 
+    //grab material_handle
+    PC_2D pc_2d_ui = {
+        ui_renderer->ui_instance_ssbo_handle.handle,
+    };
+
+    VkPushConstantsInfo push_constant_info_ui = {0};
+    push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_info_ui.layout = renderer->ui_pipeline.pipeline_layout;
+    push_constant_info_ui.offset = 0;
+    push_constant_info_ui.size = sizeof(PC_2D);
+    push_constant_info_ui.pValues = &pc_2d_ui;
+    push_constant_info_ui.pNext = NULL;
+
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
+
+
     VkDeviceSize offsets_bindless[1] = {0};
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
                            &vert_buffer->handle, offsets_bindless);
 
     vkCmdBindIndexBuffer(command_buffer->handle,
                          index_buffer->handle, 0,
-                         madness_ui->quad_draw_info.index_type
+                         VK_INDEX_TYPE_UINT16
     );
 
     // vkCmdDrawIndexed(command_buffer->handle,
@@ -1300,13 +1286,13 @@ void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_
     {
         vkCmdDrawIndexedIndirect(command_buffer->handle,
                                  quad_indirect_buffer->handle, 0,
-                                 madness_ui->quad_draw_info.quad_draw_count,
+                                 1,
                                  sizeof(VkDrawIndexedIndirectCommand));
     }
     else
     {
         // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < madness_ui->quad_draw_info.quad_draw_count; j++)
+        for (u64 j = 0; j < 1; j++)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      quad_indirect_buffer->handle,
@@ -1321,9 +1307,9 @@ void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_
 
 
     //TEXT
-    vulkan_buffer* text_vert_buffer = vulkan_buffer_get(renderer, madness_ui->text_vertex_buffer_handle);
-    vulkan_buffer* text_index_buffer = vulkan_buffer_get(renderer, madness_ui->text_index_buffer_handle);
-    vulkan_buffer* text_indirect = vulkan_buffer_get(renderer, madness_ui->text_indirect_buffer_handle);
+    vulkan_buffer* text_vert_buffer = vulkan_buffer_get(renderer, ui_renderer->text_vertex_buffer_handle);
+    vulkan_buffer* text_index_buffer = vulkan_buffer_get(renderer, ui_renderer->text_index_buffer_handle);
+    vulkan_buffer* text_indirect = vulkan_buffer_get(renderer, ui_renderer->text_indirect_buffer_handle);
 
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1349,37 +1335,39 @@ void madness_ui_draw(Madness_UI* madness_ui, Renderer* renderer, vulkan_command_
 
 
     //grab material_handle
-    madness_ui->text_draw_info.pc_2d_text.material_buffer_idx = madness_ui->text_material_ssbo_handle.handle;
+    PC_2D pc_2d_text = {
+        ui_renderer->text_instance_ssbo_handle.handle,
+    };
 
-    VkPushConstantsInfo push_constant_info = {0};
-    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info.layout = renderer->text_pipeline.pipeline_layout;
-    push_constant_info.offset = 0;
-    push_constant_info.size = sizeof(PC_2D);
-    push_constant_info.pValues = &madness_ui->text_draw_info.pc_2d_text;
-    push_constant_info.pNext = NULL;
+    VkPushConstantsInfo push_constant_info_text = {0};
+    push_constant_info_text.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    push_constant_info_text.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_info_text.layout = renderer->text_pipeline.pipeline_layout;
+    push_constant_info_text.offset = 0;
+    push_constant_info_text.size = sizeof(PC_2D);
+    push_constant_info_text.pValues = &pc_2d_text;
+    push_constant_info_text.pNext = NULL;
 
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_text);
 
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
                            &text_vert_buffer->handle, offsets_bindless);
 
     vkCmdBindIndexBuffer(command_buffer->handle,
                          text_index_buffer->handle, 0,
-                         madness_ui->text_draw_info.index_type);
+                         VK_INDEX_TYPE_UINT16);
 
     if (renderer->context.device.features.multiDrawIndirect)
     {
         vkCmdDrawIndexedIndirect(command_buffer->handle,
                                  text_indirect->handle, 0,
-                                 madness_ui->text_draw_info.text_draw_count,
+                                 1,
                                  sizeof(VkDrawIndexedIndirectCommand));
     }
     else
     {
         // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < madness_ui->text_draw_info.text_draw_count; j++)
+        for (u64 j = 0; j < 1; j++)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      text_indirect->handle,

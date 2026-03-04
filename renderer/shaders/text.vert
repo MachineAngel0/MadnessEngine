@@ -28,5 +28,32 @@ void main() {
     out_texture_idx = MATERIAL_2D[nonuniformEXT(PC_2D.material_buffer_idx)].material_data[nonuniformEXT(gl_DrawIDARB)].texture_index;
 //    out_material_idx = 1;
 
+    /*
+    typedef struct Sprite_Data
+{
+    //will be in a per instance storage buffer
+    u32 flags;
+
+    //will be used for text and for anything else 2d that needs a texture
+    // Transform transform; //TODO: when i make this more robust
+    vec2 pos;
+    vec2 size;
+    float rotation; // a float since we only rotate on one dimension, we can always change it later
+
+    // offset into a texture atlas if using one, otherwise {0, 0}
+    vec2 uv_offset;
+    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
+    vec2 uv_size;
+
+    //material data here
+    vec3 color;
+    u32 texture_index;
+} Sprite_Data;*/
+
+    /*
+    pos =
+
+    */
+
 
 }

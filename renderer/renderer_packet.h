@@ -2,39 +2,44 @@
 #define RENDERER_PACKET_H
 
 
-#include "UI.h"
-#include "vulkan_types.h"
-
-
-typedef struct Sprite_Packet
+//these are all just references to the data, they do not own anything
+typedef struct Render_Packet_Sprite
 {
-    Sprite_Data* sprite_data;
-    u32 sprite_data_size;
-} Sprite_Packet;
+    Sprite_Data_array* sprite_data_packet;
+    VkIndexType index_type;
+    const char* system_name;
+} Render_Packet_Sprite;
 
-typedef struct UI_Packet
+typedef struct Render_Packet_UI
 {
-    UI_Text_Draw_Data* text_draw_data;
-    UI_Quad_Draw_Data* ui_draw_data;
-} UI_Packet;
+    Sprite_Data_array* ui_data_packet;
+    VkIndexType ui_index_type;
+
+    Sprite_Data_array* text_data_packet;
+    VkIndexType text_index_type;
+
+    const char* system_name;
+
+} Render_Packet_UI;
 
 
-ARRAY_GENERATE_TYPE(Sprite_Packet)
-ARRAY_GENERATE_TYPE(UI_Packet)
-
-//the update function of any system like game or ui, just adds the draw data into the array
 typedef struct Render_Packet
 {
-   Sprite_Data_array* Sprite_Data_packet;
-   Sprite_Packet_array* Sprite_packet;
-   UI_Packet_array* UI_packets;
+    //rn we just have one of each,
+    //i don't want to deal with multiple instances of this data, if i need more create one for the specific system
+    //the system just sets the data inside the struct, not the safest but fine for now
+    Render_Packet_UI ui_data_packet;
+    Render_Packet_Sprite sprite_data_packet;
+
+    // geometry/mesh data at some point //TODO:
 } Render_Packet;
 
-void render_packet_clear(Render_Packet* renderer_packets);
 
-void render_packet_add_sprite_data(Render_Packet* renderer_packets, Sprite_Packet* Sprite_Packet);
+MAPI Render_Packet* render_packet_init(Arena* arena);
 
-void Render_packet_add_UI_data(Render_Packet* renderer_packets, UI_Packet* UI_Packet);
+//call before any system adds to the renderer packets
+MAPI void render_packet_clear(Render_Packet* renderer_packets);
+
 
 
 

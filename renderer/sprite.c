@@ -4,56 +4,6 @@
 #include "maths/math_types.h"
 
 
-Quad_Vertex* quad_create(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color)
-{
-    Quad_Vertex* out_vertex = arena_alloc(frame_arena, sizeof(Quad_Vertex) * 4);
-
-    out_vertex[0] = (Quad_Vertex){.pos = {pos.x, pos.y}, .color = color};
-    out_vertex[1] = (Quad_Vertex){.pos = {pos.x, pos.y + size.y}, .color = color};
-    out_vertex[2] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y + size.y}, .color = color};
-    out_vertex[3] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y}, .color = color};
-
-    return out_vertex;
-}
-
-Quad_Vertex* quad_create_screen_size(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, vec2 screen_size)
-{
-    Quad_Vertex* out_vertex = arena_alloc(frame_arena, sizeof(Quad_Vertex) * 4);
-
-    vec2 f_pos = vec2_div(pos, screen_size);
-    vec2 f_size = vec2_div(size, screen_size);
-
-    out_vertex[0] = (Quad_Vertex){.pos = {f_pos.x, f_pos.y}, .color = color};
-    out_vertex[1] = (Quad_Vertex){.pos = {f_pos.x, f_pos.y + f_size.y}, .color = color};
-    out_vertex[2] = (Quad_Vertex){.pos = {f_pos.x + f_size.x, f_pos.y + f_size.y}, .color = color};
-    out_vertex[3] = (Quad_Vertex){.pos = {f_pos.x + f_size.x, f_pos.y}, .color = color};
-
-    return out_vertex;
-}
-
-Quad_Vertex* quad_create_screen_percentage(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color)
-{
-    Quad_Vertex* out_vertex = arena_alloc(frame_arena, sizeof(Quad_Vertex) * 4);
-
-    out_vertex[0] = (Quad_Vertex){.pos = {pos.x - size.x, pos.y - size.y}, .color = color};
-    out_vertex[1] = (Quad_Vertex){.pos = {pos.x - size.x, pos.y + size.y}, .color = color};
-    out_vertex[2] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y + size.y}, .color = color};
-    out_vertex[3] = (Quad_Vertex){.pos = {pos.x + size.x, pos.y - size.y}, .color = color};
-
-    return out_vertex;
-}
-
-Quad_Texture* quad_create_textured(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, vec2 uv0, vec2 uv1)
-{
-    Quad_Texture* out_vertex = arena_alloc(frame_arena, sizeof(Quad_Texture) * 4);
-
-    out_vertex[0] = (Quad_Texture){.pos = {pos.x - size.x, pos.y - size.y}, .color = color, .tex = {uv0.x, uv0.y}};
-    out_vertex[1] = (Quad_Texture){.pos = {pos.x - size.x, pos.y + size.y}, .color = color, .tex = {uv0.x, uv1.y}};
-    out_vertex[2] = (Quad_Texture){.pos = {pos.x + size.x, pos.y + size.y}, .color = color, .tex = {uv1.x, uv1.y}};
-    out_vertex[3] = (Quad_Texture){.pos = {pos.x + size.x, pos.y - size.y}, .color = color, .tex = {uv1.x, uv0.y}};
-
-    return out_vertex;
-}
 
 
 Sprite_System* sprite_system_init(Renderer* renderer)
@@ -135,8 +85,8 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_System* sprite_system)
 
     sprite_indirect_draw.firstIndex = 0;
     sprite_indirect_draw.firstInstance = 0;
-    sprite_indirect_draw.vertexOffset = 6; // one quad is 2 triangles / 6 vertex's
-    sprite_indirect_draw.indexCount = sizeof(default_quad_indices);
+    sprite_indirect_draw.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
+    sprite_indirect_draw.indexCount = ARRAY_SIZE(default_sprite_indices);
     sprite_indirect_draw.instanceCount = sprite_count;
 
 
@@ -208,7 +158,7 @@ void sprite_draw(Sprite_System* sprite_system, Renderer* renderer, vulkan_comman
 
 
 //sprites will only last for the frame, modify this is for another time
-void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
+Sprite_Handle sprite_system_create_sprite(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
                    Sprite_Pipeline_Flags material_flags)
 {
     MASSERT(sprite_system);
@@ -219,20 +169,33 @@ void sprite_create(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color
                                                                           num_items];
     data->flags = material_flags;
     data->pos = pos;
-    data->scale = size;
+    data->size = size;
     data->color = color;
     data->texture_index = texture.handle;
+
+    return (Sprite_Handle){0};
 }
 
-Sprite_Data* sprite_create_new(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
+Sprite_Data* sprite_create(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
                                Sprite_Pipeline_Flags material_flags)
 {
     //TODO: textures should probably be handled differently, or maybe not, loading a texture is a separate thing
     Sprite_Data* data = arena_alloc(frame_arena, sizeof(Sprite_Data));
     data->flags = material_flags;
     data->pos = pos;
-    data->scale = size;
+    data->size = size;
     data->color = color;
     data->texture_index = texture.handle;
     return data;
 }
+
+Sprite_Data* sprite_create_minimal(Frame_Arena* frame_arena)
+{
+    Sprite_Data* data = arena_alloc(frame_arena, sizeof(Sprite_Data));
+    data->pos = (vec2){0.f,0.f};
+    data->size = (vec2){1.f,1.f};
+    return data;
+}
+
+
+

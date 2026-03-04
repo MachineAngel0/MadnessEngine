@@ -11,14 +11,12 @@
 
 
 
+#include "vulkan_types_vertex.h"
 #include "camera.h"
 #include "darray.h"
-#include "hash_set.h"
 #include "input.h"
 #include "str.h"
-#include "maths/math_types.h"
 #include "maths/transforms.h"
-#include "array_new.h"
 
 
 /// HANDLES ///
@@ -777,34 +775,8 @@ typedef struct vulkan_pipeline_cache
     VkPipelineCache handle;
 } vulkan_pipeline_cache;
 
-typedef struct Sprite
-{
-    vec2 pos;
-    vec2 tex;
-} Sprite;
 
-typedef struct Sprite_Data
-{
-    //will be in a per instance storage buffer
-    u32 flags;
 
-    //will be used for text and for anything else 2d that needs a texture
-    // Transform transform; //TODO: when i make this more robust
-    vec2 pos;
-    float rotation; // a float since we only rotate on one dimension, we can always change it later
-    vec2 scale;
-
-    // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
-    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
-
-    //material data here
-    vec3 color;
-    u32 texture_index;
-} Sprite_Data;
-
-ARRAY_GENERATE_TYPE(Sprite_Data)
 
 typedef struct Sprite_System
 {
@@ -829,7 +801,32 @@ typedef struct Sprite_System
     Buffer_Handle sprite_indirect_staging_buffer;
 } Sprite_System;
 
+typedef struct UI_Renderer
+{
+    Buffer_Handle ui_vertex_buffer_handle;
+    Buffer_Handle ui_index_buffer_handle;
+    Buffer_Handle ui_indirect_buffer_handle;
+    Buffer_Handle ui_instance_ssbo_handle;
 
+    Buffer_Handle text_vertex_buffer_handle;
+    Buffer_Handle text_index_buffer_handle;
+    Buffer_Handle text_instance_ssbo_handle;
+    Buffer_Handle text_indirect_buffer_handle;
+
+    // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
+    // Buffer_Handle ui_quad_texture_index_buffer_handle;
+
+    //HANDLES
+    Buffer_Handle ui_vertex_staging_buffer_handle;
+    Buffer_Handle ui_index_staging_buffer_handle;
+    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
+    Buffer_Handle ui_instance_staging_ssbo_handle;
+
+    Buffer_Handle text_vertex_staging_buffer_handle;
+    Buffer_Handle text_index_staging_buffer_handle;
+    Buffer_Handle text_instance_staging_ssbo_handle;
+    Buffer_Handle text_indirect_staging_buffer_handle;
+}UI_Renderer_Backend;
 
 typedef struct renderer
 {
@@ -850,6 +847,11 @@ typedef struct renderer
 
 
     Sprite_System* sprite_system;
+
+    //draw systems
+    UI_Renderer_Backend* ui_renderer;
+
+
 
 
     //mesh system

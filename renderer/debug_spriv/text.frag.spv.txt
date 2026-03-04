@@ -1,7 +1,7 @@
 ; SPIR-V
 ; Version: 1.0
 ; Generator: Khronos Glslang Reference Front End; 11
-; Bound: 251
+; Bound: 263
 ; Schema: 0
                OpCapability Shader
                OpCapability ShaderNonUniform
@@ -85,7 +85,7 @@ void main() {
         %171 = OpString "point_light"
         %175 = OpString "POINT_LIGHT_BUFFER"
         %182 = OpString "ubo"
-        %185 = OpString "material_buffer_idx"
+        %185 = OpString "instance_buffer_idx"
         %188 = OpString "PushConstant_2D"
         %193 = OpString "PC_2D"
         %200 = OpString "textures"
@@ -95,10 +95,12 @@ void main() {
         %220 = OpString "textureCubes"
         %229 = OpString "textureArrays"
         %232 = OpString "texture_index"
-        %236 = OpString "Material_2D_Param_Data"
-        %241 = OpString "material_data"
-        %243 = OpString "MATERIAL_2D_BUFFER"
-        %250 = OpString "MATERIAL_2D"
+        %234 = OpString "uv_size"
+        %238 = OpString "rotation"
+        %246 = OpString "Sprite_Data"
+        %251 = OpString "sprite_instance_data"
+        %255 = OpString "SPRITE_INSTANCE_BUFFER"
+        %262 = OpString "Sprite_Instance_Buffer"
                OpSourceExtension "GL_EXT_buffer_reference"
                OpSourceExtension "GL_EXT_nonuniform_qualifier"
                OpSourceExtension "GL_EXT_scalar_block_layout"
@@ -144,18 +146,24 @@ void main() {
                OpMemberName %POINT_LIGHT_BUFFER 0 "point_light"
                OpName %ubo "ubo"
                OpName %PushConstant_2D "PushConstant_2D"
-               OpMemberName %PushConstant_2D 0 "material_buffer_idx"
+               OpMemberName %PushConstant_2D 0 "instance_buffer_idx"
                OpName %PC_2D "PC_2D"
                OpName %textures "textures"
                OpName %texturesMS "texturesMS"
                OpName %textureCubes "textureCubes"
                OpName %textureArrays "textureArrays"
-               OpName %Material_2D_Param_Data "Material_2D_Param_Data"
-               OpMemberName %Material_2D_Param_Data 0 "feature_mask"
-               OpMemberName %Material_2D_Param_Data 1 "texture_index"
-               OpName %MATERIAL_2D_BUFFER "MATERIAL_2D_BUFFER"
-               OpMemberName %MATERIAL_2D_BUFFER 0 "material_data"
-               OpName %MATERIAL_2D "MATERIAL_2D"
+               OpName %Sprite_Data "Sprite_Data"
+               OpMemberName %Sprite_Data 0 "flags"
+               OpMemberName %Sprite_Data 1 "pos"
+               OpMemberName %Sprite_Data 2 "size"
+               OpMemberName %Sprite_Data 3 "rotation"
+               OpMemberName %Sprite_Data 4 "uv_offset"
+               OpMemberName %Sprite_Data 5 "uv_size"
+               OpMemberName %Sprite_Data 6 "color"
+               OpMemberName %Sprite_Data 7 "texture_index"
+               OpName %SPRITE_INSTANCE_BUFFER "SPRITE_INSTANCE_BUFFER"
+               OpMemberName %SPRITE_INSTANCE_BUFFER 0 "sprite_instance_data"
+               OpName %Sprite_Instance_Buffer "Sprite_Instance_Buffer"
                OpDecorate %outColor Location 0
                OpDecorate %in_color Location 0
                OpDecorate %texture_samples Binding 0
@@ -218,15 +226,21 @@ void main() {
                OpDecorate %textureCubes DescriptorSet 1
                OpDecorate %textureArrays Binding 0
                OpDecorate %textureArrays DescriptorSet 1
-               OpMemberDecorate %Material_2D_Param_Data 0 Offset 0
-               OpMemberDecorate %Material_2D_Param_Data 1 Offset 4
-               OpDecorate %_runtimearr_Material_2D_Param_Data ArrayStride 8
-               OpDecorate %MATERIAL_2D_BUFFER Block
-               OpMemberDecorate %MATERIAL_2D_BUFFER 0 NonWritable
-               OpMemberDecorate %MATERIAL_2D_BUFFER 0 Offset 0
-               OpDecorate %MATERIAL_2D NonWritable
-               OpDecorate %MATERIAL_2D Binding 0
-               OpDecorate %MATERIAL_2D DescriptorSet 2
+               OpMemberDecorate %Sprite_Data 0 Offset 0
+               OpMemberDecorate %Sprite_Data 1 Offset 4
+               OpMemberDecorate %Sprite_Data 2 Offset 12
+               OpMemberDecorate %Sprite_Data 3 Offset 20
+               OpMemberDecorate %Sprite_Data 4 Offset 24
+               OpMemberDecorate %Sprite_Data 5 Offset 32
+               OpMemberDecorate %Sprite_Data 6 Offset 40
+               OpMemberDecorate %Sprite_Data 7 Offset 52
+               OpDecorate %_runtimearr_Sprite_Data ArrayStride 56
+               OpDecorate %SPRITE_INSTANCE_BUFFER Block
+               OpMemberDecorate %SPRITE_INSTANCE_BUFFER 0 NonWritable
+               OpMemberDecorate %SPRITE_INSTANCE_BUFFER 0 Offset 0
+               OpDecorate %Sprite_Instance_Buffer NonWritable
+               OpDecorate %Sprite_Instance_Buffer Binding 0
+               OpDecorate %Sprite_Instance_Buffer DescriptorSet 2
        %void = OpTypeVoid
           %7 = OpTypeFunction %void
        %uint = OpTypeInt 32 0
@@ -396,22 +410,32 @@ void main() {
         %226 = OpExtInst %void %1 DebugTypePointer %224 %uint_0 %uint_0
 %textureArrays = OpVariable %_ptr_UniformConstant__arr_221_uint_1 UniformConstant
         %228 = OpExtInst %void %1 DebugGlobalVariable %229 %224 %20 %uint_32 %uint_0 %23 %229 %textureArrays %uint_8
-%Material_2D_Param_Data = OpTypeStruct %uint %uint
-    %uint_13 = OpConstant %uint 13
-        %231 = OpExtInst %void %1 DebugTypeMember %232 %11 %20 %uint_13 %uint_10 %uint_0 %uint_0 %uint_3
-        %234 = OpExtInst %void %1 DebugTypeMember %232 %11 %20 %uint_13 %uint_10 %uint_0 %uint_0 %uint_3
-        %235 = OpExtInst %void %1 DebugTypeComposite %236 %uint_1 %20 %uint_32 %uint_0 %23 %236 %uint_0 %uint_3 %231 %234
-%_runtimearr_Material_2D_Param_Data = OpTypeRuntimeArray %Material_2D_Param_Data
-        %238 = OpExtInst %void %1 DebugTypeArray %235 %uint_0
-%MATERIAL_2D_BUFFER = OpTypeStruct %_runtimearr_Material_2D_Param_Data
-        %240 = OpExtInst %void %1 DebugTypeMember %241 %238 %20 %uint_28 %uint_28 %uint_0 %uint_0 %uint_3
-        %242 = OpExtInst %void %1 DebugTypeComposite %243 %uint_1 %20 %uint_32 %uint_0 %23 %243 %uint_0 %uint_3 %240
-%_arr_MATERIAL_2D_BUFFER_uint_1 = OpTypeArray %MATERIAL_2D_BUFFER %uint_1
-        %245 = OpExtInst %void %1 DebugTypeArray %242 %uint_1
-%_ptr_StorageBuffer__arr_MATERIAL_2D_BUFFER_uint_1 = OpTypePointer StorageBuffer %_arr_MATERIAL_2D_BUFFER_uint_1
-        %247 = OpExtInst %void %1 DebugTypePointer %245 %uint_12 %uint_0
-%MATERIAL_2D = OpVariable %_ptr_StorageBuffer__arr_MATERIAL_2D_BUFFER_uint_1 StorageBuffer
-        %249 = OpExtInst %void %1 DebugGlobalVariable %250 %245 %20 %uint_32 %uint_0 %23 %250 %MATERIAL_2D %uint_8
+%Sprite_Data = OpTypeStruct %uint %v2float %v2float %float %v2float %v2float %v3float %uint
+        %231 = OpExtInst %void %1 DebugTypeMember %232 %11 %20 %uint_22 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_19 = OpConstant %uint 19
+        %233 = OpExtInst %void %1 DebugTypeMember %234 %84 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+        %236 = OpExtInst %void %1 DebugTypeMember %234 %84 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_16 = OpConstant %uint 16
+        %237 = OpExtInst %void %1 DebugTypeMember %238 %32 %20 %uint_16 %uint_11 %uint_0 %uint_0 %uint_3
+        %240 = OpExtInst %void %1 DebugTypeMember %234 %84 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+        %241 = OpExtInst %void %1 DebugTypeMember %234 %84 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_21 = OpConstant %uint 21
+        %242 = OpExtInst %void %1 DebugTypeMember %136 %43 %20 %uint_21 %uint_10 %uint_0 %uint_0 %uint_3
+        %244 = OpExtInst %void %1 DebugTypeMember %232 %11 %20 %uint_22 %uint_10 %uint_0 %uint_0 %uint_3
+        %245 = OpExtInst %void %1 DebugTypeComposite %246 %uint_1 %20 %uint_32 %uint_0 %23 %246 %uint_0 %uint_3 %231 %233 %236 %237 %240 %241 %242 %244
+%_runtimearr_Sprite_Data = OpTypeRuntimeArray %Sprite_Data
+        %248 = OpExtInst %void %1 DebugTypeArray %245 %uint_0
+%SPRITE_INSTANCE_BUFFER = OpTypeStruct %_runtimearr_Sprite_Data
+    %uint_37 = OpConstant %uint 37
+    %uint_17 = OpConstant %uint 17
+        %250 = OpExtInst %void %1 DebugTypeMember %251 %248 %20 %uint_37 %uint_17 %uint_0 %uint_0 %uint_3
+        %254 = OpExtInst %void %1 DebugTypeComposite %255 %uint_1 %20 %uint_32 %uint_0 %23 %255 %uint_0 %uint_3 %250
+%_arr_SPRITE_INSTANCE_BUFFER_uint_1 = OpTypeArray %SPRITE_INSTANCE_BUFFER %uint_1
+        %257 = OpExtInst %void %1 DebugTypeArray %254 %uint_1
+%_ptr_StorageBuffer__arr_SPRITE_INSTANCE_BUFFER_uint_1 = OpTypePointer StorageBuffer %_arr_SPRITE_INSTANCE_BUFFER_uint_1
+        %259 = OpExtInst %void %1 DebugTypePointer %257 %uint_12 %uint_0
+%Sprite_Instance_Buffer = OpVariable %_ptr_StorageBuffer__arr_SPRITE_INSTANCE_BUFFER_uint_1 StorageBuffer
+        %261 = OpExtInst %void %1 DebugGlobalVariable %262 %257 %20 %uint_32 %uint_0 %23 %262 %Sprite_Instance_Buffer %uint_8
        %main = OpFunction %void None %7
          %17 = OpLabel
          %28 = OpExtInst %void %1 DebugScope %19

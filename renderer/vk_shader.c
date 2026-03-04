@@ -291,14 +291,20 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
         renderer->descriptor_system->storage_descriptors.descriptor_set_layout,
     };
 
+    VkPushConstantRange push_constant[1] = {0};
+    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant[0].offset = 0;
+    push_constant[0].size = sizeof(PC_2D);
+
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     // pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
     // pipeline_layout_info.pSetLayouts = set_layouts;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
     pipeline_layout_info.pSetLayouts = set_layouts;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = NULL;
+    pipeline_layout_info.pushConstantRangeCount = ARRAY_SIZE(push_constant);
+    pipeline_layout_info.pPushConstantRanges = push_constant;
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
     VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info,
@@ -353,7 +359,7 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     input_binding_description[0].binding = 0;
     input_binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
     // input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2
-    input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2 + vec3
+    input_binding_description[0].stride = sizeof(Sprite); // size of vec2 + vec3
 
 
     spirv_reflect_input_variable_info* attribute_info =
@@ -619,7 +625,7 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     binding_description[0].binding = 0;
     // binding_description.stride = sizeof(Vertex_Text);
     // binding_description[0].stride = 8 + 12 + 8;
-    binding_description[0].stride = sizeof(Quad_Texture);
+    binding_description[0].stride = sizeof(Sprite);
     // binding_description[0].stride = 8+12+8;
     binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
@@ -883,8 +889,7 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     //vertex
     input_binding_description[0].binding = 0;
     input_binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    // input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2
-    input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2 + vec3
+    input_binding_description[0].stride = sizeof(Sprite); // size of vec2 + vec3
 
 
     spirv_reflect_input_variable_info* attribute_info =
