@@ -102,66 +102,8 @@ void camera_update_view_matrix(camera* out_camera)
 
 
 
-
-
-
-
-
-bool camera_mouse_movement_event(u16 code, void* sender, void* listener_inst, event_context context)
-{
-    if (code == EVENT_MOUSE_MOVED)
-    {
-        DEBUG("mouse moved");
-        uint16_t x = context.data.u16[0];
-        uint16_t y = context.data.u16[1];
-        camera_process_mouse_movement(&camera_temp, x, y, true);
-    }
-
-    return false;
-}
-
-bool camera_mouse_movement_scroll_event(u16 code, void* sender, void* listener_inst, event_context context)
-{
-    if (code == EVENT_MOUSE_WHEEL)
-    {
-        DEBUG("mouse scrolled for camera");
-
-        uint8_t y = context.data.u8[0];
-        process_mouse_scroll(&camera_temp, y);
-    }
-
-    return false;
-}
-
-bool camera_keyboard_event(u16 code, void* sender, void* listener_inst, event_context context)
-{
-    if (code == EVENT_KEY_PRESSED)
-    {
-
-        uint16_t key_code = context.data.u16[0];
-        float fake_delta = 1.0f;
-
-        if (key_code == KEY_W)
-        {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_FORWARD, fake_delta); //TODO: false delta
-            DEBUG("WWWWWWW");
-        }
-        if (key_code == KEY_S)
-        {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_BACKWARD, fake_delta); //TODO: false delta
-        }
-        if (key_code == KEY_A)
-        {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_LEFT, fake_delta); //TODO: false delta
-        }
-        if (key_code == KEY_D)
-        {
-            camera_process_keyboard(&camera_temp, CAMERA_MOVEMENT_RIGHT, fake_delta); //TODO: false delta
-        }
-    }
-
-    return false;
-}
-
 */
+
+
+
 #endif //CAMERA_H

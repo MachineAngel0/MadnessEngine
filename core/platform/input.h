@@ -156,6 +156,7 @@ typedef struct keyboard_state
 
 typedef struct mouse_state
 {
+    //x and y only track the change in mouse movement
     int16_t x;
     int16_t y;
     uint8_t buttons[MOUSE_BUTTON_MAX_BUTTONS];
@@ -225,6 +226,8 @@ MAPI bool input_is_mouse_button_released(Input_System* input_system, mouse_butto
 MAPI bool input_was_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
 
 MAPI bool input_was_mouse_button_released(Input_System* input_system, mouse_buttons key);
+
+MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y);
 
 
 #endif //INPUT_H

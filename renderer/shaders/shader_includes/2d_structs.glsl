@@ -7,6 +7,11 @@ layout(push_constant, scalar) uniform PushConstant_2D{
     uint instance_buffer_idx;
 }PC_2D;
 
+#define BITFLAG(x) (1 << (x))
+#define SPRITE_PIPELINE_NONE  BITFLAG(1)
+#define SPRITE_PIPELINE_TEXTURE  BITFLAG(2)
+#define SPRITE_PIPELINE_COLOR  BITFLAG(3)
+
 
 struct Sprite_Data {
     uint flags;

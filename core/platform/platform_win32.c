@@ -455,6 +455,7 @@ bool platform_file_copy(const char* source_file, char* new_file)
 }
 
 
+
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
@@ -491,5 +492,14 @@ bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* 
 
     return TRUE;
 }
+
+
+void platform_set_cursor_pos(int x, int y)
+{
+    // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
+    //read the docs for when you want this implemented properly
+    SetCursorPos(x, y);
+}
+
 
 #endif // MPLATFORM_WINDOWS

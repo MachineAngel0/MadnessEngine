@@ -21,9 +21,9 @@ typedef struct hash_table
 } hash_table;
 
 
-hash_table* _hash_table_string_create(u64 value_data_size, u64 capacity);
-#define HASH_MAP_STRING_CREATE(type, capacity) _hash_table_string_create(sizeof(type), capacity)
-#define HASH_MAP_STRING_CREATE_DEFAULT_SIZE(type) _hash_table_string_create(sizeof(type), HM_STRING_TEST_CAPACITY)
+hash_table* _hash_table_create(u64 value_data_size, u64 capacity);
+#define HASH_TABLE_CREATE(type, capacity) _hash_table_create(sizeof(type), capacity)
+#define HASH_TABLE_CREATE_DEFAULT_SIZE(type) _hash_table_create(sizeof(type), HM_STRING_TEST_CAPACITY)
 
 
 void hash_table_destroy(hash_table* h);

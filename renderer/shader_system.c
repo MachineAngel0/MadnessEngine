@@ -17,6 +17,9 @@ Shader_System* shader_system_init(Renderer* renderer)
     out_shader_system->available_texture_indexes = 0;
     out_shader_system->material_param_indexes = 0;
 
+    out_shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
+
+
     //create our debug texture
     out_shader_system->default_texture_handle = shader_system_add_texture_file(renderer, out_shader_system,
                                                                           "../renderer/texture/error_texture.png");
@@ -25,6 +28,8 @@ Shader_System* shader_system_init(Renderer* renderer)
                                                                         BUFFER_TYPE_CPU_STORAGE,
                                                                         sizeof(Material_Param_Data) * out_shader_system
                                                                         ->max_indexes);
+
+
 
     INFO("SHADER SYSTEM CREATED")
 
@@ -68,9 +73,19 @@ void shader_system_update(Renderer* renderer, Shader_System* system)
 //pass out the texture index
 Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System* system, char const* filepath)
 {
+
+    if (hash_table_contains(system->texture_file_to_handle, filepath))
+    {
+        Texture_Handle* handle = (Texture_Handle*)hash_table_get(system->texture_file_to_handle, filepath);
+        return *handle;
+    };
+
+
     //get an available index
     Texture_Handle out_texture_handle;
     out_texture_handle.handle = system->available_texture_indexes;
+    //add to hash table
+    hash_table_insert(system->texture_file_to_handle, filepath, &out_texture_handle);
 
     //create the texture
     Texture* out_texture = &system->textures[out_texture_handle.handle];

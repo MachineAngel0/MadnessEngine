@@ -8,8 +8,7 @@
 
 
 layout(location = 0) in vec2 in_pos;
-layout(location = 1) in vec3 in_color;
-layout(location = 2) in vec2 in_uv;
+layout(location = 1) in vec2 in_tex;
 
 layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
@@ -18,42 +17,47 @@ layout(location = 3) out flat uint out_texture_idx;
 
 void main() {
 
-    vec2 ndc =  vec2(in_pos) * 2.0 - 1.0;
+    uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
+
+    Sprite_Data inst_data =
+    Sprite_Instance_Buffer[nonuniformEXT(sprite_instance_buffer_idx)].sprite_instance_data[nonuniformEXT(gl_InstanceIndex)];
+
+    vec2 vertices[6] =
+    {
+    inst_data.pos,
+    vec2(inst_data.pos + vec2(0.0, inst_data.size.y)),
+    vec2(inst_data.pos + vec2(inst_data.size.x, inst_data.size.y)),
+    vec2(inst_data.pos + vec2(inst_data.size.x, 0.0)),
+    vec2(inst_data.pos + vec2(0.0, inst_data.size.y)),
+    vec2(inst_data.pos + inst_data.size),
+    };
+
+
+
+    vec2 ndc = vec2(vertices[gl_VertexIndex]) * 2.0 - 1.0;
     gl_Position = vec4(ndc, 0.0, 1.0);
-    out_color = in_color;
-    out_uv = in_uv;
 
-    uint draw_other_idx = gl_DrawIDARB;
 
-    out_texture_idx = MATERIAL_2D[nonuniformEXT(PC_2D.material_buffer_idx)].material_data[nonuniformEXT(gl_DrawIDARB)].texture_index;
-//    out_material_idx = 1;
+    out_color = inst_data.color;
 
-    /*
-    typedef struct Sprite_Data
-{
-    //will be in a per instance storage buffer
-    u32 flags;
+    out_texture_idx = inst_data.texture_index;
 
-    //will be used for text and for anything else 2d that needs a texture
-    // Transform transform; //TODO: when i make this more robust
-    vec2 pos;
-    vec2 size;
-    float rotation; // a float since we only rotate on one dimension, we can always change it later
 
-    // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
-    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
+    float left = inst_data.uv_offset.x;
+    float top = inst_data.uv_offset.y;
+    float right = inst_data.uv_offset.x + inst_data.uv_size.x;
+    float bottom = inst_data.uv_offset.y+ inst_data.uv_size.y;
 
-    //material data here
-    vec3 color;
-    u32 texture_index;
-} Sprite_Data;*/
+    //only 4 since this is indexed
+    vec2 uvs[4]=
+    {
+    vec2(left, top),
+    vec2(left, bottom),
+    vec2(right, bottom),
+    vec2(right, top),
+    };
 
-    /*
-    pos =
-
-    */
+    out_uv = uvs[gl_VertexIndex];
 
 
 }

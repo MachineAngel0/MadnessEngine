@@ -63,6 +63,20 @@ void main() {
 
     // gl_Position = camera.viewProj * vec4(worldPos, 0.0, 1.0);
     gl_Position = vec4(world_position, 0.0, 1.0);
+
+    /* TODO: Not in use yet
+    //only 4 since this is indexed
+    vec2 uvs[4]=
+    {
+    vec2(left, top),
+    vec2(left, bottom),
+    vec2(right, bottom),
+    vec2(right, top),
+    };
+
+    out_uv = uvs[gl_VertexIndex];
+    */
+
     out_uv = in_uv;
 
 }

@@ -111,6 +111,8 @@ void process_mouse_scroll(camera* cam, float y_offset)
 
 void camera_update(Input_System* input_system, camera* cam, float dt)
 {
+
+
     //TODO: will need to remove the input system at some point
     if (input_is_key_pressed(input_system, KEY_W))
     {

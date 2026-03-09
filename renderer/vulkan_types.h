@@ -14,6 +14,7 @@
 #include "vulkan_types_vertex.h"
 #include "camera.h"
 #include "darray.h"
+#include "hash_table.h"
 #include "input.h"
 #include "str.h"
 #include "maths/transforms.h"
@@ -370,16 +371,16 @@ typedef struct vulkan_shader_pipeline
     VkPipeline handle;
 } vulkan_shader_pipeline;
 
-
+#define AVAILABLE_TEXTURES 100
 typedef struct Shader_System
 {
     Texture default_texture;
-    Texture textures[100];
+    Texture textures[AVAILABLE_TEXTURES];
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
 
 
-    vulkan_shader_pipeline pipeline_references[100];
+    vulkan_shader_pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
 
     Texture_Handle default_texture_handle;
@@ -389,12 +390,14 @@ typedef struct Shader_System
     Shader_Handle default_shader_handle;
     Pipeline_Handle default_pipeline_handle;
 
-    Material_Param_Data material_params[100];
+    Material_Param_Data material_params[AVAILABLE_TEXTURES];
     u32 material_param_indexes;
 
     //TODO: this should hold all the global buffers and things for descriptor set
     Buffer_Handle material_mesh_ssbo_handle;
     Buffer_Handle material_mesh_staging_handle;
+
+    hash_table* texture_file_to_handle;
 
 
     u32 max_indexes;

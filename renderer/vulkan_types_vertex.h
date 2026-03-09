@@ -23,7 +23,7 @@ typedef enum Sprite_Pipeline_Flags
 typedef struct Sprite_Data
 {
     //will be in a per instance storage buffer
-    u32 flags;
+    Sprite_Pipeline_Flags flags;
 
     //will be used for text and for anything else 2d that needs a texture
     // Transform transform; //TODO: when i make this more robust

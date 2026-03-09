@@ -118,7 +118,6 @@ bool renderer_dev_run()
         clock_print_info(&app->application_base.clock);
 
         platform_pump_messages(&app->application_base.plat_state);
-        input_update(&app->application_base.input_system);
 
         //vulkan will crash if you minimize the window
         if (app->application_base.is_suspended)
@@ -137,6 +136,7 @@ bool renderer_dev_run()
         app->renderer_application.renderer_run(renderer, app_internal.renderer_application.render_packet, &app->application_base.clock);
 
 
+        input_update(&app->application_base.input_system);
 
         madness_ui_end(madness_ui);
         clock_update_frame_end(&app->application_base.clock);

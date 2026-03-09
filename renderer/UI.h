@@ -96,6 +96,7 @@ typedef struct UI_Padding
     float bottom;
 } UI_Padding;
 
+
 typedef struct UI_Config
 {
     // FUTURE: this should either be a vec3, transform or neither and we just pass in the transform values seperately for the 3D UI
@@ -110,7 +111,35 @@ typedef struct UI_Config
     vec3 hovered_color;
     vec3 pressed_color;
     UI_Layout_Direction layout_direction;
+
+    const char* texture_path;
+    Texture_Handle texture_handle;
 } UI_Config;
+
+
+typedef struct UI_Data
+{
+    vec2 pos;
+    vec2 size;
+}UI_Data;
+
+
+typedef struct UI_Style
+{
+    // FUTURE: this should either be a vec3, transform or neither and we just pass in the transform values seperately for the 3D UI
+    UI_Padding padding;
+    UI_Sizing size_type;
+    UI_Alignment alignment;
+
+    vec3 color;
+    vec3 normal_color;
+    vec3 hovered_color;
+    vec3 pressed_color;
+    UI_Layout_Direction layout_direction;
+
+    const char* texture_path;
+    Texture_Handle texture_handle;
+} UI_Style;
 
 typedef struct UI_Text_Config
 {
@@ -123,6 +152,13 @@ typedef struct UI_Text_Config
     //PASS IN STRING SEPERATELY
 } UI_Text_Config;
 
+typedef enum UI_Button_State
+{
+    BUTTON_STATE_COLD,
+    BUTTON_STATE_HOT,
+    BUTTON_STATE_ACTIVE,
+} UI_Button_State;
+
 
 //TODO:  just a temporary value for now, will increase later
 #define MAX_UI_NODE_COUNT 100
@@ -130,16 +166,16 @@ typedef struct UI_Text_Config
 
 typedef struct UI_Node
 {
-    float pos_x;
-    float pos_y;
-    float size_x;
-    float size_y;
+    vec2 pos;
+    vec2 size;
     struct UI_Node* parent;
     //this has to be an array, 10 for now, but we will make it dynamic later
     struct UI_Node* children[MAX_UI_NODE_CHILD_COUNT];
     u64 children_length;
     UI_Config config;
     const char* debug_id;
+
+    Sprite_Pipeline_Flags flags;
 } UI_Node;
 
 ARRAY_GENERATE_TYPE(UI_Node)
@@ -170,6 +206,7 @@ typedef struct Madness_UI
     Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Arena* frame_arena;
 
+    Renderer* renderer_reference;
     Input_System* input_system_reference; // does not own memory
 
     //this should be an array at some point
@@ -193,6 +230,11 @@ typedef struct Madness_UI
     i16 mouse_pos_x;
     i16 mouse_pos_y;
 
+    //stores id and the ui state they are in the previous frame, if applicable
+    hash_table* ui_hash_states; // this might not be needed
+    hash_table* button_hash_states; // only for buttons
+
+
     vec2 screen_size; // this gets queried every frame
 
 
@@ -205,8 +247,16 @@ typedef struct Madness_UI
     PC_2D pc_2d_quad;
     //u16
     VkIndexType index_type;
-} Madness_UI;
 
+    //new UI
+    bool compose;
+    vec2 cursor_pos; //position of where to draw the next ui element
+    UI_Layout_Direction layout_direction; // direction to position the ui element
+    float element_padding; // space between each ui element
+
+
+
+} Madness_UI;
 
 
 //NOTE: Remove the renderer from the init, these should not be coupled
@@ -222,12 +272,9 @@ MAPI void madness_ui_end(Madness_UI* madness_ui);
 Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* filepath);
 
 
-
 bool is_ui_hot(Madness_UI* madness_ui, int id);
 
 bool is_ui_active(Madness_UI* madness_ui, int id);
-
-bool region_hit(Madness_UI* madness_ui, vec2 pos, vec2 size);
 
 bool region_hit_new(Madness_UI* madness_ui, vec2 pos, vec2 size);
 
@@ -256,7 +303,7 @@ int generate_id(Madness_UI* madness_ui);
 
 void set_hot(Madness_UI* madness_ui, UI_ID id);
 
-void set_active(Madness_UI* madness_ui,UI_ID id);
+void set_active(Madness_UI* madness_ui, UI_ID id);
 
 bool can_be_active(Madness_UI* madness_ui);
 bool is_active(Madness_UI* madness_ui, UI_ID id);
@@ -286,6 +333,60 @@ void madness_ui_calculate_positions(Madness_UI* madness_ui);
 
 void madness_ui_generate_debug_data(Madness_UI* madness_ui);
 
+// NEW API
+
+//designing what I want it to look like from the ground up
+/*
+    //WANTS:
+    button, text, text box, textures, on hover popup, slider, checkbox
+
+    Configs:
+    rounded rects, highlight borders, clickable,
+
+
+    ui_config = {horizontal, pos, size}
+    ui_button1_config = {pos, size}
+    ui_item_begin(ui_config);
+
+    if(button(ui_button1_config)){};
+    if(button()){};
+
+
+    vertical_box_end();
+
+
+ */
+
+
+void madness_ui_begin_region(Madness_UI* madness_ui, const char* id);
+void madness_ui_end_region(Madness_UI* madness_ui, const char* id);
+
+
+void madness_set_layout_direction(Madness_UI* madness_ui, UI_Layout_Direction layout_direction);
+
+bool madness_button(Madness_UI* madness_ui, const char* id, UI_Config config);
+
+void madness_button_text(const char* id, vec2 pos, vec2 size)
+{
+}
+
+void madness_icon(Madness_UI* madness_ui, const char* id, const char* icon_path)
+{
+}
+
+void madness_slider(Madness_UI* madness_ui, const char* id, float cur_val, float min, float max)
+{
+}
+
+void madness_text_box(Madness_UI* madness_ui, const char* id)
+{
+
+}
+
+void madness_ui_test3(Madness_UI* madness_ui);
+
+
+
 //Vulkan
 
 
@@ -293,6 +394,7 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer);
 
 void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* render_packet);
 void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Render_Packet* render_packet);
-void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer, Render_Packet* render_packet);
+void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
+                      Render_Packet* render_packet);
 
 #endif //UI_H

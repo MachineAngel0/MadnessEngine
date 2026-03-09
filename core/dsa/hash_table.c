@@ -1,6 +1,6 @@
 ﻿#include "hash_table.h"
 
-hash_table* _hash_table_string_create(u64 value_data_size, u64 capacity)
+hash_table* _hash_table_create(u64 value_data_size, u64 capacity)
 {
     hash_table* h = malloc(sizeof(hash_table));
 
@@ -8,7 +8,9 @@ hash_table* _hash_table_string_create(u64 value_data_size, u64 capacity)
     h->value_data_size = value_data_size;
 
     h->key_str_data = calloc(capacity, sizeof(char*));
-    h->value_data = calloc(capacity, sizeof(void*));
+
+    h->value_data = malloc(capacity * sizeof(void*));
+    memset(h->value_data, 0, sizeof(void*));
 
 
     for (int i = 0; i < h->capacity; i++)
@@ -99,6 +101,12 @@ void hash_table_remove(hash_table* h, const char* key_str)
 bool hash_table_contains(hash_table* h, const char* key_str)
 {
     MASSERT_MSG(h, "HASH MAP STRING DELETE: INVALID PARAMS");
+
+    if (!key_str)
+    {
+        MASSERT_MSG(h, "HASH TABLE CONTAINS: INVALID KEY");
+        return false;
+    }
 
     u64 string_size = strlen(key_str);
 
@@ -197,7 +205,14 @@ void hash_table_print(hash_table* h, void (*print_func_value)(void*))
 void hash_table_test()
 {
     TEST_START("HASH TABLE");
-    hash_table* hm_test = HASH_MAP_STRING_CREATE(i32, HM_STRING_TEST_CAPACITY);
+    hash_table* hm_test = HASH_TABLE_CREATE(i32, HM_STRING_TEST_CAPACITY);
+
+    typedef enum test_hash_enum
+    {
+        TEST_HASH_TABLE_1,
+        TEST_HASH_TABLE_2 ,
+        TEST_HASH_TABLE_3 ,
+    }test_hash_enum;
 
     i32 val = 100;
     hash_table_insert(hm_test, "key", &val);

@@ -12,31 +12,6 @@
 #include "vk_shader.h"
 #include "vk_sync.h"
 
-typedef enum Results
-{
-    RESULT_VALID,
-    RESULT_INBETWEEN,
-    RESULT_INVALID,
-    RESULT_MEMORY,
-    RESULT_INIT,
-    RESULT_SHUTDOWN,
-} Results;
-
-typedef enum ErrorCode
-{
-    ErrorCode_VALID,
-    ErrorCode_INBETWEEN,
-    ErrorCode_INVALID,
-    ErrorCode_MEMORY,
-    ErrorCode_INIT,
-    ErrorCode_SHUTDOWN,
-} ErrorCode;
-
-struct renderer_init_result
-{
-    Renderer* renderer;
-};
-
 bool renderer_init(Renderer* renderer, Application_Base* application_base)
 {
     vulkan_context* vk_context = &renderer->context;
