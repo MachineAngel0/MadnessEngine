@@ -168,6 +168,11 @@ i32 hash_set_contains_index(const hash_set* h, void* key)
     return -1;
 }
 
+u64 hash_set_get_hash_key(const hash_set* h, void* key)
+{
+    return generate_hash_key_64bit(key, h->data_size);
+}
+
 
 void hash_set_print(hash_set* h, void (*print_func)(void*))
 {

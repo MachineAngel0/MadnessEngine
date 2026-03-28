@@ -91,10 +91,24 @@ void string_builder_append_char(String_Builder* str_builder, const char* word, c
     str_builder->current_length += word_size;
 }
 
+void string_builder_decrement(String_Builder* str_builder)
+{
+    //check for valid pointer and that we can decrement a valid length of string
+    MASSERT(str_builder)
+    if (str_builder->current_length <= 0) return;
+
+    str_builder->current_length--;
+}
+
 String* string_builder_to_string(const String_Builder* builder)
 {
     return string_create(builder->str, builder->current_length);
 }
+String string_builder_to_string_non_pointer(const String_Builder* builder)
+{
+    return (String){builder->str, builder->current_length};
+}
+
 String* string_builder_to_c_string(const String_Builder* builder)
 {
     UNIMPLEMENTED();

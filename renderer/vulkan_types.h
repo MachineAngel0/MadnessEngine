@@ -398,6 +398,7 @@ typedef struct Shader_System
     Buffer_Handle material_mesh_staging_handle;
 
     hash_table* texture_file_to_handle;
+    // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
 
 
     u32 max_indexes;

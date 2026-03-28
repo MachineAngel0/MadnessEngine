@@ -31,6 +31,8 @@ typedef struct hash_set
 
 hash_set* hash_set_init(uint64_t data_size, uint64_t capacity);
 
+#define HASH_SET_CREATE(type, capacity) hash_set_init(sizeof(type), capacity));
+
 
 void hash_set_free(hash_set* h);
 
@@ -45,6 +47,8 @@ bool hash_set_contains(const hash_set* h, void* key);
 
 
 i32 hash_set_contains_index(const hash_set* h, void* key);
+
+u64 hash_set_get_hash_key(const hash_set* h, void* key);
 
 
 

@@ -44,6 +44,7 @@ typedef struct Madness_Font
 
 #define DEFAULT_FONT_CREATION_SIZE 128.0f
 #define DEFAULT_FONT_SIZE 48.0f
+#define EDITOR_FONT_SIZE 16.0f
 
 //UI
 typedef enum UI_Alignment
@@ -83,8 +84,8 @@ typedef enum UI_Sizing
 
 typedef enum UI_Layout_Direction
 {
-    UI_LAYOUT_LEFT_TO_RIGHT,
-    UI_LAYOUT_TOP_TO_BOTTOM,
+    UI_LAYOUT_HORIZONTAL,
+    UI_LAYOUT_VERTICAL,
 } UI_Layout_Direction;
 
 typedef struct UI_Padding
@@ -97,60 +98,25 @@ typedef struct UI_Padding
 } UI_Padding;
 
 
-typedef struct UI_Config
+typedef struct UI_Editor_Style
 {
-    // FUTURE: this should either be a vec3, transform or neither and we just pass in the transform values seperately for the 3D UI
-    vec2 pos; //remove later
-    vec2 size;
-    UI_Padding padding;
-    UI_Sizing size_type;
-    UI_Alignment alignment;
+    vec3 layout_color;
+    vec3 layout_accent_color;
 
+    vec3 text_color;
+    vec3 textbox_color;
+
+    vec3 custom_widget_color;
+
+
+    //colors for things like buttons and checkboxes
     vec3 color;
-    vec3 normal_color;
     vec3 hovered_color;
     vec3 pressed_color;
-    UI_Layout_Direction layout_direction;
 
-    const char* texture_path;
-    Texture_Handle texture_handle;
-} UI_Config;
+    vec3 outline_color;
+} UI_Editor_Style;
 
-
-typedef struct UI_Data
-{
-    vec2 pos;
-    vec2 size;
-}UI_Data;
-
-
-typedef struct UI_Style
-{
-    // FUTURE: this should either be a vec3, transform or neither and we just pass in the transform values seperately for the 3D UI
-    UI_Padding padding;
-    UI_Sizing size_type;
-    UI_Alignment alignment;
-
-    vec3 color;
-    vec3 normal_color;
-    vec3 hovered_color;
-    vec3 pressed_color;
-    UI_Layout_Direction layout_direction;
-
-    const char* texture_path;
-    Texture_Handle texture_handle;
-} UI_Style;
-
-typedef struct UI_Text_Config
-{
-    vec2 pos;
-    vec2 size;
-    UI_Alignment alignment;
-    vec3 color;
-    vec3 font_size;
-    bool wrap;
-    //PASS IN STRING SEPERATELY
-} UI_Text_Config;
 
 typedef enum UI_Button_State
 {
@@ -164,27 +130,23 @@ typedef enum UI_Button_State
 #define MAX_UI_NODE_COUNT 100
 #define MAX_UI_NODE_CHILD_COUNT 10
 
+
 typedef struct UI_Node
 {
+    // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
-    struct UI_Node* parent;
-    //this has to be an array, 10 for now, but we will make it dynamic later
-    struct UI_Node* children[MAX_UI_NODE_CHILD_COUNT];
-    u64 children_length;
-    UI_Config config;
     const char* debug_id;
+    u64 hash_id;
 
+    //draw data
+    //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
+    vec3 color;
+    Texture_Handle texture_handle;
     Sprite_Pipeline_Flags flags;
 } UI_Node;
 
 ARRAY_GENERATE_TYPE(UI_Node)
-
-typedef struct UI_ID
-{
-    int ID;
-    int layer;
-} UI_ID;
 
 
 typedef struct Font_Handle
@@ -201,6 +163,7 @@ typedef struct
     VkDrawIndexedIndirectCommand* indirect_draw_array;
 } UI_Draw_data_new;
 
+//rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
 typedef struct Madness_UI
 {
     Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
@@ -212,28 +175,33 @@ typedef struct Madness_UI
     //this should be an array at some point
     Madness_Font default_font;
     float default_font_size;
+    float editor_font_size;
     // Font fonts[100];
 
-    UI_Node** ui_stack;
-    u32 ui_stack_count;
-    u32 ui_stack_capacity;
     UI_Node_array* ui_nodes;
+    // UI_Node_array* button_nodes; //TODO: we will see
 
-
-    UI_ID hot;
-    UI_ID active;
-
-    int id_generation_number;
+    int hot;
+    int active;
 
     bool mouse_down;
-    bool mouse_released;
+    bool mouse_released_unique;
     i16 mouse_pos_x;
     i16 mouse_pos_y;
 
-    //stores id and the ui state they are in the previous frame, if applicable
-    hash_table* ui_hash_states; // this might not be needed
-    hash_table* button_hash_states; // only for buttons
+    //TODO: keep track if backspace has been held down for a certain period of time
+    // for the backspace functionality of the
 
+    char released_key;
+
+    //stores id and the ui state they are in the previous frame, if applicable
+    hash_table* button_hash_states; // only for buttons
+    hash_table* check_box_states; // only for checkboxes
+
+    //Keep an array of strings used in textboxes
+    //should be an array at some point,
+    String_Builder* string_builder;
+    hash_table* textbox_ids; //maps textbox names to their id in the string builder array
 
     vec2 screen_size; // this gets queried every frame
 
@@ -249,13 +217,20 @@ typedef struct Madness_UI
     VkIndexType index_type;
 
     //new UI
-    bool compose;
+
+    UI_Editor_Style editor_style;
+
+    vec2 current_layout_pos; // converted pos of current layout
+    vec2 current_layout_size; // converted size of current layout
+    vec2 current_layout_screen_pos; // converted pos of current layout
+    vec2 current_layout_screen_size; // converted size of current layout
+
+
+    vec2 ghost_pos; //used for transitioning layouts, where we want to know the last element
     vec2 cursor_pos; //position of where to draw the next ui element
+
     UI_Layout_Direction layout_direction; // direction to position the ui element
     float element_padding; // space between each ui element
-
-
-
 } Madness_UI;
 
 
@@ -272,11 +247,67 @@ MAPI void madness_ui_end(Madness_UI* madness_ui);
 Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* filepath);
 
 
+
+//API START (besides init/shutdown, begin/end)
+MAPI void madness_ui_begin_layout(Madness_UI* madness_ui, const char* id, vec2 pos, vec2 size);
+
+MAPI void madness_set_layout_direction(Madness_UI* madness_ui, UI_Layout_Direction layout_direction);
+
+MAPI bool madness_button(Madness_UI* madness_ui, const char* id);
+MAPI void madness_text(Madness_UI* madness_ui, const char* id, String text);
+
+MAPI bool madness_button_text(Madness_UI* madness_ui, const char* id, String text);
+MAPI bool madness_check_box(Madness_UI* madness_ui, const char* id, String text, bool* check_box_state);
+
+MAPI void madness_icon(Madness_UI* madness_ui, const char* id, const char* icon_path);
+
+MAPI void madness_slider_scroll(Madness_UI* madness_ui, const char* id, float* slider_val, float min, float max);
+MAPI void madness_slider_arrow(Madness_UI* madness_ui, const char* id, float* slider_val, float min, float max);
+
+MAPI void madness_text_box(Madness_UI* madness_ui, const char* id);
+
+MAPI void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value);
+MAPI void madness_ui_vec2(Madness_UI* madness_ui, const char* id,  String text, vec2* v2, float increment_value);
+MAPI void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value);
+
+
+MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value);
+
+
+
+
+// MAPI void madness_scroll_box_begin(Madness_UI* madness_ui);
+// MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
+//API END
+
+
+//these is only meant for internal use and not part of the API
+void madness_draw_quad(Madness_UI* madness_ui, const char* id, vec2* out_pos, vec2* out_size, UI_Node** out_node);
+void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position);
+void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
+void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
+
+
+
+//debug and test
+void madness_ui_print_state(Madness_UI* madness_ui);
+
+void madness_ui_test(Madness_UI* madness_ui);
+
+
+//utility
+UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
+void madness_ui_update_next_element_pos(Madness_UI* madness_ui, vec2 ui_screen_size);
+
+void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_size, vec2* out_pos);
+char* madness_ui_float_to_char(Madness_UI* madness_ui, float value);
+
+
 bool is_ui_hot(Madness_UI* madness_ui, int id);
 
 bool is_ui_active(Madness_UI* madness_ui, int id);
 
-bool region_hit_new(Madness_UI* madness_ui, vec2 pos, vec2 size);
+bool region_hit(Madness_UI* madness_ui, vec2 pos, vec2 size);
 
 /*
 bool button(UI_STATE& ui_state, int id, int x, int y)
@@ -291,47 +322,33 @@ bool button(UI_STATE& ui_state, int id, int x, int y)
 
 
 //UTILITY
-
 void update_ui_mouse_pos(Madness_UI* madness_ui);
 
 //check if we can use the button
-bool use_button(Madness_UI* madness_ui, UI_ID id, vec2 pos, vec2 size);
-
-bool use_button_new(Madness_UI* madness_ui, UI_ID id, vec2 pos, vec2 size);
+bool use_ui_element(Madness_UI* madness_ui, int id, vec2 pos, vec2 size);
 
 int generate_id(Madness_UI* madness_ui);
 
-void set_hot(Madness_UI* madness_ui, UI_ID id);
+void set_hot(Madness_UI* madness_ui, int id);
 
-void set_active(Madness_UI* madness_ui, UI_ID id);
+void set_active(Madness_UI* madness_ui, int id);
 
 bool can_be_active(Madness_UI* madness_ui);
-bool is_active(Madness_UI* madness_ui, UI_ID id);
+bool is_active(Madness_UI* madness_ui, int id);
 
-bool is_hot(Madness_UI* madness_ui, UI_ID id);
+bool is_hot(Madness_UI* madness_ui, int id);
 
 
 //API
 //TODO: add UI_Alignment
-bool do_button(Madness_UI* madness_ui, UI_ID id, vec2 pos, vec2 screen_percentage,
+bool do_button(Madness_UI* madness_ui, int id, vec2 pos, vec2 screen_percentage,
                vec3 color, vec3 hovered_color, vec3 pressed_color);
 
-bool do_button_config(Madness_UI* madness_ui, UI_ID id, UI_Config ui_config);
-
-bool do_button_text(Madness_UI* madness_ui, UI_ID id, String text, vec2 pos, vec2 size,
+bool do_button_text(Madness_UI* madness_ui, int id, String text, vec2 pos, vec2 size,
                     vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
 
 void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percentage_size,
              vec3 color, float font_size);
-
-void madness_ui_test(Madness_UI* madness_ui);
-void madness_ui_test2(Madness_UI* madness_ui);
-
-void madness_ui_open_node(Madness_UI* madness_ui, const char* id, UI_Config config);
-void madness_ui_close_node(Madness_UI* madness_ui, const char* id);
-void madness_ui_calculate_positions(Madness_UI* madness_ui);
-
-void madness_ui_generate_debug_data(Madness_UI* madness_ui);
 
 // NEW API
 
@@ -356,35 +373,6 @@ void madness_ui_generate_debug_data(Madness_UI* madness_ui);
 
 
  */
-
-
-void madness_ui_begin_region(Madness_UI* madness_ui, const char* id);
-void madness_ui_end_region(Madness_UI* madness_ui, const char* id);
-
-
-void madness_set_layout_direction(Madness_UI* madness_ui, UI_Layout_Direction layout_direction);
-
-bool madness_button(Madness_UI* madness_ui, const char* id, UI_Config config);
-
-void madness_button_text(const char* id, vec2 pos, vec2 size)
-{
-}
-
-void madness_icon(Madness_UI* madness_ui, const char* id, const char* icon_path)
-{
-}
-
-void madness_slider(Madness_UI* madness_ui, const char* id, float cur_val, float min, float max)
-{
-}
-
-void madness_text_box(Madness_UI* madness_ui, const char* id)
-{
-
-}
-
-void madness_ui_test3(Madness_UI* madness_ui);
-
 
 
 //Vulkan

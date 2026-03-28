@@ -723,7 +723,7 @@ void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Fra
 
     //TODO: so the problem is how i want to structure the data, if we even want to allow submeshes, probably
     const char* testing_asset_format_file_path = "../renderer/asset_format/";
-    const char* final_path = c_string_concat(testing_asset_format_file_path, file_name);
+    const char* final_path = c_string_concat(testing_asset_format_file_path, file_name, NULL);
     FILE* fptr = fopen(final_path, "wb");
 
     fseek(fptr, 0, SEEK_END);

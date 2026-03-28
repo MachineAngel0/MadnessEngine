@@ -11,8 +11,17 @@ typedef enum mouse_buttons
     MOUSE_BUTTON_MAX_BUTTONS
 } mouse_buttons;
 
+#define MOUSE_WHEEL_UP 1
+#define MOUSE_WHEEL_DOWN (-1)
+#define MOUSE_BUTTON_PRESSED 1
+#define MOUSE_BUTTON_RELEASED 0
+
 
 #define DEFINE_KEY(name, code) KEY_##name = code
+
+//TODO: use these in the functions
+#define KEY_BUTTON_PRESSED 1
+#define KEY_BUTTON_RELEASED 0
 
 typedef enum keys
 {
@@ -48,6 +57,17 @@ typedef enum keys
     DEFINE_KEY(INSERT, 0x2D),
     DEFINE_KEY(DELETE, 0x2E),
     DEFINE_KEY(HELP, 0x2F),
+
+    DEFINE_KEY(0, 0x30),
+    DEFINE_KEY(1, 0x31),
+    DEFINE_KEY(2, 0x32),
+    DEFINE_KEY(3, 0x33),
+    DEFINE_KEY(4, 0x34),
+    DEFINE_KEY(5, 0x35),
+    DEFINE_KEY(6, 0x36),
+    DEFINE_KEY(7, 0x37),
+    DEFINE_KEY(8, 0x38),
+    DEFINE_KEY(9, 0x39),
 
     DEFINE_KEY(A, 0x41),
     DEFINE_KEY(B, 0x42),
@@ -147,19 +167,21 @@ typedef enum keys
     KEYS_MAX_KEYS
 } keys;
 
+#define MAX_KEY_COUNT 256
 
 typedef struct keyboard_state
 {
-    bool keys[256]; //all the keys, and max u8 amount
+    bool keys[MAX_KEY_COUNT]; //all the keys, and max u8 amount
     //true is considered pressed, false is released, if it was pressed the previous frame
 } keyboard_state;
 
 typedef struct mouse_state
 {
     //x and y only track the change in mouse movement
-    int16_t x;
-    int16_t y;
+    i16 x;
+    i16 y;
     uint8_t buttons[MOUSE_BUTTON_MAX_BUTTONS];
+    i32 mouse_wheel_delta;
 } mouse_state;
 
 typedef struct Input_System
@@ -169,9 +191,6 @@ typedef struct Input_System
     mouse_state mouse_current;
     mouse_state mouse_previous;
 
-    //TODO:
-    // mouse_wheel_state mouse_wheel_current;
-    // mouse_wheel_state mouse_wheel_previous;
 
     Arena input_system_arena;
 } Input_System;
@@ -210,15 +229,24 @@ MAPI bool input_key_pressed_unique(Input_System* input_system, uint8_t key);
 //checking for a one time release
 MAPI bool input_key_released_unique(Input_System* input_system, uint8_t key);
 
+//
+char input_get_first_released_key(Input_System* input_system);
+char input_key_to_char(Input_System* input_system, keys key);
+
 
 //mouse related
+
+// mouse position
 MAPI void input_get_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
 
 MAPI void input_get_previous_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
 
 MAPI void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y);
 
+MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y); // TODO: doesn't work rn
 
+
+//mouse buttons
 MAPI bool input_is_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
 
 MAPI bool input_is_mouse_button_released(Input_System* input_system, mouse_buttons key);
@@ -227,7 +255,20 @@ MAPI bool input_was_mouse_button_pressed(Input_System* input_system, mouse_butto
 
 MAPI bool input_was_mouse_button_released(Input_System* input_system, mouse_buttons key);
 
-MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y);
+//meaning these happened only once
+MAPI bool input_is_mouse_button_pressed_unique(Input_System* input_system, mouse_buttons key);
+MAPI bool input_is_mouse_button_released_unique(Input_System* input_system, mouse_buttons key);
+
+
+// mouse wheel
+MAPI bool input_has_mouse_wheel_changed_this_frame(Input_System* input_system);
+bool input_has_mouse_wheel_changed_last_frame(Input_System* input_system);
+
+MAPI void input_get_mouse_wheel_value(Input_System* input_system, i32* z_delta);
+
+MAPI bool input_is_mouse_wheel_up(Input_System* input_system);
+
+MAPI bool input_is_mouse_wheel_down(Input_System* input_system);
 
 
 #endif //INPUT_H

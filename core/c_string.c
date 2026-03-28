@@ -18,20 +18,32 @@ MAPI char* c_string_duplicate(const char* str)
 }
 
 
-MAPI const char* c_string_concat(const char* str1, const char* str2)
+//the arena is optional
+MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
 {
     u64 str1_length = c_string_length(str1);
     u64 str2_length = c_string_length(str2);
 
 
+    char* out_str;
     //+1 for the null char
-    char* out_str = malloc(str1_length + str2_length + 1);
+    u32 allocation_size = str1_length + str2_length + 1;
+
+    if (arena)
+    {
+        out_str = arena_alloc(arena, allocation_size);
+    }
+    else
+    {
+        out_str = malloc(allocation_size);
+    }
+
     memcpy(out_str, str1, str1_length);
     memcpy(out_str + str1_length, str2, str2_length);
     out_str[str1_length + str2_length] = '\0';
 
     return out_str;
-};
+}
 
 
 // Performs string formatting to dest given format string and parameters.

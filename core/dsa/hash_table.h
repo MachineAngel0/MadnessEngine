@@ -40,6 +40,8 @@ void* hash_table_get(hash_table* h, const char* key_str);
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*));
 
+u64 hash_table_get_hash_id(hash_table* h, const char* key_str);
+
 
 void hash_table_test();
 

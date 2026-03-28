@@ -53,18 +53,18 @@ typedef enum ECharacterType
 
 typedef struct unit
 {
-    TObjectPtr<UActionComponent> ActionComponent;
-    TObjectPtr<UHealthComponent> HealthComponent;
-    TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
-    TObjectPtr<UMPComponent> MPComponent;
-    TObjectPtr<UAugmentStageComponent> AugmentStageComponent;
-    TObjectPtr<UResistanceStatsComponent> ResistanceStatsComponent;
-    TObjectPtr<UStatusStatComponent> StatusStatComponent;
-    TObjectPtr<UConjureDeathListComponent> ConjureDeathListComponent;
-    TObjectPtr<UReversalList> ReversalListComponent;
-    TObjectPtr<UBattleTurnInformation> BattleTurnInformationComponent;
-    TObjectPtr<UChargeListComponent> ChargeListComponent;
-    TObjectPtr<USpecialAbilityFlagsComponent> SpecialAbilityFlagComponent;
+    Action_Component action_component;
+    Health_Component HealthComponent;
+    UInventoryManagerComponent InventoryManagerComponent;
+    UMPComponent MPComponent;
+    UAugmentStageComponent AugmentStageComponent;
+    UResistanceStatsComponent ResistanceStatsComponent;
+    UStatusStatComponent StatusStatComponent;
+    UConjureDeathListComponent ConjureDeathListComponent;
+    UReversalList ReversalListComponent;
+    UBattleTurnInformation BattleTurnInformationComponent;
+    UChargeListComponent ChargeListComponent;
+    USpecialAbilityFlagsComponent SpecialAbilityFlagComponent;
 
 
     //VFX Component

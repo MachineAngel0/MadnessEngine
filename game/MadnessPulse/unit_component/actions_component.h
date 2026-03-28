@@ -4,13 +4,13 @@
 
 #define MAX_ACTIONS_DEFAULT 3
 
-typedef struct action_component
+typedef struct Action_Component
 {
     int MaxActionsAvailable;
     int ActionsAvailable;
-}action_component;
+}Action_Component;
 
-void action_component_init(action_component action)
+void action_component_init(Action_Component action)
 {
 
     action.MaxActionsAvailable = MAX_ACTIONS_DEFAULT;

@@ -59,6 +59,11 @@ MINLINE vec2 vec2_mul(const vec2 a, const vec2 b)
     return (vec2){a.x * b.x, a.y * b.y};
 }
 
+MINLINE vec2 vec2_mul_scalar(const vec2 a, const float b)
+{
+    return (vec2){a.x * b, a.y * b};
+}
+
 MINLINE vec2 vec2_div(const vec2 a, const vec2 b)
 {
     return (vec2){a.x / b.x, a.y / b.y};
@@ -1661,14 +1666,155 @@ inline void cartesian_to_spherical(const float x, const float y, const float z, 
 
 
 /*COLOR*/
+
+inline vec3 rgb_normalize(const vec3 rgb)
+{
+    return vec3_div_scalar(rgb, 255.0f);
+}
+inline vec3 rgb_unnormalize(const vec3 rgb)
+{
+    return vec3_mul_scalar(rgb, 255.0f);
+}
+
+inline vec3 rgb_to_hsv(const vec3 rgb)
+{
+    float h, s, v;
+    float min, max, delta;
+
+
+    min = rgb.r < rgb.g ? rgb.r : rgb.g;
+    min = min < rgb.b ? min : rgb.b;
+
+    max = rgb.r > rgb.g ? rgb.r : rgb.g;
+    max = max > rgb.b ? max : rgb.b;
+
+    v = max; // v
+    delta = max - min;
+    if (delta < 0.00001)
+    {
+        s = 0;
+        h = 0; // undefined, maybe nan?
+        return (vec3){h, s, v};
+    }
+    if (max > 0.0)
+    {
+        // NOTE: if Max is == 0, this divide would cause a crash
+        s = (delta / max); // s
+    }
+    else
+    {
+        // if max is 0, then r = g = b = 0
+        // s = 0, h is undefined
+        s = 0.0;
+        h = 0.0; // its now undefined
+        return (vec3){h, s, v};
+    }
+    if (rgb.r >= max) // > is bogus, just keeps compilor happy
+        h = (rgb.g - rgb.b) / delta; // between yellow & magenta
+    else if (rgb.g >= max)
+        h = 2.0 + (rgb.b - rgb.r) / delta; // between cyan & yellow
+    else
+        h = 4.0 + (rgb.r - rgb.g) / delta; // between magenta & cyan
+
+    h *= 60.0; // degrees
+
+    if (h < 0.0)
+        h += 360.0;
+
+    return (vec3){h, s, v};
+}
+
+vec3 hsv_to_rgb(const vec3 hsv)
+{
+    float h = hsv.r;
+    float s = hsv.g;
+    float v = hsv.b;
+
+    float hh, p, q, t, ff;
+    long i;
+    vec3 out;
+
+    if (s <= 0.0)
+    {
+        // < is bogus, just shuts up warnings
+        out.r = v;
+        out.g = v;
+        out.b = v;
+        return out;
+    }
+
+    hh = h;
+
+    if (hh >= 360.0) { hh = 0.0; }
+    hh /= 60.0;
+    i = (long)hh;
+    ff = hh - i;
+    p = v * (1.0 - s);
+    q = v * (1.0 - (s * ff));
+    t = v * (1.0 - (s * (1.0 - ff)));
+
+    switch (i)
+    {
+    case 0:
+        out.r = v;
+        out.g = t;
+        out.b = p;
+        break;
+    case 1:
+        out.r = q;
+        out.g = v;
+        out.b = p;
+        break;
+    case 2:
+        out.r = p;
+        out.g = v;
+        out.b = t;
+        break;
+
+    case 3:
+        out.r = p;
+        out.g = q;
+        out.b = v;
+        break;
+    case 4:
+        out.r = t;
+        out.g = p;
+        out.b = v;
+        break;
+    case 5:
+    default:
+        out.r = v;
+        out.g = p;
+        out.b = q;
+        break;
+    }
+    return out;
+}
+
+
 static const vec3 COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
+static const vec3 COLOR_BLACK_LIGHT = {.x = 3.f/255.f, .y = 3.f/255.f, .z = 7.f/255.f};
+static const vec3 COLOR_GREY = {0.5f, 0.5f, 0.5f};
 static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
 static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
 static const vec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};
 static const vec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
 static const vec3 COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
-static const vec3 COLOR_PURPLE = {1.0f, 0.0f, 1.0f};
+static const vec3 COLOR_MAGENTA = {1.0f, 0.0f, 1.0f};
+static const vec3 COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
+static const vec3 COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
 static const vec3 COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
+
+//Purple Color Pallette
+static const vec3 COLOR_PURPLE_PALETTE_DARK = {.x = 33.f/255.f, .y = 37.f/255.f, .z = 49.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f/255.f, .y = 19.f/255.f, .z = 92.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f/255.f, .y = 58.f/255.f, .z = 112.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f/255.f, .y = 31.f/255.f, .z = 158.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f/255.f, .y = 162.f/255.f, .z = 201.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f/255.f, .y = 142.f/255.f, .z = 237.f/255.f};
+static const vec3 COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f/255.f, .y = 195.f/255.f, .z = 196.f/255.f};
+
+
 
 static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};

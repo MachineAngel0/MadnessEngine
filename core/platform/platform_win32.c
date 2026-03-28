@@ -259,47 +259,38 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             bool pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             keys key = (u16)w_param;
 
+            // Check for extended scan code.
+            bool is_extended = (HIWORD(l_param) & KF_EXTENDED) == KF_EXTENDED;
+
+
             //if alt
             if (w_param == VK_MENU)
             {
                 //check if left or right alt key
-                if (GetKeyState(VK_RMENU) & 0x8000)
-                {
-                    key = KEY_RALT;
-                }
-                else if (GetKeyState(VK_LMENU) & 0x8000)
-                {
-                    key = KEY_LALT;
-                }
+               key = is_extended ? KEY_RALT : KEY_LALT;
             }
             //shift key
             else if (w_param == VK_SHIFT)
             {
-                if (GetKeyState(VK_RSHIFT) & 0x8000)
-                {
-                    key = KEY_RSHIFT;
-                }
-                else if (GetKeyState(VK_LSHIFT) & 0x8000)
-                {
-                    key = KEY_LSHIFT;
-                }
+                u32 left_shift = MapVirtualKey(VK_LSHIFT, MAPVK_VK_TO_VSC);
+                u32 scancode = ((l_param & (0xFF << 16)) >> 16);
+                key = scancode == left_shift ? KEY_LSHIFT : KEY_RSHIFT;
             }
             //control key
             else if (w_param == VK_CONTROL)
             {
-                if (GetKeyState(VK_RCONTROL) & 0x8000)
-                {
-                    key = KEY_RCONTROL;
-                }
-                else if (GetKeyState(VK_LCONTROL) & 0x8000)
-                {
-                    key = KEY_LCONTROL;
-                }
+                key = is_extended ? KEY_RCONTROL : KEY_LCONTROL;
             }
+
+            // HACK: This is gross windows keybind crap.
+            // if (key == VK_OEM_1) {
+            //     key = KEY_SEMICOLON;
+            // }
 
             input_process_key(input_system, key, pressed);
         }
-        break;
+        // Return 0 to prevent default window behaviour for some keypresses, such as alt.
+        return 0;
     case WM_MOUSEMOVE:
         {
             // Mouse move
@@ -350,9 +341,13 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             {
                 input_process_mouse_button(input_system,mouse_button, pressed);
             }
+            break;
         }
+
+
         break;
     }
+
 
     return DefWindowProcA(hwnd, msg, w_param, l_param);
 }
@@ -399,10 +394,10 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 
     const char* dll_extension_name = platform_get_dynamic_library_extension();
 
-    const char* intermediate_temp_name = c_string_concat(file_name, "_TEMP");
+    const char* intermediate_temp_name = c_string_concat(file_name, "_TEMP", NULL);
 
-    const char* final_file_name = c_string_concat(file_name, dll_extension_name);
-    const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name);
+    const char* final_file_name = c_string_concat(file_name, dll_extension_name, NULL);
+    const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name, NULL);
 
     if (!CopyFile(final_file_name, temp_dll_name, 0))
     {
@@ -499,6 +494,18 @@ void platform_set_cursor_pos(int x, int y)
     // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
     //read the docs for when you want this implemented properly
     SetCursorPos(x, y);
+}
+
+void platform_copy_to_clipboard(const char* c_string)
+{
+    const size_t lens = strlen(c_string) + 1;
+    HGLOBAL hMem =  GlobalAlloc(GMEM_MOVEABLE, lens);
+    memcpy(GlobalLock(hMem), c_string, lens);
+    GlobalUnlock(hMem);
+    OpenClipboard(0);
+    EmptyClipboard();
+    SetClipboardData(CF_TEXT, hMem);
+    CloseClipboard();
 }
 
 

@@ -9,7 +9,7 @@
 static Renderer_Dev_Application app_internal;
 
 
-void renderer_dev_set_function_pointers()
+void renderer_dev_create()
 {
     DLL_HANDLE render_lib_handle = platform_load_dynamic_library("./MADNESSRENDERER");
     if (render_lib_handle.handle == 0)
@@ -117,6 +117,7 @@ bool renderer_dev_run()
         clock_update_frame_start(&app->application_base.clock);
         clock_print_info(&app->application_base.clock);
 
+        input_update(&app->application_base.input_system);
         platform_pump_messages(&app->application_base.plat_state);
 
         //vulkan will crash if you minimize the window
@@ -136,7 +137,6 @@ bool renderer_dev_run()
         app->renderer_application.renderer_run(renderer, app_internal.renderer_application.render_packet, &app->application_base.clock);
 
 
-        input_update(&app->application_base.input_system);
 
         madness_ui_end(madness_ui);
         clock_update_frame_end(&app->application_base.clock);

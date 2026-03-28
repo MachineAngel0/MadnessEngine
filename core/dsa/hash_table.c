@@ -201,6 +201,12 @@ void hash_table_print(hash_table* h, void (*print_func_value)(void*))
     }
 }
 
+u64 hash_table_get_hash_id(hash_table* h, const char* key_str)
+{
+    u64 string_size = strlen(key_str);
+    return generate_hash_key_64bit((u8*)key_str, string_size) % h->capacity;
+}
+
 
 void hash_table_test()
 {
