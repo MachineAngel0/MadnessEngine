@@ -65,10 +65,11 @@ void application_base_shutdown(Application_Base* application_base)
 }
 
 
-typedef bool (*renderer_initialize)(Renderer*, Application_Base*);
-typedef void (*renderer_run)(Renderer*, Render_Packet*, Clock*);
-typedef void (*renderer_terminate)(Renderer*);
-typedef void (*renderer_resize)(Renderer*, u32, u32);
+typedef bool (*renderer_initialize)(struct Renderer_Application*, struct Application_Base*);
+typedef void (*renderer_run)(struct Renderer_Application*, struct Application_Base*);
+typedef void (*renderer_terminate)(struct Renderer_Application*);
+typedef void (*renderer_resize)(struct Renderer_Application*, u32, u32);
+
 
 typedef struct Renderer_Application
 {
@@ -90,10 +91,13 @@ typedef struct Renderer_Application
 } Renderer_Application;
 
 
+/*EVERYTHING BELOW IS THE APPLICATION THAT IS MEANT TO BE USED*/
+
 typedef struct Editor_Application
 {
     Application_Base application_base;
 } Editor_Application;
+bool editor_app_run(Editor_Application* editor_app);
 
 
 // SPECIFIC APPLICATIONS
@@ -103,6 +107,7 @@ typedef struct Tetris_Application
     Renderer_Application* renderer_application;
     Tetris_Game_State* tetris_state;
 } Tetris_Application;
+bool tetris_app_run(Tetris_Application* tetris_app);
 
 
 typedef struct Renderer_Dev_Application
@@ -110,6 +115,7 @@ typedef struct Renderer_Dev_Application
     Application_Base application_base;
     Renderer_Application renderer_application;
 } Renderer_Dev_Application;
+bool renderer_dev_run(Renderer_Dev_Application* render_dev_app);
 
 
 //TODO: everything below is old and should be replace
@@ -133,28 +139,6 @@ typedef struct game_app
 } game_app;
 
 
-typedef struct editor_app
-{
-    // The application configuration.
-    Application_Config app_config;
-    platform_state* plat_state;
 
-    // Function pointer to game's update function.
-    void (*update)(struct editor_app* editor_inst);
-} editor_app;
-
-
-typedef struct renderer_app
-{
-    // The application configuration.
-    Application_Config app_config;
-    platform_state* plat_state;
-
-    bool (*renderer_initialize)(struct renderer_app* renderer_inst);
-    void (*renderer_run)(struct renderer_app* renderer_inst, Clock* clock);
-    void (*renderer_shutdown)(struct renderer_app* renderer_inst);
-
-    void (*on_resize)(struct renderer_app* renderer_inst, u32 width, u32 height);
-} renderer_app;
 
 #endif

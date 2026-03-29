@@ -31,6 +31,8 @@
 // #include "lib/cgltf-master/cgltf_write.h"
 
 //APP and Entry Point
+#include "app_types.h"
+#include "renderer_dev_application.c"
 #include "renderer_dev.h"
 #include "renderer_dev.c"
 

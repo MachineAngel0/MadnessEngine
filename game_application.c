@@ -12,7 +12,7 @@
 typedef struct application_state
 {
     game_app* game;
-    renderer_app* renderer;
+    Renderer_App* renderer;
 
     platform_state platform;
     Arena* application_memory_arena;

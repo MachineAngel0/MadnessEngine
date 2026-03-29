@@ -112,7 +112,7 @@ void memory_tracker_print_memory_usage(void)
             FATAL("MEMORY CONTAINER PRINT ERROR");
         }
     }
-    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu KB", (memory_tracker.memory_container_size / GB(1)));
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu GB", (memory_tracker.memory_container_size / GB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu MB", (memory_tracker.memory_container_size / MB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu KB", (memory_tracker.memory_container_size / KB(1)));
     DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu BYTES\n", memory_tracker.memory_container_size);

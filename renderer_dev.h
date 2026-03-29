@@ -1,23 +1,13 @@
-﻿#include "core/platform/event.h"
+﻿#pragma once
 
+#include "app_types.h"
 
-//sets up function pointers
-extern void renderer_dev_create();
-
-
-bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
-
-bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
-
-bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
-
-
-bool renderer_dev_run();
+extern void renderer_dev_create_function_pointers(Renderer_Dev_Application* renderer_app);
 
 
 void main(void)
 {
-
-    renderer_dev_create();
-    renderer_dev_run();
+    Renderer_Dev_Application renderer_dev_app;
+    renderer_dev_create_function_pointers(&renderer_dev_app);
+    renderer_dev_run(&renderer_dev_app);
 }

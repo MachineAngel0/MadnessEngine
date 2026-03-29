@@ -72,7 +72,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     swapchain_out->max_frames_in_flight = image_count - 1;
 
 
-    VkSwapchainCreateInfoKHR swapchain_create_info = {};
+    VkSwapchainCreateInfoKHR swapchain_create_info = {0};
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_create_info.surface = context->surface;
     swapchain_create_info.minImageCount = image_count;
@@ -110,8 +110,9 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     swapchain_create_info.clipped = VK_TRUE; // dont render anything off the screen
     swapchain_create_info.oldSwapchain = 0; // TODO: pass in the old swapchin
 
-    VK_CHECK(vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info, context->allocator,
-        &swapchain_out->swapchain_handle));
+    VkResult swapchain_create_result = vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info, context->allocator,
+        &swapchain_out->swapchain_handle);
+    VK_CHECK(swapchain_create_result)
 
     //create the swapchain image and image view
 

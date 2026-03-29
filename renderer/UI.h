@@ -144,9 +144,28 @@ typedef struct UI_Node
     vec3 color;
     Texture_Handle texture_handle;
     Sprite_Pipeline_Flags flags;
+
+
+
 } UI_Node;
 
+typedef struct UI_Node_Text
+{
+    vec2 pos;
+    vec2 size;
+
+    // offset into a texture atlas if using one, otherwise {0, 0}
+    vec2 text_uv_offset;
+    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
+    vec2 text_uv_size;
+
+    bool is_text;
+    bool start_text; // is the first character in the text
+}UI_Node_Text;
+
+
 ARRAY_GENERATE_TYPE(UI_Node)
+ARRAY_GENERATE_TYPE(UI_Node_Text)
 
 
 typedef struct Font_Handle
@@ -154,6 +173,23 @@ typedef struct Font_Handle
     u32 handle;
 } Font_Handle;
 
+typedef struct scroll_box_state
+{
+    u32 max_nodes_to_display; // user sets info
+
+    //internal
+    u32 scroll_amount;
+
+    vec2 scroll_box_cursor_pos;
+    vec2 scroll_box_cursor_size;
+
+    u32 scroll_box_node_start_count;
+
+    u32 scroll_box_text_start_count;
+    u32 scroll_box_text_end_count;
+
+
+}scroll_box_state;
 
 typedef struct
 {
@@ -190,13 +226,14 @@ typedef struct Madness_UI
     i16 mouse_pos_y;
 
     //TODO: keep track if backspace has been held down for a certain period of time
-    // for the backspace functionality of the
+    // for the backspace functionality of the textbox
 
     char released_key;
 
     //stores id and the ui state they are in the previous frame, if applicable
     hash_table* button_hash_states; // only for buttons
     hash_table* check_box_states; // only for checkboxes
+
 
     //Keep an array of strings used in textboxes
     //should be an array at some point,
@@ -273,11 +310,11 @@ MAPI void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, v
 
 MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value);
 
+MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
+MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
 
 
 
-// MAPI void madness_scroll_box_begin(Madness_UI* madness_ui);
-// MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
 //API END
 
 

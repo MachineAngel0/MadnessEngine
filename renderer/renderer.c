@@ -12,8 +12,10 @@
 #include "vk_shader.h"
 #include "vk_sync.h"
 
-bool renderer_init(Renderer* renderer, Application_Base* application_base)
+bool renderer_init(Renderer_Application* renderer_app, Application_Base* application_base)
 {
+    Renderer* renderer = &renderer_app->renderer;
+    memset(renderer, 0, sizeof(Renderer));
     vulkan_context* vk_context = &renderer->context;
 
     //grab the input system if its valid
@@ -160,8 +162,12 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
 
 static bool texture_flip = false;
 
-void renderer_update(Renderer* renderer, Render_Packet* render_packets, Clock* clock)
+void renderer_update(Renderer_Application* renderer_app, Application_Base* application_base)
 {
+    Renderer* renderer = &renderer_app->renderer;
+    Clock* clock = &application_base->clock;
+    Render_Packet* render_packets = renderer_app->render_packet;
+
     vulkan_context vk_context = renderer->context;
 
 
@@ -460,9 +466,9 @@ void renderer_update(Renderer* renderer, Render_Packet* render_packets, Clock* c
 }
 
 
-void renderer_shutdown(Renderer* renderer)
+void renderer_shutdown(Renderer_Application* renderer_app)
 {
-    vulkan_context vk_context = renderer->context;
+    vulkan_context vk_context = renderer_app->renderer.context;
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -568,10 +574,10 @@ void renderer_shutdown(Renderer* renderer)
 }
 
 
-void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
+void renderer_on_resize(Renderer_Application* renderer_app, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
-    vulkan_context* vk_context = &renderer->context;
+    vulkan_context* vk_context = &renderer_app->renderer.context;
 
 
     if (!vk_context->is_init)

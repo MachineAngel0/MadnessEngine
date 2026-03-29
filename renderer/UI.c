@@ -1087,7 +1087,7 @@ bool madness_check_box(Madness_UI* madness_ui, const char* id, String text, bool
     vec2 text_pos = {out_pos_outline.x + out_size_outline.x, out_pos_outline.y};
     vec2 text_size;
     madness_calculate_text_size(madness_ui, text, text_pos, &text_size);
-    text_pos.y = out_pos_outline.y + ((out_size_outline.y - text_size.y)/ 2.0f) ;
+    text_pos.y = out_pos_outline.y + ((out_size_outline.y - text_size.y) / 2.0f);
     madness_draw_text(madness_ui, text, text_pos);
 
 
@@ -1426,7 +1426,6 @@ void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float in
         {
             set_active(madness_ui, quad_node->hash_id);
         }
-
     }
 
     if (is_active(madness_ui, quad_node->hash_id))
@@ -1445,20 +1444,19 @@ void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float in
             float increment_override = 0.1f;
             if (mouse_change_x > 0)
             {
-                *f += increment_value/increment_smoother_value;
+                *f += increment_value / increment_smoother_value;
                 // *f += increment_override;
             }
             if (mouse_change_x < 0)
             {
-                *f -= increment_value/increment_smoother_value;
+                *f -= increment_value / increment_smoother_value;
                 // *f -= increment_override;
             }
-
         }
     }
-
 }
-void madness_ui_vec2(Madness_UI* madness_ui, const char* id,  String text, vec2* v2, float increment_value)
+
+void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value)
 {
     madness_text(madness_ui, id, text);
 
@@ -1491,7 +1489,6 @@ void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* 
     madness_ui_float(madness_ui, z_id, &v3->z, increment_value);
 
     madness_set_layout_direction(madness_ui, last_layout_direction);
-
 }
 
 bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value)
@@ -1513,9 +1510,7 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
             out_node->color = madness_ui->editor_style.pressed_color;
             out_result = true;
         }
-
     }
-
 
 
     vec2 color_pos;
@@ -1542,9 +1537,9 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
     char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
 
     float increment_value = 0.05;
-    madness_ui_float(madness_ui, x_id, &color_value->x,  increment_value);
-    madness_ui_float(madness_ui,y_id, &color_value->y,  increment_value);
-    madness_ui_float(madness_ui, z_id, &color_value->z,  increment_value);
+    madness_ui_float(madness_ui, x_id, &color_value->x, increment_value);
+    madness_ui_float(madness_ui, y_id, &color_value->y, increment_value);
+    madness_ui_float(madness_ui, z_id, &color_value->z, increment_value);
 
     color_value->x = clamp_float(color_value->x, 0.0, 1.0);
     color_value->y = clamp_float(color_value->y, 0.0, 1.0);
@@ -1555,18 +1550,97 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
 
 
     return out_result;
+}
+
+
+void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
+{
+    scroll_box_state->scroll_box_cursor_pos = madness_ui->cursor_pos;
+
+    const float button_ratio_to_layout_size = 0.8f;
+    const float button_vertical_normalized_size = 0.03f;
+    vec2 normalized_size;
+    normalized_size.x = madness_ui->current_layout_size.x * button_ratio_to_layout_size;
+    normalized_size.y = (button_vertical_normalized_size + madness_ui->element_padding) * scroll_box_state->max_nodes_to_display;
+    vec2 ui_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
+    scroll_box_state->scroll_box_cursor_size = ui_screen_size;
+
+
+    scroll_box_state->scroll_box_node_start_count = madness_ui->ui_nodes->num_items;
+    scroll_box_state->scroll_box_text_start_count = madness_ui->text_data->num_items;
+
 
 }
 
 
-void madness_scroll_box_begin(Madness_UI* madness_ui)
+void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
 {
-}
+    if (region_hit(madness_ui, scroll_box_state->scroll_box_cursor_pos, scroll_box_state->scroll_box_cursor_size))
+    {
+        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        {
+            if (scroll_box_state->scroll_amount > 0)
+            {
+                scroll_box_state->scroll_amount -= 1;
+            }
+        }
+        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        {
+            scroll_box_state->scroll_amount += 1;
+        }
+    };
 
-void madness_scroll_box_end(Madness_UI* madness_ui)
-{
-    //get a list of nodes that we might want to draw
-    //calculate their size
+
+    u32 node_start_count = scroll_box_state->scroll_box_node_start_count;
+    u32 node_end_node_count = madness_ui->ui_nodes->num_items;
+
+
+    scroll_box_state->scroll_box_text_end_count = madness_ui->text_data->num_items;
+
+    //find which items we should be displaying and for sizing
+    u32 items_in_scroll_box = node_end_node_count - node_start_count;
+
+
+    if (items_in_scroll_box <= scroll_box_state->max_nodes_to_display)
+    {
+        scroll_box_state->scroll_amount = 0;
+    }
+
+    //we clamp the scroll amount
+    if (scroll_box_state->scroll_amount + scroll_box_state->max_nodes_to_display > items_in_scroll_box)
+    {
+        scroll_box_state->scroll_amount = items_in_scroll_box - scroll_box_state->max_nodes_to_display;
+    }
+
+
+
+    int top_pos_index = node_start_count;
+    for (u32 i = node_start_count; i < node_end_node_count; i++)
+    {
+        if (i >= node_start_count + scroll_box_state->scroll_amount &&
+            i < node_start_count + scroll_box_state->scroll_amount + scroll_box_state->max_nodes_to_display)
+        {
+            //reorder the positions so the valid node is at the top
+            madness_ui->ui_nodes->data[i].pos = madness_ui->ui_nodes->data[top_pos_index].pos;
+            top_pos_index++;
+            continue;
+        }
+
+        //if we hit a node not in the range, we zero the size
+        madness_ui->ui_nodes->data[i].size = vec2_zero();
+    }
+
+    //TODO:
+    //get the max size of the elements and use that for the hit region of the scroll box
+    //hit region and adjustments for the slider
+    //NOTE: we do not draw any scroll box, we just use it for detecting hits for the slider
+
+
+
+
+    //draw the slider
+    scroll_box_state->max_nodes_to_display;
+    vec2 start_pos = madness_ui->cursor_pos;
 }
 
 
@@ -1578,7 +1652,7 @@ void madness_ui_test(Madness_UI* madness_ui)
             (vec2){0, 70}, (vec2){10, 10},
             COLOR_WHITE,
             DEFAULT_FONT_SIZE);
-*/
+    */
 
     madness_ui_begin_layout(madness_ui, "Madness UI Test Layout", (vec2){5, 5}, (vec2){20, 90});
 
@@ -1636,8 +1710,18 @@ void madness_ui_test(Madness_UI* madness_ui)
     madness_ui_vec2(madness_ui, "Sprite Pos", STRING("Sprite Position"), &vec2_test, vec3_change_value);
 
     static vec3 color_test;
-     madness_ui_color_picker(madness_ui, "Color Picker", &color_test);
+    madness_ui_color_picker(madness_ui, "Color Picker", &color_test);
 
+
+    static scroll_box_state scroll_box_state_test;
+    scroll_box_state_test.max_nodes_to_display = 2;
+
+    madness_scroll_box_begin(madness_ui, "scroll box", &scroll_box_state_test);
+    madness_button_text(madness_ui, "Scollbox Button 1", STRING("Scroll Around 1"));
+    madness_button_text(madness_ui, "Scollbox Button 2", STRING("Scroll Around 2"));
+    madness_button_text(madness_ui, "Scollbox Button 3", STRING("Scroll Around 3"));
+    madness_button_text(madness_ui, "Scollbox Button 4", STRING("Scroll Around 4"));
+    madness_scroll_box_end(madness_ui, "scroll box", &scroll_box_state_test);
 }
 
 

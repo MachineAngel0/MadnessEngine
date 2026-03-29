@@ -5,6 +5,7 @@
 #include "core/platform/input.h"
 #include "core/platform/audio.h"
 
+/*
 typedef struct application_state
 {
     struct renderer_app* renderer;
@@ -22,6 +23,11 @@ typedef struct application_state
 } application_state;
 
 static application_state app_state;
+*/
+
+static Renderer_Dev_Application* app_internal;
+
+
 
 bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
@@ -29,36 +35,40 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, ev
 
 bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
 
-
-bool application_renderer_create(struct renderer_app* renderer)
+bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 {
-    //TODO: refactored out, just here now for testing
-    // init_windows_audio();
+    app_internal = render_dev_app;
 
 
-    //set the renderer
-    app_state.renderer = renderer;
+    application_base_init(&render_dev_app->application_base);
 
-    //initalize the applications memory
+    //just for convience
+    Renderer* renderer = &render_dev_app->renderer_application.renderer;
+
+    //initialize the applications memory
     // Memory_System_Config memory_config;
     // memory_config.memory_request_size = GB(4);
     // memory_config.file_config = "What's up Boy";
+    memory_tracker_init();
 
     u64 memory_request_size = GB(4);
-    memory_system_init(memory_request_size);
-
-    memory_tracker_init(TODO);
+    memory_system_init(&render_dev_app->application_base.memory_system, memory_request_size);
 
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 
-    app_state.is_running = true;
+
+
+
+
+    render_dev_app->application_base.is_running = true;
 
     // Initialize subsystems.
-    event_init();
-    input_init(TODO);
+    event_init(&render_dev_app->application_base.memory_system);
+    input_init(&render_dev_app->application_base.input_system, &render_dev_app->application_base.memory_system);
     // audio_system_init();
 
 
+    //register events needed for this application
     event_register(EVENT_APP_QUIT, 10, application_on_event);
     event_register(EVENT_APP_RESIZE, 0, application_on_resized);
     event_register(EVENT_KEY_RELEASED, 10, application_on_key);
@@ -67,74 +77,87 @@ bool application_renderer_create(struct renderer_app* renderer)
 
     //start the platform
     if (!platform_startup(
-        &app_state.platform,
-        renderer->app_config.name,
-        renderer->app_config.start_pos_x,
-        renderer->app_config.start_pos_y,
-        renderer->app_config.start_width,
-        renderer->app_config.start_height))
+        &render_dev_app->application_base.plat_state,
+        &render_dev_app->application_base.input_system,
+        render_dev_app->application_base.app_config.name,
+        render_dev_app->application_base.app_config.start_pos_x,
+        render_dev_app->application_base.app_config.start_pos_y,
+        render_dev_app->application_base.app_config.start_width,
+        render_dev_app->application_base.app_config.start_height))
     {
         return false;
     }
-    app_state.renderer->plat_state = &app_state.platform;
 
-    if (!app_state.renderer->renderer_initialize(app_state.renderer))
+    //init the render packets
+    render_dev_app->renderer_application.render_packet = render_packet_init(&render_dev_app->application_base.memory_system.application_arena);
+    Render_Packet* render_packet = render_dev_app->renderer_application.render_packet;
+
+    //start the renderer
+    if (!render_dev_app->renderer_application.renderer_initialize(&render_dev_app->renderer_application, &render_dev_app->application_base))
     {
         FATAL("Failed to initialize the renderer")
         return false;
     };
-    // renderer_init(app_state.renderer); // here for debugging
+
+    Madness_UI* madness_ui = madness_ui_init(renderer);
 
     //run the renderer
     //MAIN LOOP
 
-    clock_start(&app_state.clock);
+    clock_start(&render_dev_app->application_base.clock);
 
-    application_renderer_run();
+    while (render_dev_app->application_base.is_running)
+    {
+        clock_update_frame_start(&render_dev_app->application_base.clock);
+        clock_print_info(&render_dev_app->application_base.clock);
+
+        input_update(&render_dev_app->application_base.input_system);
+        platform_pump_messages(&render_dev_app->application_base.plat_state);
+
+        //vulkan will crash if you minimize the window
+        if (render_dev_app->application_base.is_suspended)
+        {
+            continue;
+        }
+        madness_ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        madness_ui_test(madness_ui);
+
+
+        //Grab all the render data
+        render_packet_clear(render_packet);
+        madness_ui_generate_render_data(madness_ui, render_packet);
+
+        //render
+        render_dev_app->renderer_application.renderer_run(&render_dev_app->renderer_application, &render_dev_app->application_base);
+
+
+
+        madness_ui_end(madness_ui);
+        clock_update_frame_end(&render_dev_app->application_base.clock);
+
+    }
 
 
     /***SHUTDOWN***/
     //NOTE: (go in reverse order)
-    app_state.renderer->renderer_shutdown(app_state.renderer);
+
+    madness_ui_shutdown(madness_ui, renderer);
+
+
+    render_dev_app->renderer_application.renderer_terminate(&render_dev_app->renderer_application);
 
 
     //shutdown subsystems
-    audio_system_shutdown();
-    input_shutdown();
+    // audio_system_shutdown();
+
+    input_shutdown(&render_dev_app->application_base.input_system);
     event_shutdown();
 
 
     memory_tracker_shutdown();
-    memory_system_shutdown();
+    memory_system_shutdown(&render_dev_app->application_base.memory_system);
 
     return true;
-}
-
-
-void application_renderer_run()
-{
-    while (app_state.is_running)
-    {
-        clock_update_frame_start(&app_state.clock);
-        clock_print_info(&app_state.clock);
-
-        input_update();
-        platform_pump_messages(&app_state.platform);
-
-        //vulkan will crash if you minimize the window
-        if (app_state.is_suspended)
-        {
-            continue;
-        }
-
-
-
-
-        app_state.renderer->renderer_run(app_state.renderer, &app_state.clock);
-
-        clock_update_frame_end(&app_state.clock);
-
-    }
 }
 
 
@@ -144,7 +167,7 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
     {
         case EVENT_APP_QUIT:
             INFO("EVENT_APP_QUIT: SHUTTING DOWN APP")
-            app_state.is_running = false;
+            app_internal->application_base.is_running = false;
             return true;
     }
     return false;
@@ -198,10 +221,10 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
         // Check if different. If so, trigger a resize event.
 
 
-        if (width != app_state.width || height != app_state.height)
+        if (width != app_internal->application_base.width || height != app_internal->application_base.height)
         {
-            app_state.width = width;
-            app_state.height = height;
+            app_internal->application_base.width = width;
+            app_internal->application_base.height = height;
 
             DEBUG("Window resize: %i, %i", width, height);
 
@@ -209,25 +232,28 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
             if (width == 0 || height == 0)
             {
                 INFO("Window minimized, suspending application.");
-                app_state.is_suspended = true;
+                app_internal->application_base.is_suspended = true;
                 return true;
             }
             else
             {
-                if (app_state.is_suspended)
+                if (app_internal->application_base.is_suspended)
                 {
                     INFO("Window restored, resuming application.");
-                    app_state.is_suspended = false;
+                    app_internal->application_base.is_suspended = false;
                 }
 
-                app_state.renderer->on_resize(app_state.renderer, width, height);
+                app_internal->renderer_application.renderer_resize(&app_internal->renderer_application.renderer, width, height);
             }
         }
     }
 
-
     // Event purposely not handled to allow other listeners to get this.
     return false;
 }
+
+
+
+
 
 
