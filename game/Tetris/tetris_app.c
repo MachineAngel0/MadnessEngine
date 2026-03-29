@@ -64,15 +64,15 @@ bool tetris_game_run()
 
     // Initialize subsystems.
     event_init(&app->application_base.memory_system);
-    input_init(&app->application_base.input_system, &app->application_base.memory_system);
+    input_init(&app->application_base.input_system, TODO, &app->application_base.memory_system);
     // audio_system_init();
 
 
     //register events needed for this application
-    event_register(EVENT_APP_QUIT, 10, application_on_event);
-    event_register(EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(TODO, EVENT_APP_QUIT, 10, application_on_event);
+    event_register(TODO, EVENT_APP_RESIZE, 0, application_on_resized);
+    event_register(TODO, EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(TODO, EVENT_KEY_PRESSED, 12, application_on_key);
 
 
     //start the platform
@@ -155,7 +155,7 @@ bool tetris_game_run()
     //shutdown subsystems
     // audio_system_shutdown();
     input_shutdown(&app->application_base.input_system);
-    event_shutdown();
+    event_shutdown(TODO);
 
 
     memory_tracker_shutdown();
@@ -190,7 +190,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
             event_context data = {};
-            event_fire(EVENT_APP_QUIT, 0, data);
+            event_fire(TODO, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
             return true;

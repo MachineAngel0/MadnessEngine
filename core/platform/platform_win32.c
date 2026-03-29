@@ -231,7 +231,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         return 1;
     case WM_CLOSE:
         event_context data = {};
-        event_fire(EVENT_APP_QUIT, 0, data);
+        event_fire(input_system->event_system_reference, EVENT_APP_QUIT, 0, data);
         return true;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -247,7 +247,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             event_context context;
             context.data.u16[0] = (u16)width;
             context.data.u16[1] = (u16)height;
-            event_fire(EVENT_APP_RESIZE, 0, context);
+            event_fire(input_system->event_system_reference, EVENT_APP_RESIZE, 0, context);
         }
         break;
     case WM_KEYDOWN:
@@ -448,6 +448,40 @@ bool platform_file_copy(const char* source_file, char* new_file)
     CopyFile(source_file, new_file, 0);
     return true;
 }
+
+
+
+//FILE SYSTEM
+typedef struct file_data
+{
+    const char* file_path;
+    FILETIME last_write_time;
+}file_data;
+
+void platform_register_file(const char* file_name)
+{
+
+}
+bool platform_has_filed_changed(const char* file_name)
+{
+    FILETIME last_write_time = {0};
+
+    WIN32_FILE_ATTRIBUTE_DATA file_info;
+    if (!GetFileAttributesExA(file_name, GetFileExInfoStandard, &file_info))
+        return false;
+    //an alternative way of doing this
+    // WIN32_FIND_DATA find_data;
+    // FindFirstFileA(filename, &find_data);
+    // find_data.ftLastWriteTime
+
+    if (CompareFileTime(&file_info.ftLastWriteTime, &last_write_time) != 0)
+    {
+        last_write_time = file_info.ftLastWriteTime;
+        return true;
+    }
+    return false;
+}
+
 
 
 

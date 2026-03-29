@@ -18,6 +18,7 @@ typedef enum Sprite_Pipeline_Flags
     SPRITE_PIPELINE_NONE = BITFLAG(1),
     SPRITE_PIPELINE_TEXTURE = BITFLAG(2),
     SPRITE_PIPELINE_COLOR = BITFLAG(3),
+    SPRITE_PIPELINE_TEXT = BITFLAG(4),
 } Sprite_Pipeline_Flags;
 
 typedef struct Sprite_Data

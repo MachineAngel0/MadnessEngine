@@ -172,8 +172,8 @@ void gamepad_init(void)
     memset(gamepad_system, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
 
     //TODO: DEBUG WRAP
-    event_register(EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_register(EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+    event_register(TODO, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
+    event_register(TODO, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
 }
 
 void gamepad_shutdown(void)
@@ -182,8 +182,8 @@ void gamepad_shutdown(void)
     memset(gamepad_system, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
 
     //TODO: DEBUG WRAP
-    event_unregister(EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_unregister(EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+    event_unregister(TODO, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
+    event_unregister(TODO, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
 }
 
 void gamepad_poll(void)
@@ -270,9 +270,9 @@ void gamepad_poll(void)
                     {
                         event_context context;
                         context.data.u32[0] = i; // gamepad enum
-                        event_fire(gamepad_system[controller_index].gamepad_current[i]
-                                       ? EVENT_GAMEPAD_PRESS
-                                       : EVENT_GAMEPAD_RELEASE, 0, context);
+                        event_fire(TODO, gamepad_system[controller_index].gamepad_current[i]
+                                             ? EVENT_GAMEPAD_PRESS
+                                             : EVENT_GAMEPAD_RELEASE, 0, context);
                     }
                 }
             }

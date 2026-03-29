@@ -67,9 +67,9 @@ bool application_game_create(struct game_app* game)
     input_init(app_state.application_memory_arena);
 
 
-    event_register(EVENT_APP_QUIT, 10, application_on_event);
-    event_register(EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(TODO, EVENT_APP_QUIT, 10, application_on_event);
+    event_register(TODO, EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(TODO, EVENT_KEY_PRESSED, 12, application_on_key);
 
 
     //start the platform
@@ -95,7 +95,7 @@ bool application_game_create(struct game_app* game)
 
     //shutdown subsystems
     input_shutdown();
-    event_shutdown();
+    event_shutdown(TODO);
     memory_tracker_shutdown();
     return true;
 }
@@ -165,7 +165,7 @@ bool application_on_key(event_type code, void* sender, void* listener_inst, even
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
             event_context data = {};
-            event_fire(EVENT_APP_QUIT, 0, data);
+            event_fire(TODO, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
             return TRUE;

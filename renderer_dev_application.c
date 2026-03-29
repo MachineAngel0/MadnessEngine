@@ -28,12 +28,11 @@ static application_state app_state;
 static Renderer_Dev_Application* app_internal;
 
 
-
 bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
 bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
-bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
+bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
 bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 {
@@ -57,22 +56,20 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 
 
-
-
-
     render_dev_app->application_base.is_running = true;
 
     // Initialize subsystems.
-    event_init(&render_dev_app->application_base.memory_system);
-    input_init(&render_dev_app->application_base.input_system, &render_dev_app->application_base.memory_system);
+    event_init(&render_dev_app->application_base.event_system, &render_dev_app->application_base.memory_system);
+    input_init(&render_dev_app->application_base.input_system, &render_dev_app->application_base.event_system,
+               &render_dev_app->application_base.memory_system);
     // audio_system_init();
 
 
     //register events needed for this application
-    event_register(EVENT_APP_QUIT, 10, application_on_event);
-    event_register(EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(&render_dev_app->application_base.event_system, EVENT_APP_QUIT, 10, application_on_event);
+    event_register(&render_dev_app->application_base.event_system, EVENT_APP_RESIZE, 0, application_on_resized);
+    event_register(&render_dev_app->application_base.event_system, EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(&render_dev_app->application_base.event_system, EVENT_KEY_PRESSED, 12, application_on_key);
 
 
     //start the platform
@@ -89,11 +86,13 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     }
 
     //init the render packets
-    render_dev_app->renderer_application.render_packet = render_packet_init(&render_dev_app->application_base.memory_system.application_arena);
+    render_dev_app->renderer_application.render_packet = render_packet_init(
+        &render_dev_app->application_base.memory_system.application_arena);
     Render_Packet* render_packet = render_dev_app->renderer_application.render_packet;
 
     //start the renderer
-    if (!render_dev_app->renderer_application.renderer_initialize(&render_dev_app->renderer_application, &render_dev_app->application_base))
+    if (!render_dev_app->renderer_application.renderer_initialize(&render_dev_app->renderer_application,
+                                                                  &render_dev_app->application_base))
     {
         FATAL("Failed to initialize the renderer")
         return false;
@@ -128,13 +127,12 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         madness_ui_generate_render_data(madness_ui, render_packet);
 
         //render
-        render_dev_app->renderer_application.renderer_run(&render_dev_app->renderer_application, &render_dev_app->application_base);
-
+        render_dev_app->renderer_application.renderer_run(&render_dev_app->renderer_application,
+                                                          &render_dev_app->application_base);
 
 
         madness_ui_end(madness_ui);
         clock_update_frame_end(&render_dev_app->application_base.clock);
-
     }
 
 
@@ -151,7 +149,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // audio_system_shutdown();
 
     input_shutdown(&render_dev_app->application_base.input_system);
-    event_shutdown();
+    event_shutdown(&render_dev_app->application_base.event_system);
 
 
     memory_tracker_shutdown();
@@ -165,10 +163,10 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
 {
     switch (code)
     {
-        case EVENT_APP_QUIT:
-            INFO("EVENT_APP_QUIT: SHUTTING DOWN APP")
-            app_internal->application_base.is_running = false;
-            return true;
+    case EVENT_APP_QUIT:
+        INFO("EVENT_APP_QUIT: SHUTTING DOWN APP")
+        app_internal->application_base.is_running = false;
+        return true;
     }
     return false;
 }
@@ -186,7 +184,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
             event_context data = {};
-            event_fire(EVENT_APP_QUIT, 0, data);
+            event_fire(&app_internal->application_base.event_system, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
             return true;
@@ -243,7 +241,7 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
                     app_internal->application_base.is_suspended = false;
                 }
 
-                app_internal->renderer_application.renderer_resize(&app_internal->renderer_application.renderer, width, height);
+                app_internal->renderer_application.renderer_resize(&app_internal->renderer_application, width, height);
             }
         }
     }
@@ -251,9 +249,3 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
     // Event purposely not handled to allow other listeners to get this.
     return false;
 }
-
-
-
-
-
-

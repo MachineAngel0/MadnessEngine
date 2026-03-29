@@ -128,6 +128,7 @@ typedef enum UI_Button_State
 
 //TODO:  just a temporary value for now, will increase later
 #define MAX_UI_NODE_COUNT 100
+#define MAX_UI_TEXT_NODE_COUNT 1000
 #define MAX_UI_NODE_CHILD_COUNT 10
 
 
@@ -146,21 +147,31 @@ typedef struct UI_Node
     Sprite_Pipeline_Flags flags;
 
 
+    //TODO: for widgets that need some sort of child node
+    // struct UI_Node* parent;
+    // struct UI_Node children[10];
+
+
 
 } UI_Node;
 
 typedef struct UI_Node_Text
 {
+    char character;
     vec2 pos;
     vec2 size;
 
-    // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 text_uv_offset;
-    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 text_uv_size;
+    vec3 color;
+    Texture_Handle texture_handle;
+    Sprite_Pipeline_Flags flags;
 
-    bool is_text;
-    bool start_text; // is the first character in the text
+    // offset into a texture atlas if using one, otherwise {0, 0}
+    vec2 uv_offset;
+    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
+    vec2 uv_size;
+
+    // is the first character in a series of strings
+    bool start_text;
 }UI_Node_Text;
 
 
@@ -183,13 +194,22 @@ typedef struct scroll_box_state
     vec2 scroll_box_cursor_pos;
     vec2 scroll_box_cursor_size;
 
-    u32 scroll_box_node_start_count;
-
-    u32 scroll_box_text_start_count;
-    u32 scroll_box_text_end_count;
-
-
 }scroll_box_state;
+
+//this could be more general
+typedef struct active_scroll_box_state{
+    //UI_Node_Type kind;
+
+    bool is_active;
+
+    //scroll box
+    u32 slider_count; // at what point an element is allowed to be rendered
+    u32 current_attempt_count; // how many up to this point have tried to render
+    u32 max_nodes;
+
+}Parent_Node_State;
+
+
 
 typedef struct
 {
@@ -215,6 +235,7 @@ typedef struct Madness_UI
     // Font fonts[100];
 
     UI_Node_array* ui_nodes;
+    UI_Node_Text_array* ui_nodes_text;
     // UI_Node_array* button_nodes; //TODO: we will see
 
     int hot;
@@ -234,6 +255,7 @@ typedef struct Madness_UI
     hash_table* button_hash_states; // only for buttons
     hash_table* check_box_states; // only for checkboxes
 
+    Parent_Node_State parent_node_state;
 
     //Keep an array of strings used in textboxes
     //should be an array at some point,
@@ -325,6 +347,10 @@ void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent
 void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
 
 
+bool skip_node(Madness_UI* madness_ui);
+
+
+
 
 //debug and test
 void madness_ui_print_state(Madness_UI* madness_ui);
@@ -334,6 +360,7 @@ void madness_ui_test(Madness_UI* madness_ui);
 
 //utility
 UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
+UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
 void madness_ui_update_next_element_pos(Madness_UI* madness_ui, vec2 ui_screen_size);
 
 void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_size, vec2* out_pos);
@@ -376,44 +403,7 @@ bool is_active(Madness_UI* madness_ui, int id);
 bool is_hot(Madness_UI* madness_ui, int id);
 
 
-//API
-//TODO: add UI_Alignment
-bool do_button(Madness_UI* madness_ui, int id, vec2 pos, vec2 screen_percentage,
-               vec3 color, vec3 hovered_color, vec3 pressed_color);
-
-bool do_button_text(Madness_UI* madness_ui, int id, String text, vec2 pos, vec2 size,
-                    vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color);
-
-void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percentage_size,
-             vec3 color, float font_size);
-
-// NEW API
-
-//designing what I want it to look like from the ground up
-/*
-    //WANTS:
-    button, text, text box, textures, on hover popup, slider, checkbox
-
-    Configs:
-    rounded rects, highlight borders, clickable,
-
-
-    ui_config = {horizontal, pos, size}
-    ui_button1_config = {pos, size}
-    ui_item_begin(ui_config);
-
-    if(button(ui_button1_config)){};
-    if(button()){};
-
-
-    vertical_box_end();
-
-
- */
-
-
-//Vulkan
-
+//Vulkan/Renderer Stuff
 
 UI_Renderer_Backend* ui_render_init(Renderer* renderer);
 

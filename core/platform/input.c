@@ -5,7 +5,7 @@
 #include "event.h"
 #include "platform.h"
 
-bool input_init(Input_System* input_system, Memory_System* memory_system)
+bool input_init(Input_System* input_system, Event_System* event_system, Memory_System* memory_system)
 {
     MASSERT(input_system);
 
@@ -16,6 +16,8 @@ bool input_init(Input_System* input_system, Memory_System* memory_system)
     void* input_system_mem = memory_system_alloc(memory_system, input_system_mem_requirement);
     arena_init(&input_system->input_system_arena, input_system_mem, input_system_mem_requirement,
                MEMORY_SUBSYSTEM_INPUT);
+
+    input_system->event_system_reference = event_system;
 
 
     return true;
@@ -54,7 +56,7 @@ void input_process_key(Input_System* input_system, keys key, bool pressed)
         // Fire off an event for immediate processing.
         event_context context;
         context.data.u16[0] = key;
-        event_fire(pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, 0, context);
+        event_fire(input_system->event_system_reference, pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, 0, context);
     }
 }
 
@@ -75,7 +77,7 @@ void input_process_mouse_move(Input_System* input_system, i16 x, i16 y)
         event_context context;
         context.data.u16[0] = x;
         context.data.u16[1] = y;
-        event_fire(EVENT_MOUSE_MOVED, 0, context);
+        event_fire(input_system->event_system_reference, EVENT_MOUSE_MOVED, 0, context);
     }
 }
 
@@ -88,7 +90,7 @@ void input_process_mouse_wheel(Input_System* input_system, i8 z_delta)
     // Fire the event.
     event_context context;
     context.data.u8[0] = z_delta;
-    event_fire(EVENT_MOUSE_WHEEL, 0, context);
+    event_fire(input_system->event_system_reference, EVENT_MOUSE_WHEEL, 0, context);
 }
 
 void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed)
@@ -104,7 +106,7 @@ void input_process_mouse_button(Input_System* input_system, mouse_buttons button
         // Fire off an event for immediate processing.
         event_context context;
         context.data.u16[0] = button;
-        event_fire(pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, 0, context);
+        event_fire(input_system->event_system_reference, pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, 0, context);
     }
 }
 

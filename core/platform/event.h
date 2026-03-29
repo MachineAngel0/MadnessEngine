@@ -54,7 +54,7 @@ typedef struct event_context
 
 
 //event code to be implemented by anyone interested
-typedef bool (*on_event)(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
+typedef bool (*on_event)(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
 
 //someone that sends events
 
@@ -66,7 +66,7 @@ typedef bool (*on_event)(event_type code, uint32_t sender_id, uint32_t subscribe
 typedef struct subscriber_data
 {
     //array of senders
-    uint32_t subscriber_id;
+    u32 subscriber_id;
     on_event callback; //events
 } subscriber_data;
 
@@ -76,7 +76,7 @@ typedef struct subscriber_list
     Array* subs_arr;
 } subscriber_list;
 
-typedef struct event_system
+typedef struct Event_System
 {
     //look up table for events
     //the event if the index into the array
@@ -85,25 +85,23 @@ typedef struct event_system
     Arena event_system_arena;
 } Event_System;
 
-//someone that registers to receive the events
-static bool is_event_system_init = false;
-static Event_System event_system_internal;
 
-bool event_init(Memory_System* memory_system);
 
-bool event_shutdown();
+bool event_init(Event_System* event_system, Memory_System* memory_system);
 
-void event_register(const event_type event, const u32 subscriber, const on_event callback);
+bool event_shutdown(Event_System* event_system);
 
-void event_unregister(event_type event, uint32_t subscriber, on_event callback);
+void event_register(Event_System* event_system, const event_type event, const u32 subscriber, const on_event callback);
 
-void event_fire(event_type event, uint32_t sender_id, event_context context);
+void event_unregister(Event_System* event_system, event_type event, u32 subscriber, on_event callback);
 
-bool test_event(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
+void event_fire(Event_System* event_system, event_type event, u32 sender_id, event_context context);
 
-bool test_event2(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
+bool test_event(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
 
-void event_test();
+bool test_event2(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
+
+void event_test(Event_System* event_system);
 
 
 #endif //EVENT_H

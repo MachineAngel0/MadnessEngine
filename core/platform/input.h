@@ -193,10 +193,12 @@ typedef struct Input_System
 
 
     Arena input_system_arena;
+
+    Event_System* event_system_reference; // does now the memory
 } Input_System;
 
 
-MAPI bool input_init(Input_System* input_system, Memory_System* memory_system);
+MAPI bool input_init(Input_System* input_system, Event_System* event_system, Memory_System* memory_system);
 
 MAPI void input_shutdown(Input_System* input_system);
 

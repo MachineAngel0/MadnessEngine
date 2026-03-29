@@ -64,15 +64,14 @@ char* platform_get_static_library_extension(void);
 DLL_HANDLE platform_load_dynamic_library(const char* file_name);
 bool platform_unload_dynamic_library(DLL_HANDLE handle);
 bool platform_reload_dynamic_library(DLL_HANDLE handle);
-
+bool platform_file_copy(const char* source_file, char* new_file);
 
 //has to get cast into the function pointer
 void* platform_get_function_address(DLL_HANDLE handle, const char* function_name);
 
 //FILE SYSTEM
-void platform_file_watch(const char* file_name);
-bool platform_has_filed_changed(const char* file_name);
-bool platform_file_copy(const char* source_file, char* new_file);
+void platform_register_file(const char* file_name); // registers a file to be watched
+bool platform_has_filed_changed(const char* file_name); // checks if that file has been changed
 
 
 // RENDERER

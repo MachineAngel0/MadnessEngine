@@ -69,6 +69,21 @@ bool filesystem_file_size(const char* file_path, u64* out_file_size)
     return true;
 }
 
+
+typedef struct File_Handle
+{
+    u32 handle;
+}File_Handle;
+
+//returns a file handle, 0 if an invalid file, but should be safe since it won't crash anything
+File_Handle* filesystem_register_file(const char* file_path);
+void filesystem_unregister_file_by_handle(File_Handle file_handle);
+void filesystem_unregister_file_by_name(const char* file_path);
+
+bool filesystem_has_file_changed(File_Handle* file_path);
+
+
+
 // bool filesystem_exists(const char* path);
 //
 // bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle);

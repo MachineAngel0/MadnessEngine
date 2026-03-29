@@ -16,6 +16,8 @@ Madness_UI* madness_ui_init(Renderer* renderer)
     Madness_UI* madness_ui = arena_alloc(&renderer->arena, sizeof(Madness_UI));
 
     //TODO: TEMPORARY, request memory from the memory_system
+    //madness_ui->arena = memory_system_alloc(memory_system, MB(64));
+    //madness_ui->frame_arena = memory_system_alloc(memory_system, MB(64));
     madness_ui->arena = &renderer->arena;
     madness_ui->frame_arena = &renderer->frame_arena;
 
@@ -31,6 +33,7 @@ Madness_UI* madness_ui_init(Renderer* renderer)
     madness_ui->editor_font_size = EDITOR_FONT_SIZE;
 
     madness_ui->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT);
+    madness_ui->ui_nodes_text = UI_Node_Text_array_create(MAX_UI_TEXT_NODE_COUNT);
     madness_ui->string_builder = string_builder_create(100);
 
 
@@ -97,6 +100,9 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
 
     UI_Node_array_zero(madness_ui->ui_nodes);
     UI_Node_array_clear(madness_ui->ui_nodes);
+
+    UI_Node_Text_array_zero(madness_ui->ui_nodes_text);
+    UI_Node_Text_array_clear(madness_ui->ui_nodes_text);
 
 
     madness_ui->cursor_pos = vec2_zero();
@@ -418,6 +424,13 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
     return out_node;
 }
 
+UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui)
+{
+    UI_Node_Text* out_node = &madness_ui->ui_nodes_text->data[madness_ui->ui_nodes_text->num_items];
+    madness_ui->ui_nodes_text->num_items++;
+    return out_node;
+}
+
 UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
 {
     if (madness_ui->ui_nodes->num_items > 0)
@@ -427,228 +440,6 @@ UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
     return NULL;
 }
 
-
-bool do_button(Madness_UI* madness_ui, int id, vec2 pos, vec2 screen_percentage,
-               vec3 color, vec3 hovered_color, vec3 pressed_color)
-{
-    /*validation*/
-
-    //TODO: make these asserts
-    if (screen_percentage.x > 100 || screen_percentage.x < 0 || screen_percentage.y > 100 || screen_percentage.y < 0)
-    {
-        WARN("SCREEN PERCENTAGE CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-        return false;
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        WARN("POSITION CANNOT BE GREATER THAN 100 AND LESS THAN 0");
-        return false;
-    }
-
-    /*POS AND SIZE CALCULATIONS*/
-
-    vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
-    vec2 converted_size = vec2_div_scalar(screen_percentage, 100.0f);
-
-    // vec2 converted_pos2 = vec2_mul(pos, Madness_UI->screen_size);
-    // vec2 converted_pos3 = vec2_div(pos, Madness_UI->screen_size);
-
-    /*
-    vec2 final_pos = {
-        Madness_UI->screen_size.x * converted_pos.x,
-        Madness_UI->screen_size.y * converted_pos.y
-    };
-    vec2 final_size = {
-        (Madness_UI->screen_size.x * converted_size.x) / 2,
-        (Madness_UI->screen_size.y * converted_size.y) / 2
-    };*/
-
-    vec2 final_pos = {
-        converted_pos.x,
-        converted_pos.y
-    };
-    vec2 final_size = {
-        converted_size.x / 2,
-        converted_size.y / 2,
-    };
-
-    vec2 mouse_hit_pos = {
-        madness_ui->screen_size.x * converted_pos.x,
-        madness_ui->screen_size.y * converted_pos.y
-    };
-    vec2 mouse_hit_size = {
-        madness_ui->screen_size.x * converted_size.x / 2,
-        madness_ui->screen_size.y * converted_size.y / 2,
-    };
-
-
-    /*SET UI STATE*/
-
-
-    //check if button is hot and active
-    if (region_hit(madness_ui, mouse_hit_pos, mouse_hit_size))
-    {
-        set_hot(madness_ui, id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(madness_ui))
-        {
-            set_active(madness_ui, id);
-        }
-    }
-    /*
-    else
-    {
-        printf("is not hot\n");
-    }*/
-
-
-    /*SET DRAW COLOR Based on the state*/
-    Sprite_Pipeline_Flags ui_pipeline_flags;
-    ui_pipeline_flags |= SPRITE_PIPELINE_COLOR;
-    // Sprite_Data* sprite_data = sprite_create(madness_ui->frame_arena, final_pos, final_size, ui_config.color, ( Texture_Handle ){0},
-    // ui_pipeline_flags);
-    Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
-    sprite_data->pos = final_pos;
-    sprite_data->size = final_size;
-    sprite_data->color = color;
-    sprite_data->uv_offset = (vec2){0, 0};
-    sprite_data->uv_size = final_size;
-    sprite_data->flags = ui_pipeline_flags;
-
-
-    //active state
-    if (is_active(madness_ui, id))
-    {
-        sprite_data->color = pressed_color;
-    }
-    //hot state
-    else if (is_hot(madness_ui, id))
-    {
-        sprite_data->color = hovered_color;
-    }
-    // normal state
-    else
-    {
-        sprite_data->color = color;
-    }
-
-
-    /*Add to draw info*/
-    Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
-
-    //check if we clicked the button
-    if (use_ui_element(madness_ui, id, final_pos, final_size)) return true;
-
-
-    return false;
-}
-
-
-bool do_button_text(Madness_UI* madness_ui, int id, String text, vec2 pos, vec2 size,
-                    vec2 text_padding, vec3 color, vec3 hovered_color, vec3 pressed_color)
-{
-    // do_text();
-    // if (do_button()) return true;
-
-    return false;
-}
-
-
-void do_text(Madness_UI* madness_ui, String text, vec2 pos, vec2 screen_percentage_size,
-             vec3 color, float font_size)
-{
-    //tells us how much of the screen we want based on the size percentage
-    if (screen_percentage_size.x > 100 || screen_percentage_size.x < 0 || screen_percentage_size.y > 100 ||
-        screen_percentage_size.y < 0)
-    {
-        printf("YOU ARE STUPID: TEXT");
-    }
-    if (pos.x > 100 || pos.x < 0 || pos.y > 100 || pos.y < 0)
-    {
-        printf("YOU ARE STUPID 2: TEXT");
-    }
-
-    //std::vector<Vertex_Text> new_quad = text_create_quad({0.5f,0.5f}, {0.1f,0.1f}, {1.0f,1.0f,1.0f});
-
-
-    //move to the shader as a push constant
-    vec2 screen_dimensions = {madness_ui->screen_size.x, madness_ui->screen_size.y};
-
-    float screen_width = madness_ui->screen_size.x;
-    float screen_height = madness_ui->screen_size.y;
-
-    //convert 0-100 -> 0-1
-    vec2 converted_pos = vec2_div_scalar(pos, 100.0f);
-    vec2 converted_size = vec2_div_scalar(screen_percentage_size, 100.0f);
-
-    /*POS AND SIZE CALCULATIONS*/
-    //0 - n(screen size) positions
-    vec2 screen_position = {
-        converted_pos.x * screen_dimensions.x,
-        converted_pos.y * screen_dimensions.y
-    };
-    vec2 screen_size = {
-        converted_size.x * screen_width / 2,
-        converted_size.y * screen_height / 2,
-    };
-
-
-    //We take the desired font size, scale it down proportional to the font size we created it at
-    //final size of the font ex: 36/48 = 0.75, 48*0.75 = 36
-    f32 font_scalar = font_size / madness_ui->default_font_size;
-
-    for (u64 i = 0; i < text.length + 1; i++)
-    // for (const char& c : text)
-    {
-        const char c = text.chars[i];
-
-        if (c < 32 || c >= 128) continue; // skip unsupported characters
-        Glyph* g = &madness_ui->default_font.glyphs[c - 32];
-
-        // Quad position in screen coords and scaled by the font scalar
-        f32 x_position = screen_position.x + ((float)g->xoff * font_scalar);
-        f32 y_position = screen_position.y + ((float)g->yoff * font_scalar);
-
-        f32 x_width = ((f32)g->width * font_scalar);
-        f32 y_height = ((f32)g->height * font_scalar);
-
-        //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
-
-        // Convert screen coords to NDC [0,1] -> vulkan is [-1,1] which is handled in the shader
-        //pos
-        f32 ndc_x0 = (x_position) / screen_width;
-        f32 ndc_y0 = (y_position) / screen_height;
-        //size
-        f32 ndc_x1 = x_width / screen_width;
-        f32 ndc_y1 = y_height / screen_height;
-
-        // UVs from the atlas
-        vec2 uv0 = {g->u0, g->v0}; // uv pos/offset
-        vec2 uv1 = {g->u1, g->v1}; // uv size
-
-        //SET DRAW COLOR Based on the state
-        // vec2 temp_pos = {0.5f, 0.5f};
-        // vec2 temp_size = {0.1f, 0.1f};
-        // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, temp_pos, temp_size, color, uv0, uv1);
-        // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, new_final_pos, final_size, color, uv0, uv1);
-
-        Sprite_Data* text_sprite = sprite_create_minimal(madness_ui->frame_arena);
-        text_sprite->pos = (vec2){ndc_x0, ndc_y0};
-        text_sprite->size = (vec2){ndc_x1, ndc_y1};
-        text_sprite->uv_offset = (vec2){g->u0, g->v0};
-        text_sprite->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
-        text_sprite->color = COLOR_WHITE;
-        text_sprite->texture_index = madness_ui->default_font.font_texture_handle.handle;
-
-        Sprite_Data_array_push(madness_ui->text_data, text_sprite);
-
-        screen_position.x += (g->advance) * font_scalar; // move offset forward
-    }
-}
 
 void madness_ui_update_next_element_pos(Madness_UI* madness_ui, vec2 ui_screen_size)
 {
@@ -799,33 +590,24 @@ void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position
 
         //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
 
-        // Convert screen coords to NDC [0,1] -> vulkan is [-1,1] which is handled in the shader
-        //pos
-        f32 ndc_x0 = (x_position) / madness_ui->screen_size.x;
-        f32 ndc_y0 = (y_position) / madness_ui->screen_size.y;
-        //size
-        f32 ndc_x1 = x_width / madness_ui->screen_size.x;
-        f32 ndc_y1 = y_height / madness_ui->screen_size.y;
 
         // UVs from the atlas
         // vec2 uv0 = {g->u0, g->v0}; // uv pos/offset
         // vec2 uv1 = {g->u1, g->v1}; // uv size
 
-        //SET DRAW COLOR Based on the state
-        // vec2 temp_pos = {0.5f, 0.5f};
-        // vec2 temp_size = {0.1f, 0.1f};
-        // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, temp_pos, temp_size, color, uv0, uv1);
-        // Quad_Texture* new_quad = UI_create_quad_textured(Madness_UI, new_final_pos, final_size, color, uv0, uv1);
+        UI_Node_Text* text_node = madness_ui_get_new_node_text(madness_ui);
+        text_node->character = c;
+        text_node->pos = (vec2){x_position, y_position};
+        text_node->size = (vec2){x_width, y_height};
+        text_node->uv_offset = (vec2){g->u0, g->v0};
+        text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
+        text_node->color = COLOR_WHITE;
+        text_node->texture_handle = madness_ui->default_font.font_texture_handle;
 
-        Sprite_Data* text_sprite = sprite_create_minimal(madness_ui->frame_arena);
-        text_sprite->pos = (vec2){ndc_x0, ndc_y0};
-        text_sprite->size = (vec2){ndc_x1, ndc_y1};
-        text_sprite->uv_offset = (vec2){g->u0, g->v0};
-        text_sprite->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
-        text_sprite->color = COLOR_WHITE;
-        text_sprite->texture_index = madness_ui->default_font.font_texture_handle.handle;
-
-        Sprite_Data_array_push(madness_ui->text_data, text_sprite);
+        if (i == 0)
+        {
+            text_node->start_text = true;
+        }
 
         screen_position.x += (g->advance) * font_scalar; // move offset forward
     }
@@ -870,6 +652,21 @@ void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 scree
         out_text_size->x = screen_position.x - start_position.x;
         out_text_size->y = max_height_y;
     }
+}
+
+bool skip_node(Madness_UI* madness_ui)
+{
+    Parent_Node_State* state = &madness_ui->parent_node_state;
+    if (!state->is_active) return false;
+
+    state->current_attempt_count++;
+    if (state->slider_count < state->current_attempt_count &&
+        state->current_attempt_count - state->slider_count <= state->max_nodes)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -991,6 +788,12 @@ void madness_text(Madness_UI* madness_ui, const char* id, String text)
 
 bool madness_button_text(Madness_UI* madness_ui, const char* id, String text)
 {
+    if (skip_node(madness_ui))
+    {
+        return false;
+    }
+
+
     // 0-1 range
     const float button_ratio_to_layout_size = 0.8f;
     const float button_vertical_normalized_size = 0.03f;
@@ -1555,30 +1358,104 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
 
 void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
 {
-    scroll_box_state->scroll_box_cursor_pos = madness_ui->cursor_pos;
-
+    // 0-1 range
     const float button_ratio_to_layout_size = 0.8f;
     const float button_vertical_normalized_size = 0.03f;
     vec2 normalized_size;
     normalized_size.x = madness_ui->current_layout_size.x * button_ratio_to_layout_size;
-    normalized_size.y = (button_vertical_normalized_size + madness_ui->element_padding) * scroll_box_state->max_nodes_to_display;
-    vec2 ui_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
-    scroll_box_state->scroll_box_cursor_size = ui_screen_size;
+    normalized_size.y = (button_vertical_normalized_size + (madness_ui->element_padding / madness_ui->screen_size.y)) *
+        scroll_box_state->max_nodes_to_display;
+
+    // proper screen pos and size
+    vec2 button_screen_pos = madness_ui->cursor_pos;
+    vec2 button_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
+    button_screen_pos.x += (madness_ui->current_layout_screen_size.x - button_screen_size.x) / 2.f;
+
+    /*
+    //debug the size of the scroll box
+    UI_Node* new_node = madness_ui_get_new_node(madness_ui);
+    new_node->debug_id = id;
+    new_node->hash_id = generate_hash_key_64bit((u8*)id, strlen(id));
+    new_node->pos = button_screen_pos;
+    new_node->size = button_screen_size;
+    */
+
+    scroll_box_state->scroll_box_cursor_pos = madness_ui->cursor_pos;
+    scroll_box_state->scroll_box_cursor_size = button_screen_size;
 
 
-    scroll_box_state->scroll_box_node_start_count = madness_ui->ui_nodes->num_items;
-    scroll_box_state->scroll_box_text_start_count = madness_ui->text_data->num_items;
+    madness_ui->parent_node_state.is_active = true;
+    madness_ui->parent_node_state.current_attempt_count = 0;
+    madness_ui->parent_node_state.slider_count = scroll_box_state->scroll_amount;
+    madness_ui->parent_node_state.max_nodes = scroll_box_state->max_nodes_to_display;
 
 
-}
+    //draw the rect, then based on the cur val, draw it proportionally to where it should be
+
+    const float s = scroll_box_state->max_nodes_to_display - 0;
+    float t = (scroll_box_state->scroll_amount - 0) / s;
 
 
-void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
-{
-    if (region_hit(madness_ui, scroll_box_state->scroll_box_cursor_pos, scroll_box_state->scroll_box_cursor_size))
+    //slider location
+    float thumb_y_location = (button_screen_size.y / scroll_box_state->max_nodes_to_display) * t;
+    vec2 thumb_ui_screen_pos = button_screen_pos;
+    thumb_ui_screen_pos.x += button_screen_size.x; // have it sit to the right of all the ui
+    thumb_ui_screen_pos.y += thumb_y_location;
+
+    //slider size
+    vec2 thumb_ui_screen_size;
+    thumb_ui_screen_size.x = button_screen_size.x * 0.03f;
+    thumb_ui_screen_size.y = button_screen_size.y / 3;
+
+
+    //grab another
+    UI_Node* slider_node = madness_ui_get_new_node(madness_ui);
+    slider_node->debug_id = id;
+    slider_node->hash_id = generate_hash_key_64bit((u8*)id, strlen(id));
+    slider_node->pos = thumb_ui_screen_pos;
+    slider_node->size = thumb_ui_screen_size;
+    slider_node->color = madness_ui->editor_style.custom_widget_color;
+
+    //size of the scroll box and the slider
+    vec2 hit_size = (vec2){button_screen_size.x + thumb_ui_screen_size.x, button_screen_size.y};
+
+    if (region_hit(madness_ui, button_screen_pos, hit_size))
     {
+        slider_node->color = madness_ui->editor_style.hovered_color;
+
+        //slider specific check
+        if (region_hit(madness_ui, thumb_ui_screen_pos, (vec2){thumb_ui_screen_size.x, hit_size.y}))
+        {
+            if (madness_ui->mouse_down)
+            {
+                slider_node->color = madness_ui->editor_style.pressed_color;
+
+                // we can just set the slider to where the mouse is
+                // madness_ui->mouse_pos_y; //TODO: will need when we do vertical slider
+                i16 out_x;
+                i16 out_y;
+                input_get_mouse_change(madness_ui->input_system_reference, &out_x, &out_y);
+                if (out_y > 0)
+                {
+                    scroll_box_state->scroll_amount += 1;
+
+                    scroll_box_state->scroll_amount = clamp_float(scroll_box_state->scroll_amount, 0,
+                                                                  scroll_box_state->max_nodes_to_display);
+                }
+                if (out_y < 0)
+                {
+                    if (scroll_box_state->scroll_amount > 0)
+                    {
+                        scroll_box_state->scroll_amount -= 1;
+                    }
+                }
+            }
+        }
+
         if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
         {
+            slider_node->color = madness_ui->editor_style.pressed_color;
+
             if (scroll_box_state->scroll_amount > 0)
             {
                 scroll_box_state->scroll_amount -= 1;
@@ -1586,61 +1463,20 @@ void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_s
         }
         if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
         {
+            slider_node->color = madness_ui->editor_style.pressed_color;
+
             scroll_box_state->scroll_amount += 1;
+
+            scroll_box_state->scroll_amount = clamp_float(scroll_box_state->scroll_amount, 0,
+                                                          scroll_box_state->max_nodes_to_display);
         }
     };
+}
 
 
-    u32 node_start_count = scroll_box_state->scroll_box_node_start_count;
-    u32 node_end_node_count = madness_ui->ui_nodes->num_items;
-
-
-    scroll_box_state->scroll_box_text_end_count = madness_ui->text_data->num_items;
-
-    //find which items we should be displaying and for sizing
-    u32 items_in_scroll_box = node_end_node_count - node_start_count;
-
-
-    if (items_in_scroll_box <= scroll_box_state->max_nodes_to_display)
-    {
-        scroll_box_state->scroll_amount = 0;
-    }
-
-    //we clamp the scroll amount
-    if (scroll_box_state->scroll_amount + scroll_box_state->max_nodes_to_display > items_in_scroll_box)
-    {
-        scroll_box_state->scroll_amount = items_in_scroll_box - scroll_box_state->max_nodes_to_display;
-    }
-
-
-
-    int top_pos_index = node_start_count;
-    for (u32 i = node_start_count; i < node_end_node_count; i++)
-    {
-        if (i >= node_start_count + scroll_box_state->scroll_amount &&
-            i < node_start_count + scroll_box_state->scroll_amount + scroll_box_state->max_nodes_to_display)
-        {
-            //reorder the positions so the valid node is at the top
-            madness_ui->ui_nodes->data[i].pos = madness_ui->ui_nodes->data[top_pos_index].pos;
-            top_pos_index++;
-            continue;
-        }
-
-        //if we hit a node not in the range, we zero the size
-        madness_ui->ui_nodes->data[i].size = vec2_zero();
-    }
-
-    //TODO:
-    //get the max size of the elements and use that for the hit region of the scroll box
-    //hit region and adjustments for the slider
-    //NOTE: we do not draw any scroll box, we just use it for detecting hits for the slider
-
-
-
-
-    //draw the slider
-    scroll_box_state->max_nodes_to_display;
-    vec2 start_pos = madness_ui->cursor_pos;
+void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
+{
+    madness_ui->parent_node_state.is_active = false;
 }
 
 
@@ -1714,13 +1550,15 @@ void madness_ui_test(Madness_UI* madness_ui)
 
 
     static scroll_box_state scroll_box_state_test;
-    scroll_box_state_test.max_nodes_to_display = 2;
+    scroll_box_state_test.max_nodes_to_display = 3;
 
     madness_scroll_box_begin(madness_ui, "scroll box", &scroll_box_state_test);
     madness_button_text(madness_ui, "Scollbox Button 1", STRING("Scroll Around 1"));
     madness_button_text(madness_ui, "Scollbox Button 2", STRING("Scroll Around 2"));
     madness_button_text(madness_ui, "Scollbox Button 3", STRING("Scroll Around 3"));
     madness_button_text(madness_ui, "Scollbox Button 4", STRING("Scroll Around 4"));
+    madness_button_text(madness_ui, "Scollbox Button 5", STRING("Scroll Around 5"));
+    madness_button_text(madness_ui, "Scollbox Button 6", STRING("Scroll Around 6"));
     madness_scroll_box_end(madness_ui, "scroll box", &scroll_box_state_test);
 }
 
@@ -1737,13 +1575,48 @@ void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* rend
         Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
         sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
         sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-        // sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        // sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        //TODO:
+        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
+        // {sprite_data->color = node_to_draw->color;}
+
+        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
+        // {
+            // sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        // }
         sprite_data->color = node_to_draw->color;
         sprite_data->texture_index = node_to_draw->texture_handle.handle;
         sprite_data->flags = node_to_draw->flags;
 
         Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
+
+        /*
+        if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
+        {
+            sprite_data->uv_offset = node_to_draw->uv_offset;
+            sprite_data->uv_size = node_to_draw->uv_size;
+           Sprite_Data_array_push(madness_ui->text_data, sprite_data);
+        }
+        */
+
+    }
+
+
+    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
+    {
+        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
+        Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
+        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
+        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        sprite_data->uv_offset = node_to_draw->uv_offset;
+        sprite_data->uv_size = node_to_draw->uv_size;
+
+        sprite_data->color = node_to_draw->color;
+        sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        sprite_data->flags = node_to_draw->flags;
+
+        Sprite_Data_array_push(madness_ui->text_data, sprite_data);
     }
 
 

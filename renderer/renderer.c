@@ -12,6 +12,18 @@
 #include "vk_shader.h"
 #include "vk_sync.h"
 
+//finally works, TODO: whatever the fuck the renderer needs from other applications
+bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context)
+{
+    if (code == EVENT_KEY_RELEASED)
+    {
+        uint16_t key_code = context.data.u16[0];
+        FATAL("released key %hu", key_code);
+    }
+    return false;
+}
+
+
 bool renderer_init(Renderer_Application* renderer_app, Application_Base* application_base)
 {
     Renderer* renderer = &renderer_app->renderer;
@@ -23,6 +35,10 @@ bool renderer_init(Renderer_Application* renderer_app, Application_Base* applica
     {
         renderer->input_system_debug = &application_base->input_system;
     }
+
+    event_register(&application_base->event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
+
+
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
@@ -126,7 +142,6 @@ bool renderer_init(Renderer_Application* renderer_app, Application_Base* applica
 
     //System specific draws
     renderer->ui_renderer = ui_render_init(renderer);
-
 
 
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
