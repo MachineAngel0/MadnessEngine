@@ -31,7 +31,7 @@ static LARGE_INTEGER start_time;
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
 bool platform_startup(
-    platform_state* plat_state,
+    Platform_State* plat_state,
     Input_System* input_system_reference,
     const char* application_name,
     i32 x, i32 y,
@@ -134,7 +134,7 @@ bool platform_startup(
     return true;
 }
 
-void platform_shutdown(platform_state* plat_state)
+void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
     internal_state* state = (internal_state*)plat_state->internal_state;
@@ -147,7 +147,7 @@ void platform_shutdown(platform_state* plat_state)
     }
 }
 
-bool platform_pump_messages(platform_state* plat_state)
+bool platform_pump_messages(Platform_State* plat_state)
 {
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE))
@@ -202,16 +202,16 @@ void platform_sleep(u64 ms)
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
     //all this code before actually processing the message is to make sure the input system is getting any inputs
-    platform_state* plat_state = 0;
+    Platform_State* plat_state = 0;
     if (msg == WM_NCCREATE)
     {
         CREATESTRUCTA* create = (CREATESTRUCTA*)l_param;
-        plat_state = (platform_state*)create->lpCreateParams;
+        plat_state = (Platform_State*)create->lpCreateParams;
         SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)plat_state);
     }
     else
     {
-        plat_state = (platform_state*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+        plat_state = (Platform_State*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
     }
 
     if (!plat_state)
@@ -395,9 +395,16 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
     const char* final_file_name = c_string_concat(file_name, dll_extension_name, NULL);
     const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name, NULL);
 
+
     if (!CopyFile(final_file_name, temp_dll_name, 0))
     {
+        DWORD code = GetLastError();
         WARN("FAILED TO COPY DLL from %s to %s. Error: %d", final_file_name, temp_dll_name, GetLastError());
+        if (code == 32)
+        {
+            platform_sleep(100);
+            platform_load_dynamic_library(file_name);
+        }
     }
 
     file_info->dll_handle = LoadLibraryA(temp_dll_name);
@@ -572,7 +579,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
 }
 
-bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context)
 {
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 

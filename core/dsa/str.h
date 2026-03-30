@@ -1,7 +1,6 @@
 ﻿#ifndef STRINGS_H
 #define STRINGS_H
 
-#include <stdbool.h>
 #include "defines.h"
 
 //TODO: refactor to ensure immutability, and ease of use with str_builder

@@ -1,7 +1,5 @@
 ﻿#include "UI.h"
 
-#include <complex.h>
-
 #include "logger.h"
 
 #define MAX_UI_SPRITE_COUNT 1000
@@ -13,8 +11,8 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer)
 {
     Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI));
 
-    u64 ui_arena_mem_size = MB(1024);
-    u64 ui_frame_arena_mem_size = MB(1024);
+    u64 ui_arena_mem_size = MB(128);
+    u64 ui_frame_arena_mem_size = MB(128);
     madness_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("MADNESS UI"),
                                                                ui_arena_mem_size + ui_frame_arena_mem_size);
 
@@ -46,14 +44,6 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer)
     //ui button state is the u32
     madness_ui->button_hash_states = HASH_TABLE_CREATE(u32, MAX_BUTTON_COUNT);
 
-    madness_ui->editor_style = (UI_Editor_Style){
-        .layout_color = COLOR_PURPLE_PALETTE_DARK, .layout_accent_color = COLOR_PURPLE_PALETTE_PURPLE,
-        .text_color = COLOR_PURPLE_PALETTE_LIGHT, .textbox_color = COLOR_PURPLE_PALETTE_DARK2,
-        .custom_widget_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT,
-        .color = COLOR_PURPLE_PALETTE_PURPLE_STRONG, .hovered_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT2,
-        .pressed_color = COLOR_PURPLE_PALETTE_DARK2,
-        .outline_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT
-    };
 
     madness_ui->cursor_pos = vec2_zero();
 
@@ -96,6 +86,14 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     //clear draw info and reset the hot id
 
     //std::cout << "MOUSE STATE:" << Madness_UI.mouse_down << '\n';
+    madness_ui->editor_style = (UI_Editor_Style){
+        .layout_color = COLOR_PURPLE_PALETTE_DARK, .layout_accent_color = COLOR_PURPLE_PALETTE_PURPLE,
+        .text_color = COLOR_PURPLE_PALETTE_LIGHT, .textbox_color = COLOR_PURPLE_PALETTE_DARK2,
+        .custom_widget_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT,
+        .color = COLOR_PURPLE_PALETTE_PURPLE_STRONG, .hovered_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT2,
+        .pressed_color = COLOR_PURPLE_PALETTE_DARK2,
+        .outline_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT
+    };
 
     madness_ui->screen_size.x = screen_size_x;
     madness_ui->screen_size.y = screen_size_y;

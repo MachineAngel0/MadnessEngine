@@ -13,12 +13,14 @@ set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
         MadnessEngine
-        MadnessPulse
-        MADNESSPULSE
         MadnessEngine_renderer
         MADNESSRENDERER
         MadnessEngine_editor
+
+        MadnessPulse
+        MADNESSPULSE
         Tetris
+
 )
 
 
@@ -71,6 +73,9 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/ufbx)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/freetype)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
+
 
 add_executable(MadnessEngine
         unity_build_madness_pulse.c
@@ -105,26 +110,18 @@ add_library(MADNESSRENDERER SHARED
         lib/build_lib.c
 )
 
-### UI ###
-
-add_executable(MadnessUI
-        unity_build_renderer.c
-        lib/build_lib.c
-)
-add_library(MADNESSUI SHARED
-        unity_build_renderer.c
-        lib/build_lib.c
-)
-
 
 
 ### EDITOR ###
 add_executable(MadnessEngine_editor
         editor_app.h
-        unity_build_madness_pulse.c
+        unity_build_editor.c
         lib/build_lib.c
 
 )
+
+
+
 
 ### CORE ###
 add_executable(CORE_UNIT_TEST
@@ -135,7 +132,7 @@ add_executable(CORE_UNIT_TEST
 )
 
 
-#libs
+#libstdc
 
 target_sources(MadnessEngine_renderer PRIVATE
 )

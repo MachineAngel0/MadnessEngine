@@ -2,7 +2,7 @@
 #include "clock.h"
 #include "event.h"
 #include "input.h"
-#include "UI.h"
+#include "../renderer/UI.h"
 
 //this is here mainly for making handling events easier
 static Tetris_Application* app_internal;
@@ -23,7 +23,7 @@ void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
         FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
     }
 
-    Renderer_Application* renderer_out = &tetris_application->renderer_application;
+    Renderer_Plugin* renderer_out = &tetris_application->renderer_application;
     renderer_out->renderer_initialize = (renderer_initialize)platform_get_function_address(
         render_lib_handle, "renderer_init");
     renderer_out->renderer_run = (renderer_run)platform_get_function_address(render_lib_handle, "renderer_update");

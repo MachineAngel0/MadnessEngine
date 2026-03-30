@@ -64,16 +64,16 @@ typedef struct Memory_Tracker_System
     u32 capacity; // how many we have to give out
 } Memory_Tracker_System;
 
-Memory_Tracker* memory_system_get_memory_tracker(Memory_Tracker_System* memory_tracker_system, String system_name,
+MAPI Memory_Tracker* memory_system_get_memory_tracker(Memory_Tracker_System* memory_tracker_system, String system_name,
                                                  u64 max_memory_allocated);
 
-bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
+MAPI bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
 
-bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
+MAPI bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
 
-void memory_tracker_system_print_all_memory_usage(Memory_Tracker_System* memory_tracker);
+MAPI void memory_tracker_system_print_all_memory_usage(Memory_Tracker_System* memory_tracker);
 
-void memory_tracker_print_memory_usage(Memory_Tracker* memory_tracker);
+MAPI void memory_tracker_print_memory_usage(Memory_Tracker* memory_tracker);
 
 
 #endif

@@ -2,7 +2,7 @@
 #define MADNESSENGINE_EDITOR_H
 #include <stdbool.h>
 
-#include "UI.h"
+#include "../UI/UI.h"
 #include "vulkan_types.h"
 #include "memory/memory_system.h"
 

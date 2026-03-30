@@ -2,10 +2,6 @@
 #define UNIT_TEST_H
 
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-
 #include "logger.h"
 #include "color_asci.h"
 

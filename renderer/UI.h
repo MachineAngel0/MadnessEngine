@@ -3,6 +3,12 @@
 
 #include "stb_truetype.h"
 
+#include <vulkan/vulkan_core.h>
+
+#include "defines.h"
+#include "str_builder.h"
+#include "vulkan_types.h"
+
 //IMMEDIATE MODE UI
 
 //NOTE: the smallest likely screen size for a laptop is likely to be a 1024*600 or more commonly 1024 * 768

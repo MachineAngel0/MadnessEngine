@@ -1,7 +1,5 @@
 ﻿#ifndef BINARY_TREE_H
 #define BINARY_TREE_H
-#include <stdbool.h>
-#include <stddef.h>
 
 
 typedef struct BT_Node

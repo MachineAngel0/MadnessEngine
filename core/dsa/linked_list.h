@@ -1,7 +1,6 @@
 ﻿#ifndef LINKED_LIST_GENERIC_H
 #define LINKED_LIST_GENERIC_H
 
-#include <stdbool.h>
 #include <stdlib.h>
 
 //Linked List LL_Node

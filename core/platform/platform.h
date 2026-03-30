@@ -10,27 +10,27 @@ typedef struct platform_state
 {
     void* internal_state;
     Input_System* input_system; // just a pointer, does not own the memory
-} platform_state;
+} Platform_State;
 
 
 bool platform_startup(
-    platform_state* plat_state,
+    Platform_State* plat_state,
     Input_System* input_system_reference,
     const char* application_name,
     i32 x, i32 y,
     i32 width, i32 height);
 
 
-void platform_shutdown(platform_state* plat_state);
+void platform_shutdown(Platform_State* plat_state);
 
 
-bool platform_pump_messages(platform_state* plat_state);
+bool platform_pump_messages(Platform_State* plat_state);
 
 
 //AUDIO
-bool platform_audio_init(platform_state* plat_state, int32_t buffer_size, int32_t samples_per_second);
+bool platform_audio_init(Platform_State* plat_state, int32_t buffer_size, int32_t samples_per_second);
 
-bool platform_audio_shutdown(platform_state* plat_state);
+bool platform_audio_shutdown(Platform_State* plat_state);
 
 //MEMORY
 void* platform_allocate(u64 size, bool aligned);
@@ -89,7 +89,7 @@ void platform_has_directory_changed(File_Watch_Handle directory_watch_handle);
 // RENDERER
 void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
-bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context);
+bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context);
 
 //Misc
 void platform_set_cursor_pos(int x, int y);

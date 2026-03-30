@@ -5,6 +5,7 @@
 #include "shader_system.h"
 #include "UI.h"
 #include "vk_command_buffer.h"
+#include "vk_descriptors.h"
 #include "vk_framebuffer.h"
 #include "vk_image.h"
 #include "vk_pipeline.h"
@@ -25,7 +26,7 @@ bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event
 }
 
 
-bool renderer_init(Renderer_Application* renderer_app, Application_Base* application_base)
+bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_base)
 {
     Renderer* renderer = &renderer_app->renderer;
     memset(renderer, 0, sizeof(Renderer));
@@ -184,14 +185,13 @@ bool renderer_init(Renderer_Application* renderer_app, Application_Base* applica
 
 static bool texture_flip = false;
 
-void renderer_update(Renderer_Application* renderer_app, Application_Base* application_base)
+void renderer_update(Renderer_Plugin* renderer_app, Application_Base* application_base)
 {
     Renderer* renderer = &renderer_app->renderer;
     Clock* clock = &application_base->clock;
     Render_Packet* render_packets = renderer_app->render_packet;
 
     vulkan_context vk_context = renderer->context;
-
 
     arena_clear(&renderer->frame_arena);
 
@@ -488,7 +488,7 @@ void renderer_update(Renderer_Application* renderer_app, Application_Base* appli
 }
 
 
-void renderer_shutdown(Renderer_Application* renderer_app)
+void renderer_shutdown(Renderer_Plugin* renderer_app)
 {
     vulkan_context vk_context = renderer_app->renderer.context;
 
@@ -596,7 +596,7 @@ void renderer_shutdown(Renderer_Application* renderer_app)
 }
 
 
-void renderer_on_resize(Renderer_Application* renderer_app, u32 width, u32 height)
+void renderer_on_resize(Renderer_Plugin* renderer_app, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
     vulkan_context* vk_context = &renderer_app->renderer.context;

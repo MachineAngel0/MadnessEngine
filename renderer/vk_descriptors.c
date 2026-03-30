@@ -1,6 +1,6 @@
 ﻿
 #define max_bindless_resources 4096u
-#define max_bindless_bindings 16;
+#define max_bindless_bindings 16
 
 
 typedef enum descriptor_type

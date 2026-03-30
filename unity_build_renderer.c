@@ -22,9 +22,8 @@
 
 
 //Renderer
-#include "renderer/build_renderer.h"
 #include "renderer/build_renderer.c"
-
+#include "renderer/build_renderer.h"
 
 
 // #include "lib/cgltf-master/cgltf.h"
@@ -32,6 +31,7 @@
 
 //APP and Entry Point
 #include "app_types.h"
+#include "app_types.c"
 #include "renderer_dev.h"
 #include "renderer_dev.c"
 

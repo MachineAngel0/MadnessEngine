@@ -1,8 +1,6 @@
 ﻿#ifndef MADNESS_THREAD_H
 #define MADNESS_THREAD_H
 
-#include <stdbool.h>
-#include <stddef.h>
 #include "defines.h"
 
 typedef struct Madness_Thread
