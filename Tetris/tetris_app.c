@@ -55,7 +55,7 @@ void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
 bool tetris_game_run(Tetris_Application* tetris_application)
 {
     app_internal = tetris_application;
-    application_base_init(&app_internal->application_base);
+    application_base_init(&app_internal->application_base, "Tetris");
     //initialize the applications memory
     // Memory_System_Config memory_config;
     // memory_config.memory_request_size = GB(4);

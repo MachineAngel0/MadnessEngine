@@ -13,7 +13,6 @@ extern void renderer_dev_create_fpn(Renderer_Dev_Application* renderer_app)
 }
 
 
-static Renderer_Dev_Application* app_internal;
 
 
 bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
@@ -23,12 +22,15 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, ev
 bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
 
+static Renderer_Dev_Application* app_internal;
+
+
 bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 {
     app_internal = render_dev_app;
 
 
-    application_base_init(&app_internal->application_base);
+    application_base_init(&app_internal->application_base, "Madness Engine Renderer");
 
     //just for convinience
     Renderer* renderer = &app_internal->renderer_plugin.renderer;
@@ -82,7 +84,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     Render_Packet* render_packet = app_internal->renderer_plugin.render_packet;
 
     //start the renderer
-    if (!render_dev_app->renderer_plugin.renderer_initialize(&app_internal->renderer_plugin,
+    if (!app_internal->renderer_plugin.renderer_initialize(&app_internal->renderer_plugin,
                                                              &app_internal->application_base))
     {
         FATAL("Failed to initialize the renderer")
@@ -150,7 +152,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // madness_ui_shutdown(madness_ui);
     app_internal->renderer_plugin.ui_shutdown(madness_ui);
 
-    render_dev_app->renderer_plugin.renderer_terminate(&app_internal->renderer_plugin);
+    app_internal->renderer_plugin.renderer_terminate(&app_internal->renderer_plugin);
 
 
     //shutdown subsystems

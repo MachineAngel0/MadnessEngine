@@ -1,24 +1,21 @@
 
-//using a unity/jumbo build
-
-
 //CORE
-#include "core/core_unity.c"
+#include "core/build_core.h"
+#include "core/build_core.c"
+
+
+//Renderer
+#include "renderer/build_renderer.h"
+#include "renderer/build_renderer.c"
+
 
 //EDITOR
-#include "game/unit_component/actions.h"
-#include "game/unit_component/health.h"
-#include "game/ability_components/abilities.h"
-
-//LIB
-#include "lib/stb_impl.c"
-#include "lib/cgltf-master/cgltf.h"
-#include "lib/cgltf-master/cgltf_write.h"
-
+#include "build_editor.h"
+#include "build_editor.c"
 
 
 #include "app_types.h"
-#include "editor_application.c"
-#include "application.h"
-#include "editor_entry.c"
+#include "app_types.c"
+#include "editor_app.h"
+#include "editor_app.c"
 

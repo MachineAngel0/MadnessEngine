@@ -2,7 +2,7 @@
 #define MADNESSENGINE_EDITOR_H
 #include <stdbool.h>
 
-#include "../UI/UI.h"
+#include "UI.h"
 #include "vulkan_types.h"
 #include "memory/memory_system.h"
 
@@ -16,9 +16,13 @@ typedef struct Editor
     bool run_game_application;
 }Editor;
 
-Editor* editor_initialize(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui);
-bool editor_update(Editor* editor);
-bool editor_shutdown(Editor* editor);
+MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui);
+MAPI bool editor_update(Editor* editor);
+MAPI bool editor_shutdown(Editor* editor);
+
+
+void editor_ui(Editor* editor);
+
 
 
 #endif //MADNESSENGINE_EDITOR_H

@@ -2,6 +2,7 @@
 
 #include "cgltf.h"
 #include "c_string.h"
+#include "ufbx.h"
 
 
 submesh* submesh_init(Arena* arena)

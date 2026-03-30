@@ -13,9 +13,12 @@ set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
         MadnessEngine
+
         MadnessEngine_renderer
         MADNESSRENDERER
-        MadnessEngine_editor
+
+        Madness_Editor
+        MADNESSEDITOR
 
         MadnessPulse
         MADNESSPULSE
@@ -113,14 +116,15 @@ add_library(MADNESSRENDERER SHARED
 
 
 ### EDITOR ###
-add_executable(MadnessEngine_editor
-        editor_app.h
+add_executable(Madness_Editor
         unity_build_editor.c
         lib/build_lib.c
-
 )
 
-
+add_library(MADNESSEDITOR SHARED
+        unity_build_editor.c
+        lib/build_lib.c
+)
 
 
 ### CORE ###

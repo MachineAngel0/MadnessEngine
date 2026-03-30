@@ -3,6 +3,7 @@
 
 #include "renderer_packet.h"
 #include "renderer/UI.h"
+#include "editor/editor.h"
 #include "Tetris/Tetris.h"
 
 //startup information
@@ -49,13 +50,14 @@ typedef struct Application_Base
     i16 height;
 } Application_Base;
 
-void application_base_init(Application_Base* application_base)
+void application_base_init(Application_Base* application_base, char* app_name)
 {
     application_base->app_config.start_pos_x = 100;
     application_base->app_config.start_pos_y = 100;
     application_base->app_config.start_width = 1280;
     application_base->app_config.start_height = 720;
-    application_base->app_config.name = "Madness Engine Renderer";
+    // application_base->app_config.name = "Madness Engine";
+    application_base->app_config.name = app_name;
 }
 
 void application_base_shutdown(Application_Base* application_base)
@@ -103,6 +105,19 @@ typedef struct Renderer_Plugin
 bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin);
 
 
+typedef Editor* (*editor_init_fpn)(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui);
+typedef void (*editor_run_fpn)(Editor* editor);
+typedef void (*editor_shutdown_fpn)(Editor* editor);
+
+typedef struct Editor_Plugin
+{
+    Editor* editor;
+    DLL_HANDLE editor_dll_handle;
+    editor_init_fpn editor_init;
+    editor_run_fpn editor_run;
+    editor_shutdown_fpn editor_shutdown;
+} Editor_Plugin;
+bool editor_plugin_set_default_fpn(Editor_Plugin* editor_plugin);
 
 
 
@@ -157,6 +172,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app);
 typedef struct Editor_Application
 {
     Application_Base application_base;
+    Editor_Plugin editor_plugin;
     Renderer_Plugin renderer_plugin;
     Game_Plugin game_plugin;
 } Editor_Application;
