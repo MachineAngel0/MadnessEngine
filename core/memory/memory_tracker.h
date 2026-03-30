@@ -1,14 +1,9 @@
-﻿#ifndef MEMORY_H
-#define MEMORY_H
+﻿#ifndef MEMORY_TRACKER_H
+#define MEMORY_TRACKER_H
 
-#include <stdbool.h>
-#include "../defines.h"
+#include "defines.h"
+#include "str.h"
 
-//TODO: quick unit test
-//TODO: hook up to the containers
-
-
-//used for containers like arrays
 typedef enum memory_container_type
 {
     MEMORY_CONTAINER_ARENA,
@@ -29,10 +24,10 @@ typedef enum memory_container_type
 
 static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 {
-    "MEMORY_CONTAINER_ARENA",
-    "MEMORY_CONTAINER_ARENA_STACK",
-    "MEMORY_CONTAINER_ARENA_POOl",
-    "MEMORY_CONTAINER_ARENA_FREELIST",
+    "MEMORY_ARENA",
+    "MEMORY_ARENA_STACK",
+    "MEMORY_ARENA_POOl",
+    "MEMORY_ARENA_FREELIST",
     "MEMORY_ARRAY",
     "MEMORY_DARRAY",
     "MEMORY_STRING",
@@ -43,63 +38,42 @@ static const char* memory_container_type_string[MEMORY_CONTAINER_MAX] =
 };
 
 
-//used for subsystems like the render or entity systems
-typedef enum memory_subsystem_type
-{
-    MEMORY_SUBSYSTEM_APPLICATION_ARENA,
-    MEMORY_SUBSYSTEM_GAME,
-    MEMORY_SUBSYSTEM_ENTITY,
-    MEMORY_SUBSYSTEM_ANIMATION,
-    MEMORY_SUBSYSTEM_RENDERER,
-    MEMORY_SUBSYSTEM_EVENT,
-    MEMORY_SUBSYSTEM_INPUT,
-
-    MEMORY_SUBSYSTEM_MAX,
-} memory_subsystem_type;
-
-//used for subsystems like animation or entity subsystems
-static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
-{
-    "MEMORY_SUBSYSTEM_APPLICATION_ARENA",
-    "MEMORY_GAME",
-    "MEMORY_ENTITY",
-    "MEMORY_ANIMATION",
-    "MEMORY_RENDERER",
-    "MEMORY_EVENT",
-    "MEMORY_INPUT",
-};
-
+//NOTE: the design is not to track how much any given container has been allocated,
+// we want to know how much a given system/subsystem was given memory wise,
+// and how much the containers have allocated so far, to make better memory decisions
+// the containers themselves will tell us if we overallocate
 
 typedef struct Memory_Tracker
 {
-    //keep track of memory in use
+    String system_name;
+    //keep track of the max memory the system is allowed to use
+    u64 subsystem_memory_size;
+    //keep track of memory in use from the containers
     u64 memory_container_usage[MEMORY_CONTAINER_MAX];
-    u64 memory_container_size;
-    u64 memory_subsystem_usage[MEMORY_SUBSYSTEM_MAX];
-    u64 memory_subsystem_size;
+
+    //TODO: max_allocated_amount????
 } Memory_Tracker;
 
+#define DEFAULT_MEMORY_TRACKERS_COUNT 20
 
-static Memory_Tracker memory_tracker;
-static bool memory_tracker_initialized = false;
+typedef struct Memory_Tracker_System
+{
+    //an array of these hand these out to the subsystems that need them for their own memory tracking
+    Memory_Tracker* memory_tracker;
+    u32 size; // how many in use
+    u32 capacity; // how many we have to give out
+} Memory_Tracker_System;
 
-bool memory_tracker_init(void);
+Memory_Tracker* memory_system_get_memory_tracker(Memory_Tracker_System* memory_tracker_system, String system_name,
+                                                 u64 max_memory_allocated);
 
-bool memory_tracker_shutdown(void);
+bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
 
-bool memory_tracker_container_alloc(memory_container_type type, u64 size);
+bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
 
+void memory_tracker_system_print_all_memory_usage(Memory_Tracker_System* memory_tracker);
 
-bool memory_tracker_container_free(memory_container_type type, u64 size);
-
-bool memory_tracker_subsystem_alloc(memory_subsystem_type type, u64 size);
-
-bool memory_tracker_subsystem_free(memory_subsystem_type type, u64 size);
-
-
-void memory_tracker_print_memory_usage(void);
-
-void memory_tracker_unit_test(void);
+void memory_tracker_print_memory_usage(Memory_Tracker* memory_tracker);
 
 
 #endif

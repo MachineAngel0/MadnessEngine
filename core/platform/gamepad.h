@@ -1,7 +1,6 @@
 ﻿#ifndef GAMEPAD_H
 #define GAMEPAD_H
 
-#include "logger.h"
 #include "event.h"
 
 
@@ -92,6 +91,8 @@ typedef struct gamepad_system
 {
     gamepad_state* gamepad_player_info;
     u32 player_count;
+
+    Event_System* event_system;//ref
 }gamepad_system;
 
 static gamepad_system gamepad;
@@ -106,9 +107,9 @@ bool gamepad_button_recieve(event_type code, uint32_t sender_id, uint32_t subscr
 
 bool gamepad_button_press(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
 
-void gamepad_init(void);
+void gamepad_init(Memory_System* memory_system, Event_System* event_system);
 
-void gamepad_shutdown(void);
+void gamepad_shutdown(Event_System* event_system);
 
 void gamepad_update(void);
 void gamepad_poll(void);

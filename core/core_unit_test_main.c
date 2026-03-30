@@ -1,15 +1,15 @@
 ﻿
 int main(void)
 {
-    memory_tracker_init(TODO);
     u64 memory_request_size = MB(1);
-    memory_system_init(memory_request_size);
+    Memory_System memory_system;
+    memory_system_init(&memory_system, memory_request_size, TODO);
 
-    free_list_test();
 
 
     arena_test();
     arena_stack_test();
+    free_list_test();
 
     array_macro_test();
 
@@ -34,13 +34,9 @@ int main(void)
     string_test();
     string_builder_test();
 
-    memory_tracker_print_memory_usage();
 
 
-
-    memory_tracker_shutdown();
-
-    memory_system_shutdown();
+    memory_system_shutdown(&memory_system);
 
 
     TEST_REPORT_TOTAL();

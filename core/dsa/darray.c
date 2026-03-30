@@ -11,7 +11,7 @@
 
 
 
-void* _darray_create(const u64 capacity, const u64 stride)
+void* _darray_create(const u64 capacity, const u64 stride, Memory_Tracker* memory_tracker)
 {
     const u64 header_size = sizeof(array_header);
     const u64 array_size = capacity * stride;
@@ -23,7 +23,6 @@ void* _darray_create(const u64 capacity, const u64 stride)
     }
     memset(new_array, 0, header_size + array_size);
 
-    memory_tracker_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
 
 
     array_header* header = new_array;
@@ -35,29 +34,24 @@ void* _darray_create(const u64 capacity, const u64 stride)
     return (void *) ((u8 *) new_array + header_size);
 }
 
-void* _darray_create_arena(const u64 intial_capacity, const u64 stride, Arena_Stack* arena)
+void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Arena_Stack* arena, Memory_Tracker* memory_tracker)
 {
     const u64 header_size = sizeof(array_header);
-    const u64 array_size = intial_capacity * stride;
+    const u64 array_size = initial_capacity * stride;
     void* new_array = arena_stack_alloc(arena, header_size + array_size);;
     memset(new_array, 0, header_size + array_size);
 
-    memory_tracker_container_alloc(MEMORY_CONTAINER_DARRAY, header_size + array_size);
 
     array_header* header = new_array;
     header->num_items = 0;
     header->stride = stride;
-    header->capacity = intial_capacity;
+    header->capacity = initial_capacity;
 
     //return the array without the header in it, so that we can use it like a normal array
     return (void *) ((u8 *) new_array + header_size);
 }
 
-#define darray_create(type) \
-    (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type))
 
-#define darray_create_reserve(type, capacity) \
-    (type*) _darray_create(capacity, sizeof(type))
 
 void darray_free(void* array)
 {
@@ -72,8 +66,11 @@ void darray_free(void* array)
     //get the array header
     array_header* header = (array_header *) ((u8 *) array - header_size);
 
-    memory_tracker_container_free(MEMORY_CONTAINER_DARRAY, header->capacity + header_size);
-
+    if (header->memory_tracker)
+    {
+        const u64 array_size = header->num_items * header->stride;
+        memory_tracker_free_allocation(header->memory_tracker, MEMORY_CONTAINER_DARRAY, array_size);
+    }
     free(header);
     array = NULL;
     header = NULL;
@@ -184,7 +181,7 @@ void* _darray_resize(void* array)
 
 
     //allocate a new array
-    void* new_out_array = _darray_create(header->capacity * DARRAY_RESIZE_VALUE, header->stride);
+    void* new_out_array = _darray_create(header->capacity * DARRAY_RESIZE_VALUE, header->stride, header->memory_tracker);
     array_header* new_header = (array_header *) ((u8 *) new_out_array - header_size);
     //update the length, since that doens't get set
     new_header->num_items = header->num_items;
@@ -531,7 +528,7 @@ void* _darray_duplicate(const void* array)
     u64 header_size = sizeof(array_header);
     array_header* source_header = (array_header *) ((u8 *) array - header_size);
 
-    void* copy = _darray_create(source_header->capacity, source_header->stride);
+    void* copy = _darray_create(source_header->capacity, source_header->stride, source_header->memory_tracker);
     array_header* new_header = (array_header *) ((u8 *) copy - header_size);
     MASSERT_MSG(new_header->capacity == source_header->capacity, "capacity mismatch while duplicating darray.");
 

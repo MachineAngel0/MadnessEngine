@@ -57,6 +57,13 @@ typedef struct DLL_HANDLE
     const char* file_name;
 } DLL_HANDLE;
 
+typedef struct File_Watch_Handle
+{
+    uint64_t handle;
+    const char* file_name;
+} File_Watch_Handle;
+
+
 //DLL
 char* platform_get_dynamic_library_extension(void);
 char* platform_get_static_library_extension(void);
@@ -70,8 +77,13 @@ bool platform_file_copy(const char* source_file, char* new_file);
 void* platform_get_function_address(DLL_HANDLE handle, const char* function_name);
 
 //FILE SYSTEM
-void platform_register_file(const char* file_name); // registers a file to be watched
-bool platform_has_filed_changed(const char* file_name); // checks if that file has been changed
+File_Watch_Handle platform_register_file_watch(const char* file_name); // registers a file to be watched
+// bool platform_unregister_file_watch(File_Handle file_handle); // remove from the list
+
+bool platform_has_filed_changed(File_Watch_Handle file_watch_handle); // checks if that file has been changed
+
+File_Watch_Handle platform_register_directory_watch(const char* directory_name);
+void platform_has_directory_changed(File_Watch_Handle directory_watch_handle);
 
 
 // RENDERER

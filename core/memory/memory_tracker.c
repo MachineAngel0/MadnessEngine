@@ -1,166 +1,98 @@
 ﻿#include "memory_tracker.h"
 
-bool memory_tracker_init(void)
-{
-    memset(&memory_tracker, 0, sizeof(Memory_Tracker));
-    memory_tracker.memory_container_size = 0;
-    memory_tracker.memory_subsystem_size = 0;
-    memory_tracker_initialized = true;
-    return true;
-}
 
-bool memory_tracker_shutdown(void)
+Memory_Tracker* memory_system_get_memory_tracker(Memory_Tracker_System* memory_tracker_system, String system_name,
+                                                 u64 max_memory_allocated)
 {
-    memory_tracker_print_memory_usage();
-    if (!memory_tracker_initialized)
-    {
-        WARN("MEMORY TRACKER NOT INITIALIZED, NOTHING TO SHUTDOWN");
-        return false;
-    }
-    INFO("MEMORY TRACKER SHUTDOWN")
-    return true;
-}
 
-bool memory_tracker_container_alloc(const memory_container_type type, const u64 size)
-{
-    if (!memory_tracker_initialized)
+    if (memory_tracker_system->size >= memory_tracker_system->capacity)
     {
-        WARN("MEMORY TRACKER NOT INITIALIZED");
-        return false;
+        FATAL("RAN OUT OF MEMORY TRACKERS, INCREASE MAX_MEMORY_TRACKERS IN memory_tracker.h")
+        return NULL;
     }
 
+    Memory_Tracker* out_memory_tracker = &memory_tracker_system->memory_tracker[memory_tracker_system->size++];
+    memset(out_memory_tracker, 0, sizeof(Memory_Tracker));
 
-    memory_tracker.memory_container_usage[type] += size;
-    memory_tracker.memory_container_size += size;
+
+    out_memory_tracker->system_name = system_name;
+    out_memory_tracker->subsystem_memory_size = max_memory_allocated;
+
+    return out_memory_tracker;
+
+}
+
+bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, const memory_container_type type, const u64 size)
+{
+    MASSERT(memory_tracker)
+    memory_tracker->memory_container_usage[type] += size;
     return true;
 }
 
 
-bool memory_tracker_container_free(const memory_container_type type, const u64 size)
+bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker,const memory_container_type type, const u64 size)
 {
-    if (!memory_tracker_initialized)
-    {
-        WARN("MEMORY TRACKER NOT INITIALIZED");
-        return false;
-    }
-    memory_tracker.memory_container_usage[type] -= size;
-    memory_tracker.memory_container_size -= size;
+    MASSERT(memory_tracker)
+
+    memory_tracker->memory_container_usage[type] -= size;
     return true;
 }
 
-
-bool memory_tracker_subsystem_alloc(const memory_subsystem_type type, const u64 size)
+void memory_tracker_print_memory_usage(Memory_Tracker* memory_tracker)
 {
-    if (!memory_tracker_initialized)
-    {
-        WARN("MEMORY TRACKER NOT INITIALIZED");
-        return false;
-    }
+    MASSERT(memory_tracker)
 
-    memory_tracker.memory_subsystem_usage[type] += size;
-    memory_tracker.memory_subsystem_size += size;
-    return true;
-}
+    //TODO: track the total usage,
 
-bool memory_tracker_subsystem_free(const memory_subsystem_type type, const u64 size)
-{
-    if (!memory_tracker_initialized)
-    {
-        WARN("MEMORY TRACKER NOT INITIALIZED");
-        return false;
-    }
-
-    memory_tracker.memory_subsystem_usage[type] -= size;
-    memory_tracker.memory_subsystem_size -= size;
-    return true;
-}
-
-
-void memory_tracker_print_memory_usage(void)
-{
-    if (!memory_tracker_initialized)
-    {
-        WARN("MEMORY TRACKER NOT INITIALIZED");
-        return;
-    }
+    //print system name
+    string_print(&memory_tracker->system_name);
 
     DEBUG("CONTAINER MEMORY");
+    u64 memory_container_total_size = 0;
+
     for (i32 i = 0; i < MEMORY_CONTAINER_MAX; i++)
     {
         u32 container_usage = 0;
-        if (memory_tracker.memory_container_usage[i] >= GB(1))
+        if (memory_tracker->memory_container_usage[i] >= GB(1))
         {
-            container_usage = memory_tracker.memory_container_usage[i] / GB(1);
+            container_usage = memory_tracker->memory_container_usage[i] / GB(1);
             DEBUG("%s : %d GB", memory_container_type_string[i], container_usage);
         }
-        else if (memory_tracker.memory_container_usage[i] >= MB(1))
+        else if (memory_tracker->memory_container_usage[i] >= MB(1))
         {
-            container_usage = memory_tracker.memory_container_usage[i] / MB(1);
+            container_usage = memory_tracker->memory_container_usage[i] / MB(1);
             DEBUG("%s : %d MB", memory_container_type_string[i], container_usage);
         }
-        else if (memory_tracker.memory_container_usage[i] >= KB(1))
+        else if (memory_tracker->memory_container_usage[i] >= KB(1))
         {
-            container_usage = memory_tracker.memory_container_usage[i] / KB(1);
+            container_usage = memory_tracker->memory_container_usage[i] / KB(1);
             DEBUG("%s : %d KB", memory_container_type_string[i], container_usage);
         }
-        else if (memory_tracker.memory_container_usage[i] < KB(1))
+        else if (memory_tracker->memory_container_usage[i] < KB(1))
         {
-            DEBUG("%s : %d BYTES", memory_container_type_string[i], memory_tracker.memory_container_usage[i]);
+            DEBUG("%s : %d BYTES", memory_container_type_string[i], memory_tracker->memory_container_usage[i]);
         }
         else
         {
             FATAL("MEMORY CONTAINER PRINT ERROR");
         }
+
+        memory_container_total_size += memory_tracker->memory_container_usage[i];
+
     }
-    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu GB", (memory_tracker.memory_container_size / GB(1)));
-    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu MB", (memory_tracker.memory_container_size / MB(1)));
-    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu KB", (memory_tracker.memory_container_size / KB(1)));
-    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu BYTES\n", memory_tracker.memory_container_size);
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu GB", (memory_container_total_size / GB(1)));
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu MB", (memory_container_total_size / MB(1)));
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu KB", (memory_container_total_size / KB(1)));
+    DEBUG("TOTAL CONTAINER MEMORY USAGE: %llu BYTES\n", memory_container_total_size);
+    DEBUG("TOTAL CONTAINER MEMORY ALLOCATED: %llu BYTES\n", memory_tracker->subsystem_memory_size);
 
 
-    DEBUG("SUBSYSTEM MEMORY");
-    for (i32 i = 0; i < MEMORY_SUBSYSTEM_MAX; i++)
-    {
-        u32 container_usage = 0;
-        if (memory_tracker.memory_subsystem_usage[i] >= GB(1))
-        {
-            container_usage = memory_tracker.memory_subsystem_usage[i] / GB(1);
-            DEBUG("%s : %d GB", memory_subsystem_type_string[i], container_usage);
-        }
-        else if (memory_tracker.memory_subsystem_usage[i] >= MB(1))
-        {
-            container_usage = memory_tracker.memory_subsystem_usage[i] / MB(1);
-            DEBUG("%s : %d MB", memory_subsystem_type_string[i], container_usage);
-        }
-        else if (memory_tracker.memory_subsystem_usage[i] >= KB(1))
-        {
-            container_usage = memory_tracker.memory_subsystem_usage[i] / KB(1);
-            DEBUG("%s : %d KB", memory_subsystem_type_string[i], container_usage);
-        }
-        else if (memory_tracker.memory_subsystem_usage[i] < KB(1))
-        {
-            DEBUG("%s : %d BYTES", memory_subsystem_type_string[i], memory_tracker.memory_subsystem_usage[i]);
-        }
-        else
-        {
-            FATAL("MEMORY SUBSYSTEM PRINT ERROR");
-        }
-    }
-    u64 mem_size = memory_tracker.memory_subsystem_size;
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu GB", (mem_size / GB(1)));
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu MB", (mem_size / MB(1)));
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu KB", (mem_size / KB(1)));
-    DEBUG("TOTAL SUBSYSTEM MEMORY USAGE: %llu BYTES\n", mem_size);
 }
 
-void memory_tracker_unit_test(void)
+void memory_tracker_system_print_all_memory_usage(Memory_Tracker_System* memory_tracker)
 {
-    //insta fail
-    TEST_INFORM(memory_tracker_initialized);
-
-    // memory_container_alloc(MEMORY_CONTAINER_UNKNOWN, 1024);
-    // memory_subsystem_alloc(MEMORY_SUBSYSTEM_UNKNOWN, 1024);
-    memory_tracker_subsystem_alloc(MEMORY_SUBSYSTEM_GAME, KB(1));
-
-    memory_tracker_print_memory_usage();
+    for (u32 i = 0; i < memory_tracker->size; i++)
+    {
+        memory_tracker_print_memory_usage(&memory_tracker->memory_tracker[i]);
+    }
 }

@@ -53,7 +53,7 @@ void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int r
     }
 }
 
-Renderer_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
+Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))
@@ -98,7 +98,7 @@ void tetris_shutdown(Tetris_Game_State* tetris)
     //do nothing, it will deallocate when the arena clears itself
 }
 
-Renderer_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
+Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
 {
     // we only need to generate the draw data for the grid layout, grid with the pieces and for the current tetromino
     for (int i = 0; i < tetris->tetris_grid->row; i++)
@@ -112,8 +112,13 @@ Renderer_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
 
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
-            sprite_create(tetris->renderer->sprite_system, (vec2){x, y}, (vec2){BLOCK_SCALE, BLOCK_SCALE}, sprite_color, (Texture_Handle){0},
-                          SPRITE_PIPELINE_COLOR);
+            Sprite_Data* sprite_data = sprite_create_minimal(&tetris->frame_arena);
+            sprite_data->pos = (vec2){x,y};
+            sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
+            sprite_data->color = sprite_color;
+            sprite_data->texture_index = 0;
+            sprite_data->flags |= SPRITE_PIPELINE_COLOR;
+
         }
     }
 
@@ -126,8 +131,15 @@ Renderer_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
             YOFFSET + ((cur_tetromino.tetromino_default_position[i].y + cur_tetromino.grid_position.y) * CELL_SIZE),
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
-        sprite_create(tetris->renderer->sprite_system, pos, size, tetris_color_look_up_table[cur_tetromino.type], (Texture_Handle){0},
-                      SPRITE_PIPELINE_COLOR);
+
+        Sprite_Data* sprite_data = sprite_create_minimal(&tetris->frame_arena);
+        sprite_data->pos = pos;
+        sprite_data->size = size;
+        sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];
+        sprite_data->texture_index = 0;
+        sprite_data->flags |= SPRITE_PIPELINE_COLOR;
+
+
     }
 
     // tetris->tetris_render_packet->sprite_data;

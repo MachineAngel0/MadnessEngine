@@ -3,23 +3,29 @@
 #include <complex.h>
 
 #include "logger.h"
-#include "sprite.h"
-
 
 #define MAX_UI_SPRITE_COUNT 1000
 #define MAX_TEXT_SPRITE_COUNT 1000
 #define MAX_BUTTON_COUNT 1000
 
 
-Madness_UI* madness_ui_init(Renderer* renderer)
+Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer)
 {
-    Madness_UI* madness_ui = arena_alloc(&renderer->arena, sizeof(Madness_UI));
+    Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI));
 
-    //TODO: TEMPORARY, request memory from the memory_system
-    //madness_ui->arena = memory_system_alloc(memory_system, MB(64));
-    //madness_ui->frame_arena = memory_system_alloc(memory_system, MB(64));
-    madness_ui->arena = &renderer->arena;
-    madness_ui->frame_arena = &renderer->frame_arena;
+    u64 ui_arena_mem_size = MB(1024);
+    u64 ui_frame_arena_mem_size = MB(1024);
+    madness_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("MADNESS UI"),
+                                                               ui_arena_mem_size + ui_frame_arena_mem_size);
+
+    madness_ui->arena  = memory_system_alloc(memory_system, sizeof(Arena));
+    madness_ui->frame_arena  = memory_system_alloc(memory_system, sizeof(Arena));
+
+    void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size);
+    void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size);
+
+    arena_init(madness_ui->arena , arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
+    arena_init(madness_ui->frame_arena , frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
 
     madness_ui->renderer_reference = renderer;
     madness_ui->input_system_reference = renderer->input_system_debug;
@@ -80,9 +86,9 @@ Madness_UI* madness_ui_init(Renderer* renderer)
     return madness_ui;
 }
 
-bool madness_ui_shutdown(Madness_UI* madness_ui, Renderer* renderer)
+bool madness_ui_shutdown(Madness_UI* madness_ui)
 {
-    return false;
+    return true;
 }
 
 void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y)
@@ -420,8 +426,30 @@ bool is_hot(Madness_UI* madness_ui, int id)
 UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
 {
     UI_Node* out_node = &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items];
+
+
+    if (madness_ui->parent_node_state.is_active)
+    {
+        //check if the last node had a parent, if it doesn't then it is the parent
+        if (madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1].parent)
+        {
+            out_node->parent = madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1].parent;
+        }
+        else
+        {
+            out_node->parent = &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1];
+        }
+
+        out_node->parent->children[out_node->parent->child_node_count++] = out_node;
+    }
+
     madness_ui->ui_nodes->num_items++;
     return out_node;
+}
+
+UI_Node* madness_ui_get_parent_node(Madness_UI* madness_ui)
+{
+    return madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1].parent;
 }
 
 UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui)
@@ -1266,8 +1294,8 @@ void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* 
     UI_Layout_Direction last_layout_direction = madness_ui->layout_direction;
     madness_set_layout_direction(madness_ui, UI_LAYOUT_HORIZONTAL);
 
-    char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
-    char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
+    const char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
+    const char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
 
     madness_ui_float(madness_ui, x_id, &v2->x, increment_value);
     madness_ui_float(madness_ui, y_id, &v2->y, increment_value);
@@ -1283,9 +1311,9 @@ void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* 
     UI_Layout_Direction last_layout_direction = madness_ui->layout_direction;
     madness_set_layout_direction(madness_ui, UI_LAYOUT_HORIZONTAL);
 
-    char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
-    char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
-    char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
+    const char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
+    const char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
+    const char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
 
     madness_ui_float(madness_ui, x_id, &v3->x, increment_value);
     madness_ui_float(madness_ui, y_id, &v3->y, increment_value);
@@ -1334,10 +1362,9 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
     UI_Layout_Direction last_layout_direction = madness_ui->layout_direction;
     madness_set_layout_direction(madness_ui, UI_LAYOUT_HORIZONTAL);
 
-
-    char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
-    char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
-    char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
+    const char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
+    const char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
+    const char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
 
     float increment_value = 0.05;
     madness_ui_float(madness_ui, x_id, &color_value->x, increment_value);
@@ -1358,19 +1385,6 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color
 
 void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
 {
-    // 0-1 range
-    const float button_ratio_to_layout_size = 0.8f;
-    const float button_vertical_normalized_size = 0.03f;
-    vec2 normalized_size;
-    normalized_size.x = madness_ui->current_layout_size.x * button_ratio_to_layout_size;
-    normalized_size.y = (button_vertical_normalized_size + (madness_ui->element_padding / madness_ui->screen_size.y)) *
-        scroll_box_state->max_nodes_to_display;
-
-    // proper screen pos and size
-    vec2 button_screen_pos = madness_ui->cursor_pos;
-    vec2 button_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
-    button_screen_pos.x += (madness_ui->current_layout_screen_size.x - button_screen_size.x) / 2.f;
-
     /*
     //debug the size of the scroll box
     UI_Node* new_node = madness_ui_get_new_node(madness_ui);
@@ -1380,14 +1394,45 @@ void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box
     new_node->size = button_screen_size;
     */
 
-    scroll_box_state->scroll_box_cursor_pos = madness_ui->cursor_pos;
-    scroll_box_state->scroll_box_cursor_size = button_screen_size;
+    UI_Node* sroll_box_node = madness_ui_get_new_node(madness_ui);
+    sroll_box_node->debug_id = id;
+    sroll_box_node->pos = madness_ui->cursor_pos;
 
 
     madness_ui->parent_node_state.is_active = true;
     madness_ui->parent_node_state.current_attempt_count = 0;
     madness_ui->parent_node_state.slider_count = scroll_box_state->scroll_amount;
     madness_ui->parent_node_state.max_nodes = scroll_box_state->max_nodes_to_display;
+}
+
+
+void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
+{
+    madness_ui->parent_node_state.is_active = false;
+
+    //get the parent node
+
+    //last node should have a parent, which is the scroll box
+    UI_Node* scroll_box = madness_ui_get_parent_node(madness_ui);
+
+    float width_x = 0;
+    float height_y = 0;
+
+    for (u32 child_idx = 0; child_idx < scroll_box->child_node_count; child_idx++)
+    {
+        vec2 size = scroll_box->children[child_idx]->size;
+        width_x = max_f(width_x, size.x);
+        height_y += size.y + madness_ui->element_padding;
+    }
+    height_y -= madness_ui->element_padding;
+
+
+    vec2 scroll_box_screen_size = {width_x, height_y};
+    // scroll_box->size = scroll_box_screen_size;
+    // scroll_box->color = COLOR_ORANGE;
+
+    scroll_box->pos.x += (madness_ui->current_layout_screen_size.x - scroll_box_screen_size.x) / 2.f;
+    vec2 button_screen_pos = scroll_box->pos;
 
 
     //draw the rect, then based on the cur val, draw it proportionally to where it should be
@@ -1397,15 +1442,15 @@ void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box
 
 
     //slider location
-    float thumb_y_location = (button_screen_size.y / scroll_box_state->max_nodes_to_display) * t;
+    float thumb_y_location = (scroll_box_screen_size.y / scroll_box_state->max_nodes_to_display) * t;
     vec2 thumb_ui_screen_pos = button_screen_pos;
-    thumb_ui_screen_pos.x += button_screen_size.x; // have it sit to the right of all the ui
+    thumb_ui_screen_pos.x += scroll_box_screen_size.x; // have it sit to the right of all the ui
     thumb_ui_screen_pos.y += thumb_y_location;
 
     //slider size
     vec2 thumb_ui_screen_size;
-    thumb_ui_screen_size.x = button_screen_size.x * 0.03f;
-    thumb_ui_screen_size.y = button_screen_size.y / 3;
+    thumb_ui_screen_size.x = scroll_box_screen_size.x * 0.03f;
+    thumb_ui_screen_size.y = scroll_box_screen_size.y / 3;
 
 
     //grab another
@@ -1417,12 +1462,10 @@ void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box
     slider_node->color = madness_ui->editor_style.custom_widget_color;
 
     //size of the scroll box and the slider
-    vec2 hit_size = (vec2){button_screen_size.x + thumb_ui_screen_size.x, button_screen_size.y};
+    vec2 hit_size = (vec2){scroll_box_screen_size.x + thumb_ui_screen_size.x, scroll_box_screen_size.y};
 
     if (region_hit(madness_ui, button_screen_pos, hit_size))
     {
-        slider_node->color = madness_ui->editor_style.hovered_color;
-
         //slider specific check
         if (region_hit(madness_ui, thumb_ui_screen_pos, (vec2){thumb_ui_screen_size.x, hit_size.y}))
         {
@@ -1471,12 +1514,6 @@ void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box
                                                           scroll_box_state->max_nodes_to_display);
         }
     };
-}
-
-
-void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
-{
-    madness_ui->parent_node_state.is_active = false;
 }
 
 
@@ -1553,12 +1590,17 @@ void madness_ui_test(Madness_UI* madness_ui)
     scroll_box_state_test.max_nodes_to_display = 3;
 
     madness_scroll_box_begin(madness_ui, "scroll box", &scroll_box_state_test);
-    madness_button_text(madness_ui, "Scollbox Button 1", STRING("Scroll Around 1"));
-    madness_button_text(madness_ui, "Scollbox Button 2", STRING("Scroll Around 2"));
-    madness_button_text(madness_ui, "Scollbox Button 3", STRING("Scroll Around 3"));
-    madness_button_text(madness_ui, "Scollbox Button 4", STRING("Scroll Around 4"));
-    madness_button_text(madness_ui, "Scollbox Button 5", STRING("Scroll Around 5"));
-    madness_button_text(madness_ui, "Scollbox Button 6", STRING("Scroll Around 6"));
+    {
+        madness_button_text(madness_ui, "Scollbox Button 1", STRING("Scroll Around 1"));
+        madness_button_text(madness_ui, "Scollbox Button 2", STRING("Scroll Around 2"));
+        if (madness_button_text(madness_ui, "Scollbox Button 3", STRING("Scroll Around 3")))
+        {
+            FATAL("BUTTONS AND DEATH");
+        }
+        madness_button_text(madness_ui, "Scollbox Button 4", STRING("Scroll Around 4"));
+        madness_button_text(madness_ui, "Scollbox Button 5", STRING("Scroll Around 5"));
+        madness_button_text(madness_ui, "Scollbox Button 6", STRING("Scroll Around 6"));
+    }
     madness_scroll_box_end(madness_ui, "scroll box", &scroll_box_state_test);
 }
 
@@ -1582,7 +1624,7 @@ void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* rend
 
         // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
         // {
-            // sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
         // }
         sprite_data->color = node_to_draw->color;
         sprite_data->texture_index = node_to_draw->texture_handle.handle;
@@ -1598,7 +1640,6 @@ void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* rend
            Sprite_Data_array_push(madness_ui->text_data, sprite_data);
         }
         */
-
     }
 
 
@@ -1625,6 +1666,56 @@ void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* rend
     render_packet->ui_data_packet.text_index_type = madness_ui->index_type;
     render_packet->ui_data_packet.ui_index_type = madness_ui->index_type;
     render_packet->ui_data_packet.system_name = "MADNESS UI";
+}
+
+void madness_ui_generate_render_data_new(Madness_UI* madness_ui, Renderer* renderer)
+{
+    //draw pass
+    for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
+    {
+        UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
+        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(renderer->sprite_system);
+        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
+        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        //TODO:
+        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
+        // {sprite_data->color = node_to_draw->color;}
+
+        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
+        // {
+        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        // }
+        sprite_data->color = node_to_draw->color;
+        sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        sprite_data->flags = node_to_draw->flags;
+
+
+        //if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
+        //{
+        //    sprite_data->uv_offset = node_to_draw->uv_offset;
+        //    sprite_data->uv_size = node_to_draw->uv_size;
+        //   Sprite_Data_array_push(madness_ui->text_data, sprite_data);
+        //}
+    }
+
+
+    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
+    {
+        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
+        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(renderer->sprite_system);
+        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
+        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        sprite_data->uv_offset = node_to_draw->uv_offset;
+        sprite_data->uv_size = node_to_draw->uv_size;
+
+        sprite_data->color = node_to_draw->color;
+        sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        sprite_data->flags = node_to_draw->flags;
+
+        Sprite_Data_array_push(madness_ui->text_data, sprite_data);
+    }
 }
 
 UI_Renderer_Backend* ui_render_init(Renderer* renderer)
@@ -1685,7 +1776,8 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 }
 
 
-void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Render_Packet* render_packet)
+void madness_ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
+                                          Render_Packet* render_packet)
 {
     // UI
     vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);

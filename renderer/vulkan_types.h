@@ -780,8 +780,6 @@ typedef struct vulkan_pipeline_cache
 } vulkan_pipeline_cache;
 
 
-
-
 typedef struct Sprite_System
 {
     Frame_Arena* frame_arena;
@@ -789,7 +787,8 @@ typedef struct Sprite_System
 
 
     Sprite sprites[4]; // literally just need one quad for a vertex buffer
-    Sprite_Data_array* sprites_data;
+    Sprite_Data_array* sprites_data; //TODO: keep a free list of available indicies
+    Sprite_Data_array* sprites_data_transient; // this only lasts for the frame
     u16 sprite_indices[6];
 
     VkIndexType index_type;
@@ -820,7 +819,7 @@ typedef struct UI_Renderer
     // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
     // Buffer_Handle ui_quad_texture_index_buffer_handle;
 
-    //HANDLES
+
     Buffer_Handle ui_vertex_staging_buffer_handle;
     Buffer_Handle ui_index_staging_buffer_handle;
     Buffer_Handle ui_quad_indirect_staging_buffer_handle;
@@ -839,6 +838,7 @@ typedef struct renderer
 
     Arena arena; // total memory for the entire renderer
     Arena frame_arena;
+    Memory_Tracker* mem_tracker;
 
 
     Input_System* input_system_debug; //meant only to be used for debugging

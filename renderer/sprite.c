@@ -19,6 +19,7 @@ Sprite_System* sprite_system_init(Renderer* renderer)
 
 
     sprite_system->sprites_data = Sprite_Data_array_create(MAX_SPRITE_COUNT);
+    sprite_system->sprites_data_transient = Sprite_Data_array_create(MAX_SPRITE_COUNT);
     //TODO: replace with a fill function later
     Sprite_Data instance_data = {0};
     for (u64 i = 0; i < sprite_system->sprites_data->capacity; i++)
@@ -54,7 +55,8 @@ void sprite_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 screen_si
     sprite_system->screen_size.x = (float)screen_size_x;
     sprite_system->screen_size.y = (float)screen_size_y;
 
-    Sprite_Data_array_clear(sprite_system->sprites_data);
+    Sprite_Data_array_clear(sprite_system->sprites_data_transient);
+    // Sprite_Data_array_clear(sprite_system->sprites_data);
 }
 
 
@@ -157,45 +159,17 @@ void sprite_draw(Sprite_System* sprite_system, Renderer* renderer, vulkan_comman
 }
 
 
-//sprites will only last for the frame, modify this is for another time
-Sprite_Handle sprite_system_create_sprite(Sprite_System* sprite_system, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
-                   Sprite_Pipeline_Flags material_flags)
+Sprite_Data* sprite_system_get_new_sprite_transient(Sprite_System* sprite_system)
 {
-    MASSERT(sprite_system);
-
-    //TODO: technically this line should not be happening in the sense that the sprite system does not own any sprite data,
-    // but gets passed the data throught a render packet, this create function should just pass back out a sprite_data*
-    Sprite_Data* data = &sprite_system->sprites_data->data[sprite_system->sprites_data->
-                                                                          num_items];
-    data->flags = material_flags;
-    data->pos = pos;
-    data->size = size;
-    data->color = color;
-    data->texture_index = texture.handle;
-
-    return (Sprite_Handle){0};
-}
-
-Sprite_Data* sprite_create(Frame_Arena* frame_arena, vec2 pos, vec2 size, vec3 color, Texture_Handle texture,
-                               Sprite_Pipeline_Flags material_flags)
-{
-    //TODO: textures should probably be handled differently, or maybe not, loading a texture is a separate thing
-    Sprite_Data* data = arena_alloc(frame_arena, sizeof(Sprite_Data));
-    data->flags = material_flags;
-    data->pos = pos;
-    data->size = size;
-    data->color = color;
-    data->texture_index = texture.handle;
-    return data;
+    return &sprite_system->sprites_data_transient->data[sprite_system->sprites_data_transient->num_items++];
 }
 
 Sprite_Data* sprite_create_minimal(Frame_Arena* frame_arena)
 {
-    Sprite_Data* data = arena_alloc(frame_arena, sizeof(Sprite_Data));
-    data->pos = (vec2){0.f,0.f};
-    data->size = (vec2){1.f,1.f};
-    return data;
+    return (Sprite_Data*)arena_alloc(frame_arena, sizeof(Sprite_Data));
 }
+
+
 
 
 

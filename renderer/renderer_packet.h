@@ -3,12 +3,15 @@
 
 
 //these are all just references to the data, they do not own anything
-typedef struct Render_Packet_Sprite
+typedef struct Render_Packet_Game
 {
     Sprite_Data_array* sprite_data_packet;
     VkIndexType index_type;
+
+    //TODO: geometry data
+
     const char* system_name;
-} Render_Packet_Sprite;
+} Render_Packet_Game;
 
 typedef struct Render_Packet_UI
 {
@@ -26,12 +29,9 @@ typedef struct Render_Packet_UI
 typedef struct Render_Packet
 {
     //rn we just have one of each,
-    //i don't want to deal with multiple instances of this data, if i need more create one for the specific system
-    //the system just sets the data inside the struct, not the safest but fine for now
     Render_Packet_UI ui_data_packet;
-    Render_Packet_Sprite sprite_data_packet;
+    Render_Packet_Game sprite_data_packet;
 
-    // geometry/mesh data at some point //TODO:
 } Render_Packet;
 
 

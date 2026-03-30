@@ -4,26 +4,7 @@
 #include "unit_test.h"
 
 
-//TODO: remove this
-//will malloc for memory, should only be called by the application or whatever manages the entire lifetime of the program
-//see arena_init for using an already existing arena memory/ block of memory
-Arena* arena_init_malloc(const u64 capacity)
-{
-    Arena* a = (Arena *) malloc(sizeof(Arena));
-
-    MASSERT_MSG(a, "ARENA ALLOC FAILED");
-
-    a->memory = (u8 *) malloc(capacity);
-
-    MASSERT_MSG(a->memory, "ARENA MALLOC FAILED");
-
-    a->current_offset = 0;
-    a->capacity = capacity;
-    return a;
-}
-
-
-void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, const memory_subsystem_type subsystem_type)
+void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, Memory_Tracker* memory_tracker)
 {
     //we pass in an already allocated chunk of memory in the event,
     //we want to pass in an already allocated arena memory, say a global arena, and then one for audio for something similar
@@ -31,24 +12,23 @@ void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, c
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
 
-    memory_tracker_subsystem_alloc(subsystem_type, a->capacity);
+    if (memory_tracker)
+    {
+        a->memory_tracker = memory_tracker;
+    }
 }
 
 
 void arena_clear(Arena* a)
 {
+    if (a->memory_tracker)
+    {
+        memory_tracker_free_allocation(a->memory_tracker, MEMORY_CONTAINER_ARENA, a->current_offset);
+    }
+
     a->current_offset = 0;
     memset(a->memory, 0, a->capacity);
 }
-
-//Should only ever be called if we own the memory, which is most likely only the application arena
-void arena_free(Arena* a)
-{
-    memory_tracker_subsystem_free(MEMORY_SUBSYSTEM_APPLICATION_ARENA, a->capacity);
-    free(a->memory);
-    free(a);
-}
-
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8
 void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
@@ -61,8 +41,7 @@ void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
     //see if we have space left
     if (offset + mem_request > a->capacity)
     {
-        // MASSERT("ARENA OUT OF MEMORY");
-        M_ERROR("ARENA OUT OF MEMORY");
+        FATAL("ARENA OUT OF MEMORY");
         return NULL;
     }
 
@@ -72,7 +51,10 @@ void* arena_alloc_align(Arena* a, const u64 mem_request, const u64 align)
     // Zero new memory by default
     memset(ptr, 0, mem_request); // already offset so no need to include it
 
-    memory_tracker_container_alloc(MEMORY_CONTAINER_ARENA, mem_request);
+    if (a->memory_tracker)
+    {
+        memory_tracker_track_allocation(a->memory_tracker, MEMORY_CONTAINER_ARENA, mem_request);
+    }
 
     return ptr; // return the memory
 }
@@ -123,7 +105,7 @@ void arena_test(void)
     const u64 arena_size = MB(1);
     void* mem = malloc(arena_size);
     if (!mem) { MASSERT("ARENA ALLOC FAILED"); }
-    arena_init(&a, mem, arena_size, MEMORY_SUBSYSTEM_APPLICATION_ARENA);
+    arena_init(&a, mem, arena_size, NULL);
     TEST_DEBUG(a.capacity == MB(1));
 
 
@@ -164,27 +146,6 @@ void arena_test(void)
     mem = NULL;
     TEST_DEBUG(mem == NULL);
 
-
-    Arena* a2 = arena_init_malloc(arena_size);
-    TEST_DEBUG(a2);
-    TEST_DEBUG(arena_size == a2->capacity);
-    TEST_DEBUG(arena_size == a2->capacity - a2->current_offset);
-
-    int* arr3 = arena_alloc(a2, 10 * sizeof(int));
-    arr3[2] = 15;
-    TEST_DEBUG(40 == a2->current_offset);
-    TEST_DEBUG(arena_size == a2->capacity);
-    TEST_DEBUG(arena_size-40 == a2->capacity - a2->current_offset);
-
-    int* arr4 = arena_alloc(a2, 10 * sizeof(int));
-    arr4[2] = 100;
-    //its going to be 88 due to alignment
-    TEST_DEBUG(88 == a2->current_offset);
-    TEST_DEBUG(arena_size == a2->capacity);
-    TEST_DEBUG(arena_size-88 == a2->capacity - a2->current_offset);
-
-
-    arena_free(a2);
 
     TEST_REPORT("ARENA");
 }

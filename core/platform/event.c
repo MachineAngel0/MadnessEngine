@@ -1,18 +1,19 @@
 ﻿#include "event.h"
 
-
 bool event_init(Event_System* event_system, Memory_System* memory_system)
 {
-    INFO("EVENT SYSTEM INIT")
 
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement);
 
     //zero the memory
     memset(event_system, 0, sizeof(Event_System));
+
+    event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
     
-    arena_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
+    arena_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement, event_system->mem_tracker);
     
+    INFO("EVENT SYSTEM INIT")
 
     return true;
 }

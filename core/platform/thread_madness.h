@@ -18,6 +18,8 @@ typedef struct Madness_Mutex
 
 typedef u32 (pfn_thread_start)(void*);
 
+// Thread
+
 bool thread_create(pfn_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread);
 void thread_destroy(Madness_Thread* madness_thread);
 void thread_detach(Madness_Thread* madness_thread);
@@ -31,7 +33,7 @@ u64 thread_get_id();
 //get logical processor cores
 i32 get_threads_available();
 
-
+// Mutex
 bool mutex_create(Madness_Mutex* out_mutex);
 void mutex_destroy(Madness_Mutex* madness_mutex);
 bool mutex_lock(Madness_Mutex* madness_mutex);

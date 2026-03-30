@@ -6,15 +6,15 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
 #generate a compile_commands.json
-set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_UNITY_BUILD TRUE) # UNITY BUILD
+set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
         MadnessEngine
-        MadnessEngine_game
-        MADNESSGAME
+        MadnessPulse
+        MADNESSPULSE
         MadnessEngine_renderer
         MADNESSRENDERER
         MadnessEngine_editor
@@ -56,6 +56,8 @@ include_directories(${Vulkan_INCLUDE_DIRS})
 
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/dsa/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/maths/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/memory/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/platform/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/serialization/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/editor/)
@@ -71,18 +73,17 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 
 
 add_executable(MadnessEngine
-        main.c
-        unity_build_game.c
+        unity_build_madness_pulse.c
         lib/build_lib.c
 )
 
 ### GAME ###
-add_executable(MadnessEngine_game
-        unity_build_game.c
+add_executable(MadnessPulse
+        unity_build_madness_pulse.c
         lib/build_lib.c
 )
-add_library(MADNESSGAME SHARED
-        unity_build_game.c
+add_library(MADNESSPULSE SHARED
+        unity_build_madness_pulse.c
         lib/build_lib.c
 )
 
@@ -104,11 +105,23 @@ add_library(MADNESSRENDERER SHARED
         lib/build_lib.c
 )
 
+### UI ###
+
+add_executable(MadnessUI
+        unity_build_renderer.c
+        lib/build_lib.c
+)
+add_library(MADNESSUI SHARED
+        unity_build_renderer.c
+        lib/build_lib.c
+)
+
+
 
 ### EDITOR ###
 add_executable(MadnessEngine_editor
-        editor_entry.h
-        unity_build_game.c
+        editor_app.h
+        unity_build_madness_pulse.c
         lib/build_lib.c
 
 )

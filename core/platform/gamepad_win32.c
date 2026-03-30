@@ -1,11 +1,11 @@
-﻿#ifndef GAMEPAD_H
-#define GAMEPAD_H
+﻿
 
 #if MPLATFORM_WINDOWS
 
 
 #include "logger.h"
 #include "../core/platform/event.h"
+#include "gamepad.h"
 
 
 #include <windows.h>
@@ -13,9 +13,8 @@
 #include <xinput.h>
 
 
-//FUTURE: ADD CHECKS FOR DISCONNECTED CONTROLLERS,
+// FUTURE: ADD CHECKS FOR DISCONNECTED CONTROLLERS,
 // HAVE SOME METHOD OF SETTING A MAIN CONTROLLER SO I DONT NEED TO KEEP PASSING IN AN ID, I WON'T LIKELY HAVE MORE THAN A SINGLE PLAYER FOR MOST OF MY GAMES
-// SINCE THIS IS A WINDOWS API I WOULD NEED TO ABSTRACT THAT AWAY INTO ITS OWN PLATFORM LAYER
 
 //make a copy of the function with a different name
 typedef DWORD WINAPI X_InputGetState(DWORD, XINPUT_STATE*);
@@ -66,91 +65,10 @@ void x_input_load_dll(void)
     }
 }
 
-typedef enum gamepad_keys
+u32 gamepad_get_max_player_count(void)
 {
-    DPAD_UP,
-    DPAD_DOWN,
-    DPAD_LEFT,
-    DPAD_RIGHT,
-    GAMEPAD_START,
-    GAMEPAD_BACK,
-    GAMEPAD_LEFT_THUMB,
-    GAMEPAD_RIGHT_THUMB,
-    GAMEPAD_LEFT_SHOULDER,
-    GAMEPAD_RIGHT_SHOULDER,
-    GAMEPAD_A,
-    GAMEPAD_B,
-    GAMEPAD_X,
-    GAMEPAD_Y,
-
-    GAMEPAD_MAX_KEYS,
-} gamepad_keys;
-
-typedef enum gamepad_joy_keys
-{
-    GAMEPAD_JOY_LEFT,
-    GAMEPAD_JOY_RIGHT,
-    GAMEPAD_TRIGGER_LEFT,
-    GAMEPAD_TRIGGER_RIGHT,
-
-    GAMEPAD_JOY_MAX_KEYS,
-} gamepad_joy_keys;
-
-//not in use rn, but i might want to,
-typedef enum CONTROLLERS_ID
-{
-    CONTROLLER_1,
-    CONTROLLER_2,
-    CONTROLLER_3,
-    CONTROLLER_4,
-    CONTROLLER_MAX,
-} CONTROLLERS_ID;
-
-char* gamepad_enum_to_string[] = {
-    "DPAD_UP",
-    "DPAD_DOWN",
-    "DPAD_LEFT",
-    "DPAD_RIGHT",
-    "GAMEPAD_START",
-    "GAMEPAD_BACK",
-    "GAMEPAD_LEFT_THUMB",
-    "GAMEPAD_RIGHT_THUMB",
-    "GAMEPAD_LEFT_SHOULDER",
-    "GAMEPAD_RIGHT_SHOULDER",
-    "GAMEPAD_A",
-    "GAMEPAD_B",
-    "GAMEPAD_X",
-    "GAMEPAD_Y",
-    "GAMEPAD_MAX_KEYS",
-};
-
-
-typedef struct gamepad_joy_state
-{
-    // between -32768 and 32767.
-    int16_t joy_stick_left_x;
-    int16_t joy_stick_left_y;
-    int16_t joy_stick_right_x;
-    int16_t joy_stick_right_y;
-
-    // 0-255
-    int16_t left_trigger;
-    int16_t right_trigger;
-} gamepad_joy_state;
-
-
-typedef struct gamepad_state
-{
-    bool gamepad_current[GAMEPAD_MAX_KEYS];
-    bool gamepad_previous[GAMEPAD_MAX_KEYS];
-    gamepad_joy_state joy_current;
-    gamepad_joy_state joy_previous;
-    bool connected;
-} gamepad_state;
-
-//up to 4 controllers
-static gamepad_state gamepad_system[XUSER_MAX_COUNT];
-
+    return XUSER_MAX_COUNT;
+}
 
 bool gamepad_button_recieve(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data)
 {
@@ -158,32 +76,34 @@ bool gamepad_button_recieve(event_type code, uint32_t sender_id, uint32_t subscr
     return true;
 }
 
+
 bool gamepad_button_press(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data)
 {
     DEBUG("%s: PRESSED", gamepad_enum_to_string[data.data.u32[0]]);
     return true;
 }
 
-void gamepad_init(void)
+void gamepad_init(Memory_System* memory_system, Event_System* event_system)
 {
     x_input_load_dll();
 
-    //set memory to zero
-    memset(gamepad_system, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
+    gamepad.player_count = gamepad_get_max_player_count();
+    gamepad.gamepad_player_info = memory_system_alloc(memory_system, sizeof(gamepad_state) * gamepad.player_count);
+    gamepad.event_system = event_system;
 
-    //TODO: DEBUG WRAP
-    event_register(TODO, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_register(TODO, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+
+    event_register(event_system, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
+    event_register(event_system, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
 }
 
-void gamepad_shutdown(void)
+void gamepad_shutdown(Event_System* event_system)
 {
     //set memory to zero
-    memset(gamepad_system, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
+    memset(&gamepad, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
 
     //TODO: DEBUG WRAP
-    event_unregister(TODO, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_unregister(TODO, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+    event_unregister(event_system, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
+    event_unregister(event_system, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
 }
 
 void gamepad_poll(void)
@@ -205,7 +125,7 @@ void gamepad_poll(void)
         for (DWORD controller_index = 0; controller_index < XUSER_MAX_COUNT; controller_index++)
         {
             //copy the current state to prev, before we update cur state
-            memcpy(gamepad_system[controller_index].gamepad_previous, gamepad_system[controller_index].gamepad_current,
+            memcpy(gamepad.gamepad_player_info[controller_index].gamepad_previous, gamepad.gamepad_player_info[controller_index].gamepad_current,
                    GAMEPAD_MAX_KEYS);
 
 
@@ -224,53 +144,53 @@ void gamepad_poll(void)
                 // printf("gamepad B: %d\n", gamepad_system[controller_index].gamepad_current[GAMEPAD_B]);
                 // printf("%hd, %hd\n", gamepad_state.Gamepad.sThumbLX, gamepad_state.Gamepad.sThumbLX);
 
-                gamepad_system[controller_index].connected = true;
+                gamepad.gamepad_player_info[controller_index].connected = true;
 
                 //bitwise to get the state, returns a 1 or 0/ bool
-                gamepad_system[controller_index].gamepad_current[DPAD_UP] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[DPAD_UP] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                gamepad_system[controller_index].gamepad_current[DPAD_DOWN] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[DPAD_DOWN] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-                gamepad_system[controller_index].gamepad_current[DPAD_LEFT] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[DPAD_LEFT] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-                gamepad_system[controller_index].gamepad_current[DPAD_RIGHT] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[DPAD_RIGHT] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_START] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_START] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_START);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_BACK] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_BACK] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_LEFT_THUMB] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_LEFT_THUMB] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_RIGHT_THUMB] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_RIGHT_THUMB] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_LEFT_SHOULDER] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_LEFT_SHOULDER] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_RIGHT_SHOULDER] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_RIGHT_SHOULDER] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_A] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_A] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_A);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_B] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_B] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_B);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_X] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_X] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_X);
-                gamepad_system[controller_index].gamepad_current[GAMEPAD_Y] = (
+                gamepad.gamepad_player_info[controller_index].gamepad_current[GAMEPAD_Y] = (
                     gamepad_state.Gamepad.wButtons & XINPUT_GAMEPAD_Y);
 
-                gamepad_system[controller_index].joy_current.joy_stick_left_x = gamepad_state.Gamepad.sThumbLX;
-                gamepad_system[controller_index].joy_current.joy_stick_left_y = gamepad_state.Gamepad.sThumbLY;
+                gamepad.gamepad_player_info[controller_index].joy_current.joy_stick_left_x = gamepad_state.Gamepad.sThumbLX;
+                gamepad.gamepad_player_info[controller_index].joy_current.joy_stick_left_y = gamepad_state.Gamepad.sThumbLY;
 
-                gamepad_system[controller_index].joy_current.joy_stick_right_x = gamepad_state.Gamepad.sThumbRX;
-                gamepad_system[controller_index].joy_current.joy_stick_left_x = gamepad_state.Gamepad.sThumbRY;
+                gamepad.gamepad_player_info[controller_index].joy_current.joy_stick_right_x = gamepad_state.Gamepad.sThumbRX;
+                gamepad.gamepad_player_info[controller_index].joy_current.joy_stick_left_x = gamepad_state.Gamepad.sThumbRY;
 
 
                 for (int i = 0; i < GAMEPAD_MAX_KEYS; i++)
                 {
-                    if (gamepad_system[controller_index].gamepad_current[i] != gamepad_system[controller_index].
+                    if (gamepad.gamepad_player_info[controller_index].gamepad_current[i] != gamepad.gamepad_player_info[controller_index].
                         gamepad_previous[i])
                     {
                         event_context context;
                         context.data.u32[0] = i; // gamepad enum
-                        event_fire(TODO, gamepad_system[controller_index].gamepad_current[i]
+                        event_fire(gamepad.event_system, gamepad.gamepad_player_info[controller_index].gamepad_current[i]
                                              ? EVENT_GAMEPAD_PRESS
                                              : EVENT_GAMEPAD_RELEASE, 0, context);
                     }
@@ -278,7 +198,7 @@ void gamepad_poll(void)
             }
             else
             {
-                gamepad_system[controller_index].connected = false;
+                gamepad.gamepad_player_info[controller_index].connected = false;
                 // Controller is not connected
                 // printf("controller not connected\n");
             }
@@ -346,42 +266,41 @@ void set_gamepad_vibration_default_off(uint8_t gamepad_index)
 
 bool gamepad_is_pressed(uint8_t gamepad_id, gamepad_keys gamepad_enum)
 {
-    return gamepad_system[gamepad_id].gamepad_current[gamepad_enum];
+    return gamepad.gamepad_player_info[gamepad_id].gamepad_current[gamepad_enum];
 }
 
 bool gamepad_is_released(uint8_t gamepad_id, gamepad_keys gamepad_enum)
 {
-    return gamepad_system[gamepad_id].gamepad_current[gamepad_enum] == 0;
+    return gamepad.gamepad_player_info[gamepad_id].gamepad_current[gamepad_enum] == 0;
 }
 
 bool gamepad_was_pressed(uint8_t gamepad_id, gamepad_keys gamepad_enum)
 {
-    return gamepad_system[gamepad_id].gamepad_previous[gamepad_enum] == 1;
+    return gamepad.gamepad_player_info[gamepad_id].gamepad_previous[gamepad_enum] == 1;
 }
 
 bool gamepad_was_released(uint8_t gamepad_id, gamepad_keys gamepad_enum)
 {
-    return gamepad_system[gamepad_id].gamepad_previous[gamepad_enum] == 0;
+    return gamepad.gamepad_player_info[gamepad_id].gamepad_previous[gamepad_enum] == 0;
 }
 
 void gamepad_get_left_joy_pos(uint8_t gamepad_id, uint16_t* left_x, uint16_t* left_y)
 {
-    *left_x = gamepad_system[gamepad_id].joy_current.joy_stick_left_x;
-    *left_y = gamepad_system[gamepad_id].joy_current.joy_stick_left_y;
+    *left_x = gamepad.gamepad_player_info[gamepad_id].joy_current.joy_stick_left_x;
+    *left_y = gamepad.gamepad_player_info[gamepad_id].joy_current.joy_stick_left_y;
 }
 
 void gamepad_get_right_joy_pos(uint8_t gamepad_id, int16_t* left_x, int16_t* left_y)
 {
-    *left_x = gamepad_system[gamepad_id].joy_current.joy_stick_left_x;
-    *left_y = gamepad_system[gamepad_id].joy_current.joy_stick_left_y;
+    *left_x = gamepad.gamepad_player_info[gamepad_id].joy_current.joy_stick_left_x;
+    *left_y = gamepad.gamepad_player_info[gamepad_id].joy_current.joy_stick_left_y;
 }
 
 void gamepad_get_triggers(uint8_t gamepad_id, int16_t* left_trigger, int16_t* right_trigger)
 {
-    *left_trigger = gamepad_system[gamepad_id].joy_current.left_trigger;
-    *right_trigger = gamepad_system[gamepad_id].joy_current.right_trigger;
+    *left_trigger = gamepad.gamepad_player_info[gamepad_id].joy_current.left_trigger;
+    *right_trigger = gamepad.gamepad_player_info[gamepad_id].joy_current.right_trigger;
 }
 
 #endif
 
-#endif //GAMEPAD_H

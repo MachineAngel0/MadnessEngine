@@ -17,6 +17,7 @@
 #include "../core/dsa/stack.c"
 #include "../core/dsa/str.c"
 #include "../core/dsa/str_builder.c"
+#include "../core/dsa/ring_queue.c"
 
 
 //MATHS
@@ -30,11 +31,12 @@
 #include "../core/memory/memory_system.c"
 
 
-
-
-//CORE - PLATFORM
+//CORE - SUBSYSTEMS
 #include "../core/platform/event.c"
 #include "../core/platform/input.c"
+
+//CORE - PLATFORM
+
 #include "../core/color_asci.c"
 #include "../core/logger.c"
 #include "../core/platform/audio.c"
@@ -50,6 +52,7 @@
 #include "../core/platform/thread_linux.c"
 
 #endif
+#include "../core/platform/job_system.c"
 
 
 

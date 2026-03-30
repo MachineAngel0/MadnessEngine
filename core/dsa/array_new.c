@@ -89,6 +89,16 @@ u64 _u8_internal_array_get_bytes_used(u8_internal_array* array)
     return array->num_items * array->stride;
 }
 
+u64 _u8_internal_array_get_top_increment(u8_internal_array* array)
+{
+    if (!array)
+    {
+        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")
+        return 0;
+    }
+    return array->data[array->num_items++];
+}
+
 
 
 

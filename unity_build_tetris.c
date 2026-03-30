@@ -24,12 +24,12 @@
 
 
 
-#include "game/Tetris/tetris_build.h"
-#include "game/Tetris/tetris_build.c"
+#include "Tetris/tetris_build.h"
+#include "Tetris/tetris_build.c"
 
 
 //APP and Entry Point
-#include "game/Tetris/tetris_app.h"
-#include "game/Tetris/tetris_app.c"
+#include "Tetris/tetris_app.h"
+#include "Tetris/tetris_app.c"
 
 

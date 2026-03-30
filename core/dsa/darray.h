@@ -31,16 +31,19 @@ typedef struct array_header
     u64 stride; // size of each void* data
     u64 capacity; // max elements allowed in the array
     //TODO: allocator
+
+    //
+    Memory_Tracker* memory_tracker;
 } array_header;
 
-void* _darray_create(const u64 capacity, const u64 stride);
-void* _darray_create_arena(const u64 intial_capacity, const u64 stride, Arena_Stack* arena);
+void* _darray_create(const u64 capacity, const u64 stride, Memory_Tracker* memory_tracker);
+void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Arena_Stack* arena, Memory_Tracker* memory_tracker);
 
 #define darray_create(type) \
-    (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type))
+    (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), NULL)
 
 #define darray_create_reserve(type, capacity) \
-    (type*) _darray_create(capacity, sizeof(type))
+    (type*) _darray_create(capacity, sizeof(type), NULL)
 
 void darray_free(void* array);
 

@@ -3,14 +3,15 @@
 
 #include "arena.h"
 #include "array.h"
-#include "../memory/memory_system.h"
+#include "memory_system.h"
+#include "memory/memory_tracker.h"
 
 
 typedef enum event_type
 {
     EVENT_APP_QUIT,
     EVENT_APP_RESIZE,
-    EVENT_HOT_RELOAD_GAME,
+    EVENT_HOT_RELOAD,
     EVENT_TEST,
     EVENT_TEST2,
 
@@ -24,6 +25,11 @@ typedef enum event_type
     //GAMEPAD
     EVENT_GAMEPAD_PRESS,
     EVENT_GAMEPAD_RELEASE,
+
+    //Renderer
+    EVENT_HOT_RELOAD_TEXTURE,
+    EVENT_HOT_RELOAD_SHADER,
+
 
 
     MAX_EVENTS,
@@ -83,6 +89,8 @@ typedef struct Event_System
     subscriber_list events_table[MAX_EVENTS];
 
     Arena event_system_arena;
+
+    Memory_Tracker* mem_tracker;
 } Event_System;
 
 

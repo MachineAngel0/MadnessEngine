@@ -2,6 +2,7 @@
 #define INPUT_H
 
 //TODO: add support for mouse dragging (when mouse button is down and there is movement)
+#include "event.h"
 
 typedef enum mouse_buttons
 {
@@ -193,6 +194,7 @@ typedef struct Input_System
 
 
     Arena input_system_arena;
+    Memory_Tracker* mem_tracker;
 
     Event_System* event_system_reference; // does now the memory
 } Input_System;

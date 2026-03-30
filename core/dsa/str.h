@@ -31,7 +31,7 @@ typedef enum DELIMITER_BEHAVIOR
 } DELIMITER_BEHAVIOR;
 
 
-//NOTE: do not call this, just use STRING_CREATE(string) unless you specifally need to pass in the size for some reason
+//NOTE: do not call this, just use STRING_CREATE(string) unless you specifically need to pass in the size for some reason
 String* string_create(const char* word, const u64 length);
 
 

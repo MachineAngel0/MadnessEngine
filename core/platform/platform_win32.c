@@ -37,8 +37,6 @@ bool platform_startup(
     i32 x, i32 y,
     i32 width, i32 height)
 {
-
-
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state* state = (internal_state*)plat_state->internal_state;
 
@@ -203,7 +201,6 @@ void platform_sleep(u64 ms)
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
-
     //all this code before actually processing the message is to make sure the input system is getting any inputs
     platform_state* plat_state = 0;
     if (msg == WM_NCCREATE)
@@ -267,7 +264,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             if (w_param == VK_MENU)
             {
                 //check if left or right alt key
-               key = is_extended ? KEY_RALT : KEY_LALT;
+                key = is_extended ? KEY_RALT : KEY_LALT;
             }
             //shift key
             else if (w_param == VK_SHIFT)
@@ -297,7 +294,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             i32 x_position = GET_X_LPARAM(l_param);
             i32 y_position = GET_Y_LPARAM(l_param);
 
-            input_process_mouse_move(input_system,x_position, y_position);
+            input_process_mouse_move(input_system, x_position, y_position);
         }
         break;
     case WM_MOUSEWHEEL:
@@ -307,7 +304,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             {
                 // Flatten the input to an OS-independent (-1, 1)
                 z_delta = (z_delta < 0) ? -1 : 1;
-                input_process_mouse_wheel(input_system,z_delta);
+                input_process_mouse_wheel(input_system, z_delta);
             }
         }
         break;
@@ -339,7 +336,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
             if (mouse_button != MOUSE_BUTTON_MAX_BUTTONS)
             {
-                input_process_mouse_button(input_system,mouse_button, pressed);
+                input_process_mouse_button(input_system, mouse_button, pressed);
             }
             break;
         }
@@ -370,7 +367,6 @@ char* platform_get_static_library_extension(void)
 {
     return ".lib";
 }
-
 
 
 DLL_HANDLE platform_load_dynamic_library(const char* file_name)
@@ -450,39 +446,125 @@ bool platform_file_copy(const char* source_file, char* new_file)
 }
 
 
-
 //FILE SYSTEM
-typedef struct file_data
+typedef struct Windows_File_Data
 {
-    const char* file_path;
+    const char* file_name;
     FILETIME last_write_time;
-}file_data;
+    HANDLE directory_windows_handle;
 
-void platform_register_file(const char* file_name)
+} Windows_File_Data;
+
+Windows_File_Data windows_file_data[1000];
+static int windows_file_count = 1;
+
+
+File_Watch_Handle platform_register_file_watch(const char* file_name)
 {
-
-}
-bool platform_has_filed_changed(const char* file_name)
-{
-    FILETIME last_write_time = {0};
-
     WIN32_FILE_ATTRIBUTE_DATA file_info;
     if (!GetFileAttributesExA(file_name, GetFileExInfoStandard, &file_info))
+        return (File_Watch_Handle){0, file_name};
+
+    //write the file time
+    Windows_File_Data* file_data = &windows_file_data[windows_file_count];
+    file_data->file_name = file_name;
+    file_data->last_write_time = file_info.ftLastWriteTime;
+
+    //hand out the handle
+    File_Watch_Handle out_handle = {windows_file_count, file_name};
+    windows_file_count++;
+
+    return out_handle;
+}
+
+bool platform_has_filed_changed(File_Watch_Handle file_watch_handle)
+{
+    Windows_File_Data* file_data = &windows_file_data[file_watch_handle.handle];
+
+    WIN32_FILE_ATTRIBUTE_DATA file_info;
+    if (!GetFileAttributesExA(file_data->file_name, GetFileExInfoStandard, &file_info))
         return false;
     //an alternative way of doing this
     // WIN32_FIND_DATA find_data;
     // FindFirstFileA(filename, &find_data);
     // find_data.ftLastWriteTime
 
-    if (CompareFileTime(&file_info.ftLastWriteTime, &last_write_time) != 0)
+    if (CompareFileTime(&file_info.ftLastWriteTime, &file_data->last_write_time) != 0)
     {
-        last_write_time = file_info.ftLastWriteTime;
+        file_data->last_write_time = file_info.ftLastWriteTime;
         return true;
     }
     return false;
 }
 
 
+
+File_Watch_Handle platform_register_directory_watch(const char* directory_name)
+{
+
+    HANDLE dir = CreateFileW(
+        directory_name,
+        FILE_LIST_DIRECTORY,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        NULL
+    );
+
+    //get a file struct
+    Windows_File_Data* file_data = &windows_file_data[windows_file_count];
+    file_data->file_name = directory_name;
+    file_data->directory_windows_handle = dir;
+
+    if (dir == INVALID_HANDLE_VALUE)
+    {
+        M_ERROR("Failed to open directory\n");
+        return (File_Watch_Handle){0, directory_name};
+    }
+
+    File_Watch_Handle out_handle = {windows_file_count, directory_name};
+    windows_file_count++;
+
+    return out_handle;
+}
+
+void platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
+{
+    //get a file struct
+    Windows_File_Data* file_data = &windows_file_data[directory_watch_handle.handle];
+
+    char buffer[2048];
+    DWORD bytesReturned;
+
+    if (ReadDirectoryChangesW(
+            file_data->directory_windows_handle,
+            buffer,
+            sizeof(buffer),
+            TRUE, // watch subdirectories
+            FILE_NOTIFY_CHANGE_FILE_NAME |
+            FILE_NOTIFY_CHANGE_DIR_NAME |
+            FILE_NOTIFY_CHANGE_LAST_WRITE,
+            &bytesReturned,
+            NULL,
+            NULL))
+    {
+        FILE_NOTIFY_INFORMATION* info = (FILE_NOTIFY_INFORMATION*)buffer;
+
+        do
+        {
+            wprintf(L"Changed: %.*s\n",
+                    info->FileNameLength / 2,
+                    info->FileName);
+
+            if (info->NextEntryOffset == 0)
+                break;
+
+            info = (FILE_NOTIFY_INFORMATION*)((char*)info + info->NextEntryOffset);
+
+        } while (1);
+    }
+}
 
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
@@ -533,7 +615,7 @@ void platform_set_cursor_pos(int x, int y)
 void platform_copy_to_clipboard(const char* c_string)
 {
     const size_t lens = strlen(c_string) + 1;
-    HGLOBAL hMem =  GlobalAlloc(GMEM_MOVEABLE, lens);
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, lens);
     memcpy(GlobalLock(hMem), c_string, lens);
     GlobalUnlock(hMem);
     OpenClipboard(0);

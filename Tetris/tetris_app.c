@@ -1,13 +1,21 @@
-﻿#include "app_types.h"
+﻿#include "tetris_app.h"
 #include "clock.h"
-#include "core/platform/event.h"
-#include "core/platform/input.h"
+#include "event.h"
+#include "input.h"
+#include "UI.h"
 
 //this is here mainly for making handling events easier
-static Renderer_Dev_Application app_internal;
+static Tetris_Application* app_internal;
 
 
-void tetris_dev_set_function_pointers()
+bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
+
+bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
+
+bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
+
+
+void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
 {
     DLL_HANDLE render_lib_handle = platform_load_dynamic_library("./MADNESSRENDERER");
     if (render_lib_handle.handle == 0)
@@ -15,7 +23,7 @@ void tetris_dev_set_function_pointers()
         FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
     }
 
-    Renderer_Application* renderer_out = &app_internal.renderer_application;
+    Renderer_Application* renderer_out = &tetris_application->renderer_application;
     renderer_out->renderer_initialize = (renderer_initialize)platform_get_function_address(
         render_lib_handle, "renderer_init");
     renderer_out->renderer_run = (renderer_run)platform_get_function_address(render_lib_handle, "renderer_update");
@@ -44,62 +52,61 @@ void tetris_dev_set_function_pointers()
 }
 
 
-bool tetris_game_run()
+bool tetris_game_run(Tetris_Application* tetris_application)
 {
-    Renderer_Dev_Application* app = &app_internal;
-    application_base_init(&app->application_base);
-    Renderer* renderer = &app->renderer_application.renderer;
+    app_internal = tetris_application;
+    application_base_init(&app_internal->application_base);
     //initialize the applications memory
     // Memory_System_Config memory_config;
     // memory_config.memory_request_size = GB(4);
     // memory_config.file_config = "What's up Boy";
 
     u64 memory_request_size = GB(4);
-    memory_system_init(&app->application_base.memory_system, memory_request_size);
+    memory_system_init(&app_internal->application_base.memory_system, memory_request_size, TODO);
     memory_tracker_init();
 
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
 
-    app->application_base.is_running = true;
+    app_internal->application_base.is_running = true;
 
     // Initialize subsystems.
-    event_init(&app->application_base.memory_system);
-    input_init(&app->application_base.input_system, TODO, &app->application_base.memory_system);
+    event_init(&app_internal->application_base.event_system, &app_internal->application_base.memory_system);
+    input_init(&app_internal->application_base.input_system,
+        &app_internal->application_base.event_system, &app_internal->application_base.memory_system);
     // audio_system_init();
 
 
     //register events needed for this application
-    event_register(TODO, EVENT_APP_QUIT, 10, application_on_event);
-    event_register(TODO, EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(TODO, EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(TODO, EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(&app_internal->application_base.event_system, EVENT_APP_QUIT, 10, application_on_event);
+    event_register(&app_internal->application_base.event_system, EVENT_APP_RESIZE, 0, application_on_resized);
+    event_register(&app_internal->application_base.event_system, EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(&app_internal->application_base.event_system, EVENT_KEY_PRESSED, 12, application_on_key);
 
 
     //start the platform
     if (!platform_startup(
-        &app->application_base.plat_state,
-        &app->application_base.input_system,
-        app->application_base.app_config.name,
-        app->application_base.app_config.start_pos_x,
-        app->application_base.app_config.start_pos_y,
-        app->application_base.app_config.start_width,
-        app->application_base.app_config.start_height))
+        &app_internal->application_base.plat_state,
+        &app_internal->application_base.input_system,
+        app_internal->application_base.app_config.name,
+        app_internal->application_base.app_config.start_pos_x,
+        app_internal->application_base.app_config.start_pos_y,
+        app_internal->application_base.app_config.start_width,
+        app_internal->application_base.app_config.start_height))
     {
         return false;
     }
 
     //start the renderer
-    if (!app->renderer_application.renderer_initialize(renderer, &app->application_base))
+    if (!app_internal->renderer_application.renderer_initialize(&app_internal->renderer_application, &app_internal->application_base))
     {
         FATAL("Failed to initialize the renderer")
         return false;
     };
 
-    Madness_UI* madness_ui = NULL;
-    madness_ui_init(madness_ui, renderer);
+    Madness_UI* madness_ui = madness_ui_init(&app_internal->renderer_application.renderer);
     //start the game
-    Tetris_Game_State* tetris_game_state = tetris_init(&app->application_base.memory_system,
-                                                       renderer);
+    Tetris_Game_State* tetris_game_state = tetris_init(&app_internal->application_base.memory_system,
+                                                       &app_internal->renderer_application.renderer);
 
 
     //QUESTION: should the renderer reach into the game state or should the game state send its draw info to the renderer
@@ -107,28 +114,28 @@ bool tetris_game_run()
 
     //MAIN LOOP
 
-    clock_start(&app->application_base.clock);
+    clock_start(&app_internal->application_base.clock);
 
 
-    while (app->application_base.is_running)
+    while (app_internal->application_base.is_running)
     {
-        clock_update_frame_start(&app->application_base.clock);
-        clock_print_info(&app->application_base.clock);
+        clock_update_frame_start(&app_internal->application_base.clock);
+        clock_print_info(&app_internal->application_base.clock);
 
         //clear the render_packets then each system will add to it
-        render_packet_clear(app->renderer_application.render_packets);
+        render_packet_clear(app_internal->renderer_application.render_packet);
 
-        platform_pump_messages(&app->application_base.plat_state);
-        input_update(&app->application_base.input_system);
+        platform_pump_messages(&app_internal->application_base.plat_state);
+        input_update(&app_internal->application_base.input_system);
 
-        tetris_update(tetris_game_state, app->application_base.clock.delta_time);
+        tetris_update(tetris_game_state, app_internal->application_base.clock.delta_time);
 
-        madness_ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        madness_ui_begin(madness_ui, app_internal->renderer_application.renderer.context.framebuffer_width_new, app_internal->renderer_application.renderer.context.framebuffer_height_new);
         //TODO: remove the test later on
         madness_ui_test(madness_ui);
 
         //vulkan will crash if you minimize the window
-        if (app->application_base.is_suspended)
+        if (app_internal->application_base.is_suspended)
         {
             continue;
         }
@@ -138,28 +145,27 @@ bool tetris_game_run()
 
 
         //Render
-        app->renderer_application.renderer_run(&app->renderer_application.renderer,
-                                               app->renderer_application.render_packets,
-                                               &app->application_base.clock);
+        app_internal->renderer_application.renderer_run(&app_internal->renderer_application,
+                                               &app_internal->application_base);
 
         madness_ui_end(madness_ui);
-        clock_update_frame_end(&app->application_base.clock);
+        clock_update_frame_end(&app_internal->application_base.clock);
     }
 
 
     /***SHUTDOWN***/
     //NOTE: (go in reverse order)
-    app->renderer_application.renderer_terminate(&app->renderer_application.renderer);
+    app_internal->renderer_application.renderer_terminate(&app_internal->renderer_application);
 
 
     //shutdown subsystems
     // audio_system_shutdown();
-    input_shutdown(&app->application_base.input_system);
-    event_shutdown(TODO);
+    input_shutdown(&app_internal->application_base.input_system);
+    event_shutdown(&app_internal->application_base.event_system);
 
 
     memory_tracker_shutdown();
-    memory_system_shutdown(&app->application_base.memory_system);
+    memory_system_shutdown(&app_internal->application_base.memory_system);
 
     return true;
 }
@@ -171,7 +177,7 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
     {
     case EVENT_APP_QUIT:
         INFO("EVENT_APP_QUIT: SHUTTING DOWN APP")
-        app_internal.application_base.is_running = false;
+        app_internal->application_base.is_running = false;
         return true;
     }
     return false;
@@ -190,7 +196,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
             event_context data = {};
-            event_fire(TODO, EVENT_APP_QUIT, 0, data);
+            event_fire(&app_internal->application_base.event_system, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
             return true;
@@ -225,10 +231,10 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
         // Check if different. If so, trigger a resize event.
 
 
-        if (width != app_internal.application_base.width || height != app_internal.application_base.height)
+        if (width != app_internal->application_base.width || height != app_internal->application_base.height)
         {
-            app_internal.application_base.width = width;
-            app_internal.application_base.height = height;
+            app_internal->application_base.width = width;
+            app_internal->application_base.height = height;
 
             DEBUG("Window resize: %i, %i", width, height);
 
@@ -236,18 +242,18 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
             if (width == 0 || height == 0)
             {
                 INFO("Window minimized, suspending application.");
-                app_internal.application_base.is_suspended = true;
+                app_internal->application_base.is_suspended = true;
                 return true;
             }
             else
             {
-                if (app_internal.application_base.is_suspended)
+                if (app_internal->application_base.is_suspended)
                 {
                     INFO("Window restored, resuming application.");
-                    app_internal.application_base.is_suspended = false;
+                    app_internal->application_base.is_suspended = false;
                 }
 
-                app_internal.renderer_application.renderer_resize(&app_internal.renderer_application.renderer, width,
+                app_internal->renderer_application.renderer_resize(&app_internal->renderer_application, width,
                                                                   height);
             }
         }

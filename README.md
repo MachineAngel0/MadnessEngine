@@ -16,19 +16,20 @@ write my own in Vulkan.
       opportunity to learn how these things are created in the first place. It also means there are no hidden/unknown
       allocations happening like might happen with a std::vector<> resize.
     - Math Library: Vec2,3,4
+- Memory System and Tracker
 - Unit Tests and Custom Loggers/Asserts.
 - File and network serialization code.
 - Mesh Loader
+- Immediate Mode UI
 
 ### Current Todo's:
 
-- Finish setting up a more robust renderer
+- Renderer
+  - better mesh system
 - Unit Tests for the Data Structure's Folder
-- Hookup the Memory Logger 
 - Work on the Linux Platform Layer
 
 ### PLANNED:
-- Simple Flex Style Immediate Mode UI
 - PBR lighting model
 - Editor for easier development
 - Develop the Turn Based Game

@@ -12,6 +12,7 @@ i32 get_threads_available()
 {
     SYSTEM_INFO info;
     GetSystemInfo(&info);
+    INFO("%i processor cores detected.", info.dwNumberOfProcessors);
     return info.dwNumberOfProcessors;
 }
 

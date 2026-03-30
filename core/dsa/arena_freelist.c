@@ -1,123 +1,26 @@
-#include "arena_freelist.h"
+﻿#include "arena_freelist.h"
 
-void free_list_node_insert(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* new_node)
+void arena_free_list_create(Arena_Free_List* fl, void* backing_memory, size_t memory_size)
 {
-    if (prev_node == NULL) //check if we are at the head
-    {
-
-        if (*phead != NULL)
-        {
-            //there is a head value so we point next to the head, since we should be less than the ptr value
-            new_node->next = *phead;
-        }
-        else
-        {
-            //there is no head value, so we add the new node in
-            *phead = new_node;
-        }
-    }
-    else
-    {
-        if (prev_node->next == NULL) // we are at the end of the list, so we update the tail
-        {
-            prev_node->next = new_node;
-            new_node->next = NULL;
-        }
-        else
-        {
-            //have prev node point to new_node, and new_node point to whatever prev_node was pointing to
-            new_node->next = prev_node->next;
-            prev_node->next = new_node;
-        }
-    }
-}
-
-void free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* del_node)
-{
-    if (prev_node == NULL)
-    {
-        //we are removing the head
-        *phead = del_node->next;
-    }
-    else
-    {
-        //have prev node point to whatever del node was pointing to, making us lose reference of del node
-        prev_node->next = del_node->next;
-    }
-}
-
-void free_list_free_all(Free_List* fl)
-{
-    //have one free node in our free list, that has the size of the whole block
+    fl->data = backing_memory;
+    fl->size = memory_size;
     fl->used = 0;
-    Free_List_Node* first_node = (Free_List_Node*)fl->data;
-    first_node->block_size = fl->size;
-    first_node->next = NULL;
-    fl->head = first_node;
+    arena_free_list_free_all(fl);
 }
 
-void free_list_init(Free_List* fl, void* data, size_t size)
+Arena_Free_List* arena_free_list_create_memory_system(Memory_System* memory_system, size_t memory_size)
 {
-    fl->data = data;
-    fl->size = size;
-    free_list_free_all(fl);
+    Arena_Free_List* fl = arena_alloc(&memory_system->application_arena, sizeof(Arena_Free_List));
+    fl->data = arena_alloc(&memory_system->application_arena, memory_size);
+    fl->size = memory_size;
+    fl->used = 0;
+
+    arena_free_list_free_all(fl);
+
+    return fl;
 }
 
-Free_List_Node* free_list_find_first(Free_List* fl, size_t size, size_t alignment, size_t* padding_,
-    Free_List_Node** prev_node_)
-{
-    // Iterates the list and finds the first free block with enough space
-    Free_List_Node* node = fl->head;
-    Free_List_Node* prev_node = NULL;
-
-    size_t padding = 0;
-
-    while (node != NULL)
-    {
-        padding = calc_padding_with_header((uintptr_t)node, (uintptr_t)alignment, sizeof(Free_List_Allocation_Header));
-        size_t required_space = size + padding;
-        if (node->block_size >= required_space)
-        {
-            break;
-        }
-        prev_node = node;
-        node = node->next;
-    }
-    if (padding_) *padding_ = padding;
-    if (prev_node_) *prev_node_ = prev_node;
-    return node;
-}
-
-Free_List_Node* free_list_find_best(Free_List* fl, size_t size, size_t alignment, size_t* padding_,
-    Free_List_Node** prev_node_)
-{
-    // This iterates the entire list to find the best fit
-    // O(n)
-    size_t smallest_diff = ~(size_t)0;
-
-    Free_List_Node* node = fl->head;
-    Free_List_Node* prev_node = NULL;
-    Free_List_Node* best_node = NULL;
-
-    size_t padding = 0;
-
-    while (node != NULL)
-    {
-        padding = calc_padding_with_header((uintptr_t)node, (uintptr_t)alignment, sizeof(Free_List_Allocation_Header));
-        size_t required_space = size + padding;
-        if (node->block_size >= required_space && (node->block_size - required_space < smallest_diff))
-        {
-            best_node = node;
-        }
-        prev_node = node;
-        node = node->next;
-    }
-    if (padding_) *padding_ = padding;
-    if (prev_node_) *prev_node_ = prev_node;
-    return best_node;
-}
-
-void* free_list_alloc(Free_List* fl, size_t size, size_t alignment)
+void* arena_free_list_alloc(Arena_Free_List* fl, size_t size, size_t alignment)
 {
     size_t padding = 0;
     Free_List_Node* prev_node = NULL;
@@ -134,18 +37,18 @@ void* free_list_alloc(Free_List* fl, size_t size, size_t alignment)
         alignment = 8;
     }
 
-
-    if (fl->policy == Placement_Policy_Find_Best)
-    {
+    /*
+    if (fl->policy == Placement_Policy_Find_Best) {
         node = free_list_find_best(fl, size, alignment, &padding, &prev_node);
-    }
-    else
-    {
+    } else {
         node = free_list_find_first(fl, size, alignment, &padding, &prev_node);
-    }
+    }*/
+
+    node = arena_free_list_find_first(fl, size, alignment, &padding, &prev_node);
+
     if (node == NULL)
     {
-        MASSERT(0 && "Free list has no free memory");
+        MASSERT_MSG(0, "Free list has no free memory");
         return NULL;
     }
 
@@ -156,11 +59,11 @@ void* free_list_alloc(Free_List* fl, size_t size, size_t alignment)
     if (remaining > 0)
     {
         Free_List_Node* new_node = (Free_List_Node*)((char*)node + required_space);
-        new_node->block_size = remaining;
-        free_list_node_insert(&fl->head, node, new_node);
+        new_node->block_size = remaining; //NOTE* this might be a source of bugs
+        arena_free_list_node_insert(&fl->head, node, new_node);
     }
 
-    free_list_node_remove(&fl->head, prev_node, node);
+    arena_free_list_node_remove(&fl->head, prev_node, node);
 
     header_ptr = (Free_List_Allocation_Header*)((char*)node + alignment_padding);
     header_ptr->block_size = required_space;
@@ -171,29 +74,26 @@ void* free_list_alloc(Free_List* fl, size_t size, size_t alignment)
     return (void*)((char*)header_ptr + sizeof(Free_List_Allocation_Header));
 }
 
-void* free_list_free(Free_List* fl, void* ptr)
+void arena_free_list_free(Arena_Free_List* fl, void* ptr)
 {
-    Free_List_Allocation_Header* header;
-    Free_List_Node* free_node;
-    Free_List_Node* node;
-    Free_List_Node* prev_node = NULL;
+    Free_List_Allocation_Header *header;
+    Free_List_Node *free_node;
+    Free_List_Node *node;
+    Free_List_Node *prev_node = NULL;
 
-    if (ptr == NULL)
-    {
-        return NULL;
+    if (ptr == NULL) {
+        return;
     }
 
-    header = (Free_List_Allocation_Header*)((char*)ptr - sizeof(Free_List_Allocation_Header));
-    free_node = (Free_List_Node*)header;
+    header = (Free_List_Allocation_Header *)((char *)ptr - sizeof(Free_List_Allocation_Header));
+    free_node = (Free_List_Node *)header;
     free_node->block_size = header->block_size + header->padding;
     free_node->next = NULL;
 
     node = fl->head;
-    while (node != NULL)
-    {
-        if (ptr < node)
-        {
-            free_list_node_insert(&fl->head, prev_node, free_node);
+    while (node != NULL) {
+        if (ptr < node) {
+            arena_free_list_node_insert(&fl->head, prev_node, free_node);
             break;
         }
         prev_node = node;
@@ -202,28 +102,192 @@ void* free_list_free(Free_List* fl, void* ptr)
 
     fl->used -= free_node->block_size;
 
-    free_list_coalescence(fl, prev_node, free_node);
-    return NULL;
+    arena_free_list_coalescence(fl, prev_node, free_node);
 }
 
-void free_list_coalescence(Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node)
+void arena_free_list_free_all(Arena_Free_List* fl)
 {
-    if (free_node->next != NULL && (void*)((char*)free_node + free_node->block_size) == free_node->next)
-    {
+    //reset the memory used
+    fl->used = 0;
+    //set the start of the memory to be the head node
+    Free_List_Node* first_node = (Free_List_Node*)fl->data;
+    first_node->block_size = fl->size;
+    first_node->next = NULL;
+    fl->head = first_node;
+}
+
+void arena_free_list_coalescence(Arena_Free_List* fl, Free_List_Node* prev_node, Free_List_Node* free_node)
+{
+    if (free_node->next != NULL && (void *)((char *)free_node + free_node->block_size) == free_node->next) {
         free_node->block_size += free_node->next->block_size;
-        free_list_node_remove(&fl->head, free_node, free_node->next);
+        arena_free_list_node_remove(&fl->head, free_node, free_node->next);
     }
 
-    if (prev_node->next != NULL && (void*)((char*)prev_node + prev_node->block_size) == free_node)
-    {
+    if (prev_node->next != NULL && (void *)((char *)prev_node + prev_node->block_size) == free_node) {
         prev_node->block_size += free_node->next->block_size;
-        free_list_node_remove(&fl->head, prev_node, free_node);
+        arena_free_list_node_remove(&fl->head, prev_node, free_node);
     }
 }
 
-void free_list_test()
+Free_List_Node* arena_free_list_find_first(Arena_Free_List* fl, size_t size, size_t alignment, size_t* out_padding,
+                                     Free_List_Node** out_prev_node)
 {
+    // Iterates the list and finds the first free block with enough space
+    Free_List_Node* node = fl->head;
+    Free_List_Node* prev_node = NULL;
 
+    size_t padding = 0;
+
+    while (node != NULL)
+    {
+        //find alignment size
+        padding = calc_padding_with_header_fl((uintptr_t)node, (uintptr_t)alignment,
+                                              sizeof(Free_List_Allocation_Header));
+        size_t required_space = size + padding;
+
+        if (node->block_size >= required_space)
+        {
+            //found a block with sufficient memory
+            break;
+        }
+        //otherwise keep traversing the free list
+        prev_node = node;
+        node = node->next;
+    }
+    //set out data
+    if (out_padding) { *out_padding = padding; }
+    if (out_prev_node) { *out_prev_node = prev_node; }
+    return node;
+}
+
+Free_List_Node* arena_free_list_find_best(Arena_Free_List* fl, size_t size, size_t alignment, size_t* out_padding,
+                                    Free_List_Node** out_prev_node)
+{
+    // This iterates the entire list to find the best fit
+    // O(n)
+    size_t smallest_diff = ~(size_t)0;
+
+    Free_List_Node* node = fl->head;
+    Free_List_Node* prev_node = NULL;
+    Free_List_Node* best_node = NULL;
+
+    size_t padding = 0;
+
+    while (node != NULL)
+    {
+        //get sizing
+        padding = calc_padding_with_header((uintptr_t)node, (uintptr_t)alignment, sizeof(Free_List_Allocation_Header));
+        size_t required_space = size + padding;
+        //check if the current node if better than the best node
+        if (node->block_size >= required_space && (best_node->block_size - required_space < smallest_diff))
+        {
+            best_node = node;
+        }
+        prev_node = node;
+        node = node->next;
+    }
+    if (out_padding) *out_padding = padding;
+    if (out_prev_node) *out_prev_node = prev_node;
+    return best_node;
 }
 
 
+size_t calc_padding_with_header_fl(uintptr_t ptr, uintptr_t alignment, size_t header_size)
+{
+    uintptr_t p, a, modulo, padding, needed_space;
+
+    MASSERT(is_power_of_two(alignment));
+
+    p = ptr;
+    a = alignment;
+    modulo = p & (a - 1); // (p % a) as it assumes alignment is a power of two
+
+    padding = 0;
+    needed_space = 0;
+
+    if (modulo != 0)
+    {
+        // Same logic as 'align_forward'
+        padding = a - modulo;
+    }
+
+    needed_space = (uintptr_t)header_size;
+
+    if (padding < needed_space)
+    {
+        needed_space -= padding;
+
+        if ((needed_space & (a - 1)) != 0)
+        {
+            padding += a * (1 + (needed_space / a));
+        }
+        else
+        {
+            padding += a * (needed_space / a);
+        }
+    }
+
+    return (size_t)padding;
+}
+
+void arena_free_list_node_insert(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* new_node)
+{
+    if (prev_node == NULL)
+    {
+        if (*phead != NULL)
+        {
+            new_node->next = *phead;
+        }
+        else
+        {
+            *phead = new_node;
+        }
+    }
+    else
+    {
+        if (prev_node->next == NULL)
+        {
+            prev_node->next = new_node;
+            new_node->next = NULL;
+        }
+        else
+        {
+            new_node->next = prev_node->next;
+            prev_node->next = new_node;
+        }
+    }
+}
+
+void arena_free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* del_node)
+{
+    if (prev_node == NULL)
+    {
+        *phead = del_node->next;
+    }
+    else
+    {
+        prev_node->next = del_node->next;
+    }
+}
+
+void free_list_test(void)
+{
+    TEST_START("FREE LIST");
+
+    u64 memory_alloc_size = 1000;
+    void* mem_block = malloc(memory_alloc_size);
+    Arena_Free_List fl;
+    arena_free_list_create(&fl, mem_block, memory_alloc_size);
+
+    TEST_DEBUG(fl.size == memory_alloc_size);
+    TEST_DEBUG(fl.used == 0);
+
+    //TODO: flesh this out
+
+
+
+
+    TEST_END("FREE LIST");
+
+
+}

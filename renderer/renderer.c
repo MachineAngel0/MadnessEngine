@@ -15,11 +15,12 @@
 //finally works, TODO: whatever the fuck the renderer needs from other applications
 bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context)
 {
+    /*
     if (code == EVENT_KEY_RELEASED)
     {
         uint16_t key_code = context.data.u16[0];
         FATAL("released key %hu", key_code);
-    }
+    }*/
     return false;
 }
 
@@ -36,19 +37,25 @@ bool renderer_init(Renderer_Application* renderer_app, Application_Base* applica
         renderer->input_system_debug = &application_base->input_system;
     }
 
+
     event_register(&application_base->event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
 
 
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
+    u64 frame_arena_mem_size = GB(0.5);
+
+    renderer->mem_tracker = memory_system_get_memory_tracker(application_base->memory_system.memory_tracker_system, STRING("RENDERER"),
+                                                             (renderer_system_mem_requirement + frame_arena_mem_size) );
+
+
     void* renderer_system_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
     arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
-               MEMORY_SUBSYSTEM_RENDERER);
+                renderer->mem_tracker);
 
-    u64 frame_arena_mem_size = GB(0.5);
     void* frame_arena_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
-    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, MEMORY_SUBSYSTEM_RENDERER);
+    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size,  renderer->mem_tracker);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -306,7 +313,7 @@ void renderer_update(Renderer_Application* renderer_app, Application_Base* appli
            sizeof(uniform_buffer_object));
 
     mesh_system_generate_draw_data(renderer, renderer->mesh_system);
-    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
+    madness_ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
     // Begin recording commands.

@@ -149,11 +149,11 @@ MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_se
 MAPI void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
 MAPI void tetris_shutdown(Tetris_Game_State* tetris);
 
-MAPI tetris_update(Tetris_Game_State* tetris, float delta_time, Render_Packet* renderer_packet);
+Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time);
 MAPI void tetris_update_grid(Tetris_Game_State* tetris);
 MAPI void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
 
-MAPI void tetris_generate_draw(Tetris_Game_State* tetris, Render_Packet* renderer_packet);
+MAPI Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris);
 
 MAPI Tetromino_Type pick_new_tetromino_type(void);
 MAPI bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);
