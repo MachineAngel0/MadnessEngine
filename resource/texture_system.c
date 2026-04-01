@@ -65,7 +65,6 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
     Texture* texture = &texture_system->textures_array[texture_system->available_texture_indexes];
     texture_system->available_texture_indexes++;
     texture->handle = *out_handle;
-    texture->has_pixel_data_been_uploaded = false;
 
 
     //add to hash table
@@ -79,6 +78,7 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
     texture->height = texHeight; // 4 stride rgba
     texture->channels = STBI_rgb_alpha; // 4 stride rgba
     texture->image_size = texWidth * texHeight * 4; // 4 stride rgba
+    texture->is_font = false;
 
     MASSERT_MSG(texture->pixels, "FAILED TO LOAD TEXTURE");
 
@@ -89,8 +89,7 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
         return false;
     }
 
-    //increment index for next usage
-    texture_system->available_texture_indexes++;
+
 
     ring_enqueue(texture_system->textures_ring_queue, texture);
 
@@ -305,6 +304,7 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     texture->image_size = atlasRGBA_size;
     texture->pixels = atlas_RGBA_pixels;
     texture->handle = *out_handle;
+    texture->is_font = true;
     ring_enqueue(texture_system->textures_ring_queue, texture);
 
     DEBUG("Font loaded successfully: %s\n", file_path);

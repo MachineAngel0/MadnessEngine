@@ -194,20 +194,21 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
 
     ring_queue* texture_queue = render_packet->texture_queue;
 
-
     while (!ring_queue_is_empty(texture_queue))
     {
-        Texture texture;
-        ring_dequeue(texture_queue, &texture);
+        // Texture texture;
+        // ring_dequeue(texture_queue, &texture);
 
-        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture.handle.handle];
+        Texture* texture = arena_alloc(&renderer->frame_arena, sizeof(Texture));
+        ring_dequeue(texture_queue, texture);
+
+        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture->handle.handle];
 
         //create the texture
-        create_vulkan_texture_image(&renderer->context, renderer->context.graphics_command_buffer, &texture, vulkan_texture);
+        create_vulkan_texture_image(&renderer->context, renderer->context.graphics_command_buffer, texture, vulkan_texture);
         update_texture_bindless_descriptor_set(renderer, descriptor_system,
-                                            texture.handle);
+                                            texture->handle);
     }
-
 
 
 }

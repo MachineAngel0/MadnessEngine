@@ -13,7 +13,6 @@
 
 #include "camera.h"
 #include "lights.h"
-#include "mesh_system.h"
 #include "shader_system.h"
 #include "UI.h"
 #include "vk_buffer.h"

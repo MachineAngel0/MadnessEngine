@@ -8,7 +8,6 @@
 
 #include "camera.c"
 #include "lights.c"
-#include "mesh_system.c"
 #include "shader_system.c"
 #include "UI.c"
 #include "vk_buffer.c"

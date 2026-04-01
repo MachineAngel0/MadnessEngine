@@ -2,6 +2,8 @@
 #define TEXTURE_SYSTEM_H
 
 
+//TODO: rn textures dont free their pixel data, which can be a really big problem
+
 Texture_System* texture_system_init(Memory_System* memory_system);
 MAPI bool texture_system_shutdown(Texture_System* texture_system);
 

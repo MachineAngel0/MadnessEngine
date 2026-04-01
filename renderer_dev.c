@@ -95,11 +95,24 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //run the renderer
     //MAIN LOOP
 
+    //INDIRECT DRAW
+    // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
+    // mesh_load_gltf(renderer->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(renderer, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    // mesh_load_gltf(renderer, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
+    // mesh_load_gltf(renderer->mesh_system, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb",
+    // &renderer->arena, &renderer->frame_arena, renderer);
+    // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
+
+
     clock_start(&app_internal->application_base.clock);
 
     //set up file watch
     //TODO:  .dll cant be a thing on linux
     File_Watch_Handle renderer_thing_handle = platform_register_file_watch("./MADNESSRENDERER.dll");
+
+
 
 
     while (app_internal->application_base.is_running)

@@ -5,7 +5,7 @@
 #include "ring_queue.h"
 #include "stb_image.h"
 #include "stb_truetype.h"
-
+#include "transforms.h"
 
 
 /// HANDLES ///
@@ -33,6 +33,8 @@ typedef struct Sprite_Handle
 {
     u32 handle;
 } Sprite_Handle;
+
+
 
 
 /// RESOURCES ///
@@ -71,7 +73,7 @@ typedef struct Texture
 
     // for the renderer
     Texture_Handle handle;
-    bool has_pixel_data_been_uploaded;
+    bool is_font;
 } Texture;
 
 typedef struct Texture_Reference
@@ -102,6 +104,118 @@ typedef struct Madness_Font
     Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
     Texture_Handle font_texture_handle;
 } Madness_Font;
+
+
+/// MESH ///
+
+typedef struct Material_Param_Data
+{
+    u32 feature_mask;
+
+    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
+    //ALL FROM RANGES 0-1
+    float ambient_strength; // optional for now we can remove it later
+    float roughness_strength;
+    float metallic_strength;
+    float normal_strength;
+    float ambient_occlusion_strength;
+    float emissive_strength;
+
+    u32 color_index;
+    u32 normal_index;
+    u32 metallic_index;
+    u32 roughness_index;
+    u32 ambient_occlusion_index;
+    u32 emissive_index;
+    u32 _padding0;
+    u32 _padding1;
+    u32 _padding2;
+} Material_Param_Data;
+
+
+typedef struct vertex_mesh
+{
+    vec3* pos;
+    vec3* normal;
+    vec4* tangent;
+    vec2* uv;
+
+    // vec4* color; //might not support
+} vertex_mesh;
+
+typedef struct PC_Mesh
+{
+    //per instance data change
+    u32 ubo_buffer_idx;
+    u32 normal_buffer_idx;
+    u32 tangent_buffer_idx;
+    u32 uv_buffer_idx;
+    u32 transform_buffer_idx;
+    u32 material_buffer_idx;
+    u32 _padding;
+    u32 _padding1;
+
+} PC_Mesh;
+
+
+typedef struct submesh
+{
+    Transform transform;
+
+    // vertex_mesh vertices;
+    vec3* pos;
+    vec3* normal;
+    vec4* tangent;
+    vec2* uv;
+
+    // size_t* indices;
+    u8* indices;
+    // u8* indices_2;
+    u32 indices_count;
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 tangent_bytes;
+    u64 uv_bytes;
+
+    Material_Param_Data material_params;
+    Texture_Handle color_texture;
+    Texture_Handle normal_texture;
+    Texture_Handle metallic_texture;
+    Texture_Handle roughness_texture;
+    Texture_Handle ambient_occlusion_texture;
+    Texture_Handle emissive_texture;
+
+    u32 offset_into_material_data_buffer;
+
+
+    u32 mesh_pipeline_mask; // determines what material features this submesh has
+} submesh;
+
+
+typedef struct static_mesh
+{
+    submesh* mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+} static_mesh;
+
+// TODO: skinned mesh
+typedef struct skinned_mesh
+{
+    submesh* mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
+
+    //Joints joints;
+    //Weights weights;
+} skinned_mesh;
+
+
+
 
 //SPRITE
 
@@ -154,7 +268,33 @@ typedef struct Texture_System
 
 }Texture_System;
 
+typedef struct Mesh_System
+{
+    //NOTE: this is just me figuring out how to handle buffers for a particular system
+    //it would also make sense to keep reuploading the meshes into the buffers every frame, well see if its a performance penality
 
+    //global count of all the data
+    static_mesh static_mesh_array[1000];
+    u32 static_mesh_array_size;
+    u32 static_mesh_submesh_size;
+
+    //total size of all mesh data
+    size_t vertex_byte_size;
+    size_t index_byte_size;
+    size_t index_count_size;
+    size_t normals_byte_size;
+    size_t tangent_byte_size;
+    size_t uv_byte_size;
+
+
+
+    //NOTE: NOT IN USE
+    skinned_mesh* skinned_meshes;
+    u32 skinned_mesh_size;
+
+
+    // darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
+} Mesh_System;
 
 
 //RENDER PACKET
@@ -163,8 +303,11 @@ typedef struct Texture_System
 typedef struct Render_Packet_Mesh
 {
     const char* system_name;
-    VkIndexType index_type;
-    //mesh_data
+
+    static_mesh* static_mesh_array;
+    u32 static_mesh_array_size;
+    u32 static_mesh_submesh_size;
+
 
     //TODO: geometry data
 } Render_Packet_Mesh;
@@ -202,6 +345,7 @@ typedef struct Render_Packet
     //rn we just have one of each,
     Render_Packet_Sprite sprite_data_packet;
     Render_Packet_UI ui_data_packet;
+    Render_Packet_Mesh mesh_data_packet;
     // Render_Packet_Game game_data_packet;
 
 } Render_Packet;

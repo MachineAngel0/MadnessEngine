@@ -60,114 +60,8 @@ typedef struct Vulkan_Texture
     // vk_image_type image_type;
 } Vulkan_Texture;
 
-typedef struct Material_Param_Data
-{
-    u32 feature_mask;
-
-    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
-    //ALL FROM RANGES 0-1
-    float ambient_strength; // optional for now we can remove it later
-    float roughness_strength;
-    float metallic_strength;
-    float normal_strength;
-    float ambient_occlusion_strength;
-    float emissive_strength;
-
-    u32 color_index;
-    u32 normal_index;
-    u32 metallic_index;
-    u32 roughness_index;
-    u32 ambient_occlusion_index;
-    u32 emissive_index;
-    u32 _padding0;
-    u32 _padding1;
-    u32 _padding2;
-} Material_Param_Data;
 
 
-/// MESH ///
-typedef struct vertex_mesh
-{
-    vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* uv;
-
-    // vec4* color; //might not support
-} vertex_mesh;
-
-typedef struct PC_Mesh
-{
-    //per instance data change
-    u32 ubo_buffer_idx;
-    u32 normal_buffer_idx;
-    u32 tangent_buffer_idx;
-    u32 uv_buffer_idx;
-    u32 transform_buffer_idx;
-    u32 material_buffer_idx;
-    u32 _padding;
-    u32 _padding1;
-
-} PC_Mesh;
-
-
-
-
-typedef struct submesh
-{
-    Transform transform;
-
-    // vertex_mesh vertices;
-    vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* uv;
-
-    // size_t* indices;
-    u8* indices;
-    // u8* indices_2;
-    u32 indices_count;
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 tangent_bytes;
-    u64 uv_bytes;
-
-    Material_Param_Data material_params;
-    Texture_Handle color_texture;
-    Texture_Handle normal_texture;
-    Texture_Handle metallic_texture;
-    Texture_Handle roughness_texture;
-    Texture_Handle ambient_occlusion_texture;
-    Texture_Handle emissive_texture;
-
-    u32 offset_into_material_data_buffer;
-
-
-    u32 mesh_pipeline_mask; // determines what material features this submesh has
-} submesh;
-
-
-typedef struct static_mesh
-{
-    submesh* mesh;
-    // the number of meshes in the model
-    u32 mesh_size;
-} static_mesh;
-
-// TODO: skinned mesh
-typedef struct skinned_mesh
-{
-    submesh* mesh;
-    // the number of meshes in the model
-    u32 mesh_size;
-    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
-
-    //Joints joints;
-    //Weights weights;
-} skinned_mesh;
 
 typedef enum vulkan_render_pass_state
 {
@@ -684,62 +578,7 @@ typedef struct Descriptor_System
 } Descriptor_System;
 
 
-typedef struct Mesh_System
-{
-    //NOTE: this is just me figuring out how to handle buffers for a particular system
-    //it would also make sense to keep reuploading the meshes into the buffers every frame, well see if its a performance penality
 
-    //global count of all the data
-    static_mesh static_mesh_array[1000];
-    u32 static_mesh_array_size;
-    u32 static_mesh_submesh_size;
-
-    //total size of all mesh data
-    size_t vertex_byte_size;
-    size_t index_byte_size;
-    size_t index_count_size;
-    size_t normals_byte_size;
-    size_t tangent_byte_size;
-    size_t uv_byte_size;
-
-    Buffer_Handle vertex_buffer_handle;
-    Buffer_Handle index_buffer_handle;
-    Buffer_Handle indirect_buffer_handle;
-    Buffer_Handle normal_buffer_handle;
-    Buffer_Handle uv_buffer_handle;
-    Buffer_Handle tangent_buffer_handle;
-
-    Buffer_Handle transform_buffer_handle;
-    Buffer_Handle material_buffer_handle;
-
-
-    //copy data into these buffers, and then eventually copy them into the device local buffer
-    Buffer_Handle vertex_staging_buffer_handle;
-    Buffer_Handle index_staging_buffer_handle;
-    Buffer_Handle indirect_staging_buffer_handle;
-    Buffer_Handle normal_staging_buffer_handle;
-    Buffer_Handle uv_staging_buffer_handle;
-    Buffer_Handle tangent_staging_buffer_handle;
-
-    Buffer_Handle transform_staging_buffer_handle;
-    Buffer_Handle material_staging_buffer_handle;
-
-    darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
-
-
-    //NOTE: NOT IN USE
-    skinned_mesh* skinned_meshes;
-    u32 skinned_mesh_size;
-
-
-    Buffer_Handle bone_buffer_handle;
-    Buffer_Handle weights_buffer_handle;
-
-    // darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
-    u32 indirect_draw_count;
-
-    PC_Mesh pc_mesh;
-} Mesh_System;
 
 
 typedef struct pipeline_cache_file_header
@@ -759,6 +598,9 @@ typedef struct vulkan_pipeline_cache
 {
     VkPipelineCache handle;
 } vulkan_pipeline_cache;
+
+
+
 
 typedef struct UI_Renderer
 {
@@ -808,9 +650,43 @@ typedef struct Sprite_Backend
 
     u64 draw_count;
 
-}Sprite_Renderer_Backend;
+}Sprite_Renderer;
+
+typedef struct Mesh_Renderer
+{
+    Buffer_Handle vertex_buffer_handle;
+    Buffer_Handle index_buffer_handle;
+    Buffer_Handle indirect_buffer_handle;
+    Buffer_Handle normal_buffer_handle;
+    Buffer_Handle uv_buffer_handle;
+    Buffer_Handle tangent_buffer_handle;
+
+    Buffer_Handle transform_buffer_handle;
+    Buffer_Handle material_buffer_handle;
 
 
+    //copy data into these buffers, and then eventually copy them into the device local buffer
+    Buffer_Handle vertex_staging_buffer_handle;
+    Buffer_Handle index_staging_buffer_handle;
+    Buffer_Handle indirect_staging_buffer_handle;
+    Buffer_Handle normal_staging_buffer_handle;
+    Buffer_Handle uv_staging_buffer_handle;
+    Buffer_Handle tangent_staging_buffer_handle;
+
+    Buffer_Handle transform_staging_buffer_handle;
+    Buffer_Handle material_staging_buffer_handle;
+
+    darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
+
+    u32 indirect_draw_count;
+
+    PC_Mesh pc_mesh;
+
+    //TODO:
+    // Buffer_Handle bone_buffer_handle;
+    // Buffer_Handle weights_buffer_handle;
+
+}Mesh_Renderer;
 
 typedef struct renderer
 {
@@ -826,10 +702,10 @@ typedef struct renderer
 
     Resource_System* resource_system; //reference
 
-    //general resources
+    //general resources taken from the resource system
     Shader_System* shader_system;
-    Mesh_System* mesh_system;
-    Sprite_Renderer_Backend* sprite_backend;
+    Sprite_Renderer* sprite_backend;
+    Mesh_Renderer* mesh_renderer;
 
     //renderer specific
     Buffer_System* buffer_system;

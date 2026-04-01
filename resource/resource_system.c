@@ -10,6 +10,8 @@ bool resource_system_init(Resource_System* resource_system, Memory_System* memor
 
     resource_system->sprite_system = sprite_system_init(memory_system);
     resource_system->texture_system = texture_system_init(memory_system);
+    resource_system->mesh_system = mesh_system_init(memory_system);
+
     // resource_system->mesh_system = mesh_system_init();
     // resource_system->shader_system = shader_system_init();
 
@@ -36,6 +38,8 @@ bool resource_system_generate_render_packet(Resource_System* resource_system)
     sprite_system_generate_render_packet(resource_system->sprite_system,
                                          &resource_system->render_packet->ui_data_packet,
                                          &resource_system->render_packet->sprite_data_packet);
+
+    mesh_system_generate_render_packet(resource_system->mesh_system, &resource_system->render_packet->mesh_data_packet);
 
     return true;
 }

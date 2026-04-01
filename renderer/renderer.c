@@ -1,7 +1,7 @@
 ﻿#include "renderer.h"
 #include "camera.h"
 #include "lights.h"
-#include "mesh_system.h"
+#include "../resource/mesh_system.h"
 #include "shader_system.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
@@ -144,7 +144,7 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
     // Light System
     renderer->light_system = light_system_init(renderer);
     // Mesh System
-    renderer->mesh_system = mesh_system_init(renderer);
+    renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
     // Sprite Backend
     renderer->sprite_backend = sprite_render_backend_init(renderer, &application_base->resource_system);
 
@@ -164,17 +164,7 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
 
-    //INDIRECT DRAW
-    // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    mesh_load_gltf(renderer->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer);
-    // mesh_load_gltf(renderer,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
-    // mesh_load_gltf(renderer, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    // mesh_load_gltf(renderer, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
-    // mesh_load_gltf(renderer->mesh_system, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb",
-        // &renderer->arena, &renderer->frame_arena, renderer);
 
-    // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
-    // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
 
 
     INFO("VULKAN RENDERER INITIALIZED");
@@ -317,7 +307,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    mesh_system_generate_draw_data(renderer, renderer->mesh_system);
+    mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
@@ -418,7 +408,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_system_draw(renderer, renderer->mesh_system, command_buffer_current_frame,
+    mesh_system_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
                      &renderer->indirect_mesh_pipeline);
 
     ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);

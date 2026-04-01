@@ -16,10 +16,11 @@ typedef struct Resource_System
     //the resource system is just a container for all the system,
     //each system can just access the system it need to load assets
 
-    Sprite_System* sprite_system;
-    // Mesh_System* mesh_system;
+
     // Shader_System* shader_system;
     // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer
+    Sprite_System* sprite_system;
+    Mesh_System* mesh_system;
     Texture_System* texture_system;
 
 

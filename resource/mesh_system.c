@@ -54,7 +54,9 @@ void static_mesh_free(static_mesh* static_mesh)
 }
 
 
-void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Renderer* renderer)
+void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+                    Resource_System*
+                    resource_system)
 {
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -217,7 +219,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
             TRACE("COLOR Texture Path:  %s", texture_path);
 
-            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->color_texture);
+            texture_system_load_texture(resource_system->texture_system, texture_path, &current_submesh->color_texture);
             current_submesh->material_params.color_index = current_submesh->color_texture.handle;
         }
 
@@ -226,7 +228,6 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
                                                                         metallic_roughness_texture.texture;
         if (metal_roughness_texture)
         {
-
             if (metal_roughness_texture->image->uri)
             {
                 current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
@@ -237,7 +238,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
                 sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
                 TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-                texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->metallic_texture);
+                texture_system_load_texture(resource_system->texture_system, texture_path,
+                                            &current_submesh->metallic_texture);
                 current_submesh->roughness_texture = current_submesh->metallic_texture;
 
                 current_submesh->material_params.metallic_index = current_submesh->metallic_texture.handle;
@@ -247,7 +249,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             {
                 //TODO: load texture data from the shader system
                 INFO("WHOA A BUFFER VIEW ");
-                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(metal_roughness_texture->image->buffer_view);
+                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
+                    metal_roughness_texture->image->buffer_view);
                 INFO("WHOA A BUFFER VIEW ");
             }
         }
@@ -264,7 +267,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
             TRACE("AO Texture Path:  %s", texture_path);
 
-            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->ambient_occlusion_texture);
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &current_submesh->ambient_occlusion_texture);
             current_submesh->material_params.ambient_occlusion_index = current_submesh->ambient_occlusion_texture.
                 handle;
         }
@@ -273,7 +277,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         //NORMAL TEXTURE
         // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
         cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
-        if (normal_texture  && normal_texture->image->uri)
+        if (normal_texture && normal_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_NORMAL;
             char* texture_path = arena_alloc(frame_arena,
@@ -282,7 +286,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
 
-            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->normal_texture);
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &current_submesh->normal_texture);
             current_submesh->material_params.normal_index = current_submesh->normal_texture.
                                                                              handle;
         }
@@ -298,7 +303,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->emissive_texture);
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &current_submesh->emissive_texture);
             current_submesh->material_params.emissive_index = current_submesh->emissive_texture.
                                                                                handle;
         }
@@ -343,9 +349,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
 }
 
 
-
-
-void mesh_load_fbx(Renderer* renderer, const char* fbx_path)
+void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena, Frame_Arena* frame_arena)
 {
     if (!c_string_path_is_extension(fbx_path, ".fbx"))
     {
@@ -368,8 +372,7 @@ void mesh_load_fbx(Renderer* renderer, const char* fbx_path)
     }
 
 
-    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, scene->meshes.count);
-    Mesh_System* mesh_system = renderer->mesh_system;
+    static_mesh* out_static_mesh = static_mesh_init(arena, scene->meshes.count);
 
 
     // Use and inspect `scene`, it's just plain data!
@@ -410,7 +413,7 @@ void mesh_load_fbx(Renderer* renderer, const char* fbx_path)
 
 
     // GET BASE PATH
-    char* base_path = c_string_path_strip(fbx_path, &renderer->frame_arena);
+    char* base_path = c_string_path_strip(fbx_path, frame_arena);
 
 
     ufbx_free_scene(scene);
@@ -493,12 +496,9 @@ void mesh_load_obj(const char* obj_path, Renderer* renderer)
 }
 
 
-Mesh_System* mesh_system_init(Renderer* renderer)
+Mesh_System* mesh_system_init(Memory_System* memory_system)
 {
-    Mesh_System* out_mesh_system = arena_alloc(&renderer->arena, sizeof(Mesh_System));
-    out_mesh_system->mesh_shader_permutations = arena_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
-    out_mesh_system->mesh_shader_permutations->permutation_keys = darray_create_reserve(u32, 100);
-
+    Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System));
 
     memset(out_mesh_system->static_mesh_array, 0, sizeof(static_mesh) * 1000);
     out_mesh_system->static_mesh_array;
@@ -509,200 +509,21 @@ Mesh_System* mesh_system_init(Renderer* renderer)
     out_mesh_system->tangent_byte_size = 0;
     out_mesh_system->uv_byte_size = 0;
 
-    out_mesh_system->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                 MB(32));
-    out_mesh_system->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                                MB(32));
-    out_mesh_system->indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_INDIRECT,MB(32));
-    out_mesh_system->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_CPU_STORAGE,MB(32));
-    out_mesh_system->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_CPU_STORAGE,MB(32));
-    out_mesh_system->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                             MB(32));
-    out_mesh_system->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE,
-                                                                   MB(32));
-
-    out_mesh_system->vertex_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        MB(32));
-    out_mesh_system->index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        MB(32));
-    out_mesh_system->indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,MB(32));
-    out_mesh_system->normal_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STAGING,MB(32));
-    out_mesh_system->tangent_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING,MB(32));
-    out_mesh_system->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STAGING,
-                                                                     MB(32));
-    out_mesh_system->material_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,
-                                                                           MB(32));
 
     INFO("MESH SYSTEM CREATED")
 
     return out_mesh_system;
 }
 
-
-void mesh_system_generate_draw_data(Renderer* renderer, Mesh_System* mesh_system)
+bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
 {
-    vulkan_buffer_reset_offset(renderer, mesh_system->vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->normal_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->uv_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->material_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_system->tangent_staging_buffer_handle);
+    out_mesh_packet->system_name = "Mesh System";
 
-    mesh_system->indirect_draw_count = 0;
-    //were assuming that the data is already in the buffer,
-    // we are just generating the draw calls for the specific pipeline
-
-    size_t vertex_byte_size = 0;
-    size_t index_count_size = 0;
-
-
-    VkDrawIndexedIndirectCommand indirect_draw = {0};
-    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_system->static_mesh_array_size; s_mesh_idx++)
-    {
-        for (size_t submesh_idx = 0; submesh_idx < mesh_system->static_mesh_array[s_mesh_idx].mesh_size; submesh_idx++)
-        {
-            submesh* current_submesh = &mesh_system->static_mesh_array[s_mesh_idx].mesh[submesh_idx];
-
-            indirect_draw.firstIndex = index_count_size;
-            indirect_draw.firstInstance = 0;
-            indirect_draw.indexCount = current_submesh->indices_count;
-            indirect_draw.instanceCount = 1;
-            indirect_draw.vertexOffset = vertex_byte_size / sizeof(vec3); // in counts
-
-            vertex_byte_size += current_submesh->vertex_bytes;
-            index_count_size += current_submesh->indices_count;
-
-            mesh_system->indirect_draw_count++;
-
-            //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->vertex_staging_buffer_handle,
-                                                current_submesh->pos,
-                                                current_submesh->vertex_bytes);
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->index_staging_buffer_handle,
-                                                current_submesh->indices,
-                                                current_submesh->indices_bytes);
-
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->normal_staging_buffer_handle,
-                                                current_submesh->normal,
-                                                current_submesh->normal_bytes);
-
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->uv_staging_buffer_handle,
-                                                current_submesh->uv,
-                                                current_submesh->uv_bytes);
-            //add the draw data
-            //push the indirect draw into the draw data
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->indirect_staging_buffer_handle,
-                                                &indirect_draw,
-                                                sizeof(VkDrawIndexedIndirectCommand));
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_system->material_staging_buffer_handle,
-                                                &current_submesh->material_params,
-                                                sizeof(Material_Param_Data));
-        }
-    }
-
-
-    vulkan_buffer_copy(renderer, mesh_system->vertex_buffer_handle, mesh_system->vertex_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->index_buffer_handle, mesh_system->index_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->indirect_buffer_handle, mesh_system->indirect_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->normal_buffer_handle, mesh_system->normal_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->uv_buffer_handle, mesh_system->uv_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->material_buffer_handle, mesh_system->material_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_system->tangent_buffer_handle, mesh_system->tangent_staging_buffer_handle);
-}
-
-
-void mesh_system_draw(Renderer* renderer, Mesh_System* mesh_system, vulkan_command_buffer* command_buffer,
-                      vulkan_shader_pipeline* pipeline)
-{
-    INFO("MESH SYSTEM DRAW CALLS")
-
-    //only bind the vertex and index, the storage buffers are in bindless
-    vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_system->indirect_buffer_handle);
-    vulkan_buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_system->vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, mesh_system->index_buffer_handle);
-
-
-    VkDeviceSize pOffsets[] = {0};
-
-
-    //UBER SHADER MESH INDIRECT DRAW
-    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer->indirect_mesh_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //textures
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
-                           pOffsets);
-
-    vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16);
-
-    mesh_system->pc_mesh.ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle;
-    mesh_system->pc_mesh.normal_buffer_idx = mesh_system->normal_buffer_handle.handle;
-    mesh_system->pc_mesh.tangent_buffer_idx = mesh_system->tangent_buffer_handle.handle;
-    mesh_system->pc_mesh.uv_buffer_idx = mesh_system->uv_buffer_handle.handle;
-    mesh_system->pc_mesh.transform_buffer_idx = mesh_system->transform_buffer_handle.handle;
-    mesh_system->pc_mesh.material_buffer_idx = mesh_system->material_buffer_handle.handle;
-
-    VkPushConstantsInfo push_constant_info = {0};
-    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info.layout = pipeline->pipeline_layout;
-    push_constant_info.offset = 0;
-    push_constant_info.size = sizeof(PC_Mesh);
-    // push_constant_info.size = sizeof(mesh_system->pc_mesh); // make sure its not a pointer if i use this
-    push_constant_info.pValues = &mesh_system->pc_mesh;
-    push_constant_info.pNext = NULL;
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
-
-
-    //no need to sort by permutation rn, it gets handled in the shader, we can always sort out this later
-    if (renderer->context.device.features.multiDrawIndirect)
-    {
-        vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                 indirect_buffer->handle, 0,
-                                 mesh_system->indirect_draw_count,
-                                 sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < mesh_system->indirect_draw_count; j++)
-        {
-            vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                     indirect_buffer->handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
-                                     sizeof(VkDrawIndexedIndirectCommand));
-        }
-    }
+    //mesh_data
+    out_mesh_packet->static_mesh_array = mesh_system->static_mesh_array;
+    out_mesh_packet->static_mesh_array_size = mesh_system->static_mesh_array_size;
+    out_mesh_packet->static_mesh_submesh_size = mesh_system->static_mesh_submesh_size;
+    return true;
 }
 
 
