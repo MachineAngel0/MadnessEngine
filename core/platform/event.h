@@ -4,7 +4,6 @@
 #include "arena.h"
 #include "array.h"
 #include "memory_system.h"
-#include "memory/memory_tracker.h"
 
 
 typedef enum event_type

@@ -13,7 +13,6 @@
 #include "../core/dsa/hash_table.c"
 #include "../core/dsa/heap.c"
 #include "../core/dsa/linked_list.c"
-#include "../core/dsa/queue.c"
 #include "../core/dsa/stack.c"
 #include "../core/dsa/str.c"
 #include "../core/dsa/str_builder.c"

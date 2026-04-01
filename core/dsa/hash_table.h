@@ -17,7 +17,7 @@ typedef struct hash_table
     // NOTE: all strings will be null by default
     // TODO: use an arena with sized pools sizes, and allocate from that
     char** key_str_data;
-    void** value_data;
+    void** value_data; // TODO: this should not be a double pointer
 } hash_table;
 
 
@@ -34,9 +34,13 @@ void hash_table_remove(hash_table* h, const char* key_str);
 
 bool hash_table_contains(hash_table* h, const char* key_str);
 
-void hash_table_set(hash_table* h, const char* key_str, void* value);
+bool hash_table_contains_and_get(hash_table* h, const char* key_str, void* out_data);
 
 void* hash_table_get(hash_table* h, const char* key_str);
+
+void hash_table_set(hash_table* h, const char* key_str, void* value);
+
+
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*));
 
@@ -46,4 +50,4 @@ u64 hash_table_get_hash_id(hash_table* h, const char* key_str);
 void hash_table_test();
 
 
-#endif //HASH_MAP_STRING_H
+#endif //HASH_TABLE_H

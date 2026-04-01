@@ -130,12 +130,14 @@ bool hash_table_contains(hash_table* h, const char* key_str)
     return false;
 }
 
-void hash_table_set(hash_table* h, const char* key_str, void* value)
+
+bool hash_table_contains_and_get(hash_table* h, const char* key_str, void* out_data)
 {
-    MASSERT_MSG(h && key_str && value, "HASH MAP STRING SET: INVALID PARAMS");
+    //if the bool is true, then the out_data should be valid
+
+    MASSERT_MSG(h && key_str, "HASH MAP STRING CONTAIN AND GET: INVALID PARAMS");
 
     u64 string_size = strlen(key_str);
-
     uint64_t hash_index = generate_hash_key_64bit((u8*)key_str, string_size);
     uint64_t hash_key = hash_index % h->capacity;
 
@@ -145,17 +147,21 @@ void hash_table_set(hash_table* h, const char* key_str, void* value)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH MAP STRING SET: COULD NOT FIND KEY: %s", key_str);
-            return;
+            out_data = NULL;
+            return false;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)
         {
-            memcpy(h->value_data[cur_index], value, h->value_data_size);
-            return;
+            out_data = h->value_data[cur_index];
+            return true;
         }
     }
-    return;
+
+    FATAL("HASH MAP STRING GET: KEY NOT FOUND");
+    out_data = NULL;
+    return false;
 }
+
 
 void* hash_table_get(hash_table* h, const char* key_str)
 {
@@ -184,6 +190,35 @@ void* hash_table_get(hash_table* h, const char* key_str)
     FATAL("HASH MAP STRING GET: KEY NOT FOUND");
     return NULL;
 }
+
+
+void hash_table_set(hash_table* h, const char* key_str, void* value)
+{
+    MASSERT_MSG(h && key_str && value, "HASH MAP STRING SET: INVALID PARAMS");
+
+    u64 string_size = strlen(key_str);
+
+    uint64_t hash_index = generate_hash_key_64bit((u8*)key_str, string_size);
+    uint64_t hash_key = hash_index % h->capacity;
+
+    //find the string or if it's a NULL then report
+    uint64_t cur_index = hash_key;
+    for (; cur_index < h->capacity; cur_index++)
+    {
+        if (h->key_str_data[cur_index] == NULL)
+        {
+            WARN("HASH MAP STRING SET: COULD NOT FIND KEY: %s", key_str);
+            return;
+        }
+        if (strcmp(h->key_str_data[cur_index], key_str) == 0)
+        {
+            memcpy(h->value_data[cur_index], value, h->value_data_size);
+            return;
+        }
+    }
+    return;
+}
+
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*))
 {
@@ -216,9 +251,9 @@ void hash_table_test()
     typedef enum test_hash_enum
     {
         TEST_HASH_TABLE_1,
-        TEST_HASH_TABLE_2 ,
-        TEST_HASH_TABLE_3 ,
-    }test_hash_enum;
+        TEST_HASH_TABLE_2,
+        TEST_HASH_TABLE_3,
+    } test_hash_enum;
 
     i32 val = 100;
     hash_table_insert(hm_test, "key", &val);
@@ -248,5 +283,3 @@ void hash_table_test()
     hash_table_destroy(hm_test);
     TEST_END("HASH TABLE");
 }
-
-

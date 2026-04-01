@@ -3,7 +3,7 @@
 
 
 #include <stdint.h>
-
+#include <stdbool.h>
 
 // Unsigned int types.
 typedef uint8_t u8;

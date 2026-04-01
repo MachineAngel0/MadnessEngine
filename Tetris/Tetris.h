@@ -17,7 +17,6 @@
 
 //the max number of pieces a tetromino can be made out of
 #define TETROMINO_SIZE 4
-#include "sprite.h"
 
 
 typedef enum Tetris_Direction
@@ -126,6 +125,7 @@ typedef enum Tetris_State
     Tetris_State_Game_Over, // when the player game overs, and we allow them to replay the game
 } Tetris_State;
 
+#include "../resource/resource_system.h"
 typedef struct Tetris_Game_State
 {
     Tetris_State tetris_state;
@@ -134,26 +134,28 @@ typedef struct Tetris_Game_State
     Tetromino current_tetromino;
 
     Frame_Arena frame_arena;
-    Sprite_Data* tetris_sprite_data; // info gets cleared every frame
+    Sprite_Data_array* tetris_sprite_data; // info gets cleared every frame
 
-    Renderer* renderer; // does not own this, just a ref for making api calls
+    Memory_Tracker* memory_tracker;
+
+    Resource_System* resource_system; // reference
 } Tetris_Game_State;
 
 
 
 
 //NOTE: the sprite system handles the drawing
-MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Renderer* renderer);
+MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system);
 
 MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
 MAPI void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
 MAPI void tetris_shutdown(Tetris_Game_State* tetris);
 
-Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time);
+void tetris_update(Tetris_Game_State* tetris, float delta_time);
 MAPI void tetris_update_grid(Tetris_Game_State* tetris);
 MAPI void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
 
-MAPI Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris);
+MAPI void tetris_generate_draw_data(Tetris_Game_State* tetris);
 
 MAPI Tetromino_Type pick_new_tetromino_type(void);
 MAPI bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);

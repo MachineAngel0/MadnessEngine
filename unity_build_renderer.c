@@ -10,6 +10,10 @@
 // #include "lib/cgltf-master/cgltf.h"
 // #include "lib/cgltf-master/cgltf_write.h"
 
+//Resources
+#include "resource/build_resource.h"
+#include "resource/build_resource.c"
+
 //Renderer
 #include "renderer/build_renderer.h"
 #include "renderer/build_renderer.c"

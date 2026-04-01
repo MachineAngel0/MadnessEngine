@@ -1,17 +1,19 @@
 ﻿#include "Tetris.h"
 
 
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Renderer* renderer)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system)
 {
     Tetris_Game_State* tetris_game_state = arena_alloc(&memory_system->application_arena, sizeof(Tetris_Game_State));
+    tetris_game_state->resource_system = resource_system;
 
-    u64  frame_arena_size = MB(1);
+    u64 frame_arena_size = MB(1);
     void* mem_block = arena_alloc(&memory_system->application_arena, frame_arena_size);
-    arena_init(&tetris_game_state->frame_arena, mem_block, frame_arena_size, MEMORY_SUBSYSTEM_GAME);
+    tetris_game_state->memory_tracker = memory_system_get_memory_tracker(
+        memory_system->memory_tracker_system, STRING("Tetris"), frame_arena_size);
+    arena_init(&tetris_game_state->frame_arena, mem_block, frame_arena_size, tetris_game_state->memory_tracker);
 
 
     tetris_game_state->tetris_state = Tetris_State_Start;
-    tetris_game_state->renderer = renderer;
     tetris_clock_init(tetris_game_state, 5.0f, &memory_system->application_arena);
     tetris_grid_init(tetris_game_state, &memory_system->application_arena, GRID_COLUMN, GRID_ROW);
 
@@ -53,7 +55,7 @@ void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int r
     }
 }
 
-Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
+void tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))
@@ -71,7 +73,6 @@ Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
                 //printf("you lost\n");
                 //clear_vertex_info(vertex_dynamic_info); // dont clear this
                 tetris->tetris_state = Tetris_State_Game_Over;
-
             }
             else
             {
@@ -86,9 +87,7 @@ Render_Packet* tetris_update(Tetris_Game_State* tetris, float delta_time)
         }
     }
 
-
-     //update and return the draw data
-     return tetris_generate_draw(tetris);
+    tetris_generate_draw_data(tetris);
 
 
 }
@@ -98,7 +97,7 @@ void tetris_shutdown(Tetris_Game_State* tetris)
     //do nothing, it will deallocate when the arena clears itself
 }
 
-Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
+void tetris_generate_draw_data(Tetris_Game_State* tetris)
 {
     // we only need to generate the draw data for the grid layout, grid with the pieces and for the current tetromino
     for (int i = 0; i < tetris->tetris_grid->row; i++)
@@ -112,13 +111,15 @@ Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
 
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
-            Sprite_Data* sprite_data = sprite_create_minimal(&tetris->frame_arena);
-            sprite_data->pos = (vec2){x,y};
+
+            Sprite_Data* sprite_data = 0;
+            resource_system_get_new_sprite_transient(tetris->resource_system, sprite_data);
+            sprite_create_minimal(&tetris->frame_arena);
+            sprite_data->pos = (vec2){x, y};
             sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
             sprite_data->color = sprite_color;
             sprite_data->texture_index = 0;
             sprite_data->flags |= SPRITE_PIPELINE_COLOR;
-
         }
     }
 
@@ -132,21 +133,18 @@ Render_Packet* tetris_generate_draw(Tetris_Game_State* tetris)
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
 
-        Sprite_Data* sprite_data = sprite_create_minimal(&tetris->frame_arena);
+        Sprite_Data* sprite_data = 0;
+        resource_system_get_new_sprite_transient(tetris->resource_system, sprite_data);
         sprite_data->pos = pos;
         sprite_data->size = size;
         sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];
         sprite_data->texture_index = 0;
         sprite_data->flags |= SPRITE_PIPELINE_COLOR;
-
-
     }
 
     // tetris->tetris_render_packet->sprite_data;
     // tetris->tetris_render_packet->sprite_data_size;
 
-    //TODO:
-    return tetris->tetris_render_packet;
 }
 
 
@@ -342,7 +340,8 @@ bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetro
             return false;
         }
         //check for a colored block and also if we are above the grids top row
-        if (tetris->tetris_grid->grid_color[y_check][x_check] != TETRIS_COLOR_WHITE && tetris->tetris_grid->grid_color[y_check][
+        if (tetris->tetris_grid->grid_color[y_check][x_check] != TETRIS_COLOR_WHITE && tetris->tetris_grid->grid_color[
+                y_check][
                 x_check] != TETRIS_COLOR_GREY &&
             y_check > 0)
         {
@@ -398,7 +397,7 @@ void tetris_rotate_block(Tetris_Game_State* tetris)
 
     //check if we can rotate at all
     if (tetris_can_move_block(tetris, cur_tetromino->grid_position, new_tetromino_grid_position,
-        (vec2){0, 0}))
+                              (vec2){0, 0}))
     {
         //if we can rotate we set tetromino to temp, as it contains the new positions
         memcpy(cur_tetromino->tetromino_default_position, new_tetromino_grid_position,

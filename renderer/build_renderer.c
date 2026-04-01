@@ -4,15 +4,12 @@
 //Renderer
 
 #include "renderer.c"
-
 #include "spv_reflect.c"
-
 
 #include "camera.c"
 #include "lights.c"
-#include "mesh.c"
+#include "mesh_system.c"
 #include "shader_system.c"
-#include "sprite.c"
 #include "UI.c"
 #include "vk_buffer.c"
 #include "vk_command_buffer.c"
@@ -25,5 +22,5 @@
 #include "vk_shader.c"
 #include "vk_swapchain.c"
 #include "vk_sync.c"
-#include "Renderer_Packet.c"
 
+#include "render_resource_backend.c"

@@ -1,9 +1,8 @@
 ﻿#include "renderer.h"
 #include "camera.h"
 #include "lights.h"
-#include "mesh.h"
+#include "mesh_system.h"
 #include "shader_system.h"
-#include "UI.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
 #include "vk_framebuffer.h"
@@ -41,6 +40,7 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
 
     event_register(&application_base->event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
 
+    renderer->resource_system = &application_base->resource_system; //reference
 
 
     //set up memory for the renderer
@@ -145,8 +145,8 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
     renderer->light_system = light_system_init(renderer);
     // Mesh System
     renderer->mesh_system = mesh_system_init(renderer);
-    // Sprite System
-    renderer->sprite_system = sprite_system_init(renderer);
+    // Sprite Backend
+    renderer->sprite_backend = sprite_render_backend_init(renderer, &application_base->resource_system);
 
     //System specific draws
     renderer->ui_renderer = ui_render_init(renderer);
@@ -166,11 +166,12 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
 
     //INDIRECT DRAW
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    // mesh_load_gltf(renderer,"../z_assets/models/cube_gltf/Cube.gltf");
+    mesh_load_gltf(renderer->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer);
     // mesh_load_gltf(renderer,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf");
     // mesh_load_gltf(renderer, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh_load_gltf(renderer, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
-    mesh_load_gltf(renderer, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb");
+    // mesh_load_gltf(renderer->mesh_system, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb",
+        // &renderer->arena, &renderer->frame_arena, renderer);
 
     // renderer_internal.indirect_mesh = mesh_load_gltf_indirect(&renderer_internal,
     // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
@@ -189,13 +190,17 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 {
     Renderer* renderer = &renderer_app->renderer;
     Clock* clock = &application_base->clock;
-    Render_Packet* render_packets = renderer_app->render_packet;
+
+    Render_Packet* render_packets = application_base->resource_system.render_packet;
 
     vulkan_context vk_context = renderer->context;
 
     arena_clear(&renderer->frame_arena);
 
-    sprite_begin(renderer->sprite_system, vk_context.framebuffer_width_new, vk_context.framebuffer_height_new);
+    //TODO: have the render queues be in the render packet
+    shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system, render_packets);
+
+
 
     //TODO: test code, can remove later
     if (input_key_released_unique(renderer->input_system_debug, KEY_U))
@@ -313,7 +318,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
            sizeof(uniform_buffer_object));
 
     mesh_system_generate_draw_data(renderer, renderer->mesh_system);
-    madness_ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
+    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
     // Begin recording commands.

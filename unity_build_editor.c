@@ -3,11 +3,13 @@
 #include "core/build_core.h"
 #include "core/build_core.c"
 
+//Resources
+#include "resource/build_resource.h"
+#include "resource/build_resource.c"
 
 //Renderer
 #include "renderer/build_renderer.h"
 #include "renderer/build_renderer.c"
-
 
 //EDITOR
 #include "build_editor.h"

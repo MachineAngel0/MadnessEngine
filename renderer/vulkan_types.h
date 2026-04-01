@@ -16,21 +16,14 @@
 #include "darray.h"
 #include "hash_table.h"
 #include "input.h"
+#include "resource_system.h"
 #include "str.h"
 #include "maths/transforms.h"
-
+#include "../resource/resource_types.h"
 
 /// HANDLES ///
 
-typedef struct Texture_Handle
-{
-    u32 handle;
-} Texture_Handle;
 
-typedef struct Material_Handle
-{
-    u32 handle;
-} Material_Handle;
 
 typedef struct Shader_Handle
 {
@@ -52,18 +45,8 @@ typedef struct Descriptor_Handle
     u32 handle;
 } Descriptor_Handle;
 
-typedef struct Mesh_Handle
-{
-    u32 handle;
-} Mesh_Handle;
 
-
-typedef struct Sprite_Handle
-{
-    u32 handle;
-} Sprite_Handle;
-
-typedef struct Texture
+typedef struct Vulkan_Texture
 {
     VkImage texture_image;
     VkDeviceMemory texture_image_memory;
@@ -75,7 +58,7 @@ typedef struct Texture
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
     // vk_image_type image_type;
-} Texture;
+} Vulkan_Texture;
 
 typedef struct Material_Param_Data
 {
@@ -227,7 +210,7 @@ typedef struct vulkan_swapchain
     VkImage* images;
     VkImageView* image_views;
 
-    Texture depth_attachment;
+    Vulkan_Texture depth_attachment;
 
     // framebuffers used for on-screen rendering.
     vulkan_framebuffer* framebuffers;
@@ -374,8 +357,7 @@ typedef struct vulkan_shader_pipeline
 #define AVAILABLE_TEXTURES 100
 typedef struct Shader_System
 {
-    Texture default_texture;
-    Texture textures[AVAILABLE_TEXTURES];
+    Vulkan_Texture textures[MAX_TEXTURE_COUNT];
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
 
@@ -383,10 +365,9 @@ typedef struct Shader_System
     vulkan_shader_pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
 
-    Texture_Handle default_texture_handle;
-    Material_Handle default_material_handle;
 
     //idk if i need these two rn
+    Material_Handle default_material_handle;
     Shader_Handle default_shader_handle;
     Pipeline_Handle default_pipeline_handle;
 
@@ -779,31 +760,6 @@ typedef struct vulkan_pipeline_cache
     VkPipelineCache handle;
 } vulkan_pipeline_cache;
 
-
-typedef struct Sprite_System
-{
-    Frame_Arena* frame_arena;
-    vec2 screen_size; // grab every frame on start
-
-
-    Sprite sprites[4]; // literally just need one quad for a vertex buffer
-    Sprite_Data_array* sprites_data; //TODO: keep a free list of available indicies
-    Sprite_Data_array* sprites_data_transient; // this only lasts for the frame
-    u16 sprite_indices[6];
-
-    VkIndexType index_type;
-
-    Buffer_Handle sprite_vertex_buffer;
-    Buffer_Handle sprite_index_buffer;
-    Buffer_Handle sprite_indirect_buffer;
-    Buffer_Handle sprite_instance_buffer;
-
-    Buffer_Handle sprite_vertex_staging_buffer;
-    Buffer_Handle sprite_index_staging_buffer;
-    Buffer_Handle sprite_instance_staging_buffer;
-    Buffer_Handle sprite_indirect_staging_buffer;
-} Sprite_System;
-
 typedef struct UI_Renderer
 {
     Buffer_Handle ui_vertex_buffer_handle;
@@ -829,7 +785,32 @@ typedef struct UI_Renderer
     Buffer_Handle text_index_staging_buffer_handle;
     Buffer_Handle text_instance_staging_ssbo_handle;
     Buffer_Handle text_indirect_staging_buffer_handle;
+
+    u64 draw_count;
+
 }UI_Renderer_Backend;
+
+
+typedef struct Sprite_Backend
+{
+
+    VkIndexType index_type;
+
+    Buffer_Handle sprite_vertex_buffer;
+    Buffer_Handle sprite_index_buffer;
+    Buffer_Handle sprite_indirect_buffer;
+    Buffer_Handle sprite_instance_buffer;
+
+    Buffer_Handle sprite_vertex_staging_buffer;
+    Buffer_Handle sprite_index_staging_buffer;
+    Buffer_Handle sprite_instance_staging_buffer;
+    Buffer_Handle sprite_indirect_staging_buffer;
+
+    u64 draw_count;
+
+}Sprite_Renderer_Backend;
+
+
 
 typedef struct renderer
 {
@@ -843,14 +824,19 @@ typedef struct renderer
 
     Input_System* input_system_debug; //meant only to be used for debugging
 
+    Resource_System* resource_system; //reference
+
+    //general resources
     Shader_System* shader_system;
+    Mesh_System* mesh_system;
+    Sprite_Renderer_Backend* sprite_backend;
+
+    //renderer specific
     Buffer_System* buffer_system;
     Light_System* light_system;
-    Mesh_System* mesh_system;
     Descriptor_System* descriptor_system;
 
 
-    Sprite_System* sprite_system;
 
     //draw systems
     UI_Renderer_Backend* ui_renderer;

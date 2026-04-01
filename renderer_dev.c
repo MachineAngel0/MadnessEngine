@@ -37,6 +37,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     Memory_System* memory_system = &app_internal->application_base.memory_system;
     Event_System* event_system = &app_internal->application_base.event_system;
     Input_System* input_system = &app_internal->application_base.input_system;
+    Resource_System* resource_system = &app_internal->application_base.resource_system;
 
 
     //initialize the applications memory
@@ -56,6 +57,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     event_init(event_system, memory_system);
     input_init(input_system, event_system, memory_system);
     // audio_system_init();
+    resource_system_init(resource_system, memory_system);
 
 
     //register events needed for this application
@@ -78,10 +80,6 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         return false;
     }
 
-    //init the render packets
-    app_internal->renderer_plugin.render_packet = render_packet_init(
-        &app_internal->application_base.memory_system.application_arena);
-    Render_Packet* render_packet = app_internal->renderer_plugin.render_packet;
 
     //start the renderer
     if (!app_internal->renderer_plugin.renderer_initialize(&app_internal->renderer_plugin,
@@ -92,7 +90,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     };
 
     Madness_UI* madness_ui = app_internal->renderer_plugin.madness_ui;
-    madness_ui = app_internal->renderer_plugin.ui_init(memory_system, renderer);
+    madness_ui = app_internal->renderer_plugin.ui_init(memory_system, input_system, renderer, resource_system);
 
     //run the renderer
     //MAIN LOOP
@@ -124,13 +122,18 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         {
             continue;
         }
+        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
         app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
         madness_ui_test(madness_ui);
 
 
-        //Grab all the render data
-        render_packet_clear(render_packet);
-        madness_ui_generate_render_data(madness_ui, render_packet);
+
+        madness_ui_update(madness_ui, resource_system);
+
+
+        resource_system_update_and_create_render_packet(resource_system);
+
 
         //render
         app_internal->renderer_plugin.renderer_run(&app_internal->renderer_plugin,

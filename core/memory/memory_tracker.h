@@ -67,9 +67,9 @@ typedef struct Memory_Tracker_System
 MAPI Memory_Tracker* memory_system_get_memory_tracker(Memory_Tracker_System* memory_tracker_system, String system_name,
                                                  u64 max_memory_allocated);
 
-MAPI bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
+MAPI bool memory_tracker_track_allocation(Memory_Tracker* memory_tracker, const memory_container_type type, const u64 size);
 
-MAPI bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker, memory_container_type type, u64 size);
+MAPI bool memory_tracker_free_allocation(Memory_Tracker* memory_tracker, const memory_container_type type, const u64 size);
 
 MAPI void memory_tracker_system_print_all_memory_usage(Memory_Tracker_System* memory_tracker);
 

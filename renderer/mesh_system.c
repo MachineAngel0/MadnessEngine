@@ -1,4 +1,4 @@
-﻿#include "mesh.h"
+﻿#include "mesh_system.h"
 
 #include "cgltf.h"
 #include "c_string.h"
@@ -54,7 +54,7 @@ void static_mesh_free(static_mesh* static_mesh)
 }
 
 
-void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
+void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Renderer* renderer)
 {
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -75,12 +75,11 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
     result = cgltf_load_buffers(&options, data, gltf_path);
     MASSERT(result == cgltf_result_success)
 
-    static_mesh* out_static_mesh = static_mesh_init(&renderer->arena, data->meshes_count);
-    Mesh_System* mesh_system = renderer->mesh_system;
+    static_mesh* out_static_mesh = static_mesh_init(arena, data->meshes_count);
 
 
     // GET BASE PATH
-    char* base_path = c_string_path_strip(gltf_path, &renderer->frame_arena);
+    char* base_path = c_string_path_strip(gltf_path, frame_arena);
 
 
     //LOAD VERTEX/INDEX DATA
@@ -106,8 +105,8 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
 
 
             //alloc and copy data
-            float* pos_data = arena_alloc(&renderer->frame_arena, float_bytes);
-            current_submesh->pos = arena_alloc(&renderer->arena, float_bytes);
+            float* pos_data = arena_alloc(frame_arena, float_bytes);
+            current_submesh->pos = arena_alloc(arena, float_bytes);
             cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
             memcpy(current_submesh->pos, pos_data, float_bytes);
         }
@@ -124,8 +123,8 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
             current_submesh->normal_bytes = norm_bytes;
 
             //alloc and copy data
-            float* normal_data = arena_alloc(&renderer->arena, norm_bytes);
-            current_submesh->normal = arena_alloc(&renderer->arena, norm_bytes);
+            float* normal_data = arena_alloc(arena, norm_bytes);
+            current_submesh->normal = arena_alloc(arena, norm_bytes);
             cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
             memcpy(current_submesh->normal, normal_data, norm_bytes);
         }
@@ -143,8 +142,8 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
 
 
             //alloc and copy data
-            float* tangent_data = arena_alloc(&renderer->arena, tangent_bytes);
-            current_submesh->tangent = arena_alloc(&renderer->arena, tangent_bytes);
+            float* tangent_data = arena_alloc(arena, tangent_bytes);
+            current_submesh->tangent = arena_alloc(arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
             memcpy(current_submesh->tangent, tangent_data, tangent_bytes);
         }
@@ -161,10 +160,10 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
 
 
             //alloc and copy data
-            float* uv_data = arena_alloc(&renderer->frame_arena, uv_byte_size);
+            float* uv_data = arena_alloc(frame_arena, uv_byte_size);
             cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
 
-            current_submesh->uv = arena_alloc(&renderer->arena, uv_byte_size);
+            current_submesh->uv = arena_alloc(arena, uv_byte_size);
             memcpy(current_submesh->uv, uv_data, uv_byte_size);
         }
 
@@ -189,7 +188,7 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
         current_submesh->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
         //TODO: there can be multiple primitices/indices, will come back to
-        current_submesh->indices = arena_alloc(&renderer->arena,
+        current_submesh->indices = arena_alloc(arena,
                                                current_submesh->indices_bytes);
 
         const uint8_t* index_buffer_data = cgltf_buffer_view_data(
@@ -212,15 +211,13 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_COLOR;
 
-            char* texture_path = arena_alloc(&renderer->frame_arena,
+            char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(color_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
             TRACE("COLOR Texture Path:  %s", texture_path);
 
-            current_submesh->color_texture = shader_system_add_texture_file(
-                renderer, renderer->shader_system,
-                texture_path);
+            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->color_texture);
             current_submesh->material_params.color_index = current_submesh->color_texture.handle;
         }
 
@@ -234,16 +231,13 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
             {
                 current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
                 current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_METALLIC;
-                char* texture_path = arena_alloc(&renderer->frame_arena,
+                char* texture_path = arena_alloc(frame_arena,
                                                  strlen(base_path) + strlen(metal_roughness_texture->image->uri));
                 // takes a buffer, message format, then the remaining strings
                 sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
                 TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-
-                current_submesh->metallic_texture = shader_system_add_texture_file(
-                    renderer, renderer->shader_system,
-                    texture_path);
+                texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->metallic_texture);
                 current_submesh->roughness_texture = current_submesh->metallic_texture;
 
                 current_submesh->material_params.metallic_index = current_submesh->metallic_texture.handle;
@@ -264,15 +258,13 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
         if (AO_texture && AO_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_AO;
-            char* texture_path = arena_alloc(&renderer->frame_arena,
+            char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(AO_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
             TRACE("AO Texture Path:  %s", texture_path);
 
-            current_submesh->ambient_occlusion_texture = shader_system_add_texture_file(
-                renderer, renderer->shader_system,
-                texture_path);
+            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->ambient_occlusion_texture);
             current_submesh->material_params.ambient_occlusion_index = current_submesh->ambient_occlusion_texture.
                 handle;
         }
@@ -284,15 +276,13 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
         if (normal_texture  && normal_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_NORMAL;
-            char* texture_path = arena_alloc(&renderer->frame_arena,
+            char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(normal_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
 
-            current_submesh->normal_texture = shader_system_add_texture_file(
-                renderer, renderer->shader_system,
-                texture_path);
+            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->normal_texture);
             current_submesh->material_params.normal_index = current_submesh->normal_texture.
                                                                              handle;
         }
@@ -302,15 +292,13 @@ void mesh_load_gltf(Renderer* renderer, const char* gltf_path)
         if (emissive_texture && emissive_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_EMISSIVE;
-            char* texture_path = arena_alloc(&renderer->frame_arena,
+            char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(emissive_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-            current_submesh->emissive_texture = shader_system_add_texture_file(
-                renderer, renderer->shader_system,
-                texture_path);
+            texture_system_load_texture(renderer->resource_system->texture_system, texture_path, &current_submesh->emissive_texture);
             current_submesh->material_params.emissive_index = current_submesh->emissive_texture.
                                                                                handle;
         }

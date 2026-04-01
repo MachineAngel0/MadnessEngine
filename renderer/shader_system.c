@@ -1,6 +1,7 @@
 ﻿#include "shader_system.h"
 
 #include "vk_buffer.h"
+#include "vk_image.h"
 
 
 Shader_System* shader_system_init(Renderer* renderer)
@@ -19,16 +20,12 @@ Shader_System* shader_system_init(Renderer* renderer)
 
     out_shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
 
-
-    //create our debug texture
-    out_shader_system->default_texture_handle = shader_system_add_texture_file(renderer, out_shader_system,
-                                                                          "../renderer/texture/error_texture.png");
-
     out_shader_system->material_mesh_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                         BUFFER_TYPE_CPU_STORAGE,
                                                                         sizeof(Material_Param_Data) * out_shader_system
                                                                         ->max_indexes);
 
+    memset(out_shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
 
 
     INFO("SHADER SYSTEM CREATED")
@@ -43,14 +40,9 @@ void shader_system_shutdown(Shader_System* system)
 }
 
 
-Texture* shader_system_get_texture(Shader_System* system, const Texture_Handle handle)
+Vulkan_Texture* shader_system_get_texture(Shader_System* system, const Texture_Handle handle)
 {
     return &system->textures[handle.handle];
-}
-
-Texture* shader_system_get_default_texture(Shader_System* system)
-{
-    return &system->default_texture;
 }
 
 void shader_system_update(Renderer* renderer, Shader_System* system)
@@ -71,6 +63,7 @@ void shader_system_update(Renderer* renderer, Shader_System* system)
 }
 
 //pass out the texture index
+
 Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System* system, char const* filepath)
 {
 
@@ -88,7 +81,7 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
     hash_table_insert(system->texture_file_to_handle, filepath, &out_texture_handle);
 
     //create the texture
-    Texture* out_texture = &system->textures[out_texture_handle.handle];
+    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
     create_texture_image(&renderer->context, renderer->context.graphics_command_buffer, filepath, out_texture);
 
     //increment index for next usage
@@ -107,7 +100,7 @@ Texture_Handle shader_system_add_texture_font(Renderer* renderer, Shader_System*
     out_texture_handle.handle = system->available_texture_indexes;
 
     //create the texture
-    Texture* out_texture = &system->textures[out_texture_handle.handle];
+    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
     create_texture_glyph(renderer, renderer->context.graphics_command_buffer, out_texture, pixel_data, width, height);
 
     //increment index for next usage
@@ -145,7 +138,6 @@ Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* s
     update_descriptors_texture_reflect_test(&renderer->context, &renderer->context.global_descriptor_pool,
                                             &renderer->context.shader_texture); // need to update the need for a shader texture
                                             */
-
 
     return out_texture_handle;
 }
@@ -195,3 +187,28 @@ void material_param_data_init(Material_Param_Data* out_data)
     out_data->ambient_occlusion_index = 0;
     out_data->emissive_index = 0;
 }
+
+
+void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* shader_system, Descriptor_System* descriptor_system, Render_Packet* render_packet)
+{
+
+    ring_queue* texture_queue = render_packet->texture_queue;
+
+
+    while (!ring_queue_is_empty(texture_queue))
+    {
+        Texture texture;
+        ring_dequeue(texture_queue, &texture);
+
+        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture.handle.handle];
+
+        //create the texture
+        create_vulkan_texture_image(&renderer->context, renderer->context.graphics_command_buffer, &texture, vulkan_texture);
+        update_texture_bindless_descriptor_set(renderer, descriptor_system,
+                                            texture.handle);
+    }
+
+
+
+}
+

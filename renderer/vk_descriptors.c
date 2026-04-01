@@ -526,7 +526,7 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
 {
     //TODO: update vulkan_shader_texture* test_texture, to a Texture* struct type
 
-    Texture* texture = shader_system_get_texture(renderer->shader_system, texture_handle);
+    Vulkan_Texture* texture = shader_system_get_texture(renderer->shader_system, texture_handle);
     MASSERT(texture);
 
 

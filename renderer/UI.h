@@ -1,13 +1,7 @@
 ﻿#ifndef UI_H
 #define UI_H
+#include "../resource/resource_system.h"
 
-#include "stb_truetype.h"
-
-#include <vulkan/vulkan_core.h>
-
-#include "defines.h"
-#include "str_builder.h"
-#include "vulkan_types.h"
 
 //IMMEDIATE MODE UI
 
@@ -27,28 +21,6 @@ typedef struct Material_2D_Param_Data
     u32 texture_index;
 } Material_2D_Param_Data;
 
-
-//Text
-typedef struct Glyph
-{
-    int width, height;
-    int xoff, yoff;
-    float advance;
-    float u0, v0, u1, v1; // UV coordinates in atlas
-} Glyph;
-
-//called Madness font cause a linux library uses the struct font
-typedef struct Madness_Font
-{
-    stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
-    // NOTE: we make all font default size and scale up or down
-    // float font_size; // the larger the more clear the text looks
-    //NOTE: this will have to be larger if i support other languages or non standard characters
-    Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
-    Texture_Handle font_texture_handle;
-} Madness_Font;
-
-#define DEFAULT_FONT_CREATION_SIZE 128.0f
 #define DEFAULT_FONT_SIZE 48.0f
 #define EDITOR_FONT_SIZE 16.0f
 
@@ -186,10 +158,7 @@ ARRAY_GENERATE_TYPE(UI_Node)
 ARRAY_GENERATE_TYPE(UI_Node_Text)
 
 
-typedef struct Font_Handle
-{
-    u32 handle;
-} Font_Handle;
+
 
 typedef struct scroll_box_state
 {
@@ -233,9 +202,10 @@ typedef struct Madness_UI
 
     Renderer* renderer_reference;
     Input_System* input_system_reference; // does not own memory
+    Resource_System* resource_system;
 
     //this should be an array at some point
-    Madness_Font default_font;
+    Texture_Handle default_font_handle;
     float default_font_size;
     float editor_font_size;
     // Font fonts[100];
@@ -278,8 +248,7 @@ typedef struct Madness_UI
     //TODO: move these out of the UI
     PC_2D pc_2d_text;
     PC_2D pc_2d_quad;
-    //u16
-    VkIndexType index_type;
+
 
     //new UI
 
@@ -301,17 +270,14 @@ typedef struct Madness_UI
 
 //NOTE: Remove the renderer from the init, these should not be coupled
 //I should only have to pass the vertex/index data to the renderer for drawing
-MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer);
+MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system, Renderer* renderer, Resource_System* resource_system);
 MAPI bool madness_ui_shutdown(Madness_UI* madness_ui);
 
 //pass in the size every frame, in the event the size changes
 MAPI void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
+//needs to be called right before the renderers update method, to generate the appropriate render data
+MAPI void madness_ui_update(Madness_UI* madness_ui, Resource_System* resource_system);
 MAPI void madness_ui_end(Madness_UI* madness_ui);
-
-//Text
-MAPI Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* filepath);
-
-
 
 //API START (besides init/shutdown, begin/end)
 //TODO: drag the layout around
@@ -411,14 +377,5 @@ MAPI bool is_active(Madness_UI* madness_ui, int id);
 MAPI bool is_hot(Madness_UI* madness_ui, int id);
 
 
-//Vulkan/Renderer Stuff
-
-MAPI UI_Renderer_Backend* ui_render_init(Renderer* renderer);
-
-MAPI void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* render_packet);
-MAPI void madness_ui_generate_render_data_new(Madness_UI* madness_ui, Renderer* renderer);
-MAPI void madness_ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Render_Packet* render_packet);
-MAPI void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
-                      Render_Packet* render_packet);
 
 #endif //UI_H

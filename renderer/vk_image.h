@@ -10,18 +10,21 @@ void vulkan_image_create(vulkan_context* context,
                          VkMemoryPropertyFlags memory_flags,
                          b32 create_view,
                          VkImageAspectFlags view_aspect_flags,
-                         Texture* out_texture);
+                         Vulkan_Texture* out_texture);
+
+void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                          Texture* texture_data, Vulkan_Texture* out_texture);
 
 
 void vulkan_image_view_create(vulkan_context* context, VkFormat format,
-                              VkImageAspectFlags aspect_flags, Texture* texture);
+                              VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
 
-void vulkan_image_destroy(vulkan_context* context, Texture* image);
+void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image);
 
 
 
 void create_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                          const char* filepath, Texture* out_texture);
+                          const char* filepath, Vulkan_Texture* out_texture);
 
 void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
     VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
@@ -29,7 +32,7 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
 void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
     VkImage image, uint32_t width, uint32_t height);
 
-void create_texture_sampler(Renderer* renderer, Texture* texture);
+void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture);
 
 void image_insert_memory_barrier(
     VkCommandBuffer cmdbuffer,
@@ -43,7 +46,7 @@ void image_insert_memory_barrier(
     VkImageSubresourceRange subresourceRange);
 
 void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buffer,
-                          Texture* texture, const unsigned char* pixel_data, uint32_t width, uint32_t height)
+                          Vulkan_Texture* texture, const unsigned char* pixel_data, uint32_t width, uint32_t height)
 {
 
     //text_system.glyph_textures[text_system.glyphs[glyph]] = texture;

@@ -7,28 +7,29 @@
 #define MAX_BUTTON_COUNT 1000
 
 
-Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer)
+Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system, Renderer* renderer,
+                            Resource_System* resource_system)
 {
     Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI));
 
     u64 ui_arena_mem_size = MB(128);
     u64 ui_frame_arena_mem_size = MB(128);
-    madness_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("MADNESS UI"),
+    madness_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
+                                                               STRING("MADNESS UI"),
                                                                ui_arena_mem_size + ui_frame_arena_mem_size);
 
-    madness_ui->arena  = memory_system_alloc(memory_system, sizeof(Arena));
-    madness_ui->frame_arena  = memory_system_alloc(memory_system, sizeof(Arena));
+    madness_ui->arena = memory_system_alloc(memory_system, sizeof(Arena));
+    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Arena));
 
     void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size);
     void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size);
 
-    arena_init(madness_ui->arena , arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
-    arena_init(madness_ui->frame_arena , frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
+    arena_init(madness_ui->arena, arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
+    arena_init(madness_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
 
-    madness_ui->renderer_reference = renderer;
-    madness_ui->input_system_reference = renderer->input_system_debug;
+    madness_ui->input_system_reference = input_system;
+    madness_ui->resource_system = resource_system;
 
-    madness_ui->index_type = VK_INDEX_TYPE_UINT16;
 
     madness_ui->ui_data = Sprite_Data_array_create(MAX_UI_SPRITE_COUNT);
     madness_ui->text_data = Sprite_Data_array_create(MAX_TEXT_SPRITE_COUNT);
@@ -70,7 +71,13 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Renderer* renderer)
 
 
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
-    font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
+    // font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
+    if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf", &madness_ui->default_font_handle,
+                                                       madness_ui->arena))
+    {
+        MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
+    };
+
 
     INFO("UI SYSTEM CREATED");
     return madness_ui;
@@ -122,6 +129,54 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->released_key = input_get_first_released_key(madness_ui->input_system_reference);
 }
 
+void madness_ui_update(Madness_UI* madness_ui, Resource_System* resource_system)
+{
+    //Generate Draw Data for UI Sprites
+
+
+    for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
+    {
+        UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
+        Sprite_Data* sprite_data = sprite_system_get_ui_sprite(resource_system->sprite_system);
+        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
+        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        //TODO:
+        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
+        // {sprite_data->color = node_to_draw->color;}
+
+        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
+        // {
+        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        // }
+        sprite_data->color = node_to_draw->color;
+        sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        sprite_data->flags = node_to_draw->flags;
+
+
+        //if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
+        //{
+        //    sprite_data->uv_offset = node_to_draw->uv_offset;
+        //    sprite_data->uv_size = node_to_draw->uv_size;
+        //   Sprite_Data_array_push(madness_ui->text_data, sprite_data);
+        //}
+    }
+    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
+    {
+        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
+        Sprite_Data* sprite_data = sprite_system_get_text_sprite(resource_system->sprite_system);
+        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
+        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+
+        sprite_data->uv_offset = node_to_draw->uv_offset;
+        sprite_data->uv_size = node_to_draw->uv_size;
+
+        sprite_data->color = node_to_draw->color;
+        sprite_data->texture_index = node_to_draw->texture_handle.handle;
+        sprite_data->flags = node_to_draw->flags;
+    }
+}
+
 void madness_ui_end(Madness_UI* madness_ui)
 {
     //check if mouse is released, if so reset the active id
@@ -140,177 +195,6 @@ void madness_ui_end(Madness_UI* madness_ui)
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
     update_ui_mouse_pos(madness_ui);
-}
-
-
-Font_Handle font_init(Madness_UI* madness_ui, Renderer* renderer, const char* filepath)
-{
-    //TODO: rn only loads the default font, should get an available font at startup
-    Madness_Font* font_structure = &madness_ui->default_font;
-
-    Font_Handle out_handle = {-1};
-
-    // Load font file
-    FILE* font_file = fopen(filepath, "rb");
-    if (!font_file)
-    {
-        printf("Failed to open font file: %s\n", filepath);
-        return out_handle;
-    }
-
-    fseek(font_file, 0, SEEK_END);
-    size_t size = ftell(font_file);
-    rewind(font_file);
-
-    unsigned char* ttf_buffer = (unsigned char*)malloc(size);
-    fread(ttf_buffer, 1, size, font_file);
-    fclose(font_file);
-
-    // Initialize stb_truetype
-    if (!stbtt_InitFont(&font_structure->font_info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
-    {
-        WARN("Failed to initialize font\n");
-        free(ttf_buffer);
-        return out_handle;
-    }
-
-    // Generate bitmap atlas
-    float scale = stbtt_ScaleForPixelHeight(&font_structure->font_info, madness_ui->default_font_size);
-    int atlasWidth = 1024 * 4;
-    int atlasHeight = 1024 * 4;
-    char* atlasPixels = arena_alloc(madness_ui->arena, atlasWidth * atlasHeight);
-
-    int x = 0, y = 0, rowHeight = 0;
-
-    // Get font metrics for baseline calculation
-    int ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&font_structure->font_info, &ascent, &descent, &lineGap);
-    float baseline = ascent * scale;
-
-
-    for (int c = 32; c < 128; c++)
-    {
-        int width, height, xoff, yoff;
-        unsigned char* bitmap = stbtt_GetCodepointBitmap(&font_structure->font_info, 0, scale, c,
-                                                         &width, &height, &xoff, &yoff);
-
-        // Handle atlas overflow
-        if (x + width > atlasWidth)
-        {
-            x = 0;
-            y += rowHeight;
-            rowHeight = 0;
-        }
-
-        if (y + height > atlasHeight)
-        {
-            WARN("Error: Texture atlas too small!\n");
-            stbtt_FreeBitmap(bitmap, NULL);
-            free(ttf_buffer);
-            return out_handle;
-        }
-
-        // Copy glyph bitmap into atlas
-        for (int row = 0; row < height; row++)
-        {
-            memcpy(&atlasPixels[(y + row) * atlasWidth + x],
-                   &bitmap[row * width], width);
-        }
-
-
-        // Store glyph metrics
-        Glyph* g = &font_structure->glyphs[c - 32];
-        g->width = width;
-        g->height = height;
-        g->xoff = xoff;
-        g->yoff = baseline + yoff; // Adjust for baseline
-
-        int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font_structure->font_info, c, &advance, &lsb);
-        g->advance = advance * scale;
-
-
-        // Calculate UV coordinates
-        g->u0 = (float)x / (float)atlasWidth;
-        g->v0 = (float)y / (float)atlasHeight;
-        g->u1 = (float)(x + width) / (float)atlasWidth;
-        g->v1 = (float)(y + height) / (float)atlasHeight;
-
-        /*printf("Glyph '%c': size=(%d,%d), offset=(%d,%.1f), advance=%.1f, UV=(%.3f,%.3f)-(%.3f,%.3f)\n",
-               c, width, height, xoff, g.yoff, g.advance, g.u0, g.v0, g.u1, g.v1);
-               */
-
-        x += width + 48; // Add 1 pixel padding
-        if (height > rowHeight) rowHeight = height + 1;
-
-        stbtt_FreeBitmap(bitmap, NULL);
-    }
-
-    free(ttf_buffer);
-
-    // Convert to RGBA
-    u64 atlasRGBA_size = atlasWidth * atlasHeight * 4;
-    unsigned char* atlas_RGBA = arena_alloc(madness_ui->arena, atlasRGBA_size);
-    for (int i = 0; i < atlasWidth * atlasHeight; i++)
-    {
-        unsigned char v = atlasPixels[i];
-        atlas_RGBA[i * 4 + 0] = 255; // R
-        atlas_RGBA[i * 4 + 1] = 255; // G
-        atlas_RGBA[i * 4 + 2] = 255; // B
-        atlas_RGBA[i * 4 + 3] = v; // A (alpha from glyph)
-    }
-
-    // Save atlas to file for debugging, will be under cmake-build-debug
-    const char* debug_filename = "font_atlas_debug.ppm";
-    FILE* debug_file = fopen(debug_filename, "wb");
-    if (debug_file)
-    {
-        // Write PPM header (P6 format for RGB)
-        // DEBUG(debug_file, "P6\n%d %d\n255\n", atlasWidth, atlasHeight);
-        DEBUG("P6\n%d %d\n255\n", atlasWidth, atlasHeight);
-
-        // Write RGB data to PPM filing using the debug data, which is basically not flipped
-        for (int i = 0; i < atlasWidth * atlasHeight; i++)
-        {
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // R
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // G
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // B
-        }
-        fclose(debug_file);
-        DEBUG("Font atlas saved to: %s\n", debug_filename);
-    }
-    else
-    {
-        printf("Warning: Could not save font atlas debug file\n");
-    }
-
-    // Also save as raw RGBA data
-    const char* raw_filename = "font_atlas_debug.raw";
-    FILE* raw_file = fopen(raw_filename, "wb");
-    if (!raw_file)
-    {
-        WARN("FONT_INIT: COULDN'T OPEN FONT ATLAS DEBUG RAW");
-        fclose(raw_file);
-    }
-
-    fwrite(atlas_RGBA, 1, atlasRGBA_size, raw_file);
-    DEBUG("Raw RGBA atlas data saved to: %s (%dx%d RGBA)\n",
-          raw_filename, atlasWidth, atlasHeight);
-    fclose(raw_file);
-
-    // Upload to Vulkan texture
-    madness_ui->default_font.font_texture_handle = shader_system_add_texture_font(
-        renderer, renderer->shader_system, atlas_RGBA, atlasWidth, atlasHeight);
-    /*update_texture_bindless_descriptor_set(renderer,
-                                           renderer->descriptor_system,
-                                           Madness_UI->default_font.font_texture_handle);*/
-
-    // create_texture_glyph(renderer, renderer->context.graphics_command_buffer, &font_structure->font_texture,
-    // atlas_RGBA, atlasWidth, atlasHeight);
-
-    DEBUG("Font loaded successfully: %s\n", filepath);
-
-    return out_handle;
 }
 
 void madness_ui_print_state(Madness_UI* madness_ui)
@@ -605,7 +489,10 @@ void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position
         const char c = text.chars[i];
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
-        Glyph* g = &madness_ui->default_font.glyphs[c - 32];
+        Madness_Font font_data;
+        texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+
+        Glyph* g = &font_data.glyphs[c - 32];
 
         // Quad position in screen coords and scaled by the font scalar
         f32 x_position = screen_position.x + ((float)g->xoff * font_scalar);
@@ -628,7 +515,7 @@ void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position
         text_node->uv_offset = (vec2){g->u0, g->v0};
         text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
         text_node->color = COLOR_WHITE;
-        text_node->texture_handle = madness_ui->default_font.font_texture_handle;
+        text_node->texture_handle = madness_ui->default_font_handle;
 
         if (i == 0)
         {
@@ -657,12 +544,17 @@ void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 scree
     vec2 start_position = screen_position;
     float max_height_y = 0;
 
+    Madness_Font font_data;
+    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+
     for (u64 i = 0; i < text.length; i++)
     {
         const char c = text.chars[i];
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
-        Glyph* g = &madness_ui->default_font.glyphs[c - 32];
+
+
+        Glyph* g = &font_data.glyphs[c - 32];
 
         f32 y_height = ((f32)g->height * font_scalar);
 
@@ -1600,424 +1492,4 @@ void madness_ui_test(Madness_UI* madness_ui)
         madness_button_text(madness_ui, "Scollbox Button 6", STRING("Scroll Around 6"));
     }
     madness_scroll_box_end(madness_ui, "scroll box", &scroll_box_state_test);
-}
-
-
-void madness_ui_generate_render_data(Madness_UI* madness_ui, Render_Packet* render_packet)
-{
-    f32 screen_width = madness_ui->screen_size.x;
-    f32 screen_height = madness_ui->screen_size.y;
-
-    //draw pass
-    for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
-    {
-        UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
-        Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
-        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-
-        //TODO:
-        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
-        // {sprite_data->color = node_to_draw->color;}
-
-        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
-        // {
-        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        // }
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        sprite_data->flags = node_to_draw->flags;
-
-        Sprite_Data_array_push(madness_ui->ui_data, sprite_data);
-
-        /*
-        if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
-        {
-            sprite_data->uv_offset = node_to_draw->uv_offset;
-            sprite_data->uv_size = node_to_draw->uv_size;
-           Sprite_Data_array_push(madness_ui->text_data, sprite_data);
-        }
-        */
-    }
-
-
-    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
-    {
-        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
-        Sprite_Data* sprite_data = sprite_create_minimal(madness_ui->frame_arena);
-        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-
-        sprite_data->uv_offset = node_to_draw->uv_offset;
-        sprite_data->uv_size = node_to_draw->uv_size;
-
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        sprite_data->flags = node_to_draw->flags;
-
-        Sprite_Data_array_push(madness_ui->text_data, sprite_data);
-    }
-
-
-    render_packet->ui_data_packet.ui_data_packet = madness_ui->ui_data;
-    render_packet->ui_data_packet.text_data_packet = madness_ui->text_data;
-    render_packet->ui_data_packet.text_index_type = madness_ui->index_type;
-    render_packet->ui_data_packet.ui_index_type = madness_ui->index_type;
-    render_packet->ui_data_packet.system_name = "MADNESS UI";
-}
-
-void madness_ui_generate_render_data_new(Madness_UI* madness_ui, Renderer* renderer)
-{
-    //draw pass
-    for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
-    {
-        UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
-        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(renderer->sprite_system);
-        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-
-        //TODO:
-        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
-        // {sprite_data->color = node_to_draw->color;}
-
-        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
-        // {
-        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        // }
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        sprite_data->flags = node_to_draw->flags;
-
-
-        //if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
-        //{
-        //    sprite_data->uv_offset = node_to_draw->uv_offset;
-        //    sprite_data->uv_size = node_to_draw->uv_size;
-        //   Sprite_Data_array_push(madness_ui->text_data, sprite_data);
-        //}
-    }
-
-
-    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
-    {
-        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
-        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(renderer->sprite_system);
-        sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-
-        sprite_data->uv_offset = node_to_draw->uv_offset;
-        sprite_data->uv_size = node_to_draw->uv_size;
-
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        sprite_data->flags = node_to_draw->flags;
-
-        Sprite_Data_array_push(madness_ui->text_data, sprite_data);
-    }
-}
-
-UI_Renderer_Backend* ui_render_init(Renderer* renderer)
-{
-    UI_Renderer_Backend* UI_Render_Info = arena_alloc(&renderer->arena, sizeof(UI_Renderer_Backend));
-
-    //TODO: i should replace this with object counts // like max 1000 UI's on screen until i need to otherwise
-    u32 ui_buffer_sizes = MB(1);
-
-    UI_Render_Info->ui_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_VERTEX, ui_buffer_sizes);
-    UI_Render_Info->ui_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_INDEX, ui_buffer_sizes);
-    UI_Render_Info->ui_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_INDIRECT, ui_buffer_sizes);
-    UI_Render_Info->ui_instance_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE,
-                                                                   ui_buffer_sizes);
-    UI_Render_Info->text_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_VERTEX,
-                                                                     ui_buffer_sizes);
-    UI_Render_Info->text_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_INDEX,
-                                                                    ui_buffer_sizes);
-    UI_Render_Info->text_instance_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_CPU_STORAGE,
-                                                                     ui_buffer_sizes);
-    UI_Render_Info->text_indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_INDIRECT,
-                                                                       ui_buffer_sizes);
-
-
-    UI_Render_Info->ui_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    UI_Render_Info->ui_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    UI_Render_Info->ui_quad_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-        BUFFER_TYPE_STAGING, ui_buffer_sizes);
-
-    UI_Render_Info->ui_instance_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,
-                                                                           ui_buffer_sizes);
-
-
-    UI_Render_Info->text_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_STAGING,
-                                                                             ui_buffer_sizes);
-    UI_Render_Info->text_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                            BUFFER_TYPE_STAGING,
-                                                                            ui_buffer_sizes);
-    UI_Render_Info->text_instance_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_STAGING,
-                                                                             ui_buffer_sizes);
-    UI_Render_Info->text_indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                               BUFFER_TYPE_STAGING,
-                                                                               ui_buffer_sizes);
-    return UI_Render_Info;
-}
-
-
-void madness_ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                                          Render_Packet* render_packet)
-{
-    // UI
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_quad_indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_instance_staging_ssbo_handle);
-    //text
-    vulkan_buffer_reset_offset(renderer, ui_renderer->text_vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->text_index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->text_indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->text_instance_staging_ssbo_handle);
-
-    //UI Render
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_vertex_buffer_handle,
-                                       ui_renderer->ui_vertex_staging_buffer_handle,
-                                       default_sprite,
-                                       sizeof(Sprite) * 4);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_index_buffer_handle,
-                                       ui_renderer->ui_index_staging_buffer_handle,
-                                       default_sprite_indices,
-                                       sizeof(u16) * 6);
-    //material data
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_instance_ssbo_handle,
-                                       ui_renderer->ui_instance_staging_ssbo_handle,
-                                       render_packet->ui_data_packet.ui_data_packet->data,
-                                       Sprite_Data_array_get_bytes_used(
-                                           render_packet->ui_data_packet.ui_data_packet));
-    //literally only need one
-    VkDrawIndexedIndirectCommand indirect_draw_ui;
-
-    indirect_draw_ui.firstIndex = 0;
-    indirect_draw_ui.firstInstance = 0;
-    indirect_draw_ui.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
-    indirect_draw_ui.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_ui.instanceCount = render_packet->ui_data_packet.ui_data_packet->num_items;
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_indirect_buffer_handle,
-                                       ui_renderer->ui_quad_indirect_staging_buffer_handle,
-                                       &indirect_draw_ui,
-                                       sizeof(VkDrawIndexedIndirectCommand)
-    );
-
-
-    //TEXT Render
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_vertex_buffer_handle,
-                                       ui_renderer->text_vertex_staging_buffer_handle,
-                                       default_sprite,
-                                       sizeof(Sprite) * 4);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_index_buffer_handle,
-                                       ui_renderer->text_index_staging_buffer_handle,
-                                       default_sprite_indices,
-                                       sizeof(u16) * 6);
-    //material data
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_instance_ssbo_handle,
-                                       ui_renderer->text_instance_staging_ssbo_handle,
-                                       render_packet->ui_data_packet.text_data_packet->data,
-                                       Sprite_Data_array_get_bytes_used(
-                                           render_packet->ui_data_packet.text_data_packet));
-
-    //generate indirect draws for text
-    //literally only need one
-    VkDrawIndexedIndirectCommand indirect_draw_text;
-
-    indirect_draw_text.firstIndex = 0;
-    indirect_draw_text.firstInstance = 0;
-    indirect_draw_text.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
-    indirect_draw_text.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_text.instanceCount = render_packet->ui_data_packet.text_data_packet->num_items;
-
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_indirect_buffer_handle,
-                                       ui_renderer->text_indirect_staging_buffer_handle,
-                                       &indirect_draw_text,
-                                       sizeof(VkDrawIndexedIndirectCommand));
-}
-
-void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
-                      Render_Packet* render_packet)
-{
-    //does the draw
-    u64 ui_draw_count = render_packet->ui_data_packet.ui_data_packet->num_items;
-    u64 text_draw_count = render_packet->ui_data_packet.text_data_packet->num_items;
-
-    // UI
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
-    vulkan_buffer* quad_indirect_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_indirect_buffer_handle);
-
-
-    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer->ui_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->ui_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //textures
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->ui_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->ui_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-
-    //grab material_handle
-    PC_2D pc_2d_ui = {
-        ui_renderer->ui_instance_ssbo_handle.handle,
-    };
-
-    VkPushConstantsInfo push_constant_info_ui = {0};
-    push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info_ui.layout = renderer->ui_pipeline.pipeline_layout;
-    push_constant_info_ui.offset = 0;
-    push_constant_info_ui.size = sizeof(PC_2D);
-    push_constant_info_ui.pValues = &pc_2d_ui;
-    push_constant_info_ui.pNext = NULL;
-
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
-
-
-    VkDeviceSize offsets_bindless[1] = {0};
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
-                           &vert_buffer->handle, offsets_bindless);
-
-    vkCmdBindIndexBuffer(command_buffer->handle,
-                         index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16
-    );
-
-    // vkCmdDrawIndexed(command_buffer->handle,
-    // Madness_UI->draw_info.index_count,
-    // 1, 0, 0, 0);
-    if (renderer->context.device.features.multiDrawIndirect)
-    {
-        vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                 quad_indirect_buffer->handle, 0,
-                                 1,
-                                 sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < 1; j++)
-        {
-            vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                     quad_indirect_buffer->handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
-                                     sizeof(VkDrawIndexedIndirectCommand));
-        }
-    }
-
-    // vkCmdDrawIndexed(command_buffer->handle,
-    // Madness_UI->quad_draw_info.index_count,
-    // 1, 0, 0, 0);
-
-
-    //TEXT
-    vulkan_buffer* text_vert_buffer = vulkan_buffer_get(renderer, ui_renderer->text_vertex_buffer_handle);
-    vulkan_buffer* text_index_buffer = vulkan_buffer_get(renderer, ui_renderer->text_index_buffer_handle);
-    vulkan_buffer* text_indirect = vulkan_buffer_get(renderer, ui_renderer->text_indirect_buffer_handle);
-
-
-    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer->text_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->text_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //textures
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->text_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->text_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-
-    //grab material_handle
-    PC_2D pc_2d_text = {
-        ui_renderer->text_instance_ssbo_handle.handle,
-    };
-
-    VkPushConstantsInfo push_constant_info_text = {0};
-    push_constant_info_text.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info_text.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info_text.layout = renderer->text_pipeline.pipeline_layout;
-    push_constant_info_text.offset = 0;
-    push_constant_info_text.size = sizeof(PC_2D);
-    push_constant_info_text.pValues = &pc_2d_text;
-    push_constant_info_text.pNext = NULL;
-
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_text);
-
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
-                           &text_vert_buffer->handle, offsets_bindless);
-
-    vkCmdBindIndexBuffer(command_buffer->handle,
-                         text_index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16);
-
-    if (renderer->context.device.features.multiDrawIndirect)
-    {
-        vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                 text_indirect->handle, 0,
-                                 1,
-                                 sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < 1; j++)
-        {
-            vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                     text_indirect->handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
-                                     sizeof(VkDrawIndexedIndirectCommand));
-        }
-    }
 }

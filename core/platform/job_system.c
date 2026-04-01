@@ -2,17 +2,16 @@
 
 
 #include "thread_madness.h"
-
-
 /*
 
+#define INVALID_JOB_HANDLE 0
 
 static job_system_state* state_ptr;
 
 void store_result(fpn_job_on_complete callback, u32 param_size, void* params) {
     // Create the new entry.
     job_result_entry entry;
-    entry.id = INVALID_ID_U16;
+    entry.id = INVALID_JOB_HANDLE;
     entry.param_size = param_size;
     entry.callback = callback;
     if (entry.param_size > 0) {
@@ -28,7 +27,7 @@ void store_result(fpn_job_on_complete callback, u32 param_size, void* params) {
         M_ERROR("Failed to obtain mutex lock for storing a result! Result storage may be corrupted.");
     }
     for (u16 i = 0; i < MAX_JOB_RESULTS; ++i) {
-        if (state_ptr->pending_results[i].id == INVALID_ID_U16) {
+        if (state_ptr->pending_results[i].id == INVALID_JOB_HANDLE) {
             state_ptr->pending_results[i] = entry;
             state_ptr->pending_results[i].id = i;
             break;

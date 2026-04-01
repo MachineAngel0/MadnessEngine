@@ -12,7 +12,7 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
 
 bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
-bool application_on_resized(const event_type  code, u32 sender, u32 listener_inst, event_context context);
+bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, event_context context);
 
 
 void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
@@ -23,7 +23,7 @@ void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
         FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
     }
 
-    Renderer_Plugin* renderer_out = &tetris_application->renderer_application;
+    Renderer_Plugin* renderer_out = &tetris_application->renderer_plugin;
     renderer_out->renderer_initialize = (renderer_initialize)platform_get_function_address(
         render_lib_handle, "renderer_init");
     renderer_out->renderer_run = (renderer_run)platform_get_function_address(render_lib_handle, "renderer_update");
@@ -55,6 +55,18 @@ void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
 bool tetris_game_run(Tetris_Application* tetris_application)
 {
     app_internal = tetris_application;
+
+
+    application_base_init(&app_internal->application_base, "Madness Engine Renderer");
+
+    //just for convinience
+    Renderer* renderer = &app_internal->renderer_plugin.renderer;
+    Memory_System* memory_system = &app_internal->application_base.memory_system;
+    Event_System* event_system = &app_internal->application_base.event_system;
+    Input_System* input_system = &app_internal->application_base.input_system;
+    Resource_System* resource_system = &app_internal->application_base.resource_system;
+
+    app_internal = tetris_application;
     application_base_init(&app_internal->application_base, "Tetris");
     //initialize the applications memory
     // Memory_System_Config memory_config;
@@ -62,26 +74,26 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     // memory_config.file_config = "What's up Boy";
 
     u64 memory_request_size = GB(4);
-    memory_system_init(&app_internal->application_base.memory_system, memory_request_size, TODO);
-    memory_tracker_init();
-
+    memory_system_init(&app_internal->application_base.memory_system, memory_request_size);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+
 
     app_internal->application_base.is_running = true;
 
     // Initialize subsystems.
-    event_init(&app_internal->application_base.event_system, &app_internal->application_base.memory_system);
-    input_init(&app_internal->application_base.input_system,
-        &app_internal->application_base.event_system, &app_internal->application_base.memory_system);
+    event_init(event_system, memory_system);
+    input_init(input_system, event_system, memory_system);
+
+    resource_system_init(resource_system, memory_system);
+
     // audio_system_init();
 
 
     //register events needed for this application
-    event_register(&app_internal->application_base.event_system, EVENT_APP_QUIT, 10, application_on_event);
-    event_register(&app_internal->application_base.event_system, EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(&app_internal->application_base.event_system, EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(&app_internal->application_base.event_system, EVENT_KEY_PRESSED, 12, application_on_key);
-
+    event_register(event_system, EVENT_APP_QUIT, 10, application_on_event);
+    event_register(event_system, EVENT_APP_RESIZE, 0, application_on_resized);
+    event_register(event_system, EVENT_KEY_RELEASED, 10, application_on_key);
+    event_register(event_system, EVENT_KEY_PRESSED, 12, application_on_key);
 
     //start the platform
     if (!platform_startup(
@@ -97,16 +109,19 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     }
 
     //start the renderer
-    if (!app_internal->renderer_application.renderer_initialize(&app_internal->renderer_application, &app_internal->application_base))
+    if (!app_internal->renderer_plugin.renderer_initialize(&app_internal->renderer_plugin,
+                                                           &app_internal->application_base))
     {
         FATAL("Failed to initialize the renderer")
         return false;
     };
 
-    Madness_UI* madness_ui = madness_ui_init(&app_internal->renderer_application.renderer);
+    Madness_UI* madness_ui = app_internal->renderer_plugin.madness_ui;
+    madness_ui = app_internal->renderer_plugin.ui_init(memory_system, renderer);
+
     //start the game
     Tetris_Game_State* tetris_game_state = tetris_init(&app_internal->application_base.memory_system,
-                                                       &app_internal->renderer_application.renderer);
+                                                       resource_system);
 
 
     //QUESTION: should the renderer reach into the game state or should the game state send its draw info to the renderer
@@ -123,14 +138,17 @@ bool tetris_game_run(Tetris_Application* tetris_application)
         clock_print_info(&app_internal->application_base.clock);
 
         //clear the render_packets then each system will add to it
-        render_packet_clear(app_internal->renderer_application.render_packet);
+        render_packet_clear(app_internal->renderer_plugin.render_packet);
 
         platform_pump_messages(&app_internal->application_base.plat_state);
         input_update(&app_internal->application_base.input_system);
 
         tetris_update(tetris_game_state, app_internal->application_base.clock.delta_time);
 
-        madness_ui_begin(madness_ui, app_internal->renderer_application.renderer.context.framebuffer_width_new, app_internal->renderer_application.renderer.context.framebuffer_height_new);
+        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new,
+                     renderer->context.framebuffer_height_new);
+        madness_ui_begin(madness_ui, app_internal->renderer_plugin.renderer.context.framebuffer_width_new,
+                         app_internal->renderer_plugin.renderer.context.framebuffer_height_new);
         //TODO: remove the test later on
         madness_ui_test(madness_ui);
 
@@ -141,12 +159,9 @@ bool tetris_game_run(Tetris_Application* tetris_application)
         }
 
 
-
-
-
         //Render
-        app_internal->renderer_application.renderer_run(&app_internal->renderer_application,
-                                               &app_internal->application_base);
+        app_internal->renderer_plugin.renderer_run(&app_internal->renderer_plugin,
+                                                   &app_internal->application_base);
 
         madness_ui_end(madness_ui);
         clock_update_frame_end(&app_internal->application_base.clock);
@@ -155,7 +170,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
     /***SHUTDOWN***/
     //NOTE: (go in reverse order)
-    app_internal->renderer_application.renderer_terminate(&app_internal->renderer_application);
+    app_internal->renderer_plugin.renderer_terminate(&app_internal->renderer_plugin);
 
 
     //shutdown subsystems
@@ -164,7 +179,6 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     event_shutdown(&app_internal->application_base.event_system);
 
 
-    memory_tracker_shutdown();
     memory_system_shutdown(&app_internal->application_base.memory_system);
 
     return true;
@@ -204,7 +218,8 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         if (key_code == KEY_M)
         {
             //for seeing what our memory is doing
-            memory_tracker_print_memory_usage();
+            memory_tracker_system_print_all_memory_usage(
+                app_internal->application_base.memory_system.memory_tracker_system);
         }
     }
     if (code == EVENT_KEY_RELEASED)
@@ -253,8 +268,7 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
                     app_internal->application_base.is_suspended = false;
                 }
 
-                app_internal->renderer_application.renderer_resize(&app_internal->renderer_application, width,
-                                                                  height);
+                app_internal->renderer_plugin.renderer_resize(&app_internal->renderer_plugin, width, height);
             }
         }
     }

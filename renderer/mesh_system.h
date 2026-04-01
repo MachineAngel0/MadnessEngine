@@ -9,7 +9,7 @@ static_mesh* static_mesh_init(Arena* arena, u32 mesh_size);
 void static_mesh_free(static_mesh* static_mesh);
 
 
-void mesh_load_gltf(Renderer* renderer, const char* gltf_path);
+void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Renderer* renderer);
 
 void mesh_load_fbx(Renderer* renderer, const char* fbx_path);
 
