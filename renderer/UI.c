@@ -129,11 +129,10 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->released_key = input_get_first_released_key(madness_ui->input_system_reference);
 }
 
-void madness_ui_update(Madness_UI* madness_ui, Resource_System* resource_system)
+void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
 {
+
     //Generate Draw Data for UI Sprites
-
-
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
         UI_Node* node_to_draw = &madness_ui->ui_nodes->data[i];
@@ -173,12 +172,13 @@ void madness_ui_update(Madness_UI* madness_ui, Resource_System* resource_system)
 
         sprite_data->color = node_to_draw->color;
         sprite_data->texture_index = node_to_draw->texture_handle.handle;
+
         sprite_data->flags = node_to_draw->flags;
     }
-}
 
-void madness_ui_end(Madness_UI* madness_ui)
-{
+
+    //SET UI STATE FOR NEXT FRAME //
+
     //check if mouse is released, if so reset the active id
     //also update the mouse state
 

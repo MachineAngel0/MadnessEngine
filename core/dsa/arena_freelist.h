@@ -18,17 +18,17 @@ typedef struct Free_List_Node
 typedef struct Arena_Free_List
 {
     void* data;
-    size_t size;
+    size_t capacity;
     size_t used;
 
     Free_List_Node* head;
 } Arena_Free_List;
 
 
-void arena_free_list_create(Arena_Free_List* fl, void* backing_memory, size_t memory_size);
-Arena_Free_List* arena_free_list_create_memory_system(Memory_System* memory_system, size_t memory_size);
+void arena_free_list_init(Arena_Free_List* fl, void* backing_memory, size_t memory_size);
 
-void* arena_free_list_alloc(Arena_Free_List* fl, size_t size, size_t alignment);
+void* arena_free_list_alloc(Arena_Free_List* fl, size_t size);
+void* arena_free_list_alloc_aligned(Arena_Free_List* fl, size_t size, size_t alignment);
 
 void arena_free_list_free(Arena_Free_List* fl, void* ptr);
 void arena_free_list_free_all(Arena_Free_List* fl);

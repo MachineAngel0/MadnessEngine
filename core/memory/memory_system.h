@@ -1,6 +1,7 @@
 ﻿#ifndef MEMORY_SYSTEM_H
 #define MEMORY_SYSTEM_H
 
+#include "arena_freelist.h"
 #include "memory_tracker.h"
 
 //TODO: if I feel like this is necessary, this would replace the params in the init function
@@ -17,7 +18,7 @@ typedef struct
 typedef struct Memory_System
 {
     // Memory_System_Config mem_config; // a copy of the data
-    Arena application_arena;
+    Arena_Free_List application_arena_free_list;
     //TODO: likely have to create a free list, with this as a backup just to clear memory on resets
     Memory_Tracker_System* memory_tracker_system;
 } Memory_System;
@@ -28,11 +29,9 @@ MAPI void memory_system_init(Memory_System* memory_system, u64 memory_request_si
 //should be the last system shutdown
 MAPI void memory_system_shutdown(Memory_System* memory_system);
 
-//should only be called by larger subsystems like the renderer
+//should only be called by larger subsystems like the renderer, game, or resource system
 MAPI void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size);
-
-//do not keep a reference to the pointer
-MAPI Arena* memory_system_get_arena(Memory_System* memory_system);
+MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block);
 
 //hand out memory trackers
 MAPI void memory_system_print_all_memory_usage(Memory_System* memory_system);

@@ -1,26 +1,14 @@
 ﻿#include "arena_freelist.h"
 
-void arena_free_list_create(Arena_Free_List* fl, void* backing_memory, size_t memory_size)
+void arena_free_list_init(Arena_Free_List* fl, void* backing_memory, size_t memory_size)
 {
     fl->data = backing_memory;
-    fl->size = memory_size;
+    fl->capacity = memory_size;
     fl->used = 0;
     arena_free_list_free_all(fl);
 }
 
-Arena_Free_List* arena_free_list_create_memory_system(Memory_System* memory_system, size_t memory_size)
-{
-    Arena_Free_List* fl = arena_alloc(&memory_system->application_arena, sizeof(Arena_Free_List));
-    fl->data = arena_alloc(&memory_system->application_arena, memory_size);
-    fl->size = memory_size;
-    fl->used = 0;
-
-    arena_free_list_free_all(fl);
-
-    return fl;
-}
-
-void* arena_free_list_alloc(Arena_Free_List* fl, size_t size, size_t alignment)
+void* arena_free_list_alloc_aligned(Arena_Free_List* fl, size_t size, size_t alignment)
 {
     size_t padding = 0;
     Free_List_Node* prev_node = NULL;
@@ -71,8 +59,17 @@ void* arena_free_list_alloc(Arena_Free_List* fl, size_t size, size_t alignment)
 
     fl->used += required_space;
 
-    return (void*)((char*)header_ptr + sizeof(Free_List_Allocation_Header));
+    void* out = (void*)((char*)header_ptr + sizeof(Free_List_Allocation_Header));
+    memset(out, 0, size);
+    return out;
+    // return (void*)((char*)header_ptr + sizeof(Free_List_Allocation_Header));
 }
+
+void* arena_free_list_alloc(Arena_Free_List* fl, size_t size)
+{
+    return arena_free_list_alloc_aligned(fl, size, DEFAULT_ALIGNMENT);
+}
+
 
 void arena_free_list_free(Arena_Free_List* fl, void* ptr)
 {
@@ -111,7 +108,7 @@ void arena_free_list_free_all(Arena_Free_List* fl)
     fl->used = 0;
     //set the start of the memory to be the head node
     Free_List_Node* first_node = (Free_List_Node*)fl->data;
-    first_node->block_size = fl->size;
+    first_node->block_size = fl->capacity;
     first_node->next = NULL;
     fl->head = first_node;
 }
@@ -277,9 +274,9 @@ void free_list_test(void)
     u64 memory_alloc_size = 1000;
     void* mem_block = malloc(memory_alloc_size);
     Arena_Free_List fl;
-    arena_free_list_create(&fl, mem_block, memory_alloc_size);
+    arena_free_list_init(&fl, mem_block, memory_alloc_size);
 
-    TEST_DEBUG(fl.size == memory_alloc_size);
+    TEST_DEBUG(fl.capacity == memory_alloc_size);
     TEST_DEBUG(fl.used == 0);
 
     //TODO: flesh this out

@@ -9,7 +9,7 @@
 #define GRID_ROW 22  //2 rows are the boundaries
 #define BLOCK_SCALE 0.041f
 #define CELL_SIZE 0.085f
-#define XOFFSET -0.4f
+#define XOFFSET -0.1f
 #define YOFFSET -0.85f
 
 #define SPAWN_XOFFSET 5.0f
@@ -133,27 +133,30 @@ typedef struct Tetris_Game_State
     Tetris_Grid* tetris_grid;
     Tetromino current_tetromino;
 
+    Arena arena;
     Frame_Arena frame_arena;
     Sprite_Data_array* tetris_sprite_data; // info gets cleared every frame
 
     Memory_Tracker* memory_tracker;
 
     Resource_System* resource_system; // reference
+    Madness_UI* madness_ui; // reference
 } Tetris_Game_State;
 
 
 
 
 //NOTE: the sprite system handles the drawing
-MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system);
+MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system, Madness_UI* madness_ui);
 
-MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena);
-MAPI void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row);
+MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds);
+MAPI void tetris_grid_init(Tetris_Game_State* tetris, int column, int row);
 MAPI void tetris_shutdown(Tetris_Game_State* tetris);
 
 void tetris_update(Tetris_Game_State* tetris, float delta_time);
 MAPI void tetris_update_grid(Tetris_Game_State* tetris);
 MAPI void tetris_update_clock(Tetris_Game_State* tetris, float delta_time);
+MAPI void tetris_update_ui(Tetris_Game_State* tetris);
 
 MAPI void tetris_generate_draw_data(Tetris_Game_State* tetris);
 

@@ -75,7 +75,7 @@ typedef void (*renderer_resize)(struct Renderer_Plugin*, u32, u32);
 typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Renderer* renderer, Resource_System* resource_system);
 typedef bool (*UI_shutdown)(Madness_UI* madness_ui);
 typedef void (*UI_begin)(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
-typedef void (*UI_end)(Madness_UI* madness_ui);
+typedef void (*UI_end)(Madness_UI* madness_ui, Resource_System* resource_system);
 
 
 typedef struct Renderer_Plugin

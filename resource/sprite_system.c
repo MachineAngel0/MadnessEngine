@@ -90,6 +90,7 @@ bool sprite_system_generate_render_packet(Sprite_System* sprite_system, Render_P
     out_sprite_packet->system_name = "Sprite System";
     out_sprite_packet->sprite_data = sprite_system->sprites_data;
     out_sprite_packet->sprite_data_transient = sprite_system->sprites_data_transient;
+    memcpy(out_sprite_packet->sprite_indices, sprite_system->sprite_indices, sizeof(u16) * 6);
 
 
     return true;

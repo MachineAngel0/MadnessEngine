@@ -1,7 +1,7 @@
 ﻿#ifndef CLOCK_H
 #define CLOCK_H
 
-#include "../core/defines.h"
+#include "defines.h"
 #include "platform.h"
 
 typedef struct Clock
@@ -12,6 +12,7 @@ typedef struct Clock
     f64 delta_time;
 } Clock;
 
+void clock_init(Clock* clock);
 
 void clock_update_frame_start(Clock* clock);
 

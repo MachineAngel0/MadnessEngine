@@ -1,7 +1,6 @@
 ﻿#include "renderer.h"
 #include "camera.h"
 #include "lights.h"
-#include "../resource/mesh_system.h"
 #include "shader_system.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
@@ -143,12 +142,13 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
     renderer->shader_system = shader_system_init(renderer);
     // Light System
     renderer->light_system = light_system_init(renderer);
+
+    //System specific draws
     // Mesh System
     renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
     // Sprite Backend
-    renderer->sprite_backend = sprite_render_backend_init(renderer, &application_base->resource_system);
-
-    //System specific draws
+    renderer->sprite_renderer = sprite_render_init(renderer, &application_base->resource_system);
+    // UI Backend
     renderer->ui_renderer = ui_render_init(renderer);
 
 
@@ -183,7 +183,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 
     Render_Packet* render_packets = application_base->resource_system.render_packet;
 
-    vulkan_context vk_context = renderer->context;
+    vulkan_context* vk_context = &renderer->context;
 
     arena_clear(&renderer->frame_arena);
 
@@ -237,8 +237,8 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 
     // Wait for the execution of the current frame to complete. The fence being free will allow this one to move on.
     if (!vulkan_fence_wait(
-        &vk_context,
-        &vk_context.queue_submit_fence[vk_context.current_frame],
+        vk_context,
+        &vk_context->queue_submit_fence[vk_context->current_frame],
         UINT64_MAX))
     {
         WARN("In-flight fence wait failure!");
@@ -250,10 +250,10 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
     u32 image_index = 0;
     if (!vulkan_swapchain_acquire_next_image_index(
-        &vk_context,
-        &vk_context.swapchain,
+        vk_context,
+        &vk_context->swapchain,
         UINT64_MAX,
-        vk_context.swapchain_acquire_semaphore[vk_context.current_frame],
+        vk_context->swapchain_acquire_semaphore[vk_context->current_frame],
         0,
         &image_index))
     {
@@ -281,15 +281,15 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     // ubo.view = camera_get_view_matrix(&main_camera);
     ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
     // Perspective
-    ubo.proj = camera_get_projection(&renderer->main_camera, vk_context.framebuffer_width,
-                                     vk_context.framebuffer_height);
+    ubo.proj = camera_get_projection(&renderer->main_camera, vk_context->framebuffer_width,
+                                     vk_context->framebuffer_height);
 
 
-    VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+    VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context->device.logical_device,
         vulkan_buffer_get(renderer,
                           renderer->light_system->directional_light_storage_buffer_handle)->handle);
 
-    VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context.device.logical_device,
+    VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context->device.logical_device,
                                                                            vulkan_buffer_get(renderer,
                                                                                renderer->light_system->
                                                                                point_light_storage_buffer_handle)->
@@ -308,18 +308,19 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
            sizeof(uniform_buffer_object));
 
     mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
+    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
-    vulkan_command_buffer* command_buffer_current_frame = &vk_context.graphics_command_buffer[vk_context.current_frame];
+    vulkan_command_buffer* command_buffer_current_frame = &vk_context->graphics_command_buffer[vk_context->current_frame];
     vkResetCommandBuffer(command_buffer_current_frame->handle, 0);
     vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                                vk_context.swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                vk_context->swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -327,7 +328,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                                vk_context.swapchain.depth_attachment.texture_image, 0,
+                                vk_context->swapchain.depth_attachment.texture_image, 0,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -351,7 +352,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     // Set up the rendering attachment info
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = vk_context.swapchain.image_views[image_index],
+        .imageView = vk_context->swapchain.image_views[image_index],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -362,7 +363,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = {0, 0},
-            .extent = {vk_context.framebuffer_width, vk_context.framebuffer_height}
+            .extent = {vk_context->framebuffer_width, vk_context->framebuffer_height}
         },
         .layerCount = 1,
         .colorAttachmentCount = 1,
@@ -372,14 +373,14 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 
     // Dynamic state
     VkViewport viewport = {
-        0.0f, 0.0f, (f32)vk_context.framebuffer_width, (f32)vk_context.framebuffer_height, 0.0f, 1.0f
+        0.0f, 0.0f, (f32)vk_context->framebuffer_width, (f32)vk_context->framebuffer_height, 0.0f, 1.0f
     };
 
 
     // Scissor
     VkRect2D scissor = {
         .offset = {.x = 0, .y = 0},
-        .extent = {.width = vk_context.framebuffer_width, .height = vk_context.framebuffer_height},
+        .extent = {.width = vk_context->framebuffer_width, .height = vk_context->framebuffer_height},
     };
 
 
@@ -411,9 +412,10 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     mesh_system_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
                      &renderer->indirect_mesh_pipeline);
 
+    sprite_draw(renderer, renderer->sprite_renderer, command_buffer_current_frame);
+
     ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);
 
-    // sprite_draw(renderer->sprite_system, renderer, command_buffer_current_frame);
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
@@ -424,7 +426,7 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(command_buffer_current_frame->handle,
-                                vk_context.swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
+                                vk_context->swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
@@ -448,10 +450,10 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
     submit_info.pCommandBuffers = &command_buffer_current_frame->handle;
     // Semaphore to wait upon before the submitted command buffer starts executing
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &vk_context.swapchain_release_semaphore[image_index];
+    submit_info.pSignalSemaphores = &vk_context->swapchain_release_semaphore[image_index];
     // Semaphore to be signaled when command buffers have completed
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &vk_context.swapchain_acquire_semaphore[vk_context.current_frame];
+    submit_info.pWaitSemaphores = &vk_context->swapchain_acquire_semaphore[vk_context->current_frame];
     // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
     // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
     // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
@@ -460,26 +462,26 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 
     // Submit to the graphics queue passing a wait fence
     VkResult result = vkQueueSubmit(
-        vk_context.device.graphics_queue,
+        vk_context->device.graphics_queue,
         1,
         &submit_info,
-        vk_context.queue_submit_fence[vk_context.current_frame]);
+        vk_context->queue_submit_fence[vk_context->current_frame]);
     VK_CHECK(result);
 
     // End queue submission
 
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
-        &vk_context,
-        &vk_context.swapchain,
-        vk_context.device.graphics_queue,
-        vk_context.device.present_queue,
-        vk_context.swapchain_release_semaphore[image_index],
+        vk_context,
+        &vk_context->swapchain,
+        vk_context->device.graphics_queue,
+        vk_context->device.present_queue,
+        vk_context->swapchain_release_semaphore[image_index],
         image_index);
 
 
     // Increment (and loop) the frame index.
-    vk_context.current_frame = (vk_context.current_frame + 1) % vk_context.swapchain.max_frames_in_flight;
+    vk_context->current_frame = (vk_context->current_frame + 1) % vk_context->swapchain.max_frames_in_flight;
 }
 
 

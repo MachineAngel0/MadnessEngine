@@ -10,11 +10,11 @@ void memory_system_init(Memory_System* memory_system, u64 memory_request_size)
     MASSERT_MSG(memory, "memory_system_init: FAILED TO ALLOCATE MEMORY FOR THE APPLICATION ");
 
 
-    //TODO: if freeing memory actually becomes a concern then we can replace this with a freelist allocator, but most likely not
-    arena_init(&memory_system->application_arena, memory, memory_request_size, NULL);
+    //TODO: if freeing memory actually becomes a concern then we can replace this with a freelist allocator
+    arena_free_list_init(&memory_system->application_arena_free_list, memory, memory_request_size);
 
-    memory_system->memory_tracker_system = arena_alloc(&memory_system->application_arena, sizeof(Memory_Tracker_System));
-    memory_system->memory_tracker_system->memory_tracker = arena_alloc(&memory_system->application_arena, sizeof(Memory_Tracker) * DEFAULT_MEMORY_TRACKERS_COUNT);
+    memory_system->memory_tracker_system = arena_free_list_alloc(&memory_system->application_arena_free_list, sizeof(Memory_Tracker_System));
+    memory_system->memory_tracker_system->memory_tracker = arena_free_list_alloc(&memory_system->application_arena_free_list, sizeof(Memory_Tracker) * DEFAULT_MEMORY_TRACKERS_COUNT);
     memory_system->memory_tracker_system->capacity = DEFAULT_MEMORY_TRACKERS_COUNT;
     memory_system->memory_tracker_system->size = 0;
 }
@@ -29,12 +29,12 @@ void memory_system_shutdown(Memory_System* memory_system)
 
     //nice thing to have to about memory allocations throught out the applications lifetime
     INFO("APP MEMORY INFO: Current amount allocated %llu, Total Amount Available: %llu, Amount Left: %llu",
-         memory_system->application_arena.current_offset,
-         memory_system->application_arena.capacity,
-         (memory_system->application_arena.capacity - memory_system->application_arena.current_offset))
+         memory_system->application_arena_free_list.used,
+         memory_system->application_arena_free_list.capacity,
+         (memory_system->application_arena_free_list.capacity - memory_system->application_arena_free_list.used))
 
-    arena_clear(&memory_system->application_arena);
-    platform_free(memory_system->application_arena.memory);
+    arena_free_list_free_all(&memory_system->application_arena_free_list);
+    platform_free(memory_system->application_arena_free_list.data);
 
     INFO("MEMORY SYSTEM SHUTDOWN");
 }
@@ -43,13 +43,18 @@ void memory_system_shutdown(Memory_System* memory_system)
 void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size)
 {
     MASSERT(memory_system);
-    return arena_alloc(&memory_system->application_arena, memory_request_size);
+    return arena_free_list_alloc(&memory_system->application_arena_free_list, memory_request_size);
 }
 
-Arena* memory_system_get_arena(Memory_System* memory_system)
+void memory_system_memory_free(Memory_System* memory_system, void* memory_block)
 {
-    return &memory_system->application_arena;
+    MASSERT(memory_system);
+    MASSERT(memory_block);
+
+    arena_free_list_free(&memory_system->application_arena_free_list, memory_block);
+
 }
+
 
 void memory_system_print_all_memory_usage(Memory_System* memory_system)
 {

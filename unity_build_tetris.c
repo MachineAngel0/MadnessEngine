@@ -19,6 +19,8 @@
 
 
 //APP and Entry Point
+#include "app_types.h"
+#include "app_types.c"
 #include "Tetris/tetris_app.h"
 #include "Tetris/tetris_app.c"
 

@@ -636,12 +636,14 @@ typedef struct UI_Renderer
 typedef struct Sprite_Backend
 {
 
+    u16 sprite_indices[6];
+
     VkIndexType index_type;
 
     Buffer_Handle sprite_vertex_buffer;
     Buffer_Handle sprite_index_buffer;
     Buffer_Handle sprite_indirect_buffer;
-    Buffer_Handle sprite_instance_buffer;
+    Buffer_Handle sprite_instance_ssbo_buffer;
 
     Buffer_Handle sprite_vertex_staging_buffer;
     Buffer_Handle sprite_index_staging_buffer;
@@ -704,7 +706,7 @@ typedef struct renderer
 
     //general resources taken from the resource system
     Shader_System* shader_system;
-    Sprite_Renderer* sprite_backend;
+    Sprite_Renderer* sprite_renderer;
     Mesh_Renderer* mesh_renderer;
 
     //renderer specific

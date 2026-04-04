@@ -15,9 +15,9 @@ bool renderer_resource_backend_init(Renderer* renderer, Resource_System* resourc
 bool renderer_resource_backend_shutdown(Renderer* renderer, Resource_System* resource_system);
 
 //Sprite Renderer
-Sprite_Renderer* sprite_render_backend_init(Renderer* renderer, Resource_System* resource_system);
-MAPI void sprite_upload_draw_data(Renderer* renderer, Sprite_System* sprite_system,
-                                  Sprite_Renderer* sprite_backend);
+Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system);
+MAPI void sprite_upload_draw_data(Renderer* renderer,
+                                  Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet);
 MAPI void sprite_draw(Renderer* renderer, Sprite_Renderer* sprite_backend,
                       vulkan_command_buffer* command_buffer);
 

@@ -828,14 +828,19 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
         renderer->descriptor_system->storage_descriptors.descriptor_set_layout,
     };
 
+    VkPushConstantRange push_constant[1] = {0};
+    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant[0].offset = 0;
+    push_constant[0].size = sizeof(PC_2D);
+
+
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    // pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
-    // pipeline_layout_info.pSetLayouts = set_layouts;
     pipeline_layout_info.setLayoutCount = ARRAY_SIZE(set_layouts);
     pipeline_layout_info.pSetLayouts = set_layouts;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = NULL;
+    pipeline_layout_info.pushConstantRangeCount = ARRAY_SIZE(push_constant);
+    pipeline_layout_info.pPushConstantRanges = push_constant;
+
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
     VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info,

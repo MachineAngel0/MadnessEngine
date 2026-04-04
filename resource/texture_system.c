@@ -1,74 +1,91 @@
 ﻿#include "texture_system.h"
 
+
 Texture_System* texture_system_init(Memory_System* memory_system)
 {
     Texture_System* texture_system = memory_system_alloc(memory_system, sizeof(Texture_System));
 
 
-    texture_system->available_texture_indexes = 0;
+    texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
 
-    //hash table
     memset(texture_system->textures_array, 0, MAX_TEXTURE_COUNT * sizeof(Texture));
     memset(texture_system->font_array, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Font));
-    texture_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Reference, MAX_TEXTURE_COUNT);
+    memset(texture_system->texture_handles, 0, MAX_TEXTURE_COUNT * sizeof(Texture_Handle));
+
+    texture_system->available_idx_queue = ring_queue_create(sizeof(u32), MAX_TEXTURE_COUNT);
+
+    for (u32 i = 0; i < MAX_TEXTURE_COUNT; i++)
+    {
+        texture_system->texture_handles[i].handle = i;
+        ring_enqueue(texture_system->available_idx_queue, &i);
+    }
+
+
+    texture_system->texture_filepath_to_idx = HASH_TABLE_CREATE(u32, MAX_TEXTURE_COUNT);
     texture_system->textures_ring_queue = ring_queue_create(sizeof(Texture), MAX_TEXTURE_COUNT);
 
 
     //create our debug texture
-     if (!texture_system_load_texture(texture_system, "../renderer/texture/error_texture.png", &texture_system->default_texture_handle))
-     {
-         MASSERT_MSG(false, "TEXTURE SYSTEM FAILED TO LOAD DEFAULT TEXTURE");
-     };
+    if (!texture_system_load_texture(texture_system, "../renderer/texture/error_texture.png",
+                                     &texture_system->default_texture_handle))
+    {
+        MASSERT_MSG(false, "TEXTURE SYSTEM FAILED TO LOAD DEFAULT TEXTURE");
+    };
 
     return texture_system;
 }
 
 bool texture_system_shutdown(Texture_System* texture_system)
 {
-    //TODO: unload all the textures;
+    //TODO: unload all the textures and dsa's;
     return true;
 }
-
-
 
 
 //pass out the texture index
 bool texture_system_load_texture(Texture_System* texture_system, char const* file_path, Texture_Handle* out_handle)
 {
-    Texture_Reference texture_reference;
+    u32 texture_idx;
 
-    if (hash_table_contains_and_get(texture_system->texture_file_to_handle, file_path, &texture_reference))
+    //check if the texture has already been loaded in
+    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
     {
-        texture_reference.reference_count++;
-        out_handle = &texture_reference.handle;
+        out_handle = &texture_system->texture_handles[texture_idx];
+        texture_system->texture_meta_data[texture_idx].reference_count++;
         return true;
     }
 
-    if (texture_system->available_texture_indexes >= MAX_TEXTURE_COUNT)
+    if (texture_system->in_use_textures_count >= texture_system->max_textures)
     {
         FATAL("MAX TEXTURES REACHED");
-        out_handle->handle = 0;
+        out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 
+    //get a free index
+    u32 free_index;
+    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
+    {
+        MASSERT("OUT OF TEXTURE IDX's")
+    }
+    texture_system->in_use_textures_count++;
+
     //get an available index
-    Resource_MetaData* meta_data = &texture_system->texture_meta_data[texture_system->available_texture_indexes];
+    Resource_MetaData* meta_data = &texture_system->texture_meta_data[free_index];
     meta_data->type = RESOURCE_TEXTURE;
-    meta_data->handle = texture_system->available_texture_indexes;
+    meta_data->id = free_index;
     meta_data->file_path = file_path;
+    meta_data->reference_count = 1;
 
-    texture_reference.handle.handle = texture_system->available_texture_indexes;
-    texture_reference.reference_count = 1;
 
-    out_handle->handle = texture_system->available_texture_indexes;
-    Texture* texture = &texture_system->textures_array[texture_system->available_texture_indexes];
-    texture_system->available_texture_indexes++;
+    *out_handle = texture_system->texture_handles[free_index];
+    Texture* texture = &texture_system->textures_array[free_index];
     texture->handle = *out_handle;
 
 
     //add to hash table
-    hash_table_insert(texture_system->texture_file_to_handle, file_path, &out_handle);
+    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
 
     //load the image data from file
     int texWidth, texHeight, texChannels;
@@ -85,68 +102,110 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
     if (!texture->pixels)
     {
         WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        out_handle = &texture_system->default_texture_handle;
+        out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 
 
-
+    //used by the renderer to upload to the gpu, then we can free the cpu data
     ring_enqueue(texture_system->textures_ring_queue, texture);
 
 
     return true;
-
-
-    //TODO: send to the renderer to batch upload
-    /*
-
-    //create the texture
-    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(&renderer->context, renderer->context.graphics_command_buffer, filepath, out_texture);
-
-    //TODO: batch this upload once a frame
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle);
-
-    */
 }
 
-
-
-Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
-                                            const char* filepath)
+bool texture_system_unload_texture(Texture_System* texture_system, Texture_Handle handle)
 {
 
+    if (handle.handle == 0)
+    {
+        WARN("texture_system_unload_texture: TRIED UNLOADING DEFAULT TEXTURE")
+        return false;
+    }
+
+    //get the handle for use
+    u32 texture_id = handle.handle;
+
+
+
+
+    Resource_MetaData* texture_metadata = &texture_system->texture_meta_data[texture_id];
+    texture_metadata->reference_count--;
+    if (texture_metadata->reference_count <= 0)
+    {
+        //change the resource generation
+        texture_system->texture_handles[texture_id].generation++;
+        //put it into the available list
+        ring_enqueue(texture_system->available_idx_queue, &texture_id);
+        texture_system->in_use_textures_count--;
+    }
+
+    return true;
+
+}
+
+bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Texture* out_texture)
+{
+    if (texture_system->texture_handles->generation != handle.generation)
+    {
+        out_texture = NULL;
+        return false;
+    }
+
+    out_texture = &texture_system->textures_array[handle.handle];
+    return true;
+}
+
+Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
+                                             const char* filepath)
+{
+    UNIMPLEMENTED();
     return (Texture_Handle){0};
 }
+
 
 Texture_Handle* texture_system_get_default_texture(Texture_System* texture_system)
 {
     return &texture_system->default_texture_handle;
 }
 
-bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Arena* arena)
+bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle,
+                              Arena* arena)
 {
-    //TODO: find if the texture exists
-    Texture_Reference texture_reference;
+    u32 texture_id;
 
-    if (hash_table_contains_and_get(texture_system->texture_file_to_handle, file_path, &texture_reference))
+    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_id))
     {
-        texture_reference.reference_count++;
-        out_handle = &texture_reference.handle;
+        out_handle = &texture_system->texture_handles[texture_id];
+        texture_system->texture_meta_data[texture_id].reference_count++;
         return true;
     }
 
-    if (texture_system->available_texture_indexes >= MAX_TEXTURE_COUNT)
+    if (texture_system->in_use_textures_count >= texture_system->max_textures)
     {
-        FATAL("LOAD FONT: MAX TEXTURES REACHED")
+        FATAL("MAX TEXTURES REACHED");
         out_handle->handle = 0;
         return false;
     }
-    out_handle->handle = texture_system->available_texture_indexes;
-    Madness_Font* font_structure = &texture_system->font_array[texture_system->available_texture_indexes];
-    Texture* texture = &texture_system->textures_array[texture_system->available_texture_indexes];
-    texture_system->available_texture_indexes++;
 
+
+
+    //get a free index
+    u32 free_index;
+    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
+    {
+        MASSERT("OUT OF TEXTURE IDX's")
+        return false;
+    }
+    texture_system->in_use_textures_count++;
+
+    *out_handle = texture_system->texture_handles[free_index];
+    Madness_Font* font_structure = &texture_system->font_array[free_index];
+    Texture* texture = &texture_system->textures_array[free_index];
+    texture->handle = *out_handle;
+
+    //add to hash table
+    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
 
     // Load font file
     FILE* font_file = fopen(file_path, "rb");
@@ -310,6 +369,31 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     DEBUG("Font loaded successfully: %s\n", file_path);
 
     return out_handle;
+}
+
+bool texture_system_unload_font(Texture_System* texture_system, Texture_Handle handle)
+{
+    //get the handle for use
+    u32 texture_id = handle.handle;
+
+    if (texture_id == 0)
+    {
+        WARN("texture_system_unload_texture: TRIED UNLOADING DEFAULT TEXTURE")
+        return false;
+    }
+
+    Resource_MetaData* texture_metadata = &texture_system->texture_meta_data[texture_id];
+    texture_metadata->reference_count--;
+    if (texture_metadata->reference_count <= 0)
+    {
+        //change the resource generation
+        texture_system->texture_handles[texture_id].generation++;
+        //put it into the available list
+        ring_enqueue(texture_system->available_idx_queue, &texture_id);
+        texture_system->in_use_textures_count--;
+    }
+
+    return true;
 }
 
 bool texture_system_get_font(Texture_System* texture_system, const Texture_Handle handle, Madness_Font* out_font)

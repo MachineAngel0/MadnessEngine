@@ -16,6 +16,9 @@ void static_mesh_free(static_mesh* static_mesh);
 void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Resource_System*
                     resource_system);
 
+void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Resource_System*
+                    resource_system);
+
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena, Frame_Arena* frame_arena);
 
 void mesh_load_obj(const char* obj_path, Renderer* renderer);

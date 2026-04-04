@@ -69,7 +69,8 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
 
     if (hash_table_contains(system->texture_file_to_handle, filepath))
     {
-        Texture_Handle* handle = (Texture_Handle*)hash_table_get(system->texture_file_to_handle, filepath);
+        Texture_Handle* handle;
+        hash_table_get(system->texture_file_to_handle, filepath, &handle);
         return *handle;
     };
 

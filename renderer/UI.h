@@ -275,9 +275,8 @@ MAPI bool madness_ui_shutdown(Madness_UI* madness_ui);
 
 //pass in the size every frame, in the event the size changes
 MAPI void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
-//needs to be called right before the renderers update method, to generate the appropriate render data
-MAPI void madness_ui_update(Madness_UI* madness_ui, Resource_System* resource_system);
-MAPI void madness_ui_end(Madness_UI* madness_ui);
+//Note: needs to be called right before the renderers update method, to generate the appropriate render data
+MAPI void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system);
 
 //API START (besides init/shutdown, begin/end)
 //TODO: drag the layout around

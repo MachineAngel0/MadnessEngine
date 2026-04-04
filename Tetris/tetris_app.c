@@ -17,38 +17,8 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
 
 void tetris_dev_set_function_pointers(Tetris_Application* tetris_application)
 {
-    DLL_HANDLE render_lib_handle = platform_load_dynamic_library("./MADNESSRENDERER");
-    if (render_lib_handle.handle == 0)
-    {
-        FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
-    }
+    renderer_plugin_set_default_fpn(&tetris_application->renderer_plugin);
 
-    Renderer_Plugin* renderer_out = &tetris_application->renderer_plugin;
-    renderer_out->renderer_initialize = (renderer_initialize)platform_get_function_address(
-        render_lib_handle, "renderer_init");
-    renderer_out->renderer_run = (renderer_run)platform_get_function_address(render_lib_handle, "renderer_update");
-    renderer_out->renderer_terminate = (renderer_terminate)platform_get_function_address(
-        render_lib_handle, "renderer_shutdown");
-    renderer_out->renderer_resize = (renderer_resize)platform_get_function_address(
-        render_lib_handle, "renderer_on_resize");
-
-
-    if (!renderer_out->renderer_initialize)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER INITIALIZATION")
-    }
-    if (!renderer_out->renderer_run)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER RUN")
-    }
-    if (!renderer_out->renderer_terminate)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER TERMINATE")
-    }
-    if (!renderer_out->renderer_resize)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER RENDER RESIZE")
-    }
 }
 
 
@@ -57,7 +27,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     app_internal = tetris_application;
 
 
-    application_base_init(&app_internal->application_base, "Madness Engine Renderer");
+    application_base_init(&app_internal->application_base, "Tetris");
 
     //just for convinience
     Renderer* renderer = &app_internal->renderer_plugin.renderer;
@@ -66,8 +36,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     Input_System* input_system = &app_internal->application_base.input_system;
     Resource_System* resource_system = &app_internal->application_base.resource_system;
 
-    app_internal = tetris_application;
-    application_base_init(&app_internal->application_base, "Tetris");
+
     //initialize the applications memory
     // Memory_System_Config memory_config;
     // memory_config.memory_request_size = GB(4);
@@ -76,6 +45,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     u64 memory_request_size = GB(4);
     memory_system_init(&app_internal->application_base.memory_system, memory_request_size);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+    clock_init(&app_internal->application_base.clock);
 
 
     app_internal->application_base.is_running = true;
@@ -85,7 +55,6 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     input_init(input_system, event_system, memory_system);
 
     resource_system_init(resource_system, memory_system);
-
     // audio_system_init();
 
 
@@ -117,11 +86,11 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     };
 
     Madness_UI* madness_ui = app_internal->renderer_plugin.madness_ui;
-    madness_ui = app_internal->renderer_plugin.ui_init(memory_system, renderer);
+    madness_ui = app_internal->renderer_plugin.ui_init(memory_system, input_system, renderer, resource_system);
 
     //start the game
     Tetris_Game_State* tetris_game_state = tetris_init(&app_internal->application_base.memory_system,
-                                                       resource_system);
+                                                       resource_system, madness_ui);
 
 
     //QUESTION: should the renderer reach into the game state or should the game state send its draw info to the renderer
@@ -138,32 +107,33 @@ bool tetris_game_run(Tetris_Application* tetris_application)
         clock_print_info(&app_internal->application_base.clock);
 
         //clear the render_packets then each system will add to it
-        render_packet_clear(app_internal->renderer_plugin.render_packet);
 
-        platform_pump_messages(&app_internal->application_base.plat_state);
         input_update(&app_internal->application_base.input_system);
-
-        tetris_update(tetris_game_state, app_internal->application_base.clock.delta_time);
-
-        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new,
-                     renderer->context.framebuffer_height_new);
-        madness_ui_begin(madness_ui, app_internal->renderer_plugin.renderer.context.framebuffer_width_new,
-                         app_internal->renderer_plugin.renderer.context.framebuffer_height_new);
-        //TODO: remove the test later on
-        madness_ui_test(madness_ui);
+        platform_pump_messages(&app_internal->application_base.plat_state);
 
         //vulkan will crash if you minimize the window
         if (app_internal->application_base.is_suspended)
         {
             continue;
         }
+        app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new,
+                       renderer->context.framebuffer_height_new);
+
+
+        tetris_update(tetris_game_state, app_internal->application_base.clock.delta_time);
+
+
+        app_internal->renderer_plugin.ui_end(madness_ui, resource_system);
+        resource_system_update_and_create_render_packet(resource_system);
+
+
 
 
         //Render
         app_internal->renderer_plugin.renderer_run(&app_internal->renderer_plugin,
                                                    &app_internal->application_base);
 
-        madness_ui_end(madness_ui);
         clock_update_frame_end(&app_internal->application_base.clock);
     }
 

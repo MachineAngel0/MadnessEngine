@@ -2,7 +2,29 @@
 
 #include "cgltf.h"
 #include "c_string.h"
+#include "resource_types.h"
 #include "ufbx.h"
+
+
+Mesh_System* mesh_system_init(Memory_System* memory_system)
+{
+    Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System));
+    memset(out_mesh_system, 0, sizeof(Mesh_System));
+
+    memset(out_mesh_system->static_mesh_array, 0, sizeof(static_mesh) * 1000);
+    out_mesh_system->static_mesh_array;
+
+    out_mesh_system->vertex_byte_size = 0;
+    out_mesh_system->index_byte_size = 0;
+    out_mesh_system->normals_byte_size = 0;
+    out_mesh_system->tangent_byte_size = 0;
+    out_mesh_system->uv_byte_size = 0;
+
+
+    INFO("MESH SYSTEM CREATED")
+
+    return out_mesh_system;
+}
 
 
 submesh* submesh_init(Arena* arena)
@@ -29,6 +51,15 @@ void sub_mesh_free(submesh* m)
 static_mesh* static_mesh_init(Arena* arena, u32 mesh_size)
 {
     static_mesh* out_static_mesh = arena_alloc(arena, sizeof(submesh));
+    out_static_mesh->mesh_size = mesh_size;
+    out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
+
+    return out_static_mesh;
+}
+
+skinned_mesh* skinned_mesh_init(Arena* arena, u32 mesh_size)
+{
+    skinned_mesh* out_static_mesh = arena_alloc(arena, sizeof(skinned_mesh));
     out_static_mesh->mesh_size = mesh_size;
     out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
 
@@ -348,6 +379,202 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
     cgltf_free(data);
 }
 
+void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+                         Resource_System* resource_system)
+{
+    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
+    {
+        FATAL("DID NOT PASS IN A GLTF FILE");
+        return;
+    }
+
+
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
+    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
+
+    if (result != cgltf_result_success)
+    {
+        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
+        return;
+    }
+    result = cgltf_load_buffers(&options, data, gltf_path);
+    MASSERT(result == cgltf_result_success);
+
+    skinned_mesh* out_static_mesh = skinned_mesh_init(arena, data->meshes_count);
+
+
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(gltf_path, frame_arena);
+
+
+    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+    {
+        skinned_submesh* current_submesh = &out_static_mesh->mesh[mesh_idx];
+
+
+        const cgltf_accessor* joint_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                   cgltf_attribute_type_joints,
+                                                                   0);
+        if (joint_accessor)
+        {
+            //get size information
+            cgltf_size num_floats = cgltf_accessor_unpack_floats(joint_accessor, NULL, 0);
+            cgltf_size float_bytes = num_floats * sizeof(float);
+
+            current_submesh->joint_bytes = float_bytes;
+
+            //alloc and copy data
+            float* joint_data = arena_alloc(frame_arena, float_bytes);
+            current_submesh->joints = arena_alloc(arena, float_bytes);
+            cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
+            memcpy(current_submesh->joints, joint_data, float_bytes);
+        }
+
+        const cgltf_accessor* weight_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                    cgltf_attribute_type_weights,
+                                                                    0);
+
+        if (weight_accessor)
+        {
+            //get size information
+
+            cgltf_size num_floats = cgltf_accessor_unpack_floats(weight_accessor, NULL, 0);
+            cgltf_size float_bytes = num_floats * sizeof(float);
+            current_submesh->weight_bytes = float_bytes;
+
+
+            //alloc and copy data
+            float* weight_data = arena_alloc(frame_arena, float_bytes);
+            current_submesh->weights = arena_alloc(arena, float_bytes);
+            cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
+            memcpy(current_submesh->weights, weight_data, float_bytes);
+        }
+
+        mesh_system->weight_byte_size += current_submesh->weight_bytes;
+        mesh_system->joints_byte_size += current_submesh->joint_bytes;
+    }
+
+    hash_table* joint_names = HASH_TABLE_CREATE(Joint, 200);
+    for (size_t skin_idx = 0; skin_idx < data->skins_count; skin_idx++)
+    {
+        out_static_mesh->joint_count = data->skins[skin_idx].joints_count;
+        out_static_mesh->joints = arena_alloc(arena, out_static_mesh->joint_count * sizeof(Joint));
+        // cur_joint->inverse_bind_matrix = data->skins[skin_idx].inverse_bind_matrices[joint_idx].;
+        for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
+        {
+            Joint* cur_joint = &out_static_mesh->joints[joint_idx];
+            cgltf_node* cgltf_joint = data->skins[skin_idx].joints[joint_idx];
+
+            cur_joint->joint_name = cgltf_joint->name;
+            cur_joint->id = joint_idx;
+            cur_joint->children_count = cgltf_joint->children_count;
+            cur_joint->children = arena_alloc(arena, cur_joint->children_count * sizeof(Joint*));
+            hash_table_insert(joint_names, cur_joint->joint_name, cur_joint);
+        }
+        //this pass is to get the children and parent nodes
+        for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
+        {
+            Joint* cur_joint = &out_static_mesh->joints[joint_idx];
+            cgltf_node* cgltf_joint = data->skins[skin_idx].joints[joint_idx];
+
+            Joint* parent_joint;
+            hash_table_get(joint_names, cgltf_joint->parent->name, &parent_joint);
+            cur_joint->parent = parent_joint;
+
+            for (u32 joint_child_idx = 0; joint_child_idx < cur_joint->children_count; joint_child_idx++)
+            {
+                Joint* child_joint;
+                hash_table_get(joint_names, cgltf_joint->children[joint_child_idx]->name, &child_joint);
+                if (child_joint)
+                {
+                    cur_joint->children[joint_child_idx] = child_joint;
+                }
+                else
+                {
+                    FATAL("MESH LOAD ANIM GLTF: INVALID JOINT NODE IN HASH TABLE");
+                }
+            }
+        }
+    }
+
+    hash_table_destroy(joint_names);
+
+
+    Animation* out_animation_data = arena_alloc(arena, sizeof(Animation) * data->animations_count);
+    for (size_t animation_idx = 0; animation_idx < data->animations_count; animation_idx++)
+    {
+        cgltf_animation* anim_data = &data->animations[animation_idx];
+
+        out_animation_data->animation_name = anim_data->name;
+        cgltf_size channel_count = anim_data->channels_count;
+        cgltf_size sampler_count = anim_data->samplers_count;
+        out_animation_data->channel_count = channel_count;
+        out_animation_data->sampler_count = sampler_count;
+
+        out_animation_data->channels = arena_alloc(arena, sizeof(Animation_Channel) * channel_count);
+        out_animation_data->samplers = arena_alloc(arena, sizeof(Animation_Sampler) * sampler_count);
+
+
+        for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
+        {
+            Animation_Channel* cur_channel = &out_animation_data->channels[channel_idx];
+            cgltf_animation_channel* anim_channel = &anim_data->channels[channel_idx];
+
+            cur_channel->animation_path_type = anim_channel->target_path;
+            cur_channel->child_joint_name = anim_channel->target_node->name;
+            // Apparently I have to find it myself, TODO: just do a hashmap look up by name, not a big deal
+            // cur_channel->child_joint_reference_count = anim_channel->target_node.
+            cur_channel->child_joint_reference_count = cgltf_node_index(data, anim_channel->target_node); // TODO: TEST
+            cur_channel->sampler_idx = cgltf_animation_sampler_index(anim_data, anim_channel->sampler); // TODO: TEST
+        }
+
+        for (size_t sampler_idx = 0; sampler_idx < sampler_count; sampler_idx++)
+        {
+            Animation_Sampler* cur_sampler = &out_animation_data->samplers[sampler_idx];
+            cgltf_animation_sampler* anim_sampler = &anim_data->samplers[sampler_idx];
+
+            cur_sampler->interpolation_type = anim_sampler->interpolation;
+
+            //read gltf input data
+            cur_sampler->timestamps_count = anim_sampler->input->count;
+            cur_sampler->timestamps = arena_alloc(arena, sizeof(float) * cur_sampler->timestamps_count);
+            //get the timestamp data from the view_data and copy it into the timestamps
+            const uint8_t* timestamp_buffer_data = cgltf_buffer_view_data(anim_sampler->input->buffer_view);
+            memcpy(cur_sampler->timestamps, timestamp_buffer_data, cur_sampler->timestamps_count * sizeof(float));
+
+            //read gltf output data
+            cur_sampler->trs_interpolation_count = anim_sampler->output->count;
+            const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
+            switch (anim_sampler->output->type)
+            {
+            //these are the only supported formats in the gltf spec for samplers
+            case cgltf_type_scalar: // weights
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(float) * cur_sampler->trs_interpolation_count);
+                memcpy(cur_sampler->trs_interpolation_values_f, trs_buffer_data,
+                       cur_sampler->trs_interpolation_count * sizeof(float));
+                break;
+            case cgltf_type_vec3: // translation, scale
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(vec3) * cur_sampler->trs_interpolation_count);
+                memcpy(cur_sampler->trs_interpolation_values_v3, trs_buffer_data,
+                       cur_sampler->trs_interpolation_count * sizeof(float));
+                break;
+            case cgltf_type_vec4: // rotation
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(vec4) * cur_sampler->trs_interpolation_count);
+                memcpy(cur_sampler->trs_interpolation_values_v4, trs_buffer_data,
+                       cur_sampler->trs_interpolation_count * sizeof(float));
+                break;
+            default:
+                FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
+                break;
+            }
+        }
+    }
+
+
+    cgltf_free(data);
+}
+
 
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena, Frame_Arena* frame_arena)
 {
@@ -496,24 +723,7 @@ void mesh_load_obj(const char* obj_path, Renderer* renderer)
 }
 
 
-Mesh_System* mesh_system_init(Memory_System* memory_system)
-{
-    Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System));
 
-    memset(out_mesh_system->static_mesh_array, 0, sizeof(static_mesh) * 1000);
-    out_mesh_system->static_mesh_array;
-
-    out_mesh_system->vertex_byte_size = 0;
-    out_mesh_system->index_byte_size = 0;
-    out_mesh_system->normals_byte_size = 0;
-    out_mesh_system->tangent_byte_size = 0;
-    out_mesh_system->uv_byte_size = 0;
-
-
-    INFO("MESH SYSTEM CREATED")
-
-    return out_mesh_system;
-}
 
 bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
 {

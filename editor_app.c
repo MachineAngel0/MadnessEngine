@@ -74,7 +74,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     //init the render packets
     app_internal->renderer_plugin.render_packet = render_packet_init(
-        &app_internal->application_base.memory_system.application_arena);
+        &app_internal->application_base.memory_system.application_arena_free_list);
     Render_Packet* render_packet = app_internal->renderer_plugin.render_packet;
 
     //start the renderer

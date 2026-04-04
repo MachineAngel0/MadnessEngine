@@ -92,7 +92,7 @@ void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float 
         cam->pitch = clamp_float(cam->pitch, -89.0f, 89.0f);
     }
 
-    cam->yaw = clamp_float(cam->yaw, 0.0f, 360.0f);
+    cam->yaw = clamp_float(cam->yaw, 0.1f, 360.0f);
 
     // DEBUG("PITCH: %f, YAW: %f", cam->pitch, cam->yaw);
 }

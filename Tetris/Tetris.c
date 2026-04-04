@@ -1,21 +1,26 @@
 ﻿#include "Tetris.h"
 
 
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system, Madness_UI* madness_ui)
 {
-    Tetris_Game_State* tetris_game_state = arena_alloc(&memory_system->application_arena, sizeof(Tetris_Game_State));
-    tetris_game_state->resource_system = resource_system;
 
-    u64 frame_arena_size = MB(1);
-    void* mem_block = arena_alloc(&memory_system->application_arena, frame_arena_size);
+    Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State));
+    tetris_game_state->resource_system = resource_system;
+    tetris_game_state->madness_ui = madness_ui;
+
+    u64 arena_sizes = MB(1);
+    void* arena_mem_block = memory_system_alloc(memory_system, arena_sizes);
+    void* frame_arena_mem_block = memory_system_alloc(memory_system, arena_sizes);
     tetris_game_state->memory_tracker = memory_system_get_memory_tracker(
-        memory_system->memory_tracker_system, STRING("Tetris"), frame_arena_size);
-    arena_init(&tetris_game_state->frame_arena, mem_block, frame_arena_size, tetris_game_state->memory_tracker);
+        memory_system->memory_tracker_system, STRING("Tetris"), arena_sizes);
+
+    arena_init(&tetris_game_state->arena, arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
+    arena_init(&tetris_game_state->frame_arena, frame_arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
 
 
     tetris_game_state->tetris_state = Tetris_State_Start;
-    tetris_clock_init(tetris_game_state, 5.0f, &memory_system->application_arena);
-    tetris_grid_init(tetris_game_state, &memory_system->application_arena, GRID_COLUMN, GRID_ROW);
+    tetris_clock_init(tetris_game_state, 5.0f);
+    tetris_grid_init(tetris_game_state, GRID_COLUMN, GRID_ROW);
 
     //spawn block
     Tetromino_Type type_to_spawn = pick_new_tetromino_type();
@@ -23,16 +28,16 @@ Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* re
     return tetris_game_state;
 }
 
-void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds, Arena* arena)
+void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds)
 {
-    tetris->tetris_clock = arena_alloc(arena, sizeof(Tetris_Clock));
+    tetris->tetris_clock = arena_alloc(&tetris->arena, sizeof(Tetris_Clock));
     tetris->tetris_clock->accumulated_time = block_move_speed_seconds;
     tetris->tetris_clock->move_block_trigger_seconds = block_move_speed_seconds;
 }
 
-void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int row)
+void tetris_grid_init(Tetris_Game_State* tetris, int column, int row)
 {
-    tetris->tetris_grid = arena_alloc(arena, sizeof(Tetris_Grid));
+    tetris->tetris_grid = arena_alloc(&tetris->arena, sizeof(Tetris_Grid));
     tetris->tetris_grid->column = column;
     tetris->tetris_grid->row = row;
 
@@ -57,6 +62,8 @@ void tetris_grid_init(Tetris_Game_State* tetris, Arena* arena, int column, int r
 
 void tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
+    arena_clear(&tetris->frame_arena);
+
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))
     {
@@ -66,7 +73,7 @@ void tetris_update(Tetris_Game_State* tetris, float delta_time)
         {
             //since a block got stopped
             //check if we lost the game
-            //we lose if the current tetromino is on any part of the grey
+            //we lose if the current tetromino is on any part of the gray
 
             if (tetris->current_tetromino.grid_position.y <= 0)
             {
@@ -86,6 +93,10 @@ void tetris_update(Tetris_Game_State* tetris, float delta_time)
             }
         }
     }
+
+
+
+    tetris_update_ui(tetris);
 
     tetris_generate_draw_data(tetris);
 
@@ -112,8 +123,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
 
-            Sprite_Data* sprite_data = 0;
-            resource_system_get_new_sprite_transient(tetris->resource_system, sprite_data);
+            Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(tetris->resource_system->sprite_system);
             sprite_create_minimal(&tetris->frame_arena);
             sprite_data->pos = (vec2){x, y};
             sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
@@ -133,8 +143,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
 
-        Sprite_Data* sprite_data = 0;
-        resource_system_get_new_sprite_transient(tetris->resource_system, sprite_data);
+        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(tetris->resource_system->sprite_system);
         sprite_data->pos = pos;
         sprite_data->size = size;
         sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];
@@ -215,6 +224,24 @@ void tetris_update_grid(Tetris_Game_State* tetris)
 void tetris_update_clock(Tetris_Game_State* tetris, float delta_time)
 {
     tetris->tetris_clock->accumulated_time -= 1.0f * delta_time;
+}
+
+void tetris_update_ui(Tetris_Game_State* tetris)
+{
+    switch (tetris->tetris_state)
+    {
+    case Tetris_State_Start:
+        madness_ui_begin_layout(tetris->madness_ui, "", (vec2){50,50}, (vec2){25,25});
+        if (madness_button_text(tetris->madness_ui, "Start Button", STRING("Start Game")))
+        {
+            tetris->tetris_state = Tetris_State_Play;
+        }
+        break;
+    case Tetris_State_Play:
+        break;
+    case Tetris_State_Game_Over:
+        break;
+    }
 }
 
 

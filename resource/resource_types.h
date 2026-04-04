@@ -12,9 +12,18 @@
 
 #define INVALID_HANDLE 0
 
+typedef struct Handle
+{
+    u32 id;
+    u32 generation;
+} Handle;
+
+typedef Handle T_Handle;
+
 typedef struct Texture_Handle
 {
     u32 handle;
+    u32 generation;
 } Texture_Handle;
 
 typedef struct Material_Handle
@@ -35,8 +44,6 @@ typedef struct Sprite_Handle
 } Sprite_Handle;
 
 
-
-
 /// RESOURCES ///
 
 typedef enum Resource_Type
@@ -50,15 +57,15 @@ typedef enum Resource_Type
     RESOURCE_AUDIO,
 
     RESOURCE_MAX,
-}Resource_Type;
+} Resource_Type;
 
 typedef struct Resource_MetaData
 {
-    //TODO:
     Resource_Type type;
     const char* file_path;
-    u64 handle;
-}Resource_MetaData;
+    u64 id;
+    u64 reference_count;
+} Resource_MetaData;
 
 
 //Texture
@@ -75,12 +82,6 @@ typedef struct Texture
     Texture_Handle handle;
     bool is_font;
 } Texture;
-
-typedef struct Texture_Reference
-{
-    Texture_Handle handle;
-    u64 reference_count;
-} Texture_Reference;
 
 
 //FONT/TEXT
@@ -154,7 +155,6 @@ typedef struct PC_Mesh
     u32 material_buffer_idx;
     u32 _padding;
     u32 _padding1;
-
 } PC_Mesh;
 
 
@@ -203,23 +203,132 @@ typedef struct static_mesh
 } static_mesh;
 
 // TODO: skinned mesh
+
+
+typedef struct skinned_submesh
+{
+    Transform transform;
+
+    // vertex_mesh vertices;
+    vec3* pos;
+    vec3* normal;
+    vec4* tangent;
+    vec2* uv;
+    vec4* joints;
+    vec4* weights;
+
+    // size_t* indices;
+    u8* indices;
+    // u8* indices_2;
+    u32 indices_count;
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 tangent_bytes;
+    u64 uv_bytes;
+    u64 weight_bytes;
+    u64 joint_bytes;
+
+    Material_Param_Data material_params;
+    Texture_Handle color_texture;
+    Texture_Handle normal_texture;
+    Texture_Handle metallic_texture;
+    Texture_Handle roughness_texture;
+    Texture_Handle ambient_occlusion_texture;
+    Texture_Handle emissive_texture;
+
+    u32 offset_into_material_data_buffer;
+
+
+    u32 mesh_pipeline_mask; // determines what material features this submesh has
+} skinned_submesh;
+
+typedef struct Joint
+{
+    const char* joint_name;
+    int id;
+    struct Joint* parent;
+    struct Joint** children;
+    u8 children_count;
+    mat4 inverse_bind_matrix;
+} Joint;
+
+
 typedef struct skinned_mesh
 {
-    submesh* mesh;
+    skinned_submesh* mesh;
     // the number of meshes in the model
     u32 mesh_size;
-    VkDrawIndexedIndirectCommand* indirect_draw_array; // has the same size as mesh size
 
-    //Joints joints;
-    //Weights weights;
+    Joint* joints;
+    int joint_count;
 } skinned_mesh;
 
 
+typedef enum Animation_Path_Type
+{
+    //translated directly from cgltf_animation_path_type
+    animation_path_type_invalid,
+    animation_path_type_translation,
+    animation_path_type_rotation,
+    animation_path_type_scale,
+    animation_path_type_weights,
+    animation_path_type_max_enum
+} Animation_Path_Type;
+
+typedef enum Animation_Interpolation_Type
+{
+    //translated directly from cgltf_interpolation_type
+    interpolation_type_linear,
+    interpolation_type_step,
+    interpolation_type_cubic_spline,
+    interpolation_type_max_enum
+} Animation_Interpolation_Type;
+
+typedef struct Animation_Sampler
+{
+    float* timestamps;
+    u32 timestamps_count;
+
+    //trs = translation rotation scale
+    union
+    {
+        float* trs_interpolation_values_f;
+        vec3* trs_interpolation_values_v3;
+        vec4* trs_interpolation_values_v4;
+    };
+
+    u32 trs_interpolation_count;
+    Animation_Interpolation_Type interpolation_type;
+} Animation_Sampler;
+
+
+typedef struct Animation_Channel
+{
+    // the index of the channel maps directly to the index of the sampler ex: channel[1].sampler = sampler[1]
+    u32 sampler_idx;
+    Animation_Path_Type animation_path_type;
+    const char* child_joint_name; //for debug
+    u32 child_joint_reference_count;
+} Animation_Channel;
+
+
+typedef struct Animation
+{
+    const char* animation_name;
+    Animation_Channel* channels;
+    u32 channel_count;
+    Animation_Sampler* samplers;
+    u32 sampler_count;
+} Animation;
 
 
 //SPRITE
 
 #define MAX_SPRITE_COUNT 1024
+
 typedef struct Sprite_System
 {
     Arena* arena;
@@ -236,12 +345,13 @@ typedef struct Sprite_System
     //probably gonna want this
     Sprite_Data_array* ui_sprite_data;
     Sprite_Data_array* text_sprite_data;
-
 } Sprite_System;
 
 
 #define MAX_TEXTURE_COUNT 1024
 #define MAX_FONT_COUNT 10
+
+
 
 typedef struct Texture_System
 {
@@ -249,24 +359,25 @@ typedef struct Texture_System
     Texture_Handle default_texture_handle;
 
     Texture textures_array[MAX_TEXTURE_COUNT];
+    Texture_Handle texture_handles[MAX_TEXTURE_COUNT];
     Resource_MetaData texture_meta_data[MAX_TEXTURE_COUNT];
-    //TODO: count up for now, releasing is another issue, use an arena pool with a freelist
-    u32 available_texture_indexes;
+
+    ring_queue* available_idx_queue;
+    u32 in_use_textures_count; // technically this data is in the ring queue
     u32 max_textures;
 
-    hash_table* texture_file_to_handle;
+
+
+    hash_table* texture_filepath_to_idx;
     // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
 
     //textures that the renderer needs to upload to the gpu
-    //type: Texture Data // renderer should also unload the texture pixel data
     ring_queue* textures_ring_queue;
 
     //TODO: probably change this to a hash table, handle->font_data
     //rn this corresponds to the same indexes of the textures_array
     Madness_Font font_array[MAX_TEXTURE_COUNT];
-
-
-}Texture_System;
+} Texture_System;
 
 typedef struct Mesh_System
 {
@@ -287,11 +398,12 @@ typedef struct Mesh_System
     size_t uv_byte_size;
 
 
-
     //NOTE: NOT IN USE
     skinned_mesh* skinned_meshes;
     u32 skinned_mesh_size;
 
+    size_t joints_byte_size;
+    size_t weight_byte_size;
 
     // darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
 } Mesh_System;
@@ -320,8 +432,6 @@ typedef struct Render_Packet_UI
 
     Sprite_Data_array* text_data_packet;
     VkIndexType text_index_type;
-
-
 } Render_Packet_UI;
 
 typedef struct Render_Packet_Sprite
@@ -329,15 +439,15 @@ typedef struct Render_Packet_Sprite
     const char* system_name;
     Sprite_Data_array* sprite_data;
     Sprite_Data_array* sprite_data_transient;
+    u16 sprite_indices[6];
 
-}Render_Packet_Sprite;
+} Render_Packet_Sprite;
 
 
 typedef struct Render_Packet
 {
     //
     ring_queue* texture_queue;
-
 
 
     //FOR RENDERING
@@ -347,11 +457,7 @@ typedef struct Render_Packet
     Render_Packet_UI ui_data_packet;
     Render_Packet_Mesh mesh_data_packet;
     // Render_Packet_Game game_data_packet;
-
 } Render_Packet;
-
-
-
 
 
 #endif //RESOURCE_TYPES_H

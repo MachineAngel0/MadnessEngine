@@ -24,8 +24,6 @@ typedef struct Arena_Pool
 Arena_Pool* arena_pool_init(void* backing_buffer, size_t backing_buffer_length,
                             size_t chunk_size, size_t chunk_alignment);
 
-
-
 void arena_pool_free_all(Arena_Pool* a);
 
 void arena_pool_free(Arena_Pool* a, void* ptr);

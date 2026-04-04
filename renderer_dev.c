@@ -49,6 +49,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     u64 memory_request_size = GB(4);
     memory_system_init(&app_internal->application_base.memory_system, memory_request_size);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
+    clock_init(&app_internal->application_base.clock);
 
 
     app_internal->application_base.is_running = true;
@@ -97,13 +98,15 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
     //INDIRECT DRAW
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    // mesh_load_gltf(renderer->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_gltf(renderer, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    // mesh_load_gltf(renderer, "../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf");
-    // mesh_load_gltf(renderer->mesh_system, "../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb",
-    // &renderer->arena, &renderer->frame_arena, renderer);
-    // "../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf");
+    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_gltf(resource_system->mesh_system,""../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf"", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_anim_gltf(resource_system->mesh_system,"../z_assets/models/MC/MC4.2_6.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    // mesh_load_anim_gltf(resource_system->mesh_system,"../z_assets/models/CesiumMan/CesiumMan.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
 
 
     clock_start(&app_internal->application_base.clock);
@@ -127,6 +130,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         clock_update_frame_start(&app_internal->application_base.clock);
         clock_print_info(&app_internal->application_base.clock);
 
+
         input_update(input_system);
         platform_pump_messages(&app_internal->application_base.plat_state);
 
@@ -136,15 +140,14 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
             continue;
         }
         sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
-        app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+
         app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
         madness_ui_test(madness_ui);
 
 
 
-        madness_ui_update(madness_ui, resource_system);
 
-
+        app_internal->renderer_plugin.ui_end(madness_ui, resource_system);
         resource_system_update_and_create_render_packet(resource_system);
 
 
@@ -153,7 +156,6 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
                                                      &app_internal->application_base);
 
 
-        app_internal->renderer_plugin.ui_end(madness_ui);
         clock_update_frame_end(&app_internal->application_base.clock);
     }
 
