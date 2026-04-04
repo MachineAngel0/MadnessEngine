@@ -188,7 +188,7 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
-                      (uint32_t) (texWidth), (uint32_t) (texHeight));
+                      (u32) (texWidth), (u32) (texHeight));
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

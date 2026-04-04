@@ -24,16 +24,15 @@ bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event
 }
 
 
-bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_base)
+bool renderer_init(Renderer* renderer, Application_Base* application_base)
 {
-    Renderer* renderer = &renderer_app->renderer;
     memset(renderer, 0, sizeof(Renderer));
     vulkan_context* vk_context = &renderer->context;
 
     //grab the input system if its valid
     if (&application_base->input_system)
     {
-        renderer->input_system_debug = &application_base->input_system;
+        renderer->input_system = &application_base->input_system;
     }
 
 
@@ -176,9 +175,8 @@ bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_
 
 static bool texture_flip = false;
 
-void renderer_update(Renderer_Plugin* renderer_app, Application_Base* application_base)
+void renderer_update(Renderer* renderer, Application_Base* application_base)
 {
-    Renderer* renderer = &renderer_app->renderer;
     Clock* clock = &application_base->clock;
 
     Render_Packet* render_packets = application_base->resource_system.render_packet;
@@ -485,14 +483,14 @@ void renderer_update(Renderer_Plugin* renderer_app, Application_Base* applicatio
 }
 
 
-void renderer_shutdown(Renderer_Plugin* renderer_app)
+void renderer_shutdown(Renderer* renderer)
 {
-    vulkan_context vk_context = renderer_app->renderer.context;
+    vulkan_context* vk_context = &renderer->context;
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
-    vkDeviceWaitIdle(vk_context.device.logical_device);
+    vkDeviceWaitIdle(vk_context->device.logical_device);
 
     // Destroy in the opposite order of creation.
 
@@ -503,100 +501,100 @@ void renderer_shutdown(Renderer_Plugin* renderer_app)
 
 
     // Sync objects
-    for (u8 i = 0; i < vk_context.swapchain.image_count; ++i)
+    for (u8 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
         VkCommandPool* primary_command_pool = VK_NULL_HANDLE;
         VkCommandBuffer* primary_command_buffer = VK_NULL_HANDLE;
 
         vkDestroySemaphore(
-            vk_context.device.logical_device,
-            vk_context.swapchain_acquire_semaphore[i],
-            vk_context.allocator);
+            vk_context->device.logical_device,
+            vk_context->swapchain_acquire_semaphore[i],
+            vk_context->allocator);
 
         vkDestroySemaphore(
-            vk_context.device.logical_device,
-            vk_context.swapchain_release_semaphore[i],
-            vk_context.allocator);
+            vk_context->device.logical_device,
+            vk_context->swapchain_release_semaphore[i],
+            vk_context->allocator);
 
-        vkDestroyFence(vk_context.device.logical_device, vk_context.queue_submit_fence[i],
+        vkDestroyFence(vk_context->device.logical_device, vk_context->queue_submit_fence[i],
                        VK_NULL_HANDLE);
 
 
         //per frame command buffers
-        vkFreeCommandBuffers(vk_context.device.logical_device, vk_context.primary_command_pool[i], 1,
-                             &vk_context.primary_command_buffer[i]);
+        vkFreeCommandBuffers(vk_context->device.logical_device, vk_context->primary_command_pool[i], 1,
+                             &vk_context->primary_command_buffer[i]);
     }
 
-    for (u8 i = 0; i < vk_context.swapchain.image_count; ++i)
+    for (u8 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        vkDestroyCommandPool(vk_context.device.logical_device, vk_context.primary_command_pool[i], VK_NULL_HANDLE);
+        vkDestroyCommandPool(vk_context->device.logical_device, vk_context->primary_command_pool[i], VK_NULL_HANDLE);
     }
 
-    darray_free(vk_context.swapchain_acquire_semaphore);
-    darray_free(vk_context.swapchain_release_semaphore);
-    darray_free(vk_context.queue_submit_fence);
-    darray_free(vk_context.primary_command_buffer);
-    darray_free(vk_context.primary_command_pool);
+    darray_free(vk_context->swapchain_acquire_semaphore);
+    darray_free(vk_context->swapchain_release_semaphore);
+    darray_free(vk_context->queue_submit_fence);
+    darray_free(vk_context->primary_command_buffer);
+    darray_free(vk_context->primary_command_pool);
 
 
     // Command buffers
-    for (u32 i = 0; i < vk_context.swapchain.image_count; ++i)
+    for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        if (vk_context.graphics_command_buffer[i].handle)
+        if (vk_context->graphics_command_buffer[i].handle)
         {
             vulkan_command_buffer_free(
-                &vk_context,
-                vk_context.graphics_command_pool,
-                &vk_context.graphics_command_buffer[i]);
-            vk_context.graphics_command_buffer[i].handle = 0;
+                vk_context,
+                vk_context->graphics_command_pool,
+                &vk_context->graphics_command_buffer[i]);
+            vk_context->graphics_command_buffer[i].handle = 0;
         }
     }
-    darray_free(vk_context.graphics_command_buffer);
-    vk_context.graphics_command_buffer = 0;
+    darray_free(vk_context->graphics_command_buffer);
+    vk_context->graphics_command_buffer = 0;
 
     // Destroy framebuffers
-    for (u32 i = 0; i < vk_context.swapchain.image_count; ++i)
+    for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        vulkan_framebuffer_destroy(&vk_context, &vk_context.swapchain.framebuffers[i]);
+        vulkan_framebuffer_destroy(vk_context, &vk_context->swapchain.framebuffers[i]);
     }
 
     // Renderpass
-    vulkan_renderpass_destroy(&vk_context, &vk_context.main_renderpass);
+    vulkan_renderpass_destroy(vk_context, &vk_context->main_renderpass);
 
     // Swapchain
-    vulkan_swapchain_destroy(&vk_context, &vk_context.swapchain);
+    vulkan_swapchain_destroy(vk_context, &vk_context->swapchain);
 
     DEBUG("Destroying Vulkan device...");
-    vulkan_device_destroy(&vk_context);
+    vulkan_device_destroy(vk_context);
 
     DEBUG("Destroying Vulkan surface...");
-    if (vk_context.surface)
+    if (vk_context->surface)
     {
-        vkDestroySurfaceKHR(vk_context.instance, vk_context.surface, vk_context.allocator);
-        vk_context.surface = 0;
+        vkDestroySurfaceKHR(vk_context->instance, vk_context->surface, vk_context->allocator);
+        vk_context->surface = 0;
     }
 
     DEBUG("Destroying Vulkan debugger...");
-    if (vk_context.debug_messenger)
+    if (vk_context->debug_messenger)
     {
         PFN_vkDestroyDebugUtilsMessengerEXT func =
             (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-                vk_context.instance, "vkDestroyDebugUtilsMessengerEXT");
-        func(vk_context.instance, vk_context.debug_messenger, vk_context.allocator);
+                vk_context->instance, "vkDestroyDebugUtilsMessengerEXT");
+        func(vk_context->instance, vk_context->debug_messenger, vk_context->allocator);
     }
 
     DEBUG("Destroying Vulkan instance...");
-    vkDestroyInstance(vk_context.instance, vk_context.allocator);
+    vkDestroyInstance(vk_context->instance, vk_context->allocator);
 
 
     INFO("RENDERER SHUTDOWN");
 }
 
 
-void renderer_on_resize(Renderer_Plugin* renderer_app, u32 width, u32 height)
+void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
-    vulkan_context* vk_context = &renderer_app->renderer.context;
+    vulkan_context* vk_context = &renderer->context;
 
 
     if (!vk_context->is_init)

@@ -72,7 +72,8 @@ typedef void (*renderer_run)(struct Renderer_Plugin*, struct Application_Base*);
 typedef void (*renderer_terminate)(struct Renderer_Plugin*);
 typedef void (*renderer_resize)(struct Renderer_Plugin*, u32, u32);
 
-typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Renderer* renderer, Resource_System* resource_system);
+typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Renderer* renderer,
+                               Resource_System* resource_system);
 typedef bool (*UI_shutdown)(Madness_UI* madness_ui);
 typedef void (*UI_begin)(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
 typedef void (*UI_end)(Madness_UI* madness_ui, Resource_System* resource_system);
@@ -97,8 +98,8 @@ typedef struct Renderer_Plugin
     UI_shutdown ui_shutdown;
     UI_begin ui_begin;
     UI_end ui_end;
-
 } Renderer_Plugin;
+
 bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin);
 
 
@@ -114,8 +115,8 @@ typedef struct Editor_Plugin
     editor_run_fpn editor_run;
     editor_shutdown_fpn editor_shutdown;
 } Editor_Plugin;
-bool editor_plugin_set_default_fpn(Editor_Plugin* editor_plugin);
 
+bool editor_plugin_set_default_fpn(Editor_Plugin* editor_plugin);
 
 
 typedef bool (*game_init)(struct Game_Application*, struct Application_Base*);
@@ -133,7 +134,6 @@ typedef struct Game_Application
 /*APPLICATION - just a collection of plugins*/
 
 
-
 // SPECIFIC APPLICATIONS
 typedef struct Tetris_Application
 {
@@ -141,6 +141,7 @@ typedef struct Tetris_Application
     Renderer_Plugin renderer_plugin;
     Tetris_Game_State tetris_state;
 } Tetris_Application;
+
 bool tetris_app_run(Tetris_Application* tetris_app);
 
 
@@ -149,6 +150,7 @@ typedef struct Renderer_Dev_Application
     Application_Base application_base;
     Renderer_Plugin renderer_plugin;
 } Renderer_Dev_Application;
+
 bool renderer_dev_run(Renderer_Dev_Application* render_dev_app);
 
 typedef struct UI_Test_Application
@@ -156,6 +158,7 @@ typedef struct UI_Test_Application
     Application_Base application_base;
     Renderer_Plugin renderer_plugin;
 } UI_Test_Application;
+
 bool UI_app_run(UI_Test_Application* ui_app);
 
 typedef struct Madness_Pulse_Application
@@ -164,6 +167,7 @@ typedef struct Madness_Pulse_Application
     Renderer_Plugin renderer_application;
     Game_Plugin game_application; // TODO: probably gonna have to get changed
 } Madness_Pulse_Application;
+
 bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app);
 
 typedef struct Editor_Application
@@ -173,6 +177,7 @@ typedef struct Editor_Application
     Renderer_Plugin renderer_plugin;
     Game_Plugin game_plugin;
 } Editor_Application;
+
 bool editor_app_run(Editor_Application* editor_app);
 
 #endif
