@@ -6,6 +6,7 @@
 //IMMEDIATE MODE UI
 
 //NOTE: the smallest likely screen size for a laptop is likely to be a 1024*600 or more commonly 1024 * 768
+// smalles ill let it be is 600*600
 
 //Vertex Data
 
@@ -129,9 +130,6 @@ typedef struct UI_Node
     struct UI_Node* parent;
     struct UI_Node* children[10];
     u32 child_node_count;
-
-
-
 } UI_Node;
 
 typedef struct UI_Node_Text
@@ -151,13 +149,11 @@ typedef struct UI_Node_Text
 
     // is the first character in a series of strings
     bool start_text;
-}UI_Node_Text;
+} UI_Node_Text;
 
 
 ARRAY_GENERATE_TYPE(UI_Node)
 ARRAY_GENERATE_TYPE(UI_Node_Text)
-
-
 
 
 typedef struct scroll_box_state
@@ -166,12 +162,11 @@ typedef struct scroll_box_state
 
     //internal
     u32 scroll_amount;
-
-
-}scroll_box_state;
+} scroll_box_state;
 
 //this could be more general
-typedef struct active_scroll_box_state{
+typedef struct active_scroll_box_state
+{
     //UI_Node_Type kind;
 
     bool is_active;
@@ -180,9 +175,7 @@ typedef struct active_scroll_box_state{
     u32 slider_count; // at what point an element is allowed to be rendered
     u32 current_attempt_count; // how many up to this point have tried to render
     u32 max_nodes;
-
-}Parent_Node_State;
-
+} Parent_Node_State;
 
 
 typedef struct
@@ -268,9 +261,14 @@ typedef struct Madness_UI
 } Madness_UI;
 
 
-//NOTE: Remove the renderer from the init, these should not be coupled
-//I should only have to pass the vertex/index data to the renderer for drawing
-MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system, Renderer* renderer, Resource_System* resource_system);
+// FUNCTION POINTERS //
+typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Resource_System* resource_system);
+typedef bool (*UI_shutdown)(Madness_UI* madness_ui);
+typedef void (*UI_begin)(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
+typedef void (*UI_end)(Madness_UI* madness_ui, Resource_System* resource_system);
+
+MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system,
+                                 Resource_System* resource_system);
 MAPI bool madness_ui_shutdown(Madness_UI* madness_ui);
 
 //pass in the size every frame, in the event the size changes
@@ -298,7 +296,7 @@ MAPI void madness_slider_arrow(Madness_UI* madness_ui, const char* id, float* sl
 MAPI void madness_text_box(Madness_UI* madness_ui, const char* id);
 
 MAPI void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value);
-MAPI void madness_ui_vec2(Madness_UI* madness_ui, const char* id,  String text, vec2* v2, float increment_value);
+MAPI void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value);
 MAPI void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value);
 
 
@@ -306,7 +304,6 @@ MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* 
 
 MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
 MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
-
 
 
 //API END
@@ -320,8 +317,6 @@ MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 
 
 
 MAPI bool skip_node(Madness_UI* madness_ui);
-
-
 
 
 //debug and test
@@ -374,7 +369,6 @@ MAPI bool can_be_active(Madness_UI* madness_ui);
 MAPI bool is_active(Madness_UI* madness_ui, int id);
 
 MAPI bool is_hot(Madness_UI* madness_ui, int id);
-
 
 
 #endif //UI_H

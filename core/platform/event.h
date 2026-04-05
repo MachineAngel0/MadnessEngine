@@ -92,18 +92,19 @@ typedef struct Event_System
     Memory_Tracker* mem_tracker;
 } Event_System;
 
+//TODO: event queue
 
+MAPI Event_System* event_init(Memory_System* memory_system);
 
-bool event_init(Event_System* event_system, Memory_System* memory_system);
+MAPI bool event_shutdown(Event_System* event_system);
 
-bool event_shutdown(Event_System* event_system);
+MAPI void event_register(Event_System* event_system, const event_type event, const u32 subscriber, const on_event callback);
 
-void event_register(Event_System* event_system, const event_type event, const u32 subscriber, const on_event callback);
+MAPI void event_unregister(Event_System* event_system, event_type event, u32 subscriber, on_event callback);
 
-void event_unregister(Event_System* event_system, event_type event, u32 subscriber, on_event callback);
+MAPI void event_fire(Event_System* event_system, event_type event, u32 sender_id, event_context context);
 
-void event_fire(Event_System* event_system, event_type event, u32 sender_id, event_context context);
-
+//test functions
 bool test_event(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
 
 bool test_event2(event_type code, u32 sender_id, u32 subscriber_id, event_context data);

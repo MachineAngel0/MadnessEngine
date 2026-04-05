@@ -4,12 +4,10 @@
 #include "logger.h"
 #include "event.h"
 
-bool input_init(Input_System* input_system, Event_System* event_system, Memory_System* memory_system)
+Input_System* input_init(Event_System* event_system, Memory_System* memory_system)
 {
-    MASSERT(input_system);
 
-    //NOTE: the only reason you would want this is the input is expected to be initalized in here
-    // memset(&input_system, 0, sizeof(Input_System));
+    Input_System* input_system = memory_system_alloc(memory_system, sizeof(Input_System));
 
     u64 input_system_mem_requirement = MB(1);
     void* input_system_mem = memory_system_alloc(memory_system, input_system_mem_requirement);
@@ -22,7 +20,7 @@ bool input_init(Input_System* input_system, Event_System* event_system, Memory_S
     input_system->event_system_reference = event_system;
 
 
-    return true;
+    return input_system;
 }
 
 void input_shutdown(Input_System* input_system)

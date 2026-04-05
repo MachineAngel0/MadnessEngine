@@ -1,13 +1,11 @@
 ﻿#include "event.h"
 
-bool event_init(Event_System* event_system, Memory_System* memory_system)
+Event_System* event_init(Memory_System* memory_system)
 {
+    Event_System* event_system = memory_system_alloc(memory_system, sizeof(Event_System));
 
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement);
-
-    //zero the memory
-    memset(event_system, 0, sizeof(Event_System));
 
     event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
     
@@ -15,7 +13,7 @@ bool event_init(Event_System* event_system, Memory_System* memory_system)
     
     INFO("EVENT SYSTEM INIT")
 
-    return true;
+    return event_system;
 }
 
 bool event_shutdown(Event_System* event_system)

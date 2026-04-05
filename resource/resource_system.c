@@ -3,8 +3,9 @@
 #include "sprite_system.h"
 
 
-bool resource_system_init(Resource_System* resource_system, Memory_System* memory_system)
+Resource_System* resource_system_init(Memory_System* memory_system)
 {
+    Resource_System* resource_system = memory_system_alloc(memory_system, sizeof(Resource_System));
     resource_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet));
 
 
@@ -15,7 +16,7 @@ bool resource_system_init(Resource_System* resource_system, Memory_System* memor
     // resource_system->mesh_system = mesh_system_init();
     // resource_system->shader_system = shader_system_init();
 
-    return true;
+    return resource_system;
 }
 
 

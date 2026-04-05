@@ -17,6 +17,7 @@ void memory_system_init(Memory_System* memory_system, u64 memory_request_size)
     memory_system->memory_tracker_system->memory_tracker = arena_free_list_alloc(&memory_system->application_arena_free_list, sizeof(Memory_Tracker) * DEFAULT_MEMORY_TRACKERS_COUNT);
     memory_system->memory_tracker_system->capacity = DEFAULT_MEMORY_TRACKERS_COUNT;
     memory_system->memory_tracker_system->size = 0;
+    INFO("MEMORY SYSTEM SUCCESSFULLY ALLOCATED")
 }
 
 //should be the last system shutdown

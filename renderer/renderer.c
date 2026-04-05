@@ -26,15 +26,21 @@ bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event
 }
 
 
-bool renderer_init(Renderer* renderer, Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system, Input_System* input_system,
+Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system, Input_System* input_system,
                    Event_System* event_system, Resource_System* resource_system)
 {
-    memset(renderer, 0, sizeof(Renderer));
-    vulkan_context* vk_context = &renderer->context;
-
+    MASSERT(platform_state);
+    MASSERT(memory_system);
     MASSERT(input_system);
     MASSERT(event_system);
     MASSERT(resource_system);
+
+
+    Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer));
+    memset(renderer, 0, sizeof(Renderer));
+    vulkan_context* vk_context = &renderer->context;
+
+
 
     //grab the input system if its valid
     if (input_system)
@@ -136,13 +142,6 @@ bool renderer_init(Renderer* renderer, Platform_State* platform_state, Platform_
     //BUFFER SYSTEM
     renderer->buffer_system = buffer_system_init(renderer,
                                                  renderer->context.swapchain.max_frames_in_flight);
-    /*for (u32 i = 0; i < renderer_internal.buffer_system->frames_in_flight; i++)
-    {
-        Buffer_Handle temp_buffer_handle = renderer_internal.buffer_system->global_ubo_handle;
-        temp_buffer_handle.handle += i;
-        update_uniform_buffer_bindless_descriptor_set(
-            &renderer_internal, renderer_internal.descriptor_system, temp_buffer_handle, 0);
-    }*/
 
     //Shader System
     renderer->shader_system = shader_system_init(renderer);
@@ -173,7 +172,7 @@ bool renderer_init(Renderer* renderer, Platform_State* platform_state, Platform_
     INFO("VULKAN RENDERER INITIALIZED");
 
 
-    return true;
+    return renderer;
 }
 
 
@@ -597,6 +596,7 @@ void renderer_shutdown(Renderer* renderer)
 void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
+    if (!renderer) return;
     vulkan_context* vk_context = &renderer->context;
 
 

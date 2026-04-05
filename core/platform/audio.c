@@ -3,10 +3,11 @@
 #include "defines.h"
 #include "logger.h"
 
+static ma_engine engine;
 
-
-bool audio_system_init(void)
+Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system)
 {
+    Madness_Audio* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio));
     //TODO:
     //just here as a place holder until i write my own audio platform independant system way later
 
@@ -21,10 +22,10 @@ bool audio_system_init(void)
     // ma_engine_play_sound(&engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
     // ma_engine_play_sound(&engine, "..\\z_assets\\audio\\file_example_WAV_1MG.wav", NULL);
 
-    return true;
+    return madness_audio;
 }
 
-bool audio_system_shutdown(void)
+bool audio_system_shutdown(Madness_Audio* madness_audio)
 {
     ma_engine_uninit(&engine);
     return true;

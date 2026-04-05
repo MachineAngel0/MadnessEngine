@@ -11,11 +11,15 @@ typedef struct Sound_Data
     // Audio_Type* audio_type; AUDIO TYPE - wav, mp3, etc..
 } Sound_Data;
 
-static ma_engine engine;
+typedef struct Madness_Audio
+{
+    ma_engine engine;
+}Madness_Audio;
 
-bool audio_system_init(void);
 
-bool audio_system_shutdown(void);
+Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system);
+
+bool audio_system_shutdown(Madness_Audio* madness_audio);
 
 
 void audio_play_sound_effects(const char* file_path);

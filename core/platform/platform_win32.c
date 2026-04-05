@@ -33,9 +33,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 bool platform_startup(
     Platform_State* plat_state,
     Input_System* input_system_reference,
-    const char* application_name,
-    i32 x, i32 y,
-    i32 width, i32 height)
+    Event_System* event_system,
+    Platform_Config platform_config)
 {
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state* state = (internal_state*)plat_state->internal_state;
@@ -68,10 +67,10 @@ bool platform_startup(
     }
 
     // Create window
-    u32 client_x = x;
-    u32 client_y = y;
-    u32 client_width = width;
-    u32 client_height = height;
+    u32 client_x = platform_config.start_pos_x;
+    u32 client_y = platform_config.start_pos_y;
+    u32 client_width = platform_config.start_width;
+    u32 client_height = platform_config.start_height;
 
     u32 window_x = client_x;
     u32 window_y = client_y;
@@ -98,7 +97,7 @@ bool platform_startup(
     window_height += border_rect.bottom - border_rect.top;
 
     HWND handle = CreateWindowExA(
-        window_ex_style, "kohi_window_class", application_name,
+        window_ex_style, "kohi_window_class", platform_config.name,
         window_style, window_x, window_y, window_width, window_height,
         0, 0, state->h_instance, plat_state);
 
