@@ -68,11 +68,11 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     if (!platform_startup(
         &app_internal->application_base.plat_state,
         &app_internal->application_base.input_system,
+        TODO,
         app_internal->application_base.app_config.name,
         app_internal->application_base.app_config.start_pos_x,
         app_internal->application_base.app_config.start_pos_y,
-        app_internal->application_base.app_config.start_width,
-        app_internal->application_base.app_config.start_height))
+        app_internal->application_base.app_config.start_width, app_internal->application_base.app_config.start_height))
     {
         return false;
     }

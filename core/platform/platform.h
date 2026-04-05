@@ -4,21 +4,47 @@
 
 #include "vk_device.h"
 
+typedef struct Platform_Config
+{
+    // Window starting position x axis, if applicable.
+    i16 start_pos_x;
+
+    // Window starting position y axis, if applicable.
+    i16 start_pos_y;
+
+    // Window starting width, if applicable.
+    i16 start_width;
+
+    // Window starting height, if applicable.
+    i16 start_height;
+
+    // The application name used in windowing, if applicable.
+    char* name;
+} Platform_Config;
+
+void platform_config_use_defaults(Platform_Config* config)
+{
+    config->start_pos_x = 100;
+    config->start_pos_y = 100;
+    config->start_width = 1280;
+    config->start_height = 720;
+    config->name = "Madness Engine";
+}
 
 
-typedef struct platform_state
+typedef struct Platform_State
 {
     void* internal_state;
     Input_System* input_system; // just a pointer, does not own the memory
+    Event_System* event_system; // just a pointer, does not own the memory
 } Platform_State;
 
 
 bool platform_startup(
     Platform_State* plat_state,
-    Input_System* input_system_reference,
-    const char* application_name,
-    i32 x, i32 y,
-    i32 width, i32 height);
+    Input_System* input_system,
+    Event_System* event_system,
+    Platform_Config platform_config);
 
 
 void platform_shutdown(Platform_State* plat_state);

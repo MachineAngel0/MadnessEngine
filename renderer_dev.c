@@ -5,14 +5,14 @@
 #include "core/platform/event.h"
 #include "core/platform/input.h"
 #include "core/platform/audio.h"
+#include "mesh_system.h"
+#include "sprite_system.h"
 
 
 extern void renderer_dev_create_fpn(Renderer_Dev_Application* renderer_app)
 {
     renderer_plugin_set_default_fpn(&renderer_app->renderer_plugin);
 }
-
-
 
 
 bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
@@ -29,10 +29,11 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 {
     app_internal = render_dev_app;
 
+    Platform_Config platform_config;
+    platform_config_use_defaults(&platform_config);
+    platform_config.name = "Madness Engine Renderer Dev";
 
-    application_base_init(&app_internal->application_base, "Madness Engine Renderer");
-
-    //just for convinience
+    //just for convenience
     Renderer* renderer = &app_internal->renderer_plugin.renderer;
     Memory_System* memory_system = &app_internal->application_base.memory_system;
     Event_System* event_system = &app_internal->application_base.event_system;
@@ -72,19 +73,17 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     if (!platform_startup(
         &app_internal->application_base.plat_state,
         &app_internal->application_base.input_system,
-        app_internal->application_base.app_config.name,
-        app_internal->application_base.app_config.start_pos_x,
-        app_internal->application_base.app_config.start_pos_y,
-        app_internal->application_base.app_config.start_width,
-        app_internal->application_base.app_config.start_height))
+        &app_internal->application_base.event_system,
+        platform_config))
     {
         return false;
     }
 
 
     //start the renderer
-    if (!app_internal->renderer_plugin.renderer_initialize(&app_internal->renderer_plugin,
-                                                             &app_internal->application_base))
+    if (!app_internal->renderer_plugin.renderer_initialize(renderer, &app_internal->application_base.plat_state,
+                                                           platform_config, memory_system, input_system, event_system,
+                                                           resource_system))
     {
         FATAL("Failed to initialize the renderer")
         return false;
@@ -100,7 +99,8 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    mesh_load_gltf(resource_system->mesh_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                   &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
@@ -114,8 +114,6 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //set up file watch
     //TODO:  .dll cant be a thing on linux
     File_Watch_Handle renderer_thing_handle = platform_register_file_watch("./MADNESSRENDERER.dll");
-
-
 
 
     while (app_internal->application_base.is_running)
@@ -139,12 +137,12 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         {
             continue;
         }
-        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        sprite_system_begin(resource_system->sprite_system, renderer->context.framebuffer_width_new,
+                            renderer->context.framebuffer_height_new);
 
-        app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new, renderer->context.framebuffer_height_new);
+        app_internal->renderer_plugin.ui_begin(madness_ui, renderer->context.framebuffer_width_new,
+                                               renderer->context.framebuffer_height_new);
         madness_ui_test(madness_ui);
-
-
 
 
         app_internal->renderer_plugin.ui_end(madness_ui, resource_system);
@@ -152,8 +150,8 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
 
         //render
-        app_internal->renderer_plugin.renderer_run(&app_internal->renderer_plugin,
-                                                     &app_internal->application_base);
+        app_internal->renderer_plugin.renderer_run(renderer,
+                                                   app_internal->application_base.clock.delta_time);
 
 
         clock_update_frame_end(&app_internal->application_base.clock);
@@ -170,7 +168,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // madness_ui_shutdown(madness_ui);
     app_internal->renderer_plugin.ui_shutdown(madness_ui);
 
-    app_internal->renderer_plugin.renderer_terminate(&app_internal->renderer_plugin);
+    app_internal->renderer_plugin.renderer_terminate(renderer);
 
 
     //shutdown subsystems

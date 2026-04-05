@@ -3,7 +3,6 @@
 
 #if MPLATFORM_LINUX
 
-#include "core/thread.h"
 #include "logger.h"
 
 #include <pthread.h>

@@ -10,6 +10,8 @@
 #include "vk_renderpass.h"
 #include "vk_shader.h"
 #include "vk_sync.h"
+#include "maths/math_lib.h"
+#include "render_resource_backend.h"
 
 //finally works, TODO: whatever the fuck the renderer needs from other applications
 bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context)
@@ -24,37 +26,42 @@ bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event
 }
 
 
-bool renderer_init(Renderer* renderer, Application_Base* application_base)
+bool renderer_init(Renderer* renderer, Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system, Input_System* input_system,
+                   Event_System* event_system, Resource_System* resource_system)
 {
     memset(renderer, 0, sizeof(Renderer));
     vulkan_context* vk_context = &renderer->context;
 
+    MASSERT(input_system);
+    MASSERT(event_system);
+    MASSERT(resource_system);
+
     //grab the input system if its valid
-    if (&application_base->input_system)
+    if (input_system)
     {
-        renderer->input_system = &application_base->input_system;
+        renderer->input_system = input_system;
     }
 
+    renderer->resource_system = resource_system; //reference
 
-    event_register(&application_base->event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
-
-    renderer->resource_system = &application_base->resource_system; //reference
+    event_register(event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
 
 
     //set up memory for the renderer
     u64 renderer_system_mem_requirement = GB(0.5);
     u64 frame_arena_mem_size = GB(0.5);
 
-    renderer->mem_tracker = memory_system_get_memory_tracker(application_base->memory_system.memory_tracker_system, STRING("RENDERER"),
-                                                             (renderer_system_mem_requirement + frame_arena_mem_size) );
+    renderer->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
+                                                             STRING("RENDERER"),
+                                                             (renderer_system_mem_requirement + frame_arena_mem_size));
 
 
-    void* renderer_system_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
+    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement);
     arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
-                renderer->mem_tracker);
+               renderer->mem_tracker);
 
-    void* frame_arena_mem = memory_system_alloc(&application_base->memory_system, renderer_system_mem_requirement);
-    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size,  renderer->mem_tracker);
+    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement);
+    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -65,11 +72,11 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
 
     //get the size for the default window from the app config
     //if these aren't set we use 800/600 for default
-    vk_context->framebuffer_width = (application_base->app_config.start_width != 0)
-                                        ? application_base->app_config.start_width
+    vk_context->framebuffer_width = (platform_config.start_width != 0)
+                                        ? platform_config.start_width
                                         : 600;
-    vk_context->framebuffer_height = (application_base->app_config.start_height != 0)
-                                         ? application_base->app_config.start_height
+    vk_context->framebuffer_height = (platform_config.start_height != 0)
+                                         ? platform_config.start_height
                                          : 600;
     //set this as well
     vk_context->framebuffer_width_new = vk_context->framebuffer_width;
@@ -81,7 +88,7 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
     vulkan_instance_create(vk_context);
 
     // get surface from the platform layer, needed before device creation
-    if (!platform_create_vulkan_surface(&application_base->plat_state, vk_context))
+    if (!platform_create_vulkan_surface(platform_state, vk_context))
     {
         return false;
     }
@@ -146,7 +153,7 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
     // Mesh System
     renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
     // Sprite Backend
-    renderer->sprite_renderer = sprite_render_init(renderer, &application_base->resource_system);
+    renderer->sprite_renderer = sprite_render_init(renderer, renderer->resource_system);
     // UI Backend
     renderer->ui_renderer = ui_render_init(renderer);
 
@@ -163,9 +170,6 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
 
-
-
-
     INFO("VULKAN RENDERER INITIALIZED");
 
 
@@ -175,23 +179,21 @@ bool renderer_init(Renderer* renderer, Application_Base* application_base)
 
 static bool texture_flip = false;
 
-void renderer_update(Renderer* renderer, Application_Base* application_base)
+void renderer_update(Renderer* renderer, float delta_time)
 {
-    Clock* clock = &application_base->clock;
-
-    Render_Packet* render_packets = application_base->resource_system.render_packet;
+    Render_Packet* render_packets = renderer->resource_system->render_packet;
 
     vulkan_context* vk_context = &renderer->context;
 
     arena_clear(&renderer->frame_arena);
 
     //TODO: have the render queues be in the render packet
-    shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system, render_packets);
-
+    shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
+                                         render_packets);
 
 
     //TODO: test code, can remove later
-    if (input_key_released_unique(renderer->input_system_debug, KEY_U))
+    if (input_key_released_unique(renderer->input_system, KEY_U))
     {
         //TODO: MOVE OUT LATER
         renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
@@ -269,7 +271,7 @@ void renderer_update(Renderer* renderer, Application_Base* application_base)
     //                       1.0f, &camera_to_remove);
     // Update the uniform buffer for the next frame
 
-    camera_update(renderer->input_system_debug, &renderer->main_camera, clock->delta_time);
+    camera_update(renderer->input_system, &renderer->main_camera, delta_time);
 
     uniform_buffer_object ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
@@ -312,7 +314,8 @@ void renderer_update(Renderer* renderer, Application_Base* application_base)
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
-    vulkan_command_buffer* command_buffer_current_frame = &vk_context->graphics_command_buffer[vk_context->current_frame];
+    vulkan_command_buffer* command_buffer_current_frame = &vk_context->graphics_command_buffer[vk_context->
+        current_frame];
     vkResetCommandBuffer(command_buffer_current_frame->handle, 0);
     vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
 

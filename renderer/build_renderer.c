@@ -21,5 +21,4 @@
 #include "vk_shader.c"
 #include "vk_swapchain.c"
 #include "vk_sync.c"
-
 #include "render_resource_backend.c"

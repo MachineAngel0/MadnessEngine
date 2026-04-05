@@ -51,13 +51,16 @@ typedef struct internal_state
 keys translate_keycode(u32 x_keycode);
 
 bool platform_startup(
-    platform_state* plat_state,
-    const char* application_name,
-    i32 x,
-    i32 y,
-    i32 width,
-    i32 height)
+    Platform_State* plat_state,
+    Input_System* input_system,
+    Event_System* event_system,
+    Platform_Config platform_config)
 {
+    //set pointers needed by the platform
+    MASSERT(event_system);
+    MASSERT(input_system);
+    plat_state->event_system = event_system;
+    plat_state->input_system = input_system;
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(internal_state));
     internal_state* state = (internal_state*)plat_state->internal_state;
@@ -114,10 +117,10 @@ bool platform_startup(
         XCB_COPY_FROM_PARENT, // depth
         state->window,
         state->screen->root, // parent
-        x, //x
-        y, //y
-        width, //width
-        height, //height
+        platform_config.start_pos_x, //x
+        platform_config.start_pos_y, //y
+        platform_config.start_width, //width
+        platform_config.start_height, //height
         0, // No border
         XCB_WINDOW_CLASS_INPUT_OUTPUT, //class
         state->screen->root_visual,
@@ -132,8 +135,8 @@ bool platform_startup(
         XCB_ATOM_WM_NAME,
         XCB_ATOM_STRING,
         8, // data should be viewed 8 bits at a time
-        strlen(application_name),
-        application_name);
+        strlen(platform_config.name),
+        platform_config.name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -182,7 +185,7 @@ bool platform_startup(
     return true;
 }
 
-void platform_shutdown(platform_state* plat_state)
+void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
     internal_state* state = (internal_state*)plat_state->internal_state;
@@ -193,7 +196,7 @@ void platform_shutdown(platform_state* plat_state)
     xcb_destroy_window(state->connection, state->window);
 }
 
-bool platform_pump_messages(platform_state* plat_state)
+bool platform_pump_messages(Platform_State* plat_state)
 {
     //comment
     // Simply cold-cast to the known type.
@@ -225,7 +228,7 @@ bool platform_pump_messages(platform_state* plat_state)
                 xcb_keycode_t code = kb_event->detail;
                 KeySym key_sym = XkbKeycodeToKeysym(state->display, (KeyCode)code, 0, code & ShiftMask ? 1 : 0);
                 keys key = translate_keycode(key_sym);
-                input_process_key(key, pressed);
+                input_process_key(plat_state->input_system, key, pressed);
             }
             break;
         case XCB_BUTTON_PRESS:
@@ -248,12 +251,12 @@ bool platform_pump_messages(platform_state* plat_state)
                     button = MOUSE_BUTTON_RIGHT;
                     break;
                 }
-                input_process_mouse_button(button, pressed);
+                input_process_mouse_button(plat_state->input_system, button, pressed);
             }
             break;
         case XCB_MOTION_NOTIFY:
             xcb_motion_notify_event_t* move_event = (xcb_motion_notify_event_t*)event;
-            input_process_mouse_move(move_event->event_x, move_event->event_y);
+            input_process_mouse_move(plat_state->input_system,move_event->event_x, move_event->event_y);
             break;
 
         case XCB_CONFIGURE_NOTIFY:
@@ -263,7 +266,7 @@ bool platform_pump_messages(platform_state* plat_state)
                 event_context context;
                 context.data.u16[0] = (u16)resize_event->width;
                 context.data.u16[1] = (u16)resize_event->height;
-                event_fire(EVENT_APP_RESIZE, 0, context);
+                event_fire(plat_state->event_system, EVENT_APP_RESIZE, 0, context);
             }
 
         case XCB_CLIENT_MESSAGE:
@@ -366,7 +369,7 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
     file_handle_count++;
 
     const char* dll_extension_name = platform_get_dynamic_library_extension();
-    const char* final_file_name = c_string_concat(file_name, dll_extension_name);
+    const char* final_file_name = c_string_concat(file_name, dll_extension_name, NULL);
 
     // Load the library
     file_info->file_handle = dlopen(final_file_name, RTLD_NOW);
@@ -435,7 +438,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 }
 
 // Surface creation for Vulkan
-bool platform_create_vulkan_surface(platform_state* plat_state, vulkan_context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context)
 {
     // Simply cold-cast to the known type.
     internal_state* state = (internal_state*)plat_state->internal_state;

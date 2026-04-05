@@ -63,11 +63,11 @@ bool editor_app_run(Editor_Application* editor_app)
     if (!platform_startup(
         &app_internal->application_base.plat_state,
         &app_internal->application_base.input_system,
+        TODO,
         app_internal->application_base.app_config.name,
         app_internal->application_base.app_config.start_pos_x,
         app_internal->application_base.app_config.start_pos_y,
-        app_internal->application_base.app_config.start_width,
-        app_internal->application_base.app_config.start_height))
+        app_internal->application_base.app_config.start_width, app_internal->application_base.app_config.start_height))
     {
         return false;
     }

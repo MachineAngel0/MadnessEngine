@@ -5,32 +5,11 @@
 #include "editor/editor.h"
 #include "Tetris/Tetris.h"
 
-//startup information
-typedef struct Application_Config
-{
-    // Window starting position x axis, if applicable.
-    i16 start_pos_x;
-
-    // Window starting position y axis, if applicable.
-    i16 start_pos_y;
-
-    // Window starting width, if applicable.
-    i16 start_width;
-
-    // Window starting height, if applicable.
-    i16 start_height;
-
-    // The application name used in windowing, if applicable.
-    char* name;
-
-    //TODO:
-    //u64 application_memory_requirement;
-} Application_Config;
 
 
 typedef struct Application_Base
 {
-    Application_Config app_config;
+    Platform_Config plat_config;
     Platform_State plat_state;
     Clock clock;
 
@@ -50,27 +29,16 @@ typedef struct Application_Base
     i16 height;
 } Application_Base;
 
-void application_base_init(Application_Base* application_base, char* app_name)
-{
-    application_base->app_config.start_pos_x = 100;
-    application_base->app_config.start_pos_y = 100;
-    application_base->app_config.start_width = 1280;
-    application_base->app_config.start_height = 720;
-    // application_base->app_config.name = "Madness Engine";
-    application_base->app_config.name = app_name;
-}
-
-void application_base_shutdown(Application_Base* application_base)
-{
-    UNIMPLEMENTED()
-}
 
 // PLUGINS
 
-typedef bool (*renderer_initialize)(struct Renderer_Plugin*, struct Application_Base*);
-typedef void (*renderer_run)(struct Renderer_Plugin*, struct Application_Base*);
-typedef void (*renderer_terminate)(struct Renderer_Plugin*);
-typedef void (*renderer_resize)(struct Renderer_Plugin*, u32, u32);
+typedef bool (*renderer_initialize)(Renderer* renderer,
+                        Platform_State* platform_state, Platform_Config platform_config,
+                        Memory_System* memory_system, Input_System* input_system,
+                        Event_System* event_system, Resource_System* resource_system);
+typedef void (*renderer_run)(Renderer* renderer, float delta_time);
+typedef void (*renderer_terminate)(Renderer* renderer);
+typedef void (*renderer_resize)(Renderer* renderer, u32, u32);
 
 typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Renderer* renderer,
                                Resource_System* resource_system);

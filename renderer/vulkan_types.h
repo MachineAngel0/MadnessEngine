@@ -700,7 +700,7 @@ typedef struct renderer
     Memory_Tracker* mem_tracker;
 
 
-    Input_System* input_system_debug; //meant only to be used for debugging
+    Input_System* input_system; //meant only to be used for debugging
 
     Resource_System* resource_system; //reference
 

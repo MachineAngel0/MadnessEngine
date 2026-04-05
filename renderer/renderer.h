@@ -1,15 +1,17 @@
 ﻿#ifndef RENDERER_H
 #define RENDERER_H
 
+#include "platform.h"
 
-#include "app_types.h"
+MAPI bool renderer_init(Renderer* renderer,
+                        Platform_State* platform_state, Platform_Config platform_config,
+                        Memory_System* memory_system, Input_System* input_system,
+                        Event_System* event_system, Resource_System* resource_system);
 
-MAPI bool renderer_init(Renderer_Plugin* renderer_app, Application_Base* application_base);
+MAPI void renderer_update(Renderer* renderer, float delta_time);
 
-MAPI void renderer_update(Renderer_Plugin* renderer_app, Application_Base* application_base);
+MAPI void renderer_shutdown(Renderer* renderer);
 
-MAPI void renderer_shutdown(Renderer_Plugin* renderer_app);
-
-MAPI void renderer_on_resize(Renderer_Plugin* renderer_app, u32 width, u32 height);
+MAPI void renderer_on_resize(Renderer* renderer, u32 width, u32 height);
 
 #endif
