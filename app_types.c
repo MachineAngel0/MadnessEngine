@@ -10,7 +10,7 @@ bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin)
 
     if (render_lib_handle.handle == 0)
     {
-        FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
+        FATAL("FAILED TO LOAD MADNESSRENDERER DYNAMIC LIBRARY");
         return false;
     }
 

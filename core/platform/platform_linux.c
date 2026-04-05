@@ -63,10 +63,16 @@ bool platform_startup(
     plat_state->input_system = input_system;
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(internal_state));
+    memset(plat_state->internal_state, 0, (sizeof(internal_state)));
     internal_state* state = (internal_state*)plat_state->internal_state;
 
     // Connect to X
     state->display = XOpenDisplay(NULL);
+    if (!state->display)
+    {
+        FATAL("Failed to open X display.");
+        return false;
+    }
 
     // Turn off key repeats.
     XAutoRepeatOff(state->display);
@@ -126,6 +132,15 @@ bool platform_startup(
         state->screen->root_visual,
         event_mask,
         value_list);
+
+    //Check for window creation errors
+    xcb_generic_error_t* create_err = xcb_request_check(state->connection, cookie);
+    if (create_err)
+    {
+        FATAL("Failed to create window. XCB error code: %d", create_err->error_code);
+        free(create_err);
+        return false;
+    }
 
     // Change the title
     xcb_change_property(
@@ -293,7 +308,9 @@ bool platform_pump_messages(Platform_State* plat_state)
 void* platform_allocate(u64 size, bool aligned)
 {
     //mmap(); //TODO:
-    return malloc(size);
+    void* mem_block = malloc(size);
+    MASSERT(mem_block);
+    return mem_block;
 }
 
 void platform_free(void* block)
@@ -355,7 +372,7 @@ typedef struct linux_file_handle
 }linux_file_handle;
 
 linux_file_handle file_handles[100];
-static u32 file_handle_count = 0;
+static u32 file_handle_count = 1;
 
 
 DLL_HANDLE platform_load_dynamic_library(const char* file_name)
@@ -413,6 +430,18 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
     }
 
     return out_data;
+}
+
+File_Watch_Handle platform_register_file_watch(const char* file_name)
+{
+    UNIMPLEMENTED();
+    return (File_Watch_Handle){.handle = 0, .file_name = ""};
+}
+
+bool platform_has_filed_changed(File_Watch_Handle file_watch_handle)
+{
+    UNIMPLEMENTED();
+    false;
 }
 
 bool platform_file_copy(const char* source_file, char* new_file)

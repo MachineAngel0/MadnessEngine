@@ -76,7 +76,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //run the renderer
     //MAIN LOOP
 
-    //INDIRECT DRAW
+    //Mesh Testing
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
     mesh_load_gltf_new(application_core->asset_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                    &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
