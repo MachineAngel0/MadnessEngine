@@ -2,81 +2,94 @@
 #define ABILITIES_H
 #include <stdio.h>
 
+#include "game_structs.h"
+#include "game_enums.h"
+#include "health.h"
+#include "str.h"
 
-typedef enum ability_name
+#define MAX_ABILITY_COMPONENTS 10
+
+
+typedef struct Ability_Component
 {
-    madness_sphere_name,
-    madness_spear_name,
+    void (*effect)(Unit*, void*);
+    void* data;
+} Ability_Component;
 
-
-    max_names,
-} ability_name;
-
-typedef enum damage_type
+typedef struct Ability_Info
 {
-    madness_damage_type,
-    insanity_damage_type,
+    u32 id;
 
-    max_damage_type
-} damage_type;
+    String ability_name; // = "Ability Not Named";
+    String ability_text; // "Implement Text Please";
+    String status_trigger_text; // = "NA";
 
-typedef enum ability_type
+    String lore_text; //= "NA";
+
+    Fusion_Type fusion_type; // = EFusionType::ECS_Fire;
+
+    //every ability only gets one normal attack, primary tag, primarly used to determine the icon type
+    Ability_Type primary_ability_type; // = EAbilityType::ECS_Physical;
+
+    Ability_Target_Type ability_target_type;
+    Target_Can_Affect targets_can_affect;
+
+    int ability_action_cost; // = 1;
+    float mp_cost; // = -1.0f;
+
+
+} Ability_Info;
+
+
+typedef struct Ability
 {
-    damage_ability_type,
-    heal_ability_type,
-    action_ability_type,
-
-    max_ability_type
-} ability_type;
+    u32 id;
+    Ability_Component components[MAX_ABILITY_COMPONENTS];
+    u32 component_count;
+}Ability;
 
 
-typedef struct ability_base_component
+
+void ability_add_component(Ability* ability, Ability_Component* component)
 {
-    int id;
-    int ActionsAvailable;
-    void (*ability)(int id);
-} ability_base_component;
-
-
-typedef struct ability_vtable
-{
-    void (*ability[10])(int id);
-} ability_vtable;
-
-
-static ability_vtable vtable;
-
-void damage(int id)
-{
-    printf("ABILITY DAMAGE ID IS: %d\n", id);
+    ability->components[ability->component_count] = *component;
+    ability->component_count++;
 }
 
-void heal(int id)
+void ability_process(Ability* ability, Unit* unit)
 {
-    printf("ABILITY heal ID IS: %d\n", id);
+    for (u32 i = 0; i < ability->component_count; i++)
+    {
+        ability->components[i].effect(unit, ability->components[i].data);
+    }
 }
 
-
-void ability_vtable_testing()
+void ability_testing()
 {
-    //so both methods work
-    vtable.ability[0] = damage;
-    vtable.ability[1] = heal;
+    Unit unit;
+    unit.HealthComponent = health_component_create();
+
+    Ability ability;
+    memset(&ability, 0, sizeof(ability));
+
+    Health_Component heal_component;
+    heal_component.heal_amount = 10;
 
 
-    ability_base_component damage_ability;
-    damage_ability.id = 0;
-    damage_ability.ability = damage;
+    Damage_Component damage_component;
+    damage_component.damage = 15;
 
-    ability_base_component heal_ability;
-    heal_ability.id = 1;
-    heal_ability.ability = heal;
+    Ability_Component a1 = {
+        .effect = heal_c, .data = &heal_component
+    };
+    Ability_Component a2 = (Ability_Component){
+        .effect = damage_c, .data = &damage_component
+    }; // TODO: this should be damage_component
 
-    damage_ability.ability(damage_ability.id);
-    heal_ability.ability(heal_ability.id);
+    ability_add_component(&ability, &a1);
+    ability_add_component(&ability, &a2);
 
-    vtable.ability[damage_ability.id](damage_ability.id);
-    vtable.ability[heal_ability.id](heal_ability.id);
+    ability_process(&ability, &unit);
 }
 
 
