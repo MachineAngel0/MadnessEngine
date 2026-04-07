@@ -7,10 +7,10 @@
 Input_System* input_init(Event_System* event_system, Memory_System* memory_system)
 {
 
-    Input_System* input_system = memory_system_alloc(memory_system, sizeof(Input_System));
+    Input_System* input_system = memory_system_alloc(memory_system, sizeof(Input_System), MEMORY_SUBSYSTEM_INPUT);
 
     u64 input_system_mem_requirement = MB(1);
-    void* input_system_mem = memory_system_alloc(memory_system, input_system_mem_requirement);
+    void* input_system_mem = memory_system_alloc(memory_system, input_system_mem_requirement, MEMORY_SUBSYSTEM_INPUT);
 
     input_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("INPUT SYSTEM"), input_system_mem_requirement);
 

@@ -88,7 +88,7 @@ void gamepad_init(Memory_System* memory_system, Event_System* event_system)
     x_input_load_dll();
 
     gamepad.player_count = gamepad_get_max_player_count();
-    gamepad.gamepad_player_info = memory_system_alloc(memory_system, sizeof(gamepad_state) * gamepad.player_count);
+    gamepad.gamepad_player_info = memory_system_alloc(memory_system, sizeof(gamepad_state) * gamepad.player_count, MEMORY_SUBSYSTEM_GAMEPAD);
     gamepad.event_system = event_system;
 
 

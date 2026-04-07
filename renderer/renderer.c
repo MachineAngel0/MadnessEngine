@@ -36,7 +36,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     MASSERT(resource_system);
 
 
-    Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer));
+    Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
     memset(renderer, 0, sizeof(Renderer));
     vulkan_context* vk_context = &renderer->context;
 
@@ -62,11 +62,11 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
                                                              (renderer_system_mem_requirement + frame_arena_mem_size));
 
 
-    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement);
+    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
     arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
                renderer->mem_tracker);
 
-    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement);
+    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
     arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;

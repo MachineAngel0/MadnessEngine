@@ -4,8 +4,7 @@
 #include <stdbool.h>
 
 #include "game_enums.h"
-
-
+#include "game_structs.h"
 
 
 #define DAMAGE_AND_NEGATION_UPPER_LIMITS 100

@@ -1,36 +1,41 @@
 ﻿#ifndef HEAL_H
 #define HEAL_H
+#include "ability.h"
 #include "game_structs.h"
 
 
-typedef enum Heal_Types
+
+
+
+typedef struct Heal_Component
 {
-    Heal_Types_HealAmount,
-    Heal_Types_HealSetter,
-    Heal_Types_HealPercent,
-    Heal_Types_HealToFull,
-    Heal_Types_HealByMultiplication,
-}Heal_Types;
+    // TMap<EHealTypes, float> HealTypes;
+    Heal_Types HealType;
+    float heal_amount;
 
+    //should be false be default
+    bool HealOnlyIfDead;
+} Heal_Ability;
 
-struct Heal_Component
+Heal_Ability heal_ability_create(Heal_Types heal_types, float heal_amount, bool HealOnlyIfDead)
 {
-    TMap<EHealTypes, float> HealTypes;
+    return (Heal_Ability){ .HealType = heal_types, .heal_amount = heal_amount, .HealOnlyIfDead = HealOnlyIfDead};
+}
 
-    bool HealOnlyIfDead = false;
-
-};
-
-
-
-void heal(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
+void heal_ability(Unit* unit, void* data)
 {
+    Heal_Ability* heal_component = (Heal_Ability*)data;
+    unit->health_component.current_health += heal_component->heal_amount;
+}
 
+/*
+void heal_ability(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
+{
     for (AUnitBase* Target : Targets)
     {
         Health_Component* CurrentTargetHealthComponent = Target->HealthComponent;
 
-        if(HealOnlyIfDead)
+        if (HealOnlyIfDead)
         {
             if (CurrentTargetHealthComponent->IsAlive())
             {
@@ -38,7 +43,10 @@ void heal(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
             };
         }
 
-        for (const auto& HealInformation : HealTypes)
+        for (const auto&HealInformation
+        :
+        HealTypes
+        )
         {
             float FinalValue = 0;
             float Bonus = 0;
@@ -63,7 +71,8 @@ void heal(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
                 CurrentTargetHealthComponent->HealByPercent(HealInformation.Value);
                 break;
             case EHealTypes::ECS_HealToFull:
-                NewHealFinal.Emplace(UHealPlayback::CreateHealPlayBack(Target, CurrentTargetHealthComponent->HealToFullValueChange()));
+                NewHealFinal.Emplace(
+                    UHealPlayback::CreateHealPlayBack(Target, CurrentTargetHealthComponent->HealToFullValueChange()));
                 CurrentTargetHealthComponent->HealToFullHealth();
                 break;
             case EHealTypes::ECS_HealByMultiplication:
@@ -75,9 +84,7 @@ void heal(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
             Target->ReversalListComponent->AddToHealReversal(HealInformation.Key, UnitCaster);
         }
     }
-
-
 }
-
+*/
 
 #endif //HEAL_H

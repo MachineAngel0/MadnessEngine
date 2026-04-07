@@ -1,272 +1,139 @@
-
+#ifndef BATTLE_TURN_INFO_H
+#define BATTLE_TURN_INFO_H
+#include "damage.h"
 
 
 //TODO: have all the structs update when needed
-USTRUCT(BlueprintType, Blueprintable)
-struct FRewindLifeTime
+typedef struct FRewindLifeTime
 {
-	GENERATED_BODY()
+    //Snapshot of the game state that gets updated everytime all units have gone
+    int TurnCount = 0;
 
-	//Snapshot of the game state that gets updated everytime all units have gone
+    //Information character had at the start of their turn, turn is indicated by the indexed number, make sure theirs a check
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int TurnCount = 0;
+    //NOTE: these are all arrays
+    //Health
+    float* Health;
+    //MP
+    float* MP;
+    // Augment
+    TArray<TMap<EDamageType, int>> AugmentStage;
+    // Damage Points
+    int* DamageStage;
+    // Defense Points
+    int* NegationStage;
+} FRewindLifeTime;
 
-
-	//Information character had at the start of their turn, turn is indicated by the indexed number, make sure theirs a check
-
-	//Health
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<float> Health;
-	//MP
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<float> MP;
-	// Augment
-	TArray<TMap<EDamageType, int>> AugmentStage;
-	// Damage Points
-	TArray<int> DamageStage;
-	// Defense Points
-	TArray<int> NegationStage;
-
-};
-
-struct FLifeTimeEachAction
+typedef struct FLifeTimeEachAction
 {
+    //any information about the unit that needs to be reset when their turn ends
 
-	//any information about the unit that needs to be reset when their turn ends
+    //todo: heal amount, and maybe drain/blood loss
+    float HealAmount;
+    float DrainAmount;
 
+    //Damage Taken
+    float DamageTaken[Damage_Status_Type_MAX];
+    int DamageTakenElementCount[Damage_Status_Type_MAX];
+} FLifeTimeEachAction;
 
-	//todo: heal amount, and maybe drain/blood loss
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float HealAmount;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float DrainAmount;
-
-	
-	//Damage Taken
-	TMap<EDamageType, float> DamageTaken
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-	};
-
-	TMap<EDamageType, int> DamageTakenElementCount
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-	};
-
-	
-};
-
-struct FLifeTimeTurnStart
+typedef struct FLifeTimeTurnStart
 {
-
-	// damage dealt this turn
-	// elements used this turn
-	// any healing done this turn
-	// any drain done this turn
-	// specific abilties used this turn
+    //any information about the unit that lasts from when their turn starts, until their next turn starts
 
 
-	//todo: heal amount, and maybe drain/blood loss
-	TMap<EHealTypes, float> HealAmountType;
-	float HealAmount;
-	TMap<EDrainTypes, float> DrainAmountType;
-	float DrainAmount;
+    // damage dealt this turn
+    // elements used this turn
+    // any healing done this turn
+    // any drain done this turn
+    // specific abilties used this turn
 
 
-	// Damage dealt, should get reset at the first turn start
-	TMap<EDamageType, float> DamageDealt
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
+    //todo: heal amount, and maybe drain/blood loss
+    float HealAmountType[Heal_Types_MAX];
+    float HealAmount;
+    float DrainAmountType[Drain_Types_MAX];
+    float DrainAmount;
 
-	};
 
-	TMap<EDamageType, int> DamageDealtElementCount
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
+    // Damage dealt, should get reset at the first turn start
+    float DamageDealt[Damage_Type_MAX];
 
-	};
-};
+    int DamageDealtElementCount[Damage_Type_MAX];
+} FLifeTimeTurnStart;
 
-struct FLifeTimeBattleInfo
+typedef struct FLifeTimeBattleInfo
 {
+    //information that lasts until the battle is over
 
-	//information that lasts until the battle is over
+    float TotalHealAmount[Heal_Types_MAX];
 
-	TMap<EHealTypes, float> TotalHealAmount;
-
-	// Total damage taken
-	TMap<EDamageType, float> TotalDamageTaken
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-
-	};
+    // Total damage taken
+    float TotalDamageTaken[Damage_Type_MAX];
 
 
-	TMap<EDamageType, int> TotalDamageTakenElementCount
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-	};
-
-	TMap<EDamageType, float> TotalDamageDealt
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-	};
+    int TotalDamageTakenElementCount[Damage_Type_MAX];
+    float TotalDamageDealt[Damage_Type_MAX];
 
 
-	TMap<EDamageType, int> TotalDamageDealtElementCount
-	{
-		{EDamageType::ECS_Physical, 0},
-		{EDamageType::ECS_Fire, 0},
-		{EDamageType::ECS_Ice, 0},
-		{EDamageType::ECS_Blood, 0},
-		{EDamageType::ECS_Poison, 0},
-		{EDamageType::ECS_Abyss, 0},
-		{EDamageType::ECS_Heavenly, 0},
-		{EDamageType::ECS_Madness, 0},
-		{EDamageType::ECS_Insanity, 0},
-	};
+    int TotalDamageDealtElementCount[Damage_Type_MAX];
 
+    float TotalDrainAmount;
 
-	
-	float TotalDrainAmount;
-
-	//TODO: have this update
-	//everytime an ability is used, increment this count
-	TMap<FName, int> AbilityNameUsedCount;
-	
-};
-
+    //TODO: have this update
+    //everytime an ability is used, increment this count
+    // TMap<FName, int> AbilityNameUsedCount;
+} FLifeTimeBattleInfo;
 
 
 /*TODO: this whole thing needs to be updated properly which it is currently not*/
-UCLASS(ClassGroup=(Unit), meta=(BlueprintSpawnableComponent))
-class MADNESSPULSE_API UBattleTurnInformation : public UUnitBaseComponent
+typedef struct UBattleTurnInformation
 {
-	GENERATED_BODY()
-
-public:
-	// Sets default values for this component's properties
-	UBattleTurnInformation();
-
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<AUnitBase> UnitOwnerReference;
-
-	//delegate
-	UPROPERTY(VisibleAnywhere, BlueprintCallable, BlueprintAssignable)
-	FOnTurnChange OnTurnChange;
-
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-public:
-	
-	void UpdateGameStateSnapShot(int TurnCount);
-	void UpdateFirstTurnStartInfo();
-	void UpdateTurnEndInfo();
-
-	void AddToDamageTaken(EDamageType DamageType, float DamageValue);
-	void AddToDamageDealt(EDamageType DamageType, float DamageValue);
-
-	float ReturnDamageTakenByType(EDamageType DamageType);
-	float ReturnAllDamageTaken();
-	float ReturnTotalDamageTakenByType(EDamageType DamageType);
-
-	float ReturnAllTotalDamageTaken();
-	
-	float ReturnDamageDealtByType(EDamageType DamageType);
-	float ReturnAllDamageDealtByType(EDamageType DamageType);
-	float ReturnTotalDamageDealtByType(EDamageType DamageType);
-	float ReturnAllTotalDamageDealt(EDamageType DamageType);
+    /*UNTIL THE CHARACTERS TURN STARTS*/
+    FRewindLifeTime RewindLifeTime;
 
 
-	//resets all info besides maybe the turn count/rewind info
-	//TODO: implement it
-	void ClearInfoForEverything();
-
-	//TODO: implement it
-	//checking to make sure were not using it on the first turn
-	bool IsRewindAvailableForUse() const;
-	int GetRewindTurnCount() const;
-
-	
-	
-
-	/*UNTIL THE CHARACTERS TURN STARTS*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FRewindLifeTime RewindLifeTime;
-
-	
-	/*UNTIL THE CHARACTERS TURN STARTS*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLifeTimeTurnStart LifeTimeTurnStart;
+    /*UNTIL THE CHARACTERS TURN STARTS*/
+    FLifeTimeTurnStart LifeTimeTurnStart;
 
 
-	/*UNTIL THE CHARACTERS TURN ENDS, RESETS FOR EVERY CHARACTER*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLifeTimeEachAction LifeTimeEachAction;
+    /*UNTIL THE CHARACTERS TURN ENDS, RESETS FOR EVERY CHARACTER*/
+    FLifeTimeEachAction LifeTimeEachAction;
 
-	float EachAction_DamageTaken();
- 
 
-	/*Permanent category*/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLifeTimeBattleInfo LifeTimeBattleInfo;
-};
+    /*Permanent category*/
+    FLifeTimeBattleInfo LifeTimeBattleInfo;
+} UBattleTurnInformation;
+
+void UpdateGameStateSnapShot(int TurnCount);
+void UpdateFirstTurnStartInfo();
+void UpdateTurnEndInfo();
+
+void AddToDamageTaken(Damage_Type DamageType, float DamageValue);
+void AddToDamageDealt(Damage_Type DamageType, float DamageValue);
+
+float ReturnDamageTakenByType(Damage_Type DamageType);
+float ReturnAllDamageTaken();
+float ReturnTotalDamageTakenByType(Damage_Type DamageType);
+
+float ReturnAllTotalDamageTaken();
+
+float ReturnDamageDealtByType(Damage_Type DamageType);
+float ReturnAllDamageDealtByType(Damage_Type DamageType);
+float ReturnTotalDamageDealtByType(Damage_Type DamageType);
+float ReturnAllTotalDamageDealt(Damage_Type DamageType);
+
+
+//resets all info besides maybe the turn count/rewind info
+//TODO: implement it
+void ClearInfoForEverything();
+
+//TODO: implement it
+//checking to make sure were not using it on the first turn
+bool IsRewindAvailableForUse() const;
+int GetRewindTurnCount() const;
+
+float EachAction_DamageTaken();
+
+
+#endif

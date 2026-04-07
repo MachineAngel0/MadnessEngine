@@ -6,7 +6,7 @@
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui)
 {
     // editor // allocate memory for the editor
-    Editor* editor = memory_system_alloc(memory_system, sizeof(Editor));
+    Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), TODO);
     editor->renderer = renderer;
     editor->madness_ui = madness_ui;
 

@@ -19,30 +19,30 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resourc
 {
     Sprite_Renderer* sprite_backend = arena_alloc(&renderer->arena, sizeof(Sprite_Renderer));
     //TODO: move out the memory capacity to the function params or get from sprite system/resource system
-    u64 memory_capacity = MB(1);
+    u64 buffer_memory_size = MB(1);
 
     sprite_backend->index_type = VK_INDEX_TYPE_UINT16;
 
     sprite_backend->sprite_vertex_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                memory_capacity);
+                                                                buffer_memory_size);
 
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                               memory_capacity);
+                                                               buffer_memory_size);
     sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                           memory_capacity);
+                                                           buffer_memory_size);
 
     sprite_backend->sprite_indirect_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_INDIRECT, memory_capacity);
+                                                                  BUFFER_TYPE_INDIRECT, buffer_memory_size);
 
     //staging
     sprite_backend->sprite_vertex_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING, memory_capacity);
+                                                                        BUFFER_TYPE_STAGING, buffer_memory_size);
     sprite_backend->sprite_index_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING, memory_capacity);
+                                                                       BUFFER_TYPE_STAGING, buffer_memory_size);
     sprite_backend->sprite_instance_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_STAGING, memory_capacity);
+                                                                   BUFFER_TYPE_STAGING, buffer_memory_size);
     sprite_backend->sprite_indirect_staging_buffer = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, memory_capacity);
+        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, buffer_memory_size);
 
     return sprite_backend;
 }
@@ -500,43 +500,46 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
 {
     Mesh_Renderer* out_mesh_renderer = arena_alloc(&renderer->arena, sizeof(Mesh_Renderer));
 
+    u64 mesh_buffer_data_size = MB(16);
+
+
     out_mesh_renderer->mesh_shader_permutations = arena_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
     out_mesh_renderer->mesh_shader_permutations->permutation_keys = darray_create_reserve(u32, 100);
 
     out_mesh_renderer->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                 MB(32));
+                                                                 mesh_buffer_data_size);
     out_mesh_renderer->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                                MB(32));
+                                                                mesh_buffer_data_size);
     out_mesh_renderer->indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_INDIRECT,MB(32));
+                                                                   BUFFER_TYPE_INDIRECT,mesh_buffer_data_size);
     out_mesh_renderer->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_CPU_STORAGE,MB(32));
+                                                                 BUFFER_TYPE_CPU_STORAGE,mesh_buffer_data_size);
     out_mesh_renderer->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_CPU_STORAGE,MB(32));
+                                                                  BUFFER_TYPE_CPU_STORAGE,mesh_buffer_data_size);
     out_mesh_renderer->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                             MB(32));
+                                                             mesh_buffer_data_size);
     out_mesh_renderer->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                    BUFFER_TYPE_CPU_STORAGE,
-                                                                   MB(32));
+                                                                   mesh_buffer_data_size);
 
     out_mesh_renderer->vertex_staging_buffer_handle = vulkan_buffer_create(
         renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        MB(32));
+        mesh_buffer_data_size);
     out_mesh_renderer->index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                         BUFFER_TYPE_STAGING,
-                                                                        MB(32));
+                                                                        mesh_buffer_data_size);
     out_mesh_renderer->indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,MB(32));
+                                                                           BUFFER_TYPE_STAGING,mesh_buffer_data_size);
     out_mesh_renderer->normal_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STAGING,MB(32));
+                                                                         BUFFER_TYPE_STAGING,mesh_buffer_data_size);
     out_mesh_renderer->tangent_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING,MB(32));
+                                                                          BUFFER_TYPE_STAGING,mesh_buffer_data_size);
     out_mesh_renderer->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                      BUFFER_TYPE_STAGING,
-                                                                     MB(32));
+                                                                     mesh_buffer_data_size);
     out_mesh_renderer->material_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                            BUFFER_TYPE_STAGING,
-                                                                           MB(32));
+                                                                           mesh_buffer_data_size);
 
 
     out_mesh_renderer->pc_mesh.ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle;

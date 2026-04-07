@@ -31,15 +31,16 @@ set(MADNESS_BUILD_TARGETS
 #Windows
 if (MSVC)
     #    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4 /Wall /permissive- /Zi /fsanitize=address ")
-    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address")
+    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address ")
     add_compile_options(/wd4255) # disables function prototype warnings
     add_compile_options(/wd4464) # path contains '..'
+#    add_compile_options(/w14062) # warns about missing cases in switch statements
 endif ()
 
 #GCC/MINGW OR CLANG
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wvla -Wfloat-equal -Werror=vla ")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wvla -Wfloat-equal -Werror=vla -Wswitch")
     #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Waggregate-return -Wconversion") # additional compiler flags
 
     #LINUX

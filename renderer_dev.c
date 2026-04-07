@@ -145,6 +145,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //NOTE: (go in reverse order)
 
     //look at memory before shutdown
+    memory_system_print_subsystem_memory_usage(&application_core->memory_system);
     memory_tracker_system_print_all_memory_usage(application_core->memory_system.memory_tracker_system);
 
 

@@ -9,13 +9,13 @@ Sprite_System* sprite_system_init(Memory_System* memory_system)
     u64 memory_capacity = MB(1);
 
 
-    Sprite_System* sprite_system = memory_system_alloc(memory_system, sizeof(Sprite_System));
+    Sprite_System* sprite_system = memory_system_alloc(memory_system, sizeof(Sprite_System), MEMORY_SUBSYSTEM_SPRITE);
 
-    sprite_system->arena = memory_system_alloc(memory_system, sizeof(Arena));
-    sprite_system->frame_arena = memory_system_alloc(memory_system, sizeof(Frame_Arena));
+    sprite_system->arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_SPRITE);
+    sprite_system->frame_arena = memory_system_alloc(memory_system, sizeof(Frame_Arena), MEMORY_SUBSYSTEM_SPRITE);
 
-    void* arena_memory = memory_system_alloc(memory_system, memory_capacity);
-    void* frame_arena_memory = memory_system_alloc(memory_system, memory_capacity);
+    void* arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
+    void* frame_arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
 
     arena_init(sprite_system->arena, arena_memory, memory_capacity, NULL);
     arena_init(sprite_system->arena, frame_arena_memory, memory_capacity, NULL);

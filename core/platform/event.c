@@ -2,10 +2,10 @@
 
 Event_System* event_init(Memory_System* memory_system)
 {
-    Event_System* event_system = memory_system_alloc(memory_system, sizeof(Event_System));
+    Event_System* event_system = memory_system_alloc(memory_system, sizeof(Event_System), MEMORY_SUBSYSTEM_EVENT);
 
     u64 event_system_mem_requirement = MB(1);
-    void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement);
+    void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
 
     event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
     

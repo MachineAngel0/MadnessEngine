@@ -5,8 +5,8 @@
 
 Resource_System* resource_system_init(Memory_System* memory_system)
 {
-    Resource_System* resource_system = memory_system_alloc(memory_system, sizeof(Resource_System));
-    resource_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet));
+    Resource_System* resource_system = memory_system_alloc(memory_system, sizeof(Resource_System), MEMORY_SUBSYSTEM_RESOURCE);
+    resource_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet), MEMORY_SUBSYSTEM_RESOURCE);
 
 
     resource_system->sprite_system = sprite_system_init(memory_system);

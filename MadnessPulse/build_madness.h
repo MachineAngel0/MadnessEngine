@@ -2,7 +2,18 @@
 
 
 
+#include "game_enums.h"
+#include "game_structs.h"
 
 #include "turn_based_game.h"
+
+
+#include "unit_base.h"
+#include "health.h"
+
+
+#include "ability.h"
+#include "heal.h"
+
 
 

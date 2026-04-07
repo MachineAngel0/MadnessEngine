@@ -8,7 +8,7 @@
 
 Mesh_System* mesh_system_init(Memory_System* memory_system)
 {
-    Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System));
+    Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System), MEMORY_SUBSYSTEM_MESH);
     memset(out_mesh_system, 0, sizeof(Mesh_System));
 
     memset(out_mesh_system->static_mesh_array, 0, sizeof(static_mesh) * 1000);

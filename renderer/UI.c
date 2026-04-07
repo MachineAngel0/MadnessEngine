@@ -10,7 +10,7 @@
 Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system,
                             Resource_System* resource_system)
 {
-    Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI));
+    Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
 
     u64 ui_arena_mem_size = MB(128);
     u64 ui_frame_arena_mem_size = MB(128);
@@ -18,11 +18,11 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
                                                                STRING("MADNESS UI"),
                                                                ui_arena_mem_size + ui_frame_arena_mem_size);
 
-    madness_ui->arena = memory_system_alloc(memory_system, sizeof(Arena));
-    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Arena));
+    madness_ui->arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
+    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
 
-    void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size);
-    void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size);
+    void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
+    void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
 
     arena_init(madness_ui->arena, arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
     arena_init(madness_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);

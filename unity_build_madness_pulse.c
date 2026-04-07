@@ -22,6 +22,6 @@
 //APP and Entry Point
 #include "app_types.h"
 #include "app_types.c"
-#include "MadnessPulse/madness_pulse_entry.h"
-#include "MadnessPulse/madness_pulse_entry.c"
+#include "MadnessPulse/madness_pulse_app.h"
+#include "MadnessPulse/madness_pulse_app.c"
 

@@ -7,7 +7,7 @@ static ma_engine engine;
 
 Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system)
 {
-    Madness_Audio* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio));
+    Madness_Audio* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio), MEMORY_SUBSYSTEM_AUDIO);
     //TODO:
     //just here as a place holder until i write my own audio platform independant system way later
 

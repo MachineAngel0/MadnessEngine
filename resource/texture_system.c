@@ -3,7 +3,7 @@
 
 Texture_System* texture_system_init(Memory_System* memory_system)
 {
-    Texture_System* texture_system = memory_system_alloc(memory_system, sizeof(Texture_System));
+    Texture_System* texture_system = memory_system_alloc(memory_system, sizeof(Texture_System), MEMORY_SUBSYSTEM_TEXTURE);
 
 
     texture_system->in_use_textures_count = 0;

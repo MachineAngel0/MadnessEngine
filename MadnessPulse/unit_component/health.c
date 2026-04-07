@@ -1,5 +1,5 @@
 ﻿#include "health.h"
-#include "abilities.h"
+#include "ability.h"
 #include "logger.h"
 
 #define MAX_HEALTH_DEFAULT 100

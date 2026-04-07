@@ -4,13 +4,13 @@
 Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system, Madness_UI* madness_ui)
 {
 
-    Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State));
+    Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State), TODO);
     tetris_game_state->resource_system = resource_system;
     tetris_game_state->madness_ui = madness_ui;
 
     u64 arena_sizes = MB(1);
-    void* arena_mem_block = memory_system_alloc(memory_system, arena_sizes);
-    void* frame_arena_mem_block = memory_system_alloc(memory_system, arena_sizes);
+    void* arena_mem_block = memory_system_alloc(memory_system, arena_sizes, TODO);
+    void* frame_arena_mem_block = memory_system_alloc(memory_system, arena_sizes, TODO);
     tetris_game_state->memory_tracker = memory_system_get_memory_tracker(
         memory_system->memory_tracker_system, STRING("Tetris"), arena_sizes);
 
