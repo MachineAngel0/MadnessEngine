@@ -24,7 +24,6 @@ void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena,
 void mesh_load_obj(const char* obj_path, Renderer* renderer);
 
 
-void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Frame_Arena* frame_arena);
 
 
 #endif

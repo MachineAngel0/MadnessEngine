@@ -736,34 +736,3 @@ bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_
     return true;
 }
 
-
-void static_mesh_to_madness_mesh(static_mesh* s_mesh, const char* file_name, Frame_Arena* frame_arena)
-{
-    //TODO: in general this is for another time, when i need the performance and i know what my engine should look like
-
-    //TODO: so the problem is how i want to structure the data, if we even want to allow submeshes, probably
-    const char* testing_asset_format_file_path = "../renderer/asset_format/";
-    const char* final_path = c_string_concat(testing_asset_format_file_path, file_name, NULL);
-    FILE* fptr = fopen(final_path, "wb");
-
-    fseek(fptr, 0, SEEK_END);
-    u64 file_size = ftell(fptr);
-    fseek(fptr, 0, SEEK_SET);
-
-
-    for (u64 i = 0; i < s_mesh->mesh_size; i++)
-    {
-        s_mesh->mesh[i].vertex_bytes;
-        s_mesh->mesh[i].indices_bytes;
-        s_mesh->mesh[i].normal_bytes;
-        s_mesh->mesh[i].tangent_bytes;
-        s_mesh->mesh[i].uv_bytes;
-
-        ////////////////
-    }
-
-    // fwrite(); for writing binary data to a file
-
-
-    fclose(fptr);
-}

@@ -19,20 +19,24 @@ write my own in Vulkan.
 - Memory System and Tracker
 - Unit Tests and Custom Loggers/Asserts.
 - File and network serialization code.
-- Mesh Loader
+- Resource System: Meshes, Sprites, UI Sprites
 - Immediate Mode UI
 
 ### Current Todo's:
 
+- Multithreading
+  - multi-thread the resource system
+  - multi-thread the renderer
 - Renderer
-  - better mesh system
-- Unit Tests for the Data Structure's Folder
+  - pbr lighting
+  - shadows
+  - material system
 - Work on the Linux Platform Layer
-
-### PLANNED:
-- PBR lighting model
-- Editor for easier development
+- Editor
+  - Level Editor
+  - Asset Editor
 - Develop the Turn Based Game
+
 
 
 ### Extra Info:

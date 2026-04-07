@@ -161,13 +161,14 @@ bool platform_pump_messages(Platform_State* plat_state)
 
 void* platform_allocate(u64 size, bool aligned)
 {
-    // VirtualAlloc();
-    return malloc(size);
+    return VirtualAlloc(0, size, MEM_COMMIT| MEM_RESERVE, PAGE_READWRITE);
+    // return malloc(size);
 }
 
 void platform_free(void* block)
 {
-    free(block);
+    VirtualFree(block, 0, MEM_RELEASE);
+    // free(block);
 }
 
 void* platform_zero_memory(void* block, u64 size)

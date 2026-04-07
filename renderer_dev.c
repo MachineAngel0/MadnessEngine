@@ -119,6 +119,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         {
             continue;
         }
+
         sprite_system_begin(application_core->resource_system->sprite_system,
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);

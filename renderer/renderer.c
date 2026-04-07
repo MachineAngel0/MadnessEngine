@@ -186,7 +186,6 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     arena_clear(&renderer->frame_arena);
 
-    //TODO: have the render queues be in the render packet
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);
 

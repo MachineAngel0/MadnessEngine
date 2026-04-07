@@ -27,7 +27,7 @@ void arena_clear(Arena* a)
     }
 
     a->current_offset = 0;
-    memset(a->memory, 0, a->capacity);
+    // memset(a->memory, 0, a->capacity); //NOTE: this is apparently super fucking slow
 }
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8

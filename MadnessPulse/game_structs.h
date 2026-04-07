@@ -310,7 +310,7 @@ typedef enum Madness_Pulse_Game_State
     Game_State_Enum_None,
     Game_State_Enum_Main_Menu,
     Game_State_Enum_Ability_Select,
-    Game_State_Enum_Mission_Select,
+    Game_State_Enum_Level_Select,
     Game_State_Enum_Turn_Based,
 }Madness_Pulse_Game_State;
 
@@ -327,6 +327,7 @@ typedef struct Madness_Pulse_Game
     Arena arena;
     // Arena Current_State_Arena; //NOTE: to release data specific to the game state, but not unload literally everything
     Frame_Arena frame_arena;
+    Resource_System* resource_system; // ref
     Madness_UI* madness_ui; // ref
 
 
@@ -334,13 +335,22 @@ typedef struct Madness_Pulse_Game
 
 
     //MAIN MENU//
+    //TODO: Load Save File Meta Data
+
 
     //ABILITY SELECT//
 
-    //MISSION SELECT//
+
+
+    //Level SELECT//
+
+
 
     //TURN BASED//
 
+    //Turn Based States
+    Turn_Phase turn_phase;
+    Turn_Based_UI_States ui_state;
 
     //PLAYER AND ENEMY UNTIS
     #define MAX_PLAYER_COUNT 4
@@ -357,7 +367,8 @@ typedef struct Madness_Pulse_Game
 
     //TODO: action queue for the game and do and undo those actions
     u32 picked_ability;
-    Turn_Based_UI_States ui_state;
+
+
 
 } Madness_Pulse_Game;
 

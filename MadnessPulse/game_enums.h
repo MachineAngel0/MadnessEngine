@@ -64,6 +64,12 @@ typedef enum Character_Type
     Character_Type_Enemy,
 } Character_Type;
 
+typedef enum Character_State
+{
+    Character_State_Alive,
+    Character_State_Dead,
+    Character_State_Revive,
+} Character_State;
 
 // ABILITIES //
 
@@ -116,6 +122,26 @@ typedef enum Ability_Type
     Ability_Type_SpecialFlag,
     Ability_Type_Mana,
 } Ability_Type;
+
+typedef enum Ability_Activation_Type
+{
+    Ability_Activation_Type_Normal,
+    Ability_Activation_Type_Status,
+    Ability_Activation_Type_Turn,
+    Ability_Activation_Type_Reversal,
+    // component type that gets checked first, to make sure the ability is allowed to activate, otherwise the ability will fail
+    Ability_Activation_Type_Conditional,
+    // no need to put conjure here, as it just activates normally
+} Ability_Activation_Type;
+
+typedef enum Ability_Trigger_Target
+{
+    Ability_Trigger_Target_Caster,
+    Ability_Trigger_Target_Target,
+    Ability_Trigger_Target_Allies,
+    Ability_Trigger_Target_Enemies,
+    Ability_Trigger_Target_All,
+} Ability_Trigger_Target;
 
 typedef enum Fusion_Type
 {
@@ -251,26 +277,6 @@ typedef enum Turn_Activation_Type
     Turn_Activation_Type_Final_End,
 } Turn_Activation_Type;
 
-typedef enum Ability_Activation_Type
-{
-    Ability_Activation_Type_Normal,
-    Ability_Activation_Type_Status,
-    Ability_Activation_Type_Turn,
-    Ability_Activation_Type_Reversal,
-    // component type that gets checked first, to make sure the ability is allowed to activate, otherwise the ability will fail
-    Ability_Activation_Type_Conditional,
-    // no need to put conjure here, as it just activates normally
-} Ability_Activation_Type;
-
-typedef enum Ability_Trigger_Target
-{
-    Ability_Trigger_Target_Caster,
-    Ability_Trigger_Target_Target,
-    Ability_Trigger_Target_Allies,
-    Ability_Trigger_Target_Enemies,
-    Ability_Trigger_Target_All,
-} Ability_Trigger_Target;
-
 typedef enum Conjure_Type
 {
     Conjure_Type_IceDemon,
@@ -280,7 +286,7 @@ typedef enum Conjure_Type
 } Conjure_Type;
 
 
-// Battle Manager //
+// Turn Based Game //
 
 typedef enum Turn_Initiative
 {
@@ -288,28 +294,28 @@ typedef enum Turn_Initiative
     Turn_Initiative_Enemy,
 } Turn_Initiative;
 
-typedef enum TurnPhase
+typedef enum Turn_Phase
 {
-    TurnPhase_None,
-    TurnPhase_TurnStart,
-    TurnPhase_AbilitySelection,
-    TurnPhase_TargetSelection,
-    TurnPhase_AbilityProcessing,
-    TurnPhase_QueueProcessing,
-    TurnPhase_TurnEnd,
-    TurnPhase_EnemyTurn,
+    Turn_Phase_None,
+    Turn_Phase_TurnStart,
+    Turn_Phase_AbilitySelection,
+    Turn_Phase_TargetSelection,
+    Turn_Phase_AbilityProcessing,
+    Turn_Phase_QueueProcessing,
+    Turn_Phase_TurnEnd,
+    Turn_Phase_EnemyTurn,
 
-    TurnPhase_Dialogue,
-    TurnPhase_Event, // might want to specify what type of event
+    Turn_Phase_Dialogue,
+    Turn_Phase_Event, // might want to specify what type of event
 
-    TurnPhase_BattleOver,
-} TurnPhase;
+    Turn_Phase_BattleOver,
+} Turn_Phase;
 
 typedef enum Game_UI_States
 {
     Game_UI_State_None,
-    Game_UI_State_BattleLog,
-    Game_UI_State_UnitInfo,
+    Game_UI_State_Battle_Log,
+    Game_UI_State_Unit_Info,
     Game_UI_State_Fusion,
     Game_UI_State_System,
 }Turn_Based_UI_States;
@@ -341,14 +347,6 @@ typedef enum Action_Consideration_Type
     Action_Consideration_Type_Heal,
     Action_Consideration_Type_MAX,
 } Action_Consideration_Type;
-
-
-typedef enum Character_State
-{
-    Character_State_Alive,
-    Character_State_Dead,
-    Character_State_Revive,
-} Character_State;
 
 
 // probably won't use this, maybe for conjure or reversal checks

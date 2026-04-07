@@ -3,69 +3,82 @@
 #include <stdbool.h>
 
 #include "arena.h"
+#include "game_structs.h"
 
 /* Save data related things*/
-typedef struct Player_Save_Data
+
+
+typedef struct Game_Settings
 {
-	TArray<TSubclassOf<AAbilityBase>> AbilityListSave;
-	TArray<TSubclassOf<AAbilityBase>> AbilityReserveSave;
-}Player_Save_Data;
+    //game specific settings
+    bool unimplemented;
+} Game_Settings;
+
+
+
+#define MAX_GAME_SAVE_SLOTS 255 //size of a u8
+
+
 
 typedef struct Save_Meta_Data
 {
-	float GameTime;
-	int MissionsBeaten;
-}Save_Meta_Data;
+    //used for the load game screen, so the player can see which save file they want
 
-/**
- *	The place where all save info variables are to be placed and accessed
- */
+    u8 slot_number; //255 game save is more than enough
+    float game_time;
+    int missions_beaten;
+    String save_name;
+} Save_Meta_Data;
+
+
+typedef struct Player_Save_Data
+{
+    u32 unit_id;
+
+    u32 reserve_count;
+    u32 battle_list_count;
+
+    u32* ability_battle_list_save;
+    u32* ability_reserve_list;
+} Player_Save_Data;
+
 typedef struct Save_Game
 {
-	TMap<TSubclassOf<AUnitBase>, Player_Save_Data> PlayerSaveInfo;
+    Player_Save_Data PlayerSaveInfo[MAX_PLAYER_COUNT];
 
-	//TODO: set the values needed to false
-	bool MissionDataSaveUnlocksNames[Mission_Name_MAX] = {
-		[Mission_Names_Tutoria] = false,
-		{EMissionNames::ECS_Sandbox, false},
+    //TODO: set the values needed to false
+    // stores whether a level is unlocked or not,
+    // they need to be the same name as the level
+    bool unlocked_levels[Mission_Name_MAX];
 
-		//for the demo
-		{Mission_Name_Worshipper, true},
-		{EMissionNames::ECS_BurningSoul, true},
-		{EMissionNames::ECS_IceQueen, true},
-		{EMissionNames::ECS_SunMoonTwin, true},
-		{EMissionNames::ECS_FusionMania, true},
-
-	};
-	// stores whether a mission is unlocked or not,
-	// they need to be the same name as the level
+    //TODO: make fusion available during the fusion fight, and save the setting permanently from there
+    bool allowed_to_fusion = false;
 
 
-	//TODO: make fusion available during the fusion fight, and save the setting permanently from there
-	bool AllowedToFusion = false;
+} Save_Game;
 
-	//TODO:
-	/*SAVE SETTING DATA ONLY*/
+//NOTE: THESE FUNCTION ARE NEW AND UNIMPLEMENTED
+bool save_game_new_save(Save_Game* out_new_save, Arena* arena, Frame_Arena* frame);
 
-	//TODO: this is here for displaying information like the players progress and gametime
-	TArray<TMap<FString, Save_Meta_Data>> SaveGameSlotsToSlotInfoDisplay;
-}Save_Game;
 
-//NOTE: THIS FUNCTION IS NEW
-Save_Game* save_game_load(Arena* arena);
+bool save_game_load_meta_data(Save_Meta_Data* out_meta_data, Arena* arena);
+bool save_game_save_meta_data(Save_Meta_Data* meta_data_to_save, Arena* arena, Frame_Arena* frame);
 
-void SaveAllData(TArray<AActor*> SavableObject);
-void LoadDataForRequester(AActor* Requester);
-void SavePlayerData(TArray<AActor*> SavableObject);
+bool save_game_save(Save_Game* save_game, Arena* arena, Frame_Arena* frame);
+bool save_game_load(Save_Game* out_save_game, Arena* arena, Frame_Arena* frame);
 
-	void DebugUnlockAllMissions();
+//
+bool save_game_debug_build(Save_Game* out_save_game,Arena* arena, Frame_Arena* frame);
+bool save_game_demo_build(Save_Game* out_save_game,Arena* arena, Frame_Arena* frame);
 
-//dont use this function
-void StoreAbilities(TSubclassOf<AUnitBase> Unit, TArray<TSubclassOf<AAbilityBase>> Abilities);
 
-void AddAbilitiesToAllUnitsReserveList(TArray<TSubclassOf<AAbilityBase>> AbilitiesToAdd);
-TArray<TSubclassOf<AAbilityBase>> ReturnUnitAbilities(TSubclassOf<AUnitBase> Unit);
+//called only during the fusion mania fight
+void save_game_unlock_fusion(Save_Game* SaveGame);
 
+
+//DEBUG
+void save_game_debug_unlock_all_missions();
+void save_game_debug_unlock_all_abilities();
 
 
 

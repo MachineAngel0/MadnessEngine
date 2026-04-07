@@ -1,5 +1,5 @@
-﻿#ifndef MADNESSPULSEGAME_H
-#define MADNESSPULSEGAME_H
+﻿#ifndef MADNESS_PULSE_GAME_H
+#define MADNESS_PULSE_GAME_H
 
 #include "ability.h"
 #include "game_structs.h"
@@ -7,16 +7,12 @@
 //when we first load the application
 Madness_Pulse_Game* Madness_Pulse_Game_Init(Memory_System* memory_system)
 {
-    Madness_Pulse_Game* game = memory_system_alloc(memory_system, sizeof(Madness_Pulse_Game), TODO);
+    Madness_Pulse_Game* game = memory_system_alloc(memory_system, sizeof(Madness_Pulse_Game), MEMORY_SUBSYSTEM_GAME);
     game->game_state = Game_State_Enum_None;
 
     u64 game_memory_size = GB(0.5);
-    void* game_memory = memory_system_alloc(memory_system, game_memory_size, TODO);
+    void* game_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
     arena_init(&game->arena, game_memory, game_memory_size, NULL);
-
-
-
-
 
 
     game->game_state = Game_State_Enum_Main_Menu;
@@ -24,22 +20,28 @@ Madness_Pulse_Game* Madness_Pulse_Game_Init(Memory_System* memory_system)
 }
 
 
-void Main_Menu_init(Madness_Pulse_Game* game)
+void Main_Menu_Run(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
     madness_ui_begin_layout(ui, "Main Menu", (vec2){50, 50}, (vec2){50, 50});
 
-    madness_button_text(ui, "Load Game", STRING("Load Game"));
-    madness_button_text(ui, "New Game", STRING("New Game"));
-    madness_button_text(ui, "Settings", STRING("Settings"));
-    madness_button_text(ui, "Quit", STRING("Quit"));
+
+    if (madness_button_text(ui, "Load Game", STRING("Load Game")))
+    {
+        //set new state for the load menu and load in menu metadata
+    }
+    if (madness_button_text(ui, "Settings", STRING("Settings")))
+    {
+    }
+    if (madness_button_text(ui, "Quit", STRING("Quit")))
+    {
+    }
 }
 
 
 void Turn_Based_Game_Init(Madness_Pulse_Game* game)
 {
-
     // Game_State* game_state = memory_system_alloc(memory_system, sizeof(Game_State));
     // Game_State* game_state = memory_system_alloc(memory_system, sizeof(Game_State));
 
@@ -133,7 +135,7 @@ void Turn_Start(Madness_Pulse_Game* game_state)
 
     if (TurnBasedGameState.CurrentUnitsTurn->CharacterType == Character_Type_Player)
     {
-        UE_LOG(Log_BattleManager, Display, TEXT("Turn Start For Player"));
+        DEBUG("Turn Start For Player");
 
         CameraManagerComponent->PossessCamera(ECameraType::ECS_TurnPlayerCamera, TurnBasedGameState.CurrentUnitsTurn);
         BattleSpotManager->SetUnitToTurnDecisionLocation(TurnBasedGameState.CurrentUnitsTurn);
@@ -158,7 +160,7 @@ void Turn_Start(Madness_Pulse_Game* game_state)
     }
     else if (TurnBasedGameState.CurrentUnitsTurn->CharacterType == ECharacterType::ECS_Enemy)
     {
-        UE_LOG(Log_BattleManager, Display, TEXT("Turn Start For Enemy"));
+        DEBUG("Turn Start For Enemy");
 
         CameraManagerComponent->PossessCamera(ECameraType::ECS_EnemyTurnCamera, TurnBasedGameState.CurrentUnitsTurn);
         TurnBasedGameState.TurnPhase = ETurnPhase::ECS_EnemyTurn;
@@ -176,4 +178,4 @@ void Turn_End()
 }
 
 
-#endif //MADNESSPULSEGAME_H
+#endif //MADNESS_PULSE_GAME_H
