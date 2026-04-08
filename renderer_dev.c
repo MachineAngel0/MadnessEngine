@@ -44,7 +44,8 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
     application_core->resource_system = resource_system_init(&application_core->memory_system);
-    application_core->audio_system = audio_system_init(&application_core->memory_system, application_core->resource_system);
+    application_core->audio_system = audio_system_init(&application_core->memory_system,
+                                                       application_core->resource_system);
 
 
     //register events needed for this application
@@ -69,8 +70,9 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
                                                                      application_core->event_system,
                                                                      application_core->resource_system);
 
-    renderer_plugin->madness_ui = renderer_plugin->ui_init(&application_core->memory_system, application_core->input_system,
-                                          application_core->resource_system);
+    renderer_plugin->madness_ui = renderer_plugin->ui_init(&application_core->memory_system,
+                                                           application_core->input_system,
+                                                           application_core->resource_system);
 
     //run the renderer
     //MAIN LOOP
@@ -100,6 +102,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
     while (application_core->is_running)
     {
+
         //hot reload:
         if (platform_has_filed_changed(renderer_thing_handle))
         {
@@ -114,6 +117,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         input_update(application_core->input_system);
         platform_pump_messages(&application_core->plat_state);
 
+
         //vulkan will crash if you minimize the window
         if (application_core->is_suspended)
         {
@@ -125,7 +129,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
         renderer_plugin->ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
-                                               renderer_plugin->renderer->context.framebuffer_height_new);
+                                  renderer_plugin->renderer->context.framebuffer_height_new);
         madness_ui_test(renderer_plugin->madness_ui);
 
 
@@ -135,12 +139,11 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
         //render
         renderer_plugin->renderer_run(renderer_plugin->renderer,
-                                                   application_core->clock.delta_time);
+                                      application_core->clock.delta_time);
 
 
         clock_update_frame_end(&application_core->clock);
     }
-
 
     /***SHUTDOWN***/
     //NOTE: (go in reverse order)

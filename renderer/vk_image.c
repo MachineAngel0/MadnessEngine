@@ -30,7 +30,9 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
-    VK_CHECK(vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->texture_image));
+    VK_CHECK(
+        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+            texture_image));
 
 
     // Query memory requirements.
@@ -50,12 +52,15 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->texture_image_memory
+        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->
+            texture_image_memory
         ));
 
 
     // Bind the memory
-    VK_CHECK(vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory, 0));
+    VK_CHECK(
+        vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory,
+            0));
     // TODO: configurable memory offset.
 
     // Create view
@@ -81,7 +86,9 @@ void vulkan_image_view_create(vulkan_context* context, VkFormat format,
     view_create_info.subresourceRange.baseArrayLayer = 0;
     view_create_info.subresourceRange.layerCount = 1;
 
-    VK_CHECK(vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &texture->texture_image_view));
+    VK_CHECK(
+        vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &texture->
+            texture_image_view));
 }
 
 
@@ -104,12 +111,15 @@ void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image)
         vkDestroyImage(context->device.logical_device, image->texture_image, context->allocator);
         image->texture_image = 0;
     }
+    if (image->texture_sampler)
+    {
+        vkDestroySampler(context->device.logical_device, image->texture_sampler, context->allocator);
+    }
 }
 
 void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                          Texture* texture_data, Vulkan_Texture* out_texture)
+                                 Texture* texture_data, Vulkan_Texture* out_texture)
 {
-
     VkDeviceSize imageSize = texture_data->image_size;
     stbi_uc* pixels = texture_data->pixels;
     u32 texWidth = texture_data->width;
@@ -188,7 +198,7 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
-                      (u32) (texWidth), (u32) (texHeight));
+                      (u32)(texWidth), (u32)(texHeight));
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -218,8 +228,6 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     sampler_info.maxLod = 0.0f;
 
     VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
-
-
 }
 
 
@@ -307,7 +315,7 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
-                      (uint32_t) (texWidth), (uint32_t) (texHeight));
+                      (uint32_t)(texWidth), (uint32_t)(texHeight));
     transition_image_layout(context, command_buffer, out_texture->texture_image,
                             VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -506,9 +514,10 @@ void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
 }
 
 void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
-                              VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout, VkImageLayout newImageLayout,
-                              VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-                              VkImageSubresourceRange subresourceRange)
+                                 VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout,
+                                 VkImageLayout newImageLayout,
+                                 VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+                                 VkImageSubresourceRange subresourceRange)
 {
     VkImageMemoryBarrier imageMemoryBarrier = {0};
     imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

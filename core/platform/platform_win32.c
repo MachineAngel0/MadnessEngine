@@ -614,9 +614,15 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
 void platform_set_cursor_pos(int x, int y)
 {
-    // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos?redirectedfrom=MSDN
-    //read the docs for when you want this implemented properly
     SetCursorPos(x, y);
+}
+
+void platform_get_cursor_pos(int* out_x, int* out_y)
+{
+    struct tagPOINT lpPoint; // this is a pointer
+    GetCursorPos(&lpPoint);
+    *out_x = lpPoint.x;
+    *out_y = lpPoint.y;
 }
 
 void platform_copy_to_clipboard(const char* c_string)

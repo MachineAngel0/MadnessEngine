@@ -102,7 +102,7 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
 }
 
 
-void sprite_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, vulkan_command_buffer* command_buffer)
+void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, vulkan_command_buffer* command_buffer)
 {
     MASSERT(sprite_backend)
 
@@ -630,7 +630,7 @@ void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_render
 }
 
 
-void mesh_system_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
+void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
                       vulkan_shader_pipeline* pipeline)
 {
     INFO("MESH SYSTEM DRAW CALLS")

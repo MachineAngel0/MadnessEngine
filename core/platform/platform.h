@@ -119,6 +119,8 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
 //Misc
 void platform_set_cursor_pos(int x, int y);
+void platform_get_cursor_pos(int* out_x, int* out_y);
+
 void platform_copy_to_clipboard(const char* c_string);
 
 

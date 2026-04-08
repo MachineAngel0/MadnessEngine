@@ -30,14 +30,7 @@ bool stack_is_empty(const stack* s);
 
 bool stack_is_full(const stack* s);
 
-void stack_resize(stack* stack, size_t new_capacity);
-
-void stack_resize_arena(Arena* arena, stack* stack, const size_t new_capacity);
-
 void stack_push(stack* s, const void* data);
-
-void stack_push_arena(Arena* arena, stack* s, const void* data);
-
 
 void stack_pop(stack* s);
 
@@ -47,9 +40,7 @@ void* stack_peek(stack* s);
 void stack_copy_top(stack* s, void* out_data);
 u64 stack_size(const stack* s);
 
-
-void stack_print(const stack* stack, void (*print_func)(void*));
-
+void stack_print(const stack* s, void (*print_func)(void*));
 
 void stack_test();
 

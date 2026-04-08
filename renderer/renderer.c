@@ -305,8 +305,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
-    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
+    // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
+    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
@@ -408,10 +408,10 @@ void renderer_update(Renderer* renderer, float delta_time)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_system_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
+    mesh_renderer_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
                      &renderer->indirect_mesh_pipeline);
 
-    sprite_draw(renderer, renderer->sprite_renderer, command_buffer_current_frame);
+    sprite_renderer_draw(renderer, renderer->sprite_renderer, command_buffer_current_frame);
 
     ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);
 
@@ -432,7 +432,7 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     // End renderpass
 
-
+    //TODO: probably gonna need at some point
     // vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);
     // ui_system_draw(&renderer_internal, UI_System_internal, command_buffer_current_frame);
     // vulkan_renderpass_UI_end(&renderer_internal, command_buffer_current_frame, image_index);

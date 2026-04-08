@@ -94,24 +94,6 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
     return out_texture_handle;
 }
 
-Texture_Handle shader_system_add_texture_font(Renderer* renderer, Shader_System* system, void* pixel_data, u32 width, u32 height)
-{
-    //get an available index
-    Texture_Handle out_texture_handle;
-    out_texture_handle.handle = system->available_texture_indexes;
-
-    //create the texture
-    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_glyph(renderer, renderer->context.graphics_command_buffer, out_texture, pixel_data, width, height);
-
-    //increment index for next usage
-    system->available_texture_indexes++;
-
-    //TODO: batch this upload once a frame
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle);
-
-    return out_texture_handle;
-}
 
 
 void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)

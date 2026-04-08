@@ -7,7 +7,7 @@ void camera_init(camera* out_camera)
 
     // Default camera values
     const float SPEED = 2.5f;
-    const float SENSITIVITY = 20.0f;
+    const float SENSITIVITY = 40.0f;
     const float FOV = 90.0f;
     const float ZNEAR = 0.1f;
     const float ZFAR = 100.0f;
@@ -83,8 +83,8 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
 // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
 void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
 {
-    cam->yaw += x_offset * dt * cam->rotation_speed;
-    cam->pitch += y_offset * dt * cam->rotation_speed;
+    cam->yaw += x_offset * cam->rotation_speed * dt;
+    cam->pitch += y_offset * cam->rotation_speed * dt;
 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
     if (constrain_pitch)
@@ -111,8 +111,6 @@ void process_mouse_scroll(camera* cam, float y_offset)
 
 void camera_update(Input_System* input_system, camera* cam, float dt)
 {
-
-
     //TODO: will need to remove the input system at some point
     if (input_is_key_pressed(input_system, KEY_W))
     {

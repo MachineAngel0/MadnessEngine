@@ -247,7 +247,8 @@ MAPI void input_get_previous_mouse_pos(Input_System* input_system, i16* out_x, i
 
 MAPI void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y);
 
-MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y); // TODO: doesn't work rn
+MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y);
+
 
 
 //mouse buttons

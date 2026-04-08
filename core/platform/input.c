@@ -262,6 +262,13 @@ void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y)
     // DEBUG("MOUSE CHANGE X: %d, MOUSE CHANGE Y: %d", *out_x, *out_y);
 }
 
+void input_set_cursor_pos(Input_System* input_system, int x, int y)
+{
+    //TODO: have a check to make sure we are within the window coordinates
+    //otherwise, this can set the position to anywhere it wants on the screen, even outside the window
+    platform_set_cursor_pos(x,y);
+}
+
 
 bool input_is_mouse_button_pressed(Input_System* input_system, mouse_buttons key)
 {

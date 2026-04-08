@@ -18,7 +18,7 @@ bool renderer_resource_backend_shutdown(Renderer* renderer, Resource_System* res
 Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system);
 MAPI void sprite_upload_draw_data(Renderer* renderer,
                                   Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet);
-MAPI void sprite_draw(Renderer* renderer, Sprite_Renderer* sprite_backend,
+MAPI void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend,
                       vulkan_command_buffer* command_buffer);
 
 //UI Renderer
@@ -35,7 +35,7 @@ MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* reso
 
 MAPI void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
 
-MAPI void mesh_system_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
+MAPI void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
                       vulkan_shader_pipeline* pipeline);
 
 
