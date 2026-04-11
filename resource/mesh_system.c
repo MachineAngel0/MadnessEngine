@@ -20,6 +20,9 @@ Mesh_System* mesh_system_init(Memory_System* memory_system)
     out_mesh_system->tangent_byte_size = 0;
     out_mesh_system->uv_byte_size = 0;
 
+    out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_Upload_Data), MAX_MESH_COUNT);
+    out_mesh_system->draw_data_index = 0;
+
 
     INFO("MESH SYSTEM CREATED")
 
@@ -550,17 +553,20 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
             {
             //these are the only supported formats in the gltf spec for samplers
             case cgltf_type_scalar: // weights
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(float) * cur_sampler->trs_interpolation_count);
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                    arena, sizeof(float) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_f, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
                 break;
             case cgltf_type_vec3: // translation, scale
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(vec3) * cur_sampler->trs_interpolation_count);
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                    arena, sizeof(vec3) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_v3, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
                 break;
             case cgltf_type_vec4: // rotation
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(arena, sizeof(vec4) * cur_sampler->trs_interpolation_count);
+                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                    arena, sizeof(vec4) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_v4, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
                 break;
@@ -723,16 +729,322 @@ void mesh_load_obj(const char* obj_path, Renderer* renderer)
 }
 
 
-
-
 bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
 {
     out_mesh_packet->system_name = "Mesh System";
 
-    //mesh_data
+
+    out_mesh_packet->draw_data = mesh_system->draw_data;
+    out_mesh_packet->draw_data_size = mesh_system->draw_data_index;
+
+
+    //TODO: remove
     out_mesh_packet->static_mesh_array = mesh_system->static_mesh_array;
     out_mesh_packet->static_mesh_array_size = mesh_system->static_mesh_array_size;
     out_mesh_packet->static_mesh_submesh_size = mesh_system->static_mesh_submesh_size;
     return true;
 }
 
+
+void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+                        Resource_System* resource_system)
+{
+    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
+    {
+        FATAL("DID NOT PASS IN A GLTF FILE");
+        return;
+    }
+
+
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
+    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
+
+    if (result != cgltf_result_success)
+    {
+        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
+        return;
+    }
+    result = cgltf_load_buffers(&options, data, gltf_path);
+    MASSERT(result == cgltf_result_success)
+
+    // static_mesh* out_static_mesh = static_mesh_init(arena, data->meshes_count);
+    // static_mesh_gameplay* static_mesh = arena_alloc(arena, sizeof(Geometry_Data) * data->meshes_count);
+    // static_mesh->submeshes;
+    // static_mesh->submeshes_size;
+
+
+    Mesh_Upload_Data* submesh_render_data_array = arena_alloc(frame_arena,
+                                                                 sizeof(Mesh_Upload_Data) * data->meshes_count);
+
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(gltf_path, frame_arena);
+
+
+    //LOAD VERTEX/INDEX DATA
+    //Load Textures
+
+
+    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+    {
+        Mesh_Indirect_Draw_Data* mesh_draw_data = &mesh_system->draw_data[mesh_system->draw_data_index++];
+
+        Mesh_Upload_Data* current_submesh_render_data = &submesh_render_data_array[mesh_idx];
+
+        /* Find position accessor */
+        const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                 cgltf_attribute_type_position,
+                                                                 0);
+        MASSERT(pos_accessor);
+        if (pos_accessor)
+        {
+            //get size information
+
+            cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
+            cgltf_size float_bytes = num_floats * sizeof(float);
+            current_submesh_render_data->vertex_bytes = float_bytes;
+
+
+            //alloc and copy data
+            float* pos_data = arena_alloc(frame_arena, float_bytes);
+            current_submesh_render_data->pos = arena_alloc(arena, float_bytes);
+            cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+            memcpy(current_submesh_render_data->pos, pos_data, float_bytes);
+        }
+
+        // Find normal accessor
+        const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                  cgltf_attribute_type_normal,
+                                                                  0);
+        if (norm_accessor)
+        {
+            //get size information
+            cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
+            cgltf_size norm_bytes = norm_floats * sizeof(float);
+            current_submesh_render_data->normal_bytes = norm_bytes;
+
+            //alloc and copy data
+            float* normal_data = arena_alloc(arena, norm_bytes);
+            current_submesh_render_data->normal = arena_alloc(arena, norm_bytes);
+            cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
+            memcpy(current_submesh_render_data->normal, normal_data, norm_bytes);
+        }
+
+        //  Find tangent accessor
+        const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                     cgltf_attribute_type_tangent, 0);
+
+        if (tangent_accessor)
+        {
+            //get size information
+            cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
+            cgltf_size tangent_bytes = tangent_floats * sizeof(float);
+            current_submesh_render_data->tangent_bytes = tangent_bytes;
+
+
+            //alloc and copy data
+            float* tangent_data = arena_alloc(arena, tangent_bytes);
+            current_submesh_render_data->tangent = arena_alloc(arena, tangent_bytes);
+            cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
+            memcpy(current_submesh_render_data->tangent, tangent_data, tangent_bytes);
+        }
+
+        //  Find texcoord accessor
+        const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                      cgltf_attribute_type_texcoord, 0);
+        if (texcoord_accessor)
+        {
+            //get size information
+            cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
+            current_submesh_render_data->uv_bytes = uv_byte_size;
+
+
+            //alloc and copy data
+            float* uv_data = arena_alloc(frame_arena, uv_byte_size);
+            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
+
+            current_submesh_render_data->uv = arena_alloc(arena, uv_byte_size);
+            memcpy(current_submesh_render_data->uv, uv_data, uv_byte_size);
+        }
+
+        // Load indices
+        // SEE componentType in the specs for more detail 3.6.2
+        u8 index_stride = data->meshes[mesh_idx].primitives[0].indices->stride;
+        if (index_stride == 2)
+        {
+            current_submesh_render_data->index_type = VK_INDEX_TYPE_UINT16;
+        }
+        else if (index_stride == 4)
+        {
+            current_submesh_render_data->index_type = VK_INDEX_TYPE_UINT32;
+        }
+        else
+        {
+            WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
+        }
+
+        //TODO: there can be multiple primitices/indices, will come back to
+        current_submesh_render_data->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
+            index_stride;
+        current_submesh_render_data->indices = arena_alloc(arena,
+                                                           current_submesh_render_data->indices_bytes);
+
+        const uint8_t* index_buffer_data = cgltf_buffer_view_data(
+            data->meshes[mesh_idx].primitives->indices->buffer_view);
+        memcpy(current_submesh_render_data->indices, index_buffer_data,
+               current_submesh_render_data->indices_bytes);
+
+        //Mesh Data
+        mesh_draw_data->index_count = data->meshes[mesh_idx].primitives->indices->count;
+        mesh_draw_data->index_offset = mesh_system->index_count_size;
+        mesh_draw_data->vertex_offset = mesh_system->vertex_count_size;
+
+
+        //update offsets
+        mesh_system->vertex_byte_size += current_submesh_render_data->vertex_bytes;
+        mesh_system->vertex_count_size += current_submesh_render_data->vertex_bytes / sizeof(vec3);
+        mesh_system->index_byte_size += current_submesh_render_data->indices_bytes;
+        mesh_system->index_count_size +=  mesh_draw_data->index_count;
+        mesh_system->normals_byte_size += current_submesh_render_data->normal_bytes;
+        mesh_system->tangent_byte_size += current_submesh_render_data->tangent_bytes;
+        mesh_system->uv_byte_size += current_submesh_render_data->uv_bytes;
+
+
+        /*
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
+                                      out_static_mesh->mesh[mesh_idx].indices,
+                                      index_stride,
+                                      out_static_mesh->mesh[mesh_idx].indices_count);
+        */
+
+        //LOAD TEXTURES/MATERIALS
+
+        //COLOR TEXTURE
+        cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                              base_color_texture.texture;
+        if (color_texture && color_texture->image->uri)
+        {
+            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_COLOR;
+
+            char* texture_path = arena_alloc(frame_arena,
+                                             strlen(base_path) + strlen(color_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
+            TRACE("COLOR Texture Path:  %s", texture_path);
+            Texture_Handle color_handle;
+            texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
+            current_submesh_render_data->material_params.color_index = color_handle.handle;
+        }
+
+        //METAL-ROUGHNESS
+        cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                                        metallic_roughness_texture.texture;
+        if (metal_roughness_texture)
+        {
+            if (metal_roughness_texture->image->uri)
+            {
+                current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_ROUGHNESS;
+                current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_METALLIC;
+                char* texture_path = arena_alloc(frame_arena,
+                                                 strlen(base_path) + strlen(metal_roughness_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+                TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+
+                Texture_Handle metallic_handle;
+
+                texture_system_load_texture(resource_system->texture_system, texture_path,
+                                            &metallic_handle);
+
+                current_submesh_render_data->material_params.metallic_index = metallic_handle.handle;
+                current_submesh_render_data->material_params.roughness_index = metallic_handle.handle;
+            }
+            if (metal_roughness_texture->image->buffer_view)
+            {
+                //TODO: load texture data from the shader system
+                INFO("WHOA A BUFFER VIEW ");
+                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
+                    metal_roughness_texture->image->buffer_view);
+                INFO("WHOA A BUFFER VIEW ");
+            }
+        }
+
+        // AO
+        //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
+        cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
+        if (AO_texture && AO_texture->image->uri)
+        {
+            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_AO;
+            char* texture_path = arena_alloc(frame_arena,
+                                             strlen(base_path) + strlen(AO_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
+            TRACE("AO Texture Path:  %s", texture_path);
+
+            Texture_Handle ao_handle;
+
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &ao_handle);
+            current_submesh_render_data->material_params.ambient_occlusion_index = ao_handle.
+                handle;
+        }
+
+
+        //NORMAL TEXTURE
+        // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
+        cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
+        if (normal_texture && normal_texture->image->uri)
+        {
+            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_NORMAL;
+            char* texture_path = arena_alloc(frame_arena,
+                                             strlen(base_path) + strlen(normal_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
+            TRACE("NORMAL Texture Path:  %s", texture_path);
+            Texture_Handle normal_handle;
+
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &normal_handle);
+            current_submesh_render_data->material_params.normal_index = normal_handle.
+                                                                             handle;
+        }
+
+        //EMISSIVE TEXTURE
+        cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
+        if (emissive_texture && emissive_texture->image->uri)
+        {
+            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_EMISSIVE;
+            char* texture_path = arena_alloc(frame_arena,
+                                             strlen(base_path) + strlen(emissive_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
+            TRACE("EMISSIVE Texture Path:  %s", texture_path);
+
+            Texture_Handle emissive_handle;
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &emissive_handle);
+            current_submesh_render_data->material_params.emissive_index = emissive_handle.
+                                                                               handle;
+        }
+
+
+
+        //add to mesh upload queue
+        ring_enqueue(mesh_system->mesh_ring_queue, current_submesh_render_data);
+    }
+
+    //load materials
+    // if (data->meshes[0].primitives->material) {
+    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
+    //     int hi = 0;
+    // }
+    // cgltf_texture_index();
+
+
+    //TODO: remove
+    // mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
+    // mesh_system->static_mesh_array_size++;
+
+    cgltf_free(data);
+}

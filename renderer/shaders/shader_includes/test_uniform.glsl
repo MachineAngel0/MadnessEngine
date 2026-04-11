@@ -53,9 +53,6 @@ layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
     spot_light_data spot_light[];
 };
 
-layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
-    spot_light_data spot_light[];
-};
 
 layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
     mat4 model;

@@ -28,6 +28,9 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 
 //NOTE: since basically every buffer needs a staging buffer (except uniform), might as well create them upfront without asking, unless otherwise specified
 // and it would be fine if we have holes in our arrays staging buffers array, since we only need to access them by index, not by looping
+
+//TODO: create an interface for single and double buffered thangs
+
 Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system,
                                    vulkan_buffer_type buffer_type, u64 data_size);
 
@@ -53,6 +56,7 @@ vulkan_buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_
 void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle staging_buffer_handle,
                                          void* data, u64 data_size);
 
+
 //copies data from a staging buffer into a device local buffer for gpu usage
 void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle);
 
@@ -62,6 +66,8 @@ void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_
 void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,
                                         Buffer_Handle staging_buffer_handle,
                                         void* data, u64 data_size);
+
+
 
 
 /* TODO: dont need rn but could use later

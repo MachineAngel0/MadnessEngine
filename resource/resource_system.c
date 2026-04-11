@@ -31,6 +31,7 @@ bool resource_system_update_and_create_render_packet(Resource_System* resource_s
 {
     render_packet_clear(resource_system->render_packet);
     resource_system->render_packet->texture_queue = resource_system->texture_system->textures_ring_queue;
+    resource_system->render_packet->mesh_queue = resource_system->mesh_system->mesh_ring_queue;
     return resource_system_generate_render_packet(resource_system);
 }
 

@@ -307,7 +307,11 @@ void renderer_update(Renderer* renderer, float delta_time)
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
+    // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
+    //TODO: combine these two operations 
+    mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets);
+    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets);
+
     sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 

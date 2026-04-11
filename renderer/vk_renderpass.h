@@ -136,7 +136,10 @@ void vulkan_renderpass_create_new(vulkan_context* context);
 
 
 Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Attachment_Type type,
-                                           VkFormat format, u32 width, u32 height);`
+                                           VkFormat format, u32 width, u32 height);
+
+//TODO: implement this function properly when needed
+void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_command_buffer* command_buffer);
 
 //OLD API
 

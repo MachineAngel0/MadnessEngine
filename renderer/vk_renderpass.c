@@ -42,7 +42,7 @@ void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_com
         .memoryBarrierCount = 1,
         .pMemoryBarriers = &memoryBarrier
     };
-    vkCmdPipelineBarrier2KHR(command_buffer->handle, &dependencyInfo);
+    vkCmdPipelineBarrier2(command_buffer->handle, &dependencyInfo);
 }
 
 

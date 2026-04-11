@@ -33,7 +33,9 @@ MAPI void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
 //Mesh Renderer
 MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system);
 
-MAPI void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
+MAPI void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet); // TODO: old and remove
+MAPI void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
+void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
 
 MAPI void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
                       vulkan_shader_pipeline* pipeline);

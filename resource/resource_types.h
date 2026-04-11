@@ -38,6 +38,12 @@ typedef struct Mesh_Handle
 } Mesh_Handle;
 
 
+typedef struct Transform_Handle
+{
+    u32 handle;
+} Transform_Handle;
+
+
 typedef struct Sprite_Handle
 {
     u32 handle;
@@ -134,16 +140,6 @@ typedef struct Material_Param_Data
 } Material_Param_Data;
 
 
-typedef struct vertex_mesh
-{
-    vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* uv;
-
-    // vec4* color; //might not support
-} vertex_mesh;
-
 typedef struct PC_Mesh
 {
     //per instance data change
@@ -160,7 +156,7 @@ typedef struct PC_Mesh
 
 typedef struct submesh
 {
-    Transform transform;
+    // Transform transform;
 
     // vertex_mesh vertices;
     vec3* pos;
@@ -352,7 +348,6 @@ typedef struct Sprite_System
 #define MAX_FONT_COUNT 10
 
 
-
 typedef struct Texture_System
 {
     //handle 0 is always the default texture, it should never be allowed to be modified
@@ -367,7 +362,6 @@ typedef struct Texture_System
     u32 max_textures;
 
 
-
     hash_table* texture_filepath_to_idx;
     // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
 
@@ -379,18 +373,104 @@ typedef struct Texture_System
     Madness_Font font_array[MAX_TEXTURE_COUNT];
 } Texture_System;
 
+
+typedef struct Submesh_Upload_Data
+{
+    //information to upload into the associated buffer
+    u32 vertex_offset;
+    u32 vertex_bytes;
+
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u32 normal_offset;
+    u32 normal_bytes;
+
+    u32 tangent_offset;
+    u32 tangent_bytes;
+
+    u32 uv_offset;
+    u32 uv_bytes;
+
+    //TODO: these technically could just be u8's
+    vec4* tangent;
+    vec3* pos;
+    vec3* normal;
+    vec2* uv;
+    u8* indices;
+
+    Material_Param_Data material_params;
+
+} Mesh_Upload_Data;
+
+typedef struct Mesh_Draw_Data
+{
+    /*typedef struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
+
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+    //TODO: another time, for when i want to do instancing
+    // uint32_t firstInstance; // 0
+    // uint32_t instanceCount; // 1
+} Mesh_Indirect_Draw_Data;
+
+
+typedef struct submesh_gameplay
+{
+    Material_Handle material_handle;
+
+    Texture_Handle color_texture;
+    Texture_Handle normal_texture;
+    Texture_Handle metallic_texture;
+    Texture_Handle roughness_texture;
+    Texture_Handle ambient_occlusion_texture;
+    Texture_Handle emissive_texture;
+} submesh_gameplay;
+
+typedef struct static_mesh_gameplay
+{
+    //each submesh shares the same transform
+    Transform_Handle transforms_handle;
+
+    //NOTE: if I wanted to change a submeshes material, i would have to index into it
+    submesh_gameplay* submeshes;
+    u32 submeshes_size;
+
+    bool visible;
+} static_mesh_gameplay;
+
 typedef struct Mesh_System
 {
-    //NOTE: this is just me figuring out how to handle buffers for a particular system
-    //it would also make sense to keep reuploading the meshes into the buffers every frame, well see if its a performance penality
+#define MAX_MESH_COUNT 1000
+    //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
+    // fragmentation would also be a concern
+
+    //unneccessary upload from cpu into the gpu should be avoided
+    //indirect commands will be regenerated every frame, at some point it can also be moved to the gpu
+
+
+    Transform transforms[MAX_MESH_COUNT];
+    Mesh_Indirect_Draw_Data draw_data[MAX_MESH_COUNT];
+    u32 draw_data_index;
+
 
     //global count of all the data
-    static_mesh static_mesh_array[1000];
+    static_mesh static_mesh_array[MAX_MESH_COUNT];
     u32 static_mesh_array_size;
     u32 static_mesh_submesh_size;
 
+
     //total size of all mesh data
     size_t vertex_byte_size;
+    size_t vertex_count_size;
     size_t index_byte_size;
     size_t index_count_size;
     size_t normals_byte_size;
@@ -398,14 +478,25 @@ typedef struct Mesh_System
     size_t uv_byte_size;
 
 
-    //NOTE: NOT IN USE
+    //NOTE: NOT IN USE RN
     skinned_mesh* skinned_meshes;
     u32 skinned_mesh_size;
 
     size_t joints_byte_size;
     size_t weight_byte_size;
 
-    // darray_type(VkDrawIndexedIndirectCommand*) indirect_draw_data;
+
+
+    u32 vertex_buffer_size;
+    u32 index_buffer_size;
+    u32 normal_buffer_size;
+    u32 tangent_buffer_size;
+    u32 uv_buffer_size;
+    // u32 joint_buffer_size;
+    // u32 weight_buffer_size;
+
+    // data*, offset, byte_size ->for all the types
+    ring_queue* mesh_ring_queue;
 } Mesh_System;
 
 
@@ -416,12 +507,15 @@ typedef struct Render_Packet_Mesh
 {
     const char* system_name;
 
+    //geometry data for indirect draws
+    Mesh_Indirect_Draw_Data* draw_data;
+    u32 draw_data_size;
+
+    //TODO: remove these
     static_mesh* static_mesh_array;
     u32 static_mesh_array_size;
     u32 static_mesh_submesh_size;
 
-
-    //TODO: geometry data
 } Render_Packet_Mesh;
 
 typedef struct Render_Packet_UI
@@ -440,14 +534,14 @@ typedef struct Render_Packet_Sprite
     Sprite_Data_array* sprite_data;
     Sprite_Data_array* sprite_data_transient;
     u16 sprite_indices[6];
-
 } Render_Packet_Sprite;
 
 
 typedef struct Render_Packet
 {
-    //
+    //just references
     ring_queue* texture_queue;
+    ring_queue* mesh_queue;
 
 
     //FOR RENDERING
@@ -458,6 +552,26 @@ typedef struct Render_Packet
     Render_Packet_Mesh mesh_data_packet;
     // Render_Packet_Game game_data_packet;
 } Render_Packet;
+
+typedef struct Resource_System
+{
+    //the resource system is just a container for all the system,
+    //each system can just access the system it need to load assets
+
+    //TODO: it would make sense to double buffer our frame allocators for transient resources or for cpu->gpu uploads
+
+
+    // Shader_System* shader_system;
+    // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer
+    Sprite_System* sprite_system;
+    Mesh_System* mesh_system;
+    Texture_System* texture_system;
+
+
+    Render_Packet* render_packet;
+
+} Resource_System;
+
 
 
 #endif //RESOURCE_TYPES_H

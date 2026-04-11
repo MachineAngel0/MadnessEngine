@@ -196,6 +196,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
 {
     MASSERT(data_size > 0);
 
+
     //we pass out the index which we stared at
     Buffer_Handle out_handle = {buffer_system->buffer_current_count};
 

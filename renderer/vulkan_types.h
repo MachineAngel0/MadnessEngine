@@ -665,7 +665,7 @@ typedef struct Mesh_Renderer
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
 
-    Buffer_Handle transform_buffer_handle;
+    Buffer_Handle transform_buffer_handle; //TODO:
     Buffer_Handle material_buffer_handle;
 
 

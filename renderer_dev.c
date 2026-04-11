@@ -81,10 +81,14 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    mesh_load_gltf(application_core->resource_system->mesh_system,
-                   "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
-                   &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                   renderer_plugin->renderer->resource_system);
+    // mesh_load_gltf(application_core->resource_system->mesh_system,
+                   // "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                   // &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                   // renderer_plugin->renderer->resource_system);
+    mesh_load_gltf_new(application_core->resource_system->mesh_system,
+                 "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                 &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                 renderer_plugin->renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb", &renderer->arena, &renderer->frame_arena, renderer->resource_system);

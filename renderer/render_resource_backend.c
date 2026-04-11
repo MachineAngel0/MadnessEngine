@@ -563,8 +563,8 @@ void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_render
     vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, mesh_renderer->normal_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, mesh_renderer->uv_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->material_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, mesh_renderer->tangent_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_renderer->material_staging_buffer_handle);
 
     mesh_renderer->indirect_draw_count = 0;
     //were assuming that the data is already in the buffer,
@@ -628,6 +628,101 @@ void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_render
     vulkan_buffer_copy(renderer, mesh_renderer->tangent_buffer_handle, mesh_renderer->tangent_staging_buffer_handle);
 
 }
+
+void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet)
+{
+
+    ring_queue* mesh_render_packet = render_packet->mesh_queue;
+
+    //return if its empty
+    if (ring_queue_is_empty(mesh_render_packet))  return;
+
+    Mesh_Upload_Data* submesh_upload_data = arena_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
+
+    //NOTE: rn it copies from an offset, which is fine for now,
+    // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system funciton calls
+    while (!ring_queue_is_empty(mesh_render_packet))
+    {
+
+        ring_dequeue(mesh_render_packet, submesh_upload_data);
+
+        //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
+                                            submesh_upload_data->pos,
+                                            submesh_upload_data->vertex_bytes);
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->index_staging_buffer_handle,
+                                            submesh_upload_data->indices,
+                                            submesh_upload_data->indices_bytes);
+
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->normal_staging_buffer_handle,
+                                            submesh_upload_data->normal,
+                                            submesh_upload_data->normal_bytes);
+
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->uv_staging_buffer_handle,
+                                            submesh_upload_data->uv,
+                                            submesh_upload_data->uv_bytes);
+
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->material_staging_buffer_handle,
+                                            &submesh_upload_data->material_params,
+                                            sizeof(Material_Param_Data));
+
+    }
+
+
+
+
+
+    vulkan_buffer_copy(renderer, mesh_renderer->vertex_buffer_handle, mesh_renderer->vertex_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_renderer->index_buffer_handle, mesh_renderer->index_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_renderer->normal_buffer_handle, mesh_renderer->normal_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle);
+    vulkan_buffer_copy(renderer, mesh_renderer->tangent_buffer_handle, mesh_renderer->tangent_staging_buffer_handle);
+
+    vulkan_buffer_copy(renderer, mesh_renderer->material_buffer_handle, mesh_renderer->material_staging_buffer_handle);
+
+}
+
+
+void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet)
+{
+
+    Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
+
+    vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
+
+    mesh_renderer->indirect_draw_count = 0;
+    // were assuming that the data is already in the buffers,
+    // we are just generating the draw calls
+
+    Mesh_Indirect_Draw_Data* draw_data = mesh_render_packet->draw_data;
+    u32 draw_data_size = mesh_render_packet->draw_data_size;
+
+    VkDrawIndexedIndirectCommand indirect_draw = {0};
+    for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
+    {
+            Mesh_Indirect_Draw_Data* current_submesh = &draw_data[mesh_idx];
+
+            indirect_draw.firstIndex = current_submesh->index_offset;
+            indirect_draw.indexCount = current_submesh->index_count;
+            indirect_draw.vertexOffset = current_submesh->vertex_offset;
+            //instance data
+            indirect_draw.instanceCount = 1;
+            indirect_draw.firstInstance = 0;
+
+            mesh_renderer->indirect_draw_count++;
+
+            //add the draw data
+            //push the indirect draw into the draw data
+            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->indirect_staging_buffer_handle,
+                                                &indirect_draw,
+                                                sizeof(VkDrawIndexedIndirectCommand));
+    }
+
+
+    vulkan_buffer_copy(renderer, mesh_renderer->indirect_buffer_handle, mesh_renderer->indirect_staging_buffer_handle);
+
+}
+
 
 
 void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
