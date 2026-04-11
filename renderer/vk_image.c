@@ -537,3 +537,4 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
         0, NULL,
         1, &imageMemoryBarrier);
 }
+

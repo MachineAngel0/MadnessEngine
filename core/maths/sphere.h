@@ -11,23 +11,23 @@
 
 //2d circle
 
-typedef struct circle
+typedef struct Circle
 {
     vec2 center;
     float radius;
-} circle;
+} Circle;
 
 
 //3d sphere
 
-typedef struct sphere
+typedef struct Sphere
 {
     vec3 center;
     float radius;
-} sphere;
+} Sphere;
 
 
-MINLINE float distance_of_point_from_sphere_center(const sphere* s, vec3 point)
+MINLINE float distance_of_point_from_sphere_center(const Sphere* s, vec3 point)
 {
     //p is any point
     // c is the center
@@ -39,17 +39,17 @@ MINLINE float distance_of_point_from_sphere_center(const sphere* s, vec3 point)
     return vec3_magnitude(a) - s->radius;
 }
 
-MINLINE float sphere_diameter(const sphere* s)
+MINLINE float sphere_diameter(const Sphere* s)
 {
     // 2*r
     return 2 * s->radius;
 }
-MINLINE float sphere_circumference(const sphere* s)
+MINLINE float sphere_circumference(const Sphere* s)
 {
     //2*pi*r or 2*d
     return 2 * s->radius * PI;
 }
-MINLINE float sphere_area(const sphere* s)
+MINLINE float sphere_area(const Sphere* s)
 {
     //pi*r^2
     return PI * s->radius * s->radius;
@@ -57,13 +57,13 @@ MINLINE float sphere_area(const sphere* s)
 
 
 
-MINLINE float sphere_surface_area(const sphere* s)
+MINLINE float sphere_surface_area(const Sphere* s)
 {
     // 4 * pi  * r^2
     return (4) * PI * (s->radius * s->radius);
 }
 
-MINLINE float sphere_volume(const sphere* s)
+MINLINE float sphere_volume(const Sphere* s)
 {
     //4/3 * pi  * r^3
     return (4 / 3) * PI * (s->radius * s->radius * s->radius);

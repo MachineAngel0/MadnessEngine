@@ -4,6 +4,13 @@
 #include "maths/math_types.h"
 #include "maths/math_lib.h"
 
+typedef struct Triangle
+{
+    vec3 v0;
+    vec3 v1;
+    vec3 v2;
+}Triangle;
+
 
 float triangle_area(float base, float height)
 {
@@ -18,10 +25,10 @@ float triangle_area_herons(vec3 p1, vec3 p2, vec3 p3)
 
     vec3 edge1 = vec3_sub(p3, p2);
     // vec3 edge2 = vec3_sub(p1, p3);
-    vec3 edge3 =  vec3_sub(p2, p1);
+    vec3 edge3 = vec3_sub(p2, p1);
 
     vec3 a = vec3_cross(edge1, edge3);
-    return vec3_magnitude(a)/2.0f;
+    return vec3_magnitude(a) / 2.0f;
 }
 
 

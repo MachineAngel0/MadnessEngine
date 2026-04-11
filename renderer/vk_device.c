@@ -344,12 +344,17 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     // VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
     // .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
     // };
+    VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+        .dynamicRenderingLocalRead = true,
+        .pNext = &enable_extended_dynamic_state_features,
+    };
 
     VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext = &enable_extended_dynamic_state_features,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
+        .pNext = &enable_vulkan14_features,
     };
     VkPhysicalDeviceVulkan12Features enable_vulkan12_features =
     {
@@ -383,6 +388,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .pNext = &enable_vulkan11_features,
         .features = device_features,
     };
+
 
     vkGetPhysicalDeviceFeatures2(vulkan_context->device.physical_device, &enable_device_features2);
     vkGetPhysicalDeviceFeatures(vulkan_context->device.physical_device, &device_features);

@@ -52,6 +52,8 @@ typedef struct Vulkan_Texture
     VkDeviceMemory texture_image_memory;
     VkImageView texture_image_view;
     VkSampler texture_sampler;
+    // VkFormat texture_format; //TODO: should probably keep a copy of this
+
     // u32 width;
     // u32 height;
 
@@ -573,8 +575,8 @@ typedef struct Descriptor_System
     u32 uniform_count;
     u32 texture_count;
     u32 storage_count;
+    u32 attachment_count;
 
-    u32 max_count;
 } Descriptor_System;
 
 

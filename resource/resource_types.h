@@ -190,7 +190,7 @@ typedef struct submesh
 
     u32 offset_into_material_data_buffer;
 
-
+    // mesh_pipeline_flags
     u32 mesh_pipeline_mask; // determines what material features this submesh has
 } submesh;
 

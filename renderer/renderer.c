@@ -122,6 +122,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
         (vec4){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
         (vec4){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
 
+    vulkan_renderpass_create_new(vk_context);
+
     // Swapchain framebuffers.
     vk_context->swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context->swapchain.image_count);
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
@@ -305,8 +307,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
-    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
+    mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
+    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
@@ -338,12 +340,6 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 }
     );
 
-    //
-    // // Begin the render pass.
-    // vulkan_renderpass_begin(
-    //     command_buffer_current_frame,
-    //     &vk_context.main_renderpass,
-    //     vk_context.swapchain.framebuffers[image_index].framebuffer_handle);
 
     //with dynamic rendering we need to add a layout transition, using barriers
 

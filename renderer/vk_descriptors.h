@@ -1,9 +1,36 @@
 ﻿#ifndef VK_DESCRIPTOR_H
 #define VK_DESCRIPTOR_H
 
+#include "vulkan_types.h"
 
-//TODO: it would probably just be better to pass in a buffer handle and have the update take care of the rest
-//TODO: have descripor pool allocator keep track of all its global descripors and remove them from the render structs concerns
+
+typedef enum Descriptor_Type
+{
+    Descriptor_Type_UNIFORM,
+    Descriptor_Type_TEXTURE,
+    Descriptor_Type_STORAGE,
+    Descriptor_Type_ATTACHMENT,
+    Descriptor_Type_MAX,
+} Descriptor_Type;
+
+#define max_bindless_texture_resource 1024u //4096u //might want to bump this up at some point
+#define max_uniform_buffer_resources 100u
+#define max_storage_buffer_resources 100u
+#define max_attachment_resources 100u
+
+u32 descriptor_type_to_size[Descriptor_Type_MAX] = {
+    [Descriptor_Type_UNIFORM] = max_uniform_buffer_resources,
+    [Descriptor_Type_TEXTURE] = max_bindless_texture_resource,
+    [Descriptor_Type_STORAGE] = max_storage_buffer_resources,
+    [Descriptor_Type_ATTACHMENT] = max_attachment_resources
+};
+
+VkDescriptorType descriptor_type_lookup[Descriptor_Type_MAX] = {
+    [Descriptor_Type_UNIFORM] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    [Descriptor_Type_TEXTURE] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    [Descriptor_Type_STORAGE] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    [Descriptor_Type_ATTACHMENT] = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT
+};
 
 Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer);
 
@@ -16,6 +43,7 @@ void descriptor_pool_alloc(Renderer* renderer, Descriptor_System* descriptor_sys
                            VkDescriptorSet* out_descriptors);
 
 void descriptor_pool_alloc_bindless(Renderer* renderer, Descriptor_System* descriptor_system,
+                                    Descriptor_Type descriptor_type,
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors);
 
@@ -59,8 +87,6 @@ void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_system,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index);
-
-
 
 
 #endif

@@ -149,8 +149,8 @@ MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list)
     if (dest)
     {
         // Big, but can fit on the stack.
-        char buffer[32000];
-        i32 written = vsnprintf(buffer, 32000, format, va_list);
+        char buffer[1024];
+        i32 written = vsnprintf(buffer, 1024, format, va_list);
         buffer[written] = 0;
         memcpy(dest, buffer, written + 1);
 

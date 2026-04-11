@@ -11,6 +11,45 @@
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
 // Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)
 
+/*** MAX/MIN FUNCTIONS ***/
+int32_t max_i(const int32_t a, const int32_t b)
+{
+    if (a > b)
+    {
+        return a;
+    }
+    return b;
+}
+
+float max_f(const float a, const float b)
+{
+    if (a > b)
+    {
+        return a;
+    }
+    return b;
+}
+
+int32_t min_i(const int32_t a, const int32_t b)
+{
+    if (a < b)
+    {
+        return a;
+    }
+    return b;
+}
+
+float min_f(const float a, const float b)
+{
+    if (a < b)
+    {
+        return a;
+    }
+    return b;
+}
+
+
+
 // VEC2
 MINLINE vec2 vec2_zero(void)
 {
@@ -180,6 +219,25 @@ MINLINE vec3 vec3_mul_scalar(const vec3 a, const float scalar)
 {
     return (vec3){a.x * scalar, a.y * scalar, a.z * scalar};
 }
+
+
+MINLINE vec3 vec3_max(const vec3 a, const vec3 b)
+{
+    vec3 out;
+    out.x = max_f(a.x, b.x);
+    out.y = max_f(a.y, b.y);
+    out.z = max_f(a.z, b.z);
+    return out;
+}
+MINLINE vec3 vec3_min(const vec3 a, const vec3 b)
+{
+    vec3 out;
+    out.x = min_f(a.x, b.x);
+    out.y = min_f(a.y, b.y);
+    out.z = min_f(a.z, b.z);
+    return out;
+}
+
 
 MINLINE vec3 vec3_flip_sign(const vec3 a)
 {
@@ -807,6 +865,7 @@ MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
     mat4 out_mat = mat4_zero();
     vec3 z_axis = vec3_zero();
 
+    // vec3_sub(target, position)
     z_axis.x = target.x - position.x;
     z_axis.y = target.y - position.y;
     z_axis.z = target.z - position.z;
@@ -1823,43 +1882,7 @@ static const vec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
 static const vec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 
 
-/*** MAX/MIN FUNCTIONS ***/
 
-int32_t max_i(const int32_t a, const int32_t b)
-{
-    if (a > b)
-    {
-        return a;
-    }
-    return b;
-}
-
-float max_f(const float a, const float b)
-{
-    if (a > b)
-    {
-        return a;
-    }
-    return b;
-}
-
-int32_t min_i(const int32_t a, const int32_t b)
-{
-    if (a < b)
-    {
-        return a;
-    }
-    return b;
-}
-
-float min_f(const float a, const float b)
-{
-    if (a < b)
-    {
-        return a;
-    }
-    return b;
-}
 
 /*** RANDOM ***/
 static bool rand_seeded = false;

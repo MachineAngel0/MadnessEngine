@@ -1,54 +1,39 @@
-﻿
-#define max_bindless_resources 4096u
-#define max_bindless_bindings 16
+﻿/* list of all available types
+     VK_DESCRIPTOR_TYPE_SAMPLER = 0,
+     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = 1,
+     VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE = 2,
+     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE = 3,
+     VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER = 4,
+     VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER = 5,
+     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER = 6,
+     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER = 7,
+     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8,
+     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9,
+     VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10,
+     VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK = 1000138000,
+     VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR = 1000150000,
+     VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV = 1000165000,
+     VK_DESCRIPTOR_TYPE_SAMPLE_WEIGHT_IMAGE_QCOM = 1000440000,
+     VK_DESCRIPTOR_TYPE_BLOCK_MATCH_IMAGE_QCOM = 1000440001,
+     VK_DESCRIPTOR_TYPE_TENSOR_ARM = 1000460000,
+     VK_DESCRIPTOR_TYPE_MUTABLE_EXT = 1000351000,
+     VK_DESCRIPTOR_TYPE_PARTITIONED_ACCELERATION_STRUCTURE_NV = 1000570000,
+     VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT = VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK,
+     VK_DESCRIPTOR_TYPE_MUTABLE_VALVE = VK_DESCRIPTOR_TYPE_MUTABLE_EXT,
+     VK_DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
+     */
 
 
-typedef enum descriptor_type
-{
-    UNIFORM_BUFFER,
-    TEXTURE,
-    descriptor_type_max,
-} descriptor_type;
-
-VkDescriptorType descriptor_type_lookup[descriptor_type_max] = {
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-};
-
+#include "vk_descriptors.h"
 
 Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
 {
-    /* list of all available types
-        VK_DESCRIPTOR_TYPE_SAMPLER = 0,
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = 1,
-        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE = 2,
-        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE = 3,
-        VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER = 4,
-        VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER = 5,
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER = 6,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER = 7,
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9,
-        VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10,
-        VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK = 1000138000,
-        VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR = 1000150000,
-        VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV = 1000165000,
-        VK_DESCRIPTOR_TYPE_SAMPLE_WEIGHT_IMAGE_QCOM = 1000440000,
-        VK_DESCRIPTOR_TYPE_BLOCK_MATCH_IMAGE_QCOM = 1000440001,
-        VK_DESCRIPTOR_TYPE_TENSOR_ARM = 1000460000,
-        VK_DESCRIPTOR_TYPE_MUTABLE_EXT = 1000351000,
-        VK_DESCRIPTOR_TYPE_PARTITIONED_ACCELERATION_STRUCTURE_NV = 1000570000,
-        VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT = VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK,
-        VK_DESCRIPTOR_TYPE_MUTABLE_VALVE = VK_DESCRIPTOR_TYPE_MUTABLE_EXT,
-        VK_DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
-        */
-
     Descriptor_System* descriptor_system = arena_alloc(&renderer->arena, sizeof(Descriptor_System));
 
-    descriptor_system->max_count = max_bindless_resources;
-    descriptor_system->uniform_count = max_bindless_resources;
-    descriptor_system->texture_count = max_bindless_resources;
-    descriptor_system->storage_count = max_bindless_resources;
+    descriptor_system->attachment_count = max_attachment_resources;
+    descriptor_system->uniform_count = max_uniform_buffer_resources;
+    descriptor_system->texture_count = max_bindless_texture_resource;
+    descriptor_system->storage_count = max_bindless_texture_resource;
 
     //BINDLESS
 
@@ -56,23 +41,29 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
     {
         {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = max_bindless_resources
+            .descriptorCount = max_uniform_buffer_resources
         },
         {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = max_bindless_resources
+            .descriptorCount = max_bindless_texture_resource
         },
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = max_bindless_resources
+            .descriptorCount = max_bindless_texture_resource
+        },
+        {
+            .type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+            .descriptorCount = max_attachment_resources
         },
     };
+
 
     VkDescriptorPoolCreateInfo bindless_pool_info = {0};
     bindless_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     bindless_pool_info.poolSizeCount = ARRAY_SIZE(bindless_pool_sizes); // number of different pool sizes, we created
     bindless_pool_info.pPoolSizes = bindless_pool_sizes;
-    bindless_pool_info.maxSets = ARRAY_SIZE(bindless_pool_sizes) * max_bindless_resources;
+    bindless_pool_info.maxSets = descriptor_system->storage_count + descriptor_system->texture_count + descriptor_system
+        ->uniform_count + descriptor_system->attachment_count;
     bindless_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
     // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
@@ -111,6 +102,7 @@ void descriptor_pool_allocator_clear(Renderer* renderer, Descriptor_System* desc
 
 
 void descriptor_pool_alloc_bindless(Renderer* renderer, Descriptor_System* descriptor_system,
+                                    Descriptor_Type descriptor_type,
                                     VkDescriptorSetLayout* set_layout, u32* descriptor_set_count,
                                     VkDescriptorSet* out_descriptors)
 {
@@ -119,7 +111,26 @@ void descriptor_pool_alloc_bindless(Renderer* renderer, Descriptor_System* descr
     count_info.descriptorSetCount = *descriptor_set_count;
     // This number is the max allocatable count
     // count_info.pDescriptorCounts = (const u32*)max_bindless_resources;
-    const u32 binding_count = max_bindless_resources - 1;
+    u32 binding_count = 0;
+    switch (descriptor_type)
+    {
+    case Descriptor_Type_UNIFORM:
+        binding_count = max_uniform_buffer_resources;
+        break;
+    case Descriptor_Type_TEXTURE:
+        binding_count = max_bindless_texture_resource;
+        break;
+    case Descriptor_Type_STORAGE:
+        binding_count = max_storage_buffer_resources;
+        break;
+    case Descriptor_Type_ATTACHMENT:
+        binding_count = max_attachment_resources;
+        break;
+    case Descriptor_Type_MAX:
+        MASSERT(false);
+        break;
+    }
+    binding_count -= 1;
     count_info.pDescriptorCounts = &binding_count;
 
     VkDescriptorSetAllocateInfo alloc_info = {0};
@@ -320,7 +331,7 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
     //image sampler
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     layout_binding.binding = 0;
-    layout_binding.descriptorCount = max_bindless_resources;
+    layout_binding.descriptorCount = max_bindless_texture_resource;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
     layout_binding.pImmutableSamplers = NULL;
 
@@ -351,7 +362,8 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
     for (u32 i = 0; i < texture_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &texture_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, Descriptor_Type_TEXTURE,
+                                       &texture_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &texture_descriptors->descriptor_sets[i]);
     }
@@ -360,7 +372,6 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
     //TODO:
     // darray_free(texture_descriptors->descriptor_sets);
 }
-
 
 
 void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
@@ -381,7 +392,7 @@ void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
     VkDescriptorSetLayoutBinding layout_binding = {0};
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_binding.binding = 0;
-    layout_binding.descriptorCount = max_bindless_resources;
+    layout_binding.descriptorCount = max_uniform_buffer_resources;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
     layout_binding.pImmutableSamplers = NULL;
 
@@ -412,7 +423,8 @@ void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
     for (int i = 0; i < uniform_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &uniform_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, Descriptor_Type_UNIFORM,
+                                       &uniform_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &uniform_descriptors->descriptor_sets[i]);
     }
@@ -421,7 +433,6 @@ void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
     //TODO:
     // darray_free(texture_descriptors->descriptor_sets);
 }
-
 
 
 void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
@@ -442,7 +453,7 @@ void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
     VkDescriptorSetLayoutBinding layout_binding = {0};
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     layout_binding.binding = 0;
-    layout_binding.descriptorCount = max_bindless_resources;
+    layout_binding.descriptorCount = max_storage_buffer_resources;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
     layout_binding.pImmutableSamplers = NULL;
 
@@ -473,7 +484,8 @@ void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
     for (int i = 0; i < storage_descriptors->descriptor_set_count; i++)
     {
         u32 set_count = 1;
-        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, &storage_descriptors->descriptor_set_layout,
+        descriptor_pool_alloc_bindless(renderer, descriptor_pool_allocator, Descriptor_Type_STORAGE,
+                                       &storage_descriptors->descriptor_set_layout,
                                        &set_count,
                                        &storage_descriptors->descriptor_sets[i]);
     }
@@ -489,7 +501,6 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index)
 {
-
     vulkan_buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
     MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
                 "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
