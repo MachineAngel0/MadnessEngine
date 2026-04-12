@@ -182,6 +182,10 @@ static bool texture_flip = false;
 
 void renderer_update(Renderer* renderer, float delta_time)
 {
+    //NOTE: only duplicate resources which are uploaded from the cpu to the gpu, not anything that lives on the gpu like textures
+    // this includes, command buffers, sync objects, and cpu side uniform buffers
+    // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,
+
     Render_Packet* render_packets = renderer->resource_system->render_packet;
 
     vulkan_context* vk_context = &renderer->context;
@@ -302,13 +306,13 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.render_mode = renderer->mode;
 
     // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    vulkan_buffer* ubo_buffer = vulkan_buffer_get(renderer,
+    Vulkan_Buffer* ubo_buffer = vulkan_buffer_get(renderer,
                                                   renderer->buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
     // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
-    //TODO: combine these two operations 
+    //TODO: combine these two operations
     mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets);
     mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets);
 

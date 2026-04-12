@@ -53,6 +53,14 @@ void vulkan_command_buffer_end_single_use(
 // Get device address of a buffer
 VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 
+void vulkan_command_buffer_sumbit(
+    vulkan_context* context,
+    VkCommandPool pool,
+    vulkan_command_buffer* command_buffer,
+    VkQueue queue);
+
+
+
 
 //TODO: refactor
 

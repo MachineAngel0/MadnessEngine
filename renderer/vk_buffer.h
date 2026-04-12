@@ -6,6 +6,15 @@
 //TODO: at some point it would make sense to allocate something between 32-128mb of vertex buffers
 // at any one time and keep a bunch of them allocated in some sort of free list ready to be used or make them on the fly
 
+
+/*
+ * what do we need to do with buffers rn
+ * vertex buffer, index, storage -> push onto the buffer   local->host
+ * indirect buffer -> upload every frame local->host -> per frame
+ * uniform -> frequent updates -> host visible -> per frame data
+ * staging buffers -> host visible, get reset every frame
+ */
+
 Buffer_System* buffer_system_init(Renderer* renderer, u32 frames_in_flight);
 Buffer_System* buffer_system_free(Renderer* renderer);
 
@@ -32,24 +41,24 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 //TODO: create an interface for single and double buffered thangs
 
 Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system,
-                                   vulkan_buffer_type buffer_type, u64 data_size);
+                                   Vulkan_Buffer_Type buffer_type, u64 data_size);
 
 
 //TODO: so there are instances in which a buffer is associated with its staging buffer, and having to manually handle both is really annoying
 Buffer_Handle vulkan_buffer_create_with_staging_buffer(Renderer* renderer, Buffer_System* buffer_system,
-                                   vulkan_buffer_type buffer_type, u64 data_size);
+                                   Vulkan_Buffer_Type buffer_type, u64 data_size);
 
 
-void _vulkan_buffer_create_internal(Renderer* renderer, vulkan_buffer* out_buffer, vulkan_buffer_type buffer_type,
+void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffer, Vulkan_Buffer_Type buffer_type,
                                     u64 data_size);
 
-bool vulkan_buffer_free(Renderer* renderer, vulkan_buffer* vk_buffer);
+bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer);
 
-vulkan_buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
+Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
 void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle);
 
 //clears the buffer when you get it
-vulkan_buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle);
+Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle);
 
 
 //copies data (like vertex or index data) into a staging buffer

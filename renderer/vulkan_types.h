@@ -186,7 +186,7 @@ typedef struct vulkan_shader_stage
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
 
-typedef enum vulkan_cpu_buffer_type
+typedef enum Vulkan_Buffer_Type
 {
     BUFFER_TYPE_INVALID,
 
@@ -208,10 +208,10 @@ typedef enum vulkan_cpu_buffer_type
     BUFFER_TYPE_GPU_STORAGE,
     BUFFER_TYPE_STAGING,
     BUFFER_TYPE_UNIFORM,
-} vulkan_buffer_type;
+} Vulkan_Buffer_Type;
 
 
-typedef struct vulkan_buffer
+typedef struct Vulkan_Buffer
 {
     // u64 total_size;
     // VkBufferUsageFlagBits usage;
@@ -221,9 +221,9 @@ typedef struct vulkan_buffer
     //VkDeviceSize are typedefs for u64's
     u64 current_offset;
     u64 capacity;
-    vulkan_buffer_type type;
+    Vulkan_Buffer_Type type;
     uint8_t* mapped_data;
-} vulkan_buffer;
+} Vulkan_Buffer;
 
 
 typedef enum vulkan_shader_pipeline_type
@@ -292,7 +292,7 @@ typedef struct Buffer_System
     Buffer_Handle global_ubo_handle;
 
     //an array of them
-    vulkan_buffer* buffers;
+    Vulkan_Buffer* buffers;
     u32 buffers_size; // total we have to be given out
     u32 buffer_current_count; // current amount given out
     //add a linked list in later for buffers we free
@@ -300,7 +300,8 @@ typedef struct Buffer_System
     //we can have a one to one mapping from buffers -> staging buffers
     //given how we might use this, it would be ok to have holes in the array
     //TODO: freelist instead of keeping a count, and we might want to differentiate these by size
-    vulkan_buffer* staging_buffers;
+    //ASSUMPTION: staging buffers are per frame, and if i ever exceed a frames staging upload limit, just increase the size
+    Vulkan_Buffer* staging_buffers;
     u32 staging_buffers_size; // total we have to be given out
     u32 staging_buffer_current_count; // current amount given out
 

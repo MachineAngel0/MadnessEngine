@@ -316,9 +316,10 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_pool_allocator,
                                             vulkan_bindless_descriptors* texture_descriptors)
 {
+    //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
     texture_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
-    texture_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
+        VkDescriptorSet, 1/*renderer->context.swapchain.max_frames_in_flight*/);
+    texture_descriptors->descriptor_set_count = 1; //(u32)renderer->context.swapchain.max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
@@ -501,7 +502,7 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index)
 {
-    vulkan_buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
     MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
                 "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
 
@@ -535,7 +536,7 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
                                             Texture_Handle texture_handle)
 {
-    //TODO: update vulkan_shader_texture* test_texture, to a Texture* struct type
+    //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
 
     Vulkan_Texture* texture = shader_system_get_texture(renderer->shader_system, texture_handle);
     MASSERT(texture);
@@ -569,7 +570,7 @@ void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index)
 {
-    vulkan_buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
 
 
     MASSERT_MSG(buffer->type == BUFFER_TYPE_CPU_STORAGE,

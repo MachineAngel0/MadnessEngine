@@ -13,7 +13,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     //these get handed out as handles to other systems that need them
     out_buffer_system->buffers_size = max_buffers_available;
     out_buffer_system->buffer_current_count = 0;
-    out_buffer_system->buffers = arena_alloc(&renderer->arena, out_buffer_system->buffers_size * sizeof(vulkan_buffer));
+    out_buffer_system->buffers = arena_alloc(&renderer->arena, out_buffer_system->buffers_size * sizeof(Vulkan_Buffer));
 
     out_buffer_system->global_ubo_handle = vulkan_buffer_create(renderer, out_buffer_system, BUFFER_TYPE_UNIFORM,
                                                                 sizeof(uniform_buffer_object));
@@ -192,7 +192,7 @@ void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* c
 
 Buffer_Handle vulkan_buffer_create(Renderer* renderer,
                                    Buffer_System* buffer_system,
-                                   vulkan_buffer_type buffer_type, u64 data_size)
+                                   Vulkan_Buffer_Type buffer_type, u64 data_size)
 {
     MASSERT(data_size > 0);
 
@@ -207,7 +207,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         Buffer_Handle current_handle = {buffer_system->buffer_current_count};
 
         //grab an available buffer
-        vulkan_buffer* buffer_in_use = &buffer_system->buffers[buffer_system->buffer_current_count];
+        Vulkan_Buffer* buffer_in_use = &buffer_system->buffers[buffer_system->buffer_current_count];
 
         //do a large allocation upfront
         buffer_in_use->capacity = data_size;
@@ -331,7 +331,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
     return out_handle;
 }
 
-void _vulkan_buffer_create_internal(Renderer* renderer, vulkan_buffer* out_buffer, vulkan_buffer_type buffer_type,
+void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffer, Vulkan_Buffer_Type buffer_type,
                                     u64 data_size)
 {
     //it has to be allocated before hand
@@ -433,22 +433,22 @@ void _vulkan_buffer_create_internal(Renderer* renderer, vulkan_buffer* out_buffe
     renderer->buffer_system->buffer_current_count++;
 }
 
-bool vulkan_buffer_free(Renderer* renderer, vulkan_buffer* vk_buffer)
+bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer)
 {
     vkFreeMemory(renderer->context.device.logical_device, vk_buffer->memory, NULL);
     vkDestroyBuffer(renderer->context.device.logical_device, vk_buffer->handle, NULL);
     return true;
 }
 
-vulkan_buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle)
+Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     //get the index plus the current frame number
     return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
 }
 
-vulkan_buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
+Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
 {
-    vulkan_buffer* out_buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* out_buffer = vulkan_buffer_get(renderer, buffer_handle);
     out_buffer->current_offset = 0;
     return out_buffer;
 }
@@ -469,7 +469,7 @@ void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle stagi
     }
 
     //get buffer from handle
-    vulkan_buffer* buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
+    Vulkan_Buffer* buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
     //make sure its a staging buffer
     MASSERT(buffer->type == BUFFER_TYPE_STAGING);
 
@@ -482,8 +482,8 @@ void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle stagi
 
 void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle)
 {
-    vulkan_buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    vulkan_buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
+    Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
 
     MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
     MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);

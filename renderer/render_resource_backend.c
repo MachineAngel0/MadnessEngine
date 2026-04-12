@@ -110,9 +110,9 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
 
     u64 sprite_draw_count = sprite_backend->draw_count;
 
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_vertex_buffer);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_index_buffer);
-    vulkan_buffer* sprite_indirect_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_indirect_buffer);
+    Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_vertex_buffer);
+    Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_index_buffer);
+    Vulkan_Buffer* sprite_indirect_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_indirect_buffer);
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->sprite_pipeline.handle);
@@ -126,8 +126,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -345,9 +344,9 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
     u64 text_draw_count = render_packet->ui_data_packet.text_data_packet->num_items;
 
     // UI
-    vulkan_buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
-    vulkan_buffer* quad_indirect_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_indirect_buffer_handle);
+    Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
+    Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
+    Vulkan_Buffer* quad_indirect_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_indirect_buffer_handle);
 
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -362,8 +361,7 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -426,9 +424,9 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
 
 
     //TEXT
-    vulkan_buffer* text_vert_buffer = vulkan_buffer_get(renderer, ui_renderer->text_vertex_buffer_handle);
-    vulkan_buffer* text_index_buffer = vulkan_buffer_get(renderer, ui_renderer->text_index_buffer_handle);
-    vulkan_buffer* text_indirect = vulkan_buffer_get(renderer, ui_renderer->text_indirect_buffer_handle);
+    Vulkan_Buffer* text_vert_buffer = vulkan_buffer_get(renderer, ui_renderer->text_vertex_buffer_handle);
+    Vulkan_Buffer* text_index_buffer = vulkan_buffer_get(renderer, ui_renderer->text_index_buffer_handle);
+    Vulkan_Buffer* text_indirect = vulkan_buffer_get(renderer, ui_renderer->text_indirect_buffer_handle);
 
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -443,8 +441,7 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->text_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -731,9 +728,9 @@ void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan
     INFO("MESH SYSTEM DRAW CALLS")
 
     //only bind the vertex and index, the storage buffers are in bindless
-    vulkan_buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_renderer->indirect_buffer_handle);
-    vulkan_buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_renderer->vertex_buffer_handle);
-    vulkan_buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
+    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_renderer->indirect_buffer_handle);
+    Vulkan_Buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_renderer->vertex_buffer_handle);
+    Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
 
     VkDeviceSize pOffsets[] = {0};
@@ -749,11 +746,10 @@ void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan
                             &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
                                 current_frame], 0, 0);
 
-    //textures
+    //texturess
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
 
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
