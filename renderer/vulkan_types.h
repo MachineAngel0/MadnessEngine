@@ -38,6 +38,7 @@ typedef struct Pipeline_Handle
 typedef struct Buffer_Handle
 {
     u32 handle;
+    bool is_per_frame;
 } Buffer_Handle;
 
 typedef struct Descriptor_Handle

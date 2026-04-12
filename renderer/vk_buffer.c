@@ -199,6 +199,28 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
 
     //we pass out the index which we stared at
     Buffer_Handle out_handle = {buffer_system->buffer_current_count};
+    out_handle.is_per_frame = false;
+
+    u32 buffers_to_create = 1;
+    switch (buffer_type)
+    {
+    case BUFFER_TYPE_INDIRECT:
+        buffers_to_create =  buffer_system->frames_in_flight;
+        out_handle.is_per_frame = true;
+        break;
+    case BUFFER_TYPE_GPU_STORAGE:
+        buffers_to_create =  buffer_system->frames_in_flight;
+        out_handle.is_per_frame = true;
+        break;
+    case BUFFER_TYPE_STAGING:
+        buffers_to_create =  buffer_system->frames_in_flight;
+        out_handle.is_per_frame = true;
+        break;
+    case BUFFER_TYPE_UNIFORM:
+        buffers_to_create =  buffer_system->frames_in_flight;
+        out_handle.is_per_frame = true;
+        break;
+    }
 
     //create one for each frame in flight
     for (u32 frame_num = 0; frame_num < buffer_system->frames_in_flight; frame_num++)
@@ -443,7 +465,11 @@ bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer)
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     //get the index plus the current frame number
-    return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
+    if (buffer_handle.is_per_frame)
+    {
+        return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
+    }
+        return &renderer->buffer_system->buffers[buffer_handle.handle];
 }
 
 Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
