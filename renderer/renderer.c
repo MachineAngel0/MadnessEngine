@@ -26,8 +26,9 @@ bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event
 }
 
 
-Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system, Input_System* input_system,
-                   Event_System* event_system, Resource_System* resource_system)
+Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system,
+                        Input_System* input_system,
+                        Event_System* event_system, Resource_System* resource_system)
 {
     MASSERT(platform_state);
     MASSERT(memory_system);
@@ -39,7 +40,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
     memset(renderer, 0, sizeof(Renderer));
     vulkan_context* vk_context = &renderer->context;
-
 
 
     //grab the input system if its valid
@@ -62,11 +62,13 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
                                                              (renderer_system_mem_requirement + frame_arena_mem_size));
 
 
-    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
+    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+                                                    MEMORY_SUBSYSTEM_RENDERER);
     arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
                renderer->mem_tracker);
 
-    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
+    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+                                                MEMORY_SUBSYSTEM_RENDERER);
     arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -133,7 +135,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_renderer_command_buffers_create(vk_context);
 
     //NOTE: semaphores must be per swapchain image
-    init_per_frame_sync(vk_context);
+    sync_object_per_frame_init(renderer, vk_context);
     vk_context->current_frame = 0;
 
 
@@ -245,7 +247,7 @@ void renderer_update(Renderer* renderer, float delta_time)
         &vk_context->queue_submit_fence[vk_context->current_frame],
         UINT64_MAX))
     {
-        WARN("In-flight fence wait failure!");
+        FATAL("In-flight fence wait failure!");
         return;
     }
 
@@ -311,24 +313,104 @@ void renderer_update(Renderer* renderer, float delta_time)
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
-    //TODO: combine these two operations
-    mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets);
-    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets);
-
-    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
-    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
-
-
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
-    vulkan_command_buffer* command_buffer_current_frame = &vk_context->graphics_command_buffer[vk_context->
+    /*
+    vulkan_command_buffer* transfer_cmd_buffer = &vk_context->transfer_command_buffer[vk_context->
         current_frame];
-    vkResetCommandBuffer(command_buffer_current_frame->handle, 0);
-    vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
+    vkResetCommandBuffer(transfer_cmd_buffer->handle, 0);
+    vulkan_command_buffer_begin(transfer_cmd_buffer, false, false, false);
+
+
+    light_system_update(Renderer* renderer, Light_System* light_system, vulkan_command_buffer* transfer_command_buffer);
+
+    //TODO: combine these two operations
+    mesh_renderer_upload_draw_data_new(renderer, transfer_cmd_buffer, renderer->mesh_renderer, render_packets);
+    mesh_renderer_construct_indirect_draw(renderer, transfer_cmd_buffer, renderer->mesh_renderer, render_packets);
+
+    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
+    // ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
+
+    vulkan_command_buffer_end(transfer_cmd_buffer);
+
+     vulkan_command_buffer_submit(&renderer->context, transfer_cmd_buffer, renderer->context.device.transfer_queue);
+*/
+
+
+    // Begin recording transfer commands.
+    /*
+    vulkan_command_buffer* transfer_command_buffer = &vk_context->transfer_command_buffer[vk_context->
+        current_frame];
+    vulkan_command_buffer_begin(transfer_command_buffer, false, false, false);
+
+    vulkan_buffer_reset_staging_buffer_offset(renderer);
+    light_system_update(renderer, renderer->light_system, transfer_command_buffer);
+    mesh_renderer_upload_draw_data_new(renderer, transfer_command_buffer, renderer->mesh_renderer, render_packets);
+    mesh_renderer_construct_indirect_draw(renderer, transfer_command_buffer, renderer->mesh_renderer, render_packets);
+
+    /*
+    // lights
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->light_system->directional_light_storage_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->light_system->point_light_storage_buffer_handle);
+    //mesh
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->vertex_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->index_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->indirect_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->normal_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->uv_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->tangent_buffer_handle);
+    // buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS, renderer->mesh_renderer->transform_buffer_handle);
+    buffer_memory_barrier_ownership_transfer_create(renderer, QUEUE_TYPE_TRANSFER, QUEUE_TYPE_GRAPHICS,
+                                                    renderer->mesh_renderer->material_buffer_handle);
+
+
+    tranfer_graphics_memory_barrier_release(renderer, transfer_command_buffer);
+
+    vulkan_command_buffer_end(transfer_command_buffer);
+    renderer->transfer_sumbit_signal_semaphore = (VkSemaphoreSubmitInfo){
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .pNext = 0,
+        .semaphore = renderer->transfer_signal_sempahores[vk_context->
+            current_frame],
+        .value = 0, // timeline semaphore
+        .stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
+        .deviceIndex = 0,
+    };
+    vulkan_command_buffer_submit_new(&renderer->context, transfer_command_buffer,
+                                     renderer->context.device.transfer_queue, NULL,
+                                     &renderer->transfer_sumbit_signal_semaphore);
+*/
+
+
+    // Begin recording graphic commands.
+    //TODO: might have to change to primary command buffer
+    vulkan_command_buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
+        current_frame];
+    vkResetCommandBuffer(graphics_command_buffer->handle, 0);
+    vulkan_command_buffer_begin(graphics_command_buffer, false, false, false);
+
+
+    vulkan_buffer_reset_staging_buffer_offset(renderer);
+    light_system_update(renderer, renderer->light_system, graphics_command_buffer);
+    mesh_renderer_upload_draw_data_new(renderer, graphics_command_buffer, renderer->mesh_renderer, render_packets);
+    mesh_renderer_construct_indirect_draw(renderer, graphics_command_buffer, renderer->mesh_renderer, render_packets);
+
+    buffer_memory_barrier(renderer, graphics_command_buffer);
+
+
+    //acquire resources from the transfer queue
+    // tranfer_graphics_memory_barrier_acquire(renderer, graphics_command_buffer);
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -336,7 +418,7 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.depth_attachment.texture_image, 0,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -372,7 +454,7 @@ void renderer_update(Renderer* renderer, float delta_time)
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment,
     };
-    vkCmdBeginRendering(command_buffer_current_frame->handle, &rendering_info);
+    vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
     // Dynamic state
     VkViewport viewport = {
@@ -387,8 +469,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     };
 
 
-    vkCmdSetViewport(command_buffer_current_frame->handle, 0, 1, &viewport);
-    vkCmdSetScissor(command_buffer_current_frame->handle, 0, 1, &scissor);
+    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &viewport);
+    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &scissor);
 
 
     //Do Bindings and Draw
@@ -412,23 +494,23 @@ void renderer_update(Renderer* renderer, float delta_time)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_renderer_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
-                     &renderer->indirect_mesh_pipeline);
+    mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
+                       &renderer->indirect_mesh_pipeline);
 
-    sprite_renderer_draw(renderer, renderer->sprite_renderer, command_buffer_current_frame);
+    // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
-    ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);
+    // ui_renderer_draw(renderer->ui_renderer, renderer, graphics_command_buffer, render_packets);
 
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
 
     // Finish the current dynamic rendering section
-    vkCmdEndRendering(command_buffer_current_frame->handle);
+    vkCmdEndRendering(graphics_command_buffer->handle);
 
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
@@ -443,28 +525,61 @@ void renderer_update(Renderer* renderer, float delta_time)
 
 
     //End DRAW COMMAND
-    vulkan_command_buffer_end(command_buffer_current_frame);
+    vulkan_command_buffer_end(graphics_command_buffer);
+
+    VkSemaphoreSubmitInfo wait_semaphores[] = {
+        // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
+        // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
+        // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = vk_context->swapchain_acquire_semaphore[vk_context->current_frame],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        },
+        /*
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = renderer->transfer_signal_sempahores[vk_context->current_frame],
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT| VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
+        }*/
+    };
+    VkSemaphoreSubmitInfo signal_semaphores[] = {
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = vk_context->swapchain_release_semaphore[image_index],
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        }
+    };
+    VkCommandBufferSubmitInfo command_buffer_submit_info[] = {
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = graphics_command_buffer->handle,
+            .pNext = 0,
+            .deviceMask = 1,
+        }
+    };
 
     // Submit the queue and wait for the operation to complete.
     // Begin queue submission
-    VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    // Command buffer(s) to be executed.
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer_current_frame->handle;
-    // Semaphore to wait upon before the submitted command buffer starts executing
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &vk_context->swapchain_release_semaphore[image_index];
-    // Semaphore to be signaled when command buffers have completed
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &vk_context->swapchain_acquire_semaphore[vk_context->current_frame];
-    // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
-    // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
-    // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
-    VkPipelineStageFlags flags[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submit_info.pWaitDstStageMask = flags;
+    VkSubmitInfo2 submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = 0,
+        .flags = 0,
+        // Semaphore we wait on before this can be sumbitted
+        .waitSemaphoreInfoCount = ARRAY_SIZE(wait_semaphores),
+        .pWaitSemaphoreInfos = wait_semaphores,
+        // Semaphore to wait upon before the submitted command buffer starts executing
+        .signalSemaphoreInfoCount = 1,
+        .pSignalSemaphoreInfos = signal_semaphores,
+        // Command buffer(s) to be executed.
+        .commandBufferInfoCount = ARRAY_SIZE(command_buffer_submit_info),
+        .pCommandBufferInfos = command_buffer_submit_info,
+
+    };
+
 
     // Submit to the graphics queue passing a wait fence
-    VkResult result = vkQueueSubmit(
+    VkResult result = vkQueueSubmit2(
         vk_context->device.graphics_queue,
         1,
         &submit_info,
@@ -477,7 +592,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     vulkan_swapchain_present_image(
         vk_context,
         &vk_context->swapchain,
-        vk_context->device.graphics_queue,
         vk_context->device.present_queue,
         vk_context->swapchain_release_semaphore[image_index],
         image_index);

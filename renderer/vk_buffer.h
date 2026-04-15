@@ -55,35 +55,31 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
 bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer);
 
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
+Vulkan_Buffer* vulkan_buffer_get_staging_buffer(Renderer* renderer);
 void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle);
+void vulkan_buffer_reset_staging_buffer_offset(Renderer* renderer);
 
 //clears the buffer when you get it
 Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle);
 
 
 //copies data (like vertex or index data) into a staging buffer
-void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle staging_buffer_handle,
-                                         void* data, u64 data_size);
+void vulkan_buffer_data_copy_from_offset(Renderer* renderer, void* data, u64 data_size);
 
 
 //copies data from a staging buffer into a device local buffer for gpu usage
-void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle);
+void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, u64 data_size, vulkan_command_buffer* command_buffer);
 
 //copy data into a staging buffer and immediatelyy upload it into a local buffer
 //best used if there is only a single upload into the staging buffer
 //dont use if there are a lot of data copies into the staging buffer, copies into the device local can be slow if done many times
-void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,
-                                        Buffer_Handle staging_buffer_handle,
+void vulkan_buffer_data_copy_and_upload(Renderer* renderer, vulkan_command_buffer* command_buffer, Buffer_Handle buffer_handle,
+                                        void* data, u64 data_size);
+
+void vulkan_buffer_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
                                         void* data, u64 data_size);
 
 
-
-
-/* TODO: dont need rn but could use later
-//for inserting data into a specific memory region of the buffer
-void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
-                               vulkan_buffer* buffer, vulkan_buffer* staging_buffer, void* data, u64 data_size, u64 offset);
-*/
 
 
 #endif //VK_BUFFER_H

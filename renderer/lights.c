@@ -41,52 +41,33 @@ Light_System* light_system_init(Renderer* renderer)
         sizeof(Point_Light) * out_light_system->point_light_count);
 
 
-    out_light_system->directional_light_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        sizeof(Directional_Light) * out_light_system->directional_light_count);
-
-    out_light_system->point_light_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        sizeof(Point_Light) * out_light_system->point_light_count);
 
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       out_light_system->directional_light_storage_buffer_handle,
-                                       out_light_system->directional_light_staging_buffer_handle,
-                                       out_light_system->directional_lights,
-                                       sizeof(Directional_Light) * out_light_system->directional_light_count);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       out_light_system->point_light_storage_buffer_handle,
-                                       out_light_system->point_light_staging_buffer_handle,
-                                       out_light_system->point_lights,
-                                       sizeof(Point_Light) * out_light_system->point_light_count);
 
     INFO("LIGHT SYSTEM CREATED")
 
     return out_light_system;
 }
 
-void light_system_update(Renderer* renderer, Light_System* light_system)
+void light_system_update(Renderer* renderer, Light_System* light_system, vulkan_command_buffer* transfer_command_buffer)
 {
     //TODO: data upload of any lights and replace the function calls in vulkan buffer data copy
 
-    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, light_system->point_light_storage_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, light_system->directional_light_storage_buffer_handle);
 
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       light_system->directional_light_storage_buffer_handle,
-                                       light_system->point_light_staging_buffer_handle,
-                                       light_system->directional_lights,
-                                       sizeof(Directional_Light) * light_system->directional_light_count);
+    vulkan_buffer_data_copy_and_upload(
+        renderer, transfer_command_buffer,
+        light_system->directional_light_storage_buffer_handle,
+        light_system->directional_lights,
+        sizeof(Directional_Light) * light_system->directional_light_count);
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       light_system->point_light_storage_buffer_handle,
-                                       light_system->point_light_staging_buffer_handle,
-                                       light_system->point_lights,
-                                       sizeof(Point_Light) * light_system->point_light_count);
-
+    vulkan_buffer_data_copy_and_upload(
+        renderer, transfer_command_buffer,
+        light_system->point_light_storage_buffer_handle,
+        light_system->point_lights,
+        sizeof(Point_Light) * light_system->point_light_count);
 }
 
 
