@@ -1,5 +1,7 @@
 ﻿#include "lights.h"
 
+#include "vk_buffer.h"
+
 
 Light_System* light_system_init(Renderer* renderer)
 {
@@ -50,40 +52,43 @@ Light_System* light_system_init(Renderer* renderer)
         sizeof(Point_Light) * out_light_system->point_light_count);
 
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       out_light_system->directional_light_storage_buffer_handle,
-                                       out_light_system->directional_light_staging_buffer_handle,
-                                       out_light_system->directional_lights,
-                                       sizeof(Directional_Light) * out_light_system->directional_light_count);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       out_light_system->point_light_storage_buffer_handle,
-                                       out_light_system->point_light_staging_buffer_handle,
-                                       out_light_system->point_lights,
-                                       sizeof(Point_Light) * out_light_system->point_light_count);
+    // vulkan_buffer_data_copy_and_upload(renderer,
+    //                                    out_light_system->directional_light_storage_buffer_handle,
+    //                                    out_light_system->directional_light_staging_buffer_handle,
+    //                                    out_light_system->directional_lights,
+    //                                    sizeof(Directional_Light) * out_light_system->directional_light_count);
+    //
+    // vulkan_buffer_data_copy_and_upload(renderer,
+    //                                    out_light_system->point_light_storage_buffer_handle,
+    //                                    out_light_system->point_light_staging_buffer_handle,
+    //                                    out_light_system->point_lights,
+    //                                    sizeof(Point_Light) * out_light_system->point_light_count);
 
     INFO("LIGHT SYSTEM CREATED")
 
     return out_light_system;
 }
 
-void light_system_update(Renderer* renderer, Light_System* light_system)
+void light_system_update(Renderer* renderer, Light_System* light_system, vulkan_command_buffer* command_buffer)
 {
-    //TODO: data upload of any lights and replace the function calls in vulkan buffer data copy
+    //TODO: probably shouldn't be reuploading every frame
 
     vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
     vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
 
+    vulkan_buffer_reset_offset(renderer, light_system->directional_light_storage_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, light_system->directional_light_staging_buffer_handle);
 
-    vulkan_buffer_data_copy_and_upload(renderer,
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                        light_system->directional_light_storage_buffer_handle,
-                                       light_system->point_light_staging_buffer_handle,
+                                       light_system->directional_light_staging_buffer_handle, command_buffer,
                                        light_system->directional_lights,
                                        sizeof(Directional_Light) * light_system->directional_light_count);
 
-    vulkan_buffer_data_copy_and_upload(renderer,
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                        light_system->point_light_storage_buffer_handle,
-                                       light_system->point_light_staging_buffer_handle,
+                                       light_system->point_light_staging_buffer_handle,  command_buffer,
                                        light_system->point_lights,
                                        sizeof(Point_Light) * light_system->point_light_count);
 

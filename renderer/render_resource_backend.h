@@ -17,7 +17,7 @@ bool renderer_resource_backend_shutdown(Renderer* renderer, Resource_System* res
 //Sprite Renderer
 Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system);
 MAPI void sprite_upload_draw_data(Renderer* renderer,
-                                  Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet);
+                                  Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet, vulkan_command_buffer* command_buffer);
 MAPI void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend,
                       vulkan_command_buffer* command_buffer);
 
@@ -25,7 +25,7 @@ MAPI void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backe
 MAPI UI_Renderer_Backend* ui_render_init(Renderer* renderer);
 
 MAPI void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                                       Render_Packet* render_packet);
+                                       Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
 MAPI void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
                            Render_Packet* render_packet);
 
@@ -33,9 +33,8 @@ MAPI void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
 //Mesh Renderer
 MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system);
 
-MAPI void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet); // TODO: old and remove
-MAPI void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
-void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet);
+MAPI void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
+void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
 
 MAPI void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
                       vulkan_shader_pipeline* pipeline);

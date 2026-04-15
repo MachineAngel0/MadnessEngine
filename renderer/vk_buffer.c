@@ -1,5 +1,7 @@
 ﻿#include "vk_buffer.h"
 
+#include "vk_sync.h"
+
 
 //NOTE: this should change so that its consistent with the amount given out in by the descriptor pools
 #define max_buffers_available 1024u
@@ -205,19 +207,19 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
     switch (buffer_type)
     {
     case BUFFER_TYPE_INDIRECT:
-        buffers_to_create =  buffer_system->frames_in_flight;
+        buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
     case BUFFER_TYPE_GPU_STORAGE:
-        buffers_to_create =  buffer_system->frames_in_flight;
+        buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
     case BUFFER_TYPE_STAGING:
-        buffers_to_create =  buffer_system->frames_in_flight;
+        buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
     case BUFFER_TYPE_UNIFORM:
-        buffers_to_create =  buffer_system->frames_in_flight;
+        buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
     }
@@ -295,7 +297,8 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
 
 
         // Create a host-visible buffer to copy the vertex data to (staging buffer)
-        VkResult buffer_result = vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &buffer_in_use->handle);
+        VkResult buffer_result = vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator,
+                                                &buffer_in_use->handle);
         VK_CHECK(buffer_result)
         vkGetBufferMemoryRequirements(device, buffer_in_use->handle, &memReqs);
         memAlloc.allocationSize = memReqs.size;
@@ -469,7 +472,7 @@ Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle
     {
         return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
     }
-        return &renderer->buffer_system->buffers[buffer_handle.handle];
+    return &renderer->buffer_system->buffers[buffer_handle.handle];
 }
 
 Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
@@ -487,7 +490,6 @@ void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle)
 void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle staging_buffer_handle,
                                          void* data, u64 data_size)
 {
-
     if (data_size <= 0)
     {
         WARN("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
@@ -502,11 +504,10 @@ void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle stagi
     //copy data into the staging buffer
     memcpy(buffer->mapped_data + buffer->current_offset, data, data_size);
     buffer->current_offset += data_size;
-
 }
 
 
-void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle)
+void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle)
 {
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
     Vulkan_Buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
@@ -514,7 +515,7 @@ void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_
     MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
     MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);
 
-    if (staging_buffer->current_offset <= 0)
+    if (staging_buffer->current_offset < 0)
     {
         WARN("vulkan_buffer_copy: 0 offset in staging buffer");
         return;
@@ -571,7 +572,6 @@ void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_
     VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
     vkDestroyFence(device, fence, 0);
     vkFreeCommandBuffers(device, renderer->context.graphics_command_pool, 1, &copyCmd);
-
 }
 
 void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,
@@ -579,5 +579,90 @@ void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer
 {
     vulkan_buffer_data_copy_from_offset(renderer, staging_buffer_handle,
                                         data, data_size);
-    vulkan_buffer_copy(renderer, buffer_handle, staging_buffer_handle);
+    vulkan_buffer_upload(renderer, buffer_handle, staging_buffer_handle);
+}
+
+
+void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
+                                     Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer)
+{
+
+    //get buffer from handle
+    Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
+    //make sure its a staging buffer
+    MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
+    MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);
+    if (staging_buffer->current_offset < 0)
+    {
+        WARN("vulkan_buffer_copy: 0 offset in staging buffer");
+        return;
+    }
+
+    //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+
+
+    //Copy all the data in the staging buffer into the device local buffer
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = staging_buffer->current_offset;
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    vkCmdCopyBuffer(command_buffer->handle, staging_buffer->handle, device_local_buffer->handle, 1, &copyRegion);
+
+    // memory_barrier_transfer(renderer, command_buffer);
+
+
+}
+
+void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_Handle buffer_handle,
+                                     Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer, void* data, u64 data_size)
+{
+    if (data_size <= 0)
+    {
+        WARN("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
+        return;
+
+    }
+
+    //get buffer from handle
+    Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* staging_buffer = vulkan_buffer_get(renderer, staging_buffer_handle);
+    //make sure its a staging buffer
+    MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
+    MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);
+    if (staging_buffer->current_offset < 0)
+    {
+        WARN("vulkan_buffer_copy: 0 offset in staging buffer");
+        return;
+    }
+
+    if (staging_buffer->current_offset + data_size > staging_buffer->capacity)
+    {
+        WARN("vulkan_buffer_cpu_to_gpu_upload_batch: STAGING BUFFER OVERFLOW");
+        return;
+    }
+
+
+    //copy data into the staging buffer
+    memcpy(staging_buffer->mapped_data + staging_buffer->current_offset, data, data_size);
+    staging_buffer->current_offset += data_size;
+
+
+    //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
+
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+
+
+
+    //Copy all the data in the staging buffer into the device local buffer
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = staging_buffer->current_offset;
+    copyRegion.srcOffset = staging_buffer->current_offset - data_size;
+    copyRegion.dstOffset = 0;
+    vkCmdCopyBuffer(command_buffer->handle, staging_buffer->handle, device_local_buffer->handle, 1, &copyRegion);
+
+    // memory_barrier_transfer(renderer, command_buffer);
+
+
 }

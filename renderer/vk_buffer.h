@@ -46,7 +46,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_sys
 
 //TODO: so there are instances in which a buffer is associated with its staging buffer, and having to manually handle both is really annoying
 Buffer_Handle vulkan_buffer_create_with_staging_buffer(Renderer* renderer, Buffer_System* buffer_system,
-                                   Vulkan_Buffer_Type buffer_type, u64 data_size);
+                                                       Vulkan_Buffer_Type buffer_type, u64 data_size);
 
 
 void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffer, Vulkan_Buffer_Type buffer_type,
@@ -67,7 +67,7 @@ void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle stagi
 
 
 //copies data from a staging buffer into a device local buffer for gpu usage
-void vulkan_buffer_copy(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle);
+void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle);
 
 //copy data into a staging buffer and immediatelyy upload it into a local buffer
 //best used if there is only a single upload into the staging buffer
@@ -77,7 +77,11 @@ void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer
                                         void* data, u64 data_size);
 
 
-
+void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
+                                          Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer);
+void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_Handle buffer_handle,
+                                           Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer,
+                                           void* data, u64 data_size);
 
 /* TODO: dont need rn but could use later
 //for inserting data into a specific memory region of the buffer

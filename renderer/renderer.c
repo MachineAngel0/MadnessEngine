@@ -311,24 +311,30 @@ void renderer_update(Renderer* renderer, float delta_time)
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(uniform_buffer_object));
 
-    // mesh_system_upload_draw_data(renderer, renderer->mesh_renderer, render_packets);
-    //TODO: combine these two operations
-    mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets);
-    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets);
 
-    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet);
-    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets);
 
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
-    vulkan_command_buffer* command_buffer_current_frame = &vk_context->graphics_command_buffer[vk_context->
+    vulkan_command_buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
         current_frame];
-    vkResetCommandBuffer(command_buffer_current_frame->handle, 0);
-    vulkan_command_buffer_begin(command_buffer_current_frame, false, false, false);
+    vkResetCommandBuffer(graphics_command_buffer->handle, 0);
+    vulkan_command_buffer_begin(graphics_command_buffer, false, false, false);
+
+    light_system_update(renderer, renderer->light_system, graphics_command_buffer);
+
+    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+
+    mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+
+    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
+
+    //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
+    memory_barrier_transfer(renderer,  graphics_command_buffer);
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -336,7 +342,7 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.depth_attachment.texture_image, 0,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -349,7 +355,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     );
 
 
-    //with dynamic rendering we need to add a layout transition, using barriers
 
 
     // Set up the rendering attachment info
@@ -372,7 +377,7 @@ void renderer_update(Renderer* renderer, float delta_time)
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment,
     };
-    vkCmdBeginRendering(command_buffer_current_frame->handle, &rendering_info);
+    vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
     // Dynamic state
     VkViewport viewport = {
@@ -387,8 +392,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     };
 
 
-    vkCmdSetViewport(command_buffer_current_frame->handle, 0, 1, &viewport);
-    vkCmdSetScissor(command_buffer_current_frame->handle, 0, 1, &scissor);
+    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &viewport);
+    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &scissor);
 
 
     //Do Bindings and Draw
@@ -412,26 +417,30 @@ void renderer_update(Renderer* renderer, float delta_time)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_renderer_draw(renderer, renderer->mesh_renderer, command_buffer_current_frame,
+    mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
                      &renderer->indirect_mesh_pipeline);
 
-    sprite_renderer_draw(renderer, renderer->sprite_renderer, command_buffer_current_frame);
+    // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
-    ui_renderer_draw(renderer->ui_renderer, renderer, command_buffer_current_frame, render_packets);
+    ui_renderer_draw(renderer->ui_renderer, renderer, graphics_command_buffer, render_packets);
 
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//
 
     // Finish the current dynamic rendering section
-    vkCmdEndRendering(command_buffer_current_frame->handle);
+    vkCmdEndRendering(graphics_command_buffer->handle);
 
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
-    image_insert_memory_barrier(command_buffer_current_frame->handle,
-                                vk_context->swapchain.images[image_index], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0,
-                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+    image_insert_memory_barrier(graphics_command_buffer->handle,
+                                vk_context->swapchain.images[image_index],
+                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                0,
+                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_2_NONE,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
     // End renderpass
@@ -443,14 +452,14 @@ void renderer_update(Renderer* renderer, float delta_time)
 
 
     //End DRAW COMMAND
-    vulkan_command_buffer_end(command_buffer_current_frame);
+    vulkan_command_buffer_end(graphics_command_buffer);
 
     // Submit the queue and wait for the operation to complete.
     // Begin queue submission
     VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
     // Command buffer(s) to be executed.
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer_current_frame->handle;
+    submit_info.pCommandBuffers = &graphics_command_buffer->handle;
     // Semaphore to wait upon before the submitted command buffer starts executing
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &vk_context->swapchain_release_semaphore[image_index];

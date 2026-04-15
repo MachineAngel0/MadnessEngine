@@ -2,11 +2,9 @@
 
 bool renderer_resource_backend_init(Renderer* renderer, Resource_System* resource_system)
 {
-
     renderer->sprite_renderer = sprite_render_init(renderer, resource_system);
     renderer->ui_renderer = ui_render_init(renderer);
     return true;
-
 }
 
 bool renderer_resource_backend_shutdown(Renderer* renderer, Resource_System* resource_system)
@@ -28,8 +26,9 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resourc
 
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                buffer_memory_size);
-    sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                           buffer_memory_size);
+    sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                       BUFFER_TYPE_CPU_STORAGE,
+                                                                       buffer_memory_size);
 
     sprite_backend->sprite_indirect_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                   BUFFER_TYPE_INDIRECT, buffer_memory_size);
@@ -40,7 +39,7 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resourc
     sprite_backend->sprite_index_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                        BUFFER_TYPE_STAGING, buffer_memory_size);
     sprite_backend->sprite_instance_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_STAGING, buffer_memory_size);
+                                                                          BUFFER_TYPE_STAGING, buffer_memory_size);
     sprite_backend->sprite_indirect_staging_buffer = vulkan_buffer_create(
         renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, buffer_memory_size);
 
@@ -48,7 +47,8 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resourc
 }
 
 
-void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet)
+void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend,
+                             Render_Packet_Sprite* sprite_render_packet, vulkan_command_buffer* command_buffer)
 {
     MASSERT(renderer)
     MASSERT(sprite_backend)
@@ -60,26 +60,28 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     vulkan_buffer_reset_offset(renderer, sprite_backend->sprite_indirect_staging_buffer);
 
 
-    sprite_backend->draw_count = sprite_render_packet->sprite_data->num_items + sprite_render_packet->sprite_data_transient->num_items;
+    sprite_backend->draw_count = sprite_render_packet->sprite_data->num_items + sprite_render_packet->
+        sprite_data_transient->num_items;
 
-    vulkan_buffer_data_copy_and_upload(renderer, sprite_backend->sprite_vertex_buffer,
-                                       sprite_backend->sprite_vertex_staging_buffer,
-                                       &sprite_render_packet->sprite_data->data, sizeof(Sprite) * 4);
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_vertex_buffer,
+                                                   sprite_backend->sprite_vertex_staging_buffer, command_buffer,
+                                                   &sprite_render_packet->sprite_data->data, sizeof(Sprite) * 4);
 
-    vulkan_buffer_data_copy_and_upload(renderer, sprite_backend->sprite_index_buffer,
-                                       sprite_backend->sprite_index_staging_buffer,
-                                       sprite_render_packet->sprite_indices,
-                                       sizeof(u16) * 6);
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_index_buffer,
+                                                   sprite_backend->sprite_index_staging_buffer, command_buffer,
+                                                   sprite_render_packet->sprite_indices,
+                                                   sizeof(u16) * 6);
 
     //one for normal sprite data and one for transient data
-    vulkan_buffer_data_copy_and_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                       sprite_backend->sprite_instance_staging_buffer,
-                                       sprite_render_packet->sprite_data->data,
-                                       Sprite_Data_array_get_bytes_used(sprite_render_packet->sprite_data));
-    vulkan_buffer_data_copy_and_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                         sprite_backend->sprite_instance_staging_buffer,
-                                         sprite_render_packet->sprite_data_transient->data,
-                                         Sprite_Data_array_get_bytes_used(sprite_render_packet->sprite_data_transient));
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
+                                                   sprite_backend->sprite_instance_staging_buffer, command_buffer,
+                                                   sprite_render_packet->sprite_data->data,
+                                                   Sprite_Data_array_get_bytes_used(sprite_render_packet->sprite_data));
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
+                                                   sprite_backend->sprite_instance_staging_buffer, command_buffer,
+                                                   sprite_render_packet->sprite_data_transient->data,
+                                                   Sprite_Data_array_get_bytes_used(
+                                                       sprite_render_packet->sprite_data_transient));
 
     //generate indirect draw data
     //basically just a bunch of instances with indexes into the instance data buffer
@@ -95,10 +97,10 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     sprite_indirect_draw.instanceCount = sprite_count;
 
 
-    vulkan_buffer_data_copy_and_upload(renderer, sprite_backend->sprite_indirect_buffer,
-                                       sprite_backend->sprite_indirect_staging_buffer,
-                                       &sprite_indirect_draw,
-                                       sizeof(VkDrawIndexedIndirectCommand));
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_indirect_buffer,
+                                                   sprite_backend->sprite_indirect_staging_buffer, command_buffer,
+                                                   &sprite_indirect_draw,
+                                                   sizeof(VkDrawIndexedIndirectCommand));
 }
 
 
@@ -152,7 +154,6 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
     vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
 
 
-
     VkDeviceSize offsets_bindless[1] = {0};
     vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
                            &vert_buffer->handle, offsets_bindless);
@@ -182,9 +183,6 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
         }
     }
 }
-
-
-
 
 
 UI_Renderer_Backend* ui_render_init(Renderer* renderer)
@@ -246,7 +244,7 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 
 
 void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                                          Render_Packet* render_packet)
+                                  Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
     // UI
     vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);
@@ -260,24 +258,27 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     vulkan_buffer_reset_offset(renderer, ui_renderer->text_instance_staging_ssbo_handle);
 
     //UI Render
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_vertex_buffer_handle,
-                                       ui_renderer->ui_vertex_staging_buffer_handle,
-                                       default_sprite,
-                                       sizeof(Sprite) * 4);
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_index_buffer_handle,
-                                       ui_renderer->ui_index_staging_buffer_handle,
-                                       default_sprite_indices,
-                                       sizeof(u16) * 6);
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->ui_vertex_buffer_handle,
+                                                   ui_renderer->ui_vertex_staging_buffer_handle, command_buffer,
+                                                   default_sprite,
+                                                   sizeof(Sprite) * 4);
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->ui_index_buffer_handle,
+                                                   ui_renderer->ui_index_staging_buffer_handle, command_buffer,
+                                                   default_sprite_indices,
+                                                   sizeof(u16) * 6);
     //material data
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_instance_ssbo_handle,
-                                       ui_renderer->ui_instance_staging_ssbo_handle,
-                                       render_packet->ui_data_packet.ui_data_packet->data,
-                                       Sprite_Data_array_get_bytes_used(
-                                           render_packet->ui_data_packet.ui_data_packet));
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->ui_instance_ssbo_handle,
+                                                   ui_renderer->ui_instance_staging_ssbo_handle, command_buffer,
+                                                   render_packet->ui_data_packet.ui_data_packet->data,
+                                                   Sprite_Data_array_get_bytes_used(
+                                                       render_packet->ui_data_packet.ui_data_packet));
+
+
     //literally only need one
     VkDrawIndexedIndirectCommand indirect_draw_ui;
 
@@ -287,34 +288,37 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     indirect_draw_ui.indexCount = ARRAY_SIZE(default_sprite_indices);
     indirect_draw_ui.instanceCount = render_packet->ui_data_packet.ui_data_packet->num_items;
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->ui_indirect_buffer_handle,
-                                       ui_renderer->ui_quad_indirect_staging_buffer_handle,
-                                       &indirect_draw_ui,
-                                       sizeof(VkDrawIndexedIndirectCommand)
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->ui_indirect_buffer_handle,
+                                                   ui_renderer->ui_quad_indirect_staging_buffer_handle, command_buffer,
+                                                   &indirect_draw_ui,
+                                                   sizeof(VkDrawIndexedIndirectCommand)
     );
 
 
     //TEXT Render
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_vertex_buffer_handle,
-                                       ui_renderer->text_vertex_staging_buffer_handle,
-                                       default_sprite,
-                                       sizeof(Sprite) * 4);
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_index_buffer_handle,
-                                       ui_renderer->text_index_staging_buffer_handle,
-                                       default_sprite_indices,
-                                       sizeof(u16) * 6);
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->text_vertex_buffer_handle,
+                                                   ui_renderer->text_vertex_staging_buffer_handle, command_buffer,
+                                                   default_sprite,
+                                                   sizeof(Sprite) * 4);
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->text_index_buffer_handle,
+                                                   ui_renderer->text_index_staging_buffer_handle, command_buffer,
+                                                   default_sprite_indices,
+                                                   sizeof(u16) * 6);
     //material data
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_instance_ssbo_handle,
-                                       ui_renderer->text_instance_staging_ssbo_handle,
-                                       render_packet->ui_data_packet.text_data_packet->data,
-                                       Sprite_Data_array_get_bytes_used(
-                                           render_packet->ui_data_packet.text_data_packet));
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->text_instance_ssbo_handle,
+                                                   ui_renderer->text_instance_staging_ssbo_handle, command_buffer,
+                                                   render_packet->ui_data_packet.text_data_packet->data,
+                                                   Sprite_Data_array_get_bytes_used(
+                                                       render_packet->ui_data_packet.text_data_packet));
 
     //generate indirect draws for text
     //literally only need one
@@ -327,11 +331,11 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     indirect_draw_text.instanceCount = render_packet->ui_data_packet.text_data_packet->num_items;
 
 
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       ui_renderer->text_indirect_buffer_handle,
-                                       ui_renderer->text_indirect_staging_buffer_handle,
-                                       &indirect_draw_text,
-                                       sizeof(VkDrawIndexedIndirectCommand));
+   vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
+                                                   ui_renderer->text_indirect_buffer_handle,
+                                                   ui_renderer->text_indirect_staging_buffer_handle, command_buffer,
+                                                   &indirect_draw_text,
+                                                   sizeof(VkDrawIndexedIndirectCommand));
 }
 
 void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulkan_command_buffer* command_buffer,
@@ -503,40 +507,43 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
     out_mesh_renderer->mesh_shader_permutations = arena_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
     out_mesh_renderer->mesh_shader_permutations->permutation_keys = darray_create_reserve(u32, 100);
 
-    out_mesh_renderer->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                 mesh_buffer_data_size);
-    out_mesh_renderer->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                                mesh_buffer_data_size);
-    out_mesh_renderer->indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_INDIRECT,mesh_buffer_data_size);
-    out_mesh_renderer->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_CPU_STORAGE,mesh_buffer_data_size);
-    out_mesh_renderer->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_CPU_STORAGE,mesh_buffer_data_size);
-    out_mesh_renderer->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
-                                                             mesh_buffer_data_size);
-    out_mesh_renderer->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE,
+    out_mesh_renderer->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_VERTEX,
                                                                    mesh_buffer_data_size);
+    out_mesh_renderer->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
+                                                                  mesh_buffer_data_size);
+    out_mesh_renderer->indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_INDIRECT, mesh_buffer_data_size);
+    out_mesh_renderer->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                   BUFFER_TYPE_CPU_STORAGE, mesh_buffer_data_size);
+    out_mesh_renderer->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                    BUFFER_TYPE_CPU_STORAGE, mesh_buffer_data_size);
+    out_mesh_renderer->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                               BUFFER_TYPE_CPU_STORAGE,
+                                                               mesh_buffer_data_size);
+    out_mesh_renderer->material_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     mesh_buffer_data_size);
 
     out_mesh_renderer->vertex_staging_buffer_handle = vulkan_buffer_create(
         renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
         mesh_buffer_data_size);
     out_mesh_renderer->index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        mesh_buffer_data_size);
+                                                                          BUFFER_TYPE_STAGING,
+                                                                          mesh_buffer_data_size);
     out_mesh_renderer->indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,mesh_buffer_data_size);
+                                                                             BUFFER_TYPE_STAGING,
+                                                                             mesh_buffer_data_size);
     out_mesh_renderer->normal_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STAGING,mesh_buffer_data_size);
+                                                                           BUFFER_TYPE_STAGING, mesh_buffer_data_size);
     out_mesh_renderer->tangent_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING,mesh_buffer_data_size);
+                                                                            BUFFER_TYPE_STAGING, mesh_buffer_data_size);
     out_mesh_renderer->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STAGING,
-                                                                     mesh_buffer_data_size);
+                                                                       BUFFER_TYPE_STAGING,
+                                                                       mesh_buffer_data_size);
     out_mesh_renderer->material_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                           BUFFER_TYPE_STAGING,
-                                                                           mesh_buffer_data_size);
+                                                                             BUFFER_TYPE_STAGING,
+                                                                             mesh_buffer_data_size);
 
 
     out_mesh_renderer->pc_mesh.ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle;
@@ -547,92 +554,16 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
     out_mesh_renderer->pc_mesh.material_buffer_idx = out_mesh_renderer->material_buffer_handle.handle;
 
     return out_mesh_renderer;
-
 }
 
-void mesh_system_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet)
+
+void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
+                                        vulkan_command_buffer* command_buffer)
 {
-
-    Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
-
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->index_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->normal_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->uv_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->tangent_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->material_staging_buffer_handle);
-
-    mesh_renderer->indirect_draw_count = 0;
-    //were assuming that the data is already in the buffer,
-    // we are just generating the draw calls for the specific pipeline
-
-    size_t vertex_byte_size = 0;
-    size_t index_count_size = 0;
-
-
-    VkDrawIndexedIndirectCommand indirect_draw = {0};
-    for (size_t s_mesh_idx = 0; s_mesh_idx < mesh_render_packet->static_mesh_array_size; s_mesh_idx++)
-    {
-        for (size_t submesh_idx = 0; submesh_idx < mesh_render_packet->static_mesh_array[s_mesh_idx].mesh_size; submesh_idx++)
-        {
-            submesh* current_submesh = &mesh_render_packet->static_mesh_array[s_mesh_idx].mesh[submesh_idx];
-
-            indirect_draw.firstIndex = index_count_size;
-            indirect_draw.firstInstance = 0;
-            indirect_draw.indexCount = current_submesh->indices_count;
-            indirect_draw.instanceCount = 1;
-            indirect_draw.vertexOffset = vertex_byte_size / sizeof(vec3); // in counts
-
-            vertex_byte_size += current_submesh->vertex_bytes;
-            index_count_size += current_submesh->indices_count;
-
-            mesh_renderer->indirect_draw_count++;
-
-            //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
-                                                current_submesh->pos,
-                                                current_submesh->vertex_bytes);
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->index_staging_buffer_handle,
-                                                current_submesh->indices,
-                                                current_submesh->indices_bytes);
-
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->normal_staging_buffer_handle,
-                                                current_submesh->normal,
-                                                current_submesh->normal_bytes);
-
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->uv_staging_buffer_handle,
-                                                current_submesh->uv,
-                                                current_submesh->uv_bytes);
-            //add the draw data
-            //push the indirect draw into the draw data
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->indirect_staging_buffer_handle,
-                                                &indirect_draw,
-                                                sizeof(VkDrawIndexedIndirectCommand));
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->material_staging_buffer_handle,
-                                                &current_submesh->material_params,
-                                                sizeof(Material_Param_Data));
-        }
-    }
-
-
-    vulkan_buffer_copy(renderer, mesh_renderer->vertex_buffer_handle, mesh_renderer->vertex_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->index_buffer_handle, mesh_renderer->index_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->indirect_buffer_handle, mesh_renderer->indirect_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->normal_buffer_handle, mesh_renderer->normal_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->material_buffer_handle, mesh_renderer->material_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->tangent_buffer_handle, mesh_renderer->tangent_staging_buffer_handle);
-
-}
-
-void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet)
-{
-
     ring_queue* mesh_render_packet = render_packet->mesh_queue;
 
     //return if its empty
-    if (ring_queue_is_empty(mesh_render_packet))  return;
+    if (ring_queue_is_empty(mesh_render_packet)) return;
 
     Mesh_Upload_Data* submesh_upload_data = arena_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
 
@@ -640,7 +571,6 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
     // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system funciton calls
     while (!ring_queue_is_empty(mesh_render_packet))
     {
-
         ring_dequeue(mesh_render_packet, submesh_upload_data);
 
         //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
@@ -662,27 +592,28 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->material_staging_buffer_handle,
                                             &submesh_upload_data->material_params,
                                             sizeof(Material_Param_Data));
-
     }
 
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
+                                    mesh_renderer->vertex_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->index_buffer_handle,
+                                    mesh_renderer->index_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->normal_buffer_handle,
+                                    mesh_renderer->normal_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle,
+                                    command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
+                                    mesh_renderer->tangent_staging_buffer_handle, command_buffer);
 
-
-
-
-    vulkan_buffer_copy(renderer, mesh_renderer->vertex_buffer_handle, mesh_renderer->vertex_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->index_buffer_handle, mesh_renderer->index_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->normal_buffer_handle, mesh_renderer->normal_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle);
-    vulkan_buffer_copy(renderer, mesh_renderer->tangent_buffer_handle, mesh_renderer->tangent_staging_buffer_handle);
-
-    vulkan_buffer_copy(renderer, mesh_renderer->material_buffer_handle, mesh_renderer->material_staging_buffer_handle);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->material_buffer_handle,
+                                    mesh_renderer->material_staging_buffer_handle, command_buffer);
 
 }
 
 
-void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet)
+void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+                                           Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
-
     Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
 
     vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
@@ -697,33 +628,34 @@ void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* me
     VkDrawIndexedIndirectCommand indirect_draw = {0};
     for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
     {
-            Mesh_Indirect_Draw_Data* current_submesh = &draw_data[mesh_idx];
+        Mesh_Indirect_Draw_Data* current_submesh = &draw_data[mesh_idx];
 
-            indirect_draw.firstIndex = current_submesh->index_offset;
-            indirect_draw.indexCount = current_submesh->index_count;
-            indirect_draw.vertexOffset = current_submesh->vertex_offset;
-            //instance data
-            indirect_draw.instanceCount = 1;
-            indirect_draw.firstInstance = 0;
+        indirect_draw.firstIndex = current_submesh->index_offset;
+        indirect_draw.indexCount = current_submesh->index_count;
+        indirect_draw.vertexOffset = current_submesh->vertex_offset;
+        //instance data
+        indirect_draw.instanceCount = 1;
+        indirect_draw.firstInstance = 0;
 
-            mesh_renderer->indirect_draw_count++;
+        mesh_renderer->indirect_draw_count++;
 
-            //add the draw data
-            //push the indirect draw into the draw data
-            vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->indirect_staging_buffer_handle,
-                                                &indirect_draw,
-                                                sizeof(VkDrawIndexedIndirectCommand));
+        //add the draw data
+        //push the indirect draw into the draw data
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->indirect_staging_buffer_handle,
+                                            &indirect_draw,
+                                            sizeof(VkDrawIndexedIndirectCommand));
     }
 
 
-    vulkan_buffer_copy(renderer, mesh_renderer->indirect_buffer_handle, mesh_renderer->indirect_staging_buffer_handle);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->indirect_buffer_handle,
+                                    mesh_renderer->indirect_staging_buffer_handle, command_buffer);
+
 
 }
 
 
-
 void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
-                      vulkan_shader_pipeline* pipeline)
+                        vulkan_shader_pipeline* pipeline)
 {
     INFO("MESH SYSTEM DRAW CALLS")
 
@@ -762,7 +694,6 @@ void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan
 
     vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
                          VK_INDEX_TYPE_UINT16);
-
 
 
     VkPushConstantsInfo push_constant_info = {0};
