@@ -8,7 +8,6 @@
 
 
 
-
 Resource_System* resource_system_init(Memory_System* memory_system);
 
 bool resource_system_shutdown(Resource_System* resource_system, Memory_System* memory_system);
