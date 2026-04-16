@@ -6,8 +6,8 @@ void camera_init(camera* out_camera)
     memset(out_camera, 0, sizeof(camera));
 
     // Default camera values
-    const float SPEED = 2.5f;
-    const float SENSITIVITY = 40.0f;
+    const float MOVE_SPEED = 3.5f;
+    const float SENSITIVITY = 500.0f;
     const float FOV = 90.0f;
     const float ZNEAR = 0.1f;
     const float ZFAR = 100.0f;
@@ -18,7 +18,7 @@ void camera_init(camera* out_camera)
     out_camera->viewPos = vec4_zero();
 
     out_camera->rotation_speed = SENSITIVITY;
-    out_camera->move_speed = 3.5f;
+    out_camera->move_speed = MOVE_SPEED;
 
 
     out_camera->fov = FOV;
@@ -111,7 +111,7 @@ void process_mouse_scroll(camera* cam, float y_offset)
 
 void camera_update(Input_System* input_system, camera* cam, float dt)
 {
-    //TODO: will need to remove the input system at some point
+
     if (input_is_key_pressed(input_system, KEY_W))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_FORWARD, dt);

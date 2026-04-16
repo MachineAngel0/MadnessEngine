@@ -41,6 +41,7 @@ typedef struct Mesh_Handle
 typedef struct Transform_Handle
 {
     u32 handle;
+    u32 gen;
 } Transform_Handle;
 
 
@@ -571,6 +572,20 @@ typedef struct Resource_System
     Render_Packet* render_packet;
 
 } Resource_System;
+
+typedef struct Scene
+{
+    Transform* transforms;
+    int transform_count;
+
+    //i dont need rn but could be useful
+    // since we know static doesn't change we can cache the transforms
+    // Transform* static_transform;
+    // Transform* dynamic_transform;
+
+} Scene;
+
+
 
 
 

@@ -88,7 +88,6 @@ void transform_scale(Transform* t, const vec3 scale)
     t->is_dirty = true;
 }
 
-//
 
 mat4 transform_get_local(Transform* t)
 {

@@ -19,7 +19,7 @@ layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
-layout(location = 4) out vec3 out_frag_pos;
+layout(location = 4) out vec3 out_world_position;
 
 void main() {
 
@@ -41,6 +41,8 @@ void main() {
 
     //    out_normal = NORMAL[nonuniformEXT(normal_index)].normal[nonuniformEXT(draw_idx)];
     out_normal = NORMAL[nonuniformEXT(normal_index)].normal[nonuniformEXT(gl_VertexIndex)];
+    //out_normal = mat3(transpose(inverse(model))) * normal); // TODO: this would get you a correct normal
+
     out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
 
     out_uv = UV[nonuniformEXT(uv_index)].uv[nonuniformEXT(gl_VertexIndex)];
@@ -49,6 +51,12 @@ void main() {
     //    out_color_idx = MATERIAL[nonuniformEXT(material_index)].material_data[nonuniformEXT(0)].color_index;
 
 
-    out_frag_pos = vec3(ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0));
+    out_world_position = vec3(ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0));
 
 }
+
+//NOTE: for reference
+//vec4 local_pos  = vec4(in_pos, 1.0);
+//vec4 world_pos  = model * local_pos;       // local → world
+//vec4 view_pos   = view * world_pos;        // world → camera/eye space
+//vec4 clip_pos   = proj * view_pos;         // eye → clip space
