@@ -8,9 +8,6 @@
 // ABILITIES //
 
 
-
-
-
 // UNITS //
 
 typedef struct Health_Component
@@ -276,7 +273,28 @@ typedef struct Unit
     UNiagaraComponent* VFX_Damage;
     UNiagaraComponent* VFX_Fusion;
     UNiagaraComponent* VFX_Redirect;
+
+    //POPUPS
+    //TODO: these should take in a transform and be spawned in
+    void SpawnDamagePopUp(EResistanceType ResistanceType, float PopUpValue);
+    void SpawnAugmentPopUp(EDamageType DamageType, float PopUpValue);
+    void SpawnResistancePopUp(EDamageType DamageType, EResistanceType ResistanceType);
+    void SpawnGenericPopUp(float Value, FColor Color, const FString& PopUpName);
+    void SpawnFailedPopUp();
+
     */
+
+
+    Transform_Handle unit_transform;
+
+    //pop up locations
+    Transform_Handle pop_up_transform;
+
+    //vfx locations
+    Transform_Handle vfx_buff_transform;
+    Transform_Handle vfx_damage_transform;
+    Transform_Handle vfx_fusion_transform;
+    Transform_Handle vfx_redirect_transform;
 
 
     /*
@@ -288,19 +306,8 @@ typedef struct Unit
     UAnimMontage* DeathAnimation;
     UAnimMontage* ReviveAnimation;
     UAnimMontage* VictoryAnimation;
-
-    //POPUPS
-    //TODO: these should also just be transforms
-    void SpawnDamagePopUp(EResistanceType ResistanceType, float PopUpValue);
-    void SpawnAugmentPopUp(EDamageType DamageType, float PopUpValue);
-    void SpawnResistancePopUp(EDamageType DamageType, EResistanceType ResistanceType);
-    void SpawnGenericPopUp(float Value, FColor Color, const FString& PopUpName);
-    void SpawnFailedPopUp();
-
-    */
+*/
 } Unit;
-
-
 
 
 //GAME MODE
@@ -312,14 +319,14 @@ typedef enum Madness_Pulse_Game_State
     Game_State_Enum_Ability_Select,
     Game_State_Enum_Level_Select,
     Game_State_Enum_Turn_Based,
-}Madness_Pulse_Game_State;
+} Madness_Pulse_Game_State;
 
 typedef enum Main_Menu_State
 {
     Main_Menu_State_Load_Save,
     Main_Menu_State_New_Save,
     Main_Menu_State_Settings,
-}Main_Menu_State;
+} Main_Menu_State;
 
 
 typedef struct Madness_Pulse_Game
@@ -341,9 +348,7 @@ typedef struct Madness_Pulse_Game
     //ABILITY SELECT//
 
 
-
     //Level SELECT//
-
 
 
     //TURN BASED//
@@ -353,7 +358,7 @@ typedef struct Madness_Pulse_Game
     Turn_Based_UI_States ui_state;
 
     //PLAYER AND ENEMY UNTIS
-    #define MAX_PLAYER_COUNT 4
+#define MAX_PLAYER_COUNT 4
     Unit players[MAX_PLAYER_COUNT];
     u32 player_count;
     //idk the enemy unit count at start up since its different every map
@@ -367,9 +372,6 @@ typedef struct Madness_Pulse_Game
 
     //TODO: action queue for the game and do and undo those actions
     u32 picked_ability;
-
-
-
 } Madness_Pulse_Game;
 
 #endif //GAME_TYPES_H

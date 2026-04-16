@@ -43,8 +43,15 @@ Sprite_System* sprite_system_init(Memory_System* memory_system)
     return sprite_system;
 }
 
-bool sprite_system_shutdown(Sprite_System* sprite_system)
+bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_system)
 {
+
+    MASSERT(sprite_system);
+    memory_system_memory_free(memory_system, sprite_system);
+
+    sprite_system = NULL;
+
+
     return true;
 }
 

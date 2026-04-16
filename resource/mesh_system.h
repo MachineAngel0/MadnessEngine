@@ -3,6 +3,8 @@
 
 
 Mesh_System* mesh_system_init(Memory_System* memory_system);
+bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
+
 bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet);
 
 

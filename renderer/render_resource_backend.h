@@ -14,6 +14,7 @@ typedef struct Renderer_Resource_Backend
 bool renderer_resource_backend_init(Renderer* renderer, Resource_System* resource_system);
 bool renderer_resource_backend_shutdown(Renderer* renderer, Resource_System* resource_system);
 
+
 //Sprite Renderer
 Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system);
 MAPI void sprite_upload_draw_data(Renderer* renderer,

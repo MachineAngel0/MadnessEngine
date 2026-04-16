@@ -13,7 +13,7 @@ typedef struct Sprite_System_Config
 
 // Sprite System
 Sprite_System* sprite_system_init(Memory_System* memory_system);
-bool sprite_system_shutdown(Sprite_System* sprite_system);
+bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_system);
 
 MAPI void sprite_system_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 screen_size_y);
 

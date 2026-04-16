@@ -154,7 +154,7 @@ bool editor_app_run(Editor_Application* editor_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    resource_system_shutdown(application_core->resource_system);
+    resource_system_shutdown(application_core->resource_system, TODO);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

@@ -421,6 +421,10 @@ typedef struct Mesh_Draw_Data
     //TODO: another time, for when i want to do instancing
     // uint32_t firstInstance; // 0
     // uint32_t instanceCount; // 1
+
+    Transform_Handle transform_handle;
+
+
 } Mesh_Indirect_Draw_Data;
 
 
@@ -500,6 +504,20 @@ typedef struct Mesh_System
     ring_queue* mesh_ring_queue;
 } Mesh_System;
 
+typedef struct Scene
+{
+    Transform* mesh_transforms;
+    int mesh_transform_count;
+
+    mat4* mesh_world_transforms; //the count is the same as the transform_count
+
+    //i dont need rn but could be useful
+    // since we know static doesn't change we can cache the transforms
+    // Transform* static_transform;
+    // Transform* dynamic_transform;
+
+} Scene;
+
 
 //RENDER PACKET
 
@@ -512,12 +530,18 @@ typedef struct Render_Packet_Mesh
     Mesh_Indirect_Draw_Data* draw_data;
     u32 draw_data_size;
 
+    //this could just be in one giant buffer, and anything that has a transform can access it
+    mat4* world_space_matrix_array;
+    u32 world_space_matrix_count;
+
+
     //TODO: remove these
     static_mesh* static_mesh_array;
     u32 static_mesh_array_size;
     u32 static_mesh_submesh_size;
 
 } Render_Packet_Mesh;
+
 
 typedef struct Render_Packet_UI
 {
@@ -554,6 +578,9 @@ typedef struct Render_Packet
     // Render_Packet_Game game_data_packet;
 } Render_Packet;
 
+
+
+
 typedef struct Resource_System
 {
     //the resource system is just a container for all the system,
@@ -567,23 +594,14 @@ typedef struct Resource_System
     Sprite_System* sprite_system;
     Mesh_System* mesh_system;
     Texture_System* texture_system;
+    Scene* scene;
 
 
     Render_Packet* render_packet;
 
 } Resource_System;
 
-typedef struct Scene
-{
-    Transform* transforms;
-    int transform_count;
 
-    //i dont need rn but could be useful
-    // since we know static doesn't change we can cache the transforms
-    // Transform* static_transform;
-    // Transform* dynamic_transform;
-
-} Scene;
 
 
 

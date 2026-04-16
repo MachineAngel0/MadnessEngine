@@ -20,7 +20,7 @@ struct Material_Param_Data {
     uint feature_mask;
 
     vec4 color;
-    //ALL FROM RANGES 0-1
+//ALL FROM RANGES 0-1
     float ambient_strength;
     float roughness_strength;
     float metallic_strength;
@@ -54,6 +54,10 @@ layout(set = 2, binding = 0, scalar) readonly buffer UV_BUFFER{
     vec2 uv[];
 }UV[];
 
+layout(set = 2, binding = 0, scalar) readonly buffer TRANSFORM_BUFFER{
+    mat4 model_transforms[];
+}TRANSFORM[];
+
 layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
     vec3 normal[];
 }NORMAL[];
@@ -61,3 +65,4 @@ layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
 layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_BUFFER{
     Material_Param_Data material_data[];
 }MATERIAL[];
+

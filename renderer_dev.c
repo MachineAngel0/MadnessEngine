@@ -5,7 +5,6 @@
 #include "core/platform/event.h"
 #include "core/platform/input.h"
 #include "core/platform/audio.h"
-#include "mesh_system.h"
 #include "sprite_system.h"
 
 
@@ -134,6 +133,10 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
         renderer_plugin->ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                                   renderer_plugin->renderer->context.framebuffer_height_new);
+
+
+
+
         madness_ui_test(renderer_plugin->madness_ui);
 
 
@@ -166,7 +169,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    resource_system_shutdown(application_core->resource_system);
+    resource_system_shutdown(application_core->resource_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

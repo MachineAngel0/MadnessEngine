@@ -20,6 +20,7 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
 layout(location = 4) out vec3 out_world_position;
+layout(location = 5) out flat uint out_index;
 
 void main() {
 
@@ -27,7 +28,7 @@ void main() {
 
     uint draw_idx = gl_VertexIndex;
     uint draw_other_idx = gl_DrawIDARB;
-
+    out_index = gl_DrawIDARB;
 
     uint ubo_index = pc_mesh.ubo_buffer_idx;
     uint normal_index = pc_mesh.normal_buffer_idx;
@@ -36,7 +37,10 @@ void main() {
     uint transform_index =  pc_mesh.transform_buffer_idx;
     uint material_index =  pc_mesh.material_buffer_idx;
 
-    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0);
+    mat4 model = TRANSFORM[nonuniformEXT(transform_index)].model_transforms[nonuniformEXT(gl_DrawIDARB)];
+
+    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(in_pos, 1.0);
+//    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0);
     //    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
 
     //    out_normal = NORMAL[nonuniformEXT(normal_index)].normal[nonuniformEXT(draw_idx)];
@@ -51,7 +55,7 @@ void main() {
     //    out_color_idx = MATERIAL[nonuniformEXT(material_index)].material_data[nonuniformEXT(0)].color_index;
 
 
-    out_world_position = vec3(ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0));
+    out_world_position = vec3(model * vec4(in_pos, 1.0));
 
 }
 

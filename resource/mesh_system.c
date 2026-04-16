@@ -29,6 +29,18 @@ Mesh_System* mesh_system_init(Memory_System* memory_system)
     return out_mesh_system;
 }
 
+bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system)
+{
+
+    MASSERT(mesh_system);
+    memory_system_memory_free(memory_system, mesh_system);
+
+    mesh_system = NULL;
+
+    return true;
+
+}
+
 
 submesh* submesh_init(Arena* arena)
 {
@@ -1028,7 +1040,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
                                                                                handle;
         }
 
-
+        //TODO: I need a better way to store this information
+        mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
 
         //add to mesh upload queue
         ring_enqueue(mesh_system->mesh_ring_queue, current_submesh_render_data);
@@ -1045,6 +1058,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
     //TODO: remove
     // mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
     // mesh_system->static_mesh_array_size++;
+
+
 
     cgltf_free(data);
 }

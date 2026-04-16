@@ -11,7 +11,7 @@
 
 Resource_System* resource_system_init(Memory_System* memory_system);
 
-bool resource_system_shutdown(Resource_System* resource_system);
+bool resource_system_shutdown(Resource_System* resource_system, Memory_System* memory_system);
 bool resource_system_update_and_create_render_packet(Resource_System* resource_system);
 
 bool resource_system_generate_render_packet(Resource_System* resource_system);

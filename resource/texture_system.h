@@ -6,7 +6,7 @@
 //TODO: rn textures dont free their pixel data, which can be a really big problem
 
 Texture_System* texture_system_init(Memory_System* memory_system);
-MAPI bool texture_system_shutdown(Texture_System* texture_system);
+MAPI bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memory_system);
 
 
 MAPI bool texture_system_load_texture(Texture_System* texture_system, char const* file_path, Texture_Handle* out_handle);

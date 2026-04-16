@@ -183,7 +183,7 @@ vec3 CalcSpotLight(spot_light_data light, vec3 normal, vec3 frag_position, vec3 
 
 
 const float PI = 3.14159265359;
-
+/*
 vec3 getNormalFromMap(uint normal_map_index)
 {
     vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
@@ -237,3 +237,4 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+*/

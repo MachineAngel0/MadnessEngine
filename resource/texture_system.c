@@ -36,9 +36,12 @@ Texture_System* texture_system_init(Memory_System* memory_system)
     return texture_system;
 }
 
-bool texture_system_shutdown(Texture_System* texture_system)
+bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memory_system)
 {
     //TODO: unload all the textures and dsa's;
+    MASSERT(texture_system);
+    memory_system_memory_free(memory_system, texture_system);
+
     return true;
 }
 
