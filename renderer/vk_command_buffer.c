@@ -7,24 +7,28 @@ void vulkan_renderer_command_buffers_create(vulkan_context* vk_context)
     //this won't work rn, because it never gets freed or zero'd
     // if (!vk_context->graphics_command_buffers)
     // {
-        vk_context->graphics_command_buffer = darray_create_reserve(vulkan_command_buffer,
-                                                                     vk_context->swapchain.image_count);
-        for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
-        {
-            memset(&vk_context->graphics_command_buffer[i], 0, sizeof(vulkan_command_buffer));
-        }
+    vk_context->graphics_command_buffer = darray_create_reserve(vulkan_command_buffer,
+                                                                vk_context->swapchain.image_count);
+    vk_context->transfer_command_buffer = darray_create_reserve(vulkan_command_buffer,
+                                                                vk_context->swapchain.image_count);
+    vk_context->compute_command_buffer = darray_create_reserve(vulkan_command_buffer,
+                                                               vk_context->swapchain.image_count);
+    for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
+    {
+        memset(&vk_context->graphics_command_buffer[i], 0, sizeof(vulkan_command_buffer));
+        memset(&vk_context->transfer_command_buffer[i], 0, sizeof(vulkan_command_buffer));
+        memset(&vk_context->compute_command_buffer[i], 0, sizeof(vulkan_command_buffer));
+    }
 
-        for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
-        {
-            if (vk_context->graphics_command_buffer[i].handle)
-            {
-                vulkan_command_buffer_free(vk_context, vk_context->graphics_command_pool,
-                                           &vk_context->graphics_command_buffer[i]);
-            }
-            memset(&vk_context->graphics_command_buffer[i], 0, sizeof(vulkan_command_buffer));
-            vulkan_command_buffer_allocate(vk_context, vk_context->graphics_command_pool, true,
-                                           &vk_context->graphics_command_buffer[i]);
-        }
+    for (u32 i = 0; i < vk_context->swapchain.image_count; i++)
+    {
+        vulkan_command_buffer_allocate(vk_context, vk_context->graphics_command_pool, true,
+                                       &vk_context->graphics_command_buffer[i]);
+        vulkan_command_buffer_allocate(vk_context, vk_context->transfer_command_pool, true,
+                                       &vk_context->transfer_command_buffer[i]);
+        vulkan_command_buffer_allocate(vk_context, vk_context->compute_command_pool, true,
+                                       &vk_context->compute_command_buffer[i]);
+    }
     // }
     INFO("COMMAND BUFFERS CREATED");
 }
@@ -45,7 +49,6 @@ void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context)
     darray_free(&vk_context->graphics_command_buffer);
     vk_context->graphics_command_buffer = 0;
     INFO("COMMAND BUFFERS DESTROYED");
-
 }
 
 
@@ -68,9 +71,9 @@ void vulkan_command_buffer_allocate(vulkan_context* context, VkCommandPool pool,
     allocate_info.commandBufferCount = 1;
     allocate_info.pNext = 0;
 
-    VK_CHECK(
-        vkAllocateCommandBuffers(context->device.logical_device, &allocate_info, &out_command_buffer->
-            handle));
+    VkResult cmd_buffer_alloc_result = vkAllocateCommandBuffers(context->device.logical_device, &allocate_info,
+                                                                &out_command_buffer->handle);
+    VK_CHECK(cmd_buffer_alloc_result)
 }
 
 void vulkan_command_buffer_free(vulkan_context* context, VkCommandPool pool, vulkan_command_buffer* command_buffer)
@@ -152,6 +155,72 @@ VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer)
         .buffer = buffer
     };
     return vkGetBufferDeviceAddress(device, &info);
+}
+
+void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer* command_buffer, VkQueue queue)
+{
+    // Submit the command buffer to the queue to finish the copy
+    VkSubmitInfo submitInfo = {0};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &command_buffer->handle;
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fenceCI = {0};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    VK_CHECK(vkCreateFence(context->device.logical_device, &fenceCI, context->allocator, &fence));
+    // Submit copies to the queue
+    VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, fence));
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(context->device.logical_device, 1, &fence, VK_TRUE, UINT64_MAX));
+    vkDestroyFence(context->device.logical_device, fence, 0);
+}
+
+
+void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                                            VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
+                                            VkSemaphoreSubmitInfo* signal_semaphore)
+{
+    VkCommandBufferSubmitInfo command_buffer_submit_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .pNext = NULL,
+        .commandBuffer = command_buffer->handle,
+        .deviceMask = 1, // should be one for some reason, because i am not using device groups
+    };
+
+    // Submit the command buffer to the queue to finish the copy
+    VkSubmitInfo2 submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = 0,
+        .flags = 0,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &command_buffer_submit_info,
+    };
+    if (wait_semaphore)
+    {
+        submitInfo.waitSemaphoreInfoCount = 1;
+        submitInfo.pWaitSemaphoreInfos = wait_semaphore;
+    }
+    if (signal_semaphore)
+    {
+        submitInfo.signalSemaphoreInfoCount = 1;
+        submitInfo.pSignalSemaphoreInfos = signal_semaphore;
+    }
+
+
+    // Create fence to ensure that the command buffer has finished executing
+    VkFenceCreateInfo fenceCI = {0};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    VkFence fence;
+    VK_CHECK(vkCreateFence(context->device.logical_device, &fenceCI, context->allocator, &fence));
+
+    // Submit copies to the queue
+    vkQueueSubmit2(queue, 1, &submitInfo, fence);
+
+    // Wait for the fence to signal that command buffer has finished executing
+    VK_CHECK(vkWaitForFences(context->device.logical_device, 1, &fence, VK_TRUE, UINT64_MAX));
+    vkDestroyFence(context->device.logical_device, fence, 0);
 }
 
 

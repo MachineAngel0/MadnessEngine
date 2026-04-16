@@ -151,11 +151,11 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     create_info.pNext = 0;
 
     //TODO: enable if you want extra info, its very slow
-    // if (validation_ext_enabled)
-    // {
-    //     create_info.pNext = &validation_features_info;
-    // }
-    // create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *) &debugCreateInfo;
+    if (validation_ext_enabled)
+    {
+    create_info.pNext = &validation_features_info;
+    }
+    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *) &validation_features_info;
 
     /*
         VkResult vkCreateInstance(
@@ -446,9 +446,9 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     INFO("Queues obtained.");
 
+    //each command pool is tied to its queue family
 
     //create the command pool for the graphics queue
-    //each command pool is tied to its queue family
     VkCommandPoolCreateInfo pool_create_info = {0};
     pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_create_info.queueFamilyIndex = vulkan_context->device.graphics_queue_index;
@@ -458,6 +458,28 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         &vulkan_context->graphics_command_pool));
 
     INFO("GRAPHICS COMMAND POOL CREATED.");
+
+    //create the command pool for the graphics queue
+    VkCommandPoolCreateInfo transfer_pool_create_info = {0};
+    transfer_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    transfer_pool_create_info.queueFamilyIndex = vulkan_context->device.transfer_queue_index;
+    transfer_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(vulkan_context->device.logical_device,
+        &transfer_pool_create_info, vulkan_context->allocator,
+        &vulkan_context->transfer_command_pool));
+
+    INFO("TRANSFER COMMAND POOL CREATED.");
+
+    //create the command pool for the graphics queue
+    VkCommandPoolCreateInfo compute_create_info = {0};
+    compute_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    compute_create_info.queueFamilyIndex = vulkan_context->device.compute_queue_index;
+    compute_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(vulkan_context->device.logical_device,
+        &compute_create_info, vulkan_context->allocator,
+        &vulkan_context->compute_command_pool));
+
+    INFO("COMPUTE COMMAND POOL CREATED.");
 
     vkDeviceWaitIdle(vulkan_context->device.logical_device);
 
