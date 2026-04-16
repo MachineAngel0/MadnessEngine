@@ -53,13 +53,11 @@ void vulkan_command_buffer_end_single_use(
 // Get device address of a buffer
 VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 
-void vulkan_command_buffer_sumbit(
-    vulkan_context* context,
-    VkCommandPool pool,
-    vulkan_command_buffer* command_buffer,
-    VkQueue queue);
+void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer* command_buffer, VkQueue queue);
 
-
+void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                                            VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
+                                            VkSemaphoreSubmitInfo* signal_semaphore);
 
 
 //TODO: refactor

@@ -174,6 +174,13 @@ typedef struct vulkan_physical_device_queue_family_info
     u32 transfer_family_index;
 } vulkan_physical_device_queue_family_info;
 
+typedef enum vulkan_command_buffer_type
+{
+    COMMAND_BUFFER_TYPE_GRAPHICS,
+    COMMAND_BUFFER_TYPE_TRANSFER,
+    COMMAND_BUFFER_TYPE_COMPUTE,
+} vulkan_command_buffer_type;
+
 typedef struct vulkan_command_buffer
 {
     // VkCommandPool command_pool; // TODO:
@@ -302,9 +309,7 @@ typedef struct Buffer_System
     //given how we might use this, it would be ok to have holes in the array
     //TODO: freelist instead of keeping a count, and we might want to differentiate these by size
     //ASSUMPTION: staging buffers are per frame, and if i ever exceed a frames staging upload limit, just increase the size
-    Vulkan_Buffer* staging_buffers;
-    u32 staging_buffers_size; // total we have to be given out
-    u32 staging_buffer_current_count; // current amount given out
+    Buffer_Handle staging_buffer_handle;
 
     //TODO: queries for size
     /*
@@ -400,6 +405,11 @@ typedef struct vulkan_context
     VkCommandPool graphics_command_pool;
     vulkan_command_buffer* graphics_command_buffer; // darray
 
+    VkCommandPool transfer_command_pool;
+    vulkan_command_buffer* transfer_command_buffer; // darray
+    VkCommandPool compute_command_pool;
+    vulkan_command_buffer* compute_command_buffer; // darray
+
 
 
     //Semaphores and Fences
@@ -480,9 +490,6 @@ typedef struct Light_System
 
     Buffer_Handle directional_light_storage_buffer_handle;
     Buffer_Handle point_light_storage_buffer_handle;
-
-    Buffer_Handle directional_light_staging_buffer_handle;
-    Buffer_Handle point_light_staging_buffer_handle;
 
 } Light_System;
 
@@ -622,16 +629,6 @@ typedef struct UI_Renderer
     // Buffer_Handle ui_quad_texture_index_buffer_handle;
 
 
-    Buffer_Handle ui_vertex_staging_buffer_handle;
-    Buffer_Handle ui_index_staging_buffer_handle;
-    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
-    Buffer_Handle ui_instance_staging_ssbo_handle;
-
-    Buffer_Handle text_vertex_staging_buffer_handle;
-    Buffer_Handle text_index_staging_buffer_handle;
-    Buffer_Handle text_instance_staging_ssbo_handle;
-    Buffer_Handle text_indirect_staging_buffer_handle;
-
     u64 draw_count;
 
 }UI_Renderer_Backend;
@@ -649,10 +646,6 @@ typedef struct Sprite_Backend
     Buffer_Handle sprite_indirect_buffer;
     Buffer_Handle sprite_instance_ssbo_buffer;
 
-    Buffer_Handle sprite_vertex_staging_buffer;
-    Buffer_Handle sprite_index_staging_buffer;
-    Buffer_Handle sprite_instance_staging_buffer;
-    Buffer_Handle sprite_indirect_staging_buffer;
 
     u64 draw_count;
 
@@ -673,17 +666,6 @@ typedef struct Mesh_Renderer
     Buffer_Handle material_buffer_handle;
 
 
-    //copy data into these buffers, and then eventually copy them into the device local buffer
-    Buffer_Handle vertex_staging_buffer_handle;
-    Buffer_Handle index_staging_buffer_handle;
-    Buffer_Handle indirect_staging_buffer_handle;
-    Buffer_Handle normal_staging_buffer_handle;
-    Buffer_Handle uv_staging_buffer_handle;
-    Buffer_Handle tangent_staging_buffer_handle;
-
-    Buffer_Handle transform_staging_buffer_handle;
-    Buffer_Handle material_staging_buffer_handle;
-
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
 
     u32 indirect_draw_count;
@@ -695,6 +677,8 @@ typedef struct Mesh_Renderer
     // Buffer_Handle weights_buffer_handle;
 
 }Mesh_Renderer;
+
+
 
 typedef struct renderer
 {
@@ -734,6 +718,18 @@ typedef struct renderer
 
     //TODO:
     vulkan_context context;
+
+    //TODO: TEMP
+    VkBufferMemoryBarrier2 buffer_memory_barrier_batch_release[100];
+    u32 buffer_memory_barrier_batch_release_count;
+
+    VkBufferMemoryBarrier2 buffer_memory_barrier_batch_acquire[100];
+    u32 buffer_memory_barrier_batch_acquire_count;
+
+    VkSemaphore* transfer_signal_sempahores;
+    VkSemaphoreSubmitInfo transfer_sumbit_signal_semaphore;
+
+
 
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;
