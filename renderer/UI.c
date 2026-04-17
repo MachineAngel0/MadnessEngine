@@ -72,8 +72,9 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
 
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
     // font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
-    if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf", &madness_ui->default_font_handle,
-                                                       madness_ui->arena))
+    if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf",
+                                  &madness_ui->default_font_handle,
+                                  madness_ui->arena))
     {
         MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
     };
@@ -131,7 +132,6 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
 
 void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
 {
-
     //Generate Draw Data for UI Sprites
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
@@ -490,7 +490,8 @@ void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
         Madness_Font font_data;
-        texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+        texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
+                                &font_data);
 
         Glyph* g = &font_data.glyphs[c - 32];
 
@@ -1108,7 +1109,7 @@ void madness_text_box(Madness_UI* madness_ui, const char* id)
     madness_ui_update_next_element_pos(madness_ui, out_size);
 }
 
-void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value)
+bool madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value)
 {
     //get our string version of the float
     //draw quad, then text
@@ -1128,6 +1129,8 @@ void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float in
     madness_draw_text_centered(madness_ui, float_string, out_pos, out_size);
     madness_ui_update_next_element_pos(madness_ui, out_size);
 
+    bool has_chaned = false;
+
     //check if we are inside any of the squares
     if (region_hit(madness_ui, out_pos, out_size))
     {
@@ -1135,10 +1138,12 @@ void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float in
         if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
         {
             *f += increment_value;
+            has_chaned = true;
         }
         if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
         {
             *f -= increment_value;
+            has_chaned = true;
         }
 
         set_hot(madness_ui, quad_node->hash_id);
@@ -1167,17 +1172,22 @@ void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float in
             {
                 *f += increment_value / increment_smoother_value;
                 // *f += increment_override;
+                has_chaned = true;
             }
             if (mouse_change_x < 0)
             {
                 *f -= increment_value / increment_smoother_value;
                 // *f -= increment_override;
+                has_chaned = true;
             }
         }
     }
+
+
+    return has_chaned;
 }
 
-void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value)
+bool madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value)
 {
     madness_text(madness_ui, id, text);
 
@@ -1187,13 +1197,20 @@ void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* 
     const char* x_id = c_string_concat(id, "x", madness_ui->frame_arena);
     const char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
 
-    madness_ui_float(madness_ui, x_id, &v2->x, increment_value);
-    madness_ui_float(madness_ui, y_id, &v2->y, increment_value);
+    bool has_moved1 = madness_ui_float(madness_ui, x_id, &v2->x, increment_value);
+    bool has_moved2 = madness_ui_float(madness_ui, y_id, &v2->y, increment_value);
 
     madness_set_layout_direction(madness_ui, last_layout_direction);
+
+
+    if (has_moved1) { return true; }
+    if (has_moved2) { return true; }
+
+
+    return false;
 }
 
-void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value)
+bool madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value)
 {
     //draw text on top, then below the vec values
     madness_text(madness_ui, id, text);
@@ -1205,11 +1222,19 @@ void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* 
     const char* y_id = c_string_concat(id, "y", madness_ui->frame_arena);
     const char* z_id = c_string_concat(id, "z", madness_ui->frame_arena);
 
-    madness_ui_float(madness_ui, x_id, &v3->x, increment_value);
-    madness_ui_float(madness_ui, y_id, &v3->y, increment_value);
-    madness_ui_float(madness_ui, z_id, &v3->z, increment_value);
+
+    bool has_moved1 = madness_ui_float(madness_ui, x_id, &v3->x, increment_value);
+    bool has_moved2 = madness_ui_float(madness_ui, y_id, &v3->y, increment_value);
+    bool has_moved3 = madness_ui_float(madness_ui, z_id, &v3->z, increment_value);
 
     madness_set_layout_direction(madness_ui, last_layout_direction);
+
+    if (has_moved1) { return true; }
+    if (has_moved2) { return true; }
+    if (has_moved3) { return true; }
+
+
+    return false;
 }
 
 bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value)

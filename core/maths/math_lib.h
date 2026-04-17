@@ -49,7 +49,6 @@ float min_f(const float a, const float b)
 }
 
 
-
 // VEC2
 MINLINE vec2 vec2_zero(void)
 {
@@ -229,6 +228,7 @@ MINLINE vec3 vec3_max(const vec3 a, const vec3 b)
     out.z = max_f(a.z, b.z);
     return out;
 }
+
 MINLINE vec3 vec3_min(const vec3 a, const vec3 b)
 {
     vec3 out;
@@ -1204,7 +1204,7 @@ MINLINE f32 quat_normal(const quat q)
 MINLINE quat quat_normalize(const quat q)
 {
     const f32 normal = quat_normal(q);
-
+    if (normal == 0) { return quat_identity(); }
     return (quat){
         q.x / normal,
         q.y / normal,
@@ -1730,6 +1730,7 @@ inline vec3 rgb_normalize(const vec3 rgb)
 {
     return vec3_div_scalar(rgb, 255.0f);
 }
+
 inline vec3 rgb_unnormalize(const vec3 rgb)
 {
     return vec3_mul_scalar(rgb, 255.0f);
@@ -1852,7 +1853,7 @@ vec3 hsv_to_rgb(const vec3 hsv)
 
 
 static const vec3 COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
-static const vec3 COLOR_BLACK_LIGHT = {.x = 3.f/255.f, .y = 3.f/255.f, .z = 7.f/255.f};
+static const vec3 COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
 static const vec3 COLOR_GREY = {0.5f, 0.5f, 0.5f};
 static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
 static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
@@ -1865,14 +1866,13 @@ static const vec3 COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
 static const vec3 COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
 
 //Purple Color Pallette
-static const vec3 COLOR_PURPLE_PALETTE_DARK = {.x = 33.f/255.f, .y = 37.f/255.f, .z = 49.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f/255.f, .y = 19.f/255.f, .z = 92.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f/255.f, .y = 58.f/255.f, .z = 112.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f/255.f, .y = 31.f/255.f, .z = 158.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f/255.f, .y = 162.f/255.f, .z = 201.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f/255.f, .y = 142.f/255.f, .z = 237.f/255.f};
-static const vec3 COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f/255.f, .y = 195.f/255.f, .z = 196.f/255.f};
-
+static const vec3 COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f / 255.f, .y = 31.f / 255.f, .z = 158.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f / 255.f, .y = 162.f / 255.f, .z = 201.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f};
+static const vec3 COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
 
 
 static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -1880,8 +1880,6 @@ static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4 COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
 static const vec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
 static const vec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
-
-
 
 
 /*** RANDOM ***/

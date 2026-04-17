@@ -8,7 +8,7 @@
 int main()
 {
 
-    Editor_Application editor_app;
+    Editor_Application editor_app = {0};
     editor_app_run(&editor_app);
 
     return 0;

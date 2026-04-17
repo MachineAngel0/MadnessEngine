@@ -295,9 +295,9 @@ MAPI void madness_slider_arrow(Madness_UI* madness_ui, const char* id, float* sl
 
 MAPI void madness_text_box(Madness_UI* madness_ui, const char* id);
 
-MAPI void madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value);
-MAPI void madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value);
-MAPI void madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value);
+MAPI bool madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value);
+MAPI bool madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value);
+MAPI bool madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value);
 
 
 MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value);

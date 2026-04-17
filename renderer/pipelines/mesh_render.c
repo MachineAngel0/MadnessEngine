@@ -208,8 +208,6 @@ void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->draw_data_staging_buffer_handle,
                                            &mesh_draw_data,
                                            sizeof(Mesh_Draw_Data));
-
-
     }
 
 

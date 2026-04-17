@@ -27,6 +27,7 @@ typedef struct Transform_SOA
 MAPI Transform* transform_from_position_rotation_scale(const vec3 position, const quat rotation, const vec3 scale,
                                                        Arena* arena);
 MAPI Transform* transform_create(Arena* arena);
+void transform_set_default(Transform* transform);
 
 MAPI Transform* transform_from_position(const vec3 position, Arena* arena);
 MAPI Transform* transform_from_rotation(const quat rotation, Arena* arena);
@@ -45,12 +46,16 @@ MAPI void transform_set_parent(Transform* t, Transform* parent);
 MAPI void transform_translate(Transform* t, const vec3 position);
 MAPI void transform_rotate(Transform* t, const quat rotation);
 MAPI void transform_scale(Transform* t, const vec3 scale);
+MAPI mat4 transform_get_local_internal(Transform* t);
 
 //
 
 mat4 transform_get_local(Transform* t);
 
 mat4 transform_get_world(Transform* t);
+
+
+void transform_mark_dirty(Transform* t);
 
 
 #endif //TRANSFORMS_H

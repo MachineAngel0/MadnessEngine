@@ -7,9 +7,14 @@ Scene* scene_init(Memory_System* memory_system)
     scene->transforms = memory_system_alloc(memory_system, sizeof(Transform) * MAX_TRANSFORM_COUNT,
                                             MEMORY_SUBSYSTEM_RESOURCE);
     scene->world_transforms = memory_system_alloc(memory_system, sizeof(mat4) * MAX_TRANSFORM_COUNT,
-                                            MEMORY_SUBSYSTEM_RESOURCE);
+                                                  MEMORY_SUBSYSTEM_RESOURCE);
 
     scene->transform_count = 0;
+    for (int i = 0; i < MAX_TRANSFORM_COUNT; ++i)
+    {
+        transform_set_default(&scene->transforms[i]);
+    }
+
 
     MASSERT(scene);
 
@@ -47,11 +52,9 @@ void scene_update(Scene* scene, Resource_System* resource_system)
     // also I technically should know the max children any given object should have (thats not a skeletal mesh and its bones)
     for (int i = 0; i < scene->transform_count; ++i)
     {
-        scene->world_transforms[i] = transform_get_world(scene->transforms);
+        scene->world_transforms[i] = transform_get_world(&scene->transforms[i]);
     }
 
     resource_system->render_packet->transform_data_packet.world_space_matrix_array = scene->world_transforms;
     resource_system->render_packet->transform_data_packet.world_space_matrix_count = scene->transform_count;
-
 }
-

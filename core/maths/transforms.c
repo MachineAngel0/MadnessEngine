@@ -21,6 +21,14 @@ Transform* transform_create(Arena* arena)
     return out_transform;
 }
 
+void transform_set_default(Transform* transform)
+{
+    *transform = (Transform){vec3_zero(), quat_identity(), vec3_one()};
+    transform_get_local_internal(transform);
+
+    transform->is_dirty = true;
+}
+
 Transform* transform_from_position(const vec3 position, Arena* arena)
 {
     Transform* out_transform =
@@ -88,6 +96,14 @@ void transform_scale(Transform* t, const vec3 scale)
     t->is_dirty = true;
 }
 
+mat4 transform_get_local_internal(Transform* t)
+{
+    mat4 tr = mat4_mul(quat_to_mat4(t->rotation), mat4_translation(t->position));
+    tr = mat4_mul(mat4_scale(t->scale), tr);
+    t->local = tr;
+    t->is_dirty = false;
+    return t->local;
+}
 
 mat4 transform_get_local(Transform* t)
 {
@@ -99,7 +115,8 @@ mat4 transform_get_local(Transform* t)
         t->is_dirty = false;
         return t->local;
     }
-    return mat4_identity();
+    return t->local;
+
 }
 
 mat4 transform_get_world(Transform* t)
@@ -111,4 +128,9 @@ mat4 transform_get_world(Transform* t)
         return mat4_mul(l, p);
     }
     return l;
+}
+
+void transform_mark_dirty(Transform* t)
+{
+    t->is_dirty = true;
 }

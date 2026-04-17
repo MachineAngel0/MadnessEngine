@@ -11,13 +11,14 @@ typedef struct Editor
 {
     Madness_UI* madness_ui; // ref
     Renderer* renderer; // ref
+    Resource_System* resource_system; // ref
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
 } Editor;
 
 
-MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui);
+MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui, Resource_System* resource_system);
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
 
@@ -25,7 +26,7 @@ MAPI bool editor_shutdown(Editor* editor);
 void editor_ui(Editor* editor);
 
 
-typedef Editor* (*editor_init_fpn)(Memory_System*, Renderer*, Madness_UI*);
+typedef Editor* (*editor_init_fpn)(Memory_System*, Renderer*, Madness_UI*, Resource_System*);
 typedef void (*editor_run_fpn)(Editor* );
 typedef void (*editor_shutdown_fpn)(Editor* );
 

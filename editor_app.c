@@ -22,7 +22,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     Platform_Config platform_config;
     platform_config_use_defaults(&platform_config);
-    platform_config.name = "Madness Engine Renderer Dev";
+    platform_config.name = "Madness Engine Editor";
 
 
     u64 memory_request_size = GB(4);
@@ -65,24 +65,18 @@ bool editor_app_run(Editor_Application* editor_app)
     renderer_plugin->madness_ui = renderer_plugin->ui_init(&application_core->memory_system, application_core->input_system,
                                           application_core->resource_system);
 
-    editor_plugin->editor = editor_plugin->editor_init(&application_core->memory_system, renderer_plugin->renderer, renderer_plugin->madness_ui);
+    // editor_plugin->editor = editor_plugin->editor_init(&application_core->memory_system, renderer_plugin->renderer, renderer_plugin->madness_ui, application_core->resource_system);
+   editor_plugin->editor = editor_init(&application_core->memory_system, renderer_plugin->renderer, renderer_plugin->madness_ui, application_core->resource_system);
 
     //MAIN LOOP
 
-    //INDIRECT DRAW
-    // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/cube_gltf/Cube.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    mesh_load_gltf(application_core->resource_system->mesh_system,
-                   "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
-                   &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                   renderer_plugin->renderer->resource_system);
-    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_glb/DamagedHelmet.glb", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_gltf(resource_system->mesh_system,""../z_assets/models/main_sponza/NewSponza_Main_glTF_003.gltf"", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_anim_gltf(resource_system->mesh_system,"../z_assets/models/MC/MC4.2_6.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
-    // mesh_load_anim_gltf(resource_system->mesh_system,"../z_assets/models/CesiumMan/CesiumMan.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
+    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
+                 &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                 renderer_plugin->renderer->resource_system);
+    mesh_load_gltf_new(application_core->resource_system->mesh_system,
+                 "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                 &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                 renderer_plugin->renderer->resource_system);
 
 
     clock_start(&application_core->clock);
@@ -120,7 +114,8 @@ bool editor_app_run(Editor_Application* editor_app)
         renderer_plugin->ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                                                renderer_plugin->renderer->context.framebuffer_height_new);
 
-        editor_plugin->editor_run(editor_plugin->editor);
+        // editor_plugin->editor_run(editor_plugin->editor);
+        editor_update(editor_plugin->editor);
 
 
         renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->resource_system);
@@ -144,7 +139,8 @@ bool editor_app_run(Editor_Application* editor_app)
 
 
     // madness_ui_shutdown(madness_ui);
-    editor_plugin->editor_shutdown(editor_plugin->editor);
+    // editor_plugin->editor_shutdown(editor_plugin->editor);
+    editor_shutdown(editor_plugin->editor);
 
     renderer_plugin->ui_shutdown(renderer_plugin->madness_ui);
 
@@ -154,7 +150,7 @@ bool editor_app_run(Editor_Application* editor_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    resource_system_shutdown(application_core->resource_system, TODO);
+    resource_system_shutdown(application_core->resource_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);
@@ -164,7 +160,6 @@ bool editor_app_run(Editor_Application* editor_app)
 
     return true;
 }
-
 
 bool application_on_event(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
@@ -178,7 +173,6 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
     return false;
 }
 
-
 bool application_on_key(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
     if (code == EVENT_KEY_PRESSED)
@@ -190,7 +184,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         if (key_code == KEY_ESCAPE)
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
-            event_context data = {0};
+            event_context data = {};
             event_fire(app_internal->application_core.event_system, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
@@ -216,7 +210,6 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
 
     return false;
 }
-
 
 bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, const event_context context)
 {
