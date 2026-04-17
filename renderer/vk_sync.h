@@ -3,7 +3,7 @@
 
 
 
-void init_per_frame_sync(vulkan_context* context);
+void sync_object_per_frame_init(Renderer* renderer, vulkan_context* context);
 
 bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns);
 
