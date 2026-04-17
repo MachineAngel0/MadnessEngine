@@ -1,5 +1,6 @@
 ﻿#include "resource_system.h"
 
+#include "material_system.h"
 #include "mesh_system.h"
 #include "sprite_system.h"
 
@@ -16,6 +17,7 @@ Resource_System* resource_system_init(Memory_System* memory_system)
     resource_system->texture_system = texture_system_init(memory_system);
     resource_system->mesh_system = mesh_system_init(memory_system);
     resource_system->scene = scene_init(memory_system);
+    resource_system->material_system = material_system_init(memory_system);
 
 
     return resource_system;
@@ -29,6 +31,7 @@ bool resource_system_shutdown(Resource_System* resource_system, Memory_System* m
     sprite_system_shutdown(resource_system->sprite_system, memory_system);
     texture_system_shutdown(resource_system->texture_system, memory_system);
     scene_shutdown(resource_system->scene, memory_system);
+    material_system_shutdown(resource_system->material_system, memory_system);
 
 
     return true;
@@ -49,6 +52,8 @@ bool resource_system_generate_render_packet(Resource_System* resource_system)
                                          &resource_system->render_packet->sprite_data_packet);
 
     mesh_system_generate_render_packet(resource_system->mesh_system, &resource_system->render_packet->mesh_data_packet);
+
+    material_system_generate_render_packet(resource_system->material_system, &resource_system->render_packet->material_data_packet);
 
     scene_update(resource_system->scene, resource_system);
 

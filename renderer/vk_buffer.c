@@ -18,7 +18,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     out_buffer_system->buffers = arena_alloc(&renderer->arena, out_buffer_system->buffers_size * sizeof(Vulkan_Buffer));
 
     out_buffer_system->global_ubo_handle = vulkan_buffer_create(renderer, out_buffer_system, BUFFER_TYPE_UNIFORM,
-                                                                sizeof(uniform_buffer_object));
+                                                                sizeof(Global_Ubo));
 
     for (u32 i = 0; i < out_buffer_system->frames_in_flight; i++)
     {

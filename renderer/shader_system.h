@@ -16,7 +16,7 @@ Shader_System* shader_system_init(Renderer* renderer);
 void shader_system_shutdown(Shader_System* system);
 
 
-Vulkan_Texture* shader_system_get_texture(Shader_System* system, const Texture_Handle handle);
+Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, const Texture_Handle handle);
 
 void shader_system_update(Renderer* renderer, Shader_System* system);
 

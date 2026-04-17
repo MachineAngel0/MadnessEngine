@@ -16,14 +16,10 @@ Shader_System* shader_system_init(Renderer* renderer)
 
     out_shader_system->pipeline_indexes = 0;
     out_shader_system->available_texture_indexes = 0;
-    out_shader_system->material_param_indexes = 0;
 
     out_shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
 
-    out_shader_system->material_mesh_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_CPU_STORAGE,
-                                                                        sizeof(Material_Param_Data) * out_shader_system
-                                                                        ->max_indexes);
+
 
     memset(out_shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
 
@@ -40,7 +36,7 @@ void shader_system_shutdown(Shader_System* system)
 }
 
 
-Vulkan_Texture* shader_system_get_texture(Shader_System* system, const Texture_Handle handle)
+Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, const Texture_Handle handle)
 {
     return &system->textures[handle.handle];
 }
@@ -94,10 +90,6 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
 }
 
 
-void shader_system_remove_texture(Shader_System* system, Texture_Handle* handle)
-{
-    //TODO:
-}
 
 Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* system, Texture_Handle* handle,
                                             const char* filepath)
@@ -121,52 +113,6 @@ Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* s
                                             */
 
     return out_texture_handle;
-}
-
-//pass out the texture index
-Material_Handle shader_system_add_material(vulkan_context* context, Shader_System* system, char const* filepath)
-{
-    //get an available index
-    Material_Handle out_material_handle = {0};
-
-
-    return out_material_handle;
-}
-
-void shader_system_remove_material(Shader_System* system, Texture_Handle* handle)
-{
-}
-
-
-Material_Param_Data* shader_system_get_material(Shader_System* system, Material_Handle* handle)
-{
-    return &system->material_params[handle->handle];
-}
-
-Material_Param_Data* shader_system_get_unused_material_param(Shader_System* system)
-{
-    //TODO
-    // return &system->material_params[available_count];
-    return NULL;
-}
-
-
-void material_param_data_init(Material_Param_Data* out_data)
-{
-    out_data->color = vec4_one();
-    out_data->ambient_strength = 1.0;
-    out_data->roughness_strength = 1.0;
-    out_data->metallic_strength = 1.0;
-    out_data->normal_strength = 1.0;
-    out_data->ambient_occlusion_strength = 1.0;
-    out_data->emissive_strength = 1.0;
-
-    out_data->color_index = 0;
-    out_data->normal_index = 0;
-    out_data->metallic_index = 0;
-    out_data->roughness_index = 0;
-    out_data->ambient_occlusion_index = 0;
-    out_data->emissive_index = 0;
 }
 
 

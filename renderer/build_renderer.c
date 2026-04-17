@@ -21,4 +21,9 @@
 #include "vk_shader.c"
 #include "vk_swapchain.c"
 #include "vk_sync.c"
-#include "render_resource_backend.c"
+
+#include "pipelines/sprite_render.c"
+#include "pipelines/ui_render.c"
+#include "pipelines/material_render.c"
+#include "pipelines/transform_render.c"
+#include "pipelines/mesh_render.c"

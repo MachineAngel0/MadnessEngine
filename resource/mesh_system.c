@@ -2,6 +2,7 @@
 
 #include "cgltf.h"
 #include "c_string.h"
+#include "material_system.h"
 #include "resource_types.h"
 #include "ufbx.h"
 
@@ -357,7 +358,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
 
 
         //TODO: i am technically copy the data twice which is completely not needed
-        current_submesh->material_params.feature_mask = current_submesh->mesh_pipeline_mask;
+        current_submesh->material_params.flags = current_submesh->mesh_pipeline_mask;
 
         mesh_system->vertex_byte_size += current_submesh->vertex_bytes;
         mesh_system->index_byte_size += current_submesh->indices_bytes;
@@ -795,13 +796,17 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
     //LOAD VERTEX/INDEX DATA
     //Load Textures
-
+    //TODO: I need a better way to store this information
+    Transform_Handle mesh_transform_handle = scene_get_new_mesh_transform(resource_system->scene);
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
         Mesh_Indirect_Draw_Data* mesh_draw_data = &mesh_system->draw_data[mesh_system->draw_data_index++];
 
         Mesh_Upload_Data* current_submesh_render_data = &submesh_render_data_array[mesh_idx];
+        mesh_draw_data->transform_handle = mesh_transform_handle;
+        mesh_draw_data->material_handle = material_system_create_material(resource_system->material_system);
+        Material_PBR* pbr_material = material_system_add_pbr(resource_system->material_system, mesh_draw_data->material_handle);
 
         /* Find position accessor */
         const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
@@ -937,7 +942,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
                                                               base_color_texture.texture;
         if (color_texture && color_texture->image->uri)
         {
-            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_COLOR;
+            pbr_material->flags |= MESH_PIPELINE_COLOR;
 
             char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(color_texture->image->uri));
@@ -946,7 +951,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
             TRACE("COLOR Texture Path:  %s", texture_path);
             Texture_Handle color_handle;
             texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
-            current_submesh_render_data->material_params.color_index = color_handle.handle;
+            pbr_material->color_index = color_handle.handle;
         }
 
         //METAL-ROUGHNESS
@@ -956,8 +961,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         {
             if (metal_roughness_texture->image->uri)
             {
-                current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_ROUGHNESS;
-                current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_METALLIC;
+                pbr_material->flags |= MESH_PIPELINE_ROUGHNESS;
+                pbr_material->flags |= MESH_PIPELINE_METALLIC;
                 char* texture_path = arena_alloc(frame_arena,
                                                  strlen(base_path) + strlen(metal_roughness_texture->image->uri));
                 // takes a buffer, message format, then the remaining strings
@@ -969,8 +974,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
                 texture_system_load_texture(resource_system->texture_system, texture_path,
                                             &metallic_handle);
 
-                current_submesh_render_data->material_params.metallic_index = metallic_handle.handle;
-                current_submesh_render_data->material_params.roughness_index = metallic_handle.handle;
+                pbr_material->metallic_index = metallic_handle.handle;
+                pbr_material->roughness_index = metallic_handle.handle;
             }
             if (metal_roughness_texture->image->buffer_view)
             {
@@ -987,7 +992,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
         if (AO_texture && AO_texture->image->uri)
         {
-            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_AO;
+            pbr_material->flags |= MESH_PIPELINE_AO;
             char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(AO_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
@@ -998,7 +1003,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
             texture_system_load_texture(resource_system->texture_system, texture_path,
                                         &ao_handle);
-            current_submesh_render_data->material_params.ambient_occlusion_index = ao_handle.
+            pbr_material->ambient_occlusion_index = ao_handle.
                 handle;
         }
 
@@ -1008,7 +1013,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
         if (normal_texture && normal_texture->image->uri)
         {
-            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_NORMAL;
+            pbr_material->flags |= MESH_PIPELINE_NORMAL;
             char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(normal_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
@@ -1018,7 +1023,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
             texture_system_load_texture(resource_system->texture_system, texture_path,
                                         &normal_handle);
-            current_submesh_render_data->material_params.normal_index = normal_handle.
+            pbr_material->normal_index = normal_handle.
                                                                              handle;
         }
 
@@ -1026,7 +1031,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
         if (emissive_texture && emissive_texture->image->uri)
         {
-            current_submesh_render_data->material_params.feature_mask |= MESH_PIPELINE_EMISSIVE;
+            pbr_material->flags |= MESH_PIPELINE_EMISSIVE;
             char* texture_path = arena_alloc(frame_arena,
                                              strlen(base_path) + strlen(emissive_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
@@ -1036,12 +1041,11 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
             Texture_Handle emissive_handle;
             texture_system_load_texture(resource_system->texture_system, texture_path,
                                         &emissive_handle);
-            current_submesh_render_data->material_params.emissive_index = emissive_handle.
+            pbr_material->emissive_index = emissive_handle.
                                                                                handle;
         }
 
-        //TODO: I need a better way to store this information
-        mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+
 
         //add to mesh upload queue
         ring_enqueue(mesh_system->mesh_ring_queue, current_submesh_render_data);

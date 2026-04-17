@@ -6,7 +6,7 @@
 #extension GL_EXT_buffer_reference : require
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/mesh_structs.glsl"
+#include "shader_includes/materials.glsl"
 
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 
@@ -17,7 +17,6 @@ layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_tex;
 layout(location = 3) in flat uint in_color_idx;
 layout(location = 4) in vec3 in_world_position;
-layout(location = 5) in flat uint in_index;
 
 
 //look into subpasses/renderpasses for more/different out values

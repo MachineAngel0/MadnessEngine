@@ -2,6 +2,7 @@
 #define RESOURCE_TYPES_H
 
 
+#include "material_types.h"
 #include "ring_queue.h"
 #include "stb_image.h"
 #include "stb_truetype.h"
@@ -116,42 +117,11 @@ typedef struct Madness_Font
 
 /// MESH ///
 
-typedef struct Material_Param_Data
-{
-    u32 feature_mask;
-
-    vec4 color; // this will be at a default of 1.0, which is white but won't affect the material
-    //ALL FROM RANGES 0-1
-    float ambient_strength; // optional for now we can remove it later
-    float roughness_strength;
-    float metallic_strength;
-    float normal_strength;
-    float ambient_occlusion_strength;
-    float emissive_strength;
-
-    u32 color_index;
-    u32 normal_index;
-    u32 metallic_index;
-    u32 roughness_index;
-    u32 ambient_occlusion_index;
-    u32 emissive_index;
-    u32 _padding0;
-    u32 _padding1;
-    u32 _padding2;
-} Material_Param_Data;
-
 
 typedef struct PC_Mesh
 {
     //per instance data change
     u32 ubo_buffer_idx;
-    u32 normal_buffer_idx;
-    u32 tangent_buffer_idx;
-    u32 uv_buffer_idx;
-    u32 transform_buffer_idx;
-    u32 material_buffer_idx;
-    u32 _padding;
-    u32 _padding1;
 } PC_Mesh;
 
 
@@ -177,7 +147,7 @@ typedef struct submesh
     u64 tangent_bytes;
     u64 uv_bytes;
 
-    Material_Param_Data material_params;
+    Material_PBR material_params;
     Texture_Handle color_texture;
     Texture_Handle normal_texture;
     Texture_Handle metallic_texture;
@@ -228,7 +198,7 @@ typedef struct skinned_submesh
     u64 weight_bytes;
     u64 joint_bytes;
 
-    Material_Param_Data material_params;
+    Material_PBR material_params;
     Texture_Handle color_texture;
     Texture_Handle normal_texture;
     Texture_Handle metallic_texture;
@@ -262,6 +232,89 @@ typedef struct skinned_mesh
     Joint* joints;
     int joint_count;
 } skinned_mesh;
+
+typedef struct Submesh_Upload_Data
+{
+    //information to upload into the associated buffer
+    u32 vertex_offset;
+    u32 vertex_bytes;
+
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u32 normal_offset;
+    u32 normal_bytes;
+
+    u32 tangent_offset;
+    u32 tangent_bytes;
+
+    u32 uv_offset;
+    u32 uv_bytes;
+
+    //TODO: these technically could just be u8's
+    vec4* tangent;
+    vec3* pos;
+    vec3* normal;
+    vec2* uv;
+    u8* indices;
+
+
+} Mesh_Upload_Data;
+
+typedef struct Mesh_Indirect_Draw_Data
+{
+    /*typedef struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
+
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+    //TODO: another time, for when i want to do instancing
+    // uint32_t firstInstance; // 0
+    // uint32_t instanceCount; // 1
+
+    Transform_Handle transform_handle;
+    Material_Handle material_handle;
+
+
+} Mesh_Indirect_Draw_Data;
+
+typedef struct Mesh_Draw_Data
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+} Mesh_Draw_Data;
+
+
+
+typedef struct submesh_gameplay
+{
+
+    Texture_Handle color_texture;
+    Texture_Handle normal_texture;
+    Texture_Handle metallic_texture;
+    Texture_Handle roughness_texture;
+    Texture_Handle ambient_occlusion_texture;
+    Texture_Handle emissive_texture;
+} submesh_gameplay;
+
+typedef struct static_mesh_gameplay
+{
+    //each submesh shares the same transform
+    Transform_Handle transforms_handle;
+
+    //NOTE: if I wanted to change a submeshes material, i would have to index into it
+    submesh_gameplay* submeshes;
+    u32 submeshes_size;
+
+    bool visible;
+} static_mesh_gameplay;
 
 
 typedef enum Animation_Path_Type
@@ -375,82 +428,6 @@ typedef struct Texture_System
 } Texture_System;
 
 
-typedef struct Submesh_Upload_Data
-{
-    //information to upload into the associated buffer
-    u32 vertex_offset;
-    u32 vertex_bytes;
-
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u32 normal_offset;
-    u32 normal_bytes;
-
-    u32 tangent_offset;
-    u32 tangent_bytes;
-
-    u32 uv_offset;
-    u32 uv_bytes;
-
-    //TODO: these technically could just be u8's
-    vec4* tangent;
-    vec3* pos;
-    vec3* normal;
-    vec2* uv;
-    u8* indices;
-
-    Material_Param_Data material_params;
-
-} Mesh_Upload_Data;
-
-typedef struct Mesh_Draw_Data
-{
-    /*typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
-
-    u32 vertex_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    //TODO: another time, for when i want to do instancing
-    // uint32_t firstInstance; // 0
-    // uint32_t instanceCount; // 1
-
-    Transform_Handle transform_handle;
-
-
-} Mesh_Indirect_Draw_Data;
-
-
-typedef struct submesh_gameplay
-{
-    Material_Handle material_handle;
-
-    Texture_Handle color_texture;
-    Texture_Handle normal_texture;
-    Texture_Handle metallic_texture;
-    Texture_Handle roughness_texture;
-    Texture_Handle ambient_occlusion_texture;
-    Texture_Handle emissive_texture;
-} submesh_gameplay;
-
-typedef struct static_mesh_gameplay
-{
-    //each submesh shares the same transform
-    Transform_Handle transforms_handle;
-
-    //NOTE: if I wanted to change a submeshes material, i would have to index into it
-    submesh_gameplay* submeshes;
-    u32 submeshes_size;
-
-    bool visible;
-} static_mesh_gameplay;
 
 typedef struct Mesh_System
 {
@@ -506,10 +483,10 @@ typedef struct Mesh_System
 
 typedef struct Scene
 {
-    Transform* mesh_transforms;
-    int mesh_transform_count;
+    Transform* transforms;
+    int transform_count;
 
-    mat4* mesh_world_transforms; //the count is the same as the transform_count
+    mat4* world_transforms; //the count is the same as the transform_count
 
     //i dont need rn but could be useful
     // since we know static doesn't change we can cache the transforms
@@ -517,6 +494,8 @@ typedef struct Scene
     // Transform* dynamic_transform;
 
 } Scene;
+
+
 
 
 //RENDER PACKET
@@ -530,9 +509,6 @@ typedef struct Render_Packet_Mesh
     Mesh_Indirect_Draw_Data* draw_data;
     u32 draw_data_size;
 
-    //this could just be in one giant buffer, and anything that has a transform can access it
-    mat4* world_space_matrix_array;
-    u32 world_space_matrix_count;
 
 
     //TODO: remove these
@@ -541,6 +517,28 @@ typedef struct Render_Packet_Mesh
     u32 static_mesh_submesh_size;
 
 } Render_Packet_Mesh;
+
+typedef struct Render_Packet_Transform
+{
+    mat4* world_space_matrix_array;
+    u32 world_space_matrix_count;
+}Render_Packet_Transform;
+
+
+typedef struct Render_Packet_Material
+{
+    Material_Instance* material_instance;
+    u32 material_instance_count;
+    u32 material_instance_bytes;
+
+    Material_PBR* prb;
+    u32 prb_count;
+    u32 prb_bytes;
+
+    Material_UV_Anim_Data* uv_anim;
+    u32 uv_anime_count;
+    u32 uv_anime_bytes;
+}Render_Packet_Material;
 
 
 typedef struct Render_Packet_UI
@@ -572,6 +570,8 @@ typedef struct Render_Packet
     //FOR RENDERING
 
     //rn we just have one of each,
+    Render_Packet_Transform transform_data_packet;
+    Render_Packet_Material material_data_packet;
     Render_Packet_Sprite sprite_data_packet;
     Render_Packet_UI ui_data_packet;
     Render_Packet_Mesh mesh_data_packet;
@@ -594,6 +594,7 @@ typedef struct Resource_System
     Sprite_System* sprite_system;
     Mesh_System* mesh_system;
     Texture_System* texture_system;
+    Material_System* material_system;
     Scene* scene;
 
 

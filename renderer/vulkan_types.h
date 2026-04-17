@@ -234,24 +234,6 @@ typedef struct Vulkan_Buffer
 } Vulkan_Buffer;
 
 
-typedef enum vulkan_shader_pipeline_type
-{
-    //EXAMPLE OF HOW I MIGHT DYNAMICALLY CONSTRUCT A PIPELINE
-    //TODO: should error out if there are more than 4 descriptors set(not bits) are set, since I am only limited to 4
-    //the first 3 could honestly be static for a given type like mesh,
-    //will always need global ubo, materials, and ssbo's, but the 4th is custom
-    PIPELINE_TYPE_GLOBAL_UBO = BITFLAG(1),
-    PIPELINE_TYPE_MESH = BITFLAG(2),
-    PIPELINE_TYPE_MATERIAL = BITFLAG(3),
-    PIPELINE_TYPE_BUFFERS = BITFLAG(4),
-
-    //this is more describing what the pipeline is, rather than what it requires
-    PIPELINE_TYPE_OPAQUE = BITFLAG(5),
-    PIPELINE_TYPE_TRANSPARENCY = BITFLAG(6),
-    PIPELINE_TYPE_LIGHTS = BITFLAG(7),
-    PIPELINE_TYPE_TERRAIN = BITFLAG(8),
-} vulkan_shader_pipeline_type;
-
 typedef struct vulkan_shader_pipeline
 {
     VkPipelineLayout pipeline_layout;
@@ -265,28 +247,19 @@ typedef struct Shader_System
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
 
-
     vulkan_shader_pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
 
-
-    //idk if i need these two rn
-    Material_Handle default_material_handle;
-    Shader_Handle default_shader_handle;
+    //idk if i need this
     Pipeline_Handle default_pipeline_handle;
-
-    Material_Param_Data material_params[AVAILABLE_TEXTURES];
-    u32 material_param_indexes;
-
-    //TODO: this should hold all the global buffers and things for descriptor set
-    Buffer_Handle material_mesh_ssbo_handle;
-    Buffer_Handle material_mesh_staging_handle;
 
     hash_table* texture_file_to_handle;
     // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
 
-
     u32 max_indexes;
+
+    //TODO: ring_queue* texture_delete_queue
+
 } Shader_System;
 
 
@@ -504,8 +477,9 @@ typedef enum Render_Mode
     RENDER_MODE_MAX,
 } Render_Mode;
 
-typedef struct uniform_buffer_object
+typedef struct global_ubo
 {
+    //this can basically be as largae as a i want, the max limit is 64 kib
     mat4 model;
     mat4 view;
     mat4 proj;
@@ -522,43 +496,29 @@ typedef struct uniform_buffer_object
 
     Render_Mode render_mode;
 
-    u32 _padding0;
-    u32 _padding1;
-    u32 _padding2;
-    u32 _padding3;
-    u32 _padding4;
-    u32 _padding5;
-} uniform_buffer_object;
 
+    //global list of buffer resources
 
-typedef enum mesh_pipeline_flags
-{
-    MESH_PIPELINE_COLOR = BITFLAG(1),
-    MESH_PIPELINE_NORMAL = BITFLAG(2),
-    MESH_PIPELINE_EMISSIVE = BITFLAG(3),
-    MESH_PIPELINE_ROUGHNESS = BITFLAG(4),
-    MESH_PIPELINE_METALLIC = BITFLAG(5),
-    MESH_PIPELINE_AO = BITFLAG(6),
-    MESH_PIPELINE_ENUM_MAX,
-    MESH_PIPELINE_ENUM_COUNT = 6,
-} mesh_pipeline_flags;
+    //meshes
+    u32 vertex_idx;
+    u32 index_idx;
+    u32 normal_idx;
+    u32 tangent_idx;
+    u32 uv_index;
+    u32 transform_idx;
 
-const char* mesh_pipeline_flag_names[] = {
-    "Albedo",
-    "Normal",
-    "Emissive",
-    "Roughness",
-    "Metallic",
-    "AO"
-};
-String mesh_pipeline_flag_names_string[] = {
-    {"Albedo", sizeof("Albedo") - 1},
-    {"Normal", sizeof("Normal") - 1},
-    {"Emissive", sizeof("Emissive") - 1},
-    {"Roughness", sizeof("Roughness") - 1},
-    {"Metallic", sizeof("Metallic") - 1},
-    {"AO", sizeof("AO") - 1},
-};
+    //skinned : TODO:
+    u32 draw_data_idx;
+
+    //materials
+    u32 material_instance_idx;
+    u32 material_pbr_idx;
+    u32 material_wave_idx;
+    u32 material_black_hole_idx;
+    u32 material_uv_animation_idx;
+    u32 material_blend1_idx;
+    u32 material_blend2_idx;
+} Global_Ubo;
 
 
 
@@ -670,6 +630,23 @@ typedef struct Sprite_Backend
 }Sprite_Renderer;
 
 
+typedef struct Transform_Renderer
+{
+    Buffer_Handle transform_buffer_handle;
+    Buffer_Handle transform_staging_buffer_handle;
+}Transform_Renderer;
+
+typedef struct Material_Renderer
+{
+
+    Buffer_Handle instance_buffer_handle;
+    Buffer_Handle instance_staging_buffer_handle;
+
+    Buffer_Handle pbr_buffer_handle;
+    Buffer_Handle pbr_staging_buffer_handle;
+
+
+}Material_Renderer;
 
 typedef struct Mesh_Renderer
 {
@@ -680,8 +657,6 @@ typedef struct Mesh_Renderer
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
 
-    Buffer_Handle transform_buffer_handle;
-    Buffer_Handle material_buffer_handle;
 
     Buffer_Handle vertex_staging_buffer_handle;
     Buffer_Handle index_staging_buffer_handle;
@@ -690,8 +665,10 @@ typedef struct Mesh_Renderer
     Buffer_Handle tangent_staging_buffer_handle;
     Buffer_Handle uv_staging_buffer_handle;
 
-    Buffer_Handle transform_staging_buffer_handle;
-    Buffer_Handle material_staging_buffer_handle;
+
+    Buffer_Handle draw_data_buffer_handle;
+    Buffer_Handle draw_data_staging_buffer_handle;
+
 
 
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
@@ -726,6 +703,8 @@ typedef struct renderer
     Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
     Mesh_Renderer* mesh_renderer;
+    Transform_Renderer* transform_renderer;
+    Material_Renderer* material_renderer;
 
     //renderer specific
     Buffer_System* buffer_system;

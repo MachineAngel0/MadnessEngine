@@ -1,7 +1,7 @@
 ; SPIR-V
 ; Version: 1.0
 ; Generator: Khronos Glslang Reference Front End; 11
-; Bound: 506
+; Bound: 733
 ; Schema: 0
                OpCapability Shader
                OpCapability DrawParameters
@@ -19,9 +19,9 @@
           %1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
           %5 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel PhysicalStorageBuffer64 GLSL450
-               OpEntryPoint Vertex %main "main" %gl_VertexIndex %gl_DrawIDARB %out_index %_ %in_pos %out_normal %out_tangent %out_uv %out_color_idx %out_world_position
+               OpEntryPoint Vertex %main "main" %gl_VertexIndex %gl_DrawIDARB %out_normal %out_uv %out_tangent %_ %in_pos %out_color_idx %out_world_position
           %2 = OpString "C:\\Users\\Adams Humbert\\Documents\\Clion\\MadnessEngine\\renderer\\shaders\\shader_mesh_indirect.vert"
-          %3 = OpString "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine/renderer/shaders/shader_includes/mesh_structs.glsl"
+          %3 = OpString "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine/renderer/shaders/shader_includes/materials.glsl"
           %4 = OpString "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine/renderer/shaders/shader_includes/test_uniform.glsl"
          %10 = OpString "uint"
          %18 = OpString "main"
@@ -40,7 +40,7 @@
 #extension GL_ARB_shader_draw_parameters : enable
 
 #include \"shader_includes/test_uniform.glsl\"
-#include \"shader_includes/mesh_structs.glsl\"
+#include \"shader_includes/materials.glsl\"
 
 
 layout(location = 0) in vec3 in_pos;
@@ -51,10 +51,56 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
 layout(location = 4) out vec3 out_world_position;
-layout(location = 5) out flat uint out_index;
 
 void main() {
 
+
+    uint draw_idx = gl_VertexIndex;
+    uint instance_idx = gl_DrawIDARB;
+
+
+    //global
+    uint ubo_index = pc_mesh.ubo_buffer_idx;
+
+    //global mesh data
+    uint normal_buffer_index = ubo[nonuniformEXT(ubo_index)].normal_idx;
+    uint tangent_buffer_index = ubo[nonuniformEXT(ubo_index)].tangent_idx;
+    uint uv_buffer_index = ubo[nonuniformEXT(ubo_index)].uv_idx;
+    out_normal = NORMAL[nonuniformEXT(normal_buffer_index)].normal[nonuniformEXT(gl_VertexIndex)];
+    out_uv = UV[nonuniformEXT(uv_buffer_index)].uv[nonuniformEXT(gl_VertexIndex)];
+
+    out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
+    //out_tangent = TANGENT[nonuniformEXT(tangent_index)].tangent[nonuniformEXT(gl_VertexIndex)];
+
+
+    //get object draw data
+    uint draw_data_buffer_idx = ubo[nonuniformEXT(ubo_index)].draw_data_idx;
+    mesh_draw_data cur_mesh_data = MESH_DRAW_DATA[nonuniformEXT(draw_data_buffer_idx)].mesh_data[nonuniformEXT(instance_idx)];
+
+    //get transform data
+    uint transform_buffer_idx = ubo[nonuniformEXT(ubo_index)].transform_idx;
+    uint transform_idx =  cur_mesh_data.transform_idx;
+
+
+    mat4 model = TRANSFORM[nonuniformEXT(transform_buffer_idx)].model_transforms[nonuniformEXT(transform_idx)];
+    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(in_pos, 1.0);
+
+    //Material
+    uint material_instance_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_instance_idx;
+    Material_Instance material_instance = MATERIAL_INSTANCE[nonuniformEXT(material_instance_buffer_idx)].material_instance[nonuniformEXT(cur_mesh_data.material_instance_idx)];
+
+    //if(material_instance.flags & PBR){};
+    uint pbr_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_pbr_idx;
+    Pbr pbr_material = PBR[nonuniformEXT(pbr_buffer_idx)].pbr[material_instance.pbr_idx];
+
+    out_color_idx = pbr_material.color_index;
+
+
+
+    out_world_position = vec3(model * vec4(in_pos, 1.0));
+
+
+    /*
     //    uint color_idx = Material.material_data[0].color_id;
 
     uint draw_idx = gl_VertexIndex;
@@ -87,7 +133,7 @@ void main() {
 
 
     out_world_position = vec3(model * vec4(in_pos, 1.0));
-
+*/
 }
 
 //NOTE: for reference
@@ -98,73 +144,90 @@ void main() {
          %35 = OpString "draw_idx"
          %41 = OpString "int"
          %47 = OpString "gl_VertexIndex"
-         %53 = OpString "draw_other_idx"
+         %53 = OpString "instance_idx"
          %59 = OpString "gl_DrawIDARB"
-         %66 = OpString "out_index"
-         %73 = OpString "ubo_index"
-         %79 = OpString "_padding1"
-         %90 = OpString "PC_MESH"
-         %96 = OpString "pc_mesh"
-        %104 = OpString "normal_index"
-        %113 = OpString "tangent_index"
-        %122 = OpString "uv_index"
-        %131 = OpString "transform_index"
-        %140 = OpString "material_index"
-        %148 = OpString "float"
-        %155 = OpString "bool"
-        %162 = OpString "model"
-        %170 = OpString "model_transforms"
-        %173 = OpString "TRANSFORM_BUFFER"
-        %181 = OpString "TRANSFORM"
-        %194 = OpString "gl_Position"
-        %197 = OpString "gl_PointSize"
-        %200 = OpString "gl_CullDistance"
-        %204 = OpString "gl_PerVertex"
-        %209 = OpString ""
-        %217 = OpString "proj"
-        %222 = OpString "directional_lights"
-        %225 = OpString "point_lights"
-        %228 = OpString "_padding5"
-        %231 = OpString "camera_view_pos"
-        %241 = OpString "UniformBufferObject"
-        %246 = OpString "color"
-        %249 = OpString "specular"
-        %253 = OpString "directional_light_data"
-        %258 = OpString "directional_light"
-        %262 = OpString "DIRECTIONAL_LIGHT_BUFFER"
-        %273 = OpString "point_light_data"
-        %278 = OpString "point_light"
-        %282 = OpString "POINT_LIGHT_BUFFER"
-        %289 = OpString "ubo"
-        %308 = OpString "in_pos"
-        %323 = OpString "out_normal"
-        %329 = OpString "normal"
-        %331 = OpString "NORMAL_BUFFER"
-        %338 = OpString "NORMAL"
-        %350 = OpString "out_tangent"
-        %360 = OpString "out_uv"
-        %366 = OpString "uv"
-        %369 = OpString "UV_BUFFER"
-        %376 = OpString "UV"
-        %388 = OpString "out_color_idx"
-        %391 = OpString "_padding2"
-        %395 = OpString "emissive_strength"
-        %411 = OpString "Material_Param_Data"
-        %416 = OpString "material_data"
-        %418 = OpString "MATERIAL_BUFFER"
-        %425 = OpString "MATERIAL"
-        %438 = OpString "out_world_position"
-        %456 = OpString "type.2d.image"
-        %457 = OpString "@type.2d.image"
-        %461 = OpString "type.sampled.image"
-        %462 = OpString "@type.sampled.image"
-        %469 = OpString "texture_samples"
-        %476 = OpString "textures"
-        %485 = OpString "texturesMS"
-        %488 = OpString "type.cube.image"
-        %489 = OpString "@type.cube.image"
-        %496 = OpString "textureCubes"
-        %505 = OpString "textureArrays"
+         %64 = OpString "ubo_index"
+         %69 = OpString "ubo_buffer_idx"
+         %73 = OpString "PC_MESH"
+         %79 = OpString "pc_mesh"
+         %87 = OpString "normal_buffer_index"
+         %92 = OpString "float"
+         %99 = OpString "bool"
+        %109 = OpString "proj"
+        %114 = OpString "directional_lights"
+        %118 = OpString "point_lights"
+        %121 = OpString "material_blend2_idx"
+        %124 = OpString "camera_view_pos"
+        %142 = OpString "UniformBufferObject"
+        %147 = OpString "color"
+        %150 = OpString "specular"
+        %155 = OpString "directional_light_data"
+        %160 = OpString "directional_light"
+        %163 = OpString "DIRECTIONAL_LIGHT_BUFFER"
+        %175 = OpString "point_light_data"
+        %180 = OpString "point_light"
+        %184 = OpString "POINT_LIGHT_BUFFER"
+        %191 = OpString "ubo"
+        %201 = OpString "tangent_buffer_index"
+        %212 = OpString "uv_buffer_index"
+        %225 = OpString "out_normal"
+        %231 = OpString "normal"
+        %234 = OpString "NORMAL_BUFFER"
+        %242 = OpString "NORMAL"
+        %258 = OpString "out_uv"
+        %264 = OpString "uv"
+        %267 = OpString "UV_BUFFER"
+        %274 = OpString "UV"
+        %288 = OpString "out_tangent"
+        %295 = OpString "draw_data_buffer_idx"
+        %305 = OpString "material_instance_idx"
+        %309 = OpString "mesh_draw_data"
+        %315 = OpString "cur_mesh_data"
+        %326 = OpString "mesh_data"
+        %329 = OpString "MESH_DRAW_DATA_BUFFER"
+        %336 = OpString "MESH_DRAW_DATA"
+        %352 = OpString "transform_buffer_idx"
+        %362 = OpString "transform_idx"
+        %372 = OpString "model"
+        %380 = OpString "model_transforms"
+        %383 = OpString "TRANSFORM_BUFFER"
+        %390 = OpString "TRANSFORM"
+        %403 = OpString "gl_Position"
+        %405 = OpString "gl_PointSize"
+        %408 = OpString "gl_CullDistance"
+        %412 = OpString "gl_PerVertex"
+        %418 = OpString ""
+        %438 = OpString "in_pos"
+        %448 = OpString "material_instance_buffer_idx"
+        %459 = OpString "black_hole_idx"
+        %464 = OpString "Material_Instance"
+        %470 = OpString "material_instance"
+        %484 = OpString "MATERIAL_INSTANCE_BUFFER"
+        %491 = OpString "MATERIAL_INSTANCE"
+        %512 = OpString "pbr_buffer_idx"
+        %523 = OpString "_padding2"
+        %527 = OpString "emissive_strength"
+        %543 = OpString "Pbr"
+        %549 = OpString "pbr_material"
+        %575 = OpString "pbr"
+        %578 = OpString "PBR_BUFFER"
+        %585 = OpString "PBR"
+        %642 = OpString "out_color_idx"
+        %649 = OpString "out_world_position"
+        %667 = OpString "type.2d.image"
+        %668 = OpString "@type.2d.image"
+        %672 = OpString "type.sampled.image"
+        %673 = OpString "@type.sampled.image"
+        %680 = OpString "texture_samples"
+        %687 = OpString "textures"
+        %696 = OpString "texturesMS"
+        %699 = OpString "type.cube.image"
+        %700 = OpString "@type.cube.image"
+        %707 = OpString "textureCubes"
+        %716 = OpString "textureArrays"
+        %721 = OpString "tangent"
+        %724 = OpString "TANGENT_BUFFER"
+        %731 = OpString "TANGENT"
                OpSourceExtension "GL_ARB_shader_draw_parameters"
                OpSourceExtension "GL_EXT_buffer_reference"
                OpSourceExtension "GL_EXT_nonuniform_qualifier"
@@ -174,35 +237,13 @@ void main() {
                OpName %main "main"
                OpName %draw_idx "draw_idx"
                OpName %gl_VertexIndex "gl_VertexIndex"
-               OpName %draw_other_idx "draw_other_idx"
+               OpName %instance_idx "instance_idx"
                OpName %gl_DrawIDARB "gl_DrawIDARB"
-               OpName %out_index "out_index"
                OpName %ubo_index "ubo_index"
                OpName %PC_MESH "PC_MESH"
                OpMemberName %PC_MESH 0 "ubo_buffer_idx"
-               OpMemberName %PC_MESH 1 "normal_buffer_idx"
-               OpMemberName %PC_MESH 2 "tangent_buffer_idx"
-               OpMemberName %PC_MESH 3 "uv_buffer_idx"
-               OpMemberName %PC_MESH 4 "transform_buffer_idx"
-               OpMemberName %PC_MESH 5 "material_buffer_idx"
-               OpMemberName %PC_MESH 6 "_padding"
-               OpMemberName %PC_MESH 7 "_padding1"
                OpName %pc_mesh "pc_mesh"
-               OpName %normal_index "normal_index"
-               OpName %tangent_index "tangent_index"
-               OpName %uv_index "uv_index"
-               OpName %transform_index "transform_index"
-               OpName %material_index "material_index"
-               OpName %model "model"
-               OpName %TRANSFORM_BUFFER "TRANSFORM_BUFFER"
-               OpMemberName %TRANSFORM_BUFFER 0 "model_transforms"
-               OpName %TRANSFORM "TRANSFORM"
-               OpName %gl_PerVertex "gl_PerVertex"
-               OpMemberName %gl_PerVertex 0 "gl_Position"
-               OpMemberName %gl_PerVertex 1 "gl_PointSize"
-               OpMemberName %gl_PerVertex 2 "gl_ClipDistance"
-               OpMemberName %gl_PerVertex 3 "gl_CullDistance"
-               OpName %_ ""
+               OpName %normal_buffer_index "normal_buffer_index"
                OpName %UniformBufferObject "UniformBufferObject"
                OpMemberName %UniformBufferObject 0 "model"
                OpMemberName %UniformBufferObject 1 "view"
@@ -212,12 +253,20 @@ void main() {
                OpMemberName %UniformBufferObject 5 "point_lights_count"
                OpMemberName %UniformBufferObject 6 "camera_view_pos"
                OpMemberName %UniformBufferObject 7 "render_mode"
-               OpMemberName %UniformBufferObject 8 "_padding0"
-               OpMemberName %UniformBufferObject 9 "_padding1"
-               OpMemberName %UniformBufferObject 10 "_padding2"
-               OpMemberName %UniformBufferObject 11 "_padding3"
-               OpMemberName %UniformBufferObject 12 "_padding4"
-               OpMemberName %UniformBufferObject 13 "_padding5"
+               OpMemberName %UniformBufferObject 8 "vertex_idx"
+               OpMemberName %UniformBufferObject 9 "index_idx"
+               OpMemberName %UniformBufferObject 10 "normal_idx"
+               OpMemberName %UniformBufferObject 11 "tangent_idx"
+               OpMemberName %UniformBufferObject 12 "uv_idx"
+               OpMemberName %UniformBufferObject 13 "transform_idx"
+               OpMemberName %UniformBufferObject 14 "draw_data_idx"
+               OpMemberName %UniformBufferObject 15 "material_instance_idx"
+               OpMemberName %UniformBufferObject 16 "material_pbr_idx"
+               OpMemberName %UniformBufferObject 17 "material_wave_idx"
+               OpMemberName %UniformBufferObject 18 "material_black_hole_idx"
+               OpMemberName %UniformBufferObject 19 "material_uv_animation_idx"
+               OpMemberName %UniformBufferObject 20 "material_blend1_idx"
+               OpMemberName %UniformBufferObject 21 "material_blend2_idx"
                OpName %directional_light_data "directional_light_data"
                OpMemberName %directional_light_data 0 "direction"
                OpMemberName %directional_light_data 1 "color"
@@ -236,75 +285,111 @@ void main() {
                OpName %POINT_LIGHT_BUFFER "POINT_LIGHT_BUFFER"
                OpMemberName %POINT_LIGHT_BUFFER 0 "point_light"
                OpName %ubo "ubo"
-               OpName %in_pos "in_pos"
+               OpName %tangent_buffer_index "tangent_buffer_index"
+               OpName %uv_buffer_index "uv_buffer_index"
                OpName %out_normal "out_normal"
                OpName %NORMAL_BUFFER "NORMAL_BUFFER"
                OpMemberName %NORMAL_BUFFER 0 "normal"
                OpName %NORMAL "NORMAL"
-               OpName %out_tangent "out_tangent"
                OpName %out_uv "out_uv"
                OpName %UV_BUFFER "UV_BUFFER"
                OpMemberName %UV_BUFFER 0 "uv"
                OpName %UV "UV"
+               OpName %out_tangent "out_tangent"
+               OpName %draw_data_buffer_idx "draw_data_buffer_idx"
+               OpName %mesh_draw_data "mesh_draw_data"
+               OpMemberName %mesh_draw_data 0 "transform_idx"
+               OpMemberName %mesh_draw_data 1 "material_instance_idx"
+               OpName %cur_mesh_data "cur_mesh_data"
+               OpName %mesh_draw_data_0 "mesh_draw_data"
+               OpMemberName %mesh_draw_data_0 0 "transform_idx"
+               OpMemberName %mesh_draw_data_0 1 "material_instance_idx"
+               OpName %MESH_DRAW_DATA_BUFFER "MESH_DRAW_DATA_BUFFER"
+               OpMemberName %MESH_DRAW_DATA_BUFFER 0 "mesh_data"
+               OpName %MESH_DRAW_DATA "MESH_DRAW_DATA"
+               OpName %transform_buffer_idx "transform_buffer_idx"
+               OpName %transform_idx "transform_idx"
+               OpName %model "model"
+               OpName %TRANSFORM_BUFFER "TRANSFORM_BUFFER"
+               OpMemberName %TRANSFORM_BUFFER 0 "model_transforms"
+               OpName %TRANSFORM "TRANSFORM"
+               OpName %gl_PerVertex "gl_PerVertex"
+               OpMemberName %gl_PerVertex 0 "gl_Position"
+               OpMemberName %gl_PerVertex 1 "gl_PointSize"
+               OpMemberName %gl_PerVertex 2 "gl_ClipDistance"
+               OpMemberName %gl_PerVertex 3 "gl_CullDistance"
+               OpName %_ ""
+               OpName %in_pos "in_pos"
+               OpName %material_instance_buffer_idx "material_instance_buffer_idx"
+               OpName %Material_Instance "Material_Instance"
+               OpMemberName %Material_Instance 0 "flags"
+               OpMemberName %Material_Instance 1 "pbr_idx"
+               OpMemberName %Material_Instance 2 "uv_anim_idx"
+               OpMemberName %Material_Instance 3 "black_hole_idx"
+               OpName %material_instance "material_instance"
+               OpName %Material_Instance_0 "Material_Instance"
+               OpMemberName %Material_Instance_0 0 "flags"
+               OpMemberName %Material_Instance_0 1 "pbr_idx"
+               OpMemberName %Material_Instance_0 2 "uv_anim_idx"
+               OpMemberName %Material_Instance_0 3 "black_hole_idx"
+               OpName %MATERIAL_INSTANCE_BUFFER "MATERIAL_INSTANCE_BUFFER"
+               OpMemberName %MATERIAL_INSTANCE_BUFFER 0 "material_instance"
+               OpName %MATERIAL_INSTANCE "MATERIAL_INSTANCE"
+               OpName %pbr_buffer_idx "pbr_buffer_idx"
+               OpName %Pbr "Pbr"
+               OpMemberName %Pbr 0 "flags"
+               OpMemberName %Pbr 1 "color"
+               OpMemberName %Pbr 2 "ambient_strength"
+               OpMemberName %Pbr 3 "roughness_strength"
+               OpMemberName %Pbr 4 "metallic_strength"
+               OpMemberName %Pbr 5 "normal_strength"
+               OpMemberName %Pbr 6 "ambient_occlusion_strength"
+               OpMemberName %Pbr 7 "emissive_strength"
+               OpMemberName %Pbr 8 "color_index"
+               OpMemberName %Pbr 9 "normal_index"
+               OpMemberName %Pbr 10 "metallic_index"
+               OpMemberName %Pbr 11 "roughness_index"
+               OpMemberName %Pbr 12 "ambient_occlusion_index"
+               OpMemberName %Pbr 13 "emissive_index"
+               OpMemberName %Pbr 14 "_padding0"
+               OpMemberName %Pbr 15 "_padding1"
+               OpMemberName %Pbr 16 "_padding2"
+               OpName %pbr_material "pbr_material"
+               OpName %Pbr_0 "Pbr"
+               OpMemberName %Pbr_0 0 "flags"
+               OpMemberName %Pbr_0 1 "color"
+               OpMemberName %Pbr_0 2 "ambient_strength"
+               OpMemberName %Pbr_0 3 "roughness_strength"
+               OpMemberName %Pbr_0 4 "metallic_strength"
+               OpMemberName %Pbr_0 5 "normal_strength"
+               OpMemberName %Pbr_0 6 "ambient_occlusion_strength"
+               OpMemberName %Pbr_0 7 "emissive_strength"
+               OpMemberName %Pbr_0 8 "color_index"
+               OpMemberName %Pbr_0 9 "normal_index"
+               OpMemberName %Pbr_0 10 "metallic_index"
+               OpMemberName %Pbr_0 11 "roughness_index"
+               OpMemberName %Pbr_0 12 "ambient_occlusion_index"
+               OpMemberName %Pbr_0 13 "emissive_index"
+               OpMemberName %Pbr_0 14 "_padding0"
+               OpMemberName %Pbr_0 15 "_padding1"
+               OpMemberName %Pbr_0 16 "_padding2"
+               OpName %PBR_BUFFER "PBR_BUFFER"
+               OpMemberName %PBR_BUFFER 0 "pbr"
+               OpName %PBR "PBR"
                OpName %out_color_idx "out_color_idx"
-               OpName %Material_Param_Data "Material_Param_Data"
-               OpMemberName %Material_Param_Data 0 "feature_mask"
-               OpMemberName %Material_Param_Data 1 "color"
-               OpMemberName %Material_Param_Data 2 "ambient_strength"
-               OpMemberName %Material_Param_Data 3 "roughness_strength"
-               OpMemberName %Material_Param_Data 4 "metallic_strength"
-               OpMemberName %Material_Param_Data 5 "normal_strength"
-               OpMemberName %Material_Param_Data 6 "ambient_occlusion_strength"
-               OpMemberName %Material_Param_Data 7 "emissive_strength"
-               OpMemberName %Material_Param_Data 8 "color_index"
-               OpMemberName %Material_Param_Data 9 "normal_index"
-               OpMemberName %Material_Param_Data 10 "metallic_index"
-               OpMemberName %Material_Param_Data 11 "roughness_index"
-               OpMemberName %Material_Param_Data 12 "ambient_occlusion_index"
-               OpMemberName %Material_Param_Data 13 "emissive_index"
-               OpMemberName %Material_Param_Data 14 "_padding0"
-               OpMemberName %Material_Param_Data 15 "_padding1"
-               OpMemberName %Material_Param_Data 16 "_padding2"
-               OpName %MATERIAL_BUFFER "MATERIAL_BUFFER"
-               OpMemberName %MATERIAL_BUFFER 0 "material_data"
-               OpName %MATERIAL "MATERIAL"
                OpName %out_world_position "out_world_position"
                OpName %texture_samples "texture_samples"
                OpName %textures "textures"
                OpName %texturesMS "texturesMS"
                OpName %textureCubes "textureCubes"
                OpName %textureArrays "textureArrays"
+               OpName %TANGENT_BUFFER "TANGENT_BUFFER"
+               OpMemberName %TANGENT_BUFFER 0 "tangent"
+               OpName %TANGENT "TANGENT"
                OpDecorate %gl_VertexIndex BuiltIn VertexIndex
                OpDecorate %gl_DrawIDARB BuiltIn DrawIndex
-               OpDecorate %out_index Flat
-               OpDecorate %out_index Location 5
                OpDecorate %PC_MESH Block
                OpMemberDecorate %PC_MESH 0 Offset 0
-               OpMemberDecorate %PC_MESH 1 Offset 4
-               OpMemberDecorate %PC_MESH 2 Offset 8
-               OpMemberDecorate %PC_MESH 3 Offset 12
-               OpMemberDecorate %PC_MESH 4 Offset 16
-               OpMemberDecorate %PC_MESH 5 Offset 20
-               OpMemberDecorate %PC_MESH 6 Offset 24
-               OpMemberDecorate %PC_MESH 7 Offset 28
-               OpDecorate %_runtimearr_mat4v4float ArrayStride 64
-               OpDecorate %TRANSFORM_BUFFER Block
-               OpMemberDecorate %TRANSFORM_BUFFER 0 ColMajor
-               OpMemberDecorate %TRANSFORM_BUFFER 0 MatrixStride 16
-               OpMemberDecorate %TRANSFORM_BUFFER 0 NonWritable
-               OpMemberDecorate %TRANSFORM_BUFFER 0 Offset 0
-               OpDecorate %TRANSFORM NonWritable
-               OpDecorate %TRANSFORM Binding 0
-               OpDecorate %TRANSFORM DescriptorSet 2
-               OpDecorate %183 NonUniform
-               OpDecorate %185 NonUniform
-               OpDecorate %188 NonUniform
-               OpDecorate %189 NonUniform
-               OpDecorate %gl_PerVertex Block
-               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
-               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
-               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
-               OpMemberDecorate %gl_PerVertex 3 BuiltIn CullDistance
                OpDecorate %UniformBufferObject Block
                OpMemberDecorate %UniformBufferObject 0 ColMajor
                OpMemberDecorate %UniformBufferObject 0 MatrixStride 16
@@ -326,6 +411,14 @@ void main() {
                OpMemberDecorate %UniformBufferObject 11 Offset 244
                OpMemberDecorate %UniformBufferObject 12 Offset 248
                OpMemberDecorate %UniformBufferObject 13 Offset 252
+               OpMemberDecorate %UniformBufferObject 14 Offset 256
+               OpMemberDecorate %UniformBufferObject 15 Offset 260
+               OpMemberDecorate %UniformBufferObject 16 Offset 264
+               OpMemberDecorate %UniformBufferObject 17 Offset 268
+               OpMemberDecorate %UniformBufferObject 18 Offset 272
+               OpMemberDecorate %UniformBufferObject 19 Offset 276
+               OpMemberDecorate %UniformBufferObject 20 Offset 280
+               OpMemberDecorate %UniformBufferObject 21 Offset 284
                OpMemberDecorate %directional_light_data 0 Offset 0
                OpMemberDecorate %directional_light_data 1 Offset 12
                OpMemberDecorate %directional_light_data 2 Offset 24
@@ -347,13 +440,15 @@ void main() {
                OpMemberDecorate %POINT_LIGHT_BUFFER 0 Offset 0
                OpDecorate %ubo Binding 0
                OpDecorate %ubo DescriptorSet 0
-               OpDecorate %292 NonUniform
-               OpDecorate %295 NonUniform
-               OpDecorate %296 NonUniform
-               OpDecorate %298 NonUniform
-               OpDecorate %299 NonUniform
-               OpDecorate %300 NonUniform
-               OpDecorate %in_pos Location 0
+               OpDecorate %193 NonUniform
+               OpDecorate %197 NonUniform
+               OpDecorate %198 NonUniform
+               OpDecorate %206 NonUniform
+               OpDecorate %208 NonUniform
+               OpDecorate %209 NonUniform
+               OpDecorate %217 NonUniform
+               OpDecorate %219 NonUniform
+               OpDecorate %220 NonUniform
                OpDecorate %out_normal Location 0
                OpDecorate %_runtimearr_v3float ArrayStride 12
                OpDecorate %NORMAL_BUFFER Block
@@ -362,11 +457,10 @@ void main() {
                OpDecorate %NORMAL NonWritable
                OpDecorate %NORMAL Binding 0
                OpDecorate %NORMAL DescriptorSet 2
-               OpDecorate %341 NonUniform
-               OpDecorate %343 NonUniform
-               OpDecorate %346 NonUniform
-               OpDecorate %347 NonUniform
-               OpDecorate %out_tangent Location 1
+               OpDecorate %245 NonUniform
+               OpDecorate %247 NonUniform
+               OpDecorate %250 NonUniform
+               OpDecorate %251 NonUniform
                OpDecorate %out_uv Location 2
                OpDecorate %_runtimearr_v2float ArrayStride 8
                OpDecorate %UV_BUFFER Block
@@ -375,40 +469,105 @@ void main() {
                OpDecorate %UV NonWritable
                OpDecorate %UV Binding 0
                OpDecorate %UV DescriptorSet 2
-               OpDecorate %379 NonUniform
-               OpDecorate %381 NonUniform
-               OpDecorate %384 NonUniform
-               OpDecorate %385 NonUniform
+               OpDecorate %277 NonUniform
+               OpDecorate %279 NonUniform
+               OpDecorate %282 NonUniform
+               OpDecorate %283 NonUniform
+               OpDecorate %out_tangent Location 1
+               OpDecorate %299 NonUniform
+               OpDecorate %301 NonUniform
+               OpDecorate %302 NonUniform
+               OpMemberDecorate %mesh_draw_data_0 0 Offset 0
+               OpMemberDecorate %mesh_draw_data_0 1 Offset 4
+               OpDecorate %_runtimearr_mesh_draw_data_0 ArrayStride 8
+               OpDecorate %MESH_DRAW_DATA_BUFFER Block
+               OpMemberDecorate %MESH_DRAW_DATA_BUFFER 0 NonWritable
+               OpMemberDecorate %MESH_DRAW_DATA_BUFFER 0 Offset 0
+               OpDecorate %MESH_DRAW_DATA NonWritable
+               OpDecorate %MESH_DRAW_DATA Binding 0
+               OpDecorate %MESH_DRAW_DATA DescriptorSet 2
+               OpDecorate %338 NonUniform
+               OpDecorate %340 NonUniform
+               OpDecorate %343 NonUniform
+               OpDecorate %344 NonUniform
+               OpDecorate %356 NonUniform
+               OpDecorate %358 NonUniform
+               OpDecorate %359 NonUniform
+               OpDecorate %_runtimearr_mat4v4float ArrayStride 64
+               OpDecorate %TRANSFORM_BUFFER Block
+               OpMemberDecorate %TRANSFORM_BUFFER 0 ColMajor
+               OpMemberDecorate %TRANSFORM_BUFFER 0 MatrixStride 16
+               OpMemberDecorate %TRANSFORM_BUFFER 0 NonWritable
+               OpMemberDecorate %TRANSFORM_BUFFER 0 Offset 0
+               OpDecorate %TRANSFORM NonWritable
+               OpDecorate %TRANSFORM Binding 0
+               OpDecorate %TRANSFORM DescriptorSet 2
+               OpDecorate %392 NonUniform
+               OpDecorate %394 NonUniform
+               OpDecorate %397 NonUniform
+               OpDecorate %398 NonUniform
+               OpDecorate %gl_PerVertex Block
+               OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
+               OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize
+               OpMemberDecorate %gl_PerVertex 2 BuiltIn ClipDistance
+               OpMemberDecorate %gl_PerVertex 3 BuiltIn CullDistance
+               OpDecorate %421 NonUniform
+               OpDecorate %425 NonUniform
+               OpDecorate %426 NonUniform
+               OpDecorate %428 NonUniform
+               OpDecorate %429 NonUniform
+               OpDecorate %430 NonUniform
+               OpDecorate %in_pos Location 0
+               OpDecorate %453 NonUniform
+               OpDecorate %455 NonUniform
+               OpDecorate %456 NonUniform
+               OpMemberDecorate %Material_Instance_0 0 Offset 0
+               OpMemberDecorate %Material_Instance_0 1 Offset 4
+               OpMemberDecorate %Material_Instance_0 2 Offset 8
+               OpMemberDecorate %Material_Instance_0 3 Offset 12
+               OpDecorate %_runtimearr_Material_Instance_0 ArrayStride 16
+               OpDecorate %MATERIAL_INSTANCE_BUFFER Block
+               OpMemberDecorate %MATERIAL_INSTANCE_BUFFER 0 NonWritable
+               OpMemberDecorate %MATERIAL_INSTANCE_BUFFER 0 Offset 0
+               OpDecorate %MATERIAL_INSTANCE NonWritable
+               OpDecorate %MATERIAL_INSTANCE Binding 0
+               OpDecorate %MATERIAL_INSTANCE DescriptorSet 2
+               OpDecorate %493 NonUniform
+               OpDecorate %496 NonUniform
+               OpDecorate %499 NonUniform
+               OpDecorate %500 NonUniform
+               OpDecorate %517 NonUniform
+               OpDecorate %519 NonUniform
+               OpDecorate %520 NonUniform
+               OpMemberDecorate %Pbr_0 0 Offset 0
+               OpMemberDecorate %Pbr_0 1 Offset 4
+               OpMemberDecorate %Pbr_0 2 Offset 20
+               OpMemberDecorate %Pbr_0 3 Offset 24
+               OpMemberDecorate %Pbr_0 4 Offset 28
+               OpMemberDecorate %Pbr_0 5 Offset 32
+               OpMemberDecorate %Pbr_0 6 Offset 36
+               OpMemberDecorate %Pbr_0 7 Offset 40
+               OpMemberDecorate %Pbr_0 8 Offset 44
+               OpMemberDecorate %Pbr_0 9 Offset 48
+               OpMemberDecorate %Pbr_0 10 Offset 52
+               OpMemberDecorate %Pbr_0 11 Offset 56
+               OpMemberDecorate %Pbr_0 12 Offset 60
+               OpMemberDecorate %Pbr_0 13 Offset 64
+               OpMemberDecorate %Pbr_0 14 Offset 68
+               OpMemberDecorate %Pbr_0 15 Offset 72
+               OpMemberDecorate %Pbr_0 16 Offset 76
+               OpDecorate %_runtimearr_Pbr_0 ArrayStride 80
+               OpDecorate %PBR_BUFFER Block
+               OpMemberDecorate %PBR_BUFFER 0 NonWritable
+               OpMemberDecorate %PBR_BUFFER 0 Offset 0
+               OpDecorate %PBR NonWritable
+               OpDecorate %PBR Binding 0
+               OpDecorate %PBR DescriptorSet 2
+               OpDecorate %587 NonUniform
+               OpDecorate %592 NonUniform
+               OpDecorate %593 NonUniform
                OpDecorate %out_color_idx Flat
                OpDecorate %out_color_idx Location 3
-               OpMemberDecorate %Material_Param_Data 0 Offset 0
-               OpMemberDecorate %Material_Param_Data 1 Offset 4
-               OpMemberDecorate %Material_Param_Data 2 Offset 20
-               OpMemberDecorate %Material_Param_Data 3 Offset 24
-               OpMemberDecorate %Material_Param_Data 4 Offset 28
-               OpMemberDecorate %Material_Param_Data 5 Offset 32
-               OpMemberDecorate %Material_Param_Data 6 Offset 36
-               OpMemberDecorate %Material_Param_Data 7 Offset 40
-               OpMemberDecorate %Material_Param_Data 8 Offset 44
-               OpMemberDecorate %Material_Param_Data 9 Offset 48
-               OpMemberDecorate %Material_Param_Data 10 Offset 52
-               OpMemberDecorate %Material_Param_Data 11 Offset 56
-               OpMemberDecorate %Material_Param_Data 12 Offset 60
-               OpMemberDecorate %Material_Param_Data 13 Offset 64
-               OpMemberDecorate %Material_Param_Data 14 Offset 68
-               OpMemberDecorate %Material_Param_Data 15 Offset 72
-               OpMemberDecorate %Material_Param_Data 16 Offset 76
-               OpDecorate %_runtimearr_Material_Param_Data ArrayStride 80
-               OpDecorate %MATERIAL_BUFFER Block
-               OpMemberDecorate %MATERIAL_BUFFER 0 NonWritable
-               OpMemberDecorate %MATERIAL_BUFFER 0 Offset 0
-               OpDecorate %MATERIAL NonWritable
-               OpDecorate %MATERIAL Binding 0
-               OpDecorate %MATERIAL DescriptorSet 2
-               OpDecorate %428 NonUniform
-               OpDecorate %430 NonUniform
-               OpDecorate %434 NonUniform
-               OpDecorate %435 NonUniform
                OpDecorate %out_world_position Location 4
                OpDecorate %texture_samples Binding 0
                OpDecorate %texture_samples DescriptorSet 1
@@ -420,6 +579,13 @@ void main() {
                OpDecorate %textureCubes DescriptorSet 1
                OpDecorate %textureArrays Binding 0
                OpDecorate %textureArrays DescriptorSet 1
+               OpDecorate %_runtimearr_v4float ArrayStride 16
+               OpDecorate %TANGENT_BUFFER Block
+               OpMemberDecorate %TANGENT_BUFFER 0 NonWritable
+               OpMemberDecorate %TANGENT_BUFFER 0 Offset 0
+               OpDecorate %TANGENT NonWritable
+               OpDecorate %TANGENT Binding 0
+               OpDecorate %TANGENT DescriptorSet 2
        %void = OpTypeVoid
           %7 = OpTypeFunction %void
        %uint = OpTypeInt 32 0
@@ -430,17 +596,17 @@ void main() {
      %uint_3 = OpConstant %uint 3
           %8 = OpExtInst %void %1 DebugTypeFunction %uint_3 %void
          %20 = OpExtInst %void %1 DebugSource %2 %21
-    %uint_25 = OpConstant %uint 25
+    %uint_24 = OpConstant %uint 24
      %uint_1 = OpConstant %uint 1
      %uint_4 = OpConstant %uint 4
      %uint_2 = OpConstant %uint 2
          %23 = OpExtInst %void %1 DebugCompilationUnit %uint_1 %uint_4 %20 %uint_2
-         %19 = OpExtInst %void %1 DebugFunction %18 %8 %20 %uint_25 %uint_0 %23 %18 %uint_3 %uint_25
+         %19 = OpExtInst %void %1 DebugFunction %18 %8 %20 %uint_24 %uint_0 %23 %18 %uint_3 %uint_24
 %_ptr_Function_uint = OpTypePointer Function %uint
      %uint_7 = OpConstant %uint 7
          %32 = OpExtInst %void %1 DebugTypePointer %11 %uint_7 %uint_0
-    %uint_29 = OpConstant %uint 29
-         %34 = OpExtInst %void %1 DebugLocalVariable %35 %11 %20 %uint_29 %uint_0 %19 %uint_4
+    %uint_27 = OpConstant %uint 27
+         %34 = OpExtInst %void %1 DebugLocalVariable %35 %11 %20 %uint_27 %uint_0 %19 %uint_4
          %38 = OpExtInst %void %1 DebugExpression
         %int = OpTypeInt 32 1
          %42 = OpExtInst %void %1 DebugTypeBasic %41 %uint_32 %uint_4 %uint_0
@@ -448,422 +614,657 @@ void main() {
          %44 = OpExtInst %void %1 DebugTypePointer %42 %uint_1 %uint_0
 %gl_VertexIndex = OpVariable %_ptr_Input_int Input
      %uint_8 = OpConstant %uint 8
-         %46 = OpExtInst %void %1 DebugGlobalVariable %47 %42 %20 %uint_29 %uint_0 %23 %47 %gl_VertexIndex %uint_8
-    %uint_30 = OpConstant %uint 30
-         %52 = OpExtInst %void %1 DebugLocalVariable %53 %11 %20 %uint_30 %uint_0 %19 %uint_4
+         %46 = OpExtInst %void %1 DebugGlobalVariable %47 %42 %20 %uint_27 %uint_0 %23 %47 %gl_VertexIndex %uint_8
+    %uint_28 = OpConstant %uint 28
+         %52 = OpExtInst %void %1 DebugLocalVariable %53 %11 %20 %uint_28 %uint_0 %19 %uint_4
 %gl_DrawIDARB = OpVariable %_ptr_Input_int Input
-         %58 = OpExtInst %void %1 DebugGlobalVariable %59 %42 %20 %uint_30 %uint_0 %23 %59 %gl_DrawIDARB %uint_8
-%_ptr_Output_uint = OpTypePointer Output %uint
-         %63 = OpExtInst %void %1 DebugTypePointer %11 %uint_3 %uint_0
-  %out_index = OpVariable %_ptr_Output_uint Output
-    %uint_31 = OpConstant %uint 31
-         %65 = OpExtInst %void %1 DebugGlobalVariable %66 %11 %20 %uint_31 %uint_0 %23 %66 %out_index %uint_8
-    %uint_33 = OpConstant %uint 33
-         %72 = OpExtInst %void %1 DebugLocalVariable %73 %11 %20 %uint_33 %uint_0 %19 %uint_4
-    %PC_MESH = OpTypeStruct %uint %uint %uint %uint %uint %uint %uint %uint
-    %uint_15 = OpConstant %uint 15
+         %58 = OpExtInst %void %1 DebugGlobalVariable %59 %42 %20 %uint_28 %uint_0 %23 %59 %gl_DrawIDARB %uint_8
+         %63 = OpExtInst %void %1 DebugLocalVariable %64 %11 %20 %uint_32 %uint_0 %19 %uint_4
+    %PC_MESH = OpTypeStruct %uint
+    %uint_17 = OpConstant %uint 17
     %uint_10 = OpConstant %uint 10
-         %78 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %82 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %83 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %84 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %85 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %86 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %87 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %88 = OpExtInst %void %1 DebugTypeMember %79 %11 %20 %uint_15 %uint_10 %uint_0 %uint_0 %uint_3
-         %89 = OpExtInst %void %1 DebugTypeComposite %90 %uint_1 %20 %uint_33 %uint_0 %23 %90 %uint_0 %uint_3 %78 %82 %83 %84 %85 %86 %87 %88
+         %68 = OpExtInst %void %1 DebugTypeMember %69 %11 %20 %uint_17 %uint_10 %uint_0 %uint_0 %uint_3
+         %72 = OpExtInst %void %1 DebugTypeComposite %73 %uint_1 %20 %uint_32 %uint_0 %23 %73 %uint_0 %uint_3 %68
 %_ptr_PushConstant_PC_MESH = OpTypePointer PushConstant %PC_MESH
      %uint_9 = OpConstant %uint 9
-         %93 = OpExtInst %void %1 DebugTypePointer %89 %uint_9 %uint_0
+         %76 = OpExtInst %void %1 DebugTypePointer %72 %uint_9 %uint_0
     %pc_mesh = OpVariable %_ptr_PushConstant_PC_MESH PushConstant
-         %95 = OpExtInst %void %1 DebugGlobalVariable %96 %89 %20 %uint_33 %uint_0 %23 %96 %pc_mesh %uint_8
+         %78 = OpExtInst %void %1 DebugGlobalVariable %79 %72 %20 %uint_32 %uint_0 %23 %79 %pc_mesh %uint_8
       %int_0 = OpConstant %int 0
 %_ptr_PushConstant_uint = OpTypePointer PushConstant %uint
-         %99 = OpExtInst %void %1 DebugTypePointer %11 %uint_9 %uint_0
-    %uint_34 = OpConstant %uint 34
-        %103 = OpExtInst %void %1 DebugLocalVariable %104 %11 %20 %uint_34 %uint_0 %19 %uint_4
-      %int_1 = OpConstant %int 1
+         %82 = OpExtInst %void %1 DebugTypePointer %11 %uint_9 %uint_0
     %uint_35 = OpConstant %uint 35
-        %112 = OpExtInst %void %1 DebugLocalVariable %113 %11 %20 %uint_35 %uint_0 %19 %uint_4
-      %int_2 = OpConstant %int 2
-    %uint_36 = OpConstant %uint 36
-        %121 = OpExtInst %void %1 DebugLocalVariable %122 %11 %20 %uint_36 %uint_0 %19 %uint_4
-      %int_3 = OpConstant %int 3
-    %uint_37 = OpConstant %uint 37
-        %130 = OpExtInst %void %1 DebugLocalVariable %131 %11 %20 %uint_37 %uint_0 %19 %uint_4
-      %int_4 = OpConstant %int 4
-    %uint_38 = OpConstant %uint 38
-        %139 = OpExtInst %void %1 DebugLocalVariable %140 %11 %20 %uint_38 %uint_0 %19 %uint_4
-      %int_5 = OpConstant %int 5
+         %86 = OpExtInst %void %1 DebugLocalVariable %87 %11 %20 %uint_35 %uint_0 %19 %uint_4
       %float = OpTypeFloat 32
-        %149 = OpExtInst %void %1 DebugTypeBasic %148 %uint_32 %uint_3 %uint_0
+         %93 = OpExtInst %void %1 DebugTypeBasic %92 %uint_32 %uint_3 %uint_0
     %v4float = OpTypeVector %float 4
-        %151 = OpExtInst %void %1 DebugTypeVector %149 %uint_4
+         %95 = OpExtInst %void %1 DebugTypeVector %93 %uint_4
 %mat4v4float = OpTypeMatrix %v4float 4
        %bool = OpTypeBool
-        %156 = OpExtInst %void %1 DebugTypeBasic %155 %uint_32 %uint_2 %uint_0
+        %100 = OpExtInst %void %1 DebugTypeBasic %99 %uint_32 %uint_2 %uint_0
        %true = OpConstantTrue %bool
-        %153 = OpExtInst %void %1 DebugTypeMatrix %151 %uint_4 %true
-%_ptr_Function_mat4v4float = OpTypePointer Function %mat4v4float
-        %159 = OpExtInst %void %1 DebugTypePointer %153 %uint_7 %uint_0
-    %uint_40 = OpConstant %uint 40
-        %161 = OpExtInst %void %1 DebugLocalVariable %162 %153 %20 %uint_40 %uint_0 %19 %uint_4
-%_runtimearr_mat4v4float = OpTypeRuntimeArray %mat4v4float
-        %167 = OpExtInst %void %1 DebugTypeArray %153 %uint_0
-%TRANSFORM_BUFFER = OpTypeStruct %_runtimearr_mat4v4float
-    %uint_58 = OpConstant %uint 58
-        %169 = OpExtInst %void %1 DebugTypeMember %170 %167 %20 %uint_58 %uint_10 %uint_0 %uint_0 %uint_3
-        %172 = OpExtInst %void %1 DebugTypeComposite %173 %uint_1 %20 %uint_40 %uint_0 %23 %173 %uint_0 %uint_3 %169
-%_runtimearr_TRANSFORM_BUFFER = OpTypeRuntimeArray %TRANSFORM_BUFFER
-        %175 = OpExtInst %void %1 DebugTypeArray %172 %uint_0
-%_ptr_StorageBuffer__runtimearr_TRANSFORM_BUFFER = OpTypePointer StorageBuffer %_runtimearr_TRANSFORM_BUFFER
-    %uint_12 = OpConstant %uint 12
-        %178 = OpExtInst %void %1 DebugTypePointer %175 %uint_12 %uint_0
-  %TRANSFORM = OpVariable %_ptr_StorageBuffer__runtimearr_TRANSFORM_BUFFER StorageBuffer
-        %180 = OpExtInst %void %1 DebugGlobalVariable %181 %175 %20 %uint_40 %uint_0 %23 %181 %TRANSFORM %uint_8
-%_ptr_StorageBuffer_mat4v4float = OpTypePointer StorageBuffer %mat4v4float
-        %187 = OpExtInst %void %1 DebugTypePointer %153 %uint_12 %uint_0
-%_arr_float_uint_1 = OpTypeArray %float %uint_1
-        %191 = OpExtInst %void %1 DebugTypeArray %149 %uint_1
-%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1 %_arr_float_uint_1
-    %uint_24 = OpConstant %uint 24
-        %193 = OpExtInst %void %1 DebugTypeMember %194 %151 %20 %uint_1 %uint_24 %uint_0 %uint_0 %uint_3
-    %uint_42 = OpConstant %uint 42
-        %196 = OpExtInst %void %1 DebugTypeMember %197 %149 %20 %uint_1 %uint_42 %uint_0 %uint_0 %uint_3
-    %uint_85 = OpConstant %uint 85
-        %199 = OpExtInst %void %1 DebugTypeMember %200 %191 %20 %uint_1 %uint_85 %uint_0 %uint_0 %uint_3
-        %202 = OpExtInst %void %1 DebugTypeMember %200 %191 %20 %uint_1 %uint_85 %uint_0 %uint_0 %uint_3
-        %203 = OpExtInst %void %1 DebugTypeComposite %204 %uint_1 %20 %uint_42 %uint_0 %23 %204 %uint_0 %uint_3 %193 %196 %199 %202
-%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
-        %206 = OpExtInst %void %1 DebugTypePointer %203 %uint_3 %uint_0
-          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
-        %208 = OpExtInst %void %1 DebugGlobalVariable %209 %203 %20 %uint_42 %uint_0 %23 %209 %_ %uint_8
+         %97 = OpExtInst %void %1 DebugTypeMatrix %95 %uint_4 %true
                OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER PhysicalStorageBuffer
   %uint_5349 = OpConstant %uint 5349
-        %212 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %261 %uint_5349 %uint_0
+        %104 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %162 %uint_5349 %uint_0
                OpTypeForwardPointer %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER PhysicalStorageBuffer
-        %214 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %281 %uint_5349 %uint_0
-%UniformBufferObject = OpTypeStruct %mat4v4float %mat4v4float %mat4v4float %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %uint %v4float %uint %uint %uint %uint %uint %uint %uint
-    %uint_59 = OpConstant %uint 59
-        %216 = OpExtInst %void %1 DebugTypeMember %217 %153 %20 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-        %219 = OpExtInst %void %1 DebugTypeMember %217 %153 %20 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-        %220 = OpExtInst %void %1 DebugTypeMember %217 %153 %20 %uint_59 %uint_10 %uint_0 %uint_0 %uint_3
-    %uint_62 = OpConstant %uint 62
-        %221 = OpExtInst %void %1 DebugTypeMember %222 %212 %20 %uint_62 %uint_30 %uint_0 %uint_0 %uint_3
-    %uint_66 = OpConstant %uint 66
-        %224 = OpExtInst %void %1 DebugTypeMember %225 %214 %20 %uint_66 %uint_24 %uint_0 %uint_0 %uint_3
-    %uint_82 = OpConstant %uint 82
-        %227 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-    %uint_73 = OpConstant %uint 73
-        %230 = OpExtInst %void %1 DebugTypeMember %231 %151 %20 %uint_73 %uint_10 %uint_0 %uint_0 %uint_3
-        %233 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %234 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %235 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %236 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %237 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %238 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %239 = OpExtInst %void %1 DebugTypeMember %228 %11 %20 %uint_82 %uint_10 %uint_0 %uint_0 %uint_3
-        %240 = OpExtInst %void %1 DebugTypeComposite %241 %uint_1 %20 %uint_42 %uint_0 %23 %241 %uint_0 %uint_3 %216 %219 %220 %221 %224 %227 %230 %233 %234 %235 %236 %237 %238 %239
+        %106 = OpExtInstWithForwardRefsKHR %void %1 DebugTypePointer %183 %uint_5349 %uint_0
+%UniformBufferObject = OpTypeStruct %mat4v4float %mat4v4float %mat4v4float %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER %uint %v4float %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint %uint
+    %uint_61 = OpConstant %uint 61
+        %108 = OpExtInst %void %1 DebugTypeMember %109 %97 %20 %uint_61 %uint_10 %uint_0 %uint_0 %uint_3
+        %111 = OpExtInst %void %1 DebugTypeMember %109 %97 %20 %uint_61 %uint_10 %uint_0 %uint_0 %uint_3
+        %112 = OpExtInst %void %1 DebugTypeMember %109 %97 %20 %uint_61 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_64 = OpConstant %uint 64
+    %uint_30 = OpConstant %uint 30
+        %113 = OpExtInst %void %1 DebugTypeMember %114 %104 %20 %uint_64 %uint_30 %uint_0 %uint_0 %uint_3
+    %uint_68 = OpConstant %uint 68
+        %117 = OpExtInst %void %1 DebugTypeMember %118 %106 %20 %uint_68 %uint_24 %uint_0 %uint_0 %uint_3
+    %uint_95 = OpConstant %uint 95
+        %120 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_75 = OpConstant %uint 75
+        %123 = OpExtInst %void %1 DebugTypeMember %124 %95 %20 %uint_75 %uint_10 %uint_0 %uint_0 %uint_3
+        %126 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %127 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %128 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %129 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %130 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %131 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %132 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %133 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %134 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %135 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %136 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %137 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %138 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %139 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %140 = OpExtInst %void %1 DebugTypeMember %121 %11 %20 %uint_95 %uint_10 %uint_0 %uint_0 %uint_3
+        %141 = OpExtInst %void %1 DebugTypeComposite %142 %uint_1 %20 %uint_35 %uint_0 %23 %142 %uint_0 %uint_3 %108 %111 %112 %113 %117 %120 %123 %126 %127 %128 %129 %130 %131 %132 %133 %134 %135 %136 %137 %138 %139 %140
     %v3float = OpTypeVector %float 3
-        %243 = OpExtInst %void %1 DebugTypeVector %149 %uint_3
+        %144 = OpExtInst %void %1 DebugTypeVector %93 %uint_3
 %directional_light_data = OpTypeStruct %v3float %v3float %float %float
-        %245 = OpExtInst %void %1 DebugTypeMember %246 %243 %20 %uint_8 %uint_10 %uint_0 %uint_0 %uint_3
-        %247 = OpExtInst %void %1 DebugTypeMember %246 %243 %20 %uint_8 %uint_10 %uint_0 %uint_0 %uint_3
+        %146 = OpExtInst %void %1 DebugTypeMember %147 %144 %20 %uint_10 %uint_10 %uint_0 %uint_0 %uint_3
+        %148 = OpExtInst %void %1 DebugTypeMember %147 %144 %20 %uint_10 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_13 = OpConstant %uint 13
     %uint_11 = OpConstant %uint 11
-        %248 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_11 %uint_11 %uint_0 %uint_0 %uint_3
-        %251 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_11 %uint_11 %uint_0 %uint_0 %uint_3
-        %252 = OpExtInst %void %1 DebugTypeComposite %253 %uint_1 %20 %uint_42 %uint_0 %23 %253 %uint_0 %uint_3 %245 %247 %248 %251
+        %149 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_13 %uint_11 %uint_0 %uint_0 %uint_3
+        %153 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_13 %uint_11 %uint_0 %uint_0 %uint_3
+        %154 = OpExtInst %void %1 DebugTypeComposite %155 %uint_1 %20 %uint_35 %uint_0 %23 %155 %uint_0 %uint_3 %146 %148 %149 %153
 %_runtimearr_directional_light_data = OpTypeRuntimeArray %directional_light_data
-        %255 = OpExtInst %void %1 DebugTypeArray %252 %uint_0
+        %157 = OpExtInst %void %1 DebugTypeArray %154 %uint_0
 %DIRECTIONAL_LIGHT_BUFFER = OpTypeStruct %_runtimearr_directional_light_data
-    %uint_44 = OpConstant %uint 44
-    %uint_28 = OpConstant %uint 28
-        %257 = OpExtInst %void %1 DebugTypeMember %258 %255 %20 %uint_44 %uint_28 %uint_0 %uint_0 %uint_3
-        %261 = OpExtInst %void %1 DebugTypeComposite %262 %uint_1 %20 %uint_42 %uint_0 %23 %262 %uint_0 %uint_3 %257
+    %uint_46 = OpConstant %uint 46
+        %159 = OpExtInst %void %1 DebugTypeMember %160 %157 %20 %uint_46 %uint_28 %uint_0 %uint_0 %uint_3
+        %162 = OpExtInst %void %1 DebugTypeComposite %163 %uint_1 %20 %uint_35 %uint_0 %23 %163 %uint_0 %uint_3 %159
 %_ptr_PhysicalStorageBuffer_DIRECTIONAL_LIGHT_BUFFER = OpTypePointer PhysicalStorageBuffer %DIRECTIONAL_LIGHT_BUFFER
 %point_light_data = OpTypeStruct %v4float %v4float %float %float %float %float %float
-    %uint_17 = OpConstant %uint 17
-        %264 = OpExtInst %void %1 DebugTypeMember %246 %151 %20 %uint_17 %uint_10 %uint_0 %uint_0 %uint_3
-        %266 = OpExtInst %void %1 DebugTypeMember %246 %151 %20 %uint_17 %uint_10 %uint_0 %uint_0 %uint_3
-        %267 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_24 %uint_11 %uint_0 %uint_0 %uint_3
-        %268 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_24 %uint_11 %uint_0 %uint_0 %uint_3
-        %269 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_24 %uint_11 %uint_0 %uint_0 %uint_3
-        %270 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_24 %uint_11 %uint_0 %uint_0 %uint_3
-        %271 = OpExtInst %void %1 DebugTypeMember %249 %149 %20 %uint_24 %uint_11 %uint_0 %uint_0 %uint_3
-        %272 = OpExtInst %void %1 DebugTypeComposite %273 %uint_1 %20 %uint_42 %uint_0 %23 %273 %uint_0 %uint_3 %264 %266 %267 %268 %269 %270 %271
+    %uint_19 = OpConstant %uint 19
+        %165 = OpExtInst %void %1 DebugTypeMember %147 %95 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+        %167 = OpExtInst %void %1 DebugTypeMember %147 %95 %20 %uint_19 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_26 = OpConstant %uint 26
+        %168 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_26 %uint_11 %uint_0 %uint_0 %uint_3
+        %170 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_26 %uint_11 %uint_0 %uint_0 %uint_3
+        %171 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_26 %uint_11 %uint_0 %uint_0 %uint_3
+        %172 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_26 %uint_11 %uint_0 %uint_0 %uint_3
+        %173 = OpExtInst %void %1 DebugTypeMember %150 %93 %20 %uint_26 %uint_11 %uint_0 %uint_0 %uint_3
+        %174 = OpExtInst %void %1 DebugTypeComposite %175 %uint_1 %20 %uint_35 %uint_0 %23 %175 %uint_0 %uint_3 %165 %167 %168 %170 %171 %172 %173
 %_runtimearr_point_light_data = OpTypeRuntimeArray %point_light_data
-        %275 = OpExtInst %void %1 DebugTypeArray %272 %uint_0
+        %177 = OpExtInst %void %1 DebugTypeArray %174 %uint_0
 %POINT_LIGHT_BUFFER = OpTypeStruct %_runtimearr_point_light_data
-    %uint_48 = OpConstant %uint 48
+    %uint_50 = OpConstant %uint 50
     %uint_22 = OpConstant %uint 22
-        %277 = OpExtInst %void %1 DebugTypeMember %278 %275 %20 %uint_48 %uint_22 %uint_0 %uint_0 %uint_3
-        %281 = OpExtInst %void %1 DebugTypeComposite %282 %uint_1 %20 %uint_42 %uint_0 %23 %282 %uint_0 %uint_3 %277
+        %179 = OpExtInst %void %1 DebugTypeMember %180 %177 %20 %uint_50 %uint_22 %uint_0 %uint_0 %uint_3
+        %183 = OpExtInst %void %1 DebugTypeComposite %184 %uint_1 %20 %uint_35 %uint_0 %23 %184 %uint_0 %uint_3 %179
 %_ptr_PhysicalStorageBuffer_POINT_LIGHT_BUFFER = OpTypePointer PhysicalStorageBuffer %POINT_LIGHT_BUFFER
 %_runtimearr_UniformBufferObject = OpTypeRuntimeArray %UniformBufferObject
-        %284 = OpExtInst %void %1 DebugTypeArray %240 %uint_0
+        %186 = OpExtInst %void %1 DebugTypeArray %141 %uint_0
 %_ptr_Uniform__runtimearr_UniformBufferObject = OpTypePointer Uniform %_runtimearr_UniformBufferObject
-        %286 = OpExtInst %void %1 DebugTypePointer %284 %uint_2 %uint_0
+        %188 = OpExtInst %void %1 DebugTypePointer %186 %uint_2 %uint_0
         %ubo = OpVariable %_ptr_Uniform__runtimearr_UniformBufferObject Uniform
-        %288 = OpExtInst %void %1 DebugGlobalVariable %289 %284 %20 %uint_42 %uint_0 %23 %289 %ubo %uint_8
-%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
-        %294 = OpExtInst %void %1 DebugTypePointer %153 %uint_2 %uint_0
-%_ptr_Input_v3float = OpTypePointer Input %v3float
-        %305 = OpExtInst %void %1 DebugTypePointer %243 %uint_1 %uint_0
-     %in_pos = OpVariable %_ptr_Input_v3float Input
-        %307 = OpExtInst %void %1 DebugGlobalVariable %308 %243 %20 %uint_42 %uint_0 %23 %308 %in_pos %uint_8
-    %float_1 = OpConstant %float 1
-%_ptr_Output_v4float = OpTypePointer Output %v4float
-        %317 = OpExtInst %void %1 DebugTypePointer %151 %uint_3 %uint_0
+        %190 = OpExtInst %void %1 DebugGlobalVariable %191 %186 %20 %uint_35 %uint_0 %23 %191 %ubo %uint_8
+     %int_10 = OpConstant %int 10
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+        %196 = OpExtInst %void %1 DebugTypePointer %11 %uint_2 %uint_0
+    %uint_36 = OpConstant %uint 36
+        %200 = OpExtInst %void %1 DebugLocalVariable %201 %11 %20 %uint_36 %uint_0 %19 %uint_4
+     %int_11 = OpConstant %int 11
+    %uint_37 = OpConstant %uint 37
+        %211 = OpExtInst %void %1 DebugLocalVariable %212 %11 %20 %uint_37 %uint_0 %19 %uint_4
+     %int_12 = OpConstant %int 12
 %_ptr_Output_v3float = OpTypePointer Output %v3float
-        %320 = OpExtInst %void %1 DebugTypePointer %243 %uint_3 %uint_0
+        %222 = OpExtInst %void %1 DebugTypePointer %144 %uint_3 %uint_0
  %out_normal = OpVariable %_ptr_Output_v3float Output
-    %uint_47 = OpConstant %uint 47
-        %322 = OpExtInst %void %1 DebugGlobalVariable %323 %243 %20 %uint_47 %uint_0 %23 %323 %out_normal %uint_8
+    %uint_38 = OpConstant %uint 38
+        %224 = OpExtInst %void %1 DebugGlobalVariable %225 %144 %20 %uint_38 %uint_0 %23 %225 %out_normal %uint_8
 %_runtimearr_v3float = OpTypeRuntimeArray %v3float
-        %326 = OpExtInst %void %1 DebugTypeArray %243 %uint_0
+        %228 = OpExtInst %void %1 DebugTypeArray %144 %uint_0
 %NORMAL_BUFFER = OpTypeStruct %_runtimearr_v3float
-        %328 = OpExtInst %void %1 DebugTypeMember %329 %326 %20 %uint_62 %uint_10 %uint_0 %uint_0 %uint_3
-        %330 = OpExtInst %void %1 DebugTypeComposite %331 %uint_1 %20 %uint_47 %uint_0 %23 %331 %uint_0 %uint_3 %328
+   %uint_114 = OpConstant %uint 114
+        %230 = OpExtInst %void %1 DebugTypeMember %231 %228 %20 %uint_114 %uint_10 %uint_0 %uint_0 %uint_3
+        %233 = OpExtInst %void %1 DebugTypeComposite %234 %uint_1 %20 %uint_38 %uint_0 %23 %234 %uint_0 %uint_3 %230
 %_runtimearr_NORMAL_BUFFER = OpTypeRuntimeArray %NORMAL_BUFFER
-        %333 = OpExtInst %void %1 DebugTypeArray %330 %uint_0
+        %236 = OpExtInst %void %1 DebugTypeArray %233 %uint_0
 %_ptr_StorageBuffer__runtimearr_NORMAL_BUFFER = OpTypePointer StorageBuffer %_runtimearr_NORMAL_BUFFER
-        %335 = OpExtInst %void %1 DebugTypePointer %333 %uint_12 %uint_0
+    %uint_12 = OpConstant %uint 12
+        %239 = OpExtInst %void %1 DebugTypePointer %236 %uint_12 %uint_0
      %NORMAL = OpVariable %_ptr_StorageBuffer__runtimearr_NORMAL_BUFFER StorageBuffer
-        %337 = OpExtInst %void %1 DebugGlobalVariable %338 %333 %20 %uint_47 %uint_0 %23 %338 %NORMAL %uint_8
+        %241 = OpExtInst %void %1 DebugGlobalVariable %242 %236 %20 %uint_38 %uint_0 %23 %242 %NORMAL %uint_8
 %_ptr_StorageBuffer_v3float = OpTypePointer StorageBuffer %v3float
-        %345 = OpExtInst %void %1 DebugTypePointer %243 %uint_12 %uint_0
-%out_tangent = OpVariable %_ptr_Output_v4float Output
-    %uint_50 = OpConstant %uint 50
-        %349 = OpExtInst %void %1 DebugGlobalVariable %350 %151 %20 %uint_50 %uint_0 %23 %350 %out_tangent %uint_8
-        %352 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+        %249 = OpExtInst %void %1 DebugTypePointer %144 %uint_12 %uint_0
     %v2float = OpTypeVector %float 2
-        %355 = OpExtInst %void %1 DebugTypeVector %149 %uint_2
+        %253 = OpExtInst %void %1 DebugTypeVector %93 %uint_2
 %_ptr_Output_v2float = OpTypePointer Output %v2float
-        %357 = OpExtInst %void %1 DebugTypePointer %355 %uint_3 %uint_0
+        %255 = OpExtInst %void %1 DebugTypePointer %253 %uint_3 %uint_0
      %out_uv = OpVariable %_ptr_Output_v2float Output
-    %uint_52 = OpConstant %uint 52
-        %359 = OpExtInst %void %1 DebugGlobalVariable %360 %355 %20 %uint_52 %uint_0 %23 %360 %out_uv %uint_8
-%_runtimearr_v2float = OpTypeRuntimeArray %v2float
-        %363 = OpExtInst %void %1 DebugTypeArray %355 %uint_0
-  %UV_BUFFER = OpTypeStruct %_runtimearr_v2float
-    %uint_54 = OpConstant %uint 54
-        %365 = OpExtInst %void %1 DebugTypeMember %366 %363 %20 %uint_54 %uint_10 %uint_0 %uint_0 %uint_3
-        %368 = OpExtInst %void %1 DebugTypeComposite %369 %uint_1 %20 %uint_52 %uint_0 %23 %369 %uint_0 %uint_3 %365
-%_runtimearr_UV_BUFFER = OpTypeRuntimeArray %UV_BUFFER
-        %371 = OpExtInst %void %1 DebugTypeArray %368 %uint_0
-%_ptr_StorageBuffer__runtimearr_UV_BUFFER = OpTypePointer StorageBuffer %_runtimearr_UV_BUFFER
-        %373 = OpExtInst %void %1 DebugTypePointer %371 %uint_12 %uint_0
-         %UV = OpVariable %_ptr_StorageBuffer__runtimearr_UV_BUFFER StorageBuffer
-        %375 = OpExtInst %void %1 DebugGlobalVariable %376 %371 %20 %uint_52 %uint_0 %23 %376 %UV %uint_8
-%_ptr_StorageBuffer_v2float = OpTypePointer StorageBuffer %v2float
-        %383 = OpExtInst %void %1 DebugTypePointer %355 %uint_12 %uint_0
-%out_color_idx = OpVariable %_ptr_Output_uint Output
-        %387 = OpExtInst %void %1 DebugGlobalVariable %388 %11 %20 %uint_54 %uint_0 %23 %388 %out_color_idx %uint_8
-%Material_Param_Data = OpTypeStruct %uint %v4float %float %float %float %float %float %float %uint %uint %uint %uint %uint %uint %uint %uint %uint
     %uint_39 = OpConstant %uint 39
-        %390 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %393 = OpExtInst %void %1 DebugTypeMember %246 %151 %20 %uint_22 %uint_10 %uint_0 %uint_0 %uint_3
-        %394 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %396 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %397 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %398 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %399 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %400 = OpExtInst %void %1 DebugTypeMember %395 %149 %20 %uint_29 %uint_11 %uint_0 %uint_0 %uint_3
-        %401 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %402 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %403 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %404 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %405 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %406 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %407 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %408 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %409 = OpExtInst %void %1 DebugTypeMember %391 %11 %20 %uint_39 %uint_10 %uint_0 %uint_0 %uint_3
-        %410 = OpExtInst %void %1 DebugTypeComposite %411 %uint_1 %20 %uint_54 %uint_0 %23 %411 %uint_0 %uint_3 %390 %393 %394 %396 %397 %398 %399 %400 %401 %402 %403 %404 %405 %406 %407 %408 %409
-%_runtimearr_Material_Param_Data = OpTypeRuntimeArray %Material_Param_Data
-        %413 = OpExtInst %void %1 DebugTypeArray %410 %uint_0
-%MATERIAL_BUFFER = OpTypeStruct %_runtimearr_Material_Param_Data
-        %415 = OpExtInst %void %1 DebugTypeMember %416 %413 %20 %uint_66 %uint_25 %uint_0 %uint_0 %uint_3
-        %417 = OpExtInst %void %1 DebugTypeComposite %418 %uint_1 %20 %uint_54 %uint_0 %23 %418 %uint_0 %uint_3 %415
-%_runtimearr_MATERIAL_BUFFER = OpTypeRuntimeArray %MATERIAL_BUFFER
-        %420 = OpExtInst %void %1 DebugTypeArray %417 %uint_0
-%_ptr_StorageBuffer__runtimearr_MATERIAL_BUFFER = OpTypePointer StorageBuffer %_runtimearr_MATERIAL_BUFFER
-        %422 = OpExtInst %void %1 DebugTypePointer %420 %uint_12 %uint_0
-   %MATERIAL = OpVariable %_ptr_StorageBuffer__runtimearr_MATERIAL_BUFFER StorageBuffer
-        %424 = OpExtInst %void %1 DebugGlobalVariable %425 %420 %20 %uint_54 %uint_0 %23 %425 %MATERIAL %uint_8
+        %257 = OpExtInst %void %1 DebugGlobalVariable %258 %253 %20 %uint_39 %uint_0 %23 %258 %out_uv %uint_8
+%_runtimearr_v2float = OpTypeRuntimeArray %v2float
+        %261 = OpExtInst %void %1 DebugTypeArray %253 %uint_0
+  %UV_BUFFER = OpTypeStruct %_runtimearr_v2float
+   %uint_110 = OpConstant %uint 110
+        %263 = OpExtInst %void %1 DebugTypeMember %264 %261 %20 %uint_110 %uint_10 %uint_0 %uint_0 %uint_3
+        %266 = OpExtInst %void %1 DebugTypeComposite %267 %uint_1 %20 %uint_39 %uint_0 %23 %267 %uint_0 %uint_3 %263
+%_runtimearr_UV_BUFFER = OpTypeRuntimeArray %UV_BUFFER
+        %269 = OpExtInst %void %1 DebugTypeArray %266 %uint_0
+%_ptr_StorageBuffer__runtimearr_UV_BUFFER = OpTypePointer StorageBuffer %_runtimearr_UV_BUFFER
+        %271 = OpExtInst %void %1 DebugTypePointer %269 %uint_12 %uint_0
+         %UV = OpVariable %_ptr_StorageBuffer__runtimearr_UV_BUFFER StorageBuffer
+        %273 = OpExtInst %void %1 DebugGlobalVariable %274 %269 %20 %uint_39 %uint_0 %23 %274 %UV %uint_8
+%_ptr_StorageBuffer_v2float = OpTypePointer StorageBuffer %v2float
+        %281 = OpExtInst %void %1 DebugTypePointer %253 %uint_12 %uint_0
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+        %285 = OpExtInst %void %1 DebugTypePointer %95 %uint_3 %uint_0
+%out_tangent = OpVariable %_ptr_Output_v4float Output
+    %uint_41 = OpConstant %uint 41
+        %287 = OpExtInst %void %1 DebugGlobalVariable %288 %95 %20 %uint_41 %uint_0 %23 %288 %out_tangent %uint_8
+    %float_1 = OpConstant %float 1
+        %291 = OpConstantComposite %v4float %float_1 %float_1 %float_1 %float_1
+        %294 = OpExtInst %void %1 DebugLocalVariable %295 %11 %20 %uint_46 %uint_0 %19 %uint_4
+     %int_14 = OpConstant %int 14
+%mesh_draw_data = OpTypeStruct %uint %uint
+    %uint_23 = OpConstant %uint 23
+        %304 = OpExtInst %void %1 DebugTypeMember %305 %11 %20 %uint_23 %uint_10 %uint_0 %uint_0 %uint_3
+        %307 = OpExtInst %void %1 DebugTypeMember %305 %11 %20 %uint_23 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_47 = OpConstant %uint 47
+        %308 = OpExtInst %void %1 DebugTypeComposite %309 %uint_1 %20 %uint_47 %uint_0 %23 %309 %uint_0 %uint_3 %304 %307
+%_ptr_Function_mesh_draw_data = OpTypePointer Function %mesh_draw_data
+        %312 = OpExtInst %void %1 DebugTypePointer %308 %uint_7 %uint_0
+        %314 = OpExtInst %void %1 DebugLocalVariable %315 %308 %20 %uint_47 %uint_0 %19 %uint_4
+%mesh_draw_data_0 = OpTypeStruct %uint %uint
+        %319 = OpExtInst %void %1 DebugTypeMember %305 %11 %20 %uint_23 %uint_10 %uint_0 %uint_0 %uint_3
+        %320 = OpExtInst %void %1 DebugTypeMember %305 %11 %20 %uint_23 %uint_10 %uint_0 %uint_0 %uint_3
+        %321 = OpExtInst %void %1 DebugTypeComposite %309 %uint_1 %20 %uint_47 %uint_0 %23 %309 %uint_0 %uint_3 %319 %320
+%_runtimearr_mesh_draw_data_0 = OpTypeRuntimeArray %mesh_draw_data_0
+        %323 = OpExtInst %void %1 DebugTypeArray %321 %uint_0
+%MESH_DRAW_DATA_BUFFER = OpTypeStruct %_runtimearr_mesh_draw_data_0
+    %uint_20 = OpConstant %uint 20
+        %325 = OpExtInst %void %1 DebugTypeMember %326 %323 %20 %uint_28 %uint_20 %uint_0 %uint_0 %uint_3
+        %328 = OpExtInst %void %1 DebugTypeComposite %329 %uint_1 %20 %uint_47 %uint_0 %23 %329 %uint_0 %uint_3 %325
+%_runtimearr_MESH_DRAW_DATA_BUFFER = OpTypeRuntimeArray %MESH_DRAW_DATA_BUFFER
+        %331 = OpExtInst %void %1 DebugTypeArray %328 %uint_0
+%_ptr_StorageBuffer__runtimearr_MESH_DRAW_DATA_BUFFER = OpTypePointer StorageBuffer %_runtimearr_MESH_DRAW_DATA_BUFFER
+        %333 = OpExtInst %void %1 DebugTypePointer %331 %uint_12 %uint_0
+%MESH_DRAW_DATA = OpVariable %_ptr_StorageBuffer__runtimearr_MESH_DRAW_DATA_BUFFER StorageBuffer
+        %335 = OpExtInst %void %1 DebugGlobalVariable %336 %331 %20 %uint_47 %uint_0 %23 %336 %MESH_DRAW_DATA %uint_8
+%_ptr_StorageBuffer_mesh_draw_data_0 = OpTypePointer StorageBuffer %mesh_draw_data_0
+        %342 = OpExtInst %void %1 DebugTypePointer %321 %uint_12 %uint_0
+      %int_1 = OpConstant %int 1
+        %351 = OpExtInst %void %1 DebugLocalVariable %352 %11 %20 %uint_50 %uint_0 %19 %uint_4
+     %int_13 = OpConstant %int 13
+    %uint_51 = OpConstant %uint 51
+        %361 = OpExtInst %void %1 DebugLocalVariable %362 %11 %20 %uint_51 %uint_0 %19 %uint_4
+%_ptr_Function_mat4v4float = OpTypePointer Function %mat4v4float
+        %369 = OpExtInst %void %1 DebugTypePointer %97 %uint_7 %uint_0
+    %uint_54 = OpConstant %uint 54
+        %371 = OpExtInst %void %1 DebugLocalVariable %372 %97 %20 %uint_54 %uint_0 %19 %uint_4
+%_runtimearr_mat4v4float = OpTypeRuntimeArray %mat4v4float
+        %377 = OpExtInst %void %1 DebugTypeArray %97 %uint_0
+%TRANSFORM_BUFFER = OpTypeStruct %_runtimearr_mat4v4float
+   %uint_118 = OpConstant %uint 118
+        %379 = OpExtInst %void %1 DebugTypeMember %380 %377 %20 %uint_118 %uint_10 %uint_0 %uint_0 %uint_3
+        %382 = OpExtInst %void %1 DebugTypeComposite %383 %uint_1 %20 %uint_54 %uint_0 %23 %383 %uint_0 %uint_3 %379
+%_runtimearr_TRANSFORM_BUFFER = OpTypeRuntimeArray %TRANSFORM_BUFFER
+        %385 = OpExtInst %void %1 DebugTypeArray %382 %uint_0
+%_ptr_StorageBuffer__runtimearr_TRANSFORM_BUFFER = OpTypePointer StorageBuffer %_runtimearr_TRANSFORM_BUFFER
+        %387 = OpExtInst %void %1 DebugTypePointer %385 %uint_12 %uint_0
+  %TRANSFORM = OpVariable %_ptr_StorageBuffer__runtimearr_TRANSFORM_BUFFER StorageBuffer
+        %389 = OpExtInst %void %1 DebugGlobalVariable %390 %385 %20 %uint_54 %uint_0 %23 %390 %TRANSFORM %uint_8
+%_ptr_StorageBuffer_mat4v4float = OpTypePointer StorageBuffer %mat4v4float
+        %396 = OpExtInst %void %1 DebugTypePointer %97 %uint_12 %uint_0
+%_arr_float_uint_1 = OpTypeArray %float %uint_1
+        %400 = OpExtInst %void %1 DebugTypeArray %93 %uint_1
+%gl_PerVertex = OpTypeStruct %v4float %float %_arr_float_uint_1 %_arr_float_uint_1
+        %402 = OpExtInst %void %1 DebugTypeMember %403 %95 %20 %uint_1 %uint_24 %uint_0 %uint_0 %uint_3
+    %uint_42 = OpConstant %uint 42
+        %404 = OpExtInst %void %1 DebugTypeMember %405 %93 %20 %uint_1 %uint_42 %uint_0 %uint_0 %uint_3
+    %uint_85 = OpConstant %uint 85
+        %407 = OpExtInst %void %1 DebugTypeMember %408 %400 %20 %uint_1 %uint_85 %uint_0 %uint_0 %uint_3
+        %410 = OpExtInst %void %1 DebugTypeMember %408 %400 %20 %uint_1 %uint_85 %uint_0 %uint_0 %uint_3
+    %uint_55 = OpConstant %uint 55
+        %411 = OpExtInst %void %1 DebugTypeComposite %412 %uint_1 %20 %uint_55 %uint_0 %23 %412 %uint_0 %uint_3 %402 %404 %407 %410
+%_ptr_Output_gl_PerVertex = OpTypePointer Output %gl_PerVertex
+        %415 = OpExtInst %void %1 DebugTypePointer %411 %uint_3 %uint_0
+          %_ = OpVariable %_ptr_Output_gl_PerVertex Output
+        %417 = OpExtInst %void %1 DebugGlobalVariable %418 %411 %20 %uint_55 %uint_0 %23 %418 %_ %uint_8
+      %int_2 = OpConstant %int 2
+%_ptr_Uniform_mat4v4float = OpTypePointer Uniform %mat4v4float
+        %424 = OpExtInst %void %1 DebugTypePointer %97 %uint_2 %uint_0
+%_ptr_Input_v3float = OpTypePointer Input %v3float
+        %435 = OpExtInst %void %1 DebugTypePointer %144 %uint_1 %uint_0
+     %in_pos = OpVariable %_ptr_Input_v3float Input
+        %437 = OpExtInst %void %1 DebugGlobalVariable %438 %144 %20 %uint_55 %uint_0 %23 %438 %in_pos %uint_8
+    %uint_58 = OpConstant %uint 58
+        %447 = OpExtInst %void %1 DebugLocalVariable %448 %11 %20 %uint_58 %uint_0 %19 %uint_4
+     %int_15 = OpConstant %int 15
+%Material_Instance = OpTypeStruct %uint %uint %uint %uint
+        %458 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %460 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %461 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %462 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_59 = OpConstant %uint 59
+        %463 = OpExtInst %void %1 DebugTypeComposite %464 %uint_1 %20 %uint_59 %uint_0 %23 %464 %uint_0 %uint_3 %458 %460 %461 %462
+%_ptr_Function_Material_Instance = OpTypePointer Function %Material_Instance
+        %467 = OpExtInst %void %1 DebugTypePointer %463 %uint_7 %uint_0
+        %469 = OpExtInst %void %1 DebugLocalVariable %470 %463 %20 %uint_59 %uint_0 %19 %uint_4
+%Material_Instance_0 = OpTypeStruct %uint %uint %uint %uint
+        %474 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %475 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %476 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %477 = OpExtInst %void %1 DebugTypeMember %459 %11 %20 %uint_9 %uint_10 %uint_0 %uint_0 %uint_3
+        %478 = OpExtInst %void %1 DebugTypeComposite %464 %uint_1 %20 %uint_59 %uint_0 %23 %464 %uint_0 %uint_3 %474 %475 %476 %477
+%_runtimearr_Material_Instance_0 = OpTypeRuntimeArray %Material_Instance_0
+        %480 = OpExtInst %void %1 DebugTypeArray %478 %uint_0
+%MATERIAL_INSTANCE_BUFFER = OpTypeStruct %_runtimearr_Material_Instance_0
+        %482 = OpExtInst %void %1 DebugTypeMember %470 %480 %20 %uint_13 %uint_23 %uint_0 %uint_0 %uint_3
+        %483 = OpExtInst %void %1 DebugTypeComposite %484 %uint_1 %20 %uint_59 %uint_0 %23 %484 %uint_0 %uint_3 %482
+%_runtimearr_MATERIAL_INSTANCE_BUFFER = OpTypeRuntimeArray %MATERIAL_INSTANCE_BUFFER
+        %486 = OpExtInst %void %1 DebugTypeArray %483 %uint_0
+%_ptr_StorageBuffer__runtimearr_MATERIAL_INSTANCE_BUFFER = OpTypePointer StorageBuffer %_runtimearr_MATERIAL_INSTANCE_BUFFER
+        %488 = OpExtInst %void %1 DebugTypePointer %486 %uint_12 %uint_0
+%MATERIAL_INSTANCE = OpVariable %_ptr_StorageBuffer__runtimearr_MATERIAL_INSTANCE_BUFFER StorageBuffer
+        %490 = OpExtInst %void %1 DebugGlobalVariable %491 %486 %20 %uint_59 %uint_0 %23 %491 %MATERIAL_INSTANCE %uint_8
+%_ptr_StorageBuffer_Material_Instance_0 = OpTypePointer StorageBuffer %Material_Instance_0
+        %498 = OpExtInst %void %1 DebugTypePointer %478 %uint_12 %uint_0
+      %int_3 = OpConstant %int 3
+    %uint_62 = OpConstant %uint 62
+        %511 = OpExtInst %void %1 DebugLocalVariable %512 %11 %20 %uint_62 %uint_0 %19 %uint_4
+     %int_16 = OpConstant %int 16
+        %Pbr = OpTypeStruct %uint %v4float %float %float %float %float %float %float %uint %uint %uint %uint %uint %uint %uint %uint %uint
+        %522 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_34 = OpConstant %uint 34
+        %524 = OpExtInst %void %1 DebugTypeMember %147 %95 %20 %uint_34 %uint_10 %uint_0 %uint_0 %uint_3
+        %526 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %528 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %529 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %530 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %531 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %532 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %533 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %534 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %535 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %536 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %537 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %538 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %539 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %540 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %541 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+    %uint_63 = OpConstant %uint 63
+        %542 = OpExtInst %void %1 DebugTypeComposite %543 %uint_1 %20 %uint_63 %uint_0 %23 %543 %uint_0 %uint_3 %522 %524 %526 %528 %529 %530 %531 %532 %533 %534 %535 %536 %537 %538 %539 %540 %541
+%_ptr_Function_Pbr = OpTypePointer Function %Pbr
+        %546 = OpExtInst %void %1 DebugTypePointer %542 %uint_7 %uint_0
+        %548 = OpExtInst %void %1 DebugLocalVariable %549 %542 %20 %uint_63 %uint_0 %19 %uint_4
+      %Pbr_0 = OpTypeStruct %uint %v4float %float %float %float %float %float %float %uint %uint %uint %uint %uint %uint %uint %uint %uint
+        %553 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %554 = OpExtInst %void %1 DebugTypeMember %147 %95 %20 %uint_34 %uint_10 %uint_0 %uint_0 %uint_3
+        %555 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %556 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %557 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %558 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %559 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %560 = OpExtInst %void %1 DebugTypeMember %527 %93 %20 %uint_41 %uint_11 %uint_0 %uint_0 %uint_3
+        %561 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %562 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %563 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %564 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %565 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %566 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %567 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %568 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %569 = OpExtInst %void %1 DebugTypeMember %523 %11 %20 %uint_51 %uint_10 %uint_0 %uint_0 %uint_3
+        %570 = OpExtInst %void %1 DebugTypeComposite %543 %uint_1 %20 %uint_63 %uint_0 %23 %543 %uint_0 %uint_3 %553 %554 %555 %556 %557 %558 %559 %560 %561 %562 %563 %564 %565 %566 %567 %568 %569
+%_runtimearr_Pbr_0 = OpTypeRuntimeArray %Pbr_0
+        %572 = OpExtInst %void %1 DebugTypeArray %570 %uint_0
+ %PBR_BUFFER = OpTypeStruct %_runtimearr_Pbr_0
+    %uint_57 = OpConstant %uint 57
+        %574 = OpExtInst %void %1 DebugTypeMember %575 %572 %20 %uint_57 %uint_9 %uint_0 %uint_0 %uint_3
+        %577 = OpExtInst %void %1 DebugTypeComposite %578 %uint_1 %20 %uint_63 %uint_0 %23 %578 %uint_0 %uint_3 %574
+%_runtimearr_PBR_BUFFER = OpTypeRuntimeArray %PBR_BUFFER
+        %580 = OpExtInst %void %1 DebugTypeArray %577 %uint_0
+%_ptr_StorageBuffer__runtimearr_PBR_BUFFER = OpTypePointer StorageBuffer %_runtimearr_PBR_BUFFER
+        %582 = OpExtInst %void %1 DebugTypePointer %580 %uint_12 %uint_0
+        %PBR = OpVariable %_ptr_StorageBuffer__runtimearr_PBR_BUFFER StorageBuffer
+        %584 = OpExtInst %void %1 DebugGlobalVariable %585 %580 %20 %uint_63 %uint_0 %23 %585 %PBR %uint_8
+%_ptr_StorageBuffer_Pbr_0 = OpTypePointer StorageBuffer %Pbr_0
+        %591 = OpExtInst %void %1 DebugTypePointer %570 %uint_12 %uint_0
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+        %598 = OpExtInst %void %1 DebugTypePointer %95 %uint_7 %uint_0
+%_ptr_Function_float = OpTypePointer Function %float
+        %602 = OpExtInst %void %1 DebugTypePointer %93 %uint_7 %uint_0
+      %int_4 = OpConstant %int 4
+      %int_5 = OpConstant %int 5
+      %int_6 = OpConstant %int 6
+      %int_7 = OpConstant %int 7
       %int_8 = OpConstant %int 8
-%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
-        %433 = OpExtInst %void %1 DebugTypePointer %11 %uint_12 %uint_0
+      %int_9 = OpConstant %int 9
+%_ptr_Output_uint = OpTypePointer Output %uint
+        %639 = OpExtInst %void %1 DebugTypePointer %11 %uint_3 %uint_0
+%out_color_idx = OpVariable %_ptr_Output_uint Output
+    %uint_65 = OpConstant %uint 65
+        %641 = OpExtInst %void %1 DebugGlobalVariable %642 %11 %20 %uint_65 %uint_0 %23 %642 %out_color_idx %uint_8
 %out_world_position = OpVariable %_ptr_Output_v3float Output
-        %437 = OpExtInst %void %1 DebugGlobalVariable %438 %243 %20 %uint_58 %uint_0 %23 %438 %out_world_position %uint_8
-    %uint_60 = OpConstant %uint 60
+    %uint_69 = OpConstant %uint 69
+        %648 = OpExtInst %void %1 DebugGlobalVariable %649 %144 %20 %uint_69 %uint_0 %23 %649 %out_world_position %uint_8
+   %uint_106 = OpConstant %uint 106
+        %665 = OpTypeImage %float 2D 0 0 0 1 Unknown
+        %669 = OpExtInst %void %1 DebugInfoNone
+        %666 = OpExtInst %void %1 DebugTypeComposite %667 %uint_0 %20 %uint_106 %uint_0 %23 %668 %669 %uint_3
+        %670 = OpTypeSampledImage %665
+        %671 = OpExtInst %void %1 DebugTypeComposite %672 %uint_0 %20 %uint_106 %uint_0 %23 %673 %669 %uint_3
+%_arr_670_uint_1 = OpTypeArray %670 %uint_1
+        %675 = OpExtInst %void %1 DebugTypeArray %671 %uint_1
+%_ptr_UniformConstant__arr_670_uint_1 = OpTypePointer UniformConstant %_arr_670_uint_1
+        %677 = OpExtInst %void %1 DebugTypePointer %675 %uint_0 %uint_0
+%texture_samples = OpVariable %_ptr_UniformConstant__arr_670_uint_1 UniformConstant
+        %679 = OpExtInst %void %1 DebugGlobalVariable %680 %675 %20 %uint_106 %uint_0 %23 %680 %texture_samples %uint_8
+%_arr_665_uint_1 = OpTypeArray %665 %uint_1
+        %682 = OpExtInst %void %1 DebugTypeArray %666 %uint_1
+%_ptr_UniformConstant__arr_665_uint_1 = OpTypePointer UniformConstant %_arr_665_uint_1
+        %684 = OpExtInst %void %1 DebugTypePointer %682 %uint_0 %uint_0
+   %textures = OpVariable %_ptr_UniformConstant__arr_665_uint_1 UniformConstant
+        %686 = OpExtInst %void %1 DebugGlobalVariable %687 %682 %20 %uint_106 %uint_0 %23 %687 %textures %uint_8
+        %688 = OpTypeImage %float 2D 0 0 1 1 Unknown
+        %689 = OpExtInst %void %1 DebugTypeComposite %667 %uint_0 %20 %uint_106 %uint_0 %23 %668 %669 %uint_3
+%_arr_688_uint_1 = OpTypeArray %688 %uint_1
+        %691 = OpExtInst %void %1 DebugTypeArray %689 %uint_1
+%_ptr_UniformConstant__arr_688_uint_1 = OpTypePointer UniformConstant %_arr_688_uint_1
+        %693 = OpExtInst %void %1 DebugTypePointer %691 %uint_0 %uint_0
+ %texturesMS = OpVariable %_ptr_UniformConstant__arr_688_uint_1 UniformConstant
+        %695 = OpExtInst %void %1 DebugGlobalVariable %696 %691 %20 %uint_106 %uint_0 %23 %696 %texturesMS %uint_8
+        %697 = OpTypeImage %float Cube 0 0 0 1 Unknown
+        %698 = OpExtInst %void %1 DebugTypeComposite %699 %uint_0 %20 %uint_106 %uint_0 %23 %700 %669 %uint_3
+%_arr_697_uint_1 = OpTypeArray %697 %uint_1
+        %702 = OpExtInst %void %1 DebugTypeArray %698 %uint_1
+%_ptr_UniformConstant__arr_697_uint_1 = OpTypePointer UniformConstant %_arr_697_uint_1
+        %704 = OpExtInst %void %1 DebugTypePointer %702 %uint_0 %uint_0
+%textureCubes = OpVariable %_ptr_UniformConstant__arr_697_uint_1 UniformConstant
+        %706 = OpExtInst %void %1 DebugGlobalVariable %707 %702 %20 %uint_106 %uint_0 %23 %707 %textureCubes %uint_8
+        %708 = OpTypeImage %float 2D 0 1 0 1 Unknown
+        %709 = OpExtInst %void %1 DebugTypeComposite %667 %uint_0 %20 %uint_106 %uint_0 %23 %668 %669 %uint_3
+%_arr_708_uint_1 = OpTypeArray %708 %uint_1
+        %711 = OpExtInst %void %1 DebugTypeArray %709 %uint_1
+%_ptr_UniformConstant__arr_708_uint_1 = OpTypePointer UniformConstant %_arr_708_uint_1
+        %713 = OpExtInst %void %1 DebugTypePointer %711 %uint_0 %uint_0
+%textureArrays = OpVariable %_ptr_UniformConstant__arr_708_uint_1 UniformConstant
+        %715 = OpExtInst %void %1 DebugGlobalVariable %716 %711 %20 %uint_106 %uint_0 %23 %716 %textureArrays %uint_8
+%_runtimearr_v4float = OpTypeRuntimeArray %v4float
+        %718 = OpExtInst %void %1 DebugTypeArray %95 %uint_0
+%TANGENT_BUFFER = OpTypeStruct %_runtimearr_v4float
+   %uint_122 = OpConstant %uint 122
+        %720 = OpExtInst %void %1 DebugTypeMember %721 %718 %20 %uint_122 %uint_10 %uint_0 %uint_0 %uint_3
+        %723 = OpExtInst %void %1 DebugTypeComposite %724 %uint_1 %20 %uint_106 %uint_0 %23 %724 %uint_0 %uint_3 %720
+%_arr_TANGENT_BUFFER_uint_1 = OpTypeArray %TANGENT_BUFFER %uint_1
+        %726 = OpExtInst %void %1 DebugTypeArray %723 %uint_1
+%_ptr_StorageBuffer__arr_TANGENT_BUFFER_uint_1 = OpTypePointer StorageBuffer %_arr_TANGENT_BUFFER_uint_1
+        %728 = OpExtInst %void %1 DebugTypePointer %726 %uint_12 %uint_0
+    %TANGENT = OpVariable %_ptr_StorageBuffer__arr_TANGENT_BUFFER_uint_1 StorageBuffer
+        %730 = OpExtInst %void %1 DebugGlobalVariable %731 %726 %20 %uint_106 %uint_0 %23 %731 %TANGENT %uint_8
 %float_3_14159274 = OpConstant %float 3.14159274
-        %454 = OpTypeImage %float 2D 0 0 0 1 Unknown
-        %458 = OpExtInst %void %1 DebugInfoNone
-        %455 = OpExtInst %void %1 DebugTypeComposite %456 %uint_0 %20 %uint_60 %uint_0 %23 %457 %458 %uint_3
-        %459 = OpTypeSampledImage %454
-        %460 = OpExtInst %void %1 DebugTypeComposite %461 %uint_0 %20 %uint_60 %uint_0 %23 %462 %458 %uint_3
-%_arr_459_uint_1 = OpTypeArray %459 %uint_1
-        %464 = OpExtInst %void %1 DebugTypeArray %460 %uint_1
-%_ptr_UniformConstant__arr_459_uint_1 = OpTypePointer UniformConstant %_arr_459_uint_1
-        %466 = OpExtInst %void %1 DebugTypePointer %464 %uint_0 %uint_0
-%texture_samples = OpVariable %_ptr_UniformConstant__arr_459_uint_1 UniformConstant
-        %468 = OpExtInst %void %1 DebugGlobalVariable %469 %464 %20 %uint_60 %uint_0 %23 %469 %texture_samples %uint_8
-%_arr_454_uint_1 = OpTypeArray %454 %uint_1
-        %471 = OpExtInst %void %1 DebugTypeArray %455 %uint_1
-%_ptr_UniformConstant__arr_454_uint_1 = OpTypePointer UniformConstant %_arr_454_uint_1
-        %473 = OpExtInst %void %1 DebugTypePointer %471 %uint_0 %uint_0
-   %textures = OpVariable %_ptr_UniformConstant__arr_454_uint_1 UniformConstant
-        %475 = OpExtInst %void %1 DebugGlobalVariable %476 %471 %20 %uint_60 %uint_0 %23 %476 %textures %uint_8
-        %477 = OpTypeImage %float 2D 0 0 1 1 Unknown
-        %478 = OpExtInst %void %1 DebugTypeComposite %456 %uint_0 %20 %uint_60 %uint_0 %23 %457 %458 %uint_3
-%_arr_477_uint_1 = OpTypeArray %477 %uint_1
-        %480 = OpExtInst %void %1 DebugTypeArray %478 %uint_1
-%_ptr_UniformConstant__arr_477_uint_1 = OpTypePointer UniformConstant %_arr_477_uint_1
-        %482 = OpExtInst %void %1 DebugTypePointer %480 %uint_0 %uint_0
- %texturesMS = OpVariable %_ptr_UniformConstant__arr_477_uint_1 UniformConstant
-        %484 = OpExtInst %void %1 DebugGlobalVariable %485 %480 %20 %uint_60 %uint_0 %23 %485 %texturesMS %uint_8
-        %486 = OpTypeImage %float Cube 0 0 0 1 Unknown
-        %487 = OpExtInst %void %1 DebugTypeComposite %488 %uint_0 %20 %uint_60 %uint_0 %23 %489 %458 %uint_3
-%_arr_486_uint_1 = OpTypeArray %486 %uint_1
-        %491 = OpExtInst %void %1 DebugTypeArray %487 %uint_1
-%_ptr_UniformConstant__arr_486_uint_1 = OpTypePointer UniformConstant %_arr_486_uint_1
-        %493 = OpExtInst %void %1 DebugTypePointer %491 %uint_0 %uint_0
-%textureCubes = OpVariable %_ptr_UniformConstant__arr_486_uint_1 UniformConstant
-        %495 = OpExtInst %void %1 DebugGlobalVariable %496 %491 %20 %uint_60 %uint_0 %23 %496 %textureCubes %uint_8
-        %497 = OpTypeImage %float 2D 0 1 0 1 Unknown
-        %498 = OpExtInst %void %1 DebugTypeComposite %456 %uint_0 %20 %uint_60 %uint_0 %23 %457 %458 %uint_3
-%_arr_497_uint_1 = OpTypeArray %497 %uint_1
-        %500 = OpExtInst %void %1 DebugTypeArray %498 %uint_1
-%_ptr_UniformConstant__arr_497_uint_1 = OpTypePointer UniformConstant %_arr_497_uint_1
-        %502 = OpExtInst %void %1 DebugTypePointer %500 %uint_0 %uint_0
-%textureArrays = OpVariable %_ptr_UniformConstant__arr_497_uint_1 UniformConstant
-        %504 = OpExtInst %void %1 DebugGlobalVariable %505 %500 %20 %uint_60 %uint_0 %23 %505 %textureArrays %uint_8
        %main = OpFunction %void None %7
          %17 = OpLabel
    %draw_idx = OpVariable %_ptr_Function_uint Function
-%draw_other_idx = OpVariable %_ptr_Function_uint Function
+%instance_idx = OpVariable %_ptr_Function_uint Function
   %ubo_index = OpVariable %_ptr_Function_uint Function
-%normal_index = OpVariable %_ptr_Function_uint Function
-%tangent_index = OpVariable %_ptr_Function_uint Function
-   %uv_index = OpVariable %_ptr_Function_uint Function
-%transform_index = OpVariable %_ptr_Function_uint Function
-%material_index = OpVariable %_ptr_Function_uint Function
+%normal_buffer_index = OpVariable %_ptr_Function_uint Function
+%tangent_buffer_index = OpVariable %_ptr_Function_uint Function
+%uv_buffer_index = OpVariable %_ptr_Function_uint Function
+%draw_data_buffer_idx = OpVariable %_ptr_Function_uint Function
+%cur_mesh_data = OpVariable %_ptr_Function_mesh_draw_data Function
+%transform_buffer_idx = OpVariable %_ptr_Function_uint Function
+%transform_idx = OpVariable %_ptr_Function_uint Function
       %model = OpVariable %_ptr_Function_mat4v4float Function
+%material_instance_buffer_idx = OpVariable %_ptr_Function_uint Function
+%material_instance = OpVariable %_ptr_Function_Material_Instance Function
+%pbr_buffer_idx = OpVariable %_ptr_Function_uint Function
+%pbr_material = OpVariable %_ptr_Function_Pbr Function
          %28 = OpExtInst %void %1 DebugScope %19
-         %29 = OpExtInst %void %1 DebugLine %20 %uint_25 %uint_25 %uint_0 %uint_0
+         %29 = OpExtInst %void %1 DebugLine %20 %uint_24 %uint_24 %uint_0 %uint_0
          %27 = OpExtInst %void %1 DebugFunctionDefinition %19 %main
-         %39 = OpExtInst %void %1 DebugLine %20 %uint_29 %uint_29 %uint_0 %uint_0
+         %39 = OpExtInst %void %1 DebugLine %20 %uint_27 %uint_27 %uint_0 %uint_0
          %37 = OpExtInst %void %1 DebugDeclare %34 %draw_idx %38
          %49 = OpLoad %int %gl_VertexIndex
          %50 = OpBitcast %uint %49
                OpStore %draw_idx %50
-         %56 = OpExtInst %void %1 DebugLine %20 %uint_30 %uint_30 %uint_0 %uint_0
-         %55 = OpExtInst %void %1 DebugDeclare %52 %draw_other_idx %38
+         %56 = OpExtInst %void %1 DebugLine %20 %uint_28 %uint_28 %uint_0 %uint_0
+         %55 = OpExtInst %void %1 DebugDeclare %52 %instance_idx %38
          %60 = OpLoad %int %gl_DrawIDARB
          %61 = OpBitcast %uint %60
-               OpStore %draw_other_idx %61
-         %69 = OpExtInst %void %1 DebugLine %20 %uint_31 %uint_31 %uint_0 %uint_0
-         %68 = OpLoad %int %gl_DrawIDARB
-         %70 = OpBitcast %uint %68
-               OpStore %out_index %70
-         %76 = OpExtInst %void %1 DebugLine %20 %uint_33 %uint_33 %uint_0 %uint_0
-         %75 = OpExtInst %void %1 DebugDeclare %72 %ubo_index %38
-        %100 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_0
-        %101 = OpLoad %uint %100
-               OpStore %ubo_index %101
-        %107 = OpExtInst %void %1 DebugLine %20 %uint_34 %uint_34 %uint_0 %uint_0
-        %106 = OpExtInst %void %1 DebugDeclare %103 %normal_index %38
-        %109 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_1
-        %110 = OpLoad %uint %109
-               OpStore %normal_index %110
-        %116 = OpExtInst %void %1 DebugLine %20 %uint_35 %uint_35 %uint_0 %uint_0
-        %115 = OpExtInst %void %1 DebugDeclare %112 %tangent_index %38
-        %118 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_2
-        %119 = OpLoad %uint %118
-               OpStore %tangent_index %119
-        %125 = OpExtInst %void %1 DebugLine %20 %uint_36 %uint_36 %uint_0 %uint_0
-        %124 = OpExtInst %void %1 DebugDeclare %121 %uv_index %38
-        %127 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_3
-        %128 = OpLoad %uint %127
-               OpStore %uv_index %128
-        %134 = OpExtInst %void %1 DebugLine %20 %uint_37 %uint_37 %uint_0 %uint_0
-        %133 = OpExtInst %void %1 DebugDeclare %130 %transform_index %38
-        %136 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_4
-        %137 = OpLoad %uint %136
-               OpStore %transform_index %137
-        %143 = OpExtInst %void %1 DebugLine %20 %uint_38 %uint_38 %uint_0 %uint_0
-        %142 = OpExtInst %void %1 DebugDeclare %139 %material_index %38
-        %145 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_5
-        %146 = OpLoad %uint %145
-               OpStore %material_index %146
-        %165 = OpExtInst %void %1 DebugLine %20 %uint_40 %uint_40 %uint_0 %uint_0
-        %164 = OpExtInst %void %1 DebugDeclare %161 %model %38
-        %182 = OpLoad %uint %transform_index
-        %183 = OpCopyObject %uint %182
-        %184 = OpLoad %int %gl_DrawIDARB
-        %185 = OpCopyObject %int %184
-        %188 = OpAccessChain %_ptr_StorageBuffer_mat4v4float %TRANSFORM %183 %int_0 %185
-        %189 = OpLoad %mat4v4float %188
-               OpStore %model %189
-        %291 = OpExtInst %void %1 DebugLine %20 %uint_42 %uint_42 %uint_0 %uint_0
-        %290 = OpLoad %uint %ubo_index
-        %292 = OpCopyObject %uint %290
-        %295 = OpAccessChain %_ptr_Uniform_mat4v4float %ubo %292 %int_2
-        %296 = OpLoad %mat4v4float %295
-        %297 = OpLoad %uint %ubo_index
-        %298 = OpCopyObject %uint %297
-        %299 = OpAccessChain %_ptr_Uniform_mat4v4float %ubo %298 %int_1
-        %300 = OpLoad %mat4v4float %299
-        %301 = OpMatrixTimesMatrix %mat4v4float %296 %300
-        %302 = OpLoad %mat4v4float %model
-        %303 = OpMatrixTimesMatrix %mat4v4float %301 %302
-        %309 = OpLoad %v3float %in_pos
-        %311 = OpCompositeExtract %float %309 0
-        %312 = OpCompositeExtract %float %309 1
-        %313 = OpCompositeExtract %float %309 2
-        %314 = OpCompositeConstruct %v4float %311 %312 %313 %float_1
-        %315 = OpMatrixTimesVector %v4float %303 %314
-        %318 = OpAccessChain %_ptr_Output_v4float %_ %int_0
-               OpStore %318 %315
-        %340 = OpExtInst %void %1 DebugLine %20 %uint_47 %uint_47 %uint_0 %uint_0
-        %339 = OpLoad %uint %normal_index
-        %341 = OpCopyObject %uint %339
-        %342 = OpLoad %int %gl_VertexIndex
-        %343 = OpCopyObject %int %342
-        %346 = OpAccessChain %_ptr_StorageBuffer_v3float %NORMAL %341 %int_0 %343
-        %347 = OpLoad %v3float %346
-               OpStore %out_normal %347
-        %353 = OpExtInst %void %1 DebugLine %20 %uint_50 %uint_50 %uint_0 %uint_0
-               OpStore %out_tangent %352
-        %378 = OpExtInst %void %1 DebugLine %20 %uint_52 %uint_52 %uint_0 %uint_0
-        %377 = OpLoad %uint %uv_index
-        %379 = OpCopyObject %uint %377
-        %380 = OpLoad %int %gl_VertexIndex
-        %381 = OpCopyObject %int %380
-        %384 = OpAccessChain %_ptr_StorageBuffer_v2float %UV %379 %int_0 %381
-        %385 = OpLoad %v2float %384
-               OpStore %out_uv %385
-        %427 = OpExtInst %void %1 DebugLine %20 %uint_54 %uint_54 %uint_0 %uint_0
-        %426 = OpLoad %uint %material_index
-        %428 = OpCopyObject %uint %426
-        %429 = OpLoad %int %gl_DrawIDARB
-        %430 = OpCopyObject %int %429
-        %434 = OpAccessChain %_ptr_StorageBuffer_uint %MATERIAL %428 %int_0 %430 %int_8
-        %435 = OpLoad %uint %434
-               OpStore %out_color_idx %435
-        %440 = OpExtInst %void %1 DebugLine %20 %uint_58 %uint_58 %uint_0 %uint_0
-        %439 = OpLoad %mat4v4float %model
-        %441 = OpLoad %v3float %in_pos
-        %442 = OpCompositeExtract %float %441 0
-        %443 = OpCompositeExtract %float %441 1
-        %444 = OpCompositeExtract %float %441 2
-        %445 = OpCompositeConstruct %v4float %442 %443 %444 %float_1
-        %446 = OpMatrixTimesVector %v4float %439 %445
-        %447 = OpCompositeExtract %float %446 0
-        %448 = OpCompositeExtract %float %446 1
-        %449 = OpCompositeExtract %float %446 2
-        %450 = OpCompositeConstruct %v3float %447 %448 %449
-               OpStore %out_world_position %450
-        %451 = OpExtInst %void %1 DebugLine %20 %uint_60 %uint_60 %uint_0 %uint_0
+               OpStore %instance_idx %61
+         %66 = OpExtInst %void %1 DebugLine %20 %uint_32 %uint_32 %uint_0 %uint_0
+         %65 = OpExtInst %void %1 DebugDeclare %63 %ubo_index %38
+         %83 = OpAccessChain %_ptr_PushConstant_uint %pc_mesh %int_0
+         %84 = OpLoad %uint %83
+               OpStore %ubo_index %84
+         %90 = OpExtInst %void %1 DebugLine %20 %uint_35 %uint_35 %uint_0 %uint_0
+         %89 = OpExtInst %void %1 DebugDeclare %86 %normal_buffer_index %38
+        %192 = OpLoad %uint %ubo_index
+        %193 = OpCopyObject %uint %192
+        %197 = OpAccessChain %_ptr_Uniform_uint %ubo %193 %int_10
+        %198 = OpLoad %uint %197
+               OpStore %normal_buffer_index %198
+        %204 = OpExtInst %void %1 DebugLine %20 %uint_36 %uint_36 %uint_0 %uint_0
+        %203 = OpExtInst %void %1 DebugDeclare %200 %tangent_buffer_index %38
+        %205 = OpLoad %uint %ubo_index
+        %206 = OpCopyObject %uint %205
+        %208 = OpAccessChain %_ptr_Uniform_uint %ubo %206 %int_11
+        %209 = OpLoad %uint %208
+               OpStore %tangent_buffer_index %209
+        %215 = OpExtInst %void %1 DebugLine %20 %uint_37 %uint_37 %uint_0 %uint_0
+        %214 = OpExtInst %void %1 DebugDeclare %211 %uv_buffer_index %38
+        %216 = OpLoad %uint %ubo_index
+        %217 = OpCopyObject %uint %216
+        %219 = OpAccessChain %_ptr_Uniform_uint %ubo %217 %int_12
+        %220 = OpLoad %uint %219
+               OpStore %uv_buffer_index %220
+        %244 = OpExtInst %void %1 DebugLine %20 %uint_38 %uint_38 %uint_0 %uint_0
+        %243 = OpLoad %uint %normal_buffer_index
+        %245 = OpCopyObject %uint %243
+        %246 = OpLoad %int %gl_VertexIndex
+        %247 = OpCopyObject %int %246
+        %250 = OpAccessChain %_ptr_StorageBuffer_v3float %NORMAL %245 %int_0 %247
+        %251 = OpLoad %v3float %250
+               OpStore %out_normal %251
+        %276 = OpExtInst %void %1 DebugLine %20 %uint_39 %uint_39 %uint_0 %uint_0
+        %275 = OpLoad %uint %uv_buffer_index
+        %277 = OpCopyObject %uint %275
+        %278 = OpLoad %int %gl_VertexIndex
+        %279 = OpCopyObject %int %278
+        %282 = OpAccessChain %_ptr_StorageBuffer_v2float %UV %277 %int_0 %279
+        %283 = OpLoad %v2float %282
+               OpStore %out_uv %283
+        %292 = OpExtInst %void %1 DebugLine %20 %uint_41 %uint_41 %uint_0 %uint_0
+               OpStore %out_tangent %291
+        %297 = OpExtInst %void %1 DebugLine %20 %uint_46 %uint_46 %uint_0 %uint_0
+        %296 = OpExtInst %void %1 DebugDeclare %294 %draw_data_buffer_idx %38
+        %298 = OpLoad %uint %ubo_index
+        %299 = OpCopyObject %uint %298
+        %301 = OpAccessChain %_ptr_Uniform_uint %ubo %299 %int_14
+        %302 = OpLoad %uint %301
+               OpStore %draw_data_buffer_idx %302
+        %317 = OpExtInst %void %1 DebugLine %20 %uint_47 %uint_47 %uint_0 %uint_0
+        %316 = OpExtInst %void %1 DebugDeclare %314 %cur_mesh_data %38
+        %337 = OpLoad %uint %draw_data_buffer_idx
+        %338 = OpCopyObject %uint %337
+        %339 = OpLoad %uint %instance_idx
+        %340 = OpCopyObject %uint %339
+        %343 = OpAccessChain %_ptr_StorageBuffer_mesh_draw_data_0 %MESH_DRAW_DATA %338 %int_0 %340
+        %344 = OpLoad %mesh_draw_data_0 %343
+        %345 = OpCompositeExtract %uint %344 0
+        %346 = OpAccessChain %_ptr_Function_uint %cur_mesh_data %int_0
+               OpStore %346 %345
+        %347 = OpCompositeExtract %uint %344 1
+        %349 = OpAccessChain %_ptr_Function_uint %cur_mesh_data %int_1
+               OpStore %349 %347
+        %354 = OpExtInst %void %1 DebugLine %20 %uint_50 %uint_50 %uint_0 %uint_0
+        %353 = OpExtInst %void %1 DebugDeclare %351 %transform_buffer_idx %38
+        %355 = OpLoad %uint %ubo_index
+        %356 = OpCopyObject %uint %355
+        %358 = OpAccessChain %_ptr_Uniform_uint %ubo %356 %int_13
+        %359 = OpLoad %uint %358
+               OpStore %transform_buffer_idx %359
+        %365 = OpExtInst %void %1 DebugLine %20 %uint_51 %uint_51 %uint_0 %uint_0
+        %364 = OpExtInst %void %1 DebugDeclare %361 %transform_idx %38
+        %366 = OpAccessChain %_ptr_Function_uint %cur_mesh_data %int_0
+        %367 = OpLoad %uint %366
+               OpStore %transform_idx %367
+        %375 = OpExtInst %void %1 DebugLine %20 %uint_54 %uint_54 %uint_0 %uint_0
+        %374 = OpExtInst %void %1 DebugDeclare %371 %model %38
+        %391 = OpLoad %uint %transform_buffer_idx
+        %392 = OpCopyObject %uint %391
+        %393 = OpLoad %uint %transform_idx
+        %394 = OpCopyObject %uint %393
+        %397 = OpAccessChain %_ptr_StorageBuffer_mat4v4float %TRANSFORM %392 %int_0 %394
+        %398 = OpLoad %mat4v4float %397
+               OpStore %model %398
+        %420 = OpExtInst %void %1 DebugLine %20 %uint_55 %uint_55 %uint_0 %uint_0
+        %419 = OpLoad %uint %ubo_index
+        %421 = OpCopyObject %uint %419
+        %425 = OpAccessChain %_ptr_Uniform_mat4v4float %ubo %421 %int_2
+        %426 = OpLoad %mat4v4float %425
+        %427 = OpLoad %uint %ubo_index
+        %428 = OpCopyObject %uint %427
+        %429 = OpAccessChain %_ptr_Uniform_mat4v4float %ubo %428 %int_1
+        %430 = OpLoad %mat4v4float %429
+        %431 = OpMatrixTimesMatrix %mat4v4float %426 %430
+        %432 = OpLoad %mat4v4float %model
+        %433 = OpMatrixTimesMatrix %mat4v4float %431 %432
+        %439 = OpLoad %v3float %in_pos
+        %440 = OpCompositeExtract %float %439 0
+        %441 = OpCompositeExtract %float %439 1
+        %442 = OpCompositeExtract %float %439 2
+        %443 = OpCompositeConstruct %v4float %440 %441 %442 %float_1
+        %444 = OpMatrixTimesVector %v4float %433 %443
+        %445 = OpAccessChain %_ptr_Output_v4float %_ %int_0
+               OpStore %445 %444
+        %451 = OpExtInst %void %1 DebugLine %20 %uint_58 %uint_58 %uint_0 %uint_0
+        %450 = OpExtInst %void %1 DebugDeclare %447 %material_instance_buffer_idx %38
+        %452 = OpLoad %uint %ubo_index
+        %453 = OpCopyObject %uint %452
+        %455 = OpAccessChain %_ptr_Uniform_uint %ubo %453 %int_15
+        %456 = OpLoad %uint %455
+               OpStore %material_instance_buffer_idx %456
+        %472 = OpExtInst %void %1 DebugLine %20 %uint_59 %uint_59 %uint_0 %uint_0
+        %471 = OpExtInst %void %1 DebugDeclare %469 %material_instance %38
+        %492 = OpLoad %uint %material_instance_buffer_idx
+        %493 = OpCopyObject %uint %492
+        %494 = OpAccessChain %_ptr_Function_uint %cur_mesh_data %int_1
+        %495 = OpLoad %uint %494
+        %496 = OpCopyObject %uint %495
+        %499 = OpAccessChain %_ptr_StorageBuffer_Material_Instance_0 %MATERIAL_INSTANCE %493 %int_0 %496
+        %500 = OpLoad %Material_Instance_0 %499
+        %501 = OpCompositeExtract %uint %500 0
+        %502 = OpAccessChain %_ptr_Function_uint %material_instance %int_0
+               OpStore %502 %501
+        %503 = OpCompositeExtract %uint %500 1
+        %504 = OpAccessChain %_ptr_Function_uint %material_instance %int_1
+               OpStore %504 %503
+        %505 = OpCompositeExtract %uint %500 2
+        %506 = OpAccessChain %_ptr_Function_uint %material_instance %int_2
+               OpStore %506 %505
+        %507 = OpCompositeExtract %uint %500 3
+        %509 = OpAccessChain %_ptr_Function_uint %material_instance %int_3
+               OpStore %509 %507
+        %515 = OpExtInst %void %1 DebugLine %20 %uint_62 %uint_62 %uint_0 %uint_0
+        %514 = OpExtInst %void %1 DebugDeclare %511 %pbr_buffer_idx %38
+        %516 = OpLoad %uint %ubo_index
+        %517 = OpCopyObject %uint %516
+        %519 = OpAccessChain %_ptr_Uniform_uint %ubo %517 %int_16
+        %520 = OpLoad %uint %519
+               OpStore %pbr_buffer_idx %520
+        %551 = OpExtInst %void %1 DebugLine %20 %uint_63 %uint_63 %uint_0 %uint_0
+        %550 = OpExtInst %void %1 DebugDeclare %548 %pbr_material %38
+        %586 = OpLoad %uint %pbr_buffer_idx
+        %587 = OpCopyObject %uint %586
+        %588 = OpAccessChain %_ptr_Function_uint %material_instance %int_1
+        %589 = OpLoad %uint %588
+        %592 = OpAccessChain %_ptr_StorageBuffer_Pbr_0 %PBR %587 %int_0 %589
+        %593 = OpLoad %Pbr_0 %592
+        %594 = OpCompositeExtract %uint %593 0
+        %595 = OpAccessChain %_ptr_Function_uint %pbr_material %int_0
+               OpStore %595 %594
+        %596 = OpCompositeExtract %v4float %593 1
+        %599 = OpAccessChain %_ptr_Function_v4float %pbr_material %int_1
+               OpStore %599 %596
+        %600 = OpCompositeExtract %float %593 2
+        %603 = OpAccessChain %_ptr_Function_float %pbr_material %int_2
+               OpStore %603 %600
+        %604 = OpCompositeExtract %float %593 3
+        %605 = OpAccessChain %_ptr_Function_float %pbr_material %int_3
+               OpStore %605 %604
+        %606 = OpCompositeExtract %float %593 4
+        %608 = OpAccessChain %_ptr_Function_float %pbr_material %int_4
+               OpStore %608 %606
+        %609 = OpCompositeExtract %float %593 5
+        %611 = OpAccessChain %_ptr_Function_float %pbr_material %int_5
+               OpStore %611 %609
+        %612 = OpCompositeExtract %float %593 6
+        %614 = OpAccessChain %_ptr_Function_float %pbr_material %int_6
+               OpStore %614 %612
+        %615 = OpCompositeExtract %float %593 7
+        %617 = OpAccessChain %_ptr_Function_float %pbr_material %int_7
+               OpStore %617 %615
+        %618 = OpCompositeExtract %uint %593 8
+        %620 = OpAccessChain %_ptr_Function_uint %pbr_material %int_8
+               OpStore %620 %618
+        %621 = OpCompositeExtract %uint %593 9
+        %623 = OpAccessChain %_ptr_Function_uint %pbr_material %int_9
+               OpStore %623 %621
+        %624 = OpCompositeExtract %uint %593 10
+        %625 = OpAccessChain %_ptr_Function_uint %pbr_material %int_10
+               OpStore %625 %624
+        %626 = OpCompositeExtract %uint %593 11
+        %627 = OpAccessChain %_ptr_Function_uint %pbr_material %int_11
+               OpStore %627 %626
+        %628 = OpCompositeExtract %uint %593 12
+        %629 = OpAccessChain %_ptr_Function_uint %pbr_material %int_12
+               OpStore %629 %628
+        %630 = OpCompositeExtract %uint %593 13
+        %631 = OpAccessChain %_ptr_Function_uint %pbr_material %int_13
+               OpStore %631 %630
+        %632 = OpCompositeExtract %uint %593 14
+        %633 = OpAccessChain %_ptr_Function_uint %pbr_material %int_14
+               OpStore %633 %632
+        %634 = OpCompositeExtract %uint %593 15
+        %635 = OpAccessChain %_ptr_Function_uint %pbr_material %int_15
+               OpStore %635 %634
+        %636 = OpCompositeExtract %uint %593 16
+        %637 = OpAccessChain %_ptr_Function_uint %pbr_material %int_16
+               OpStore %637 %636
+        %645 = OpExtInst %void %1 DebugLine %20 %uint_65 %uint_65 %uint_0 %uint_0
+        %644 = OpAccessChain %_ptr_Function_uint %pbr_material %int_8
+        %646 = OpLoad %uint %644
+               OpStore %out_color_idx %646
+        %652 = OpExtInst %void %1 DebugLine %20 %uint_69 %uint_69 %uint_0 %uint_0
+        %651 = OpLoad %mat4v4float %model
+        %653 = OpLoad %v3float %in_pos
+        %654 = OpCompositeExtract %float %653 0
+        %655 = OpCompositeExtract %float %653 1
+        %656 = OpCompositeExtract %float %653 2
+        %657 = OpCompositeConstruct %v4float %654 %655 %656 %float_1
+        %658 = OpMatrixTimesVector %v4float %651 %657
+        %659 = OpCompositeExtract %float %658 0
+        %660 = OpCompositeExtract %float %658 1
+        %661 = OpCompositeExtract %float %658 2
+        %662 = OpCompositeConstruct %v3float %659 %660 %661
+               OpStore %out_world_position %662
+        %663 = OpExtInst %void %1 DebugLine %20 %uint_106 %uint_106 %uint_0 %uint_0
                OpReturn
                OpFunctionEnd

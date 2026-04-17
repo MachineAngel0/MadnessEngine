@@ -1,5 +1,7 @@
-#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout: require
+#extension GL_EXT_buffer_reference : require
+#extension GL_ARB_shader_draw_parameters : enable
 
 
 //NOTE: ambient can also refer to color
@@ -74,14 +76,59 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
 
     uint render_mode;
 
-    uint _padding0;
-    uint _padding1;
-    uint _padding2;
-    uint _padding3;
-    uint _padding4;
-    uint _padding5;
+    uint vertex_idx;
+    uint index_idx;
+    uint normal_idx;
+    uint tangent_idx;
+    uint uv_idx;
+    uint transform_idx;
 
+    uint draw_data_idx;
+    uint material_instance_idx;
+
+
+    uint material_pbr_idx;
+    uint material_wave_idx;
+    uint material_black_hole_idx;
+    uint material_uv_animation_idx;
+    uint material_blend1_idx;
+    uint material_blend2_idx;
 } ubo[];
+
+
+
+// binding 0 stores our textures
+// binding 1 stores our params and indexes into the descriptor
+layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
+layout (set = 1, binding = 0) uniform texture2D textures[];
+layout (set = 1, binding = 0) uniform texture2DMS texturesMS[];
+layout (set = 1, binding = 0) uniform textureCube textureCubes[];
+layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
+//layout (set = 1, binding = 1) uniform sampler samplers[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer UV_BUFFER{
+    vec2 uv[];
+}UV[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
+    vec3 normal[];
+}NORMAL[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer TRANSFORM_BUFFER{
+    mat4 model_transforms[];
+}TRANSFORM[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer TANGENT_BUFFER{
+    vec4 tangent[];
+}TANGENT[];
+
+
+
+
+
+
+
+
 
 
 vec3 calculate_directional_light(directional_light_data light, vec3 normal, vec3 view_direction)

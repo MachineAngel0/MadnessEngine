@@ -11,7 +11,7 @@
 #include "vk_shader.h"
 #include "vk_sync.h"
 #include "maths/math_lib.h"
-#include "render_resource_backend.h"
+#include "pipelines/sprite_render.h"
 
 //finally works, TODO: whatever the fuck the renderer needs from other applications
 bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context)
@@ -151,6 +151,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->light_system = light_system_init(renderer);
 
     //System specific draws
+    // Transform System
+    renderer->transform_renderer = transform_renderer_init(renderer, renderer->resource_system);
+    // Material System
+    renderer->material_renderer = material_renderer_init(renderer, renderer->resource_system);
     // Mesh System
     renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
     // Sprite Backend
@@ -266,18 +270,12 @@ void renderer_update(Renderer* renderer, float delta_time)
     }
 
 
-    //World Update
-    // vertex_buffer_update(&vk_context, &vk_context.graphics_command_buffer[vk_context.current_frame],
-    //                      &vk_context.default_vertex_buffer, &vk_context.default_vertex_info);
-
-    //global uniform / projection matrix
-    // uniform_buffer_update(&vk_context, &vk_context.default_shader_info.global_uniform_buffers, vk_context.current_frame,
-    //                       1.0f, &camera_to_remove);
-    // Update the uniform buffer for the next frame
 
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
 
-    uniform_buffer_object ubo = {0};
+
+
+    Global_Ubo ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
     // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
     ubo.model = mat4_identity();
@@ -305,11 +303,33 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.camera_position = renderer->main_camera.viewPos;
     ubo.render_mode = renderer->mode;
 
-    // Copy the current matrices to the current frame's uniform buffer. As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
+    //global indexes
+    //meshes
+    ubo.vertex_idx = renderer->mesh_renderer->vertex_buffer_handle.handle;
+    ubo.index_idx  = renderer->mesh_renderer->index_buffer_handle.handle;
+    ubo.normal_idx  = renderer->mesh_renderer->normal_buffer_handle.handle;
+    ubo.tangent_idx  = renderer->mesh_renderer->tangent_buffer_handle.handle;
+    ubo.uv_index  = renderer->mesh_renderer->uv_buffer_handle.handle;
+    ubo.draw_data_idx  = renderer->mesh_renderer->draw_data_buffer_handle.handle;
+
+    //transform
+    ubo.transform_idx  = renderer->transform_renderer->transform_buffer_handle.handle;
+
+    //Materials
+    ubo.material_instance_idx = renderer->material_renderer->instance_buffer_handle.handle;
+    ubo.material_pbr_idx = renderer->material_renderer->pbr_buffer_handle.handle;
+    // ubo.material_wave_idx;
+    // ubo.material_black_hole_idx;
+    // ubo.material_uv_animation_idx;
+    // ubo.material_blend1_idx;
+    // ubo.material_blend2_idx;
+
+    // Copy the current matrices to the current frame's uniform buffer.
+    // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
     Vulkan_Buffer* ubo_buffer = vulkan_buffer_get(renderer,
                                                   renderer->buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
-           sizeof(uniform_buffer_object));
+           sizeof(Global_Ubo));
 
 
 
@@ -323,11 +343,14 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
+    transform_renderer_upload_data(renderer, renderer->transform_renderer, render_packets, graphics_command_buffer);
+    material_renderer_upload_data(renderer, renderer->material_renderer, &render_packets->material_data_packet, graphics_command_buffer);
+
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 
     mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-
+    // mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_construct_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
