@@ -23,6 +23,7 @@ bool scene_shutdown(Scene* scene, Memory_System* memory_system)
     memory_system_memory_free(memory_system, scene);
 
     scene = NULL;
+    return true;
 }
 
 Transform_Handle scene_get_new_mesh_transform(Scene* scene)

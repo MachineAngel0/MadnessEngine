@@ -491,6 +491,9 @@ typedef struct Light_System
     Buffer_Handle directional_light_storage_buffer_handle;
     Buffer_Handle point_light_storage_buffer_handle;
 
+    Buffer_Handle directional_light_staging_buffer_handle;
+    Buffer_Handle point_light_staging_buffer_handle;
+
 } Light_System;
 
 typedef enum Render_Mode
@@ -628,6 +631,16 @@ typedef struct UI_Renderer
     // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
     // Buffer_Handle ui_quad_texture_index_buffer_handle;
 
+    Buffer_Handle ui_vertex_staging_buffer_handle;
+    Buffer_Handle ui_index_staging_buffer_handle;
+    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
+    Buffer_Handle ui_instance_staging_ssbo_handle;
+
+    Buffer_Handle text_vertex_staging_buffer_handle;
+    Buffer_Handle text_index_staging_buffer_handle;
+    Buffer_Handle text_instance_staging_ssbo_handle;
+    Buffer_Handle text_indirect_staging_buffer_handle;
+
 
     u64 draw_count;
 
@@ -645,6 +658,11 @@ typedef struct Sprite_Backend
     Buffer_Handle sprite_index_buffer;
     Buffer_Handle sprite_indirect_buffer;
     Buffer_Handle sprite_instance_ssbo_buffer;
+
+    Buffer_Handle sprite_vertex_staging_buffer;
+    Buffer_Handle sprite_index_staging_buffer;
+    Buffer_Handle sprite_instance_staging_buffer;
+    Buffer_Handle sprite_indirect_staging_buffer;
 
 
     u64 draw_count;
@@ -664,6 +682,16 @@ typedef struct Mesh_Renderer
 
     Buffer_Handle transform_buffer_handle;
     Buffer_Handle material_buffer_handle;
+
+    Buffer_Handle vertex_staging_buffer_handle;
+    Buffer_Handle index_staging_buffer_handle;
+    Buffer_Handle indirect_staging_buffer_handle;
+    Buffer_Handle normal_staging_buffer_handle;
+    Buffer_Handle tangent_staging_buffer_handle;
+    Buffer_Handle uv_staging_buffer_handle;
+
+    Buffer_Handle transform_staging_buffer_handle;
+    Buffer_Handle material_staging_buffer_handle;
 
 
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;

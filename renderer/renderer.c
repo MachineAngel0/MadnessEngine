@@ -133,7 +133,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_renderer_command_buffers_create(vk_context);
 
     //NOTE: semaphores must be per swapchain image
-    init_per_frame_sync(vk_context);
+    sync_object_per_frame_init(renderer, vk_context);
     vk_context->current_frame = 0;
 
 
@@ -486,7 +486,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     vulkan_swapchain_present_image(
         vk_context,
         &vk_context->swapchain,
-        vk_context->device.graphics_queue,
         vk_context->device.present_queue,
         vk_context->swapchain_release_semaphore[image_index],
         image_index);
