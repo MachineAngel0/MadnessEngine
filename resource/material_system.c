@@ -48,11 +48,12 @@ void material_system_enable_flag(Material_System* material_system, Material_Hand
     inst->flags |= flags;
 }
 
-Material_PBR* material_system_disable_flag(Material_System* material_system, Material_Handle material_handle,
-    Material_Flag flags)
+void material_system_disable_flag(Material_System* material_system, Material_Handle material_handle,
+                                  Material_Flag flags)
 {
     Material_Instance* inst = &material_system->material_instance[material_handle.handle];
     inst->flags &= flags;
+
 }
 
 Material_PBR* material_system_add_pbr(Material_System* material_system, Material_Handle material_handle)

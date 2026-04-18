@@ -31,6 +31,7 @@ bool editor_app_run(Editor_Application* editor_app)
     clock_init(&app_internal->application_core.clock);
 
 
+
     app_internal->application_core.is_running = true;
 
     // Initialize subsystems.
@@ -80,12 +81,12 @@ bool editor_app_run(Editor_Application* editor_app)
                        &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                        renderer_plugin->renderer->resource_system);
 
-/*
-    mesh_load_gltf_new(application_core->resource_system->mesh_system,
-                       "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
-                       &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                       renderer_plugin->renderer->resource_system);
-*/
+    /*
+        mesh_load_gltf_new(application_core->resource_system->mesh_system,
+                           "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                           &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                           renderer_plugin->renderer->resource_system);
+    */
 
     clock_start(&application_core->clock);
 

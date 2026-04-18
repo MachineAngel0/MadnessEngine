@@ -204,6 +204,8 @@ void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
     update_ui_mouse_pos(madness_ui);
+    //update mouse delta/change
+    input_get_mouse_change(madness_ui->input_system_reference, &madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
 }
 
 void madness_ui_print_state(Madness_UI* madness_ui)
@@ -500,15 +502,16 @@ void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position
 {
     f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
 
+    Madness_Font font_data;
+    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
+                            &font_data);
 
     for (u64 i = 0; i < text.length; i++)
     {
         const char c = text.chars[i];
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
-        Madness_Font font_data;
-        texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
-                                &font_data);
+
 
         Glyph* g = &font_data.glyphs[c - 32];
 
@@ -1525,6 +1528,59 @@ bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness)
 
     //check if we clicked the button
     return use_ui_element(madness_ui, new_node->hash_id, button_screen_pos, button_screen_size);
+}
+
+bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
+                     u8 output_size)
+{
+    u32 size_y_padding = 20;
+    u32 size_y_increment = madness_ui->editor_font_size + size_y_padding;
+
+    UI_Node* background = madness_ui_get_new_node(madness_ui);
+    background->pos.x = 50;
+    background->pos.y = 50;
+    background->size.x = 100;
+    background->color = madness_ui->editor_style.color;
+
+    u32 size_input = 0;//madness_ui->editor_font_size;
+    u32 size_output = 0;//madness_ui->editor_font_size;
+    for (u8 i = 0; i < input_size; i++)
+    {
+        size_input += (i * size_y_increment);
+        madness_draw_text(madness_ui, inputs[i], (vec2){50, 50 + (i * size_y_increment)});
+    }
+    for (u8 i = 0; i < output_size; i++)
+    {
+        size_output += (i * size_y_increment);
+        madness_draw_text(madness_ui, outputs[i], (vec2){100, 50 + (i * size_y_increment)});
+    }
+
+    background->size.y = max_f(size_input, size_output);
+
+
+    return false;
+}
+
+bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos)
+{
+    UI_Node* background = madness_ui_get_new_node(madness_ui);
+    background->pos = *pos;
+    background->size.x = 150;
+    background->size.y = 150;
+    background->color = madness_ui->editor_style.color;
+
+
+    if (region_hit(madness_ui, background->pos, background->size))
+    {
+        if (madness_ui->mouse_down) {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos->x += madness_ui->mouse_delta_x;
+            pos->y += madness_ui->mouse_delta_y;
+        }
+    }
+
+
 }
 
 

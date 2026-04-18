@@ -36,6 +36,7 @@ void editor_ui(Editor* editor);
 //UI_States
 void editor_ui_debug(Editor* editor);
 void editor_ui_scene(Editor* editor);
+void editor_material_nodes(Editor* editor);
 
 
 

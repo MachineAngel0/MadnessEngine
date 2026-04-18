@@ -50,6 +50,8 @@ void editor_ui(Editor* editor)
         editor_ui_scene(editor);
         break;
     case EDITOR_UI_STATE_MATERIAL:
+    editor_material_nodes(editor);
+
         break;
     case EDITOR_UI_STATE_MAX:
         break;
@@ -133,4 +135,16 @@ void editor_ui_scene(Editor* editor)
     madness_scroll_box_end(madness_ui, "Scene Scroll Box", &scroll_box_state_test);
 
 
+}
+
+void editor_material_nodes(Editor* editor)
+{
+    Madness_UI* madness_ui = editor->madness_ui;
+    String inputs_String[] = {STRING("in1"), STRING("in2")};
+    String output_String[] = {STRING("out 1"), STRING("out 2"), STRING("out 3")};
+    madness_ui_node(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,
+                    ARRAY_SIZE(output_String));
+
+    static vec2 pos;
+    madness_ui_drag_test(madness_ui, &pos);
 }

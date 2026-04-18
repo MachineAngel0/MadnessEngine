@@ -224,6 +224,8 @@ typedef struct Madness_UI
     bool mouse_released_unique;
     i16 mouse_pos_x;
     i16 mouse_pos_y;
+    i16 mouse_delta_x;
+    i16 mouse_delta_y;
 
     //TODO: keep track if backspace has been held down for a certain period of time
     // for the backspace functionality of the textbox
@@ -312,6 +314,11 @@ MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scrol
 MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
 
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness);
+
+
+MAPI bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[], u8 output_size);
+
+MAPI bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos);
 
 
 //API END
