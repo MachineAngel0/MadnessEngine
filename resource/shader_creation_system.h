@@ -27,6 +27,16 @@ const char* shader_type_lookup[SHADER_TYPE_MAX] =
     [SHADER_TYPE_MAT4] = "mat4",
 };
 
+const char* shader_type_io_lookup[SHADER_TYPE_MAX] =
+{
+    [SHADER_TYPE_U32] = "flat uint",
+    [SHADER_TYPE_I32] = "flat int",
+    [SHADER_TYPE_FLOAT] = "float",
+    [SHADER_TYPE_VEC2] = "vec2",
+    [SHADER_TYPE_VEC3] = "vec3",
+    [SHADER_TYPE_MAT3] = "mat3",
+    [SHADER_TYPE_MAT4] = "mat4",
+};
 
 typedef enum Shader_Operation
 {
@@ -65,15 +75,15 @@ typedef struct Shader_Creation_System
     FILE* open_file;
     const char* current_file_name;
 
+
+    u32 input_count;
+    u32 output_count;
+
     const char* param_names[100];
     Shader_Type param_type[100];
     u32 param_count;
 } Shader_Creation_System;
 
-typedef struct Shader_Creation_Handle
-{
-    u32 handle;
-} Shader_Creation_Handle;
 
 typedef struct Shader_Param_Handle
 {
@@ -97,20 +107,22 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 }
 
 
-Shader_Creation_Handle shader_creation_system_shader_start(Shader_Creation_System* shader_system,
-                                                           const char* shader_name, Shader_Stage shader_stage)
+bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation_system,
+                                         const char* shader_name, Shader_Stage shader_stage)
 {
-    arena_clear(shader_system->frame_arena); // really dumb but it does work, alternatively, we could use a stack arena
-    shader_system->param_count = 0;
+    arena_clear(shader_creation_system->frame_arena); // really dumb but it does work, alternatively, we could use a stack arena
+    shader_creation_system->input_count = 0;
+    shader_creation_system->output_count = 0;
+    shader_creation_system->param_count = 0;
 
-    const char* file_name = c_string_concat(SHADER_PATH, shader_name, shader_system->frame_arena);
+    const char* file_name = c_string_concat(SHADER_PATH, shader_name, shader_creation_system->frame_arena);
     switch (shader_stage)
     {
     case SHADER_STAGE_VERTEX:
-        shader_system->current_file_name = c_string_concat(file_name, ".vert", shader_system->frame_arena);
+        shader_creation_system->current_file_name = c_string_concat(file_name, ".vert", shader_creation_system->frame_arena);
         break;
     case SHADER_STAGE_FRAGMENT:
-        shader_system->current_file_name = c_string_concat(file_name, ".frag", shader_system->frame_arena);
+        shader_creation_system->current_file_name = c_string_concat(file_name, ".frag", shader_creation_system->frame_arena);
         break;
     case SHADER_STAGE_TESSELATION:
         UNIMPLEMENTED();
@@ -120,28 +132,58 @@ Shader_Creation_Handle shader_creation_system_shader_start(Shader_Creation_Syste
         break;
     }
 
-    shader_system->open_file = fopen(shader_system->current_file_name, "w");
+    shader_creation_system->open_file = fopen(shader_creation_system->current_file_name, "w");
 
-    if (!shader_system->open_file)
+    MASSERT(shader_creation_system->open_file);
+    if (!shader_creation_system->open_file)
     {
-        return (Shader_Creation_Handle){0};
+        return false;
     }
+
+    //write global
+
+    fprintf(shader_creation_system->open_file, "#version 450\n");
+    fprintf(shader_creation_system->open_file, "#include \"shader_includes/test_uniform.glsl\"\n");
+
+
 }
+
+
+shader_creation_system_shader_start_main(Shader_Creation_System* shader_creation_system)
+{
+    fprintf(shader_creation_system->open_file, "void main() {\n");
+}
+
+
 
 void shader_creation_system_shader_end(Shader_Creation_System* shader_system)
 {
+    fprintf(shader_system->open_file, "}\n");
+
+
     fclose(shader_system->open_file);
 }
 
 
 //NOTE: these should be hardcoded, like for PBR_OQAQUE, we know what the inputs and outputs are, in general,
-bool shader_creation_system_add_input(Shader_Creation_System* shader_system, Shader_Creation_Handle handle,
-                                      Shader_Type shader_type, const char* shader_input_name);
-bool shader_creation_system_add_output(Shader_Creation_System* shader_system, Shader_Creation_Handle handle,
-                                       Shader_Type shader_type, const char* shader_output_name);
+bool shader_creation_system_add_input(Shader_Creation_System* shader_system,
+                                      Shader_Type shader_type, const char* shader_input_name)
+{
+    fprintf(shader_system->open_file, "layout(location = %d) in %s %s;\n", shader_system->input_count,
+            shader_type_io_lookup[shader_type], shader_input_name);
+    shader_system->input_count++;
+}
+
+bool shader_creation_system_add_output(Shader_Creation_System* shader_system,
+                                       Shader_Type shader_type, const char* shader_output_name)
+{
+    fprintf(shader_system->open_file, "layout(location = %d) out %s %s;\n", shader_system->output_count,
+            shader_type_io_lookup[shader_type], shader_output_name);
+    shader_system->output_count++;
+}
 
 Shader_Param_Handle shader_creation_system_add_param(Shader_Creation_System* shader_system,
-                                                     Shader_Creation_Handle handle, Shader_Type shader_type,
+                                                     Shader_Type shader_type,
                                                      const char* param_name)
 {
     Shader_Param_Handle param_handle = {shader_system->param_count};
@@ -155,26 +197,33 @@ Shader_Param_Handle shader_creation_system_add_param(Shader_Creation_System* sha
     return param_handle;
 }
 
-bool shader_creation_system_addition(Shader_Creation_System* shader_system, Shader_Creation_Handle handle,
+bool shader_creation_system_addition(Shader_Creation_System* shader_system, const char* output_name,
                                      Shader_Param_Handle param1, Shader_Param_Handle param2)
 {
     const char* name1 = shader_system->param_names[param1.handle];
     const char* name2 = shader_system->param_names[param2.handle];
 
-    fprintf(shader_system->open_file, "%s + %s;\n", name1, name2);
+    fprintf(shader_system->open_file, "float %s = %s + %s;\n", output_name, name1, name2);
 }
 
 bool shader_creation_system_test(Shader_Creation_System* shader_creation_system)
 {
-    Shader_Creation_Handle handle = shader_creation_system_shader_start(shader_creation_system, SHADER_TEST_NAME,
-                                                                        SHADER_STAGE_VERTEX);
+    shader_creation_system_shader_start(shader_creation_system, SHADER_TEST_NAME,
+                                        SHADER_STAGE_VERTEX);
 
-    Shader_Param_Handle wind_speed = shader_creation_system_add_param(shader_creation_system, handle, SHADER_TYPE_FLOAT,
+
+    shader_creation_system_add_input(shader_creation_system,
+                                     SHADER_TYPE_FLOAT, "in_pos");
+    shader_creation_system_add_output(shader_creation_system, SHADER_TYPE_VEC3, "out_color");
+
+    shader_creation_system_shader_start_main(shader_creation_system);
+
+    Shader_Param_Handle wind_speed = shader_creation_system_add_param(shader_creation_system, SHADER_TYPE_FLOAT,
                                                                       "wind_speed");
     Shader_Param_Handle wind_direction = shader_creation_system_add_param(
-        shader_creation_system, handle, SHADER_TYPE_FLOAT, "wind_direction");
+        shader_creation_system, SHADER_TYPE_FLOAT, "wind_direction");
 
-    shader_creation_system_addition(shader_creation_system, handle, wind_speed, wind_direction);
+    shader_creation_system_addition(shader_creation_system, "wind_output",  wind_speed, wind_direction);
 
     shader_creation_system_shader_end(shader_creation_system);
 }
