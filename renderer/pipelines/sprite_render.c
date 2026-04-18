@@ -129,6 +129,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
 
     //grab material_handle
     PC_2D pc_2d_ui = {
+        renderer->buffer_system->global_ubo_handle.handle,
         sprite_backend->sprite_instance_ssbo_buffer.handle,
     };
 

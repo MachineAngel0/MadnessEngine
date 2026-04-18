@@ -4,14 +4,16 @@
 
 
 layout(push_constant, scalar) uniform PushConstant_2D{
+    uint ubo_buffer_idx;
     uint instance_buffer_idx;
 }PC_2D;
 
 #define BITFLAG(x) (1 << (x))
-#define SPRITE_PIPELINE_NONE  BITFLAG(1)
-#define SPRITE_PIPELINE_TEXTURE  BITFLAG(2)
-#define SPRITE_PIPELINE_COLOR  BITFLAG(3)
-
+#define SPRITE_FLAG_NONE BITFLAG(1)
+#define SPRITE_FLAG_TEXTURE BITFLAG(2)
+#define SPRITE_FLAG_COLOR BITFLAG(3)
+#define SPRITE_FLAG_TEXT BITFLAG(4)
+#define SPRITE_FLAG_CIRCLE BITFLAG(5)
 
 struct Sprite_Data {
     uint flags;
@@ -20,11 +22,15 @@ struct Sprite_Data {
     vec2 size;
     float rotation;
 
+    float thickness;
+
+
     vec2 uv_offset;
     vec2 uv_size;
 
     vec3 color;
     uint texture_index;
+    uint _padding0;
 };
 
 

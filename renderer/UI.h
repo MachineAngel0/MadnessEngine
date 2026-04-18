@@ -13,6 +13,7 @@
 
 typedef struct PC_2D
 {
+    u32 ubo_buffer_idx;
     u32 material_buffer_idx;
 } PC_2D;
 
@@ -110,12 +111,21 @@ typedef enum UI_Button_State
 #define MAX_UI_TEXT_NODE_COUNT 1000
 #define MAX_UI_NODE_CHILD_COUNT 10
 
+struct UI_Circle
+{
+    float radius;
+    float donut_hole; // 1 is full, the rest create the hole in the middle
+};
 
 typedef struct UI_Node
 {
     // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
+
+    //for circles
+    float thickness;
+
     const char* debug_id;
     u64 hash_id;
 
@@ -123,7 +133,7 @@ typedef struct UI_Node
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     vec3 color;
     Texture_Handle texture_handle;
-    Sprite_Pipeline_Flags flags;
+    Sprite_Flags flags;
 
 
     //TODO: for widgets that need some sort of child node, like a scroll box
@@ -140,7 +150,7 @@ typedef struct UI_Node_Text
 
     vec3 color;
     Texture_Handle texture_handle;
-    Sprite_Pipeline_Flags flags;
+    Sprite_Flags flags;
 
     // offset into a texture atlas if using one, otherwise {0, 0}
     vec2 uv_offset;
@@ -238,10 +248,6 @@ typedef struct Madness_UI
     Sprite_Data_array* ui_data;
     Sprite_Data_array* text_data;
 
-    //TODO: move these out of the UI
-    PC_2D pc_2d_text;
-    PC_2D pc_2d_quad;
-
 
     //new UI
 
@@ -304,6 +310,8 @@ MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* 
 
 MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
 MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
+
+MAPI bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness);
 
 
 //API END

@@ -22,7 +22,7 @@ void main() {
 
     outColor = vec4(in_color, 1.0f);
 
-    if ((in_flags & SPRITE_PIPELINE_TEXTURE) != 0){
+    if ((in_flags & SPRITE_FLAG_TEXTURE) != 0u){
         outColor *= texture(texture_samples[(nonuniformEXT(in_material_idx))], in_uv);
     }
 

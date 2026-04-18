@@ -60,10 +60,6 @@ bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin);
 typedef struct Editor_Plugin
 {
     Editor* editor;
-    DLL_HANDLE editor_dll_handle;
-    editor_init_fpn editor_init;
-    editor_run_fpn editor_run;
-    editor_shutdown_fpn editor_shutdown;
 } Editor_Plugin;
 
 bool editor_plugin_set_default_fpn(Editor_Plugin* editor_plugin);

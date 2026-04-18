@@ -54,9 +54,12 @@ layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
     spot_light_data spot_light[];
 };
 
+//Set 0 = global data
+//Set 1 = textures
+//Set 2 = buffers
+//Set 3 = (object material data) // should be
 
 layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
-    mat4 model;
     mat4 view;
     mat4 proj;
 
@@ -73,7 +76,9 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
 //    uint spot_lights_count;
 
     vec4 camera_view_pos;
+    vec2 screen_dimensions;
 
+    float time;
     uint render_mode;
 
     uint vertex_idx;
@@ -97,8 +102,6 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
 
 
 
-// binding 0 stores our textures
-// binding 1 stores our params and indexes into the descriptor
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 layout (set = 1, binding = 0) uniform texture2D textures[];
 layout (set = 1, binding = 0) uniform texture2DMS texturesMS[];

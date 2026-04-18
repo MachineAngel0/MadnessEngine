@@ -6,6 +6,13 @@
 #include "vulkan_types.h"
 #include "memory/memory_system.h"
 
+typedef enum Editor_UI_State
+{
+    EDITOR_UI_STATE_DEBUG,
+    EDITOR_UI_STATE_SCENE,
+    EDITOR_UI_STATE_MATERIAL,
+    EDITOR_UI_STATE_MAX,
+} Editor_UI_State;
 
 typedef struct Editor
 {
@@ -15,6 +22,8 @@ typedef struct Editor
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
+
+    Editor_UI_State state;
 } Editor;
 
 
@@ -24,11 +33,10 @@ MAPI bool editor_shutdown(Editor* editor);
 
 
 void editor_ui(Editor* editor);
+//UI_States
+void editor_ui_debug(Editor* editor);
+void editor_ui_scene(Editor* editor);
 
-
-typedef Editor* (*editor_init_fpn)(Memory_System*, Renderer*, Madness_UI*, Resource_System*);
-typedef void (*editor_run_fpn)(Editor* );
-typedef void (*editor_shutdown_fpn)(Editor* );
 
 
 #endif //MADNESSENGINE_EDITOR_H

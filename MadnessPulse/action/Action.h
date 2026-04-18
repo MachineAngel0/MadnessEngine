@@ -61,10 +61,9 @@ struct UActionHandler
 
     void DebugPrintActionStack();
 
-    void AddAction(UObject* Actions);
-    void AppendActions(TArray<UObject*> Actions);
+    void AddAction(Action* Actions);
+    void AppendActions(Action* Actions);
 
-    ATurnBasedGameMode* GameModeRef;
 };
 
 

@@ -70,6 +70,7 @@ void sprite_system_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 sc
 }
 
 
+
 Sprite_Data* sprite_system_get_new_sprite_transient(Sprite_System* sprite_system)
 {
     return &sprite_system->sprites_data_transient->data[sprite_system->sprites_data_transient->num_items++];

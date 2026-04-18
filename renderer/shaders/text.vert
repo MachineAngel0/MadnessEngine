@@ -8,12 +8,10 @@
 
 
 layout(location = 0) in vec2 in_pos;
-layout(location = 1) in vec2 in_tex;
 
 layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
-layout(location = 2) out vec2 out_tex;
-layout(location = 3) out flat uint out_texture_idx;
+layout(location = 2) out flat uint out_texture_idx;
 
 void main() {
 

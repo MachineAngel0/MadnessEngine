@@ -1,6 +1,7 @@
 ﻿#include "UI.h"
 
 #include "logger.h"
+#include "str.h"
 
 #define MAX_UI_SPRITE_COUNT 1000
 #define MAX_TEXT_SPRITE_COUNT 1000
@@ -106,6 +107,7 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->screen_size.x = screen_size_x;
     madness_ui->screen_size.y = screen_size_y;
 
+
     Sprite_Data_array_clear(madness_ui->ui_data);
     Sprite_Data_array_clear(madness_ui->text_data);
 
@@ -139,6 +141,13 @@ void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
         Sprite_Data* sprite_data = sprite_system_get_ui_sprite(resource_system->sprite_system);
         sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
         sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
+        sprite_data->thickness = 1.0;
+
+        if (node_to_draw->flags & SPRITE_FLAG_CIRCLE)
+        {
+            sprite_data->thickness = node_to_draw->thickness;
+        }
+
 
         //TODO:
         // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
@@ -331,7 +340,15 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
 
 UI_Node* madness_ui_get_parent_node(Madness_UI* madness_ui)
 {
-    return madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1].parent;
+    //get the parent
+    UI_Node* parent_node = madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1].parent;
+    if (parent_node)
+    {
+        return parent_node;
+    }
+
+    //fallback
+    return &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1];
 }
 
 UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui)
@@ -1212,6 +1229,11 @@ bool madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* 
 
 bool madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value)
 {
+    if (skip_node(madness_ui))
+    {
+        return false;
+    }
+
     //draw text on top, then below the vec values
     madness_text(madness_ui, id, text);
 
@@ -1323,15 +1345,18 @@ void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box
 
 void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state)
 {
+    //TODO: bugged if there are no children
+
     madness_ui->parent_node_state.is_active = false;
 
     //get the parent node
 
-    //last node should have a parent, which is the scroll box
+    //last node should have a parent, which is the scroll box, if not then we do nothing????
     UI_Node* scroll_box = madness_ui_get_parent_node(madness_ui);
 
-    float width_x = 0;
+    float width_x = madness_ui->current_layout_screen_size.x;
     float height_y = 0;
+
 
     for (u32 child_idx = 0; child_idx < scroll_box->child_node_count; child_idx++)
     {
@@ -1340,6 +1365,8 @@ void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_s
         height_y += size.y + madness_ui->element_padding;
     }
     height_y -= madness_ui->element_padding;
+
+    height_y = max(height_y, madness_ui->current_layout_screen_size.x);
 
 
     vec2 scroll_box_screen_size = {width_x, height_y};
@@ -1379,33 +1406,30 @@ void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_s
     //size of the scroll box and the slider
     vec2 hit_size = (vec2){scroll_box_screen_size.x + thumb_ui_screen_size.x, scroll_box_screen_size.y};
 
-    if (region_hit(madness_ui, button_screen_pos, hit_size))
+    //check hit on the scroll bar
+    if (region_hit(madness_ui, thumb_ui_screen_pos, thumb_ui_screen_size))
     {
-        //slider specific check
-        if (region_hit(madness_ui, thumb_ui_screen_pos, (vec2){thumb_ui_screen_size.x, hit_size.y}))
+        if (madness_ui->mouse_down)
         {
-            if (madness_ui->mouse_down)
+            slider_node->color = madness_ui->editor_style.pressed_color;
+
+            // we can just set the slider to where the mouse is
+            // madness_ui->mouse_pos_y; //TODO: will need when we do vertical slider
+            i16 out_x;
+            i16 out_y;
+            input_get_mouse_change(madness_ui->input_system_reference, &out_x, &out_y);
+            if (out_y > 0)
             {
-                slider_node->color = madness_ui->editor_style.pressed_color;
+                scroll_box_state->scroll_amount += 1;
 
-                // we can just set the slider to where the mouse is
-                // madness_ui->mouse_pos_y; //TODO: will need when we do vertical slider
-                i16 out_x;
-                i16 out_y;
-                input_get_mouse_change(madness_ui->input_system_reference, &out_x, &out_y);
-                if (out_y > 0)
+                scroll_box_state->scroll_amount = clamp_float(scroll_box_state->scroll_amount, 0,
+                                                              scroll_box_state->max_nodes_to_display);
+            }
+            if (out_y < 0)
+            {
+                if (scroll_box_state->scroll_amount > 0)
                 {
-                    scroll_box_state->scroll_amount += 1;
-
-                    scroll_box_state->scroll_amount = clamp_float(scroll_box_state->scroll_amount, 0,
-                                                                  scroll_box_state->max_nodes_to_display);
-                }
-                if (out_y < 0)
-                {
-                    if (scroll_box_state->scroll_amount > 0)
-                    {
-                        scroll_box_state->scroll_amount -= 1;
-                    }
+                    scroll_box_state->scroll_amount -= 1;
                 }
             }
         }
@@ -1428,7 +1452,79 @@ void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_s
             scroll_box_state->scroll_amount = clamp_float(scroll_box_state->scroll_amount, 0,
                                                           scroll_box_state->max_nodes_to_display);
         }
-    };
+    }
+};
+
+bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness)
+{
+    if (skip_node(madness_ui))
+    {
+        return false;
+    }
+
+    *thickness = clamp_float(*thickness, 0.0f, 1.0f);
+
+    // 0-1 range
+    const float button_ratio_to_layout_size = 0.8f;
+    const float button_vertical_normalized_size = 0.03f;
+    vec2 normalized_size;
+    normalized_size.x = madness_ui->current_layout_size.x * button_ratio_to_layout_size;
+    normalized_size.y = madness_ui->current_layout_size.x * button_ratio_to_layout_size;
+
+
+    // proper screen pos and size
+    vec2 button_screen_pos = madness_ui->cursor_pos;
+    vec2 button_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
+    button_screen_pos.x += (madness_ui->current_layout_screen_size.x - button_screen_size.x) / 2.f;
+
+    //grab a node
+    UI_Node* new_node = madness_ui_get_new_node(madness_ui);
+    new_node->debug_id = id;
+    new_node->hash_id = generate_hash_key_64bit((u8*)id, strlen(id));
+    new_node->pos = button_screen_pos;
+    new_node->size = button_screen_size;
+    new_node->thickness = *thickness;
+    new_node->flags |= SPRITE_FLAG_CIRCLE;
+
+
+    if (region_hit(madness_ui, new_node->pos, new_node->size))
+    {
+        set_hot(madness_ui, new_node->hash_id);
+
+        //check if we have the mouse pressed and nothing else is selected
+        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
+        //TODO: this is despite there bieng another ui in front of it
+        //TODO: for now imma just leave it be and dont draw things on top of others
+        if (can_be_active(madness_ui))
+        {
+            set_active(madness_ui, new_node->hash_id);
+        }
+    }
+
+
+    //active state
+    if (is_active(madness_ui, new_node->hash_id))
+    {
+        new_node->color = madness_ui->editor_style.pressed_color;
+    }
+    //hot state
+    else if (is_hot(madness_ui, new_node->hash_id))
+    {
+        new_node->color = madness_ui->editor_style.hovered_color;
+    }
+    // normal state
+    else
+    {
+        new_node->color = madness_ui->editor_style.color;
+    }
+
+
+    //update ui state for the next element
+    madness_ui_update_next_element_pos(madness_ui, button_screen_size);
+
+
+    //check if we clicked the button
+    return use_ui_element(madness_ui, new_node->hash_id, button_screen_pos, button_screen_size);
 }
 
 

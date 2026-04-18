@@ -8,9 +8,6 @@
 #include "shader_includes/test_uniform.glsl"
 #include "shader_includes/materials.glsl"
 
-layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
-
-
 
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec4 in_tangent;
@@ -24,20 +21,20 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 
-
+    uint ubo_index = pc_mesh.ubo_buffer_idx;
 
 
     // properties
     vec3 norm = normalize(in_normal);
     // Normal = mat3(transpose(inverse(model))) * aNormal; // for generating proper normals with non-uniform scales
 
-    vec3 view_direction = normalize(ubo[nonuniformEXT(0)].camera_view_pos.xyz - in_world_position);
+    vec3 view_direction = normalize(ubo[nonuniformEXT(ubo_index)].camera_view_pos.xyz - in_world_position);
 
     // Directional lighting
-    vec3 result = calculate_directional_light(ubo[nonuniformEXT(0)].directional_lights.directional_light[0], norm, view_direction);
+    vec3 result = calculate_directional_light(ubo[nonuniformEXT(ubo_index)].directional_lights.directional_light[0], norm, view_direction);
     // Point lights
-    for(int i = 0; i < ubo[nonuniformEXT(0)].point_lights_count; i++){
-        result += calculate_point_light(ubo[nonuniformEXT(0)].point_lights.point_light[i], norm, in_world_position, view_direction);
+    for(int i = 0; i < ubo[nonuniformEXT(ubo_index)].point_lights_count; i++){
+        result += calculate_point_light(ubo[nonuniformEXT(ubo_index)].point_lights.point_light[i], norm, in_world_position, view_direction);
     }
     // phase 3: Spot light
     //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);

@@ -74,42 +74,4 @@ bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin)
     return true;
 }
 
-bool editor_plugin_set_default_fpn(Editor_Plugin* editor_plugin)
-{
-    editor_plugin->editor_dll_handle = platform_load_dynamic_library("./MADNESSEDITOR");
-    DLL_HANDLE editor_lib_handle = editor_plugin->editor_dll_handle;
 
-    if (editor_lib_handle.handle == 0)
-    {
-        FATAL("FAILED TO LOAD MADNESSRENDERER DLL");
-        return false;
-    }
-
-    editor_plugin->editor_init = (editor_init_fpn)platform_get_function_address(
-        editor_lib_handle, "editor_init");
-    editor_plugin->editor_run = (editor_run_fpn)platform_get_function_address(editor_lib_handle, "editor_update");
-    editor_plugin->editor_shutdown = (editor_shutdown_fpn)platform_get_function_address(
-        editor_lib_handle, "editor_shutdown");
-
-
-
-    if (!editor_plugin->editor_init)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER EDITOR INIT")
-        return false;
-    }
-    if (!editor_plugin->editor_run)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER EDITOR RUN")
-        return false;
-    }
-    if (!editor_plugin->editor_shutdown)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER EDITOR TERMINATE")
-        return false;
-    }
-
-
-
-    return true;
-}

@@ -72,6 +72,7 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
                                                       &descriptor_system->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
 
+    //hard coded descriptor sets
     create_bindless_uniform_buffer_descriptor_set(renderer,
                                                   descriptor_system,
                                                   &descriptor_system->uniform_descriptors);
@@ -331,7 +332,7 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
     VkDescriptorSetLayoutBinding layout_binding = {0};
     //image sampler
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layout_binding.binding = 0;
+    layout_binding.binding = 0; //layout = binding
     layout_binding.descriptorCount = max_bindless_texture_resource;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
     layout_binding.pImmutableSamplers = NULL;

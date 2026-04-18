@@ -6,7 +6,6 @@
 #include "renderer.h"
 
 
-#include "vulkan_types_vertex.h"
 #include "vulkan_types.h"
 #include "spv_reflect.h"
 

@@ -278,7 +278,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     Global_Ubo ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
     // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
-    ubo.model = mat4_identity();
     // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // ubo.view = camera_get_view_matrix(&main_camera);
     ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
@@ -301,6 +300,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.point_lights_address = point_light_buffer_address;
     ubo.point_lights_count = renderer->light_system->point_light_count;
     ubo.camera_position = renderer->main_camera.viewPos;
+    ubo.screem_dimensions = (vec2){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
+    ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;
 
     //global indexes
@@ -351,7 +352,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     // mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     mesh_renderer_construct_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
+    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     memory_barrier_transfer(renderer,  graphics_command_buffer);
@@ -443,7 +444,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
                      &renderer->indirect_mesh_pipeline);
 
-    // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
+    sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
     ui_renderer_draw(renderer->ui_renderer, renderer, graphics_command_buffer, render_packets);
 

@@ -11,7 +11,7 @@
 
 
 
-#include "vulkan_types_vertex.h"
+#include "../resource/sprite_type.h"
 #include "camera.h"
 #include "darray.h"
 #include "hash_table.h"
@@ -480,7 +480,6 @@ typedef enum Render_Mode
 typedef struct global_ubo
 {
     //this can basically be as largae as a i want, the max limit is 64 kib
-    mat4 model;
     mat4 view;
     mat4 proj;
 
@@ -493,7 +492,9 @@ typedef struct global_ubo
 
     //camera
     vec4 camera_position;
+    vec2 screem_dimensions;
 
+    float time;
     Render_Mode render_mode;
 
 

@@ -8,9 +8,6 @@ MAPI char* c_string_duplicate(const char* str);
 
 MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* arena);
 
-//we do not modify either string
-MAPI const char* c_string_append(const char* str1, const char* str2);
-
 
 // Performs string formatting to dest given format string and parameters.
 MAPI char* c_string_path_strip(const char* path, Arena* arena);

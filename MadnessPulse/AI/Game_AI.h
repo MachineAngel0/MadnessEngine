@@ -190,15 +190,15 @@ struct AAIControllerBase
 	TArray<AUnitBase*> TargetsAvailableByAffect;
 
 
-	void InjectAbility(int AbilityMapLocation, TArray<TSubclassOf<AAbilityBase>> AbilitiesToAdd);
+	void InjectAbility(u8 AbilityMapLocation, Ability_Name AbilityToAdd);
 	// removes abilities
-	void RemoveAbility(int AbilityMapLocation, TArray<TSubclassOf<AAbilityBase>> AbilitiesToRemove);
-	void RemoveAllAbilitiesAtIndex(int AbilityMapLocation);
+	void RemoveAbility(u8 AbilityMapLocation, Ability_Name AbilitiesToRemove);
+	void RemoveAllAbilitiesAtIndex(u8 AbilityMapLocation);
 
 
-	void InjectActions(TArray<TSubclassOf<AAIAction>> ActionsToAdd);
+	void InjectActions(AAIAction ActionsToAdd);
 	//TODO: doesn't remove from the extras array
-	void RemoveAction(TArray<TSubclassOf<AAIAction>> ActionsToRemove);
+	void RemoveAction(AAIAction ActionsToRemove);
 
 	//Rn every child has a binding to every single needed thing, not really a performance for this
 	void CreateBindings(ATurnBasedGameMode* GameMode);

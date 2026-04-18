@@ -13,10 +13,21 @@
 // then save them to game/engine specific format
 // resource system will then load the actual game/engine specific format
 
+typedef struct Asset_Editor_File_Header
+{
+
+    u64 count;
+}Asset_Editor_File_Header;
+
+
 typedef struct Asset_Manager
 {
     bool unimplemented;
+
+
 }Asset_Manager;
+
+#define ENGINE_RESOURCE_PATH "../z_assets_engine_format/asset_list"
 
 #define ENGINE_TEXTURE_PATH "../z_assets_engine_format/texture"
 #define ENGINE_FONTS_PATH "../z_assets_engine_format/fonts"

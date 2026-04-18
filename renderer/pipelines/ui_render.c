@@ -191,6 +191,7 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
 
     //grab material_handle
     PC_2D pc_2d_ui = {
+        renderer->buffer_system->global_ubo_handle.handle,
         ui_renderer->ui_instance_ssbo_handle.handle,
     };
 
@@ -271,6 +272,7 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
 
     //grab material_handle
     PC_2D pc_2d_text = {
+        renderer->buffer_system->global_ubo_handle.handle,
         ui_renderer->text_instance_ssbo_handle.handle,
     };
 

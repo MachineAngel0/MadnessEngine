@@ -136,6 +136,7 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
 
 
     //TODO:this is bugged, its acting like on pressed
+    /*
     if (input_key_released_unique(input_system, KEY_Q))
     {
         process_mouse_scroll(cam, -10.0f);
@@ -143,7 +144,7 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
     if (input_key_released_unique(input_system, KEY_E))
     {
         process_mouse_scroll(cam, 10.0f);
-    }
+    }*/
 }
 
 mat4 camera_get_view_matrix(camera* cam)

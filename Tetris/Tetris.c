@@ -129,7 +129,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
             sprite_data->color = sprite_color;
             sprite_data->texture_index = 0;
-            sprite_data->flags |= SPRITE_PIPELINE_COLOR;
+            sprite_data->flags |= SPRITE_FLAG_COLOR;
         }
     }
 
@@ -148,7 +148,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
         sprite_data->size = size;
         sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];
         sprite_data->texture_index = 0;
-        sprite_data->flags |= SPRITE_PIPELINE_COLOR;
+        sprite_data->flags |= SPRITE_FLAG_COLOR;
     }
 
     // tetris->tetris_render_packet->sprite_data;

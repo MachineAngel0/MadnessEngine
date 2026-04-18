@@ -23,7 +23,6 @@ vec2 rotate(vec2 pos, float a)
     );
 }
 
-
 void main() {
 
     uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
@@ -57,13 +56,13 @@ void main() {
 
     out_flags = inst_data.flags;
 
-    if((inst_data.flags & SPRITE_PIPELINE_COLOR) != 0){
+    if((inst_data.flags & SPRITE_FLAG_COLOR) != 0u){
         out_color = inst_data.color;
 
     }
 
 
-    if((inst_data.flags & SPRITE_PIPELINE_TEXTURE) != 0){
+    if((inst_data.flags & SPRITE_FLAG_TEXTURE) != 0u){
 
         float left = inst_data.uv_offset.x;
         float top = inst_data.uv_offset.y;

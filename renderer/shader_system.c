@@ -1,6 +1,4 @@
 ﻿#include "shader_system.h"
-
-#include "vk_buffer.h"
 #include "vk_image.h"
 
 

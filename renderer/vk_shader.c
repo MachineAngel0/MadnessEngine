@@ -454,23 +454,26 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
 
     //TODO: I should look more into this later, its kinda like photoshop blend modes
     // the most important is the src and dst
-    VkPipelineColorBlendAttachmentState colorBlendAttachment = {0};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-    //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    //colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-    //colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    //colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    //colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+    // color_blend_attachment.blendEnable = VK_FALSE;
+    color_blend_attachment.blendEnable = VK_TRUE;
+    // Premultiplied alpha blending, will make the text less blurrier in motion
+    color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+    // A_out = A_src + (1 - A_src) * A_dst
+    color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo color_blending = {0};
     color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     color_blending.logicOpEnable = VK_FALSE;
     color_blending.logicOp = VK_LOGIC_OP_COPY;
     color_blending.attachmentCount = 1;
-    color_blending.pAttachments = &colorBlendAttachment; // this thing can be a vector
+    color_blending.pAttachments = &color_blend_attachment; // this thing can be a vector
     color_blending.blendConstants[0] = 0.0f; // Optional
     color_blending.blendConstants[1] = 0.0f; // Optional
     color_blending.blendConstants[2] = 0.0f; // Optional
