@@ -32,7 +32,23 @@ void main() {
     vec2(inst_data.pos + inst_data.size),
     };
 
-    vec2 ndc = (vec2(vertices[gl_VertexIndex])) * 2.0 - 1.0;
+    //rotations
+    // using a rotation matrix, calculated on the gpu
+    //| cos θ  -sin θ | * | x |
+    //| sin θ   cos θ | × | y |
+
+    //vec2 center = inst_data.pos + inst_data.pivot * inst_data.size // when i want abritrary pivot points
+    vec2 center = inst_data.pos + inst_data.size * 0.5; // find the center
+    float c = cos(inst_data.rotation);
+    float s = sin(inst_data.rotation);
+
+    vec2 v = vertices[gl_VertexIndex];
+    v -= center;
+    v = vec2(v.x * c - v.y * s, v.x * s + v.y * c);
+    v += center;
+
+    vec2 ndc = v * 2.0 - 1.0;
+//    vec2 ndc = (vec2(vertices[gl_VertexIndex])) * 2.0 - 1.0;
     gl_Position = vec4(ndc, 0.0, 1.0);
     out_color = inst_data.color;
 

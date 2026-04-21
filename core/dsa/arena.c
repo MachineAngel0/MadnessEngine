@@ -6,6 +6,9 @@
 
 void arena_init(Arena* a, void* backing_buffer, const u64 backing_buffer_size, Memory_Tracker* memory_tracker)
 {
+    MASSERT(a);
+    MASSERT(backing_buffer);
+
     //we pass in an already allocated chunk of memory in the event,
     //we want to pass in an already allocated arena memory, say a global arena, and then one for audio for something similar
     a->memory = (u8*) backing_buffer;

@@ -280,7 +280,10 @@ void free_list_test(void)
     TEST_DEBUG(fl.used == 0);
 
     //TODO: flesh this out
-
+    int* i = arena_free_list_alloc(&fl, sizeof(int));
+    float* f = arena_free_list_alloc(&fl, sizeof(float));
+    double* d = arena_free_list_alloc(&fl, sizeof(double));
+    u64* uint64 = arena_free_list_alloc(&fl, sizeof(u64));
 
 
 

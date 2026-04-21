@@ -142,6 +142,8 @@ void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
         sprite_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
         sprite_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
         sprite_data->thickness = 1.0;
+        sprite_data->rotation = deg_to_rad(node_to_draw->rotation);
+
 
         if (node_to_draw->flags & SPRITE_FLAG_CIRCLE)
         {
@@ -1530,6 +1532,81 @@ bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness)
     return use_ui_element(madness_ui, new_node->hash_id, button_screen_pos, button_screen_size);
 }
 
+bool madness_ui_node_simple(Madness_UI* madness_ui, const char* id, vec2 pos, String inputs[], u8 input_size,
+                            String outputs[], u8 output_size, u32 node_id)
+{
+    u32 size_y_padding = 20;
+    u32 size_y_increment = madness_ui->editor_font_size + size_y_padding;
+
+    UI_Node* background = madness_ui_get_new_node(madness_ui);
+    background->pos.x = pos.x;
+    background->pos.y = pos.y;
+    background->size.x = 100;
+    background->color = madness_ui->editor_style.color;
+
+    float x_pos = pos.x;
+    float y_pos = pos.y;
+
+    u32 size_input = 0; //madness_ui->editor_font_size;
+    u32 size_output = 0; //madness_ui->editor_font_size;
+
+    for (u8 i = 0; i < input_size; i++)
+    {
+        size_input += (i * size_y_increment);
+        y_pos += (i * size_y_increment);
+        vec2 tex_pos = {x_pos, y_pos};
+        vec2 text_size;
+        madness_calculate_text_size(madness_ui, inputs[i], tex_pos, &text_size);
+        madness_draw_text(madness_ui, inputs[i], tex_pos);
+
+
+        if (region_hit(madness_ui, tex_pos, text_size))
+        {
+            if (madness_ui->mouse_down)
+            {
+                madness_ui->input_pressed = true;
+                madness_ui->input_pressed_id = node_id;
+                madness_ui->input_pos = tex_pos;
+            }
+        };
+    }
+
+
+    for (u8 i = 0; i < output_size; i++)
+    {
+        size_input += (i * size_y_increment);
+        y_pos += (i * size_y_increment);
+        vec2 tex_pos = {x_pos + 50, y_pos};
+        vec2 text_size;
+        madness_calculate_text_size(madness_ui, outputs[i], tex_pos, &text_size);
+        madness_draw_text(madness_ui, outputs[i], tex_pos);
+
+        if (region_hit(madness_ui, tex_pos, text_size))
+        {
+            if (madness_ui->mouse_down)
+            {
+                madness_ui->output_pressed = true;
+                madness_ui->output_pressed_id = node_id;
+            }
+        };
+
+        // TODO: this should be for the link number and not the node id
+        if (madness_ui->output_pressed_id == node_id)
+        {
+            if (madness_ui->input_pressed)
+            {
+                UI_Node* connection = madness_ui_get_new_node(madness_ui);
+                connection->pos = tex_pos;
+                connection->size = (vec2){vec2_sub(madness_ui->input_pos, tex_pos).x, 10};
+                connection->color = madness_ui->editor_style.hovered_color;
+            }
+        };
+    }
+
+    background->size.y = max_f(size_input, size_output);
+    return false;
+}
+
 bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
                      u8 output_size)
 {
@@ -1542,8 +1619,8 @@ bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8
     background->size.x = 100;
     background->color = madness_ui->editor_style.color;
 
-    u32 size_input = 0;//madness_ui->editor_font_size;
-    u32 size_output = 0;//madness_ui->editor_font_size;
+    u32 size_input = 0; //madness_ui->editor_font_size;
+    u32 size_output = 0; //madness_ui->editor_font_size;
     for (u8 i = 0; i < input_size; i++)
     {
         size_input += (i * size_y_increment);
@@ -1572,14 +1649,101 @@ bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos)
 
     if (region_hit(madness_ui, background->pos, background->size))
     {
-        if (madness_ui->mouse_down) {
+        if (madness_ui->mouse_down)
+        {
             // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
             // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
             pos->x += madness_ui->mouse_delta_x;
             pos->y += madness_ui->mouse_delta_y;
+            return true;
         }
     }
 
+    return false;
+}
+
+bool madness_ui_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3)
+{
+
+    bool has_moved = false;
+
+    UI_Node* node1 = madness_ui_get_new_node(madness_ui);
+    node1->pos = *pos1;
+    node1->size.x = 150;
+    node1->size.y = 150;
+    node1->color = COLOR_GREEN;
+    node1->thickness = 1.f;
+    node1->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node1->pos, node1->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos1->x += madness_ui->mouse_delta_x;
+            pos1->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+    UI_Node* node2 = madness_ui_get_new_node(madness_ui);
+    node2->pos = *pos2;
+    node2->size.x = 150;
+    node2->size.y = 150;
+    node2->color = COLOR_RED;
+    node2->thickness = 1.f;
+    node2->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node2->pos, node2->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos2->x += madness_ui->mouse_delta_x;
+            pos2->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+    UI_Node* node3 = madness_ui_get_new_node(madness_ui);
+    node3->pos = *pos3;
+    node3->size.x = 150;
+    node3->size.y = 150;
+    node3->color = COLOR_BLUE;
+    node3->thickness = 1.f;
+    node3->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node3->pos, node3->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos3->x += madness_ui->mouse_delta_x;
+            pos3->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+
+
+    u32 steps = 100;
+    for (u32 i = 0; i <= steps; i++) {
+        UI_Node* background = madness_ui_get_new_node(madness_ui);
+        background->size.x = 10;
+        background->size.y = 10;
+        background->color = madness_ui->editor_style.color;
+
+        float t = (float)i / (float)steps;
+        background->pos = quadratic_bezier(*pos1, *pos2, *pos3, t);
+    }
+
+    return has_moved;
 
 }
 

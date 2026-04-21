@@ -14,12 +14,16 @@
 #include "../core/unit_test.h"
 #include "../core/color_asci.h"
 #include "../core/logger.h"
+#include "../core/id_gen.h"
+
+//MATH
 #include "../core/maths/math_types.h"
 #include "../core/misc_util.h"
 #include "../core/maths/math_lib.h"
 #include "../core/maths/transforms.h"
+#include "../core/maths/bezier.h"
+
 #include "../core/c_string.h"
-#include "../core/id_gen.h"
 
 
 

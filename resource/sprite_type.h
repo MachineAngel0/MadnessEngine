@@ -17,6 +17,7 @@ typedef enum Sprite_Flags
     SPRITE_FLAG_COLOR = BITFLAG(3),
     SPRITE_FLAG_TEXT = BITFLAG(4),
     SPRITE_FLAG_CIRCLE = BITFLAG(5),
+    SPRITE_FLAG_BEZIER = BITFLAG(6), // TODO:
 } Sprite_Flags;
 
 typedef struct Sprite_Data

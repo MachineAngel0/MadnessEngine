@@ -107,7 +107,7 @@ typedef enum UI_Button_State
 
 
 //TODO:  just a temporary value for now, will increase later
-#define MAX_UI_NODE_COUNT 100
+#define MAX_UI_NODE_COUNT 1000
 #define MAX_UI_TEXT_NODE_COUNT 1000
 #define MAX_UI_NODE_CHILD_COUNT 10
 
@@ -122,6 +122,7 @@ typedef struct UI_Node
     // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
+    float rotation; // degrees, but gets converted to radians at draw time
 
     //for circles
     float thickness;
@@ -266,11 +267,23 @@ typedef struct Madness_UI
 
     UI_Layout_Direction layout_direction; // direction to position the ui element
     float element_padding; // space between each ui element
+
+
+    //Material Node
+    bool input_pressed;
+    u32 input_pressed_id;
+    vec2 input_pos;
+    bool output_pressed;
+    u32 output_pressed_id;
+
+
+
 } Madness_UI;
 
 
 // FUNCTION POINTERS //
-typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system, Resource_System* resource_system);
+typedef Madness_UI* (*UI_init)(Memory_System* memory_system, Input_System* input_system,
+                               Resource_System* resource_system);
 typedef bool (*UI_shutdown)(Madness_UI* madness_ui);
 typedef void (*UI_begin)(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
 typedef void (*UI_end)(Madness_UI* madness_ui, Resource_System* resource_system);
@@ -316,9 +329,58 @@ MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness);
 
 
-MAPI bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[], u8 output_size);
+typedef struct Material_Link
+{
+    //nodes that we are connecting to
+    u32 from_id;
+    u32 to_id;
+    //inputs and output links
+    u8 from_node;
+    u8 to_node;
+} Material_Link;
+
+
+typedef struct Material_Node
+{
+    u32 node_id;
+
+    String* inputs;
+    vec2* inputs_positions;
+    Material_Link* inputs_links;
+    int input_size;
+
+    String* outputs;
+    vec2* output_positions;
+    Material_Link* output_links;
+    int output_size;
+} Material_Node;
+
+// simple version
+//press on an node (at the draw location), and store that state,
+//then if we press on another node, we take the data, do some validation and connect the two by drawing a line
+//the ui node function, will handle look at the connections, if there are any and do the drawing of them
+
+// complex version
+// if we press on a node, we set the state to active, then when we let go, if were hovering over another node, we connect the two,
+// and like previosly, if there is a connection, the node itself will handle adding an additional function call
+// might need some additional state, just cause, the node draw order could be random,
+// and we will have no idea, if on a release, we are hovering over another node
+
+MAPI bool madness_ui_node_simple(Madness_UI* madness_ui, const char* id, vec2 pos, String inputs[], u8 input_size,
+                                 String outputs[], u8 output_size, u32 node_id);
+
+MAPI bool madness_ui_node_complex(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
+                          u8 output_size);
+
+
+MAPI bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
+                          u8 output_size);
 
 MAPI bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos);
+
+
+MAPI bool madness_ui_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3);
+
 
 
 //API END

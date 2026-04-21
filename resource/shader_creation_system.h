@@ -52,9 +52,8 @@ typedef enum Shader_Stage
     SHADER_STAGE_VERTEX,
     SHADER_STAGE_FRAGMENT,
     SHADER_STAGE_TESSELATION,
-    //NOTE: idk what geo is, and compute should be its own thing
-    // SHADER_STAGE_GEOMETRY,
-    // SHADER_STAGE_COMPUTE,
+    // SHADER_STAGE_GEOMETRY, // this is never going to be used
+    // SHADER_STAGE_COMPUTE, // ideally compute shaders these should just be hand written and not generated
     SHADER_STAGE_MAX,
 } Shader_Stage;
 
@@ -90,6 +89,7 @@ typedef struct Shader_Param_Handle
     u32 handle;
 } Shader_Param_Handle;
 
+
 #define SHADER_PATH "../renderer/shaders/"
 #define SHADER_TEST_NAME "test_shader"
 
@@ -102,6 +102,8 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
     u64 arena_memory_amount = KB(512);
     void* mem = memory_system_alloc(memory_system, arena_memory_amount, MEMORY_SUBSYSTEM_RESOURCE);
     arena_init(shader_creation_system->frame_arena, mem, arena_memory_amount, NULL);
+
+
 
     return shader_creation_system;
 }

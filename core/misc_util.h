@@ -36,6 +36,13 @@ void print_char(void* data_int)
 //compare function return -1,0,1
 //-1 if a less than b, 0 equal, 1 if a greater than b
 
+typedef enum Compare_Result
+{
+    A_LESS_THAN_B, // A < B
+    EQUAL,
+    B_LESS_THAN_A, // A > B
+} Compare_Result;
+
 int cmp_int(void* a, void* b)
 {
     int A = *(int*) a;

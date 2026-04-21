@@ -8,10 +8,24 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
+
+    editor->editor_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_EDITOR);
+    u64 editor_memory_size = MB(5);
+
+    void* editor_memory = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
+    arena_init(editor->editor_arena, editor_memory, editor_memory_size, NULL);
+
+
+    editor->editor_frame_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_EDITOR);
+    void* editor_memory_frame = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
+    arena_init(editor->editor_frame_arena, editor_memory_frame, editor_memory_size, NULL);
+
+
     editor->renderer = renderer;
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
     editor->state = EDITOR_UI_STATE_DEBUG;
+    // editor->state = EDITOR_UI_STATE_MATERIAL;
 
     return editor;
 }
@@ -50,7 +64,7 @@ void editor_ui(Editor* editor)
         editor_ui_scene(editor);
         break;
     case EDITOR_UI_STATE_MATERIAL:
-    editor_material_nodes(editor);
+        editor_material_nodes(editor);
 
         break;
     case EDITOR_UI_STATE_MAX:
@@ -58,6 +72,10 @@ void editor_ui(Editor* editor)
     }
 }
 
+//testing bezier curves
+static vec2 pos1 = {400,400};
+static vec2 pos2 = {500,600};
+static vec2 pos3 = {500,100};
 
 void editor_ui_debug(Editor* editor)
 {
@@ -106,6 +124,16 @@ void editor_ui_debug(Editor* editor)
 
     madness_ui_float(madness_ui, "thickess", &thick, 1.f);
     madness_ui_circle(madness_ui, "circle", &thick);
+
+    static f32 rot;
+    madness_ui->ui_nodes[0].data->rotation = rot;
+    if (madness_ui_float(madness_ui, "material flags disable", &rot, 15.f))
+    {
+    }
+
+
+
+    madness_ui_bezier(madness_ui, &pos1, &pos2, &pos3);
 }
 
 
@@ -133,8 +161,6 @@ void editor_ui_scene(Editor* editor)
     }
 
     madness_scroll_box_end(madness_ui, "Scene Scroll Box", &scroll_box_state_test);
-
-
 }
 
 void editor_material_nodes(Editor* editor)
@@ -147,4 +173,18 @@ void editor_material_nodes(Editor* editor)
 
     static vec2 pos;
     madness_ui_drag_test(madness_ui, &pos);
+
+    //think of it like a param node
+    madness_ui_node_simple(madness_ui, "node", (vec2){200, 200}, NULL, 0,
+                           output_String, ARRAY_SIZE(output_String), 1);
+
+
+    String inputs_String2[] = {STRING("other in 1"), STRING("other in 2")};
+
+    //takes inputs from the param
+    madness_ui_node_simple(madness_ui, "node", (vec2){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2),
+                           output_String, ARRAY_SIZE(output_String), 2);
+
+    // madness_ui_node_complex(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,
+    // ARRAY_SIZE(output_String));
 }
