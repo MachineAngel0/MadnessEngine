@@ -1662,7 +1662,7 @@ bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos)
     return false;
 }
 
-bool madness_ui_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3)
+bool madness_ui_quadratic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3)
 {
 
     bool has_moved = false;
@@ -1741,6 +1741,110 @@ bool madness_ui_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos
 
         float t = (float)i / (float)steps;
         background->pos = quadratic_bezier(*pos1, *pos2, *pos3, t);
+    }
+
+    return has_moved;
+
+}
+
+bool madness_ui_cubic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3, vec2* pos4)
+{
+
+    bool has_moved = false;
+
+    UI_Node* node1 = madness_ui_get_new_node(madness_ui);
+    node1->pos = *pos1;
+    node1->size.x = 150;
+    node1->size.y = 150;
+    node1->color = COLOR_GREEN;
+    node1->thickness = 1.f;
+    node1->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node1->pos, node1->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos1->x += madness_ui->mouse_delta_x;
+            pos1->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+    UI_Node* node2 = madness_ui_get_new_node(madness_ui);
+    node2->pos = *pos2;
+    node2->size.x = 150;
+    node2->size.y = 150;
+    node2->color = COLOR_RED;
+    node2->thickness = 1.f;
+    node2->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node2->pos, node2->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos2->x += madness_ui->mouse_delta_x;
+            pos2->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+    UI_Node* node3 = madness_ui_get_new_node(madness_ui);
+    node3->pos = *pos3;
+    node3->size.x = 150;
+    node3->size.y = 150;
+    node3->color = COLOR_BLUE;
+    node3->thickness = 1.f;
+    node3->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node3->pos, node3->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos3->x += madness_ui->mouse_delta_x;
+            pos3->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+    UI_Node* node4 = madness_ui_get_new_node(madness_ui);
+    node4->pos = *pos4;
+    node4->size.x = 150;
+    node4->size.y = 150;
+    node4->color = COLOR_MAGENTA;
+    node4->thickness = 1.f;
+    node4->flags = SPRITE_FLAG_CIRCLE;
+
+    if (region_hit(madness_ui, node4->pos, node4->size))
+    {
+        if (madness_ui->mouse_down)
+        {
+            // pos->x = madness_ui->mouse_pos_x - background->size.x/2;
+            // pos->y = madness_ui->mouse_pos_y - background->size.y/2;
+            pos4->x += madness_ui->mouse_delta_x;
+            pos4->y += madness_ui->mouse_delta_y;
+            has_moved =  true;
+        }
+    }
+
+
+    u32 steps = 100;
+    for (u32 i = 0; i <= steps; i++) {
+        UI_Node* background = madness_ui_get_new_node(madness_ui);
+        background->size.x = 10;
+        background->size.y = 10;
+        background->color = madness_ui->editor_style.color;
+
+        float t = (float)i / (float)steps;
+        background->pos = cubic_bezier(*pos1, *pos2, *pos3, *pos4,t);
+        float a= 2;
     }
 
     return has_moved;

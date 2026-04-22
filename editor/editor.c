@@ -76,6 +76,7 @@ void editor_ui(Editor* editor)
 static vec2 pos1 = {400,400};
 static vec2 pos2 = {500,600};
 static vec2 pos3 = {500,100};
+static vec2 pos4 = {600,150};
 
 void editor_ui_debug(Editor* editor)
 {
@@ -133,7 +134,8 @@ void editor_ui_debug(Editor* editor)
 
 
 
-    madness_ui_bezier(madness_ui, &pos1, &pos2, &pos3);
+    // madness_ui_quadratic_bezier(madness_ui, &pos1, &pos2, &pos3);
+    madness_ui_cubic_bezier(madness_ui, &pos1, &pos2, &pos3, &pos4);
 }
 
 

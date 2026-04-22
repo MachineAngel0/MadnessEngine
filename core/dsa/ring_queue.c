@@ -18,6 +18,7 @@ ring_queue* ring_queue_create(u32 data_size, u32 capacity)
 
 void ring_queue_free(ring_queue* queue)
 {
+    MASSERT(queue);
     //TODO: fix this up
     free(queue->data);
     free(queue);
@@ -26,15 +27,21 @@ void ring_queue_free(ring_queue* queue)
 
 void ring_queue_clear(ring_queue* queue)
 {
+    MASSERT(queue);
+    queue->num_items = 0;
+    queue->front = 0;
+    queue->back = -1;
 }
 
 bool ring_queue_is_empty(ring_queue* queue)
 {
+    MASSERT(queue);
     return queue->num_items == 0;
 }
 
 bool ring_queue_is_full(ring_queue* queue)
 {
+    MASSERT(queue);
     return queue->num_items >= queue->capacity;
 }
 
@@ -92,11 +99,14 @@ bool ring_queue_peek(const ring_queue* q, void* out_data)
 
 int ring_queue_size(ring_queue* queue)
 {
-    return 0;
+    MASSERT(queue);
+    return queue->num_items;
 }
 
 void ring_queue_print(ring_queue* queue, void (*print_func)(void*))
 {
+    MASSERT(queue);
+    //TODO:
 }
 
 void ring_queue_test()

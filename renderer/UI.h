@@ -379,7 +379,8 @@ MAPI bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[
 MAPI bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos);
 
 
-MAPI bool madness_ui_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3);
+MAPI bool madness_ui_quadratic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3);
+MAPI bool madness_ui_cubic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2, vec2* pos3, vec2* pos4);
 
 
 
