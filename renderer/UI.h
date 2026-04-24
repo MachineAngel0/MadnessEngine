@@ -23,8 +23,8 @@ typedef struct Material_2D_Param_Data
     u32 texture_index;
 } Material_2D_Param_Data;
 
-#define DEFAULT_FONT_SIZE 48.0f
-#define EDITOR_FONT_SIZE 16.0f
+#define DEFAULT_FONT_SIZE 32.0f
+#define EDITOR_FONT_SIZE 24.0f
 
 //UI
 typedef enum UI_Alignment

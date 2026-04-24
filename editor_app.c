@@ -80,13 +80,17 @@ bool editor_app_run(Editor_Application* editor_app)
     mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                        &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                        renderer_plugin->renderer->resource_system);
-
     /*
         mesh_load_gltf_new(application_core->resource_system->mesh_system,
                            "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
                            &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                            renderer_plugin->renderer->resource_system);
     */
+
+    Texture_Handle delete_handle_later;
+    texture_system_load_msdf_font(application_core->resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png", &delete_handle_later,
+                                  &renderer_plugin->renderer->frame_arena);
+
 
     clock_start(&application_core->clock);
 

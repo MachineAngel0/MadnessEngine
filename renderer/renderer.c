@@ -199,7 +199,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);
 
-
     //TODO: test code, can remove later
     if (input_key_released_unique(renderer->input_system, KEY_U))
     {

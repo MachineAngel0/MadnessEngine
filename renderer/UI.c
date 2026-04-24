@@ -73,11 +73,18 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
 
     //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
     // font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
-    if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf",
-                                  &madness_ui->default_font_handle,
-                                  madness_ui->arena))
+    // if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf",
+    //                               &madness_ui->default_font_handle,
+    //                               madness_ui->arena))
+    // {
+    //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
+    // };
+
+    if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
+                              &madness_ui->default_font_handle,
+                              madness_ui->arena))
     {
-        MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
+        MASSERT_MSG(false, "UI SYSTEM Failed to load default msdf font");
     };
 
 
@@ -502,7 +509,7 @@ void madness_draw_quad(Madness_UI* madness_ui, const char* id, vec2* out_pos, ve
 
 void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position)
 {
-    f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
+    f32 font_scalar = ((madness_ui->editor_font_size) / madness_ui->default_font_size);
 
     Madness_Font font_data;
     texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
@@ -1873,7 +1880,11 @@ void madness_ui_test(Madness_UI* madness_ui)
         FATAL("YOU HAVE PRESSED THE BUTTON OH LORD WHY!");
     }
     madness_button(madness_ui, "test button 3");
-    madness_button(madness_ui, "test button 4;");
+    madness_text(madness_ui, "editor_font_size", STRING("editor_font_size"));
+    madness_ui_float(madness_ui, "editor_font_slider", &madness_ui->editor_font_size, 1.f);
+    madness_text(madness_ui, "default_font_size", STRING("default_font_size"));
+    madness_ui_float(madness_ui, "default_font_slider", &madness_ui->default_font_size, 1.f);
+
     {
         //if we want a layout change, specify so,
         madness_set_layout_direction(madness_ui, UI_LAYOUT_HORIZONTAL);

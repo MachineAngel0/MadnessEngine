@@ -97,6 +97,14 @@ bool ring_queue_peek(const ring_queue* q, void* out_data)
     return true;
 }
 
+void ring_queue_empty(ring_queue* q)
+{
+    MASSERT(q);
+    q->num_items = 0;
+    q->front = 0;
+    q->back = -1;
+}
+
 int ring_queue_size(ring_queue* queue)
 {
     MASSERT(queue);

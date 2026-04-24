@@ -42,6 +42,9 @@ bool ring_dequeue(ring_queue* q, void* out_data);
 
 bool ring_queue_peek(const ring_queue* q, void* out_data);
 
+//
+void ring_queue_empty(ring_queue* q);
+
 void ring_queue_print(ring_queue* queue, void (*print_func)(void*));
 
 void ring_queue_test();

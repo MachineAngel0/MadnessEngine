@@ -3,7 +3,8 @@
 
 Texture_System* texture_system_init(Memory_System* memory_system)
 {
-    Texture_System* texture_system = memory_system_alloc(memory_system, sizeof(Texture_System), MEMORY_SUBSYSTEM_TEXTURE);
+    Texture_System* texture_system = memory_system_alloc(memory_system, sizeof(Texture_System),
+                                                         MEMORY_SUBSYSTEM_TEXTURE);
 
 
     texture_system->in_use_textures_count = 0;
@@ -119,7 +120,6 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
 
 bool texture_system_unload_texture(Texture_System* texture_system, Texture_Handle handle)
 {
-
     if (handle.handle == 0)
     {
         WARN("texture_system_unload_texture: TRIED UNLOADING DEFAULT TEXTURE")
@@ -128,8 +128,6 @@ bool texture_system_unload_texture(Texture_System* texture_system, Texture_Handl
 
     //get the handle for use
     u32 texture_id = handle.handle;
-
-
 
 
     Resource_MetaData* texture_metadata = &texture_system->texture_meta_data[texture_id];
@@ -144,7 +142,6 @@ bool texture_system_unload_texture(Texture_System* texture_system, Texture_Handl
     }
 
     return true;
-
 }
 
 bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Texture* out_texture)
@@ -192,7 +189,6 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     }
 
 
-
     //get a free index
     u32 free_index;
     if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
@@ -228,7 +224,8 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     fclose(font_file);
 
     // Initialize stb_truetype
-    if (!stbtt_InitFont(&font_structure->font_info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
+    stbtt_fontinfo font_info;
+    if (!stbtt_InitFont(&font_info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
     {
         WARN("Failed to initialize font\n");
         free(ttf_buffer);
@@ -236,7 +233,7 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     }
 
     // Generate bitmap atlas
-    float scale = stbtt_ScaleForPixelHeight(&font_structure->font_info, DEFAULT_FONT_CREATION_SIZE);
+    float scale = stbtt_ScaleForPixelHeight(&font_info, DEFAULT_FONT_CREATION_SIZE);
     int atlas_width = 1024 * 4;
     int atlas_height = 1024 * 4;
     char* atlasPixels = arena_alloc(arena, atlas_width * atlas_height);
@@ -245,14 +242,14 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
 
     // Get font metrics for baseline calculation
     int ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&font_structure->font_info, &ascent, &descent, &lineGap);
+    stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &lineGap);
     float baseline = ascent * scale;
 
 
     for (int c = 32; c < 128; c++)
     {
         int width, height, xoff, yoff;
-        unsigned char* bitmap = stbtt_GetCodepointBitmap(&font_structure->font_info, 0, scale, c,
+        unsigned char* bitmap = stbtt_GetCodepointBitmap(&font_info, 0, scale, c,
                                                          &width, &height, &xoff, &yoff);
 
         // Handle atlas overflow
@@ -287,7 +284,7 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
         g->yoff = baseline + yoff; // Adjust for baseline
 
         int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font_structure->font_info, c, &advance, &lsb);
+        stbtt_GetCodepointHMetrics(&font_info, c, &advance, &lsb);
         g->advance = advance * scale;
 
 
@@ -402,5 +399,123 @@ bool texture_system_unload_font(Texture_System* texture_system, Texture_Handle h
 bool texture_system_get_font(Texture_System* texture_system, const Texture_Handle handle, Madness_Font* out_font)
 {
     *out_font = texture_system->font_array[handle.handle];
+    return true;
+}
+
+bool texture_system_load_msdf_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle,
+                                   Frame_Arena* frame_arena)
+{
+    u32 texture_idx;
+
+    //check if the texture has already been loaded in
+    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
+    {
+        out_handle = &texture_system->texture_handles[texture_idx];
+        texture_system->texture_meta_data[texture_idx].reference_count++;
+        return true;
+    }
+
+    if (texture_system->in_use_textures_count >= texture_system->max_textures)
+    {
+        FATAL("MAX TEXTURES REACHED");
+        out_handle = texture_system_get_default_texture(texture_system);
+        return false;
+    }
+
+    //get a free index
+    u32 free_index;
+    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
+    {
+        MASSERT("OUT OF TEXTURE IDX's")
+    }
+    texture_system->in_use_textures_count++;
+
+    //get an available index
+    Resource_MetaData* meta_data = &texture_system->texture_meta_data[free_index];
+    meta_data->type = RESOURCE_FONT;
+    meta_data->id = free_index;
+    meta_data->file_path = file_path;
+    meta_data->reference_count = 1;
+
+
+    *out_handle = texture_system->texture_handles[free_index];
+    Texture* texture = &texture_system->textures_array[free_index];
+    Madness_Font* font_structure = &texture_system->font_array[free_index];
+    texture->handle = *out_handle;
+
+    //add to hash table
+    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
+
+    //load the image data from file
+    int texture_width, texture_height, tex_channels;
+    texture->pixels = stbi_load(file_path, &texture_width, &texture_height, &tex_channels, STBI_rgb_alpha);
+    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
+    texture->width = texture_width; // 4 stride rgba
+    texture->height = texture_height; // 4 stride rgba
+    texture->channels = STBI_rgb_alpha; // 4 stride rgba
+    texture->image_size = texture_width * texture_height * 4; // 4 stride rgba
+    texture->is_font = false;
+
+    MASSERT_MSG(texture->pixels, "FAILED TO LOAD FONT");
+
+    if (!texture->pixels)
+    {
+        WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
+        out_handle = texture_system_get_default_texture(texture_system);
+        return false;
+    }
+
+
+    //used by the renderer to upload to the gpu, then we can free the cpu data
+    ring_enqueue(texture_system->textures_ring_queue, texture);
+
+
+    char* file_name = c_string_ext_strip(file_path, frame_arena);
+    char* csv_path = c_string_concat(file_name, "csv", frame_arena);
+
+    FILE* file = fopen(csv_path, "r");
+    MASSERT(file)
+
+
+    float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
+    float glyph_size = 32.f; // this you would just have to know, or force it based on texture_size
+
+    char buffer[256];
+    float ascender = 0.0f;
+
+    while (fgets(buffer, sizeof(buffer), file))
+    {
+        int index;
+        float advance, bound_left, bound_top, bound_right, bound_bottom, u0, v0, u1, v1;
+
+        int parsed = sscanf(buffer, "%d,%f,%f,%f,%f,%f,%f,%f,%f,%f",
+                            &index,
+                            &advance,
+                            &bound_left, &bound_top, &bound_right, &bound_bottom,
+                            &u0, &v0, &u1, &v1
+        );
+
+        if (bound_top < ascender) { ascender = bound_top; };
+
+        Glyph* g = &font_structure->glyphs[index - GLYPH_START];
+
+        g->advance = advance * glyph_size;
+        g->xoff = bound_left * glyph_size;
+        g->yoff = bound_top * glyph_size;
+        g->width = (bound_right - bound_left) * glyph_size;
+        g->height = (bound_bottom - bound_top) * glyph_size;
+        g->u0 = u0 / texture_size;
+        g->v0 = v0 / texture_size;
+        g->u1 = u1 / texture_size;
+        g->v1 = v1 / texture_size;
+    }
+
+    // bake ascender into yoff so draw_text needs no correction
+    float ascender_px = ascender * 32.0f;
+    for (int i = 0; i < GLYPH_LENGTH; i++)
+    {
+        font_structure->glyphs[i].yoff -= ascender_px;
+    }
+
     return true;
 }

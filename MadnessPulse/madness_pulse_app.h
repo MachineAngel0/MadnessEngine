@@ -1,5 +1,5 @@
-﻿#ifndef MADNESS_PULSE_GAME_H
-#define MADNESS_PULSE_GAME_H
+﻿#ifndef MADNESS_PULSE_APP_H
+#define MADNESS_PULSE_APP_H
 
 
 
@@ -16,4 +16,4 @@ int main()
 
 
 
-#endif //MADNESS_PULSE_GAME_H
+#endif //MADNESS_PULSE_APP_H

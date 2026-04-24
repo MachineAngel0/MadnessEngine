@@ -24,7 +24,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     editor->renderer = renderer;
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
-    editor->state = EDITOR_UI_STATE_DEBUG;
+    editor->state = EDITOR_UI_STATE_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
     return editor;
@@ -66,6 +66,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_MATERIAL:
         editor_material_nodes(editor);
 
+        break;
+    case EDITOR_UI_STATE_UI_TEST:
+        madness_ui_test(editor->madness_ui);
         break;
     case EDITOR_UI_STATE_MAX:
         break;
@@ -131,8 +134,6 @@ void editor_ui_debug(Editor* editor)
     if (madness_ui_float(madness_ui, "material flags disable", &rot, 15.f))
     {
     }
-
-
 
     // madness_ui_quadratic_bezier(madness_ui, &pos1, &pos2, &pos3);
     madness_ui_cubic_bezier(madness_ui, &pos1, &pos2, &pos3, &pos4);

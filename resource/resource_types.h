@@ -93,26 +93,31 @@ typedef struct Texture
 
 
 //FONT/TEXT
-#define DEFAULT_FONT_CREATION_SIZE 128.0f
+#define DEFAULT_FONT_CREATION_SIZE 32.0f
+#define GLYPH_LENGTH 96
+#define GLYPH_START 32
+#define GLYPH_END 128
 
 typedef struct Glyph
 {
-    int width, height;
-    int xoff, yoff;
+    float width, height;
+    float xoff, yoff;
     float advance;
     float u0, v0, u1, v1; // UV coordinates in atlas
 } Glyph;
 
 
+
 //called Madness font cause a linux library uses the struct font
 typedef struct Madness_Font
 {
-    stbtt_fontinfo font_info; // NOTE: idk if i even need to store this
     // float font_creation_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages or non standard characters
-    Glyph glyphs[96]; // idk why this is 96, im assuming for all the ascii characters
+    Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
     Texture_Handle font_texture_handle;
 } Madness_Font;
+
+
 
 
 /// MESH ///

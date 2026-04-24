@@ -40,6 +40,10 @@ void* stack_peek(stack* s);
 void stack_copy_top(stack* s, void* out_data);
 u64 stack_size(const stack* s);
 
+//clears the stack, just sets the num_items = 0
+void stack_empty(stack* s);
+
+
 void stack_print(const stack* s, void (*print_func)(void*));
 
 void stack_test();

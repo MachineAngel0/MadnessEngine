@@ -11,6 +11,7 @@ MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* aren
 
 // Performs string formatting to dest given format string and parameters.
 MAPI char* c_string_path_strip(const char* path, Arena* arena);
+MAPI char* c_string_ext_strip(const char* path, Arena* arena);
 
 
 MAPI char* c_string_path_get_extension(const char* path, Arena* arena);

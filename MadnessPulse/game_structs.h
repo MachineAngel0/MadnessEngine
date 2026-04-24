@@ -5,9 +5,6 @@
 #include "game_enums.h"
 
 
-// ABILITIES //
-
-
 // UNITS //
 
 typedef struct Health_Component
@@ -310,7 +307,16 @@ typedef struct Unit
 } Unit;
 
 
-//GAME MODE
+/// ABILITIES ///
+
+
+
+
+
+
+
+
+/// GAME MODE/STATE ///
 //NOTE: I dont have a decent name for this rn
 typedef enum Madness_Pulse_Game_State
 {
@@ -344,14 +350,15 @@ typedef struct Madness_Pulse_Game
     //MAIN MENU//
     //TODO: Load Save File Meta Data
 
+    //ABILITY SELECT / LEVEL SELECT OPTIONS MENU //
 
-    //ABILITY SELECT//
-
-
-    //Level SELECT//
+    //ABILITY SELECT //
 
 
-    //TURN BASED//
+    //LEVEL SELECT //
+
+
+    //TURN BASED GAME//
 
     //Turn Based States
     Turn_Phase turn_phase;
@@ -370,8 +377,8 @@ typedef struct Madness_Pulse_Game
     u32* turn_queue;
     u32 current_units_turn;
 
-    //TODO: action queue for the game and do and undo those actions
     u32 picked_ability;
+    // Action_Handler* action_handler; // TODO:
 } Madness_Pulse_Game;
 
 #endif //GAME_TYPES_H

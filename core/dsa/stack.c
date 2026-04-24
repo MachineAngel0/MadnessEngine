@@ -121,6 +121,12 @@ u64 stack_size(const stack* s)
     return s->num_items;
 }
 
+void stack_empty(stack* s)
+{
+    MASSERT(s);
+    s->num_items = 0;
+}
+
 void stack_print(const stack* s, void (*print_func)(void*))
 {
     MASSERT(s);

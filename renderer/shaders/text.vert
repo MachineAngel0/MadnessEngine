@@ -13,6 +13,8 @@ layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out flat uint out_texture_idx;
 
+
+
 void main() {
 
     uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
@@ -56,6 +58,5 @@ void main() {
     };
 
     out_uv = uvs[gl_VertexIndex];
-
 
 }

@@ -27,6 +27,7 @@ MAPI bool texture_system_get_font(Texture_System* texture_system, Texture_Handle
 
 
 
+MAPI bool texture_system_load_msdf_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Frame_Arena* frame_arena);
 
 
 #endif //TEXTURE_SYSTEM_H

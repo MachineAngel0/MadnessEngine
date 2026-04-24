@@ -134,7 +134,8 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
         renderer_plugin->ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                                   renderer_plugin->renderer->context.framebuffer_height_new);
-
+        // madness_ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
+                                  // renderer_plugin->renderer->context.framebuffer_height_new);
 
 
 

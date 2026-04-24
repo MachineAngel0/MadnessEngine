@@ -3,13 +3,13 @@
 
 
 // Returns the length of the given string.
-MAPI u64 c_string_length(const char* str)
+ u64 c_string_length(const char* str)
 {
     //does not count the null terminated string
     return strlen(str);
 }
 
-MAPI char* c_string_duplicate(const char* str)
+ char* c_string_duplicate(const char* str)
 {
     u64 length = c_string_length(str);
     char* copy = malloc(length + 1);
@@ -19,7 +19,7 @@ MAPI char* c_string_duplicate(const char* str)
 
 
 //the arena is optional
-MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
+const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
 {
     u64 str1_length = c_string_length(str1);
     u64 str2_length = c_string_length(str2);
@@ -47,7 +47,7 @@ MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* aren
 
 
 // Performs string formatting to dest given format string and parameters.
-MAPI char* c_string_path_strip(const char* path, Arena* arena)
+char* c_string_path_strip(const char* path, Arena* arena)
 {
     MASSERT(path);
 
@@ -56,6 +56,28 @@ MAPI char* c_string_path_strip(const char* path, Arena* arena)
     for (; i > 0; i--)
     {
         if (path[i] == '/')
+        {
+            new_path = arena_alloc(arena, i + 2);
+            memcpy(new_path, path, i + 1);
+            new_path[i + 1] = '\0';
+            return new_path;
+        }
+    }
+
+    //basically was not a valid path string
+    MASSERT_MSG(new_path, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+    return "";
+}
+
+char* c_string_ext_strip(const char* path, Arena* arena)
+{
+    MASSERT(path);
+
+    char* new_path = NULL;
+    size_t i = strlen(path);
+    for (; i > 0; i--)
+    {
+        if (path[i] == '.')
         {
             new_path = arena_alloc(arena, i + 2);
             memcpy(new_path, path, i + 1);
@@ -138,13 +160,13 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 
 // Case-sensitive string comparison. True if the same, otherwise false.
-MAPI bool c_strings_equal(const char* str0, const char* str1)
+ bool c_strings_equal(const char* str0, const char* str1)
 {
     return strcmp(str0, str1) == 0;
 }
 
 // Performs variadic string formatting to dest given format string and va_list.
-MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list)
+ i32 c_string_format_v(char* dest, const char* format, void* va_list)
 {
     if (dest)
     {
@@ -161,7 +183,7 @@ MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list)
 
 
 // Performs string formatting to dest given format string and parameters.
-MAPI i32 c_string_format(char* dest, const char* format, ...)
+ i32 c_string_format(char* dest, const char* format, ...)
 {
     if (dest)
     {

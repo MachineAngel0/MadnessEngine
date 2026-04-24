@@ -11,6 +11,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_DEBUG,
     EDITOR_UI_STATE_SCENE,
     EDITOR_UI_STATE_MATERIAL,
+    EDITOR_UI_STATE_UI_TEST,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
