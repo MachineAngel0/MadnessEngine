@@ -110,7 +110,7 @@ bool UI_app_run(UI_Test_Application* ui_app);
 typedef struct Madness_Pulse_Application
 {
     Application_Core application_core;
-    Renderer_Plugin renderer_application;
+    Renderer_Plugin renderer_plugin;
     Game_Plugin game_application; // TODO: probably gonna have to get changed
 } Madness_Pulse_Application;
 

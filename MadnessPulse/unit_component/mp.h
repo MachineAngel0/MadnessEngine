@@ -15,7 +15,16 @@ MP_Component mp_component_create()
     mp_component.CurrentMP = MP_DEFAULT_AMOUNT;
     mp_component.MaxMP = MP_DEFAULT_AMOUNT;
     mp_component.MaxAllowedMP = mp_component.MaxMP*2;
+    return mp_component;
 }
+
+void mp_component_create_default(MP_Component* mp_component)
+{
+    mp_component->CurrentMP = MP_DEFAULT_AMOUNT;
+    mp_component->MaxMP = MP_DEFAULT_AMOUNT;
+    mp_component->MaxAllowedMP = mp_component->MaxMP*2;
+}
+
 
 
 void ClampMP(MP_Component* mp_component)
@@ -28,13 +37,13 @@ float GetMPPercent(MP_Component* mp_component)
     return mp_component->CurrentMP / mp_component->MaxMP;
 }
 
-void ChangeMP(MP_Component* mp_component, float MPChangeValue)
+void ChangeMP(Unit* unit, MP_Component* mp_component, float MPChangeValue)
 {
     DEBUG("Called Change MP by Amount");
 
-    bool InfiniteMPFlag = UnitOwner->SpecialAbilityFlagComponent->SpecialAbilityFlagList.InfiniteMPFlag;
-    bool PermanentMPFlag = UnitOwner->SpecialAbilityFlagComponent->SpecialAbilityFlagList.PermanentInfiniteMPFlag;
-    bool RampartDestruction = UnitOwner->SpecialAbilityFlagComponent->SpecialAbilityFlagList.RampartTaunt;
+    bool InfiniteMPFlag = unit->special_ability_flag_list_component.InfiniteMPFlag;
+    bool PermanentMPFlag = unit->special_ability_flag_list_component.PermanentInfiniteMPFlag;
+    bool RampartDestruction = unit->special_ability_flag_list_component.RampartTaunt;
 
     // if infinite mp flag is set, then we don't need to do anything
     if (InfiniteMPFlag || PermanentMPFlag)
@@ -97,9 +106,9 @@ bool CanAffordAbilityCost(Unit* caster, MP_Component* mp_component, float MPCost
 {
     // if our mp is greater than the cost, or we have the infinite mp flag on
 
-    bool InfiniteMPFlag = caster->SpecialAbilityFlagComponent->SpecialAbilityFlagList.InfiniteMPFlag;
-    bool PermanentMPFlag = caster->SpecialAbilityFlagComponent->SpecialAbilityFlagList.PermanentInfiniteMPFlag;
-    bool RampartDestruction = caster->SpecialAbilityFlagComponent->SpecialAbilityFlagList.RampartTaunt;
+    bool InfiniteMPFlag = caster->special_ability_flag_list_component.InfiniteMPFlag;
+    bool PermanentMPFlag = caster->special_ability_flag_list_component.PermanentInfiniteMPFlag;
+    bool RampartDestruction = caster->special_ability_flag_list_component.RampartTaunt;
 
 
     //make any adjustments to MP cost based on any set abilities

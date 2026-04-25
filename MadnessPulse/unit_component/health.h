@@ -6,6 +6,7 @@
 #include "game_structs.h"
 
 Health_Component health_component_create();
+void health_component_init_default(Health_Component* health);
 
 
 bool health_component_is_dead(Health_Component* health_component);

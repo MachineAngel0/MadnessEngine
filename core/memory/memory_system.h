@@ -70,7 +70,7 @@ MAPI void memory_system_shutdown(Memory_System* memory_system);
 
 //should only be called by larger subsystems like the renderer, game, or resource system
 MAPI void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
-MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block);
+MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type);
 
 //hand out memory trackers
 MAPI void memory_system_print_subsystem_memory_usage(Memory_System* memory_system);

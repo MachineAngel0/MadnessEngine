@@ -11,12 +11,15 @@
 
 
 
-void action_component_init(Action_Component action)
+void action_component_init_default(Action_Component* action)
 {
-    action.MaxActionsAvailable = MAX_ACTIONS_DEFAULT;
+    action->MaxActionsAvailable = MAX_ACTIONS_DEFAULT;
     //starts off at 0 but the will be increased on units turn start
-    action.ActionsAvailable = 0;
+    action->ActionsAvailable = 0;
 }
+
+
+
 
 void RefreshActionsAvailable(Action_Component* action)
 {

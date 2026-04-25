@@ -25,14 +25,29 @@ Charge_List_Component Charge_List_Component_Create()
     //flat bonuses for things like augments
     Charge_List_Component.ChargePassiveAmount = Charge_Passive;
     Charge_List_Component.HighChargePassiveAmount = High_Charge_Passive;
+    return Charge_List_Component;
+}
+void charge_list_component_create_default(Charge_List_Component* charge_list_component)
+{
+    memset(charge_list_component,0,sizeof(Charge_List_Component));
+    // Charge_State ChargeList[Damage_Type_MAX];
+    // bool ChargeTypesMarkedForReset[Damage_Type_MAX];
+
+    //percent based bonus
+    charge_list_component->ChargeDamagePercent = Charge_Percent;
+    charge_list_component->HighChargeDamagePercent = High_Charge_Percent;
+
+    //flat bonuses for things like augments
+    charge_list_component->ChargePassiveAmount = Charge_Passive;
+    charge_list_component->HighChargePassiveAmount = High_Charge_Passive;
 }
 
-
-void AppendChargeStates(Charge_List_Component* charge_list_component, TMap<EDamageType, EChargeState> ElementToChargeType)
+/*
+void charge_list_component_append_charge_states(Charge_List_Component* charge_list_component, TMap<EDamageType, EChargeState> ElementToChargeType)
 {
     for (const auto& NewChargeType : ElementToChargeType)
     {
-        ChargeList[NewChargeType.Key] = NewChargeType.Value;
+        charge_list_component->charge_list[NewChargeType.Key] = NewChargeType.Value;
     }
 }
 
@@ -61,7 +76,7 @@ int ReturnChargePassive(Charge_List_Component* charge_list_component,const Damag
     // I want status Triggers to have charge applied to them too
     //we return charge type and then in the action manager we call clear charge list, if any charge was used
 
-    switch (charge_list_component->ChargeList[damage_type])
+    switch (charge_list_component->charge_list[damage_type])
     {
     case Charge_State_None:
         return 0;
@@ -94,6 +109,6 @@ void BroadcastChargeStates(Charge_List_Component* charge_list_component)
         OnCharge.Broadcast(List.Key, List.Value);
     }
 }
-
+*/
 
 #endif

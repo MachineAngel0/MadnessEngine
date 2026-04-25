@@ -81,7 +81,7 @@ typedef struct Resistance_Stats_Component
 
 typedef struct Status_Stat_Component
 {
-    float StatusInfo[Damage_Type_MAX];
+    f32 StatusInfo[Damage_Type_MAX];
     /*=
     {
             {EDamageType::ECS_Physical, 0},
@@ -95,7 +95,7 @@ typedef struct Status_Stat_Component
             {EDamageType::ECS_Insanity, 0},
         };*/
 
-    float StatusThreshold[Damage_Type_MAX];
+    f32 StatusThreshold[Damage_Type_MAX];
     /*=
     {
             {EDamageType::ECS_Physical, 100},
@@ -109,13 +109,13 @@ typedef struct Status_Stat_Component
             {EDamageType::ECS_Insanity, 100},
         };*/
 
-    float LowerClampValue;
-    float UpperClampValue;
+    f32 LowerClampValue;
+    f32 UpperClampValue;
 
-    int StatusTriggerOccurrence;
+    i32 StatusTriggerOccurrence;
 
-    float LowerThresholdClampValue;
-    float UpperThresholdClampValue;
+    f32 LowerThresholdClampValue;
+    f32 UpperThresholdClampValue;
 } Status_Stat_Component;
 
 typedef struct Character_Flags_Component
@@ -145,7 +145,7 @@ typedef struct Inventory_Component
 typedef struct Conjure_List_Component
 {
     bool active_conjure_list[Conjure_Type_Max]; // tells us if a conjure type is active
-    bool KillPlayer; // this could potentially be a flag on the unit ex: bool Conjure_Kill_Flag)
+    bool kill_player; // this could potentially be a flag on the unit ex: bool Conjure_Kill_Flag)
 } Conjure_List_Component;
 
 
@@ -178,7 +178,7 @@ typedef struct Reversal_List_Component
 
 typedef struct Charge_List_Component
 {
-    Charge_State ChargeList[Damage_Type_MAX];
+    Charge_State charge_list[Damage_Type_MAX];
     /*=
 {
         {EDamageType::ECS_Physical, EChargeState::ECS_None},
@@ -243,9 +243,9 @@ typedef struct SpecialAbilityFlagList
 
 typedef struct Unit
 {
-    Character_Type CharacterType;
+    Character_Type character_type;
     Character_Name name;
-    Character_State CharacterState;
+    Character_State character_state;
 
     Action_Component action_component;
     Health_Component health_component;
@@ -254,12 +254,12 @@ typedef struct Unit
 
     Augment_Component augment_component;
     Resistance_Stats_Component resistance_stats_component;
-    Status_Stat_Component StatusStatComponent;
-    Conjure_List_Component ConjureDeathListComponent;
-    Reversal_List_Component ReversalListComponent;
+    Status_Stat_Component status_stat_component;
+    Conjure_List_Component conjure_death_list_component;
+    Reversal_List_Component reversal_list_component;
     // UBattleTurnInformation BattleTurnInformationComponent;
-    Charge_List_Component ChargeListComponent;
-    Special_Ability_Flag_List_Component SpecialAbilityFlagComponent;
+    Charge_List_Component charge_list_component;
+    Special_Ability_Flag_List_Component special_ability_flag_list_component;
 
 
     /*
@@ -320,11 +320,11 @@ typedef struct Unit
 //NOTE: I dont have a decent name for this rn
 typedef enum Madness_Pulse_Game_State
 {
-    Game_State_Enum_None,
     Game_State_Enum_Main_Menu,
     Game_State_Enum_Ability_Select,
     Game_State_Enum_Level_Select,
     Game_State_Enum_Turn_Based,
+    Game_State_Enum_MAX,
 } Madness_Pulse_Game_State;
 
 typedef enum Main_Menu_State
@@ -340,8 +340,12 @@ typedef struct Madness_Pulse_Game
     Arena arena;
     // Arena Current_State_Arena; //NOTE: to release data specific to the game state, but not unload literally everything
     Frame_Arena frame_arena;
-    Resource_System* resource_system; // ref
-    Madness_UI* madness_ui; // ref
+
+    //refs
+    Resource_System* resource_system;
+    Madness_UI* madness_ui;
+    Event_System* event_system;
+    Input_System* input_system;
 
 
     Madness_Pulse_Game_State game_state;
@@ -363,6 +367,7 @@ typedef struct Madness_Pulse_Game
     //Turn Based States
     Turn_Phase turn_phase;
     Turn_Based_UI_States ui_state;
+
 
     //PLAYER AND ENEMY UNTIS
 #define MAX_PLAYER_COUNT 4

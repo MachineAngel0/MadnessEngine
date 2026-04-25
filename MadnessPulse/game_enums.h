@@ -282,6 +282,7 @@ typedef enum Conjure_Type
     Conjure_Type_IceDemon,
     Conjure_Type_MiracleDemon,
     Conjure_Type_DamageDemon,
+    //TODO: add all the other ones I intend to have
     Conjure_Type_Max,
 } Conjure_Type;
 

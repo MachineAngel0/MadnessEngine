@@ -55,7 +55,7 @@ void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size,
     return arena_free_list_alloc(&memory_system->application_arena_free_list, memory_request_size);
 }
 
-void memory_system_memory_free(Memory_System* memory_system, void* memory_block)
+void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type)
 {
     MASSERT(memory_system);
     MASSERT(memory_block);

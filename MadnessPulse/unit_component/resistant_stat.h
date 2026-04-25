@@ -6,66 +6,66 @@
 #include "game_structs.h"
 
 
+void Resistance_Stats_Component_init_default(Resistance_Stats_Component* resistance_component)
+{
+    for (int i = 0; i < Damage_Type_MAX; ++i)
+    {
+        resistance_component->Resistance[i] = Resistance_Type_Neutral;
+    }
+}
+
 Resistance_Type ReturnResistanceType(Resistance_Stats_Component* resistance_component, Damage_Type DamageType)
 {
-    if(Resistance.Contains(DamageType))
-    {
-        return Resistance[DamageType];
-    }
-    return EResistanceType::ECS_Neutral;
+    return resistance_component->Resistance[DamageType];
 }
 
-float ReturnResistanceValue(Resistance_Stats_Component* resistance_component, Damage_Type DamageType)
-{
-    if(Resistance.Contains(DamageType))
-    {
-        return CalculateResistanceValue(Resistance[DamageType]);
-    }
-    return 1.0f;
-}
-
-bool IsDamageTypeRedirectOrSpread(Resistance_Stats_Component* resistance_component, const Damage_Type DamageType)
-{
-    if(Resistance.Contains(DamageType))
-    {
-        return Resistance[DamageType] == EResistanceType::ECS_Redirect || Resistance[DamageType] == EResistanceType::ECS_Spread;
-    }
-
-
-    return false;
-}
-
-static float CalculateResistanceValue(Resistance_Stats_Component* resistance_component, Resistance_Type ResistanceType)
+static float CalculateResistanceValue(Resistance_Type ResistanceType)
 {
     switch (ResistanceType)
     {
-    case(EResistanceType::ECS_SuperWeak):
+    case(Resistance_Type_SuperWeak):
         return 1.4f;
-    case(EResistanceType::ECS_Weak):
+    case(Resistance_Type_Weak):
         return 1.2f;
-    case(EResistanceType::ECS_Neutral):
+    case(Resistance_Type_Neutral):
         return 1.0f;
-    case(EResistanceType::ECS_Strong):
+    case(Resistance_Type_Strong):
         return 0.8f;
-    case(EResistanceType::ECS_Resistant):
+    case(Resistance_Type_Resistant):
         return 0.7f;
     default:
         return 1.0f;
     }
 }
 
+float ReturnResistanceValue(Resistance_Stats_Component* resistance_component, Damage_Type DamageType)
+{
+    return CalculateResistanceValue(resistance_component->Resistance[DamageType]);
+}
+
+bool IsDamageTypeRedirectOrSpread(Resistance_Stats_Component* resistance_component, const Damage_Type DamageType)
+{
+    return resistance_component->Resistance[DamageType] == Resistance_Type_Redirect
+        || resistance_component->Resistance[DamageType] == Resistance_Type_Spread;
+}
+
 void ChangeResistanceType(Resistance_Stats_Component* resistance_component, Damage_Type DamageType,
                           Resistance_Type NewResistanceType)
 {
-	Resistance[DamageType] = NewResistanceType;
+    resistance_component->Resistance[DamageType] = NewResistanceType;
 }
 
-void ChangeAllResistancesToType(Resistance_Stats_Component* resistance_component, Resistance_Type NewResistanceType)
+void ChangeAllResistancesToType(Resistance_Stats_Component* resistance_component, Resistance_Type new_resistance_type)
 {
-    for (TPair<EDamageType, EResistanceType> Conditional : Resistance)
+    for (int i = 0; i < Damage_Type_MAX; ++i)
     {
-        Resistance[Conditional.Key] = NewResistanceType;
+        resistance_component->Resistance[i] = new_resistance_type;
     }
+
+    // for (TPair<EDamageType, EResistanceType> Conditional : Resistance)
+    // {
+    // Resistance[Conditional.Key] = new_resistance_type;
+    // }
 }
 
 

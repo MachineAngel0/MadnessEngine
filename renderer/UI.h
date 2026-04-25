@@ -449,4 +449,13 @@ MAPI bool is_active(Madness_UI* madness_ui, int id);
 MAPI bool is_hot(Madness_UI* madness_ui, int id);
 
 
+
+
+
+
+
+
+
+
+
 #endif //UI_H

@@ -34,7 +34,7 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 {
 
     MASSERT(mesh_system);
-    memory_system_memory_free(memory_system, mesh_system);
+    memory_system_memory_free(memory_system, mesh_system, MEMORY_SUBSYSTEM_MESH);
 
     mesh_system = NULL;
 

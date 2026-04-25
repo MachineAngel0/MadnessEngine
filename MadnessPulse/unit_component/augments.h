@@ -16,7 +16,8 @@ Augment_Component augment_component_create()
 {
     Augment_Component augment_component;
 
-    augment_component.StatusPoints = {0};
+    //TODO:
+    // augment_component.StatusPoints = 0;
     augment_component.damage_points = 0;
     augment_component.negation_points = 0;
 
@@ -25,6 +26,21 @@ Augment_Component augment_component_create()
 
     augment_component.StatusUpperLimitPoints = STATUS_UPPER_LIMITS;
     augment_component.StatusLowerLimitPoints = STATUS_LOWER_LIMITS;
+    return augment_component;
+}
+
+void augment_component_create_default(Augment_Component* augment_component)
+{
+    //TODO:
+    // augment_component.StatusPoints = 0;
+    augment_component->damage_points = 0;
+    augment_component->negation_points = 0;
+
+    augment_component->DamageAndNegationUpperLimitPoints = DAMAGE_AND_NEGATION_UPPER_LIMITS;
+    augment_component->DamageAndNegationLowerLimitPoints = DAMAGE_AND_NEGATION_LOWER_LIMITS;
+
+    augment_component->StatusUpperLimitPoints = STATUS_UPPER_LIMITS;
+    augment_component->StatusLowerLimitPoints = STATUS_LOWER_LIMITS;
 }
 
 

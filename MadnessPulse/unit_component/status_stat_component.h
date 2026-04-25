@@ -5,13 +5,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-
 Status_Stat_Component Status_Stat_Component_create()
 {
-    Status_Stat_Component status_stat_component;
+    Status_Stat_Component status_stat_component = {0};
 
-    status_stat_component.StatusInfo[Damage_Type_MAX] = {0};
-    status_stat_component.StatusThreshold[Damage_Type_MAX]= {0};
+    // status_stat_component.StatusInfo[Damage_Type_MAX] = {0};
+    // status_stat_component.StatusThreshold[Damage_Type_MAX] = {0};
 
     status_stat_component.LowerClampValue = 0.0f;
     status_stat_component.UpperClampValue = 1000.0f; // this is just an arbitrary value
@@ -21,117 +20,146 @@ Status_Stat_Component Status_Stat_Component_create()
     status_stat_component.LowerThresholdClampValue = 1.0f;
     // I dont know how low I actually want to let this go, 50 lowest maybe?
     status_stat_component.UpperThresholdClampValue = 10000.0f;
+
+    return status_stat_component;
 }
+
+void Status_Stat_Component_init_default(Status_Stat_Component* status_stat_component)
+{
+    memset(status_stat_component, 0, sizeof(Status_Stat_Component));
+    //TODO: This is so fucking wrong
+    // status_stat_component->StatusInfo[Damage_Type_MAX];
+    // status_stat_component->StatusThreshold[Damage_Type_MAX];
+
+    status_stat_component->LowerClampValue = 0.0f;
+    status_stat_component->UpperClampValue = 1000.0f; // this is just an arbitrary value
+
+    status_stat_component->StatusTriggerOccurrence = 0;
+
+    status_stat_component->LowerThresholdClampValue = 1.0f;
+    // I dont know how low I actually want to let this go, 50 lowest maybe?
+    status_stat_component->UpperThresholdClampValue = 10000.0f;
+}
+
 
 //utility
 void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component, const Damage_Type StatusTypeToCheck)
 {
-    StatusInfo[StatusTypeToCheck] = FMath::Clamp(StatusInfo[StatusTypeToCheck], LowerClampValue, UpperClampValue);
-    StatusInfo[StatusTypeToCheck] = FMath::TruncToInt32(StatusInfo[StatusTypeToCheck]);
+    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
+        status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
+        status_stat_component->UpperClampValue);
+    //truncate the value
+    status_stat_component->StatusInfo[StatusTypeToCheck] = (u32)status_stat_component->StatusInfo[StatusTypeToCheck];
 }
 
 void ClampStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusTypeToCheck)
 {
-    StatusThreshold[StatusTypeToCheck] = FMath::Clamp(StatusThreshold[StatusTypeToCheck], LowerThresholdClampValue,
-                                                      UpperThresholdClampValue);
+    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
+        status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
+        status_stat_component->UpperClampValue);
 }
 
 //build-ups
 void ChangeStatusBuildUp(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
                          const float StatusChangeValue)
 {
-    StatusInfo[StatusType] += StatusChangeValue;
+    status_stat_component->StatusInfo[StatusType] += StatusChangeValue;
 
-    while (StatusInfo[StatusType] >= StatusThreshold[StatusType])
+    while (status_stat_component->StatusInfo[StatusType] >= status_stat_component->StatusThreshold[StatusType])
     {
-        StatusInfo[StatusType] -= StatusThreshold[StatusType];
-        StatusTriggerOccurrence++;
+        status_stat_component->StatusInfo[StatusType] -= status_stat_component->StatusThreshold[StatusType];
+        status_stat_component->StatusTriggerOccurrence++;
     }
-    UE_LOG(Log_Status, Warning, TEXT("Status Trigger Occurence #: %d for: %s"), StatusTriggerOccurrence,
-           *GetOwner()->GetName());
-    ClampAndTruncateStatusBuildup(StatusType);
+    // UE_LOG(Log_Status, Warning, TEXT("Status Trigger Occurence #: %d for: %s"), status_stat_component->StatusTriggerOccurrence,
+    // *GetOwner()->GetName());
+    ClampAndTruncateStatusBuildup(status_stat_component, StatusType);
 }
 
 void ChangeStatusBuildUpByPercent(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
                                   const float StatusChangePercent)
 {
-    StatusInfo[StatusType] += StatusThreshold[StatusType] * StatusChangePercent;
-    while (StatusInfo[StatusType] >= StatusThreshold[StatusType])
+    status_stat_component->StatusInfo[StatusType] += status_stat_component->StatusThreshold[StatusType] *
+        StatusChangePercent;
+    while (status_stat_component->StatusInfo[StatusType] >= status_stat_component->StatusThreshold[StatusType])
     {
-        StatusInfo[StatusType] -= 100.f;
-        StatusTriggerOccurrence++;
+        status_stat_component->StatusInfo[StatusType] -= 100.f;
+        status_stat_component->StatusTriggerOccurrence++;
     }
-    ClampAndTruncateStatusBuildup(StatusType);
+    ClampAndTruncateStatusBuildup(status_stat_component, StatusType);
 }
 
 float ReturnStatusChangeByPercent(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
                                   float StatusChangePercent)
 {
-    return StatusThreshold[StatusType] * StatusChangePercent;
+    return status_stat_component->StatusThreshold[StatusType] * StatusChangePercent;
 }
 
 void SetStatusBuildUpToSpecificPercent(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
                                        const float StatusChangeToSetTo)
 {
-    StatusInfo[StatusType] = StatusThreshold[StatusType] * StatusChangeToSetTo; // 100 * .7 = 70%
-    ClampAndTruncateStatusBuildup(StatusType);
+    status_stat_component->StatusInfo[StatusType] = status_stat_component->StatusThreshold[StatusType] *
+        StatusChangeToSetTo; // 100 * .7 = 70%
+    ClampAndTruncateStatusBuildup(status_stat_component, StatusType);
 }
 
 
 void ResetStatusBuildUp(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReset)
 {
-    StatusInfo[StatusTypeToReset] = 0;
+    status_stat_component->StatusInfo[StatusTypeToReset] = 0;
 }
 
 float ReturnDivisionValueBasedOnStatusBuildUp(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
                                               float DivisionValue)
 {
-    return StatusInfo[StatusType] / DivisionValue;
+    return status_stat_component->StatusInfo[StatusType] / DivisionValue;
 }
 
 float ReturnStatusChangeToZero(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReset)
 {
-    return StatusInfo[StatusTypeToReset];
+    return status_stat_component->StatusInfo[StatusTypeToReset];
 }
 
 float ReturnBuildUpPercentByType(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReturn)
 {
-    return StatusInfo[StatusTypeToReturn] / StatusThreshold[StatusTypeToReturn];
+    return status_stat_component->StatusInfo[StatusTypeToReturn] / status_stat_component->StatusThreshold[
+        StatusTypeToReturn];
 }
 
-float ReturnBuildUpNonDecimalPercentByType(Status_Stat_Component* status_stat_component,
-                                           Damage_Type StatusTypeToReturn)
+int ReturnBuildUpNonDecimalPercentByType(Status_Stat_Component* status_stat_component,
+                                         Damage_Type StatusTypeToReturn)
 {
-    return FMath::TruncToInt((StatusInfo[StatusTypeToReturn] / StatusThreshold[StatusTypeToReturn]) * 100);
+    return (status_stat_component->StatusInfo[StatusTypeToReturn] / status_stat_component->StatusThreshold[
+        StatusTypeToReturn]) * 100;
 }
 
 
 //status trigger
 void ResetStatusTriggerOccurence(Status_Stat_Component* status_stat_component)
 {
-    StatusTriggerOccurrence = 0;
+    status_stat_component->StatusTriggerOccurrence = 0;
 }
 
 //threshold change
 void ChangeStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
                            const float StatusChangeValue)
 {
-    StatusThreshold[StatusType] += StatusChangeValue;
-    ClampStatusThreshold(StatusType);
+    status_stat_component->StatusThreshold[StatusType] += StatusChangeValue;
+    ClampStatusThreshold(status_stat_component, StatusType);
 }
 
 void SetStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
                         const float StatusChangeValue)
 {
-    StatusThreshold[StatusType] += StatusThreshold[StatusType] * StatusChangeValue;
-    ClampStatusThreshold(StatusType);
+    status_stat_component->StatusThreshold[StatusType] += status_stat_component->StatusThreshold[StatusType] *
+        StatusChangeValue;
+    ClampStatusThreshold(status_stat_component, StatusType);
 }
 
 void SetStatusByMultiplication(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
                                float StatusChangeValue)
 {
-    StatusThreshold[StatusType] *= StatusChangeValue;
-    ClampStatusThreshold(StatusType);
+    status_stat_component->StatusThreshold[StatusType] *= StatusChangeValue;
+    ClampStatusThreshold(status_stat_component, StatusType);
 }
 
 

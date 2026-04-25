@@ -3,7 +3,6 @@
 #include <stdbool.h>
 
 //NOTE: Testing a shader creation system for funs and learning
-
 typedef enum Shader_Type
 {
     SHADER_TYPE_U32,
@@ -228,6 +227,9 @@ bool shader_creation_system_test(Shader_Creation_System* shader_creation_system)
     shader_creation_system_addition(shader_creation_system, "wind_output",  wind_speed, wind_direction);
 
     shader_creation_system_shader_end(shader_creation_system);
+
+
+
 }
 
 

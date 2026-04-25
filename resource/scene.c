@@ -24,8 +24,8 @@ Scene* scene_init(Memory_System* memory_system)
 bool scene_shutdown(Scene* scene, Memory_System* memory_system)
 {
     MASSERT(scene);
-    memory_system_memory_free(memory_system, scene->transforms);
-    memory_system_memory_free(memory_system, scene);
+    memory_system_memory_free(memory_system, scene->transforms, MEMORY_SUBSYSTEM_RESOURCE);
+    memory_system_memory_free(memory_system, scene, MEMORY_SUBSYSTEM_RESOURCE);
 
     scene = NULL;
     return true;

@@ -186,6 +186,8 @@ static bool texture_flip = false;
 
 void renderer_update(Renderer* renderer, float delta_time)
 {
+    MASSERT(renderer);
+
     //NOTE: only duplicate resources which are uploaded from the cpu to the gpu, not anything that lives on the gpu like textures
     // this includes, command buffers, sync objects, and cpu side uniform buffers
     // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,

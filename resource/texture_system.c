@@ -41,7 +41,7 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
 {
     //TODO: unload all the textures and dsa's;
     MASSERT(texture_system);
-    memory_system_memory_free(memory_system, texture_system);
+    memory_system_memory_free(memory_system, texture_system, MEMORY_SUBSYSTEM_TEXTURE);
 
     return true;
 }

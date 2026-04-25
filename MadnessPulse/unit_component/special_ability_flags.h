@@ -10,6 +10,12 @@ Special_Ability_Flag_List_Component special_ability_flag_list_component_create()
     return special_ability_flag_list;
 }
 
+void special_ability_flag_list_component_create_default(Special_Ability_Flag_List_Component* special_ability_flag_list)
+{
+    memset(special_ability_flag_list, 0, sizeof(Special_Ability_Flag_List_Component));
+}
+
+
 void SetFlags(Special_Ability_Flag_List_Component* units_list, Special_Ability_Flag_List_Component flags_to_set)
 {
     if (flags_to_set.BlackSun)

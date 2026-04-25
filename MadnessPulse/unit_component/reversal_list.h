@@ -10,6 +10,11 @@ Reversal_List_Component Reversal_List_Component_create()
     return reversal_list_component;
 }
 
+void reversal_list_component_create_default(Reversal_List_Component* reversal_list_component)
+{
+    memset(reversal_list_component, 0, sizeof(Reversal_List_Component));
+}
+
 void ClearReversalList(Reversal_List_Component* reversal_list)
 {
     memset(reversal_list, 0, sizeof(Reversal_List_Component));

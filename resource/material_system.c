@@ -13,7 +13,7 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 {
     MASSERT(material_system);
 
-    memory_system_memory_free(memory_system, material_system);
+    memory_system_memory_free(memory_system, material_system, MEMORY_SUBSYSTEM_RESOURCE);
 
     return true;
 }

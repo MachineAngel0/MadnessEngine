@@ -47,7 +47,7 @@ bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_
 {
 
     MASSERT(sprite_system);
-    memory_system_memory_free(memory_system, sprite_system);
+    memory_system_memory_free(memory_system, sprite_system, MEMORY_SUBSYSTEM_SPRITE);
 
     sprite_system = NULL;
 

@@ -4,7 +4,19 @@
 #include "game_enums.h"
 #include "game_structs.h"
 
-void conjure_death_list_add_death_condition(Conjure_List_Component* conjure_death_list_component, const Conjure_Type ConjureTypeToAdd)
+
+void conjure_death_list_create_default(Conjure_List_Component* conjure_death_list_component)
+{
+    for (u32 i = 0; i < Conjure_Type_Max; ++i)
+    {
+        conjure_death_list_component->active_conjure_list[i]; // tells us if a conjure type is active
+    }
+    conjure_death_list_component->kill_player;
+    // this could potentially be a flag on the unit ex: bool Conjure_Kill_Flag)
+}
+
+void conjure_death_list_add_death_condition(Conjure_List_Component* conjure_death_list_component,
+                                            const Conjure_Type ConjureTypeToAdd)
 {
     conjure_death_list_component->active_conjure_list[ConjureTypeToAdd] = true;
 }
@@ -12,10 +24,10 @@ void conjure_death_list_add_death_condition(Conjure_List_Component* conjure_deat
 //Kill player is to be set when a death condition is triggered, will be reset right after the player is killed
 void CheckKillPlayerCondition(Conjure_List_Component* conjure_death_list_component, Unit* Caster)
 {
-    if (!conjure_death_list_component->KillPlayer)
+    if (!conjure_death_list_component->kill_player)
         return;
     // Caster->HealthComponent->HealthToZero();
-    conjure_death_list_component->KillPlayer = false;
+    conjure_death_list_component->kill_player = false;
 }
 
 bool conjure_is_active(Conjure_List_Component* conjure_death_list_component, const Conjure_Type conjure_type)

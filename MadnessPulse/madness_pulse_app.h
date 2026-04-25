@@ -7,7 +7,7 @@
 
 int main()
 {
-    Madness_Pulse_Application madness_pulse_app;
+    Madness_Pulse_Application madness_pulse_app = {0};
     madness_pulse_run(&madness_pulse_app);
 
     return 0;
