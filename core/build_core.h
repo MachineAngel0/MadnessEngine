@@ -76,3 +76,6 @@
 #include "../core/dsa/unions.h"
 
 
+//CORE - Compiler
+#include "../core/compiler/compiler_test_file.h"
+#include "../core/compiler/compiler.h"

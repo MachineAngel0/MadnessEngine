@@ -13,6 +13,11 @@ static Editor_Application* app_internal;
 
 bool editor_app_run(Editor_Application* editor_app)
 {
+
+    //TODO: testing lexer/parser stuff
+    lexer_test();
+
+
     app_internal = editor_app;
     Application_Core* application_core = &editor_app->application_core;
     Renderer_Plugin* renderer_plugin = &editor_app->renderer_plugin;
@@ -87,6 +92,10 @@ bool editor_app_run(Editor_Application* editor_app)
                            renderer_plugin->renderer->resource_system);
     */
 
+    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
+
+
+
     clock_start(&application_core->clock);
 
     //set up file watch
@@ -122,12 +131,15 @@ bool editor_app_run(Editor_Application* editor_app)
 
         madness_ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                          renderer_plugin->renderer->context.framebuffer_height_new);
-
+        insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
+                             renderer_plugin->renderer->context.framebuffer_height_new);
 
         editor_update(editor_plugin->editor);
 
 
         madness_ui_end(renderer_plugin->madness_ui, application_core->resource_system);
+        insanity_ui_end(application_core->resource_system);
+
         resource_system_update_and_create_render_packet(application_core->resource_system);
 
 

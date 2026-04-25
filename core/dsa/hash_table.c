@@ -117,7 +117,7 @@ bool hash_table_contains(hash_table* h, const char* key_str)
 
 bool hash_table_get(hash_table* h, const char* key_str, void* out_data)
 {
-    MASSERT_MSG(h && key_str, "HASH MAP STRING SET: INVALID PARAMS");
+    MASSERT_MSG(h && key_str, "HASH TABLE STRING SET: INVALID PARAMS");
 
     u64 string_size = strlen(key_str);
 

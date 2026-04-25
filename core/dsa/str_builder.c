@@ -50,6 +50,8 @@ void string_builder_append_string(String_Builder* str_builder, String* s)
     {
         u64 length_requested = str_builder->current_length + s->length;
         u64 new_capacity = str_builder->capacity * 2;
+        //if we are still less than the requested length, then allocate to the size of the requested length
+        // otherwise just double
         if (new_capacity < length_requested)
         {
             str_builder->str = realloc(str_builder->str, length_requested);
@@ -91,6 +93,33 @@ void string_builder_append_char(String_Builder* str_builder, const char* word, c
     str_builder->current_length += word_size;
 }
 
+void string_builder_append_single_char(String_Builder* str_builder, const char* word)
+{
+    //check if we have enough space
+    if (str_builder->current_length + 1 > str_builder->capacity)
+    {
+        u64 length_requested = str_builder->current_length + 1;
+        u64 new_capacity = str_builder->capacity * 2;
+        if (new_capacity < length_requested)
+        {
+            str_builder->str = realloc(str_builder->str, length_requested);
+            str_builder->capacity = length_requested;
+        }
+        else
+        {
+            str_builder->str = realloc(str_builder->str, new_capacity);
+            str_builder->capacity = new_capacity;
+        }
+    };
+
+    //copy the word into the string
+    memcpy(str_builder->str + str_builder->current_length, word, 1);
+    str_builder->current_length += 1;
+
+
+}
+
+
 void string_builder_decrement(String_Builder* str_builder)
 {
     //check for valid pointer and that we can decrement a valid length of string
@@ -113,6 +142,32 @@ String* string_builder_to_c_string(const String_Builder* builder)
 {
     UNIMPLEMENTED();
     return NULL;
+}
+
+void string_builder_empty(String_Builder* builder)
+{
+    builder->current_length = 0;
+}
+
+bool string_builder_compare_with_char(String_Builder* builder, const char* word, u64 word_size)
+{
+
+    if (builder->current_length != word_size)
+    {
+        return false;
+    }
+
+    for (u64 i = 0; i < word_size; i++)
+    {
+        if (builder->str[i] != word[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+
+
 }
 
 #define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_char(builder, string, sizeof(string)-1)

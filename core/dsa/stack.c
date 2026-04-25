@@ -1,12 +1,22 @@
 ﻿#include "stack.h"
 
 //TODO: test arena functions
-stack* stack_create_malloc(const u64 stride, const u64 capacity)
+stack* stack_create(const u64 stride, const u64 capacity, Arena* arena)
 {
-    stack* s = malloc(sizeof(stack));
-    memset(s, 0, sizeof(stack));
-    s->data = malloc(stride * capacity);
-    memset(s->data, 0, stride * capacity);
+    stack* s;
+    if (arena)
+    {
+         s = arena_alloc(arena, sizeof(stack));
+        s->data = arena_alloc(arena, stride * capacity);
+    }
+    else
+    {
+        s = malloc(sizeof(stack));
+        memset(s, 0, sizeof(stack));
+        s->data = malloc(stride * capacity);
+        memset(s->data, 0, stride * capacity);
+    }
+
 
     s->stride = stride;
     s->capacity = capacity;
@@ -15,30 +25,21 @@ stack* stack_create_malloc(const u64 stride, const u64 capacity)
     return s;
 }
 
-stack* stack_create_arena(Arena* arena, const u64 stride, const u64 capacity)
-{
-    stack* s = arena_alloc(arena, sizeof(stack));
-    s->data = arena_alloc(arena, stride * capacity);
 
-    s->stride = stride;
-    s->capacity = capacity;
-    s->num_items = 0;
-
-    return s;
-}
 
 //not worth it
 // #define STACK_CREATE (arena, type, capacity) stack_create_arena(arena, sizeof(type), capacity)
 
 //only use if allocated with malloc
-void stack_free(stack* s)
+void stack_free(stack* s, Arena* arena)
 {
     MASSERT(s);
-    if (!s)
+    if (arena)
     {
-        WARN("STACK FREE: TRYING TO FREE AN INVALID STACK")
+        //TODO:
         return;
     }
+
     free(s->data);
     free(s);
 }
@@ -78,7 +79,7 @@ void stack_push(stack* s, const void* data)
     }
 
     // get the start location, then memcpy it
-    uint8_t* dest = (uint8_t*)s->data + (s->stride * (s->num_items));
+    uint8_t* dest = ((uint8_t*)s->data) + (s->stride * (s->num_items));
     memcpy(dest, data, s->stride);
 
     s->num_items++;
@@ -105,12 +106,12 @@ void* stack_peek(stack* s)
 }
 
 // Peek element
-void stack_copy_top(stack* s, void* out_data)
+void stack_top(stack* s, void* out_data)
 {
     MASSERT(s);
     if (stack_is_empty(s)) return;
 
-    memcpy(out_data,
+    memcpy((u8*)out_data,
            ((uint8_t*)s->data + (s->stride * (s->num_items - 1))),
            s->stride);
 }
@@ -145,7 +146,7 @@ void stack_test()
 
     int num = 3;
     int stack_default_capacity = 3;
-    stack* stack = stack_create_malloc(sizeof(num), stack_default_capacity);
+    stack* stack = stack_create(sizeof(num), stack_default_capacity, NULL);
 
     //stack_is_empty(stack);
 
@@ -171,7 +172,7 @@ void stack_test()
     stack_print(stack, print_int);
 
 
-    stack_free(stack);
+    stack_free(stack, NULL);
 
 
     printf("Stack End\n\n"); // number of bytes

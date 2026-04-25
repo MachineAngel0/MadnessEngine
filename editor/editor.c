@@ -68,7 +68,9 @@ void editor_ui(Editor* editor)
 
         break;
     case EDITOR_UI_STATE_UI_TEST:
-        madness_ui_test(editor->madness_ui);
+        // madness_ui_test(editor->madness_ui);
+        insanity_ui_test();
+
         break;
     case EDITOR_UI_STATE_MAX:
         break;

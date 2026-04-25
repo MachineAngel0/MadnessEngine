@@ -1,6 +1,5 @@
 ﻿#include "vk_shader.h"
 
-#include "UI.h"
 
 
 VkShaderModule create_shader_module(const vulkan_context* context, const char* shader_bytes, const u64 shader_size)

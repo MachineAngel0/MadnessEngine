@@ -26,41 +26,9 @@ typedef struct Material_2D_Param_Data
 #define DEFAULT_FONT_SIZE 32.0f
 #define EDITOR_FONT_SIZE 24.0f
 
-//UI
-typedef enum UI_Alignment
-{
-    //basically just a nine slice
-    UI_ALIGNMENT_LEFT, // left should be the default
-    UI_ALIGNMENT_CENTER,
-    UI_ALIGNMENT_RIGHT,
-    UI_ALIGNMENT_TOP,
-    UI_ALIGNMENT_BOTTOM,
-    UI_ALIGNMENT_TOP_LEFT,
-    UI_ALIGNMENT_TOP_RIGHT,
-    UI_ALIGNMENT_BOTTOM_LEFT,
-    UI_ALIGNMENT_BOTTOM_RIGHT,
-    UI_ALIGNMENT_MAX,
-} UI_Alignment;
 
 
-typedef enum UI_TYPE
-{
-    UI_TYPE_RECTANGLE = BITFLAG(1),
-    UI_TYPE_BUTTON = BITFLAG(2),
-    UI_TYPE_SLIDER = BITFLAG(3),
-    UI_TYPE_IMAGE = BITFLAG(4),
-    UI_TYPE_TEXT = BITFLAG(5),
-} UI_TYPE;
 
-
-typedef enum UI_Sizing
-{
-    UI_SIZING_FIXED, //fit only the given size it was specified
-    UI_SIZING_FIT, //fit only its children, which also means it won't appear in the layout if there is no padding
-    UI_SIZING_FIT_EXPAND, //fit its children and plus whatever size was specified
-    UI_SIZING_EXPAND, // expands to take up any space that is left
-    UI_SIZING_MAX,
-} UI_Sizing;
 
 typedef enum UI_Layout_Direction
 {
@@ -68,14 +36,7 @@ typedef enum UI_Layout_Direction
     UI_LAYOUT_VERTICAL,
 } UI_Layout_Direction;
 
-typedef struct UI_Padding
-{
-    //not using a vec4 cause its not clear what the values are suppose to be
-    float left;
-    float right;
-    float top;
-    float bottom;
-} UI_Padding;
+
 
 
 typedef struct UI_Editor_Style
@@ -97,13 +58,6 @@ typedef struct UI_Editor_Style
     vec3 outline_color;
 } UI_Editor_Style;
 
-
-typedef enum UI_Button_State
-{
-    BUTTON_STATE_COLD,
-    BUTTON_STATE_HOT,
-    BUTTON_STATE_ACTIVE,
-} UI_Button_State;
 
 
 //TODO:  just a temporary value for now, will increase later
@@ -432,7 +386,6 @@ bool button(UI_STATE& ui_state, int id, int x, int y)
 
 
 //UTILITY
-MAPI void update_ui_mouse_pos(Madness_UI* madness_ui);
 
 //check if we can use the button
 MAPI bool use_ui_element(Madness_UI* madness_ui, int id, vec2 pos, vec2 size);

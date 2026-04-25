@@ -212,7 +212,7 @@ void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system)
     //update mouse state
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
-    update_ui_mouse_pos(madness_ui);
+    input_get_mouse_pos(madness_ui->input_system_reference, &madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
     //update mouse delta/change
     input_get_mouse_change(madness_ui->input_system_reference, &madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
 }
@@ -230,10 +230,7 @@ void madness_ui_print_state(Madness_UI* madness_ui)
 }
 
 
-void update_ui_mouse_pos(Madness_UI* madness_ui)
-{
-    input_get_mouse_pos(madness_ui->input_system_reference, &madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
-}
+
 
 
 bool is_ui_hot(Madness_UI* madness_ui, int id)
@@ -329,7 +326,6 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
 {
     UI_Node* out_node = &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items];
 
-
     if (madness_ui->parent_node_state.is_active)
     {
         //check if the last node had a parent, if it doesn't then it is the parent
@@ -344,6 +340,7 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
 
         out_node->parent->children[out_node->parent->child_node_count++] = out_node;
     }
+
 
     madness_ui->ui_nodes->num_items++;
     return out_node;

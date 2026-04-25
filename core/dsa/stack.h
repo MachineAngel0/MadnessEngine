@@ -11,16 +11,16 @@ typedef struct stack
     u64 capacity; // size of the array
 } stack;
 
-//TODO: test arena functions
-stack* stack_create_malloc(const u64 stride, const u64 capacity);
 
-stack* stack_create_arena(Arena* arena, const u64 stride, const u64 capacity);
+
+//Arena can be NULL
+stack* stack_create(const u64 stride, const u64 capacity, Arena* arena);
+
 
 //not worth it
 // #define STACK_CREATE (arena, type, capacity) stack_create_arena(arena, sizeof(type), capacity)
 
-//only use if allocated with malloc
-void stack_free(stack* s);
+void stack_free(stack* s, Arena* arena);
 
 void stack_clear(stack* s);
 
@@ -37,7 +37,7 @@ void stack_pop(stack* s);
 // Peek element
 void* stack_peek(stack* s);
 // Peek element
-void stack_copy_top(stack* s, void* out_data);
+void stack_top(stack* s, void* out_data);
 u64 stack_size(const stack* s);
 
 //clears the stack, just sets the num_items = 0

@@ -146,6 +146,7 @@ bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation
     fprintf(shader_creation_system->open_file, "#version 450\n");
     fprintf(shader_creation_system->open_file, "#include \"shader_includes/test_uniform.glsl\"\n");
 
+    return true;
 
 }
 
@@ -181,6 +182,7 @@ bool shader_creation_system_add_output(Shader_Creation_System* shader_system,
     fprintf(shader_system->open_file, "layout(location = %d) out %s %s;\n", shader_system->output_count,
             shader_type_io_lookup[shader_type], shader_output_name);
     shader_system->output_count++;
+    return true;
 }
 
 Shader_Param_Handle shader_creation_system_add_param(Shader_Creation_System* shader_system,
@@ -205,6 +207,7 @@ bool shader_creation_system_addition(Shader_Creation_System* shader_system, cons
     const char* name2 = shader_system->param_names[param2.handle];
 
     fprintf(shader_system->open_file, "float %s = %s + %s;\n", output_name, name1, name2);
+    return true;
 }
 
 bool shader_creation_system_test(Shader_Creation_System* shader_creation_system)
@@ -228,6 +231,7 @@ bool shader_creation_system_test(Shader_Creation_System* shader_creation_system)
 
     shader_creation_system_shader_end(shader_creation_system);
 
+    return true;
 
 
 }

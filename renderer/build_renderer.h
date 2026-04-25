@@ -13,7 +13,6 @@
 #include "camera.h"
 #include "lights.h"
 #include "shader_system.h"
-#include "UI.h"
 #include "vk_buffer.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
@@ -32,3 +31,5 @@
 #include "pipelines/transform_render.h"
 #include "pipelines/mesh_render.h"
 
+#include "UI.h"
+#include "Insanity_UI.h"

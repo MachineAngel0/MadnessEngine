@@ -9,7 +9,6 @@
 #include "camera.c"
 #include "lights.c"
 #include "shader_system.c"
-#include "UI.c"
 #include "vk_buffer.c"
 #include "vk_command_buffer.c"
 #include "vk_descriptors.c"
@@ -27,3 +26,7 @@
 #include "pipelines/material_render.c"
 #include "pipelines/transform_render.c"
 #include "pipelines/mesh_render.c"
+
+
+#include "UI.c"
+#include "Insanity_UI.c"
