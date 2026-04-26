@@ -1,7 +1,7 @@
 ﻿#ifndef UI_H
 #define UI_H
-#include "../resource/resource_system.h"
 
+#include "resource_types.h"
 
 //IMMEDIATE MODE UI
 
@@ -158,7 +158,6 @@ typedef struct Madness_UI
     Frame_Arena* frame_arena;
     Memory_Tracker* mem_tracker;
 
-    Renderer* renderer_reference;
     Input_System* input_system_reference; // does not own memory
     Resource_System* resource_system;
 

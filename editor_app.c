@@ -140,6 +140,8 @@ bool editor_app_run(Editor_Application* editor_app)
         madness_ui_end(renderer_plugin->madness_ui, application_core->resource_system);
         insanity_ui_end(application_core->resource_system);
 
+
+
         resource_system_update_and_create_render_packet(application_core->resource_system);
 
 

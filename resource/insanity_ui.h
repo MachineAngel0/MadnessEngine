@@ -1,12 +1,9 @@
 ﻿#ifndef INSANITY_UI_H
 #define INSANITY_UI_H
-#include <vulkan/vulkan_core.h>
 
 #include "arena.h"
 #include "stack.h"
 #include "str_builder.h"
-#include "vulkan_types.h"
-#include "../resource/resource_system.h"
 
 
 //IMMEDIATE MODE UI
@@ -21,6 +18,13 @@
 // float -> box
 // vec3 -> vertical layout, box, /children ->  background, wheel scroll
 
+
+#define INSANITY_DEFAULT_FONT_SIZE 32.0f
+#define INSANITY_EDITOR_FONT_SIZE 24.0f
+
+#define INSANITY_MAX_UI_NODE_COUNT 1000
+#define INSANITY_MAX_UI_TEXT_NODE_COUNT 1000
+#define INSANITY_MAX_UI_NODE_CHILD_COUNT 10
 
 //UI
 typedef enum Insanity_UI_Alignment
@@ -47,10 +51,24 @@ typedef enum Insanity_UI_Property_Flags
     UI_TYPE_IMAGE = BITFLAG(3),
     UI_TYPE_TEXT = BITFLAG(4),
     UI_TYPE_OUTLINE = BITFLAG(5),
-    UI_TYPE_SCROLL = BITFLAG(5),
-    UI_TYPE_COLOR = BITFLAG(6),
-    UI_TYPE_DRAGGABLE = BITFLAG(7),
+    UI_TYPE_SCROLL = BITFLAG(6),
+    UI_TYPE_COLOR = BITFLAG(7),
+    UI_TYPE_DRAGGABLE = BITFLAG(8),
+    UI_TYPE_ROUND_CORNER = BITFLAG(9),
+    UI_TYPE_ROUND_CIRCLE = BITFLAG(10),
 } Insanity_UI_Property_Flags;
+
+typedef enum Insanity_UI_Interaction_Event
+{
+    UI_EVENT_HOVER = BITFLAG(0),
+    UI_EVENT_CLICK = BITFLAG(1),
+    UI_EVENT_DRAG = BITFLAG(2),
+    UI_EVENT_SCROLL = BITFLAG(3),
+    // UI_EVENT_TEXT = BITFLAG(4),
+    // UI_EVENT_OUTLINE = BITFLAG(5),
+    // UI_EVENT_COLOR = BITFLAG(6),
+} Insanity_UI_Interaction_Event ;
+
 
 
 typedef enum Insanity_UI_Sizing
@@ -120,8 +138,16 @@ typedef struct Insanity_UI_Node
     vec2 size;
     float rotation; // degrees, but gets converted to radians at draw time
 
+    //rounded
+    float rounded_radius; // 0-1 range
+
+    //outline
+    vec3 outline_color;
+    float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
+
+
     //for circles
-    float thickness;
+    float thickness; // size of the circle is determined by the pos and size
 
     const char* debug_id;
     u64 hash_id;
@@ -134,8 +160,9 @@ typedef struct Insanity_UI_Node
 
     //TODO: for widgets that need some sort of child node, like a scroll box
     struct Insanity_UI_Node* parent;
-    struct Insanity_UI_Node* children[10];
+    struct Insanity_UI_Node* children[INSANITY_MAX_UI_NODE_CHILD_COUNT];
     u32 child_node_count;
+
 
 
     //colors
@@ -144,7 +171,6 @@ typedef struct Insanity_UI_Node
     vec3 pressed_color;
 
     vec3 text_color;
-    vec3 outline_color;
     vec3 background_color;
 } Insanity_UI_Node;
 
@@ -171,15 +197,52 @@ typedef struct Insanity_UI_Node_Text
 ARRAY_GENERATE_TYPE(Insanity_UI_Node)
 ARRAY_GENERATE_TYPE(Insanity_UI_Node_Text)
 
+typedef struct Insanity_UI_Node_Draw_Data
+{
+    Insanity_UI_Property_Flags ui_flags;
+
+    // screen size and pos, not normalized
+    vec2 pos;
+    vec2 size;
+    float rotation; // degrees, but gets converted to radians at draw time
+
+    //rounded
+    float rounded_radius; // 0-1 range
+
+    //outline
+    vec3 outline_color;
+    float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
+
+
+    //for circles
+    float thickness; // size of the circle is determined by the pos and size
+
+    //draw data
+    //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
+    u32 texture_handle;
+
+    //colors
+    vec3 color;
+    vec3 hovered_color;
+    vec3 pressed_color;
+    vec3 background_color;
+}Insanity_UI_Node_Draw_Data;
+
+
+
+typedef struct Insanity_UI_Render_Data{
+    Insanity_UI_Node_array* ui_nodes;
+    Insanity_UI_Node_Text_array* ui_nodes_text;
+}Insanity_UI_Render_Data;
+
 
 //rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
-typedef struct Insanity_UI
+typedef struct insanity_ui
 {
     Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Arena* frame_arena;
     Memory_Tracker* mem_tracker;
 
-    Renderer* renderer_reference;
     Input_System* input_system_reference; // does not own memory
     Resource_System* resource_system;
 
@@ -227,9 +290,12 @@ typedef struct Insanity_UI
     hash_table* drag_state;
 
     String string_stack;
+    Texture_Handle image_stack;
 
 
 } Insanity_UI;
+
+
 
 
 MAPI bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
@@ -244,6 +310,9 @@ MAPI void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y);
 
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
 MAPI void insanity_ui_end(Resource_System* resource_system);
+
+MAPI Insanity_UI_Render_Data insanity_get_render_data();
+
 
 //part of the ui end function
 MAPI void insanity_ui_passes();
@@ -267,6 +336,9 @@ MAPI void insanity_ui_set_flags(Insanity_UI_Property_Flags flags);
 MAPI Insanity_UI_Property_Flags insanity_ui_get_flags();
 MAPI void insanity_ui_set_pos(vec2 pos);
 MAPI void insanity_ui_set_text(String text);
+
+MAPI void insanity_ui_set_image(const char* texture_file);
+MAPI Texture_Handle insanity_ui_get_image(void);
 
 
 //Utility

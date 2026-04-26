@@ -1,4 +1,4 @@
-﻿#include "Insanity_UI.h"
+﻿#include "insanity_ui.h"
 
 #include "math_lib.h"
 #include "sprite_system.h"
@@ -32,11 +32,11 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->resource_system = resource_system;
 
 
-    insanity_ui->ui_data = Sprite_Data_array_create(MAX_UI_SPRITE_COUNT);
-    insanity_ui->text_data = Sprite_Data_array_create(MAX_TEXT_SPRITE_COUNT);
+    insanity_ui->ui_data = Sprite_Data_array_create(INSANITY_MAX_UI_NODE_COUNT);
+    insanity_ui->text_data = Sprite_Data_array_create(INSANITY_MAX_UI_TEXT_NODE_COUNT);
 
-    insanity_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
-    insanity_ui->editor_font_size = EDITOR_FONT_SIZE;
+    insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
+    insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
 
     insanity_ui->ui_nodes = Insanity_UI_Node_array_create(MAX_INSANITY_UI_NODE_COUNT);
     insanity_ui->ui_nodes_text = Insanity_UI_Node_Text_array_create(MAX_INSANITY_UI_NODE_COUNT);
@@ -64,15 +64,6 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     //TODO: replace with an in param
     insanity_ui->screen_size = (vec2){800.0f, 600.0f};
 
-
-    //TODO: THERE IS NO WAY I AM LOADING THIS FILE FROM THERE, WHAT ABOUT LINUX
-    // font_init(madness_ui, renderer, "c:/windows/fonts/arialbd.ttf");
-    // if (!texture_system_load_font(resource_system->texture_system, "../z_assets/fonts/arialbd.ttf",
-    //                               &madness_ui->default_font_handle,
-    //                               madness_ui->arena))
-    // {
-    //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
-    // };
 
     if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
                                        &insanity_ui->default_font_handle,
@@ -130,6 +121,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     stack_push(insanity_ui->pos_stack, &default_pos);
 
     insanity_ui->string_stack = STRING("INVALID STRING");
+    insanity_ui->image_stack = texture_system_get_default_texture(insanity_ui->resource_system->texture_system);
 
 
     insanity_ui->hot = -1;
@@ -230,6 +222,13 @@ void insanity_ui_end(Resource_System* resource_system)
                            &insanity_ui->mouse_delta_y);
 }
 
+Insanity_UI_Render_Data insanity_get_render_data()
+{
+    return (Insanity_UI_Render_Data){.ui_nodes = insanity_ui->ui_nodes, .ui_nodes_text = insanity_ui->ui_nodes_text};
+
+}
+
+
 void insanity_ui_passes()
 {
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
@@ -299,6 +298,16 @@ void insanity_ui_set_text(String text)
     insanity_ui->string_stack = text;
 }
 
+void insanity_ui_set_image(const char* texture_file)
+{
+    insanity_ui->image_stack = texture_system_load_texture_new(insanity_ui->resource_system->texture_system,
+                                                               texture_file);
+}
+
+Texture_Handle insanity_ui_get_image(void)
+{
+    return insanity_ui->image_stack;
+}
 
 Insanity_UI_Node* insanity_ui_get_new_node()
 {
@@ -379,9 +388,15 @@ void insanity_ui_draw_rect(const char* id)
     node->debug_id = id;
     node->ui_flags = insanity_ui_get_flags();
     node->pos = *(vec2*)stack_peek(insanity_ui->pos_stack);
-    node->size = (vec2){100, 50};
+    node->size = (vec2){200, 100};
     node->color = insanity_ui->editor_style.color;
 
+
+    if ((node->ui_flags & UI_TYPE_OUTLINE))
+    {
+        node->outline_color = insanity_ui->editor_style.outline_color;
+        node->outline_thickness = 0.01; // TODO:
+    }
 
     //handle drag state
     if ((node->ui_flags & UI_TYPE_DRAGGABLE))
@@ -395,11 +410,15 @@ void insanity_ui_draw_rect(const char* id)
             hash_table_insert(insanity_ui->drag_state, node->debug_id, &node->pos);
         }
     }
-    if ((node->ui_flags & UI_TYPE_TEXT))
+    if (node->ui_flags & UI_TYPE_TEXT)
     {
+        //create the text
         insanity_ui_text();
     }
-
+    if (node->ui_flags & UI_TYPE_IMAGE)
+    {
+        node->texture_handle = insanity_ui_get_image();
+    }
 
 
     //close
@@ -407,11 +426,13 @@ void insanity_ui_draw_rect(const char* id)
     {
         //add child sizing to the parent
     }
+
+
+    // return
 }
 
 void insanity_ui_text()
 {
-
     // proper screen pos and size
     vec2 screen_position = *(vec2*)stack_peek(insanity_ui->pos_stack);
     String text = insanity_ui->string_stack;
@@ -461,7 +482,6 @@ void insanity_ui_text()
 
         screen_position.x += (g->advance) * font_scalar; // move offset forward
     }
-
 }
 
 void insanity_ui_layout_start(Insanity_UI_Layout_Direction layout_direction)
@@ -485,10 +505,16 @@ void insanity_ui_test()
     }
 
     {
-        insanity_ui_set_flags(UI_TYPE_CLICKABLE| UI_TYPE_TEXT);
+        insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_TEXT);
         insanity_ui_set_text(STRING("Bitch"));
         insanity_ui_set_pos((vec2){500, 200});
 
         insanity_ui_draw_rect("id2");
     }
+
+
+    //check box
+    insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
+    insanity_ui_set_pos((vec2){200, 500});
+    insanity_ui_draw_rect("id3");
 }

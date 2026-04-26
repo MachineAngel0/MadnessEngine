@@ -63,7 +63,7 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
     if (texture_system->in_use_textures_count >= texture_system->max_textures)
     {
         FATAL("MAX TEXTURES REACHED");
-        out_handle = texture_system_get_default_texture(texture_system);
+        *out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 
@@ -106,7 +106,7 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
     if (!texture->pixels)
     {
         WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        out_handle = texture_system_get_default_texture(texture_system);
+        *out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 
@@ -117,6 +117,78 @@ bool texture_system_load_texture(Texture_System* texture_system, char const* fil
 
     return true;
 }
+
+Texture_Handle texture_system_load_texture_new(Texture_System* texture_system, char const* file_path)
+{
+    Texture_Handle out_handle = {0};
+    u32 texture_idx;
+
+    //check if the texture has already been loaded in
+    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
+    {
+        out_handle = texture_system->texture_handles[texture_idx];
+        texture_system->texture_meta_data[texture_idx].reference_count++;
+        return out_handle;
+    }
+
+    if (texture_system->in_use_textures_count >= texture_system->max_textures)
+    {
+        FATAL("MAX TEXTURES REACHED");
+        out_handle = texture_system_get_default_texture(texture_system);
+        return out_handle;
+    }
+
+    //get a free index
+    u32 free_index;
+    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
+    {
+        MASSERT("OUT OF TEXTURE IDX's")
+    }
+    texture_system->in_use_textures_count++;
+
+    //get an available index
+    Resource_MetaData* meta_data = &texture_system->texture_meta_data[free_index];
+    meta_data->type = RESOURCE_TEXTURE;
+    meta_data->id = free_index;
+    meta_data->file_path = file_path;
+    meta_data->reference_count = 1;
+
+
+    out_handle = texture_system->texture_handles[free_index];
+    Texture* texture = &texture_system->textures_array[free_index];
+    texture->handle = out_handle;
+
+
+    //add to hash table
+    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
+
+    //load the image data from file
+    int texWidth, texHeight, texChannels;
+    texture->pixels = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
+    texture->width = texWidth; // 4 stride rgba
+    texture->height = texHeight; // 4 stride rgba
+    texture->channels = STBI_rgb_alpha; // 4 stride rgba
+    texture->image_size = texWidth * texHeight * 4; // 4 stride rgba
+    texture->is_font = false;
+
+    MASSERT_MSG(texture->pixels, "FAILED TO LOAD TEXTURE");
+
+    if (!texture->pixels)
+    {
+        WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
+        out_handle = texture_system_get_default_texture(texture_system);
+        return out_handle;
+    }
+
+
+    //used by the renderer to upload to the gpu, then we can free the cpu data
+    ring_enqueue(texture_system->textures_ring_queue, texture);
+
+
+    return out_handle;
+}
+
 
 bool texture_system_unload_texture(Texture_System* texture_system, Texture_Handle handle)
 {
@@ -164,9 +236,9 @@ Texture_Handle texture_system_update_texture(Texture_System* texture_system, Tex
 }
 
 
-Texture_Handle* texture_system_get_default_texture(Texture_System* texture_system)
+Texture_Handle texture_system_get_default_texture(Texture_System* texture_system)
 {
-    return &texture_system->default_texture_handle;
+    return texture_system->default_texture_handle;
 }
 
 bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle,
@@ -418,7 +490,7 @@ bool texture_system_load_msdf_font(Texture_System* texture_system, const char* f
     if (texture_system->in_use_textures_count >= texture_system->max_textures)
     {
         FATAL("MAX TEXTURES REACHED");
-        out_handle = texture_system_get_default_texture(texture_system);
+        *out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 
@@ -461,7 +533,7 @@ bool texture_system_load_msdf_font(Texture_System* texture_system, const char* f
     if (!texture->pixels)
     {
         WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        out_handle = texture_system_get_default_texture(texture_system);
+        *out_handle = texture_system_get_default_texture(texture_system);
         return false;
     }
 

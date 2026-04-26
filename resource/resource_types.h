@@ -554,6 +554,7 @@ typedef struct Render_Packet_UI
 
     Sprite_Data_array* text_data_packet;
     VkIndexType text_index_type;
+
 } Render_Packet_UI;
 
 typedef struct Render_Packet_Sprite

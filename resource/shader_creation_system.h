@@ -174,6 +174,7 @@ bool shader_creation_system_add_input(Shader_Creation_System* shader_system,
     fprintf(shader_system->open_file, "layout(location = %d) in %s %s;\n", shader_system->input_count,
             shader_type_io_lookup[shader_type], shader_input_name);
     shader_system->input_count++;
+    return true;
 }
 
 bool shader_creation_system_add_output(Shader_Creation_System* shader_system,
