@@ -348,8 +348,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     transform_renderer_upload_data(renderer, renderer->transform_renderer, render_packets, graphics_command_buffer);
     material_renderer_upload_data(renderer, renderer->material_renderer, &render_packets->material_data_packet, graphics_command_buffer);
 
-    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
-    // ui_renderer_upload_insanity_draw_data(renderer->ui_renderer, renderer, graphics_command_buffer);
+    // ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+    ui_renderer_upload_insanity_draw_data(renderer->ui_renderer, renderer, graphics_command_buffer);
 
     mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     // mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);

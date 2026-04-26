@@ -55,7 +55,7 @@ typedef enum Insanity_UI_Property_Flags
     UI_TYPE_COLOR = BITFLAG(7),
     UI_TYPE_DRAGGABLE = BITFLAG(8),
     UI_TYPE_ROUND_CORNER = BITFLAG(9),
-    UI_TYPE_ROUND_CIRCLE = BITFLAG(10),
+    UI_TYPE_CIRCLE = BITFLAG(10),
 } Insanity_UI_Property_Flags;
 
 typedef enum Insanity_UI_Interaction_Event
@@ -155,7 +155,8 @@ typedef struct Insanity_UI_Node
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     Texture_Handle texture_handle;
-    Sprite_Flags sprite_flags;
+    vec2 uv_offset;
+    vec2 uv_size;
 
 
     //TODO: for widgets that need some sort of child node, like a scroll box
@@ -167,10 +168,6 @@ typedef struct Insanity_UI_Node
 
     //colors
     vec3 color;
-    vec3 hovered_color;
-    vec3 pressed_color;
-
-    vec3 text_color;
     vec3 background_color;
 } Insanity_UI_Node;
 
@@ -220,24 +217,32 @@ typedef struct Insanity_UI_Node_Draw_Data
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     u32 texture_handle;
+    vec2 uv_offset;
+    vec2 uv_size;
 
     //colors
     vec3 color;
-    vec3 hovered_color;
-    vec3 pressed_color;
     vec3 background_color;
 }Insanity_UI_Node_Draw_Data;
 
 
 
-typedef struct Insanity_UI_Render_Data{
-    Insanity_UI_Node_array* ui_nodes;
+typedef struct Insanity_UI_Render_Packet{
+    Insanity_UI_Node_Draw_Data* ui_nodes;
+    u64 ui_nodes_size;
+    u64 ui_nodes_bytes;
+
     Insanity_UI_Node_Text_array* ui_nodes_text;
-}Insanity_UI_Render_Data;
+
+
+    // Insanity_UI_Node_Text_Draw_Data* ui_nodes_text;
+    // u64 ui_nodes_text_size;
+    // u64 ui_nodes_text_bytes;
+}Insanity_UI_Render_Packet;
 
 
 //rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
-typedef struct insanity_ui
+typedef struct Insanity_UI
 {
     Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Arena* frame_arena;
@@ -255,6 +260,10 @@ typedef struct insanity_ui
     Insanity_UI_Node_array* ui_nodes;
     Insanity_UI_Node_Text_array* ui_nodes_text;
     // UI_Node_array* button_nodes; //TODO: we will see
+
+    Insanity_UI_Node_Draw_Data* node_draw_data_array;
+    u64 node_draw_data_array_size;
+
 
     int hot;
     int active;
@@ -277,7 +286,6 @@ typedef struct insanity_ui
 
     Insanity_UI_Editor_Style editor_style;
 
-    Sprite_Data_array* ui_data;
     Sprite_Data_array* text_data;
 
     bool layout;
@@ -291,6 +299,8 @@ typedef struct insanity_ui
 
     String string_stack;
     Texture_Handle image_stack;
+    float rounded_radius_stack;
+    float outline_thickness_stack;
 
 
 } Insanity_UI;
@@ -311,7 +321,7 @@ MAPI void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y);
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
 MAPI void insanity_ui_end(Resource_System* resource_system);
 
-MAPI Insanity_UI_Render_Data insanity_get_render_data();
+MAPI Insanity_UI_Render_Packet insanity_get_render_data();
 
 
 //part of the ui end function

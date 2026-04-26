@@ -17,6 +17,19 @@ layout(push_constant, scalar) uniform PushConstant_2D{
 #define SPRITE_FLAG_ROUND_CORNER BITFLAG(6)
 #define SPRITE_FLAG_OUTLINE BITFLAG(7)
 
+
+#define UI_TYPE_NONE BITFLAG(0)
+#define UI_TYPE_BACKGROUND BITFLAG(1)
+#define UI_TYPE_CLICKABLE BITFLAG(2)
+#define UI_TYPE_IMAGE BITFLAG(3)
+#define UI_TYPE_TEXT BITFLAG(4)
+#define UI_TYPE_OUTLINE BITFLAG(5)
+#define UI_TYPE_SCROLL BITFLAG(6)
+#define UI_TYPE_COLOR BITFLAG(7)
+#define UI_TYPE_DRAGGABLE BITFLAG(8)
+#define UI_TYPE_ROUND_CORNER BITFLAG(9)
+#define UI_TYPE_CIRCLE BITFLAG(10)
+
 struct Sprite_Data {
     uint flags;
 
@@ -37,29 +50,32 @@ struct Sprite_Data {
 
 struct UI_Data
 {
-    uint ui_flags;
+    uint flags;
 
 // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
-    float rotation; // degrees, but gets converted to radians at draw time
+    float rotation;// degrees, but gets converted to radians at draw time
 
 //rounded
-    float rounded_radius; // 0-1 range
+    float rounded_radius;// 0-1 range
 
 //outline
     vec3 outline_color;
-    float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
+    float outline_thickness;// 0-1 :: ideally should be something small like 0.05-0.1
 
 
 //for circles
-    float thickness; // size of the circle is determined by the pos and size
+    float thickness;// size of the circle is determined by the pos and size
 
+//texture
     uint texture_handle;
+    vec2 uv_offset;
+    vec2 uv_size;
+
 
     vec3 color;
-    vec3 hovered_color;
-    vec3 pressed_color;
+
     vec3 background_color;
 };
 
@@ -78,7 +94,6 @@ layout(set = 2, binding = 0, scalar) readonly buffer SPRITE_INSTANCE_BUFFER{
     Sprite_Data sprite_instance_data[];
 }Sprite_Instance_Buffer[];
 
-// binding 2 stores all our buffers
 layout(set = 2, binding = 0, scalar) readonly buffer UI_INSTANCE_BUFFER{
     UI_Data ui_instance_data[];
 }UI_Instance_Buffer[];

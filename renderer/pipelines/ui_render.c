@@ -313,7 +313,7 @@ void ui_renderer_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, vulk
 void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
                                            vulkan_command_buffer* command_buffer)
 {
-    Insanity_UI_Render_Data render_data = insanity_get_render_data();
+    Insanity_UI_Render_Packet render_data = insanity_get_render_data();
 
     // UI
     vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);
@@ -343,9 +343,8 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                                    ui_renderer->ui_instance_ssbo_handle,
                                                    ui_renderer->ui_instance_staging_ssbo_handle, command_buffer,
-                                                   render_data.ui_nodes->data,
-                                                   Insanity_UI_Node_array_get_bytes_used(
-                                                       render_data.ui_nodes));
+                                                   render_data.ui_nodes,
+                                                   render_data.ui_nodes_bytes);
 
 
     //literally only need one
@@ -355,7 +354,7 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     indirect_draw_ui.firstInstance = 0;
     indirect_draw_ui.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
     indirect_draw_ui.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_ui.instanceCount = render_data.ui_nodes->num_items;
+    indirect_draw_ui.instanceCount = render_data.ui_nodes_size;
 
 
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,

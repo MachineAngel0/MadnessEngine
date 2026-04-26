@@ -11,7 +11,7 @@ layout(location = 0) in vec3 in_color;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in vec2 in_local_pos;
 layout(location = 3) in flat uint in_texture_idx;
-layout(location = 4) in flat uint in_sprite_buffer_location;
+layout(location = 4) in flat uint in_material_buffer_location;
 
 
 layout(location = 0) out vec4 outColor;
@@ -26,61 +26,87 @@ float sdRoundBox(in vec2 p, in vec2 b, in vec4 r)
 }
 
 void main() {
-    uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
+    uint material_instance_buffer_idx = PC_2D.instance_buffer_idx;
 
     vec2 screen_dimensions = ubo[nonuniformEXT(PC_2D.ubo_buffer_idx)].screen_dimensions;
     float aspect_ratio = screen_dimensions.x / screen_dimensions.y;
 
-    Sprite_Data inst_data =
-    Sprite_Instance_Buffer[nonuniformEXT(sprite_instance_buffer_idx)].sprite_instance_data[nonuniformEXT(in_sprite_buffer_location)];
-    outColor = vec4(in_color, 1.0);
+    UI_Data inst_data =
+    UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(in_material_buffer_location)];
 
+
+
+//    {
+//        //calculations for rounded rects and for any outlines
+//        //get screen space position and  size
+//        vec2 p = (in_local_pos - vec2(0.5)) * 2.0;
+//        vec2 size = vec2(1.0, 1.0);
+//
+//        vec4 radius = vec4(inst_data.rounded_radius);
+//
+//        float dist = sdRoundBox(p, size, radius);
+//        float px = fwidth(dist);
+//
+//        float outline_thickness = inst_data.outline_thickness;
+//        vec3 outline_color = inst_data.outline_color;
+//        vec3 fill_color = in_color;
+//
+//        //  fill (AA edge)
+//        float fill_alpha = 1.0 - smoothstep(-px, px, dist/ px);
+//
+//        //  smooth inner outline band
+//        // outer edge (near surface)
+//        float edge_outer = smoothstep(-px, px, dist / px);
+//
+//        // inner edge
+//        float edge_inner = smoothstep(-outline_thickness - px, -outline_thickness + px, dist);
+//
+//        // band = region between both edges
+//        float outline_alpha = edge_inner - edge_outer;
+//
+//        // clamp just to be safe
+//        outline_alpha = clamp(outline_alpha, 0.0, 1.0);
+//
+//        //  combine
+//        vec3 color = mix(fill_color, outline_color, outline_alpha);
+//        float alpha = fill_alpha;
+//
+//        outColor = vec4(color, alpha);
+//    }
 
     {
-        //calculations for rounded rects and for any outlines
-        //get screen space position and  size
         vec2 p = (in_local_pos - vec2(0.5)) * 2.0;
-        vec2 size = vec2(1.0);
 
-        //TODO: get radius from sprite data
-        vec4 radius = vec4(0.2);
+        // size is normalized, so turn back to pixel dimensions first to get the proper size
+        vec2 pixel_size = inst_data.size * screen_dimensions;
+        float quad_aspect = pixel_size.x / pixel_size.y;
+        p.x *= quad_aspect;
+        vec2 size = vec2(quad_aspect, 1.0);
+
+        vec4 radius = vec4(inst_data.rounded_radius);
 
         float dist = sdRoundBox(p, size, radius);
         float px = fwidth(dist);
 
-        //TODO: params for outline color and outline thickness
-        float outline_thickness = 0.05;
-        vec3 outline_color = vec3(0.0);
+        float outline_thickness = inst_data.outline_thickness;
+        vec3 outline_color = inst_data.outline_color;
         vec3 fill_color = in_color;
 
-        //  fill (AA edge)
-        float fill_alpha = 1.0 - smoothstep(-px, px, dist/ px);
+        float fill_alpha = 1.0 - smoothstep(-px, px, dist / px);
 
-        //  smooth inner outline band
-        // outer edge (near surface)
         float edge_outer = smoothstep(-px, px, dist / px);
-
-        // inner edge
         float edge_inner = smoothstep(-outline_thickness - px, -outline_thickness + px, dist);
 
-        // band = region between both edges
-        float outline_alpha = edge_inner - edge_outer;
+        float outline_alpha = clamp(edge_inner - edge_outer, 0.0, 1.0);
 
-        // clamp just to be safe
-        outline_alpha = clamp(outline_alpha, 0.0, 1.0);
-
-        //  combine
+        // combine
         vec3 color = mix(fill_color, outline_color, outline_alpha);
-        float alpha = fill_alpha;
 
-        outColor = vec4(color, alpha);
+        outColor = vec4(color, fill_alpha);
     }
 
 
-
-
-
-    if ((inst_data.flags & SPRITE_FLAG_CIRCLE) != 0u){
+    if ((inst_data.flags & UI_TYPE_CIRCLE) != 0u){
 
         float outline_thickness = inst_data.thickness;
 
@@ -101,5 +127,4 @@ void main() {
 
         //    outColor = vec4(in_color * circle, 1.0); * texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv); // if we want colors overlayed
     }
-
 }

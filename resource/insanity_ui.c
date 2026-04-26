@@ -13,8 +13,8 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui = memory_system_alloc(memory_system, sizeof(Insanity_UI), MEMORY_SUBSYSTEM_UI);
     MASSERT(insanity_ui);
 
-    u64 ui_arena_mem_size = MB(128);
-    u64 ui_frame_arena_mem_size = MB(128);
+    u64 ui_arena_mem_size = MB(64);
+    u64 ui_frame_arena_mem_size = MB(64);
     insanity_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
                                                                 STRING("MADNESS UI"),
                                                                 ui_arena_mem_size + ui_frame_arena_mem_size);
@@ -32,7 +32,6 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->resource_system = resource_system;
 
 
-    insanity_ui->ui_data = Sprite_Data_array_create(INSANITY_MAX_UI_NODE_COUNT);
     insanity_ui->text_data = Sprite_Data_array_create(INSANITY_MAX_UI_TEXT_NODE_COUNT);
 
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
@@ -86,6 +85,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 {
     MASSERT(insanity_ui);
     //clear draw info and reset the hot id
+    arena_clear(insanity_ui->frame_arena);
 
     //std::cout << "MOUSE STATE:" << Insanity_UI.mouse_down << '\n';
     insanity_ui->editor_style = (Insanity_UI_Editor_Style){
@@ -94,14 +94,13 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
         .custom_widget_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT,
         .color = COLOR_PURPLE_PALETTE_PURPLE_STRONG, .hovered_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT2,
         .pressed_color = COLOR_PURPLE_PALETTE_DARK2,
-        .outline_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT
+        .outline_color = COLOR_BLACK,
     };
 
     insanity_ui->screen_size.x = screen_size_x;
     insanity_ui->screen_size.y = screen_size_y;
 
 
-    Sprite_Data_array_clear(insanity_ui->ui_data);
     Sprite_Data_array_clear(insanity_ui->text_data);
 
 
@@ -122,7 +121,8 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 
     insanity_ui->string_stack = STRING("INVALID STRING");
     insanity_ui->image_stack = texture_system_get_default_texture(insanity_ui->resource_system->texture_system);
-
+    insanity_ui->rounded_radius_stack = 0.2;
+    insanity_ui->outline_thickness_stack = 0.2;
 
     insanity_ui->hot = -1;
 
@@ -135,43 +135,39 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 
 void insanity_ui_generate_draw(Resource_System* resource_system)
 {
-    //Generate Draw Data for UI Sprites
+    //NEW DRAW DATA
+
+    insanity_ui->node_draw_data_array = arena_alloc(insanity_ui->frame_arena, insanity_ui->ui_nodes->num_items);
+    insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
+
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node_to_draw = &insanity_ui->ui_nodes->data[i];
-        Sprite_Data* sprite_data = sprite_system_get_ui_sprite(resource_system->sprite_system);
-        sprite_data->pos = vec2_div(node_to_draw->pos, insanity_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, insanity_ui->screen_size);
-        sprite_data->thickness = 1.0;
-        sprite_data->rotation = deg_to_rad(node_to_draw->rotation);
+        Insanity_UI_Node* node_data = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node_Draw_Data* node_draw_data = &insanity_ui->node_draw_data_array[i];
+
+        node_draw_data->ui_flags = node_data->ui_flags;
+        node_draw_data->pos = vec2_div(node_data->pos, insanity_ui->screen_size);
+        node_draw_data->size = vec2_div(node_data->size, insanity_ui->screen_size);
+        node_draw_data->rotation = deg_to_rad(node_data->rotation);
 
 
-        if (node_to_draw->sprite_flags & SPRITE_FLAG_CIRCLE)
-        {
-            sprite_data->thickness = node_to_draw->thickness;
-        }
+        node_draw_data->rounded_radius = node_data->rounded_radius;
+
+        node_draw_data->outline_color = node_data->outline_color;
+        node_draw_data->outline_thickness = node_data->outline_thickness;
 
 
-        //TODO:
-        // if (node_to_draw->flags & SPRITE_PIPELINE_COLOR)
-        // {sprite_data->color = node_to_draw->color;}
+        node_draw_data->thickness = node_data->thickness;
 
-        // if (node_to_draw->flags & SPRITE_PIPELINE_TEXTURE)
-        // {
-        // sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        // }
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-        sprite_data->flags = node_to_draw->sprite_flags;
+        node_draw_data->texture_handle = node_data->texture_handle.handle;
+        node_draw_data->uv_offset = (vec2){0, 0};
+        node_draw_data->uv_size = (vec2){0, 0};
 
 
-        //if (node_to_draw->flags & SPRITE_PIPELINE_TEXT)
-        //{
-        //    sprite_data->uv_offset = node_to_draw->uv_offset;
-        //    sprite_data->uv_size = node_to_draw->uv_size;
-        //   Sprite_Data_array_push(madness_ui->text_data, sprite_data);
-        //}
+        node_draw_data->color = node_data->color;
+        node_draw_data->background_color = node_data->background_color;
     }
+
     for (u32 i = 0; i < insanity_ui->ui_nodes_text->num_items; i++)
     {
         Insanity_UI_Node_Text* node_to_draw = &insanity_ui->ui_nodes_text->data[i];
@@ -222,10 +218,15 @@ void insanity_ui_end(Resource_System* resource_system)
                            &insanity_ui->mouse_delta_y);
 }
 
-Insanity_UI_Render_Data insanity_get_render_data()
+Insanity_UI_Render_Packet insanity_get_render_data()
 {
-    return (Insanity_UI_Render_Data){.ui_nodes = insanity_ui->ui_nodes, .ui_nodes_text = insanity_ui->ui_nodes_text};
-
+    // return (Insanity_UI_Render_Packet){.ui_nodes = insanity_ui->node_draw_data_array, .ui_nodes_text = insanity_ui->ui_nodes_text};
+    return (Insanity_UI_Render_Packet){
+        .ui_nodes = insanity_ui->node_draw_data_array,
+        .ui_nodes_size = insanity_ui->node_draw_data_array_size,
+        .ui_nodes_bytes = insanity_ui->node_draw_data_array_size * sizeof(Insanity_UI_Node_Draw_Data),
+        .ui_nodes_text = insanity_ui->ui_nodes_text
+    };
 }
 
 
@@ -392,14 +393,18 @@ void insanity_ui_draw_rect(const char* id)
     node->color = insanity_ui->editor_style.color;
 
 
-    if ((node->ui_flags & UI_TYPE_OUTLINE))
+    if (node->ui_flags & UI_TYPE_OUTLINE)
     {
         node->outline_color = insanity_ui->editor_style.outline_color;
-        node->outline_thickness = 0.01; // TODO:
+        node->outline_thickness = insanity_ui->outline_thickness_stack;
+    }
+    if (node->ui_flags & UI_TYPE_ROUND_CORNER)
+    {
+        node->rounded_radius = insanity_ui->rounded_radius_stack;
     }
 
     //handle drag state
-    if ((node->ui_flags & UI_TYPE_DRAGGABLE))
+    if (node->ui_flags & UI_TYPE_DRAGGABLE)
     {
         vec2 pos;
         if (hash_table_get(insanity_ui->drag_state, node->debug_id, &pos))
@@ -514,7 +519,7 @@ void insanity_ui_test()
 
 
     //check box
-    insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
+    insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE| UI_TYPE_ROUND_CORNER);
     insanity_ui_set_pos((vec2){200, 500});
     insanity_ui_draw_rect("id3");
 }
