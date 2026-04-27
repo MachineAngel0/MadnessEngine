@@ -263,7 +263,8 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
                     app_internal->application_core.is_suspended = false;
                 }
 
-                app_internal->renderer_plugin.renderer_resize(app_internal->renderer_plugin.renderer, width, height);
+                // app_internal->renderer_plugin.renderer_resize(app_internal->renderer_plugin.renderer, width, height);
+                renderer_on_resize(app_internal->renderer_plugin.renderer, width, height);
             }
         }
     }

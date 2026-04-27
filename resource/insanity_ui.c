@@ -43,6 +43,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
 
     insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->arena);
+    insanity_ui->sizing_type_stack = stack_create(sizeof(Insanity_UI_Sizing), 100, insanity_ui->arena);
 
     insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
 
@@ -120,8 +121,11 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     Insanity_UI_Node_Text_array_clear(insanity_ui->ui_nodes_text);
 
 
-    insanity_ui->ui_stack_count = 0;
+    stack_clear(insanity_ui->flag_stack);
+    Insanity_UI_Property_Flags no_flag = UI_TYPE_NONE;
+    stack_push(insanity_ui->flag_stack, &no_flag);
 
+    //pos and size
     stack_clear(insanity_ui->pos_stack);
     vec2 default_pos = {0, 0};
     stack_push(insanity_ui->pos_stack, &default_pos);
@@ -130,15 +134,16 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     vec2 no_size = {0, 0};
     stack_push(insanity_ui->size_stack, &no_size);
 
+    //layout
     stack_clear(insanity_ui->layout_stack);
     Insanity_UI_Layout default_layout = Insanity_UI_LAYOUT_VERTICAL;
     stack_push(insanity_ui->layout_stack, &default_layout);
 
-    stack_clear(insanity_ui->flag_stack);
-    Insanity_UI_Property_Flags no_flag = 0;
-    stack_push(insanity_ui->flag_stack, &no_flag);
+    stack_clear(insanity_ui->sizing_type_stack);
+    Insanity_UI_Sizing default_sizing = Insanity_UI_SIZING_PERCENT;
+    stack_push(insanity_ui->sizing_type_stack, &default_sizing);
 
-
+    //styling
     stack_clear(insanity_ui->float_stack);
 
 
@@ -197,65 +202,63 @@ void insanity_ui_passes()
 {
     if (insanity_ui->ui_nodes->num_items == 0) return;
 
-    //upward sizing pass
-    //creating a post order - depth first search
-    stack* order_stack = stack_create(sizeof(Insanity_UI_Node*), insanity_ui->ui_nodes->num_items,
-                                      insanity_ui->frame_arena);
-    stack* process_stack = stack_create(sizeof(Insanity_UI_Node*), insanity_ui->ui_nodes->num_items,
-                                        insanity_ui->frame_arena);
 
-    //push all the nodes into the stack
+    //scale up the sizes of all the elements to the proper screen size
+    //NOTE: this is done because when a state is stored like position for drag,
+    // when we update it, it's best to update the relative values 0-1
+    // instead of directly modifying the screen position value ie: 1280x720
     for (int i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        stack_push(order_stack, &node);
+        if (node->sizing == Insanity_UI_SIZING_PIXEL) { continue; }
+
+        node->pos = vec2_mul(node->pos, insanity_ui->screen_size);
+        node->size = vec2_mul(node->size, insanity_ui->screen_size);
     }
 
-    //construct the process stack
-    while (!stack_is_empty(order_stack))
+
+    // sizing pass //
+    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node;
-        stack_top(order_stack, &node);
-        stack_pop(order_stack);
+        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        // float horizontal_padding = node->config.padding.left + node->config.padding.right;
+        // float vertical_padding = node->config.padding.top + node->config.padding.bottom;
 
-        //push the parent node onto the stack first, meaning it will be processed last, like we want
-        stack_push(process_stack, node);
-
-        for (int i = 0; i < node->child_count; ++i)
+        //make the ui a percent size of the parent
+        if (node->parent || node->sizing == Insanity_UI_SIZING_PERCENT)
         {
-            Insanity_UI_Node* child = node->children[i];
-            stack_push(order_stack, &child);
+            node->size = vec2_mul(node->parent->size, vec2_div(node->size, insanity_ui->screen_size));
+        }
+
+        //this never gets hit by a child node, unless that child is also a parent
+        for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
+        {
+            Insanity_UI_Node* child_node = node->children[child_idx];
+            switch (node->sizing)
+            {
+            case Insanity_UI_SIZING_EXPAND:
+                switch (node->layout)
+                {
+                case Insanity_UI_LAYOUT_VERTICAL:
+                    node->size.x = max_f(node->size.x, child_node->size.x /*+ horizontal_padding*/);
+                    node->size.y += child_node->size.y;
+                    break;
+                case Insanity_UI_LAYOUT_HORIZONTAL:
+                    node->size.x += child_node->size.x;
+                    node->size.y = max_f(node->size.y, child_node->size.y /*+ vertical_padding*/);
+                    break;
+                }
+                break;
+            case Insanity_UI_SIZING_PERCENT:
+                break;
+            case Insanity_UI_SIZING_PIXEL:
+                break;
+            }
         }
     }
 
-    //TODO: when we have sizing semantics, position is a bit more of a priority rn
-    // //downward position pass
-    // while (!stack_is_empty(process_stack))
-    // {
-    //     Insanity_UI_Node* node;
-    //     stack_top(process_stack, &node);
-    //     stack_pop(process_stack);
-    //
-    //     float total_x = 0.f, total_y = 0.f;
-    //     float max_x = 0.f, max_y = 0.f;
-    //
-    //     for (u32 i = 0; i < node->child_count; i++)
-    //     {
-    //         Insanity_UI_Node* child = node->children[i];
-    //         total_x += child->size.x;
-    //         total_y += child->size.y;
-    //         max_x = fmaxf(max_x, child->size.x);
-    //         max_y = fmaxf(max_y, child->size.y);
-    //     }
-    //
-    //     //TODO: just testing vertical sizing
-    //     // if (node->layout_axis == Axis2_Y)
-    //     // if (node->size_kind_y == UI_SizeKind_ChildrenSum) node->size.y = total_y;
-    //     // if (node->size_kind_x == UI_SizeKind_ChildrenSum) node->size.x = max_x;
-    // }
 
-
-    //downward sizing pass
+    // //position pass
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
@@ -266,6 +269,7 @@ void insanity_ui_passes()
         for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
         {
             Insanity_UI_Node* child_node = node->children[child_idx];
+
             child_node->pos.x = pos_x;
             child_node->pos.y = pos_y;
             switch (node->layout)
@@ -318,8 +322,8 @@ void insanity_ui_passes()
                     hash_table_get(insanity_ui->drag_state, node->id, &pos);
                     // node->pos.x += insanity_ui->mouse_delta_x;
                     // node->pos.y += insanity_ui->mouse_delta_y;
-                    pos.x += insanity_ui->mouse_delta_x;
-                    pos.y += insanity_ui->mouse_delta_y;
+                    pos.x += insanity_ui->mouse_delta_x / insanity_ui->screen_size.x;
+                    pos.y += insanity_ui->mouse_delta_y / insanity_ui->screen_size.y;
                     hash_table_set(insanity_ui->drag_state, node->id, &pos);
                 }
             }
@@ -454,12 +458,25 @@ Insanity_UI_Property_Flags insanity_ui_get_flags()
 
 void insanity_ui_push_pos(vec2 pos)
 {
+    if (pos.x < 0 || pos.x > 1 || pos.y < 0 || pos.y > 1)
+    {
+        WARN("insanity_ui_push_pos: value greater than or less than 1 passed in for the pos")
+    }
     stack_push(insanity_ui->pos_stack, &pos);
 }
 
 void insanity_ui_push_size(vec2 size)
 {
+    if (size.x < 0 || size.x > 1 || size.y < 0 || size.y > 1)
+    {
+        WARN("insanity_ui_push_size: value greater than or less than 1 passed in for the size")
+    }
     stack_push(insanity_ui->size_stack, &size);
+}
+
+void insanity_ui_push_sizing_type(Insanity_UI_Sizing sizing_type)
+{
+    stack_push(insanity_ui->sizing_type_stack, &sizing_type);
 }
 
 void insanity_ui_push_layout(Insanity_UI_Layout layout)
@@ -574,17 +591,28 @@ bool insanity_rect_hit(vec2 pos, vec2 size)
 }
 
 
-Insanity_UI_Interaction_Result insanity_ui_draw(const char* id)
+Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
 {
     Insanity_UI_Interaction_Result out_result = {0};
 
     Insanity_UI_Node* node = insanity_ui_get_new_node();
     node->id = id;
     node->ui_flags = insanity_ui_get_flags();
+
     node->pos = *(vec2*)stack_peek(insanity_ui->pos_stack);
     node->size = *(vec2*)stack_peek(insanity_ui->size_stack);
-    node->color = insanity_ui->editor_style.color;
+
     node->layout = *(Insanity_UI_Layout*)stack_peek(insanity_ui->layout_stack);
+    node->sizing = *(Insanity_UI_Sizing*)stack_peek(insanity_ui->sizing_type_stack);
+
+
+    node->color = insanity_ui->editor_style.color;
+
+    if (node->parent == NULL && node->sizing == Insanity_UI_SIZING_EXPAND)
+    {
+        node->size.x = 0;
+        node->size.y = 0;
+    }
 
 
     if (node->ui_flags & UI_TYPE_OUTLINE)
@@ -717,7 +745,7 @@ void insanity_ui_text()
 void insanity_ui_push_parent(const char* id)
 {
     //draw the item like normal then add it to the stack
-    insanity_ui_draw(id);
+    insanity_ui_draw_rect(id);
 
     //get the node we just drew
     Insanity_UI_Node* new_parent = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
@@ -741,27 +769,80 @@ void insanity_ui_test()
 {
     MASSERT(insanity_ui);
 
+    /*
     {
-        insanity_ui_push_pos((vec2){200, 200});
-        insanity_ui_push_size((vec2){200, 100});
+        insanity_ui_push_pos((vec2){0.2, 0.1});
+        insanity_ui_push_size((vec2){0.2, 0.1});
         insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_DRAGGABLE);
 
-        insanity_ui_draw("id");
+        insanity_ui_draw_rect("id");
     }
+    */
 
     {
+        insanity_ui_push_flags(UI_TYPE_DRAGGABLE);
+        insanity_ui_push_pos((vec2){0, 0});
+        insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
+        insanity_ui_push_size((vec2){0.5, 0.5});
+        insanity_ui_push_sizing_type(Insanity_UI_SIZING_EXPAND);
+        insanity_ui_push_parent("parent test");
+        {
+            insanity_ui_push_sizing_type(Insanity_UI_SIZING_PERCENT);
+            insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_IMAGE);
+            insanity_ui_push_size((vec2){0.5, 0.5});
+            // insanity_ui_draw_rect("child 1");
+            insanity_ui_push_parent("child 1");
+            {
+                insanity_ui_push_flags(UI_TYPE_CLICKABLE);
+                insanity_ui_push_size((vec2){0.5, 0.5}); // does nothing, TODO: implement padding and make it percent based
+                insanity_ui_draw_rect("inner childchild");
+            }
+            insanity_ui_pop_parent();
+
+
+            insanity_ui_push_size((vec2){0.25, 0.25});
+            insanity_ui_push_flags(UI_TYPE_CLICKABLE);
+            insanity_ui_draw_rect("child 2");
+        }
+        insanity_ui_pop_parent();
+        insanity_ui_pop_layout();
+    }
+
+    //assume this is a turn based ability
+    // {
+    //     insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_ROUND_CORNER);
+    //     insanity_ui_push_pos((vec2){0, 0});
+    //     insanity_ui_push_size((vec2){0.33, 0.15});
+    //     insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
+    //     insanity_ui_push_parent("parent test");
+    //     {
+    //         insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_IMAGE);
+    //         insanity_ui_push_size((vec2){0.4, 1.0});
+    //         insanity_ui_draw_rect("child 1");
+    //
+    //         insanity_ui_push_size((vec2){0.5, 0.5});
+    //         insanity_ui_push_flags(UI_TYPE_NONE);
+    //         insanity_ui_draw_rect("child 2");
+    //     }
+    //     insanity_ui_pop_parent();
+    //     insanity_ui_pop_layout();
+    // }
+
+
+    /*
+     {
         insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_TEXT | UI_TYPE_ROUND_CORNER);
         insanity_ui_push_text(STRING("Bitch"));
         insanity_ui_push_pos((vec2){500, 200});
 
-        insanity_ui_draw("id2");
+        insanity_ui_draw_rect("id2");
     }
 
 
     //check box
     insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
     insanity_ui_push_pos((vec2){200, 500});
-    if (insanity_ui_draw("id3").clicked)
+    if (insanity_ui_draw_rect("id3").clicked)
     {
         //do something
     };
@@ -773,7 +854,7 @@ void insanity_ui_test()
     insanity_ui_push_pos((vec2){500, 500});
     insanity_ui_push_text_float(100);
     static float x;
-    x = insanity_ui_draw("id4").float_change;
+    x = insanity_ui_draw_rect("id4").float_change;
 
     //float slider type thing
     //check box
@@ -781,21 +862,8 @@ void insanity_ui_test()
     // insanity_ui_push_flags(UI_TYPE_IMAGE);
     insanity_ui_push_flags(UI_TYPE_IMAGE | UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
     insanity_ui_push_pos((vec2){800, 200});
-    insanity_ui_draw("image");
+    insanity_ui_draw_rect("image");
 
-    /*
-        if (input_is_mouse_wheel_up(insanity_ui->input_system_reference))
-        {
-            insanity_ui->rounded_radius_stack += 0.1;
-            insanity_ui->outline_thickness_stack += 0.05;
-
-        }
-        if (input_is_mouse_wheel_down(insanity_ui->input_system_reference))
-        {
-            insanity_ui->rounded_radius_stack -= 0.1;
-            insanity_ui->outline_thickness_stack -= 0.05;
-        }
-    */
 
     //text input field
     //TODO: does not drag the text, we can wait until the ui nodes have children
@@ -803,7 +871,7 @@ void insanity_ui_test()
     insanity_ui_push_text(STRING("Text Input:"));
     insanity_ui_push_pos((vec2){800, 500});
 
-    insanity_ui_draw("text input");
+    insanity_ui_draw_rect("text input");
 
     //parent node testing
     insanity_ui_push_flags(UI_TYPE_NONE);
@@ -813,12 +881,13 @@ void insanity_ui_test()
     {
         insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_IMAGE);
         insanity_ui_push_size((vec2){200 / 2, 100 / 2});
-        insanity_ui_draw("child 1");
+        insanity_ui_draw_rect("child 1");
 
         insanity_ui_push_size((vec2){200 / 4, 100 / 4});
         insanity_ui_push_flags(UI_TYPE_CLICKABLE);
-        insanity_ui_draw("child 2");
+        insanity_ui_draw_rect("child 2");
     }
     insanity_ui_pop_parent();
     insanity_ui_pop_layout();
+    */
 }

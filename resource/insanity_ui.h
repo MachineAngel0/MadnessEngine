@@ -54,7 +54,7 @@ typedef enum Insanity_UI_Property_Flags
     UI_TYPE_OUTLINE = BITFLAG(5),
     UI_TYPE_SCROLL_VIEW = BITFLAG(6),
     UI_TYPE_COLOR = BITFLAG(7), // this is kinda implied all the time
-    UI_TYPE_DRAGGABLE = BITFLAG(8),
+    UI_TYPE_DRAGGABLE = BITFLAG(8), //NOTE: child elements are not draggable, only a root parent is draggable
     UI_TYPE_ROUND_CORNER = BITFLAG(9),
     UI_TYPE_CIRCLE = BITFLAG(10),
     UI_TYPE_SCROLL_FLOAT = BITFLAG(11),
@@ -89,14 +89,14 @@ typedef struct Insanity_UI_Interaction_Result
 
 typedef enum Insanity_UI_Sizing
 {
-    // percentage of the screen
-    Insanity_UI_SIZING_PERCENT,
-    //percentage of the parent
-    Insanity_UI_SIZING_PARENT_PERCENT,
-    // takes up space of its children or if it is a child, as much of the parent as possible
+    // if a parent takes up percentage of the screen,
+    // if a child takes up percentage of the parent
+    Insanity_UI_SIZING_PERCENT, //(default)
+    // parent -> grows exactly to the size of its children
+    // child -> takes up the rest of the parent space
     Insanity_UI_SIZING_EXPAND,
-
-    Insanity_UI_SIZING_MAX,
+    //exact pizel size, regardless of screen size
+    Insanity_UI_SIZING_PIXEL,
 } Insanity_UI_Sizing;
 
 typedef enum Insanity_UI_Layout_Direction
@@ -105,9 +105,11 @@ typedef enum Insanity_UI_Layout_Direction
     Insanity_UI_LAYOUT_HORIZONTAL,
 } Insanity_UI_Layout;
 
+
 typedef struct Insanity_UI_Padding
 {
-    //not using a vec4 cause its not clear what the values are suppose to be
+    //NOTE: 0-1 range because we are basing padding on percent
+    //not using a vec4 cause its not clear what the values are supposed to be
     float left;
     float right;
     float top;
@@ -171,13 +173,14 @@ typedef struct Insanity_UI_Node
     vec3 color;
     vec3 background_color;
 
-
     //TODO: for widgets that need some sort of child node, like a scroll box
     struct Insanity_UI_Node* parent;
     struct Insanity_UI_Node* children[INSANITY_MAX_UI_NODE_CHILD_COUNT];
     u32 child_count;
 
     Insanity_UI_Layout layout;
+    Insanity_UI_Sizing sizing;
+    Insanity_UI_Padding padding;
 
 } Insanity_UI_Node;
 
@@ -297,8 +300,6 @@ typedef struct Insanity_UI
     // for the backspace functionality of the textbox
 
 
-
-
     vec2 screen_size; // this gets queried every frame
 
     Insanity_UI_Editor_Style editor_style;
@@ -314,6 +315,7 @@ typedef struct Insanity_UI
     stack* size_stack;
 
     stack* layout_stack;
+    stack* sizing_type_stack;
 
     stack* style_stack;
     stack* flag_stack;
@@ -327,7 +329,6 @@ typedef struct Insanity_UI
 
     stack* float_stack;
     float increment_value_stack;
-
 } Insanity_UI;
 
 
@@ -354,7 +355,7 @@ MAPI void insanity_ui_generate_draw(void);
 
 //API
 
-MAPI Insanity_UI_Interaction_Result insanity_ui_draw(const char* id);
+MAPI Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id);
 MAPI void insanity_ui_text();
 
 
@@ -366,9 +367,12 @@ void insanity_ui_pop_parent(void);
 
 //style stuff
 
+//TODO: have the stack never go below 0
+
 MAPI void insanity_ui_push_flags(Insanity_UI_Property_Flags flags);
 MAPI void insanity_ui_push_pos(vec2 pos);
 MAPI void insanity_ui_push_size(vec2 size);
+MAPI void insanity_ui_push_sizing_type(Insanity_UI_Sizing sizing_type);
 
 MAPI void insanity_ui_push_layout(Insanity_UI_Layout layout);
 MAPI void insanity_ui_pop_layout(void);
