@@ -34,45 +34,12 @@ void main() {
     UI_Data inst_data =
     UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(in_material_buffer_location)];
 
+    vec3 fill_color = in_color;
 
-
-//    {
-//        //calculations for rounded rects and for any outlines
-//        //get screen space position and  size
-//        vec2 p = (in_local_pos - vec2(0.5)) * 2.0;
-//        vec2 size = vec2(1.0, 1.0);
-//
-//        vec4 radius = vec4(inst_data.rounded_radius);
-//
-//        float dist = sdRoundBox(p, size, radius);
-//        float px = fwidth(dist);
-//
-//        float outline_thickness = inst_data.outline_thickness;
-//        vec3 outline_color = inst_data.outline_color;
-//        vec3 fill_color = in_color;
-//
-//        //  fill (AA edge)
-//        float fill_alpha = 1.0 - smoothstep(-px, px, dist/ px);
-//
-//        //  smooth inner outline band
-//        // outer edge (near surface)
-//        float edge_outer = smoothstep(-px, px, dist / px);
-//
-//        // inner edge
-//        float edge_inner = smoothstep(-outline_thickness - px, -outline_thickness + px, dist);
-//
-//        // band = region between both edges
-//        float outline_alpha = edge_inner - edge_outer;
-//
-//        // clamp just to be safe
-//        outline_alpha = clamp(outline_alpha, 0.0, 1.0);
-//
-//        //  combine
-//        vec3 color = mix(fill_color, outline_color, outline_alpha);
-//        float alpha = fill_alpha;
-//
-//        outColor = vec4(color, alpha);
-//    }
+    if ((inst_data.flags & UI_TYPE_IMAGE) != 0u){
+        fill_color *= texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv).rgb;
+        //fill_color = texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv).rgb;
+    }
 
     {
         vec2 p = (in_local_pos - vec2(0.5)) * 2.0;
@@ -90,7 +57,6 @@ void main() {
 
         float outline_thickness = inst_data.outline_thickness;
         vec3 outline_color = inst_data.outline_color;
-        vec3 fill_color = in_color;
 
         float fill_alpha = 1.0 - smoothstep(-px, px, dist / px);
 
@@ -101,7 +67,6 @@ void main() {
 
         // combine
         vec3 color = mix(fill_color, outline_color, outline_alpha);
-
         outColor = vec4(color, fill_alpha);
     }
 

@@ -12,15 +12,16 @@ layout(location = 0) in vec2 in_pos;
 layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out flat uint out_texture_idx;
+layout(location = 3) out flat uint out_buffer_idx;
 
 
 
 void main() {
 
-    uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
+    uint material_instance_buffer_idx = PC_2D.instance_buffer_idx;
 
-    Sprite_Data inst_data =
-    Sprite_Instance_Buffer[nonuniformEXT(sprite_instance_buffer_idx)].sprite_instance_data[nonuniformEXT(gl_InstanceIndex)];
+    UI_Data inst_data =
+    UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(gl_InstanceIndex)];
 
     vec2 vertices[6] =
     {
@@ -40,7 +41,7 @@ void main() {
 
     out_color = inst_data.color;
 
-    out_texture_idx = inst_data.texture_index;
+    out_texture_idx = inst_data.texture_handle;
 
 
     float left = inst_data.uv_offset.x;

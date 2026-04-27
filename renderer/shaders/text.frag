@@ -11,6 +11,7 @@
 layout(location = 0) in vec3 in_color;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in flat uint in_texture_idx;
+layout(location = 3) in flat uint in_buffer_idx;
 
 
 layout(location = 0) out vec4 outColor;
@@ -38,13 +39,18 @@ void main() {
 
     outColor = vec4(in_color, 1.0f) * texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv);// if we want colors overlayed
 
+    uint material_instance_buffer_idx = PC_2D.instance_buffer_idx;
+
+    UI_Data inst_data =
+    UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(in_buffer_idx)];
+
 
     vec3 msd = texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv).rgb;
     float sd = median(msd.r, msd.g, msd.b);
     float screenPxDistance = screenPxRange(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv)*(sd - 0.5);
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 
-    vec4 background_color = vec4(0,0,0,0);
+    vec4 background_color = vec4(inst_data.background_color, 0);
     vec4 text_color = vec4(in_color,1);
 
     outColor = mix(background_color, text_color, opacity);

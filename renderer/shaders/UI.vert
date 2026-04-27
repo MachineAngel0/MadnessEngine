@@ -21,7 +21,7 @@ void main() {
 
     UI_Data inst_data =
     UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(gl_InstanceIndex)];
-    out_texture_idx = inst_data.texture_handle;
+
 
     vec2 vertices[6] =
     {
@@ -67,6 +67,7 @@ void main() {
     };
 
     out_uv = uvs[gl_VertexIndex];
+    out_texture_idx = inst_data.texture_handle;
 
     // Always output local UVs
     vec2 local_position[6] = {

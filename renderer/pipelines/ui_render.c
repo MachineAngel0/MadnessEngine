@@ -343,8 +343,8 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                                    ui_renderer->ui_instance_ssbo_handle,
                                                    ui_renderer->ui_instance_staging_ssbo_handle, command_buffer,
-                                                   render_data.ui_nodes,
-                                                   render_data.ui_nodes_bytes);
+                                                   render_data.ui_data,
+                                                   render_data.ui_data_bytes);
 
 
     //literally only need one
@@ -354,7 +354,7 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     indirect_draw_ui.firstInstance = 0;
     indirect_draw_ui.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
     indirect_draw_ui.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_ui.instanceCount = render_data.ui_nodes_size;
+    indirect_draw_ui.instanceCount = render_data.ui_data_size;
 
 
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
@@ -383,9 +383,8 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                                    ui_renderer->text_instance_ssbo_handle,
                                                    ui_renderer->text_instance_staging_ssbo_handle, command_buffer,
-                                                   render_data.ui_nodes_text->data,
-                                                   Insanity_UI_Node_Text_array_get_bytes_used(
-                                                       render_data.ui_nodes_text));
+                                                   render_data.text_data,
+                                                   render_data.text_data_bytes);
 
     //generate indirect draws for text
     //literally only need one
@@ -395,7 +394,7 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     indirect_draw_text.firstInstance = 0;
     indirect_draw_text.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
     indirect_draw_text.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_text.instanceCount = render_data.ui_nodes_text->num_items;
+    indirect_draw_text.instanceCount = render_data.text_data_size;
 
 
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,

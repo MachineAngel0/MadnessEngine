@@ -32,24 +32,35 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->resource_system = resource_system;
 
 
-    insanity_ui->text_data = Sprite_Data_array_create(INSANITY_MAX_UI_TEXT_NODE_COUNT);
-
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
 
     insanity_ui->ui_nodes = Insanity_UI_Node_array_create(MAX_INSANITY_UI_NODE_COUNT);
     insanity_ui->ui_nodes_text = Insanity_UI_Node_Text_array_create(MAX_INSANITY_UI_NODE_COUNT);
-    insanity_ui->string_builder = string_builder_create(100);
 
     //stacks
-    insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
     insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
-    // insanity_ui->sizing_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
+    insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
+
+    insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->arena);
+
+    insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
+
+    insanity_ui->float_stack = stack_create(sizeof(float), 100, insanity_ui->arena);
     // insanity_ui->style_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
 
+
+    //states/hash tables
     insanity_ui->drag_state = HASH_TABLE_CREATE_DEFAULT_SIZE(vec2);
+    insanity_ui->float_state = HASH_TABLE_CREATE_DEFAULT_SIZE(float);
+    insanity_ui->text_box_state = HASH_TABLE_CREATE_DEFAULT_SIZE(String_Builder*);
+
+    //defaults for stacks
+    insanity_ui->rounded_radius_stack = 0.2;
+    insanity_ui->outline_thickness_stack = 0.2;
 
 
+    //interaction and events
     insanity_ui->active = -1;
     insanity_ui->hot = -1;
 
@@ -64,6 +75,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->screen_size = (vec2){800.0f, 600.0f};
 
 
+    //
     if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
                                        &insanity_ui->default_font_handle,
                                        insanity_ui->arena))
@@ -101,9 +113,6 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     insanity_ui->screen_size.y = screen_size_y;
 
 
-    Sprite_Data_array_clear(insanity_ui->text_data);
-
-
     Insanity_UI_Node_array_zero(insanity_ui->ui_nodes);
     Insanity_UI_Node_array_clear(insanity_ui->ui_nodes);
 
@@ -111,18 +120,35 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     Insanity_UI_Node_Text_array_clear(insanity_ui->ui_nodes_text);
 
 
-    stack_clear(insanity_ui->flag_stack);
-    Insanity_UI_Property_Flags no_flag = 0;
-    stack_push(insanity_ui->flag_stack, &no_flag);
+    insanity_ui->ui_stack_count = 0;
 
     stack_clear(insanity_ui->pos_stack);
     vec2 default_pos = {0, 0};
     stack_push(insanity_ui->pos_stack, &default_pos);
 
+    stack_clear(insanity_ui->size_stack);
+    vec2 no_size = {0, 0};
+    stack_push(insanity_ui->size_stack, &no_size);
+
+    stack_clear(insanity_ui->layout_stack);
+    Insanity_UI_Layout default_layout = Insanity_UI_LAYOUT_VERTICAL;
+    stack_push(insanity_ui->layout_stack, &default_layout);
+
+    stack_clear(insanity_ui->flag_stack);
+    Insanity_UI_Property_Flags no_flag = 0;
+    stack_push(insanity_ui->flag_stack, &no_flag);
+
+
+    stack_clear(insanity_ui->float_stack);
+
+
     insanity_ui->string_stack = STRING("INVALID STRING");
     insanity_ui->image_stack = texture_system_get_default_texture(insanity_ui->resource_system->texture_system);
-    insanity_ui->rounded_radius_stack = 0.2;
-    insanity_ui->outline_thickness_stack = 0.2;
+    // insanity_ui->rounded_radius_stack = 0.2;
+    // insanity_ui->outline_thickness_stack = 0.2;
+
+    insanity_ui->increment_value_stack = 1;
+
 
     insanity_ui->hot = -1;
 
@@ -130,59 +156,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     insanity_ui->mouse_released_unique = input_is_mouse_button_released_unique(
         insanity_ui->input_system_reference, MOUSE_BUTTON_LEFT);
     //this can be 0 if invalid
-    insanity_ui->released_key = input_get_first_released_key(insanity_ui->input_system_reference);
-}
-
-void insanity_ui_generate_draw(Resource_System* resource_system)
-{
-    //NEW DRAW DATA
-
-    insanity_ui->node_draw_data_array = arena_alloc(insanity_ui->frame_arena, insanity_ui->ui_nodes->num_items);
-    insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
-
-    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
-    {
-        Insanity_UI_Node* node_data = &insanity_ui->ui_nodes->data[i];
-        Insanity_UI_Node_Draw_Data* node_draw_data = &insanity_ui->node_draw_data_array[i];
-
-        node_draw_data->ui_flags = node_data->ui_flags;
-        node_draw_data->pos = vec2_div(node_data->pos, insanity_ui->screen_size);
-        node_draw_data->size = vec2_div(node_data->size, insanity_ui->screen_size);
-        node_draw_data->rotation = deg_to_rad(node_data->rotation);
-
-
-        node_draw_data->rounded_radius = node_data->rounded_radius;
-
-        node_draw_data->outline_color = node_data->outline_color;
-        node_draw_data->outline_thickness = node_data->outline_thickness;
-
-
-        node_draw_data->thickness = node_data->thickness;
-
-        node_draw_data->texture_handle = node_data->texture_handle.handle;
-        node_draw_data->uv_offset = (vec2){0, 0};
-        node_draw_data->uv_size = (vec2){0, 0};
-
-
-        node_draw_data->color = node_data->color;
-        node_draw_data->background_color = node_data->background_color;
-    }
-
-    for (u32 i = 0; i < insanity_ui->ui_nodes_text->num_items; i++)
-    {
-        Insanity_UI_Node_Text* node_to_draw = &insanity_ui->ui_nodes_text->data[i];
-        Sprite_Data* sprite_data = sprite_system_get_text_sprite(resource_system->sprite_system);
-        sprite_data->pos = vec2_div(node_to_draw->pos, insanity_ui->screen_size);
-        sprite_data->size = vec2_div(node_to_draw->size, insanity_ui->screen_size);
-
-        sprite_data->uv_offset = node_to_draw->uv_offset;
-        sprite_data->uv_size = node_to_draw->uv_size;
-
-        sprite_data->color = node_to_draw->color;
-        sprite_data->texture_index = node_to_draw->texture_handle.handle;
-
-        sprite_data->flags = node_to_draw->flags;
-    }
+    insanity_ui->first_released_key = input_get_first_released_key(insanity_ui->input_system_reference);
 }
 
 
@@ -193,7 +167,7 @@ void insanity_ui_end(Resource_System* resource_system)
 
     insanity_ui_passes();
 
-    insanity_ui_generate_draw(resource_system);
+    insanity_ui_generate_draw();
 
     //SET UI STATE FOR NEXT FRAME //
 
@@ -218,27 +192,103 @@ void insanity_ui_end(Resource_System* resource_system)
                            &insanity_ui->mouse_delta_y);
 }
 
-Insanity_UI_Render_Packet insanity_get_render_data()
-{
-    // return (Insanity_UI_Render_Packet){.ui_nodes = insanity_ui->node_draw_data_array, .ui_nodes_text = insanity_ui->ui_nodes_text};
-    return (Insanity_UI_Render_Packet){
-        .ui_nodes = insanity_ui->node_draw_data_array,
-        .ui_nodes_size = insanity_ui->node_draw_data_array_size,
-        .ui_nodes_bytes = insanity_ui->node_draw_data_array_size * sizeof(Insanity_UI_Node_Draw_Data),
-        .ui_nodes_text = insanity_ui->ui_nodes_text
-    };
-}
-
 
 void insanity_ui_passes()
 {
+    if (insanity_ui->ui_nodes->num_items == 0) return;
+
+    //upward sizing pass
+    //creating a post order - depth first search
+    stack* order_stack = stack_create(sizeof(Insanity_UI_Node*), insanity_ui->ui_nodes->num_items,
+                                      insanity_ui->frame_arena);
+    stack* process_stack = stack_create(sizeof(Insanity_UI_Node*), insanity_ui->ui_nodes->num_items,
+                                        insanity_ui->frame_arena);
+
+    //push all the nodes into the stack
+    for (int i = 0; i < insanity_ui->ui_nodes->num_items; i++)
+    {
+        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        stack_push(order_stack, &node);
+    }
+
+    //construct the process stack
+    while (!stack_is_empty(order_stack))
+    {
+        Insanity_UI_Node* node;
+        stack_top(order_stack, &node);
+        stack_pop(order_stack);
+
+        //push the parent node onto the stack first, meaning it will be processed last, like we want
+        stack_push(process_stack, node);
+
+        for (int i = 0; i < node->child_count; ++i)
+        {
+            Insanity_UI_Node* child = node->children[i];
+            stack_push(order_stack, &child);
+        }
+    }
+
+    //TODO: when we have sizing semantics, position is a bit more of a priority rn
+    // //downward position pass
+    // while (!stack_is_empty(process_stack))
+    // {
+    //     Insanity_UI_Node* node;
+    //     stack_top(process_stack, &node);
+    //     stack_pop(process_stack);
+    //
+    //     float total_x = 0.f, total_y = 0.f;
+    //     float max_x = 0.f, max_y = 0.f;
+    //
+    //     for (u32 i = 0; i < node->child_count; i++)
+    //     {
+    //         Insanity_UI_Node* child = node->children[i];
+    //         total_x += child->size.x;
+    //         total_y += child->size.y;
+    //         max_x = fmaxf(max_x, child->size.x);
+    //         max_y = fmaxf(max_y, child->size.y);
+    //     }
+    //
+    //     //TODO: just testing vertical sizing
+    //     // if (node->layout_axis == Axis2_Y)
+    //     // if (node->size_kind_y == UI_SizeKind_ChildrenSum) node->size.y = total_y;
+    //     // if (node->size_kind_x == UI_SizeKind_ChildrenSum) node->size.x = max_x;
+    // }
+
+
+    //downward sizing pass
+    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
+    {
+        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        float pos_x = node->pos.x;
+        float pos_y = node->pos.y;
+
+        // node->size.x += horizontal_padding;
+        for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
+        {
+            Insanity_UI_Node* child_node = node->children[child_idx];
+            child_node->pos.x = pos_x;
+            child_node->pos.y = pos_y;
+            switch (node->layout)
+            {
+            case Insanity_UI_LAYOUT_HORIZONTAL:
+                pos_x += child_node->size.x;
+                break;
+            case Insanity_UI_LAYOUT_VERTICAL:
+                pos_y += child_node->size.y;
+                break;
+            }
+        }
+    }
+
+
+    //feature pass
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
 
-        bool hit = (insanity_rect_hit(node->pos, node->size));
+        bool hover_hit = (insanity_rect_hit(node->pos, node->size));
 
-        if (hit)
+        if (hover_hit)
         {
             if (node->ui_flags & UI_TYPE_CLICKABLE)
             {
@@ -260,17 +310,58 @@ void insanity_ui_passes()
 
         if (node->ui_flags & UI_TYPE_DRAGGABLE)
         {
-            if (hit)
+            if (hover_hit)
             {
                 if (insanity_ui->mouse_down)
                 {
                     vec2 pos;
-                    hash_table_get(insanity_ui->drag_state, node->debug_id, &pos);
+                    hash_table_get(insanity_ui->drag_state, node->id, &pos);
                     // node->pos.x += insanity_ui->mouse_delta_x;
                     // node->pos.y += insanity_ui->mouse_delta_y;
                     pos.x += insanity_ui->mouse_delta_x;
                     pos.y += insanity_ui->mouse_delta_y;
-                    hash_table_set(insanity_ui->drag_state, node->debug_id, &pos);
+                    hash_table_set(insanity_ui->drag_state, node->id, &pos);
+                }
+            }
+        }
+
+        if (node->ui_flags & UI_TYPE_SCROLL_FLOAT)
+        {
+            if (hover_hit)
+            {
+                float val;
+                if (hash_table_get(insanity_ui->float_state, node->id, &val))
+                {
+                    if (input_is_mouse_wheel_up(insanity_ui->input_system_reference))
+                    {
+                        val += insanity_ui->increment_value_stack;
+                        hash_table_set(insanity_ui->float_state, node->id, &val);
+                    }
+                    if (input_is_mouse_wheel_down(insanity_ui->input_system_reference))
+                    {
+                        val -= insanity_ui->increment_value_stack;
+                        hash_table_set(insanity_ui->float_state, node->id, &val);
+                    }
+                }
+            }
+        }
+
+        if (node->ui_flags & UI_TYPE_TEXT_INPUT)
+        {
+            if (hover_hit)
+            {
+                String_Builder* builder;
+                if (hash_table_get(insanity_ui->text_box_state, node->id, &builder))
+                {
+                    if (input_key_released_unique(insanity_ui->input_system_reference, KEY_BACKSPACE))
+                    {
+                        string_builder_decrement(builder);
+                    }
+
+                    if (insanity_ui->first_released_key)
+                    {
+                        string_builder_append_char(builder, &insanity_ui->first_released_key, 1);
+                    }
                 }
             }
         }
@@ -278,7 +369,79 @@ void insanity_ui_passes()
 }
 
 
-void insanity_ui_set_flags(Insanity_UI_Property_Flags flags)
+void insanity_ui_generate_draw(void)
+{
+    //NEW DRAW DATA
+
+    insanity_ui->node_draw_data_array = arena_alloc(insanity_ui->frame_arena,
+                                                    insanity_ui->ui_nodes->num_items * sizeof(
+                                                        Insanity_UI_Node_Draw_Data));
+    insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
+
+    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
+    {
+        Insanity_UI_Node* node_data = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node_Draw_Data* draw_data = &insanity_ui->node_draw_data_array[i];
+
+        draw_data->ui_flags = node_data->ui_flags;
+        draw_data->pos = vec2_div(node_data->pos, insanity_ui->screen_size);
+        draw_data->size = vec2_div(node_data->size, insanity_ui->screen_size);
+        draw_data->rotation = deg_to_rad(node_data->rotation);
+
+
+        draw_data->rounded_radius = node_data->rounded_radius;
+
+        draw_data->outline_color = node_data->outline_color;
+        draw_data->outline_thickness = node_data->outline_thickness;
+
+
+        draw_data->thickness = node_data->thickness;
+
+        draw_data->texture_handle = node_data->texture_handle.handle;
+        draw_data->uv_offset = node_data->uv_offset;
+        draw_data->uv_size = node_data->uv_size;
+
+
+        draw_data->color = node_data->color;
+        draw_data->background_color = node_data->background_color;
+    }
+
+    insanity_ui->text_draw_data_array = arena_alloc(insanity_ui->frame_arena,
+                                                    insanity_ui->ui_nodes_text->num_items * sizeof(
+                                                        Insanity_UI_Node_Draw_Data));
+    insanity_ui->text_draw_data_array_size = insanity_ui->ui_nodes_text->num_items;
+
+    for (u32 i = 0; i < insanity_ui->ui_nodes_text->num_items; i++)
+    {
+        Insanity_UI_Node_Text* node_data = &insanity_ui->ui_nodes_text->data[i];
+        Insanity_UI_Node_Draw_Data* draw_data = &insanity_ui->text_draw_data_array[i];
+
+        draw_data->ui_flags = node_data->flags;
+        draw_data->pos = vec2_div(node_data->pos, insanity_ui->screen_size);
+        draw_data->size = vec2_div(node_data->size, insanity_ui->screen_size);
+
+        draw_data->uv_offset = node_data->uv_offset;
+        draw_data->uv_size = node_data->uv_size;
+
+        draw_data->color = node_data->color;
+        draw_data->texture_handle = node_data->texture_handle.handle;
+    }
+}
+
+Insanity_UI_Render_Packet insanity_get_render_data()
+{
+    // return (Insanity_UI_Render_Packet){.ui_nodes = insanity_ui->node_draw_data_array, .ui_nodes_text = insanity_ui->ui_nodes_text};
+    return (Insanity_UI_Render_Packet){
+        .ui_data = insanity_ui->node_draw_data_array,
+        .ui_data_size = insanity_ui->node_draw_data_array_size,
+        .ui_data_bytes = insanity_ui->node_draw_data_array_size * sizeof(Insanity_UI_Node_Draw_Data),
+        .text_data = insanity_ui->text_draw_data_array,
+        .text_data_size = insanity_ui->text_draw_data_array_size,
+        .text_data_bytes = insanity_ui->text_draw_data_array_size * sizeof(Insanity_UI_Node_Draw_Data),
+    };
+}
+
+void insanity_ui_push_flags(Insanity_UI_Property_Flags flags)
 {
     Insanity_UI_Property_Flags flags_t = flags;
     stack_push(insanity_ui->flag_stack, &flags_t);
@@ -289,17 +452,49 @@ Insanity_UI_Property_Flags insanity_ui_get_flags()
     return *(Insanity_UI_Property_Flags*)stack_peek(insanity_ui->flag_stack);
 }
 
-void insanity_ui_set_pos(vec2 pos)
+void insanity_ui_push_pos(vec2 pos)
 {
     stack_push(insanity_ui->pos_stack, &pos);
 }
 
-void insanity_ui_set_text(String text)
+void insanity_ui_push_size(vec2 size)
+{
+    stack_push(insanity_ui->size_stack, &size);
+}
+
+void insanity_ui_push_layout(Insanity_UI_Layout layout)
+{
+    stack_push(insanity_ui->layout_stack, &layout);
+}
+
+void insanity_ui_pop_layout(void)
+{
+    stack_pop(insanity_ui->layout_stack);
+}
+
+void insanity_ui_push_text(String text)
 {
     insanity_ui->string_stack = text;
 }
 
-void insanity_ui_set_image(const char* texture_file)
+char* insanity_ui_float_to_char(const float value)
+{
+    int len = snprintf(NULL, 0, "%.3f", value);
+    char* result = arena_alloc(insanity_ui->frame_arena, len + 1);
+    snprintf(result, len + 1, "%.3f", value);
+
+    return result;
+}
+
+void insanity_ui_push_text_float(float val)
+{
+    stack_push(insanity_ui->float_stack, &val);
+    char* float_char = insanity_ui_float_to_char(val);
+    String float_string = {float_char, strlen(float_char)};
+    insanity_ui_push_text(float_string);
+}
+
+void insanity_ui_push_image(const char* texture_file)
 {
     insanity_ui->image_stack = texture_system_load_texture_new(insanity_ui->resource_system->texture_system,
                                                                texture_file);
@@ -314,24 +509,20 @@ Insanity_UI_Node* insanity_ui_get_new_node()
 {
     Insanity_UI_Node* out_node = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items];
 
-
-    //set the parent is a layout is active
-    if (insanity_ui->layout)
+    if (insanity_ui->ui_stack_count > 0)
     {
-        //check if the last node had a parent, if it doesn't then it is the parent
-        if (insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1].parent)
-        {
-            out_node->parent = insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1].parent;
-        }
-        else
-        {
-            out_node->parent = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
-        }
+        //whatever is at the top of the stack if the parent node
+        Insanity_UI_Node* parent_node = insanity_ui->ui_stack[insanity_ui->ui_stack_count - 1];
 
-        out_node->parent->children[out_node->parent->child_node_count++] = out_node;
+        //set the new nodes parent
+        out_node->parent = parent_node;
+        //set the children for the parent node
+        parent_node->children[parent_node->child_count] = out_node;
+        parent_node->child_count += 1;
     }
 
     insanity_ui->ui_nodes->num_items++;
+
     return out_node;
 }
 
@@ -383,14 +574,17 @@ bool insanity_rect_hit(vec2 pos, vec2 size)
 }
 
 
-void insanity_ui_draw_rect(const char* id)
+Insanity_UI_Interaction_Result insanity_ui_draw(const char* id)
 {
+    Insanity_UI_Interaction_Result out_result = {0};
+
     Insanity_UI_Node* node = insanity_ui_get_new_node();
-    node->debug_id = id;
+    node->id = id;
     node->ui_flags = insanity_ui_get_flags();
     node->pos = *(vec2*)stack_peek(insanity_ui->pos_stack);
-    node->size = (vec2){200, 100};
+    node->size = *(vec2*)stack_peek(insanity_ui->size_stack);
     node->color = insanity_ui->editor_style.color;
+    node->layout = *(Insanity_UI_Layout*)stack_peek(insanity_ui->layout_stack);
 
 
     if (node->ui_flags & UI_TYPE_OUTLINE)
@@ -402,19 +596,55 @@ void insanity_ui_draw_rect(const char* id)
     {
         node->rounded_radius = insanity_ui->rounded_radius_stack;
     }
-
     //handle drag state
     if (node->ui_flags & UI_TYPE_DRAGGABLE)
     {
-        vec2 pos;
-        if (hash_table_get(insanity_ui->drag_state, node->debug_id, &pos))
+        vec2 pos = {0};
+        if (hash_table_get(insanity_ui->drag_state, node->id, &pos))
         {
             node->pos = pos;
         }
+        else
         {
-            hash_table_insert(insanity_ui->drag_state, node->debug_id, &node->pos);
+            hash_table_insert(insanity_ui->drag_state, node->id, &node->pos);
         }
     }
+    if (node->ui_flags & UI_TYPE_SCROLL_FLOAT)
+    {
+        bool stack_result = stack_is_empty(insanity_ui->float_stack);
+        if (stack_result)
+        {
+            FATAL("PUSH A FLOAT ONTO THE STACK, NODE ID: %s", node->id);
+            MASSERT(stack_result);
+        }
+
+        float val = {0};
+        if (hash_table_get(insanity_ui->float_state, node->id, &val))
+        {
+            out_result.float_value = val;
+            insanity_ui_push_text_float(val);
+        }
+        else
+        {
+            hash_table_insert(insanity_ui->float_state, node->id, stack_peek(insanity_ui->float_stack));
+        }
+    }
+    if (node->ui_flags & UI_TYPE_TEXT_INPUT)
+    {
+        //if text is set with this, we probably just want to let that be for the first iteration and ignore every other time
+        String_Builder* string_builder = {0};
+        if (hash_table_get(insanity_ui->text_box_state, node->id, &string_builder))
+        {
+            insanity_ui_push_text(string_builder_to_string_non_pointer(string_builder));
+        }
+        else
+        {
+            string_builder = string_builder_create(100);
+            string_builder_append_string(string_builder, &insanity_ui->string_stack);
+            hash_table_insert(insanity_ui->text_box_state, node->id, &string_builder);
+        }
+    }
+
     if (node->ui_flags & UI_TYPE_TEXT)
     {
         //create the text
@@ -423,17 +653,11 @@ void insanity_ui_draw_rect(const char* id)
     if (node->ui_flags & UI_TYPE_IMAGE)
     {
         node->texture_handle = insanity_ui_get_image();
+        node->uv_size = (vec2){1., 1.};
     }
 
-
-    //close
-    if (insanity_ui->layout)
-    {
-        //add child sizing to the parent
-    }
-
-
-    // return
+    //TODO: get this from a hash table
+    return out_result;
 }
 
 void insanity_ui_text()
@@ -471,6 +695,7 @@ void insanity_ui_text()
         // vec2 uv0 = {g->u0, g->v0}; // uv pos/offset
         // vec2 uv1 = {g->u1, g->v1}; // uv size
 
+        // Insanity_UI_Node_Text* text_node = insanity_ui_get_new_node_text();
         Insanity_UI_Node_Text* text_node = insanity_ui_get_new_node_text();
         text_node->character = c;
         text_node->pos = (vec2){x_position, y_position};
@@ -489,12 +714,26 @@ void insanity_ui_text()
     }
 }
 
-void insanity_ui_layout_start(Insanity_UI_Layout_Direction layout_direction)
+void insanity_ui_push_parent(const char* id)
 {
+    //draw the item like normal then add it to the stack
+    insanity_ui_draw(id);
+
+    //get the node we just drew
+    Insanity_UI_Node* new_parent = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
+
+    insanity_ui->ui_stack[insanity_ui->ui_stack_count] = new_parent;
+    insanity_ui->ui_stack_count++;
 }
 
-void insanity_ui_layout_end(Insanity_UI_Layout_Direction layout_direction)
+
+void insanity_ui_pop_parent(void)
 {
+    if (insanity_ui->ui_stack_count == 0)
+    {
+        FATAL("insanity_ui_parent_pop: trying to pop from parent node")
+    }
+    insanity_ui->ui_stack_count--;
 }
 
 
@@ -503,23 +742,83 @@ void insanity_ui_test()
     MASSERT(insanity_ui);
 
     {
-        insanity_ui_set_pos((vec2){200, 200});
-        insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_DRAGGABLE);
+        insanity_ui_push_pos((vec2){200, 200});
+        insanity_ui_push_size((vec2){200, 100});
+        insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_DRAGGABLE);
 
-        insanity_ui_draw_rect("id");
+        insanity_ui_draw("id");
     }
 
     {
-        insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_TEXT);
-        insanity_ui_set_text(STRING("Bitch"));
-        insanity_ui_set_pos((vec2){500, 200});
+        insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_TEXT | UI_TYPE_ROUND_CORNER);
+        insanity_ui_push_text(STRING("Bitch"));
+        insanity_ui_push_pos((vec2){500, 200});
 
-        insanity_ui_draw_rect("id2");
+        insanity_ui_draw("id2");
     }
 
 
     //check box
-    insanity_ui_set_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE| UI_TYPE_ROUND_CORNER);
-    insanity_ui_set_pos((vec2){200, 500});
-    insanity_ui_draw_rect("id3");
+    insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
+    insanity_ui_push_pos((vec2){200, 500});
+    if (insanity_ui_draw("id3").clicked)
+    {
+        //do something
+    };
+
+
+    //float slider type thing
+    //check box
+    insanity_ui_push_flags(UI_TYPE_SCROLL_FLOAT | UI_TYPE_TEXT);
+    insanity_ui_push_pos((vec2){500, 500});
+    insanity_ui_push_text_float(100);
+    static float x;
+    x = insanity_ui_draw("id4").float_change;
+
+    //float slider type thing
+    //check box
+    insanity_ui_push_image("../renderer/texture/error_texture.png");
+    // insanity_ui_push_flags(UI_TYPE_IMAGE);
+    insanity_ui_push_flags(UI_TYPE_IMAGE | UI_TYPE_CLICKABLE | UI_TYPE_OUTLINE);
+    insanity_ui_push_pos((vec2){800, 200});
+    insanity_ui_draw("image");
+
+    /*
+        if (input_is_mouse_wheel_up(insanity_ui->input_system_reference))
+        {
+            insanity_ui->rounded_radius_stack += 0.1;
+            insanity_ui->outline_thickness_stack += 0.05;
+
+        }
+        if (input_is_mouse_wheel_down(insanity_ui->input_system_reference))
+        {
+            insanity_ui->rounded_radius_stack -= 0.1;
+            insanity_ui->outline_thickness_stack -= 0.05;
+        }
+    */
+
+    //text input field
+    //TODO: does not drag the text, we can wait until the ui nodes have children
+    insanity_ui_push_flags(UI_TYPE_TEXT_INPUT | UI_TYPE_TEXT | UI_TYPE_DRAGGABLE);
+    insanity_ui_push_text(STRING("Text Input:"));
+    insanity_ui_push_pos((vec2){800, 500});
+
+    insanity_ui_draw("text input");
+
+    //parent node testing
+    insanity_ui_push_flags(UI_TYPE_NONE);
+    insanity_ui_push_pos((vec2){0, 0});
+    insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
+    insanity_ui_push_parent("parent test");
+    {
+        insanity_ui_push_flags(UI_TYPE_CLICKABLE | UI_TYPE_IMAGE);
+        insanity_ui_push_size((vec2){200 / 2, 100 / 2});
+        insanity_ui_draw("child 1");
+
+        insanity_ui_push_size((vec2){200 / 4, 100 / 4});
+        insanity_ui_push_flags(UI_TYPE_CLICKABLE);
+        insanity_ui_draw("child 2");
+    }
+    insanity_ui_pop_parent();
+    insanity_ui_pop_layout();
 }
