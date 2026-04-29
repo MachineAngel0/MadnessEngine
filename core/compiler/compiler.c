@@ -6,8 +6,10 @@ void lexer_test()
     lexer_generate_tokens(lexer, "../core/compiler/compiler_test_file.h");
 
     Lexer* lexer2 = lexer_init();
-    lexer_generate_tokens(lexer, "../core/compiler/shader_test_file.madnessshader");
+    lexer_generate_tokens(lexer2, "../core/compiler/shader_test_file.madnessshader");
 
+    Lexer* lexer3 = lexer_init();
+    lexer_generate_tokens(lexer3, "../MadnessPulse/game_enums.h");
 
 }
 
@@ -40,6 +42,7 @@ void lexer_generate_tokens(Lexer* lexer, const char* file_path)
     lexer->position = malloc(sz);
     fread(lexer->position, 1, sz, file);
 
+    fclose(file);
 
     while (true)
     {
@@ -56,7 +59,7 @@ void lexer_generate_tokens(Lexer* lexer, const char* file_path)
     }
 
     u64 size = darray_get_size(lexer->tokens);
-    u64 sizea = darray_get_size(lexer->tokens);
+    DEBUG("token size: %d", size)
 }
 
 

@@ -66,6 +66,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                                      application_core->input_system,
                                                                      application_core->resource_system);
 
+    // ability_testing();
+    turn_based_game_init(madness_pulse_game);
+
 
     //MAIN LOOP
 

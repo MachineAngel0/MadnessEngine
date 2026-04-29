@@ -67,7 +67,7 @@ void SetFlags(Special_Ability_Flag_List_Component* units_list, Special_Ability_F
 
 }
 
-void ResetFlags(Special_Ability_Flag_List_Component* special_ability_flag_list)
+void special_ability_flag_list_reset_flags(Special_Ability_Flag_List_Component* special_ability_flag_list)
 {
     memset(special_ability_flag_list, 0, sizeof(Special_Ability_Flag_List_Component));
 }

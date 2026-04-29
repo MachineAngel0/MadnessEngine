@@ -39,7 +39,7 @@ bool health_component_is_dead(Health_Component* health_component)
     return health_component->current_health <= 0;
 }
 
-bool IsAlive(Health_Component* health_component)
+bool health_component_is_alive(Health_Component* health_component)
 {
     return health_component->current_health > 0;
 }

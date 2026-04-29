@@ -11,7 +11,7 @@ void health_component_init_default(Health_Component* health);
 
 bool health_component_is_dead(Health_Component* health_component);
 
-bool IsAlive(Health_Component* health_component);
+bool health_component_is_alive(Health_Component* health_component);
 
 void CheckForDeathOrRevive(Unit* unit, Health_Component* health_component);
 

@@ -365,42 +365,5 @@ void ui_renderer_upload_insanity_draw_data(UI_Renderer_Backend* ui_renderer, Ren
     );
 
 
-    //TEXT Render
-
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->text_vertex_buffer_handle,
-                                                   ui_renderer->text_vertex_staging_buffer_handle, command_buffer,
-                                                   default_sprite,
-                                                   sizeof(Sprite) * 4);
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->text_index_buffer_handle,
-                                                   ui_renderer->text_index_staging_buffer_handle, command_buffer,
-                                                   default_sprite_indices,
-                                                   sizeof(u16) * 6);
-    //material data
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->text_instance_ssbo_handle,
-                                                   ui_renderer->text_instance_staging_ssbo_handle, command_buffer,
-                                                   render_data.text_data,
-                                                   render_data.text_data_bytes);
-
-    //generate indirect draws for text
-    //literally only need one
-    VkDrawIndexedIndirectCommand indirect_draw_text;
-
-    indirect_draw_text.firstIndex = 0;
-    indirect_draw_text.firstInstance = 0;
-    indirect_draw_text.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
-    indirect_draw_text.indexCount = ARRAY_SIZE(default_sprite_indices);
-    indirect_draw_text.instanceCount = render_data.text_data_size;
-
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->text_indirect_buffer_handle,
-                                                   ui_renderer->text_indirect_staging_buffer_handle, command_buffer,
-                                                   &indirect_draw_text,
-                                                   sizeof(VkDrawIndexedIndirectCommand));
 }
 

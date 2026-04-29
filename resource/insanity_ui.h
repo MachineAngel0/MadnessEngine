@@ -23,7 +23,6 @@
 #define INSANITY_EDITOR_FONT_SIZE 24.0f
 
 #define INSANITY_MAX_UI_NODE_COUNT 1000
-#define INSANITY_MAX_UI_TEXT_NODE_COUNT 1000
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 10
 
 //UI
@@ -46,23 +45,23 @@ typedef enum Insanity_UI_Alignment
 
 typedef enum Insanity_UI_Property_Flags
 {
-    UI_TYPE_NONE = BITFLAG(0),
-    UI_TYPE_BACKGROUND = BITFLAG(1),
-    UI_TYPE_CLICKABLE = BITFLAG(2),
-    UI_TYPE_IMAGE = BITFLAG(3),
-    UI_TYPE_TEXT = BITFLAG(4),
-    UI_TYPE_OUTLINE = BITFLAG(5),
-    UI_TYPE_SCROLL_VIEW = BITFLAG(6),
-    UI_TYPE_COLOR = BITFLAG(7), // this is kinda implied all the time
-    UI_TYPE_DRAGGABLE = BITFLAG(8), //NOTE: child elements are not draggable, only a root parent is draggable
-    UI_TYPE_ROUND_CORNER = BITFLAG(9),
-    UI_TYPE_CIRCLE = BITFLAG(10),
-    UI_TYPE_SCROLL_FLOAT = BITFLAG(11),
-    UI_TYPE_TEXT_INPUT = BITFLAG(12),
-    // UI_TYPE_SCROLL_INT = BITFLAG(13),
-    // UI_TYPE_ = BITFLAG(14),
-    // UI_TYPE_ = BITFLAG(15),
-    // UI_TYPE_ = BITFLAG(16),
+    UI_FLAG_NONE = BITFLAG(0),
+    UI_FLAG_BACKGROUND = BITFLAG(1),
+    UI_FLAG_CLICKABLE = BITFLAG(2),
+    UI_FLAG_IMAGE = BITFLAG(3),
+    UI_FLAG_TEXT = BITFLAG(4),
+    UI_FLAG_OUTLINE = BITFLAG(5),
+    UI_FLAG_SCROLL_VIEW = BITFLAG(6),
+    UI_FLAG_COLOR = BITFLAG(7), // this is kinda implied all the time
+    UI_FLAG_DRAGGABLE = BITFLAG(8), //NOTE: child elements are not draggable, only a root parent is draggable
+    UI_FLAG_ROUND_CORNER = BITFLAG(9),
+    UI_FLAG_CIRCLE = BITFLAG(10),
+    UI_FLAG_SCROLL_FLOAT = BITFLAG(11),
+    UI_FLAG_TEXT_INPUT = BITFLAG(12),
+    UI_FLAG_PRESSED = BITFLAG(13), //for handling states in which the item should have a different color if its in the selected state
+    // UI_FLAG_ = BITFLAG(14),
+    // UI_FLAG_ = BITFLAG(15),
+    // UI_FLAG_ = BITFLAG(16),
 } Insanity_UI_Property_Flags;
 
 typedef enum Insanity_UI_Interaction_Event
@@ -95,9 +94,13 @@ typedef enum Insanity_UI_Sizing
     // parent -> grows exactly to the size of its children
     // child -> takes up the rest of the parent space
     Insanity_UI_SIZING_EXPAND,
+    //TODO: debug info error on this, so we are not having empty children types
+    // parent and child -> grows exactly to the size of its contents/children, if none are present, then nothing will be shown
+    Insanity_UI_SIZING_FIT,
     //exact pizel size, regardless of screen size
     Insanity_UI_SIZING_PIXEL,
 } Insanity_UI_Sizing;
+
 
 typedef enum Insanity_UI_Layout_Direction
 {
@@ -148,6 +151,7 @@ typedef struct Insanity_UI_Node
     // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
+    vec2 percent_size;
     float rotation; // degrees, but gets converted to radians at draw time
 
     //rounded
@@ -163,11 +167,12 @@ typedef struct Insanity_UI_Node
     const char* id;
     u64 hash_id;
 
-    //draw data
-    //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     Texture_Handle texture_handle;
     vec2 uv_offset;
     vec2 uv_size;
+    //Text
+    char character; // will also need the texture handle
+    Texture_Handle font_handle;
 
     //colors
     vec3 color;
@@ -179,33 +184,17 @@ typedef struct Insanity_UI_Node
     u32 child_count;
 
     Insanity_UI_Layout layout;
-    Insanity_UI_Sizing sizing;
-    Insanity_UI_Padding padding;
+    Insanity_UI_Sizing sizing_x;
+    Insanity_UI_Sizing sizing_y;
+    vec2 padding;
+
+
 
 } Insanity_UI_Node;
 
-typedef struct Insanity_UI_Node_Text
-{
-    Insanity_UI_Property_Flags flags;
-    char character;
-    vec2 pos;
-    vec2 size;
-
-    vec3 color;
-    Texture_Handle texture_handle;
-
-    // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
-    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
-
-    // is the first character in a series of strings
-    bool start_text;
-} Insanity_UI_Node_Text;
 
 
 ARRAY_GENERATE_TYPE(Insanity_UI_Node)
-ARRAY_GENERATE_TYPE(Insanity_UI_Node_Text)
 
 typedef struct Insanity_UI_Node_Draw_Data
 {
@@ -245,9 +234,6 @@ typedef struct Insanity_UI_Render_Packet
     u64 ui_data_size;
     u64 ui_data_bytes;
 
-    Insanity_UI_Node_Draw_Data* text_data;
-    u64 text_data_size;
-    u64 text_data_bytes;
 } Insanity_UI_Render_Packet;
 
 
@@ -268,7 +254,6 @@ typedef struct Insanity_UI
     // Font fonts[100];
 
     Insanity_UI_Node_array* ui_nodes;
-    Insanity_UI_Node_Text_array* ui_nodes_text;
     // UI_Node_array* button_nodes; //TODO: we will see
 
     Insanity_UI_Node* ui_stack[100];
@@ -315,7 +300,9 @@ typedef struct Insanity_UI
     stack* size_stack;
 
     stack* layout_stack;
-    stack* sizing_type_stack;
+    stack* padding_stack;
+    stack* sizing_x_stack;
+    stack* sizing_y_stack;
 
     stack* style_stack;
     stack* flag_stack;
@@ -372,14 +359,27 @@ void insanity_ui_pop_parent(void);
 MAPI void insanity_ui_push_flags(Insanity_UI_Property_Flags flags);
 MAPI void insanity_ui_push_pos(vec2 pos);
 MAPI void insanity_ui_push_size(vec2 size);
-MAPI void insanity_ui_push_sizing_type(Insanity_UI_Sizing sizing_type);
+
 
 MAPI void insanity_ui_push_layout(Insanity_UI_Layout layout);
 MAPI void insanity_ui_pop_layout(void);
 
+MAPI void insanity_ui_push_sizing_x(Insanity_UI_Sizing sizing_type);
+MAPI void insanity_ui_push_sizing_y(Insanity_UI_Sizing sizing_type);
+MAPI void insanity_ui_push_padding(vec2 padding);
+
+MAPI void insanity_ui_push_image(const char* texture_file);
+
+//Text related params
+//NOTE: size does not affect ui
+//TODO: push formatted text
 MAPI void insanity_ui_push_text(String text);
 MAPI void insanity_ui_push_text_float(float val);
-MAPI void insanity_ui_push_image(const char* texture_file);
+// MAPI void insanity_ui_push_font_image();
+// MAPI void insanity_ui_push_text_alignment();
+// MAPI void insanity_ui_push_font_size();
+
+
 
 MAPI Insanity_UI_Property_Flags insanity_ui_get_flags();
 MAPI Texture_Handle insanity_ui_get_image(void);
@@ -387,8 +387,8 @@ MAPI Texture_Handle insanity_ui_get_image(void);
 
 //Utility
 MAPI Insanity_UI_Node* insanity_ui_get_new_node();
-MAPI Insanity_UI_Node_Text* insanity_ui_get_new_node_text();
 MAPI Insanity_UI_Node* insanity_ui_get_parent_node();
+MAPI Insanity_UI_Node* insanity_ui_get_top_node();
 
 
 MAPI bool insanity_rect_hit(vec2 pos, vec2 size);

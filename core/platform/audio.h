@@ -16,6 +16,11 @@ typedef struct Madness_Audio
     ma_engine engine;
 }Madness_Audio;
 
+typedef struct Audio_Handle
+{
+    u32 id;
+    u32 gen;
+}Audio_Handle;
 
 Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system);
 

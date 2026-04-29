@@ -20,7 +20,7 @@
 #include "status_stat_component.h"
 #include "unit_base.h"
 
-
+#include "command/command.h"
 
 
 #include "madness_pulse_game.h"

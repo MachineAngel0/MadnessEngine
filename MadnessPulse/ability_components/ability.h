@@ -32,12 +32,21 @@ typedef void (*ability_effect)(Unit*, void*);
 static ability_effect ability_vtable[Ability_Component_TYPE_MAX] = {
     [Ability_Component_TYPE_HEAL] = heal_ability,
     [Ability_Component_TYPE_DAMAGE] = damage_ability,
+
 };
 
 typedef struct Ability_Component
 {
+    //ability vtable lookup
     Ability_Component_Type type;
     void* data;
+
+    //is it a normal, reversal
+    Ability_Activation_Type activation_type;
+    //single or multitarget
+    Target_Can_Affect target_can_affect;
+    //who is this targeting
+    Ability_Target_Type ability_target;
 } Ability_Component;
 
 typedef struct Ability
@@ -45,6 +54,8 @@ typedef struct Ability
     u32 id;
     Ability_Component components[MAX_ABILITY_COMPONENTS];
     u32 component_count;
+
+    //madness or insanity type
 } Ability;
 
 typedef struct Ability_Info
@@ -64,7 +75,7 @@ typedef struct Ability_Info
     Target_Can_Affect targets_can_affect;
 
     int ability_action_cost; // = 1;
-    float mp_cost; // = -1.0f;
+    float mp_cost; // = 1.0f;
 } Ability_Info;
 
 void ability_add_component(Ability* ability, Ability_Component* component)
@@ -110,6 +121,65 @@ void ability_testing()
 
     ability_process(&ability, &unit);
 }
+
+
+Ability get_default_heal_ability()
+{
+    Ability ability;
+
+    Heal_Ability heal_ability = heal_ability_create(Heal_Types_HealAmount, 10, false);
+    Damage_Ability damage_component = damage_ability_create(15);
+    Ability_Component a1 = {
+        .type = Ability_Component_TYPE_HEAL, .data = &heal_ability
+    };
+
+    ability_add_component(&ability, &a1);
+    return ability;
+}
+
+Ability get_default_damage_ability()
+{
+    Ability ability;
+
+    Damage_Ability damage_component = damage_ability_create(15);
+    Ability_Component a1 = {
+        .type = Ability_Component_TYPE_DAMAGE, .data = &damage_component
+    };
+
+    ability_add_component(&ability, &a1);
+    return ability;
+}
+
+/*
+
+typedef struct Ability_Component
+{
+    Ability_Component_Type type;
+    void* data;
+} Ability_Component;
+
+typedef struct Ability
+{
+    u32 id;
+    Ability_Component components[MAX_ABILITY_COMPONENTS];
+    u32 component_count;
+} Ability;
+
+
+ Damage_Table[params1, params2, params3...]
+ Health_Table[params1, params2, params3...]
+
+
+-> Ability[component 1 (heal), component 2(damage)]
+component 1 (heal) -> heal type, heal amount
+component 1 (damage) -> Damage_Component [table_ref 2]
+
+
+
+
+
+
+*/
 
 
 #endif

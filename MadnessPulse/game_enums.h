@@ -75,10 +75,23 @@ typedef enum Character_State
 
 typedef enum Ability_Name
 {
+    //sort by missions
+
+    //test/debug
     Ability_Name_Madness_Test,
     Ability_Name_Madness_Buff_Test,
     Ability_Name_Shield,
     Ability_Name_BloodShield,
+    //default
+
+    //mission 1
+    //mission 2
+    //mission 3
+
+
+    //AI abilities
+
+
     Ability_Name_MAX,
 } Ability_Name;
 
@@ -303,7 +316,7 @@ typedef enum Turn_Phase
     Turn_Phase_TargetSelection,
     Turn_Phase_AbilityProcessing,
     Turn_Phase_QueueProcessing,
-    Turn_Phase_TurnEnd,
+    Turn_Phase_Turn_End,
     Turn_Phase_EnemyTurn,
 
     Turn_Phase_Dialogue,

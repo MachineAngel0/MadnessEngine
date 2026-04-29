@@ -2,6 +2,7 @@
 #define GAME_TYPES_H
 #include <stdbool.h>
 
+#include "ability.h"
 #include "game_enums.h"
 
 
@@ -132,6 +133,11 @@ typedef struct Inventory_Component
     // Ability* ability_battle_list; // list containing all abilities usable in the battle
     // Ability* ability_reserve; // list that contains all moves unlocked
     // Ability* Modifiable_AbilityBattleList; // list containing all abilities usable in the battle
+
+    //TEMP
+    Ability ability_battle_list_ability[INVENTORY_MAX_BATTLE_LIST]; // list containing all abilities usable in the battle
+    u8 battle_list_size;
+
 
     //list of ids to seperate tables
     Ability_Name ability_battle_list[INVENTORY_MAX_BATTLE_LIST]; // list containing all abilities usable in the battle
@@ -379,11 +385,19 @@ typedef struct Madness_Pulse_Game
 
     u32 total_unit_count;
 
-    u32* turn_queue;
-    u32 current_units_turn;
+    //TODO: this will likely need to realloc or put a hard limit on what can be summoned into the game
+    // im thinking if a unit does get added mid fight, that they will have summoners sickness,
+    // meaning they cant act until the turn queue gets reset
+    ring_queue* turn_queue;
+    // NOTE: right there will only be unique enemies in the game, and only a single instance allowed in play
+    // FUTURE: if i need to update this in the future then do so to accomadate multiple of the same enemy
+    Character_Name current_units_turn;
 
     u32 picked_ability;
     // Action_Handler* action_handler; // TODO:
+
+    Turn_Initiative starting_turn_initiative;
+
 } Madness_Pulse_Game;
 
 #endif //GAME_TYPES_H

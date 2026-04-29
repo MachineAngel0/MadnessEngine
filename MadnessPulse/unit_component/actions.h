@@ -19,21 +19,19 @@ void action_component_init_default(Action_Component* action)
 }
 
 
-
-
 void RefreshActionsAvailable(Action_Component* action)
 {
 	action->ActionsAvailable = action->MaxActionsAvailable;
 }
 
-void RefreshActionsByAddition(Action_Component* action)
+void action_component_refresh_actions_by_addition(Action_Component* action)
 {
     action->ActionsAvailable += action->MaxActionsAvailable;
 }
 
 void RefreshForTurnStart(Action_Component* action)
 {
-	RefreshActionsByAddition(action);
+	action_component_refresh_actions_by_addition(action);
 }
 
 void DecreaseActions(Action_Component* action, const int ActionsToDecrease)
@@ -52,7 +50,7 @@ int ReturnActionsAvailable(Action_Component* action)
 	return action->ActionsAvailable;
 }
 
-bool IsActionAvailable(Action_Component* action)
+bool action_component_is_action_available(Action_Component* action)
 {
 	return action->ActionsAvailable > 0;
 }
