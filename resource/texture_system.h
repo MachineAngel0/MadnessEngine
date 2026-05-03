@@ -21,13 +21,13 @@ MAPI Texture_Handle texture_system_get_default_texture(Texture_System* texture_s
 
 
 
-MAPI bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Arena* arena);
+MAPI bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Allocator* arena);
 MAPI bool texture_system_unload_font(Texture_System* texture_system, Texture_Handle handle);
 MAPI bool texture_system_get_font(Texture_System* texture_system, Texture_Handle handle, Madness_Font* out_font);
 
 
 
-MAPI bool texture_system_load_msdf_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Frame_Arena* frame_arena);
+MAPI bool texture_system_load_msdf_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle, Frame_Allocator* frame_arena);
 
 
 #endif //TEXTURE_SYSTEM_H

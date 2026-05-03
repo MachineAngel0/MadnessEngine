@@ -1,7 +1,7 @@
 ﻿#ifndef VULKAN_TYPES_VERTEX_H
 #define VULKAN_TYPES_VERTEX_H
 
-#include "array_new.h"
+#include "../core/dsa/array_macro.h"
 #include "maths/math_types.h"
 
 typedef struct Sprite

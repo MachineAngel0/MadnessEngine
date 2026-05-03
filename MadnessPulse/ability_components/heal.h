@@ -1,30 +1,20 @@
 ﻿#ifndef HEAL_H
 #define HEAL_H
+
+
 #include "ability.h"
 #include "game_structs.h"
 
 
 
-
-
-typedef struct Heal_Component
+Heal_Component heal_component_create(Heal_Types heal_types, float heal_amount, bool HealOnlyIfDead)
 {
-    // TMap<EHealTypes, float> HealTypes;
-    Heal_Types HealType;
-    float heal_amount;
-
-    //should be false be default
-    bool HealOnlyIfDead;
-} Heal_Ability;
-
-Heal_Ability heal_ability_create(Heal_Types heal_types, float heal_amount, bool HealOnlyIfDead)
-{
-    return (Heal_Ability){ .HealType = heal_types, .heal_amount = heal_amount, .HealOnlyIfDead = HealOnlyIfDead};
+    return (Heal_Component){ .heal_type = heal_types, .heal_amount = heal_amount, .heal_only_if_dead = HealOnlyIfDead};
 }
 
 void heal_ability(Unit* unit, void* data)
 {
-    Heal_Ability* heal_component = (Heal_Ability*)data;
+    Heal_Component* heal_component = (Heal_Component*)data;
     unit->health_component.current_health += heal_component->heal_amount;
 }
 

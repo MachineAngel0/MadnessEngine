@@ -10,7 +10,7 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Madnes
 
     u64 game_memory_size = GB(0.5);
     void* game_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
-    arena_init(&game->arena, game_memory, game_memory_size, NULL);
+    allocator_init(&game->arena, game_memory, game_memory_size, NULL);
 
 
     game->madness_ui = madness_ui;

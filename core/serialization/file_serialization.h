@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "arena.h"
+#include "allocator.h"
 
 //TODO: use the allocator properly, like dynamic allocations when writing or reading
 typedef struct byte_buffer
@@ -13,13 +13,13 @@ typedef struct byte_buffer
     u64 write_offset;
     u64 read_offset;
     uint8_t* data;
-    Arena* Arena; // removed capacity and this is return in favor of it
+    Allocator* Arena; // removed capacity and this is return in favor of it
 } byte_buffer;
 
 byte_buffer* byte_buffer_init(uint32_t capacity);
 
 // void byte_buffer_free(byte_buffer* buffer);
-byte_buffer* byte_buffer_init_arena(Arena* arena, const uint32_t capacity);
+byte_buffer* byte_buffer_init_arena(Allocator* arena, const uint32_t capacity);
 
 
 

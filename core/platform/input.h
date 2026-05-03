@@ -193,7 +193,7 @@ typedef struct Input_System
     mouse_state mouse_previous;
 
 
-    Arena input_system_arena;
+    Allocator input_system_arena;
     Memory_Tracker* mem_tracker;
 
     Event_System* event_system_reference; // does now the memory

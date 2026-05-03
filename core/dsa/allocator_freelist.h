@@ -1,6 +1,5 @@
 ﻿#ifndef ARENA_FREELIST_H
 #define ARENA_FREELIST_H
-#include "memory/memory_system.h"
 
 typedef struct Free_List_Allocation_Header
 {
@@ -46,6 +45,10 @@ size_t calc_padding_with_header_fl(uintptr_t ptr, uintptr_t alignment, size_t he
 void arena_free_list_node_insert(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* new_node);
 
 void arena_free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_node, Free_List_Node* del_node);
+
+//INTERFACE
+MAPI void* free_list_allocator_interface_alloc(void* allocator,  u64 memory_byte_request, u8 alignment);
+MAPI void free_list_allocator_interface_free(void* allocator, void* memory_block);
 
 void free_list_test(void);
 

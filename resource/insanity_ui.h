@@ -1,7 +1,7 @@
 ﻿#ifndef INSANITY_UI_H
 #define INSANITY_UI_H
 
-#include "arena.h"
+#include "allocator.h"
 #include "stack.h"
 #include "str_builder.h"
 
@@ -23,7 +23,7 @@
 #define INSANITY_EDITOR_FONT_SIZE 24.0f
 
 #define INSANITY_MAX_UI_NODE_COUNT 1000
-#define INSANITY_MAX_UI_NODE_CHILD_COUNT 10
+#define INSANITY_MAX_UI_NODE_CHILD_COUNT 100
 
 //UI
 typedef enum Insanity_UI_Alignment
@@ -86,22 +86,6 @@ typedef struct Insanity_UI_Interaction_Result
     float float_value;
 } Insanity_UI_Interaction_Result;
 
-typedef enum Insanity_UI_Sizing
-{
-    // if a parent takes up percentage of the screen,
-    // if a child takes up percentage of the parent
-    Insanity_UI_SIZING_PERCENT, //(default)
-    // parent -> grows exactly to the size of its children
-    // child -> takes up the rest of the parent space
-    Insanity_UI_SIZING_EXPAND,
-    //TODO: debug info error on this, so we are not having empty children types
-    // parent and child -> grows exactly to the size of its contents/children, if none are present, then nothing will be shown
-    Insanity_UI_SIZING_FIT,
-    //exact pizel size, regardless of screen size
-    Insanity_UI_SIZING_PIXEL,
-} Insanity_UI_Sizing;
-
-
 typedef enum Insanity_UI_Layout_Direction
 {
     Insanity_UI_LAYOUT_VERTICAL,
@@ -140,9 +124,7 @@ typedef struct Insanity_UI_Editor_Style
 
 
 //TODO:  just a temporary value for now, will increase later
-#define MAX_INSANITY_UI_NODE_COUNT 1000
-#define MAX_Insanity_UI_TEXT_NODE_COUNT 1000
-#define MAX_Insanity_UI_NODE_CHILD_COUNT 10
+
 
 typedef struct Insanity_UI_Node
 {
@@ -151,7 +133,6 @@ typedef struct Insanity_UI_Node
     // screen size and pos, not normalized
     vec2 pos;
     vec2 size;
-    vec2 percent_size;
     float rotation; // degrees, but gets converted to radians at draw time
 
     //rounded
@@ -171,7 +152,9 @@ typedef struct Insanity_UI_Node
     vec2 uv_offset;
     vec2 uv_size;
     //Text
-    char character; // will also need the texture handle
+    String text; // will also need the texture handle
+    float text_total_width;
+    float text_max_height;
     Texture_Handle font_handle;
 
     //colors
@@ -183,10 +166,9 @@ typedef struct Insanity_UI_Node
     struct Insanity_UI_Node* children[INSANITY_MAX_UI_NODE_CHILD_COUNT];
     u32 child_count;
 
-    Insanity_UI_Layout layout;
-    Insanity_UI_Sizing sizing_x;
-    Insanity_UI_Sizing sizing_y;
     vec2 padding;
+    vec2 child_padding;
+    Insanity_UI_Layout layout;
 
 
 
@@ -240,8 +222,8 @@ typedef struct Insanity_UI_Render_Packet
 //rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
 typedef struct Insanity_UI
 {
-    Arena* arena; // rn mainly just for loading fonts, would be better as a pool arena
-    Frame_Arena* frame_arena;
+    Allocator* arena; // rn mainly just for loading fonts, would be better as a pool arena
+    Frame_Allocator* frame_arena;
     Memory_Tracker* mem_tracker;
 
     Input_System* input_system_reference; // does not own memory
@@ -301,8 +283,7 @@ typedef struct Insanity_UI
 
     stack* layout_stack;
     stack* padding_stack;
-    stack* sizing_x_stack;
-    stack* sizing_y_stack;
+
 
     stack* style_stack;
     stack* flag_stack;
@@ -364,8 +345,11 @@ MAPI void insanity_ui_push_size(vec2 size);
 MAPI void insanity_ui_push_layout(Insanity_UI_Layout layout);
 MAPI void insanity_ui_pop_layout(void);
 
-MAPI void insanity_ui_push_sizing_x(Insanity_UI_Sizing sizing_type);
-MAPI void insanity_ui_push_sizing_y(Insanity_UI_Sizing sizing_type);
+//TODO:
+MAPI void insanity_ui_push_loop_count(void);
+MAPI void insanity_ui_pop_loop_count(void);
+
+
 MAPI void insanity_ui_push_padding(vec2 padding);
 
 MAPI void insanity_ui_push_image(const char* texture_file);

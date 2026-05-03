@@ -43,9 +43,9 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 }
 
 
-submesh* submesh_init(Arena* arena)
+submesh* submesh_init(Allocator* arena)
 {
-    submesh* m = arena_alloc(arena, sizeof(submesh));
+    submesh* m = allocator_alloc(arena, sizeof(submesh));
 
     // m->vertices.color = darray_create(vec4);
     m->index_type = VK_INDEX_TYPE_UINT32;
@@ -64,20 +64,20 @@ void sub_mesh_free(submesh* m)
     free(m);
 }
 
-static_mesh* static_mesh_init(Arena* arena, u32 mesh_size)
+static_mesh* static_mesh_init(Allocator* arena, u32 mesh_size)
 {
-    static_mesh* out_static_mesh = arena_alloc(arena, sizeof(submesh));
+    static_mesh* out_static_mesh = allocator_alloc(arena, sizeof(submesh));
     out_static_mesh->mesh_size = mesh_size;
-    out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
+    out_static_mesh->mesh = allocator_alloc(arena, sizeof(submesh) * mesh_size);
 
     return out_static_mesh;
 }
 
-skinned_mesh* skinned_mesh_init(Arena* arena, u32 mesh_size)
+skinned_mesh* skinned_mesh_init(Allocator* arena, u32 mesh_size)
 {
-    skinned_mesh* out_static_mesh = arena_alloc(arena, sizeof(skinned_mesh));
+    skinned_mesh* out_static_mesh = allocator_alloc(arena, sizeof(skinned_mesh));
     out_static_mesh->mesh_size = mesh_size;
-    out_static_mesh->mesh = arena_alloc(arena, sizeof(submesh) * mesh_size);
+    out_static_mesh->mesh = allocator_alloc(arena, sizeof(submesh) * mesh_size);
 
     return out_static_mesh;
 }
@@ -101,7 +101,7 @@ void static_mesh_free(static_mesh* static_mesh)
 }
 
 
-void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena,
                     Resource_System*
                     resource_system)
 {
@@ -154,8 +154,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
 
 
             //alloc and copy data
-            float* pos_data = arena_alloc(frame_arena, float_bytes);
-            current_submesh->pos = arena_alloc(arena, float_bytes);
+            float* pos_data = allocator_alloc(frame_arena, float_bytes);
+            current_submesh->pos = allocator_alloc(arena, float_bytes);
             cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
             memcpy(current_submesh->pos, pos_data, float_bytes);
         }
@@ -172,8 +172,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             current_submesh->normal_bytes = norm_bytes;
 
             //alloc and copy data
-            float* normal_data = arena_alloc(arena, norm_bytes);
-            current_submesh->normal = arena_alloc(arena, norm_bytes);
+            float* normal_data = allocator_alloc(arena, norm_bytes);
+            current_submesh->normal = allocator_alloc(arena, norm_bytes);
             cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
             memcpy(current_submesh->normal, normal_data, norm_bytes);
         }
@@ -191,8 +191,8 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
 
 
             //alloc and copy data
-            float* tangent_data = arena_alloc(arena, tangent_bytes);
-            current_submesh->tangent = arena_alloc(arena, tangent_bytes);
+            float* tangent_data = allocator_alloc(arena, tangent_bytes);
+            current_submesh->tangent = allocator_alloc(arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
             memcpy(current_submesh->tangent, tangent_data, tangent_bytes);
         }
@@ -209,10 +209,10 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
 
 
             //alloc and copy data
-            float* uv_data = arena_alloc(frame_arena, uv_byte_size);
+            float* uv_data = allocator_alloc(frame_arena, uv_byte_size);
             cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
 
-            current_submesh->uv = arena_alloc(arena, uv_byte_size);
+            current_submesh->uv = allocator_alloc(arena, uv_byte_size);
             memcpy(current_submesh->uv, uv_data, uv_byte_size);
         }
 
@@ -237,7 +237,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         current_submesh->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
         //TODO: there can be multiple primitices/indices, will come back to
-        current_submesh->indices = arena_alloc(arena,
+        current_submesh->indices = allocator_alloc(arena,
                                                current_submesh->indices_bytes);
 
         const uint8_t* index_buffer_data = cgltf_buffer_view_data(
@@ -260,7 +260,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_COLOR;
 
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(color_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
@@ -279,7 +279,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
             {
                 current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_ROUGHNESS;
                 current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_METALLIC;
-                char* texture_path = arena_alloc(frame_arena,
+                char* texture_path = allocator_alloc(frame_arena,
                                                  strlen(base_path) + strlen(metal_roughness_texture->image->uri));
                 // takes a buffer, message format, then the remaining strings
                 sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
@@ -308,7 +308,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         if (AO_texture && AO_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_AO;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(AO_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
@@ -327,7 +327,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         if (normal_texture && normal_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_NORMAL;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(normal_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
@@ -344,7 +344,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
         if (emissive_texture && emissive_texture->image->uri)
         {
             current_submesh->mesh_pipeline_mask |= MESH_PIPELINE_EMISSIVE;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(emissive_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
@@ -395,7 +395,7 @@ void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* aren
     cgltf_free(data);
 }
 
-void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena,
                          Resource_System* resource_system)
 {
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
@@ -441,8 +441,8 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
             current_submesh->joint_bytes = float_bytes;
 
             //alloc and copy data
-            float* joint_data = arena_alloc(frame_arena, float_bytes);
-            current_submesh->joints = arena_alloc(arena, float_bytes);
+            float* joint_data = allocator_alloc(frame_arena, float_bytes);
+            current_submesh->joints = allocator_alloc(arena, float_bytes);
             cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
             memcpy(current_submesh->joints, joint_data, float_bytes);
         }
@@ -461,8 +461,8 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
 
 
             //alloc and copy data
-            float* weight_data = arena_alloc(frame_arena, float_bytes);
-            current_submesh->weights = arena_alloc(arena, float_bytes);
+            float* weight_data = allocator_alloc(frame_arena, float_bytes);
+            current_submesh->weights = allocator_alloc(arena, float_bytes);
             cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
             memcpy(current_submesh->weights, weight_data, float_bytes);
         }
@@ -475,7 +475,7 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
     for (size_t skin_idx = 0; skin_idx < data->skins_count; skin_idx++)
     {
         out_static_mesh->joint_count = data->skins[skin_idx].joints_count;
-        out_static_mesh->joints = arena_alloc(arena, out_static_mesh->joint_count * sizeof(Joint));
+        out_static_mesh->joints = allocator_alloc(arena, out_static_mesh->joint_count * sizeof(Joint));
         // cur_joint->inverse_bind_matrix = data->skins[skin_idx].inverse_bind_matrices[joint_idx].;
         for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
         {
@@ -485,7 +485,7 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
             cur_joint->joint_name = cgltf_joint->name;
             cur_joint->id = joint_idx;
             cur_joint->children_count = cgltf_joint->children_count;
-            cur_joint->children = arena_alloc(arena, cur_joint->children_count * sizeof(Joint*));
+            cur_joint->children = allocator_alloc(arena, cur_joint->children_count * sizeof(Joint*));
             hash_table_insert(joint_names, cur_joint->joint_name, cur_joint);
         }
         //this pass is to get the children and parent nodes
@@ -517,7 +517,7 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
     hash_table_destroy(joint_names);
 
 
-    Animation* out_animation_data = arena_alloc(arena, sizeof(Animation) * data->animations_count);
+    Animation* out_animation_data = allocator_alloc(arena, sizeof(Animation) * data->animations_count);
     for (size_t animation_idx = 0; animation_idx < data->animations_count; animation_idx++)
     {
         cgltf_animation* anim_data = &data->animations[animation_idx];
@@ -528,8 +528,8 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
         out_animation_data->channel_count = channel_count;
         out_animation_data->sampler_count = sampler_count;
 
-        out_animation_data->channels = arena_alloc(arena, sizeof(Animation_Channel) * channel_count);
-        out_animation_data->samplers = arena_alloc(arena, sizeof(Animation_Sampler) * sampler_count);
+        out_animation_data->channels = allocator_alloc(arena, sizeof(Animation_Channel) * channel_count);
+        out_animation_data->samplers = allocator_alloc(arena, sizeof(Animation_Sampler) * sampler_count);
 
 
         for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
@@ -554,7 +554,7 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
 
             //read gltf input data
             cur_sampler->timestamps_count = anim_sampler->input->count;
-            cur_sampler->timestamps = arena_alloc(arena, sizeof(float) * cur_sampler->timestamps_count);
+            cur_sampler->timestamps = allocator_alloc(arena, sizeof(float) * cur_sampler->timestamps_count);
             //get the timestamp data from the view_data and copy it into the timestamps
             const uint8_t* timestamp_buffer_data = cgltf_buffer_view_data(anim_sampler->input->buffer_view);
             memcpy(cur_sampler->timestamps, timestamp_buffer_data, cur_sampler->timestamps_count * sizeof(float));
@@ -566,19 +566,19 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
             {
             //these are the only supported formats in the gltf spec for samplers
             case cgltf_type_scalar: // weights
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                cur_sampler->trs_interpolation_values_v3 = allocator_alloc(
                     arena, sizeof(float) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_f, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
                 break;
             case cgltf_type_vec3: // translation, scale
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                cur_sampler->trs_interpolation_values_v3 = allocator_alloc(
                     arena, sizeof(vec3) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_v3, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
                 break;
             case cgltf_type_vec4: // rotation
-                cur_sampler->trs_interpolation_values_v3 = arena_alloc(
+                cur_sampler->trs_interpolation_values_v3 = allocator_alloc(
                     arena, sizeof(vec4) * cur_sampler->trs_interpolation_count);
                 memcpy(cur_sampler->trs_interpolation_values_v4, trs_buffer_data,
                        cur_sampler->trs_interpolation_count * sizeof(float));
@@ -595,7 +595,7 @@ void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena*
 }
 
 
-void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena, Frame_Arena* frame_arena)
+void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena)
 {
     if (!c_string_path_is_extension(fbx_path, ".fbx"))
     {
@@ -759,7 +759,7 @@ bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_
 }
 
 
-void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena,
+void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena,
                         Resource_System* resource_system)
 {
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
@@ -787,7 +787,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
     // static_mesh->submeshes_size;
 
 
-    Mesh_Upload_Data* submesh_render_data_array = arena_alloc(frame_arena,
+    Mesh_Upload_Data* submesh_render_data_array = allocator_alloc(frame_arena,
                                                                  sizeof(Mesh_Upload_Data) * data->meshes_count);
 
     // GET BASE PATH
@@ -823,8 +823,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
 
             //alloc and copy data
-            float* pos_data = arena_alloc(frame_arena, float_bytes);
-            current_submesh_render_data->pos = arena_alloc(arena, float_bytes);
+            float* pos_data = allocator_alloc(frame_arena, float_bytes);
+            current_submesh_render_data->pos = allocator_alloc(arena, float_bytes);
             cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
             memcpy(current_submesh_render_data->pos, pos_data, float_bytes);
         }
@@ -841,8 +841,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
             current_submesh_render_data->normal_bytes = norm_bytes;
 
             //alloc and copy data
-            float* normal_data = arena_alloc(arena, norm_bytes);
-            current_submesh_render_data->normal = arena_alloc(arena, norm_bytes);
+            float* normal_data = allocator_alloc(arena, norm_bytes);
+            current_submesh_render_data->normal = allocator_alloc(arena, norm_bytes);
             cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
             memcpy(current_submesh_render_data->normal, normal_data, norm_bytes);
         }
@@ -860,8 +860,8 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
 
             //alloc and copy data
-            float* tangent_data = arena_alloc(arena, tangent_bytes);
-            current_submesh_render_data->tangent = arena_alloc(arena, tangent_bytes);
+            float* tangent_data = allocator_alloc(arena, tangent_bytes);
+            current_submesh_render_data->tangent = allocator_alloc(arena, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
             memcpy(current_submesh_render_data->tangent, tangent_data, tangent_bytes);
         }
@@ -878,10 +878,10 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
 
 
             //alloc and copy data
-            float* uv_data = arena_alloc(frame_arena, uv_byte_size);
+            float* uv_data = allocator_alloc(frame_arena, uv_byte_size);
             cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
 
-            current_submesh_render_data->uv = arena_alloc(arena, uv_byte_size);
+            current_submesh_render_data->uv = allocator_alloc(arena, uv_byte_size);
             memcpy(current_submesh_render_data->uv, uv_data, uv_byte_size);
         }
 
@@ -904,7 +904,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         //TODO: there can be multiple primitices/indices, will come back to
         current_submesh_render_data->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
-        current_submesh_render_data->indices = arena_alloc(arena,
+        current_submesh_render_data->indices = allocator_alloc(arena,
                                                            current_submesh_render_data->indices_bytes);
 
         const uint8_t* index_buffer_data = cgltf_buffer_view_data(
@@ -944,7 +944,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         {
             pbr_material->flags |= MESH_PIPELINE_COLOR;
 
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(color_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
@@ -963,7 +963,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
             {
                 pbr_material->flags |= MESH_PIPELINE_ROUGHNESS;
                 pbr_material->flags |= MESH_PIPELINE_METALLIC;
-                char* texture_path = arena_alloc(frame_arena,
+                char* texture_path = allocator_alloc(frame_arena,
                                                  strlen(base_path) + strlen(metal_roughness_texture->image->uri));
                 // takes a buffer, message format, then the remaining strings
                 sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
@@ -993,7 +993,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         if (AO_texture && AO_texture->image->uri)
         {
             pbr_material->flags |= MESH_PIPELINE_AO;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(AO_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
@@ -1014,7 +1014,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         if (normal_texture && normal_texture->image->uri)
         {
             pbr_material->flags |= MESH_PIPELINE_NORMAL;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(normal_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
@@ -1032,7 +1032,7 @@ void mesh_load_gltf_new(Mesh_System* mesh_system, const char* gltf_path, Arena* 
         if (emissive_texture && emissive_texture->image->uri)
         {
             pbr_material->flags |= MESH_PIPELINE_EMISSIVE;
-            char* texture_path = arena_alloc(frame_arena,
+            char* texture_path = allocator_alloc(frame_arena,
                                              strlen(base_path) + strlen(emissive_texture->image->uri));
             // takes a buffer, message format, then the remaining strings
             sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);

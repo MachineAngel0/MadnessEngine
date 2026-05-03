@@ -6,10 +6,10 @@
 //fixed sized array, so no reallocating more space
 typedef struct Array
 {
-    void* data; //array of void* data
-    u64 stride; // size/stride of each void* data
     u64 capacity; // size of the array
-    u64 num_items; // current/top index in our array
+    u32 stride; // size/stride of each void* data
+    u32 num_items; // current/top index in our array
+    void* data; //array of void* data
 
 #ifndef NDEBUG
     //extra debug type info that gets removed in release builds
@@ -22,6 +22,7 @@ Array* _array_create(const u64 data_stride, const u64 capacity, const char* type
 
 #define array_create(type, capacity)\
     _array_create(sizeof(type), capacity, #type)
+
 
 bool _array_type_check(Array* array, const char* type_name);
 

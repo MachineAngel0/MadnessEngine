@@ -386,8 +386,8 @@ typedef struct Animation
 
 typedef struct Sprite_System
 {
-    Arena* arena;
-    Frame_Arena* frame_arena;
+    Allocator* arena;
+    Frame_Allocator* frame_arena;
     vec2 screen_size; // grab every frame on start
 
 

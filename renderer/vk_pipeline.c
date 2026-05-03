@@ -261,7 +261,7 @@ void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_ca
 
     //read in the data
     *pipeline_cache_size = pipeline_cache_prefix_header.data_size;
-    *pipeline_cache_data = arena_alloc(&renderer->arena, pipeline_cache_prefix_header.data_size);
+    *pipeline_cache_data = allocator_alloc(&renderer->arena, pipeline_cache_prefix_header.data_size);
     size_t read_size2 = fread(*pipeline_cache_data, 1, pipeline_cache_prefix_header.data_size, fptr);
     if (read_size2 != pipeline_cache_prefix_header.data_size)
     {
@@ -275,7 +275,7 @@ void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_ca
 
 vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
 {
-    vulkan_pipeline_cache* pipeline_info = arena_alloc(&renderer->arena, sizeof(vulkan_pipeline_cache));
+    vulkan_pipeline_cache* pipeline_info = allocator_alloc(&renderer->arena, sizeof(vulkan_pipeline_cache));
 
     u8* pipeline_cache_data = NULL;
     size_t pipeline_cache_data_size = 0;
@@ -317,7 +317,7 @@ void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cac
                                              NULL);
     VK_CHECK(result)
 
-    data = arena_alloc(&renderer->frame_arena, data_size);
+    data = allocator_alloc(&renderer->frame_arena, data_size);
 
     VkResult result2 = vkGetPipelineCacheData(renderer->context.device.logical_device, pipeline_cache->handle,
                                               &data_size,

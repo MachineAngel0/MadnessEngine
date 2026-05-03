@@ -7,8 +7,8 @@ int main(void)
 
 
 
-    arena_test();
-    arena_stack_test();
+    allocator_test();
+    stack_allocator_test();
     free_list_test();
 
     array_macro_test();

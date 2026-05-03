@@ -28,7 +28,7 @@
 
 Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
 {
-    Descriptor_System* descriptor_system = arena_alloc(&renderer->arena, sizeof(Descriptor_System));
+    Descriptor_System* descriptor_system = allocator_alloc(&renderer->arena, sizeof(Descriptor_System));
 
     descriptor_system->attachment_count = max_attachment_resources;
     descriptor_system->uniform_count = max_uniform_buffer_resources;

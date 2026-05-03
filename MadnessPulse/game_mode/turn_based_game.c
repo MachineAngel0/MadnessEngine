@@ -70,7 +70,7 @@ void turn_based_game_init(Madness_Pulse_Game* game)
     game->player_count = 2;
 
 
-    game->enemies = arena_alloc(&game->arena, sizeof(Unit) * 2);
+    game->enemies = allocator_alloc(&game->arena, sizeof(Unit) * 2);
     game->enemies[0] = *unit_create_default(game);
     game->enemies[1] = *unit_create_default(game);
     game->enemy_count = 2;
@@ -89,7 +89,7 @@ void turn_based_game_init(Madness_Pulse_Game* game)
 
 void turn_start(Madness_Pulse_Game* game)
 {
-    /*
+
     DEBUG("Turn Start Processing");
 
     //First Turn Start
@@ -114,7 +114,7 @@ void turn_start(Madness_Pulse_Game* game)
         ActionHandlerComponent->AppendActions(
             ActionManagerComponent->ProcessTurnType(TurnBasedGameState, Turn_Activation_Type_First_Start));
         TurnBasedGameState.CurrentUnitsTurn->BattleTurnInformationComponent->UpdateFirstTurnStartInfo();
-        FusionComponent->ResetFirstTimeFusion();
+        // FusionComponent->ResetFirstTimeFusion();
     }
 
     ActionHandlerComponent->AppendActions(
@@ -162,9 +162,11 @@ void turn_start(Madness_Pulse_Game* game)
 
         //ProcessEnemyAI();
     }
-
     ActionHandlerComponent->ExecuteNextAction();
-*/
+
+
+
+
     /*
     //runs once a frame
     DEBUG("Turn Start Processing");

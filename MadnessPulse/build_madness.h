@@ -2,7 +2,9 @@
 
 
 
+#include "game_constants.h"
 #include "game_enums.h"
+#include "game_abilties.h"
 #include "game_structs.h"
 
 //UNIT Related Stuff

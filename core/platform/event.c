@@ -9,7 +9,7 @@ Event_System* event_init(Memory_System* memory_system)
 
     event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
     
-    arena_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement, event_system->mem_tracker);
+    allocator_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement, event_system->mem_tracker);
     
     INFO("EVENT SYSTEM INIT")
 
@@ -22,7 +22,7 @@ bool event_shutdown(Event_System* event_system)
     INFO("EVENT SYSTEM SHUTDOWN")
 
 
-    arena_clear(&event_system->event_system_arena);
+    allocator_clear(&event_system->event_system_arena);
 
     return true;
 }

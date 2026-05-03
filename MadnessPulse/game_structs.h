@@ -1,9 +1,17 @@
 ﻿#ifndef GAME_TYPES_H
 #define GAME_TYPES_H
+
 #include <stdbool.h>
 
-#include "ability.h"
 #include "game_enums.h"
+
+
+
+
+
+
+/// ABILITIES ///
+
 
 
 // UNITS //
@@ -127,7 +135,6 @@ typedef struct Character_Flags_Component
 
 typedef struct Inventory_Component
 {
-#define INVENTORY_MAX_BATTLE_LIST 20
 
     //NOTE: these should not get touched but copied, as many things can
     // Ability* ability_battle_list; // list containing all abilities usable in the battle
@@ -211,7 +218,7 @@ typedef struct Charge_List_Component
     int HighChargePassiveAmount;
 } Charge_List_Component;
 
-typedef struct SpecialAbilityFlagList
+typedef struct Special_Ability_Flag_List_Component
 {
     //for now it resets at the characters first turn start
 
@@ -313,9 +320,6 @@ typedef struct Unit
 } Unit;
 
 
-/// ABILITIES ///
-
-
 
 
 
@@ -343,9 +347,9 @@ typedef enum Main_Menu_State
 
 typedef struct Madness_Pulse_Game
 {
-    Arena arena;
+    Allocator arena;
     // Arena Current_State_Arena; //NOTE: to release data specific to the game state, but not unload literally everything
-    Frame_Arena frame_arena;
+    Frame_Allocator frame_arena;
 
     //refs
     Resource_System* resource_system;
@@ -376,7 +380,6 @@ typedef struct Madness_Pulse_Game
 
 
     //PLAYER AND ENEMY UNTIS
-#define MAX_PLAYER_COUNT 4
     Unit players[MAX_PLAYER_COUNT];
     u32 player_count;
     //idk the enemy unit count at start up since its different every map

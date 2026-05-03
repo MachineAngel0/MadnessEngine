@@ -53,12 +53,13 @@
 
 
 //CORE - DSA
-#include "../core/dsa/arena.h"
-#include "../core/dsa/arena_stack.h"
-#include "../core/dsa/arena_freelist.h"
-#include "../core/dsa/arena_pool.h"
+#include "../core/dsa/allocator.h"
+#include "../core/dsa/allocator_stack.h"
+#include "../core/dsa/allocator_freelist.h"
+#include "../core/dsa/allocator_pool.h"
+#include "../core/dsa/_allocator_interface.h"
 #include "../core/dsa/array.h"
-#include "../core/dsa/array_new.h"
+#include "../core/dsa/array_macro.h"
 #include "../core/dsa/b_tree_red_black.h"
 #include "../core/dsa/binary_tree.h"
 #include "../core/dsa/darray.h"
@@ -79,3 +80,4 @@
 //CORE - Compiler
 #include "../core/compiler/compiler_test_file.h"
 #include "../core/compiler/compiler.h"
+#include "../core/compiler/reflection_system.h"

@@ -19,27 +19,27 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
                                                                STRING("MADNESS UI"),
                                                                ui_arena_mem_size + ui_frame_arena_mem_size);
 
-    madness_ui->arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
-    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
+    madness_ui->arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
 
     void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
     void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
 
-    arena_init(madness_ui->arena, arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
-    arena_init(madness_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
+    allocator_init(madness_ui->arena, arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
+    allocator_init(madness_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, madness_ui->mem_tracker);
 
     madness_ui->input_system_reference = input_system;
     madness_ui->resource_system = resource_system;
 
 
-    madness_ui->ui_data = Sprite_Data_array_create(MAX_UI_SPRITE_COUNT);
-    madness_ui->text_data = Sprite_Data_array_create(MAX_TEXT_SPRITE_COUNT);
+    madness_ui->ui_data = Sprite_Data_array_create(MAX_UI_SPRITE_COUNT, NULL);
+    madness_ui->text_data = Sprite_Data_array_create(MAX_TEXT_SPRITE_COUNT, NULL);
 
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
     madness_ui->editor_font_size = EDITOR_FONT_SIZE;
 
-    madness_ui->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT);
-    madness_ui->ui_nodes_text = UI_Node_Text_array_create(MAX_UI_TEXT_NODE_COUNT);
+    madness_ui->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT, NULL);
+    madness_ui->ui_nodes_text = UI_Node_Text_array_create(MAX_UI_TEXT_NODE_COUNT, NULL);
     madness_ui->string_builder = string_builder_create(100);
 
 
@@ -402,7 +402,7 @@ void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_
 char* madness_ui_float_to_char(Madness_UI* madness_ui, const float value)
 {
     int len = snprintf(NULL, 0, "%.3f", value);
-    char* result = arena_alloc(madness_ui->frame_arena, len + 1);
+    char* result = allocator_alloc(madness_ui->frame_arena, len + 1);
     snprintf(result, len + 1, "%.3f", value);
 
     return result;

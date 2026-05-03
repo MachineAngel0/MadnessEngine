@@ -6,7 +6,7 @@
 #include "misc_util.h"
 
 #include "unit_test.h"
-#include "arena_stack.h"
+#include "allocator_stack.h"
 #include "../memory/memory_tracker.h"
 
 
@@ -34,11 +34,11 @@ void* _darray_create(const u64 capacity, const u64 stride, Memory_Tracker* memor
     return (void *) ((u8 *) new_array + header_size);
 }
 
-void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Arena_Stack* arena, Memory_Tracker* memory_tracker)
+void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Stack_Allocator* arena, Memory_Tracker* memory_tracker)
 {
     const u64 header_size = sizeof(array_header);
     const u64 array_size = initial_capacity * stride;
-    void* new_array = arena_stack_alloc(arena, header_size + array_size);;
+    void* new_array = stack_allocator_alloc(arena, header_size + array_size);;
     memset(new_array, 0, header_size + array_size);
 
 

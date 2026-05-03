@@ -1,14 +1,14 @@
-#include "arena_stack.h"
+#include "allocator_stack.h"
 
 
 #include <stdlib.h>
 #include <string.h>
-#include "../core/logger.h"
+#include "logger.h"
 #include "dsa_utility.h"
 
 
 //used for arenas who get memory from other arenas
-void arena_stack_init(Arena_Stack* a, void* mem, const size_t mem_size)
+void stack_allocator_init(Stack_Allocator* a, void* mem, const size_t mem_size)
 {
     //we pass in an already allocated chunk of memory in the event,
     //we want to pass in an already allocated arena memory, say a global arena, and then one for audio for something similar
@@ -18,13 +18,13 @@ void arena_stack_init(Arena_Stack* a, void* mem, const size_t mem_size)
 }
 
 
-void arena_stack_clear(Arena_Stack* a)
+void stack_allocator_clear(Stack_Allocator* a)
 {
     a->current_offset = 0;
 }
 
 
-void arena_stack_pop(Arena_Stack* a, void* ptr)
+void stack_allocator_pop(Stack_Allocator* a, void* ptr)
 {
     //pass back the
     if (!ptr)
@@ -34,7 +34,7 @@ void arena_stack_pop(Arena_Stack* a, void* ptr)
     };
 
     uintptr_t start, end, curr_addr;
-    Arena_Stack_Header* header;
+    Stack_Allocator_Header* header;
     size_t prev_offset;
 
     start = (uintptr_t)a->memory;
@@ -53,7 +53,7 @@ void arena_stack_pop(Arena_Stack* a, void* ptr)
         return;
     }
 
-    header = (Arena_Stack_Header*)(curr_addr - sizeof(Arena_Stack_Header));
+    header = (Stack_Allocator_Header*)(curr_addr - sizeof(Stack_Allocator_Header));
     prev_offset = (size_t)(curr_addr - (uintptr_t)header->data_size - start);
 
     a->current_offset = prev_offset;
@@ -100,11 +100,11 @@ size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t heade
 
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8
-void* arena_stack_alloc_align(Arena_Stack* a, const size_t mem_request, size_t alignment)
+void* stack_allocator_alloc_align(Stack_Allocator* a, const size_t mem_request, size_t alignment)
 {
     uintptr_t curr_addr, next_addr;
     size_t padding;
-    Arena_Stack_Header* header;
+    Stack_Allocator_Header* header;
 
 
     MASSERT(is_power_of_two(alignment));
@@ -117,7 +117,7 @@ void* arena_stack_alloc_align(Arena_Stack* a, const size_t mem_request, size_t a
     }
 
     curr_addr = (uintptr_t)a->memory + (uintptr_t)a->current_offset;
-    padding = calc_padding_with_header(curr_addr, (uintptr_t)alignment, sizeof(Arena_Stack_Header));
+    padding = calc_padding_with_header(curr_addr, (uintptr_t)alignment, sizeof(Stack_Allocator_Header));
     if (a->current_offset + padding + mem_request > a->capacity)
     {
         // Stack allocator is out of memory
@@ -126,7 +126,7 @@ void* arena_stack_alloc_align(Arena_Stack* a, const size_t mem_request, size_t a
     a->current_offset += padding;
 
     next_addr = curr_addr + (uintptr_t)padding;
-    header = (Arena_Stack_Header*)(next_addr - sizeof(Arena_Stack_Header));
+    header = (Stack_Allocator_Header*)(next_addr - sizeof(Stack_Allocator_Header));
     header->data_size = (uint8_t)padding;
 
     a->current_offset += mem_request;
@@ -135,13 +135,13 @@ void* arena_stack_alloc_align(Arena_Stack* a, const size_t mem_request, size_t a
 }
 
 // in the event we just want a default alignment
-void* arena_stack_alloc(Arena_Stack* a, size_t mem_request)
+void* stack_allocator_alloc(Stack_Allocator* a, size_t mem_request)
 {
-    return arena_stack_alloc_align(a, mem_request, DEFAULT_ALIGNMENT);
+    return stack_allocator_alloc_align(a, mem_request, DEFAULT_ALIGNMENT);
 }
 
 
-void arena_stack_debug_print(Arena_Stack* a)
+void arena_stack_debug_print(Stack_Allocator* a)
 {
     if (!a) return;
     INFO("ARENA STACK CAPACITY: %llu", a->capacity);
@@ -149,40 +149,52 @@ void arena_stack_debug_print(Arena_Stack* a)
     INFO("ARENA STACK MEMORY LEFT: %llu", a->capacity - a->current_offset);
 }
 
+void* stack_allocator_interface_alloc(void* allocator, u64 memory_byte_request, u8 alignment)
+{
+    Stack_Allocator* a = (Stack_Allocator*)allocator;
+    return stack_allocator_alloc(a, memory_byte_request);
+}
 
-void arena_stack_test(void)
+void stack_allocator_interface_free(void* allocator, void* memory_block)
+{
+    //stack pops should be handled manually and not by the interface
+    return;
+}
+
+
+void stack_allocator_test(void)
 {
     TEST_START("ARENA STACK");
 
     u64 mem_size = MB(1);
     uint8_t* backing_buffer = malloc(mem_size);
 
-    Arena_Stack a_s;
-    arena_stack_init(&a_s, backing_buffer, mem_size);
+    Stack_Allocator a_s;
+    stack_allocator_init(&a_s, backing_buffer, mem_size);
     TEST_DEBUG(a_s.capacity == MB(1));
 
-    uint32_t* arr1 = arena_stack_alloc(&a_s, 10 * sizeof(uint32_t));
+    uint32_t* arr1 = stack_allocator_alloc(&a_s, 10 * sizeof(uint32_t));
     //56 due to alignment and header padding
     arr1[0] = 10;
     TEST_DEBUG(a_s.current_offset == 56);
     TEST_DEBUG(arr1[0] == 10);
 
 
-    uint32_t* arr2 = arena_stack_alloc(&a_s, 10 * sizeof(uint32_t));
+    uint32_t* arr2 = stack_allocator_alloc(&a_s, 10 * sizeof(uint32_t));
     arr1[1] = 10;
     TEST_DEBUG(a_s.current_offset == 104);
 
-    uint32_t* arr3 = arena_stack_alloc(&a_s, 10 * sizeof(uint32_t));
+    uint32_t* arr3 = stack_allocator_alloc(&a_s, 10 * sizeof(uint32_t));
     arr1[15] = 10;
     TEST_DEBUG(a_s.current_offset == 152);
 
 
     //pops all of them off the arena
-    arena_stack_pop(&a_s, arr3);
+    stack_allocator_pop(&a_s, arr3);
     TEST_DEBUG(a_s.current_offset == 104);
-    arena_stack_pop(&a_s, arr2);
+    stack_allocator_pop(&a_s, arr2);
     TEST_DEBUG(a_s.current_offset == 56);
-    arena_stack_pop(&a_s, arr1);
+    stack_allocator_pop(&a_s, arr1);
     TEST_DEBUG(a_s.current_offset == 0);
 
     TEST_REPORT("ARENA STACK");

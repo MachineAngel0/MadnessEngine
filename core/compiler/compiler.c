@@ -7,10 +7,6 @@ void lexer_test()
 
     Lexer* lexer2 = lexer_init();
     lexer_generate_tokens(lexer2, "../core/compiler/shader_test_file.madnessshader");
-
-    Lexer* lexer3 = lexer_init();
-    lexer_generate_tokens(lexer3, "../MadnessPulse/game_enums.h");
-
 }
 
 Lexer* lexer_init()
@@ -60,6 +56,81 @@ void lexer_generate_tokens(Lexer* lexer, const char* file_path)
 
     u64 size = darray_get_size(lexer->tokens);
     DEBUG("token size: %d", size)
+}
+
+Token* lexer_prune_tokens(Token* token_array, Token_Type* tokens_to_remove, u32 list_size)
+{
+    Token* out_list = darray_create_reserve(Token, darray_get_size(token_array));
+    u64 size = darray_get_size(token_array);
+    for (u64 i = 0; i < size; i++)
+    {
+        for (u64 list_idx = 0; list_idx < list_size; list_idx++)
+        {
+            if (tokens_to_remove[list_idx] == token_array[i].type)
+            {
+                darray_push(out_list, token_array[i]);
+                break;
+            }
+        }
+    }
+
+    return out_list;
+}
+
+bool lexer_is_token_data_type(Token token)
+{
+    switch (token.type)
+    {
+    case Token_VAR:
+        return true;
+        break;
+    case Token_U8:
+        return true;
+        break;
+    case Token_U16:
+        return true;
+        break;
+    case Token_U32:
+        return true;
+        break;
+    case Token_U64:
+        return true;
+        break;
+    case Token_I8:
+        return true;
+        break;
+    case Token_I16:
+        return true;
+        break;
+    case Token_I32:
+        return true;
+        break;
+    case Token_I64:
+        return true;
+        break;
+    case Token_F32:
+        return true;
+        break;
+    case Token_F64:
+        return true;
+        break;
+    case Token_char:
+        return true;
+        break;
+    case Token_size_t:
+        return true;
+        break;
+    case Token_bool:
+        return true;
+        break;
+    case Token_string_type:
+        return true;
+        break;
+
+    default:
+        return false;
+        break;
+    }
 }
 
 
@@ -207,6 +278,22 @@ void nextToken(Lexer* lexer, Token* token)
             }
         }
         break;
+    case '#':
+        {
+            token->type = Token_MACRO;
+
+            string_builder_append_single_char(&token->string_builder, lexer->position);
+
+            while (lexer->position[0] &&
+                lexer->position[0] != '\n')
+            {
+                ++lexer->position;
+                string_builder_append_single_char(&token->string_builder, lexer->position);
+            }
+            // Saves total string length
+            // token->text.length = lexer->position - token->text.str;
+        }
+        break;
     default:
         {
             // Identifier/keywords
@@ -276,53 +363,53 @@ void nextToken(Lexer* lexer, Token* token)
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u8")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint8_t"))
                 {
-                    token->type = Token_u8;
+                    token->type = Token_U8;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u16")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint16_t"))
                 {
-                    token->type = Token_u16;
+                    token->type = Token_U16;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u32")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint32_t"))
                 {
-                    token->type = Token_u32;
+                    token->type = Token_U32;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u64")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint64_t"))
                 {
-                    token->type = Token_u32;
+                    token->type = Token_U32;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "i8")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int8_t"))
                 {
-                    token->type = Token_i8;
+                    token->type = Token_I8;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "i16")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int16_t"))
                 {
-                    token->type = Token_i16;
+                    token->type = Token_I16;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "32")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int32_t")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int"))
                 {
-                    token->type = Token_i32;
+                    token->type = Token_I32;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u64")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint64_t"))
                 {
-                    token->type = Token_i64;
+                    token->type = Token_I64;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "f32")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "float"))
                 {
-                    token->type = Token_f32;
+                    token->type = Token_F32;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "f64")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "double"))
                 {
-                    token->type = Token_f64;
+                    token->type = Token_F64;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "size_t"))
                 {
@@ -336,7 +423,10 @@ void nextToken(Lexer* lexer, Token* token)
                 {
                     token->type = Token_bool;
                 }
-
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "String"))
+                {
+                    token->type = Token_string_type;
+                }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "const"))
                 {
                     token->type = Token_const;

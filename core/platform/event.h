@@ -1,8 +1,8 @@
 ﻿#ifndef EVENT_H
 #define EVENT_H
 
-#include "arena.h"
-#include "array.h"
+#include "allocator.h"
+#include "../dsa/array.h"
 #include "memory_system.h"
 
 
@@ -87,7 +87,7 @@ typedef struct Event_System
     //the event if the index into the array
     subscriber_list events_table[MAX_EVENTS];
 
-    Arena event_system_arena;
+    Allocator event_system_arena;
 
     Memory_Tracker* mem_tracker;
 } Event_System;

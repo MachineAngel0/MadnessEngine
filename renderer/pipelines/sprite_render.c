@@ -5,7 +5,7 @@
 
 Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system)
 {
-    Sprite_Renderer* sprite_backend = arena_alloc(&renderer->arena, sizeof(Sprite_Renderer));
+    Sprite_Renderer* sprite_backend = allocator_alloc(&renderer->arena, sizeof(Sprite_Renderer));
     //TODO: move out the memory capacity to the function params or get from sprite system/resource system
     u64 buffer_memory_size = MB(1);
 

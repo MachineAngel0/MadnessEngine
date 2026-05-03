@@ -1,13 +1,13 @@
-#include "arena_pool.h"
+#include "allocator_pool.h"
 
 
 
 
 
-Arena_Pool* arena_pool_init(void* backing_buffer, size_t backing_buffer_length,
-                            size_t chunk_size, size_t chunk_alignment)
+Pool_Allocator* pool_allocator_init(void* backing_buffer, size_t backing_buffer_length,
+                                    size_t chunk_size, size_t chunk_alignment)
 {
-    Arena_Pool* a = malloc(sizeof(Arena_Pool));
+    Pool_Allocator* a = malloc(sizeof(Pool_Allocator));
     // Align backing buffer to the specified chunk alignment
     uintptr_t initial_start = (uintptr_t)backing_buffer;
     uintptr_t start = align_forward_uintptr(initial_start, (uintptr_t)chunk_alignment);
@@ -22,12 +22,12 @@ Arena_Pool* arena_pool_init(void* backing_buffer, size_t backing_buffer_length,
     a->head = NULL;
 
     // Set up the free list for free chunks
-    arena_pool_free_all(a);
+    pool_allocator_free_all(a);
 
     return a;
 }
 
-void* arena_pool_alloc(Arena_Pool* p)
+void* pool_allocator_alloc(Pool_Allocator* p)
 {
     // Get latest free node
     Pool_Free_Node* node = p->head;
@@ -45,8 +45,21 @@ void* arena_pool_alloc(Arena_Pool* p)
     return memset(node, 0, p->chunk_size);
 }
 
+void* pool_allocator_interface_alloc(void* allocator, u64 memory_byte_request, u8 alignment)
+{
+    Pool_Allocator* pool_allocator = (Pool_Allocator*)allocator;
+    return pool_allocator_alloc(allocator);
 
-void arena_pool_free(Arena_Pool* a, void* ptr)
+}
+
+void pool_allocator_interface_free(void* allocator, void* memory_block)
+{
+    Pool_Allocator* pool_allocator = (Pool_Allocator*)allocator;
+    pool_allocator_free(pool_allocator, memory_block);
+}
+
+
+void pool_allocator_free(Pool_Allocator* a, void* ptr)
 {
     Pool_Free_Node* node;
 
@@ -71,7 +84,7 @@ void arena_pool_free(Arena_Pool* a, void* ptr)
     a->head = node;
 }
 
-void arena_pool_free_all(Arena_Pool* a)
+void pool_allocator_free_all(Pool_Allocator* a)
 {
     size_t chunk_count = a->capacity / a->chunk_size;
     size_t i;

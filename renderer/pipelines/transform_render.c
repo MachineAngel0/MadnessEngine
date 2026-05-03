@@ -3,7 +3,7 @@
 
 MAPI Transform_Renderer* transform_renderer_init(Renderer* renderer, Resource_System* resource_system)
 {
-    Transform_Renderer* transform_renderer = arena_alloc(&renderer->arena, sizeof(Mesh_Renderer));
+    Transform_Renderer* transform_renderer = allocator_alloc(&renderer->arena, sizeof(Mesh_Renderer));
 
     u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4);
 

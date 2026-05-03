@@ -25,14 +25,14 @@ typedef struct Transform_SOA
 
 //create operations
 MAPI Transform* transform_from_position_rotation_scale(const vec3 position, const quat rotation, const vec3 scale,
-                                                       Arena* arena);
-MAPI Transform* transform_create(Arena* arena);
+                                                       Allocator* arena);
+MAPI Transform* transform_create(Allocator* arena);
 void transform_set_default(Transform* transform);
 
-MAPI Transform* transform_from_position(const vec3 position, Arena* arena);
-MAPI Transform* transform_from_rotation(const quat rotation, Arena* arena);
+MAPI Transform* transform_from_position(const vec3 position, Allocator* arena);
+MAPI Transform* transform_from_rotation(const quat rotation, Allocator* arena);
 
-MAPI Transform* transform_from_scale(const vec3 scale, Arena* arena);
+MAPI Transform* transform_from_scale(const vec3 scale, Allocator* arena);
 
 
 //set operations

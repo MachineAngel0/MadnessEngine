@@ -1,6 +1,6 @@
 ﻿#include "input.h"
 
-#include "arena.h"
+#include "allocator.h"
 #include "logger.h"
 #include "event.h"
 
@@ -14,7 +14,7 @@ Input_System* input_init(Event_System* event_system, Memory_System* memory_syste
 
     input_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("INPUT SYSTEM"), input_system_mem_requirement);
 
-    arena_init(&input_system->input_system_arena, input_system_mem, input_system_mem_requirement,
+    allocator_init(&input_system->input_system_arena, input_system_mem, input_system_mem_requirement,
                input_system->mem_tracker);
 
     input_system->event_system_reference = event_system;
@@ -28,7 +28,7 @@ void input_shutdown(Input_System* input_system)
     MASSERT(input_system);
     //TODO: if needed
     INFO("INPUT SYSTEM SHUTDOWN")
-    arena_clear(&input_system->input_system_arena);
+    allocator_clear(&input_system->input_system_arena);
 }
 
 void input_update(Input_System* input_system)

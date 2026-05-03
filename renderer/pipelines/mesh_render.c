@@ -2,12 +2,12 @@
 
 Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system)
 {
-    Mesh_Renderer* out_mesh_renderer = arena_alloc(&renderer->arena, sizeof(Mesh_Renderer));
+    Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->arena, sizeof(Mesh_Renderer));
 
     u64 mesh_buffer_data_size = MB(16);
 
 
-    out_mesh_renderer->mesh_shader_permutations = arena_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
+    out_mesh_renderer->mesh_shader_permutations = allocator_alloc(&renderer->arena, sizeof(Mesh_Pipeline_Permutations));
     out_mesh_renderer->mesh_shader_permutations->permutation_keys = darray_create_reserve(u32, 100);
 
     out_mesh_renderer->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -79,7 +79,7 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
     //return if its empty
     if (ring_queue_is_empty(mesh_render_queue)) return;
 
-    Mesh_Upload_Data* submesh_upload_data = arena_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
+    Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
 
     //NOTE: rn it copies from an offset, which is fine for now,
     // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system funciton calls

@@ -14,13 +14,13 @@ typedef struct stack
 
 
 //Arena can be NULL
-stack* stack_create(const u64 stride, const u64 capacity, Arena* arena);
+stack* stack_create(const u64 stride, const u64 capacity, Allocator* arena);
 
 
 //not worth it
 // #define STACK_CREATE (arena, type, capacity) stack_create_arena(arena, sizeof(type), capacity)
 
-void stack_free(stack* s, Arena* arena);
+void stack_free(stack* s, Allocator* arena);
 
 void stack_clear(stack* s);
 

@@ -3,7 +3,7 @@
 
 Material_Renderer* material_renderer_init(Renderer* renderer, Resource_System* resource_system)
 {
-    Material_Renderer* material_renderer = arena_alloc(&renderer->arena, sizeof(Mesh_Renderer));
+    Material_Renderer* material_renderer = allocator_alloc(&renderer->arena, sizeof(Mesh_Renderer));
 
 
     material_renderer->instance_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,

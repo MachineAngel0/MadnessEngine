@@ -22,7 +22,7 @@ Action_Component action_component[Character_Name_MAX] = {
 
 Unit* unit_create_default(Madness_Pulse_Game* game)
 {
-    Unit* unit = arena_alloc(&game->arena, sizeof(Unit));
+    Unit* unit = allocator_alloc(&game->arena, sizeof(Unit));
     unit->name = Character_Name_None;
     unit->character_type = Character_Type_Player;
     unit->character_state = Character_State_Alive;

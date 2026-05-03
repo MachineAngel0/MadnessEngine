@@ -17,14 +17,14 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
                                                                 STRING("MADNESS UI"),
                                                                 ui_arena_mem_size + ui_frame_arena_mem_size);
 
-    insanity_ui->arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
-    insanity_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_UI);
+    insanity_ui->arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    insanity_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
 
     void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
     void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
 
-    arena_init(insanity_ui->arena, arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
-    arena_init(insanity_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
+    allocator_init(insanity_ui->arena, arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
+    allocator_init(insanity_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
 
     insanity_ui->input_system_reference = input_system;
     insanity_ui->resource_system = resource_system;
@@ -33,15 +33,13 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
 
-    insanity_ui->ui_nodes = Insanity_UI_Node_array_create(MAX_INSANITY_UI_NODE_COUNT);
+    insanity_ui->ui_nodes = Insanity_UI_Node_array_create(INSANITY_MAX_UI_NODE_COUNT, NULL); // TODO: use an allocator
 
     //stacks
     insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
     insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
 
     insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->arena);
-    insanity_ui->sizing_x_stack = stack_create(sizeof(Insanity_UI_Sizing), 100, insanity_ui->arena);
-    insanity_ui->sizing_y_stack = stack_create(sizeof(Insanity_UI_Sizing), 100, insanity_ui->arena);
     insanity_ui->padding_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
 
     insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
@@ -97,7 +95,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 {
     MASSERT(insanity_ui);
     //clear draw info and reset the hot id
-    arena_clear(insanity_ui->frame_arena);
+    allocator_clear(insanity_ui->frame_arena);
 
     //std::cout << "MOUSE STATE:" << Insanity_UI.mouse_down << '\n';
     insanity_ui->editor_style = (Insanity_UI_Editor_Style){
@@ -134,11 +132,6 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     stack_clear(insanity_ui->layout_stack);
     stack_push(insanity_ui->layout_stack, &default_layout);
 
-    Insanity_UI_Sizing default_sizing = Insanity_UI_SIZING_PERCENT;
-    stack_clear(insanity_ui->sizing_x_stack);
-    stack_clear(insanity_ui->sizing_y_stack);
-    stack_push(insanity_ui->sizing_x_stack, &default_sizing);
-    stack_push(insanity_ui->sizing_y_stack, &default_sizing);
 
     vec2 default_padding = {0, 0};
     stack_clear(insanity_ui->padding_stack);
@@ -201,298 +194,77 @@ void insanity_ui_end(Resource_System* resource_system)
 
 void insanity_ui_passes()
 {
-    if (insanity_ui->ui_nodes->num_items == 0) return;
+    //debug check
+    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
+    {
+        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        if (node->size.x > 1.0f)
+        {
+            M_ERROR("OVER 1 X SIZE ON NODE: %s", node->id)
+        }
+        if (node->size.y > 1.0f)
+        {
+            M_ERROR("OVER 1 Y SIZE ON NODE: %s", node->id)
+        }
+    }
 
     //passes
 
-    // percent/fit sizing widths
-    // grow widths and shrink widths
-    // wrap texts
-    // percent/fit sizing heights
-    // grow and shrink heights
-    // position and alignment
-
-    // features pre screen size scale up
-    // scale up by screen size
-    // features pos screen size scale up
-
-
-    // sizing pass //
-    // fit  size pass width
+    //child sizing
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        // float horizontal_padding = node->config.padding.left + node->config.padding.right;
-        // float vertical_padding = node->config.padding.top + node->config.padding.bottom;
+        //size child to a percentage of the parent
+        //the order ensures all parents are sized first before the children are sized
 
-        //handles parent sizing
-        //this never gets hit by a child node, unless that child is also a parent
+        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        float overflow_x = 0;
+        float overflow_y = 0;
+
         for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
         {
             Insanity_UI_Node* child_node = node->children[child_idx];
-            switch (node->sizing_x)
-            {
-            case Insanity_UI_SIZING_FIT:
-                switch (node->layout)
-                {
-                case Insanity_UI_LAYOUT_VERTICAL:
-                    node->size.x = max_f(node->size.x, child_node->size.x /*+ horizontal_padding*/);
-                    break;
-                case Insanity_UI_LAYOUT_HORIZONTAL:
-                    node->size.x += child_node->size.x;
-                    break;
-                }
-                break;
-            case Insanity_UI_SIZING_PERCENT:
-                break;
-            case Insanity_UI_SIZING_PIXEL:
-                break;
-            case Insanity_UI_SIZING_EXPAND:
-                break;
-            }
-        }
-    }
 
+            child_node->size.x = node->size.x * child_node->size.x;
+            child_node->size.y = node->size.y * child_node->size.y;
 
-    // fit  size pass height
-    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
-    {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        // float horizontal_padding = node->config.padding.left + node->config.padding.right;
-        // float vertical_padding = node->config.padding.top + node->config.padding.bottom;
-
-
-        //handles parent sizing
-        //this never gets hit by a child node, unless that child is also a parent
-        for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
-        {
-            Insanity_UI_Node* child_node = node->children[child_idx];
-            switch (node->sizing_y)
-            {
-            case Insanity_UI_SIZING_FIT:
-                switch (node->layout)
-                {
-                case Insanity_UI_LAYOUT_VERTICAL:
-                    node->size.y += child_node->size.y;
-                    break;
-                case Insanity_UI_LAYOUT_HORIZONTAL:
-                    node->size.y = max_f(node->size.y, child_node->size.y /*+ vertical_padding*/);
-                    break;
-                }
-                break;
-            case Insanity_UI_SIZING_PERCENT:
-                break;
-            case Insanity_UI_SIZING_PIXEL:
-                break;
-            case Insanity_UI_SIZING_EXPAND:
-                break;
-            }
-        }
-    }
-
-    //second sizing percent
-    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
-    {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-
-        //if its a child node make the ui a percent size of the parent
-        if (node->parent && node->sizing_x == Insanity_UI_SIZING_PERCENT)
-        {
-            node->size.x = node->parent->size.x * node->percent_size.x;
-        }
-        if (node->parent && node->sizing_y == Insanity_UI_SIZING_PERCENT)
-        {
-            node->size.y = node->parent->size.y * node->percent_size.y;
-        }
-    }
-
-    // width growing sizing pass
-    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
-    {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        // float horizontal_padding = node->config.padding.left + node->config.padding.right;
-        // float vertical_padding = node->config.padding.top + node->config.padding.bottom;
-
-
-        //if its a child node make the ui a percent size of the parent
-        if (node->parent && node->sizing_x == Insanity_UI_SIZING_PERCENT)
-        {
-            node->size.x = node->parent->size.x * node->percent_size.x;
-        }
-
-
-        // gather a nodes child elements that have the expand property
-        if (node->child_count > 0)
-        {
-            Insanity_UI_Node** growable_nodes = arena_alloc(insanity_ui->frame_arena,
-                                                            sizeof(Insanity_UI_Node*) * node->child_count);
-            u32 growable_nodes_count = 0;
-
-            //get all growable nodes and also get the remaining size while at it
-            for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
-            {
-                if (node->children[child_idx]->sizing_x == Insanity_UI_SIZING_EXPAND)
-                {
-                    growable_nodes[growable_nodes_count] = node->children[child_idx];
-                    growable_nodes_count++;
-                }
-            }
-
-            if (growable_nodes_count <= 0) continue;
-
-            //get remaining size
-            float remaining_size_x = node->size.x;
+            //debug check
             switch (node->layout)
             {
             case Insanity_UI_LAYOUT_VERTICAL:
-                for (u32 grow_idx = 0; grow_idx < growable_nodes_count; grow_idx++)
-                {
-                    growable_nodes[grow_idx]->size.x = remaining_size_x;
-                }
+                overflow_y += child_node->size.y;
                 break;
             case Insanity_UI_LAYOUT_HORIZONTAL:
-                for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
-                {
-                    remaining_size_x -= node->children[child_idx]->size.x;
-                }
-
-                while (remaining_size_x > 0)
-                {
-                    float smallest = growable_nodes[0]->size.x;
-                    float second_smallest = INF;
-                    float width_to_add = remaining_size_x;
-
-                    for (u32 grow_idx = 0; grow_idx < growable_nodes_count; grow_idx++)
-                    {
-                        if (growable_nodes[grow_idx]->size.x < smallest)
-                        {
-                            second_smallest = smallest;
-                            smallest = growable_nodes[grow_idx]->size.x;
-                        }
-                        if (growable_nodes[grow_idx]->size.x > smallest)
-                        {
-                            second_smallest = min(second_smallest, growable_nodes[grow_idx]->size.x);
-                            width_to_add = second_smallest - smallest;
-                        }
-                    }
-
-                    width_to_add = min(width_to_add, remaining_size_x / growable_nodes_count);
-
-                    for (int grow_idx = 0; grow_idx < growable_nodes_count; ++grow_idx)
-                    {
-                        if (growable_nodes[grow_idx]->size.x == smallest)
-                        {
-                            growable_nodes[grow_idx]->size.x += width_to_add;
-                            remaining_size_x -= width_to_add;
-                        }
-                    }
-                }
+                overflow_x += child_node->size.x;
                 break;
             }
+        }
+
+        //debug check
+        if (overflow_x > 1)
+        {
+            M_ERROR("OVERFLOW X ON NODE: %s", node->id)
+        }
+        if (overflow_y > 1)
+        {
+            M_ERROR("OVERFLOW Y ON NODE: %s", node->id)
         }
     }
 
 
-    // height growing sizing pass
-    for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
-    {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        // float horizontal_padding = node->config.padding.left + node->config.padding.right;
-        // float vertical_padding = node->config.padding.top + node->config.padding.bottom;
-        if (node->parent && node->sizing_y == Insanity_UI_SIZING_PERCENT)
-        {
-            node->size.y = node->parent->size.y * node->percent_size.y;
-        }
-        // gather a nodes child elements that have the expand property
-        if (node->child_count > 0)
-        {
-            Insanity_UI_Node** growable_nodes = arena_alloc(insanity_ui->frame_arena,
-                                                            sizeof(Insanity_UI_Node*) * node->child_count);
-            u32 growable_nodes_count = 0;
-
-            //get all growable nodes and also get the remaining size while at it
-
-            for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
-            {
-                if (node->children[child_idx]->sizing_y == Insanity_UI_SIZING_EXPAND)
-                {
-                    growable_nodes[growable_nodes_count] = node->children[child_idx];
-                    growable_nodes_count++;
-                }
-            }
-            if (growable_nodes_count <= 0) continue;
-
-            //get remaining size
-            float remaining_size_y = node->size.y;
-            switch (node->layout)
-            {
-            case Insanity_UI_LAYOUT_VERTICAL:
-                for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
-                {
-                    remaining_size_y -= node->children[child_idx]->size.y;
-                }
-
-                while (remaining_size_y > 0)
-                {
-                    float smallest = growable_nodes[0]->size.y;
-                    float second_smallest = INF;
-                    float height_to_add = remaining_size_y;
-
-                    for (u32 grow_idx = 0; grow_idx < growable_nodes_count; grow_idx++)
-                    {
-                        if (growable_nodes[grow_idx]->size.y < smallest)
-                        {
-                            second_smallest = smallest;
-                            smallest = growable_nodes[grow_idx]->size.y;
-                        }
-                        if (growable_nodes[grow_idx]->size.y > smallest)
-                        {
-                            second_smallest = min(second_smallest, growable_nodes[grow_idx]->size.y);
-                            height_to_add = second_smallest - smallest;
-                        }
-                    }
-
-                    height_to_add = min(height_to_add, remaining_size_y / growable_nodes_count);
-
-                    for (int grow_idx = 0; grow_idx < growable_nodes_count; ++grow_idx)
-                    {
-                        if (growable_nodes[grow_idx]->size.y == smallest)
-                        {
-                            growable_nodes[grow_idx]->size.y += height_to_add;
-                            remaining_size_y -= height_to_add;
-                        }
-                    }
-                }
-                break;
-            case Insanity_UI_LAYOUT_HORIZONTAL:
-                for (u32 grow_idx = 0; grow_idx < growable_nodes_count; grow_idx++)
-                {
-                    growable_nodes[grow_idx]->size.y = remaining_size_y;
-                }
-                break;
-            }
-        }
-    }
-
-
-    //position pass //
+    //position pass
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
         float pos_x = node->pos.x;
         float pos_y = node->pos.y;
 
-
         for (u32 child_idx = 0; child_idx < node->child_count; child_idx++)
         {
             Insanity_UI_Node* child_node = node->children[child_idx];
 
-            //TODO: padding is a sizing issue, not a position issue
-            // float horizontal_padding = node->size.x * child_node->padding.x;
-            // float vertical_padding = node->size.y * child_node->padding.y;
+            child_node->pos.x = pos_x;
+            child_node->pos.y = pos_y;
 
-            child_node->pos.x = pos_x; // + horizontal_padding;
-            child_node->pos.y = pos_y; // + vertical_padding;
             switch (node->layout)
             {
             case Insanity_UI_LAYOUT_HORIZONTAL:
@@ -533,7 +305,6 @@ void insanity_ui_passes()
     for (int i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
-        if (node->sizing_x == Insanity_UI_SIZING_PIXEL || node->sizing_y == Insanity_UI_SIZING_PIXEL) { continue; }
 
         node->pos = vec2_mul(node->pos, insanity_ui->screen_size);
         node->size = vec2_mul(node->size, insanity_ui->screen_size);
@@ -605,7 +376,6 @@ void insanity_ui_passes()
                 }
             }
         }
-
         if (node->ui_flags & UI_FLAG_TEXT_INPUT)
         {
             if (hover_hit)
@@ -633,7 +403,7 @@ void insanity_ui_generate_draw(void)
 {
     //NEW DRAW DATA
 
-    insanity_ui->node_draw_data_array = arena_alloc(insanity_ui->frame_arena,
+    insanity_ui->node_draw_data_array = allocator_alloc(insanity_ui->frame_arena,
                                                     insanity_ui->ui_nodes->num_items * sizeof(
                                                         Insanity_UI_Node_Draw_Data));
     insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
@@ -706,22 +476,6 @@ void insanity_ui_push_size(vec2 size)
     stack_push(insanity_ui->size_stack, &size);
 }
 
-void insanity_ui_push_sizing_x(Insanity_UI_Sizing sizing_type)
-{
-    stack_push(insanity_ui->sizing_x_stack, &sizing_type);
-}
-
-void insanity_ui_push_sizing_y(Insanity_UI_Sizing sizing_type)
-{
-    stack_push(insanity_ui->sizing_y_stack, &sizing_type);
-}
-
-void insanity_ui_push_sizing_xy(Insanity_UI_Sizing sizing_type)
-{
-    stack_push(insanity_ui->sizing_x_stack, &sizing_type);
-    stack_push(insanity_ui->sizing_y_stack, &sizing_type);
-}
-
 
 void insanity_ui_push_padding(vec2 padding)
 {
@@ -746,7 +500,7 @@ void insanity_ui_push_text(String text)
 char* insanity_ui_float_to_char(const float value)
 {
     int len = snprintf(NULL, 0, "%.3f", value);
-    char* result = arena_alloc(insanity_ui->frame_arena, len + 1);
+    char* result = allocator_alloc(insanity_ui->frame_arena, len + 1);
     snprintf(result, len + 1, "%.3f", value);
 
     return result;
@@ -851,38 +605,31 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
     node->size = *(vec2*)stack_peek(insanity_ui->size_stack);
 
     node->layout = *(Insanity_UI_Layout*)stack_peek(insanity_ui->layout_stack);
-    node->sizing_x = *(Insanity_UI_Sizing*)stack_peek(insanity_ui->sizing_x_stack);
-    node->sizing_y = *(Insanity_UI_Sizing*)stack_peek(insanity_ui->sizing_y_stack);
     node->padding = *(vec2*)stack_peek(insanity_ui->padding_stack);
 
 
     node->color = insanity_ui->editor_style.color;
 
-    //TODO: handle text node creation properly
+
     if (node->ui_flags & UI_FLAG_TEXT)
     {
-        //create the text
-        insanity_ui_text();
-    }
+        node->text = insanity_ui->string_stack;
+        // proper screen pos and size
+        f32 font_scalar = ((insanity_ui->editor_font_size) / insanity_ui->default_font_size);
 
-
-    if (node->sizing_x == Insanity_UI_SIZING_EXPAND)
-    {
-        node->size.x = 0;
-    }
-    if (node->sizing_y == Insanity_UI_SIZING_EXPAND)
-    {
-        node->size.y = 0;
-    }
-    if (node->sizing_x == Insanity_UI_SIZING_PERCENT)
-    {
-        node->percent_size.x = node->size.x;
-        node->size.x = 0;
-    }
-    if (node->sizing_y == Insanity_UI_SIZING_PERCENT)
-    {
-        node->percent_size.y = node->size.y;
-        node->size.y = 0;
+        Madness_Font font_data;
+        texture_system_get_font(insanity_ui->resource_system->texture_system, insanity_ui->default_font_handle,
+                                &font_data);
+        node->text_total_width;
+        node->text_max_height;
+        for (u64 i = 0; i < node->text.length; i++)
+        {
+            const char c = node->text.chars[i];
+            if (c < 32 || c >= 128) continue; // skip unsupported characters
+            Glyph* g = &font_data.glyphs[c - 32];
+            node->text_total_width += (g->advance) * font_scalar;
+            node->text_max_height = max_f(node->text_max_height, g->advance * font_scalar);
+        }
     }
 
 
@@ -994,7 +741,7 @@ void insanity_ui_text()
 
         Insanity_UI_Node* text_node = insanity_ui_get_new_node();
         text_node->ui_flags = flags;
-        text_node->character = c;
+        // text_node->character = c;
         text_node->pos = vec2_div((vec2){x_position, y_position}, insanity_ui->screen_size);
         text_node->size = vec2_div((vec2){x_width, y_height}, insanity_ui->screen_size);
         // text_node->pos = vec2_div((vec2){x_position, y_position}, insanity_ui->screen_size);
@@ -1003,6 +750,7 @@ void insanity_ui_text()
         text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
         text_node->color = COLOR_WHITE;
         text_node->texture_handle = insanity_ui->default_font_handle;
+
 
         base_position.x += (g->advance) * font_scalar; // move offset forward
     }
@@ -1032,204 +780,81 @@ void insanity_ui_pop_parent(void)
 
 static float x_size = 1;
 
+
+static uint8_t _UI_LATCH;
+#define insanity_ui_draw_parent(id) \
+for(_UI_LATCH = (insanity_ui_push_parent(id), 0);\
+_UI_LATCH <= 0; \
+_UI_LATCH = 1, insanity_ui_pop_parent())
+
+#define insanity_ui_draw(id) \
+    insanity_ui_draw_rect(id)
+
+
 void insanity_ui_test()
 {
     MASSERT(insanity_ui);
     x_size += 0.1f * 0.01; // emulating delta time
 
-    // insanity_ui_push_flags(UI_FLAG_TEXT);
-    // insanity_ui_push_pos((vec2){0.1 /**( cos(x_size) +1)*/, 0.3});
-    // insanity_ui_push_text(STRING("what a world"));
-    // insanity_ui_draw_rect("string");
+    // {
+    //     insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
+    //     insanity_ui_push_flags(UI_FLAG_DRAGGABLE);
+    //     insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
+    //     insanity_ui_push_pos((vec2){0, 0});
+    //     insanity_ui_push_size((vec2){0.5 /**( cos(x_size) +1)*/ , 0.5 /** ( cos(x_size) +1)*/});
+    //     insanity_ui_draw_parent("parent test")
+    //     {
+    //         insanity_ui_push_flags(UI_FLAG_IMAGE);
+    //         insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
+    //         insanity_ui_push_size((vec2){0.5, 0.5});
+    //         insanity_ui_draw("child1");
+    //         insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
+    //         insanity_ui_push_size((vec2){0.1, 0.1});
+    //         insanity_ui_push_flags(UI_FLAG_TEXT|  UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
+    //         insanity_ui_draw("child8");
+    //         insanity_ui_push_flags(UI_FLAG_CLICKABLE);
+    //         insanity_ui_push_sizing_xy(Insanity_UI_SIZING_EXPAND);
+    //         insanity_ui_draw("child2");
+    //         insanity_ui_draw_parent("child3")
+    //         {
+    //             insanity_ui_push_flags(UI_FLAG_IMAGE);
+    //             insanity_ui_draw("child4");
+    //             insanity_ui_draw_parent("child5")
+    //             {
+    //                 insanity_ui_push_flags(UI_FLAG_CLICKABLE);
+    //                 insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
+    //                 insanity_ui_draw("child6");
+    //                 insanity_ui_draw("child7");
+    //             }
+    //         }
+    //     }
+    // }
 
+    //game ui recreaction
+
+    insanity_ui_push_pos((vec2){.03, .1});
+    insanity_ui_push_size((vec2){.2, .05});
+    insanity_ui_draw("turn phase");
+
+    insanity_ui_push_flags(UI_FLAG_SCROLL_VIEW);
+    insanity_ui_push_pos((vec2){.1, .2});
+    insanity_ui_push_size((vec2){.2, .5});
+    insanity_ui_draw_parent("abilities list")
     {
-        insanity_ui_push_sizing_xy(Insanity_UI_SIZING_FIT);
-        insanity_ui_push_flags(UI_FLAG_DRAGGABLE);
-        // insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
-        insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
-        insanity_ui_push_pos((vec2){0, 0});
-        insanity_ui_push_size((vec2){0.5 /**( cos(x_size) +1)*/ , 0.8 /** ( cos(x_size) +1)*/});
-        // insanity_ui_push_sizing_x(Insanity_UI_SIZING_PERCENT);
-        insanity_ui_push_parent("parent test");
+        for (u64 i = 0; i < 5; i++)
         {
-            insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
-            insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
-            insanity_ui_push_size((vec2){0.5, 0.5});
-            insanity_ui_draw_rect("child 1");
-
-            insanity_ui_push_size((vec2){0.25, 0.25});
-            insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-            insanity_ui_draw_rect("child 2");
-
-            // insanity_ui_push_sizing_x(Insanity_UI_SIZING_EXPAND);
-            // insanity_ui_push_size((vec2){0.5, 0.5});
-            // insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
-            // insanity_ui_draw_rect("child 2");
-
-            insanity_ui_push_sizing_xy(Insanity_UI_SIZING_EXPAND);
-            insanity_ui_push_flags(UI_FLAG_IMAGE);
-            insanity_ui_push_parent("parent child 3");
+            insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_ROUND_CORNER);
+            // insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
+            insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
+            insanity_ui_push_size((vec2){1., .2});
+            insanity_ui_draw_parent("ability")
             {
-                insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
-                // insanity_ui_push_sizing_xy(Insanity_UI_SIZING_EXPAND);
-                // insanity_ui_push_sizing_x(Insanity_UI_SIZING_PERCENT);
-                insanity_ui_push_size((vec2){0.5, 0.5});
-                insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-                insanity_ui_draw_rect("child 4");
-                insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-                insanity_ui_push_parent("child 5");
-                {
-                    insanity_ui_push_sizing_xy(Insanity_UI_SIZING_EXPAND);
-                    insanity_ui_push_flags(UI_FLAG_IMAGE);
-                    insanity_ui_draw_rect("child 7");
-                    insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-                    insanity_ui_push_parent("child 8");
-                    {
-                        insanity_ui_push_sizing_xy(Insanity_UI_SIZING_PERCENT);
-                        insanity_ui_push_sizing_y(Insanity_UI_SIZING_EXPAND);
-                        insanity_ui_push_flags(UI_FLAG_IMAGE);
-                        insanity_ui_draw_rect("child 7");
-                    }
-                    insanity_ui_pop_parent();
-                }
-                insanity_ui_pop_parent();
+                insanity_ui_push_flags(UI_FLAG_IMAGE);
+                insanity_ui_push_size((vec2){.2, 1.});
+                insanity_ui_draw("icon");
+                insanity_ui_push_flags(UI_FLAG_IMAGE | UI_FLAG_CLICKABLE);
+                insanity_ui_draw("text");
             }
-            insanity_ui_pop_parent();
         }
-        insanity_ui_pop_parent();
-        insanity_ui_pop_layout();
     }
-
-
-    /*
-    {
-        insanity_ui_push_pos((vec2){0.2, 0.1});
-        insanity_ui_push_size((vec2){0.2, 0.1});
-        insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_DRAGGABLE);
-
-        insanity_ui_draw_rect("id");
-    }
-    */
-
-    /*{
-        insanity_ui_push_flags(UI_FLAG_DRAGGABLE);
-        insanity_ui_push_pos((vec2){0, 0});
-        insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
-        insanity_ui_push_size((vec2){0.5, 0.5});
-        insanity_ui_push_sizing_FLAG(Insanity_UI_SIZING_EXPAND);
-        insanity_ui_push_parent("parent test");
-        {
-            insanity_ui_push_sizing_type(Insanity_UI_SIZING_PERCENT);
-            insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
-            insanity_ui_push_size((vec2){0.5, 0.5});
-            // insanity_ui_draw_rect("child 1");
-            insanity_ui_push_parent("parent 2 / child 1");
-            {
-                insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-                // TODO: size does nothing when a child, implement padding and make it percent based
-                // for me in the morning, idk if ill be able to implement right padding properly
-                // but it would make sense to have the push_size also be used as the interface for padding
-                // its either a top offset, or a left offset
-                insanity_ui_push_size((vec2){0.4, 0.4});
-                insanity_ui_draw_rect("inner child child");
-                insanity_ui_push_flags(UI_FLAG_CLICKABLE| UI_FLAG_IMAGE);
-                insanity_ui_push_sizing_type(Insanity_UI_SIZING_EXPAND);
-                insanity_ui_draw_rect("inner child child");
-
-            }
-            insanity_ui_pop_parent();
-
-
-            insanity_ui_push_size((vec2){0.25, 0.25});
-            insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-            insanity_ui_draw_rect("child 2");
-        }
-        insanity_ui_pop_parent();
-        insanity_ui_pop_layout();
-    }*/
-
-    /*
-    assume this is a turn based ability
-     {
-         insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_ROUND_CORNER);
-         insanity_ui_push_pos((vec2){0, 0});
-         insanity_ui_push_size((vec2){0.33, 0.15});
-         insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
-         insanity_ui_push_parent("parent test");
-         {
-             insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
-             insanity_ui_push_size((vec2){0.4, 1.0});
-             insanity_ui_draw_rect("child 1");
-
-             insanity_ui_push_size((vec2){0.5, 0.5});
-             insanity_ui_push_flags(UI_FLAG_NONE);
-             insanity_ui_draw_rect("child 2");
-         }
-         insanity_ui_pop_parent();
-         insanity_ui_pop_layout();
-     }
-     */
-
-
-    /*
-     {
-        insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_TEXT | UI_FLAG_ROUND_CORNER);
-        insanity_ui_push_text(STRING("Bitch"));
-        insanity_ui_push_pos((vec2){500, 200});
-
-        insanity_ui_draw_rect("id2");
-    }
-
-
-    //check box
-    insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_OUTLINE);
-    insanity_ui_push_pos((vec2){200, 500});
-    if (insanity_ui_draw_rect("id3").clicked)
-    {
-        //do something
-    };
-
-
-    //float slider type thing
-    //check box
-    insanity_ui_push_flags(UI_FLAG_SCROLL_FLOAT | UI_FLAG_TEXT);
-    insanity_ui_push_pos((vec2){500, 500});
-    insanity_ui_push_text_float(100);
-    static float x;
-    x = insanity_ui_draw_rect("id4").float_change;
-
-    //float slider type thing
-    //check box
-    insanity_ui_push_image("../renderer/texture/error_texture.png");
-    // insanity_ui_push_flags(UI_FLAG_IMAGE);
-    insanity_ui_push_flags(UI_FLAG_IMAGE | UI_FLAG_CLICKABLE | UI_FLAG_OUTLINE);
-    insanity_ui_push_pos((vec2){800, 200});
-    insanity_ui_draw_rect("image");
-
-
-    //text input field
-    //TODO: does not drag the text, we can wait until the ui nodes have children
-    insanity_ui_push_flags(UI_FLAG_TEXT_INPUT | UI_FLAG_TEXT | UI_FLAG_DRAGGABLE);
-    insanity_ui_push_text(STRING("Text Input:"));
-    insanity_ui_push_pos((vec2){800, 500});
-
-    insanity_ui_draw_rect("text input");
-
-    //parent node testing
-    insanity_ui_push_flags(UI_FLAG_NONE);
-    insanity_ui_push_pos((vec2){0, 0});
-    insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
-    insanity_ui_push_parent("parent test");
-    {
-        insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_IMAGE);
-        insanity_ui_push_size((vec2){200 / 2, 100 / 2});
-        insanity_ui_draw_rect("child 1");
-
-        insanity_ui_push_size((vec2){200 / 4, 100 / 4});
-        insanity_ui_push_flags(UI_FLAG_CLICKABLE);
-        insanity_ui_draw_rect("child 2");
-    }
-    insanity_ui_pop_parent();
-    insanity_ui_pop_layout();
-    */
 }

@@ -1,13 +1,13 @@
 ﻿#include "stack.h"
 
 //TODO: test arena functions
-stack* stack_create(const u64 stride, const u64 capacity, Arena* arena)
+stack* stack_create(const u64 stride, const u64 capacity, Allocator* arena)
 {
     stack* s;
     if (arena)
     {
-         s = arena_alloc(arena, sizeof(stack));
-        s->data = arena_alloc(arena, stride * capacity);
+         s = allocator_alloc(arena, sizeof(stack));
+        s->data = allocator_alloc(arena, stride * capacity);
     }
     else
     {
@@ -31,7 +31,7 @@ stack* stack_create(const u64 stride, const u64 capacity, Arena* arena)
 // #define STACK_CREATE (arena, type, capacity) stack_create_arena(arena, sizeof(type), capacity)
 
 //only use if allocated with malloc
-void stack_free(stack* s, Arena* arena)
+void stack_free(stack* s, Allocator* arena)
 {
     MASSERT(s);
     if (arena)

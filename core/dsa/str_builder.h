@@ -38,7 +38,7 @@ void string_builder_decrement(String_Builder* str_builder);
 
 String* string_builder_to_string(const String_Builder* builder);
 String string_builder_to_string_non_pointer(const String_Builder* builder);
-String* string_builder_to_c_string(const String_Builder* builder);
+char* string_builder_to_c_string(const String_Builder* builder);
 #define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_char(builder, string, sizeof(string)-1)
 
 void string_builder_empty(String_Builder* builder);

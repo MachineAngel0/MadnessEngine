@@ -1,7 +1,6 @@
 ﻿#ifndef GAME_ENUMS_H
 #define GAME_ENUMS_H
 
-
 // UNIT//
 typedef enum Character_Name
 {
@@ -57,12 +56,12 @@ typedef enum Character_Name
     Character_Name_MAX
 } Character_Name;
 
-
 typedef enum Character_Type
 {
     Character_Type_Player,
     Character_Type_Enemy,
 } Character_Type;
+
 
 typedef enum Character_State
 {
@@ -72,6 +71,24 @@ typedef enum Character_State
 } Character_State;
 
 // ABILITIES //
+
+typedef enum Ability_Component_Type
+{
+    Ability_Component_TYPE_HEAL,
+    Ability_Component_TYPE_DAMAGE,
+    Ability_Component_TYPE_MP_CHANGE,
+    Ability_Component_TYPE_AUGMENT_CHANGE,
+    Ability_Component_TYPE_CHARGE,
+    Ability_Component_TYPE_CONJURE,
+    Ability_Component_TYPE_DRAIN,
+    Ability_Component_TYPE_ACTION_CHANGE,
+    Ability_Component_TYPE_ABILITY_CHANGE,
+    Ability_Component_TYPE_RESISTANCE_CHANGE,
+    Ability_Component_TYPE_STATUS_CHANGE,
+    Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE,
+    Ability_Component_TYPE_MAX,
+} Ability_Component_Type;
+
 
 typedef enum Ability_Name
 {
@@ -96,11 +113,11 @@ typedef enum Ability_Name
 } Ability_Name;
 
 
-typedef enum Target_Can_Affect
+typedef enum Target_Area_Affect
 {
-    Target_Can_Affect_SingleTarget,
-    Target_Can_Affect_TargetAll,
-} Target_Can_Affect;
+    Target_Area_Affect_Single_Target,
+    Target_Area_Affect_Target_All,
+} Target_Area_Affect;
 
 typedef enum Ability_Target_Type
 {
@@ -218,6 +235,14 @@ typedef enum Status_Change_Types
     Status_Change_Types_StatusToSpecificPercent,
     Status_Change_Types_StatusToZero,
 } Status_Change_Types;
+
+typedef enum Status_Threshold_Types
+{
+    Status_Threshold_Types_Threshold_Amount,
+    Status_Threshold_Types_Threshold_Specific_Value,
+    Status_Threshold_Types_Threshold_By_Multiplication,
+    Status_Threshold_Types_MAX,
+}Status_Threshold_Types;
 
 typedef enum Drain_Types
 {

@@ -3,7 +3,8 @@
 
 #include <stdlib.h>
 #include "logger.h"
-#include "../memory/memory_tracker.h"
+#include "memory/memory_tracker.h"
+#include "allocator.h"
 
 
 #define _array_struct_macro(type)\
@@ -12,34 +13,57 @@
     u64 stride; \
     u64 num_items;\
     type* data;\
+    bool using_arena;\
     }type##_array;
 
 #define _array_create_macro(type)\
-    type##_array* type##_array_create(u64 capacity) \
+    type##_array* type##_array_create(u64 capacity, Allocator* arena) \
     { \
         if (capacity <= 0)\
         {\
             WARN("ARRAY MACRO CREATE: INVALID CAPACITY")\
             return NULL;\
         } \
-        type##_array* arr = malloc(sizeof(type##_array)); \
-        memset(arr, 0, sizeof(type##_array)); \
-        arr->data = malloc(sizeof(type) * capacity); \
-        memset(arr->data, 0, sizeof(type) * capacity); \
+        type##_array* arr; \
+        if (arena)\
+        {\
+            arr = allocator_alloc(arena, sizeof(type##_array));\
+            arr->data = allocator_alloc(arena, sizeof(type) * capacity); \
+            arr->using_arena = true;\
+        }\
+        else\
+        {\
+            arr = malloc(sizeof(type##_array));\
+            memset(arr, 0, sizeof(type##_array));\
+            arr->data = malloc(sizeof(type) * capacity); \
+            memset(arr->data, 0, sizeof(u8) * capacity);\
+            arr->using_arena = false;\
+         \
+        }\
         arr->capacity = capacity;\
-        arr->stride = sizeof(type);        \
-        arr->num_items = 0;        \
+        arr->stride = sizeof(type); \
+        arr->num_items = 0; \
         return arr; \
     };
+
+#define _array_free_macro(type)\
+    void type##_array_free(type##_array* array)\
+        {\
+        MASSERT_MSG(array, "ARRAY MACRO FREE: NULL ARRAY")\
+        if (array->using_arena)\
+            {\
+                return;\
+            }\
+        free(array->data);\
+        free(array);\
+        };
+
+
 
 #define _array_push_macro(type)\
     void type##_array_push(type##_array* array, const type* data) \
     {\
-        if (!array)\
-        {\
-            WARN("ARRAY MACRO PUSH: NULL ARRAY")\
-            return;\
-        }\
+        MASSERT_MSG(array, "ARRAY MACRO PUSH: NULL ARRAY");\
         if (array->num_items >= array->capacity)\
         {\
             WARN("ARRAY MACRO PUSH: NULL ARRAY")\
@@ -52,11 +76,7 @@
 #define _array_pop_macro(type)\
     void type##_array_pop(type##_array* array) \
     {\
-        if (!array)\
-        {\
-            WARN("ARRAY MACRO POP: NULL ARRAY")\
-            return;\
-        }\
+        MASSERT_MSG(array, "ARRAY MACRO POP: NULL ARRAY");\
         if (array->num_items <= 0)\
         {\
             WARN("ARRAY MACRO POP: NOTHING TO POP")\
@@ -67,31 +87,19 @@
 #define _array_clear_macro(type)\
     void type##_array_clear(type##_array* array) \
     {\
-        if (!array)\
-        {\
-            WARN("ARRAY MACRO CLEAR: NULL ARRAY")\
-            return;\
-        }\
+        MASSERT_MSG(array, "ARRAY MACRO CLEAR: NULL ARRAY");\
         array->num_items = 0;\
     }
 #define _array_zero_macro(type)\
     void type##_array_zero(type##_array* array)\
     {\
-        if (!array)\
-        {\
-            WARN("ARRAY MACRO ZERO: NULL ARRAY")\
-            return;\
-        }\
+        MASSERT_MSG(array, "ARRAY MACRO ZERO: NULL ARRAY");\
         memset(array->data, 0, array->stride * array->capacity);\
     }
 #define _array_get_bytes_used(type)\
     u64 type##_array_get_bytes_used(type##_array* array)\
     {\
-        if (!array)\
-        {\
-        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")\
-        return 0;\
-        }\
+        MASSERT_MSG(array, "ARRAY MACRO GET BYTES USED: NULL ARRAY");\
         return array->num_items * array->stride;\
     }
 #define _array_slice_macro(type) \
@@ -118,13 +126,13 @@
 #define ARRAY_GENERATE_TYPE(type) \
     _array_struct_macro(type)\
     _array_create_macro(type);\
+    _array_free_macro(type)\
     _array_push_macro(type)\
     _array_pop_macro(type)\
     _array_clear_macro(type)\
     _array_zero_macro(type)\
     _array_get_bytes_used(type) \
-    \
-    _array_slice_macro(type)
+    _array_slice_macro(type)\
 
 
 //TODO: functions

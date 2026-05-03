@@ -4,7 +4,7 @@
 
 Shader_System* shader_system_init(Renderer* renderer)
 {
-    Shader_System* out_shader_system = arena_alloc(&renderer->arena, sizeof(Shader_System));
+    Shader_System* out_shader_system = allocator_alloc(&renderer->arena, sizeof(Shader_System));
     renderer->shader_system = out_shader_system;
 
     out_shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
@@ -118,7 +118,7 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
                                           Descriptor_System* descriptor_system, Render_Packet* render_packet)
 {
     ring_queue* texture_queue = render_packet->texture_queue;
-    Texture* texture = arena_alloc(&renderer->frame_arena, sizeof(Texture));
+    Texture* texture = allocator_alloc(&renderer->frame_arena, sizeof(Texture));
 
     while (!ring_queue_is_empty(texture_queue))
     {

@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include "unit_test.h"
-#include "arena_stack.h"
+#include "allocator_stack.h"
 #include "../memory/memory_tracker.h"
 
 
@@ -37,7 +37,7 @@ typedef struct array_header
 } array_header;
 
 void* _darray_create(const u64 capacity, const u64 stride, Memory_Tracker* memory_tracker);
-void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Arena_Stack* arena, Memory_Tracker* memory_tracker);
+void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Stack_Allocator* arena, Memory_Tracker* memory_tracker);
 
 #define darray_create(type) \
     (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type), NULL)

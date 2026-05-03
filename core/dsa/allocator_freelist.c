@@ -1,4 +1,4 @@
-﻿#include "arena_freelist.h"
+﻿#include "allocator_freelist.h"
 
 void arena_free_list_init(Arena_Free_List* fl, void* backing_memory, size_t memory_size)
 {
@@ -265,6 +265,18 @@ void arena_free_list_node_remove(Free_List_Node** phead, Free_List_Node* prev_no
     {
         prev_node->next = del_node->next;
     }
+}
+
+void* free_list_allocator_interface_alloc(void* allocator, u64 memory_byte_request, u8 alignment)
+{
+    Arena_Free_List* fl = (Arena_Free_List*)allocator;
+    return arena_free_list_alloc(fl, memory_byte_request);
+}
+
+void free_list_allocator_interface_free(void* allocator, void* memory_block)
+{
+    Arena_Free_List* fl = (Arena_Free_List*)allocator;
+    arena_free_list_free(fl, memory_block);
 }
 
 void free_list_test(void)

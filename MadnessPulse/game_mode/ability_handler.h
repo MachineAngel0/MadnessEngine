@@ -3,15 +3,12 @@
 
 #include "game_enums.h"
 #include "game_structs.h"
+#include "../game_abilties.h"
 #include "command/command.h"
 
 
-typedef struct FTurnComponentDuration
-{
-    int EffectLength = 0;
-    int TurnsUntilTriggered = 0;
-}FTurnComponentDuration;
 
+//State the Ability Handler needs to use turn and reversal effects
 typedef struct Turn_Trigger_Component_Info
 {
     //TODO: dont store pointers
@@ -33,7 +30,7 @@ typedef struct Reversal_Component_Info
     TArray<UAbilityBaseComponent*> ComponentsWithReversalTag;
     Unit* Caster;
     Unit* ReversalTarget; // who we put the reversal on
-    bool IsPermanent = false;
+    bool IsPermanent;
 }Reversal_Component_Info;
 
 typedef enum Action_Handler_Process_Stage
@@ -67,8 +64,8 @@ typedef struct Ability_Handler
     */
 
     /* High level Components Logic Functions */
-    TArray<Command*> ProcessAbility( AAbilityBase*& AbilityToProcess, FTurnBasedGameState GameState,
-                                    TArray<Unit*>& Targets);
+    TArray<Command*> ProcessAbility( Ability* ability_to_process, FTurnBasedGameState GameState,
+                                    TArray<Unit*> Targets);
 
     /*
     TArray<Command*> ProcessNormalComponents( FTurnBasedGameState& GameState,

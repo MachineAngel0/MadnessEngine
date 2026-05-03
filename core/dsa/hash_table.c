@@ -67,7 +67,7 @@ bool hash_table_remove(hash_table* h, const char* key_str)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH MAP STRING REMOVE: COULD NOT FIND STRING");
+            WARN("HASH TABLE STRING REMOVE: COULD NOT FIND STRING");
             return false;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)
@@ -78,13 +78,13 @@ bool hash_table_remove(hash_table* h, const char* key_str)
         }
     }
 
-    WARN("HASH MAP STRING REMOVE: COULD NOT FIND STRING");
+    WARN("HASH TABLE REMOVE: COULD NOT FIND STRING");
     return false;
 }
 
 bool hash_table_contains(hash_table* h, const char* key_str)
 {
-    MASSERT_MSG(h, "HASH MAP STRING DELETE: INVALID PARAMS");
+    MASSERT_MSG(h, "HASH TABLE CONTAINS: INVALID PARAMS");
 
     if (!key_str)
     {
@@ -103,7 +103,7 @@ bool hash_table_contains(hash_table* h, const char* key_str)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH MAP STRING REMOVE: COULD NOT FIND STRING");
+            WARN("HASH MAP STRING CONTAINS: COULD NOT FIND STRING");
             return false;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)

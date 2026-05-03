@@ -9,11 +9,11 @@ typedef enum {
     TYPE_CHAR,
     TYPE_STRING,  // dynamically allocated copy
     TYPE_CUSTOM,   // for structs
-} ValueType;
+} Union_Type;
 
 // --- Tagged Union ---
 typedef struct {
-    ValueType type;
+    Union_Type type;
     union {
         int i;
         float f;
@@ -21,7 +21,7 @@ typedef struct {
         char* s;
         void* custom;   // generic pointer to a struct or custom data
     } data;
-} Value;
+} Tagged_Union;
 
 
 #endif //UNIONS_H

@@ -30,10 +30,10 @@ vec2 quadratic_bezier(const vec2 p0, const vec2 p1, const vec2 p2, const float t
     return result;
 }
 
-vec2* quadratic_bezier_sample(Arena* arena, vec2 p0, vec2 p1, vec2 p2, u32 steps)
+vec2* quadratic_bezier_sample(Allocator* arena, vec2 p0, vec2 p1, vec2 p2, u32 steps)
 {
     //the out size is the step size
-    vec2* out_bezier_points = arena_alloc(arena, sizeof(vec2) * steps);
+    vec2* out_bezier_points = allocator_alloc(arena, sizeof(vec2) * steps);
     for (int i = 0; i <= steps; i++)
     {
         float t = (float)i / (float)steps;
@@ -68,10 +68,10 @@ vec2 cubic_bezier(const vec2 p0, const vec2 p1, const vec2 p2, const vec2 p3, co
     return vec2_add(vec2_add(vec2_add(p0, part2), part3), part4);
 }
 
-vec2* cubic_bezier_sample(Arena* arena, vec2 p0, vec2 p1, vec2 p2, vec2 p3, u32 steps)
+vec2* cubic_bezier_sample(Allocator* arena, vec2 p0, vec2 p1, vec2 p2, vec2 p3, u32 steps)
 {
     //the out size is the step size
-    vec2* out_bezier_points = arena_alloc(arena, sizeof(vec2) * steps);
+    vec2* out_bezier_points = allocator_alloc(arena, sizeof(vec2) * steps);
     for (int i = 0; i <= steps; i++)
     {
         float t = (float)i / (float)steps;

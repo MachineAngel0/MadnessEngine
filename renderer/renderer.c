@@ -63,11 +63,11 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    arena_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
+    allocator_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
                renderer->mem_tracker);
 
     void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    arena_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
+    allocator_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -196,7 +196,7 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     vulkan_context* vk_context = &renderer->context;
 
-    arena_clear(&renderer->frame_arena);
+    allocator_clear(&renderer->frame_arena);
 
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);

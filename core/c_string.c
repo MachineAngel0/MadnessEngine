@@ -19,7 +19,7 @@
 
 
 //the arena is optional
-const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
+const char* c_string_concat(const char* str1, const char* str2, Allocator* arena)
 {
     u64 str1_length = c_string_length(str1);
     u64 str2_length = c_string_length(str2);
@@ -31,7 +31,7 @@ const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
 
     if (arena)
     {
-        out_str = arena_alloc(arena, allocation_size);
+        out_str = allocator_alloc(arena, allocation_size);
     }
     else
     {
@@ -47,7 +47,7 @@ const char* c_string_concat(const char* str1, const char* str2, Arena* arena)
 
 
 // Performs string formatting to dest given format string and parameters.
-char* c_string_path_strip(const char* path, Arena* arena)
+char* c_string_path_strip(const char* path, Allocator* arena)
 {
     MASSERT(path);
 
@@ -57,7 +57,7 @@ char* c_string_path_strip(const char* path, Arena* arena)
     {
         if (path[i] == '/')
         {
-            new_path = arena_alloc(arena, i + 2);
+            new_path = allocator_alloc(arena, i + 2);
             memcpy(new_path, path, i + 1);
             new_path[i + 1] = '\0';
             return new_path;
@@ -69,7 +69,7 @@ char* c_string_path_strip(const char* path, Arena* arena)
     return "";
 }
 
-char* c_string_ext_strip(const char* path, Arena* arena)
+char* c_string_ext_strip(const char* path, Allocator* arena)
 {
     MASSERT(path);
 
@@ -79,7 +79,7 @@ char* c_string_ext_strip(const char* path, Arena* arena)
     {
         if (path[i] == '.')
         {
-            new_path = arena_alloc(arena, i + 2);
+            new_path = allocator_alloc(arena, i + 2);
             memcpy(new_path, path, i + 1);
             new_path[i + 1] = '\0';
             return new_path;
@@ -91,7 +91,7 @@ char* c_string_ext_strip(const char* path, Arena* arena)
     return "";
 }
 
-char* c_string_path_get_extension(const char* path, Arena* arena)
+char* c_string_path_get_extension(const char* path, Allocator* arena)
 {
     //NOTE: does return the dot  ex: .gltf / .txt and not gltf/txt
     MASSERT(path);
@@ -108,7 +108,7 @@ char* c_string_path_get_extension(const char* path, Arena* arena)
         if (path[i] == '.')
         {
             size_t diff = string_size - i; // difference from where we started
-            out_string_extension = arena_alloc(arena, diff + 1);
+            out_string_extension = allocator_alloc(arena, diff + 1);
 
             size_t new_string_idx = 0;
             for (size_t j = i; j < string_size; j++)

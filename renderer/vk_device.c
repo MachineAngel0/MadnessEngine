@@ -1,5 +1,5 @@
 ﻿#include "vk_device.h"
-#include "array.h"
+#include "../core/dsa/array.h"
 #include "platform/platform.h"
 
 

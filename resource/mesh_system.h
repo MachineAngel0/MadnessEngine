@@ -8,20 +8,20 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet);
 
 
-submesh* submesh_init(Arena* arena);
+submesh* submesh_init(Allocator* arena);
 void sub_mesh_free(submesh* m);
 
-static_mesh* static_mesh_init(Arena* arena, u32 mesh_size);
+static_mesh* static_mesh_init(Allocator* arena, u32 mesh_size);
 void static_mesh_free(static_mesh* static_mesh);
 
 
-void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Resource_System*
+void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena, Resource_System*
                     resource_system);
 
-void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Arena* arena, Frame_Arena* frame_arena, Resource_System*
+void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena, Resource_System*
                     resource_system);
 
-void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Arena* arena, Frame_Arena* frame_arena);
+void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena);
 
 void mesh_load_obj(const char* obj_path, Renderer* renderer);
 

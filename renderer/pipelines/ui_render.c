@@ -3,7 +3,7 @@
 
 UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 {
-    UI_Renderer_Backend* UI_Render_Info = arena_alloc(&renderer->arena, sizeof(UI_Renderer_Backend));
+    UI_Renderer_Backend* UI_Render_Info = allocator_alloc(&renderer->arena, sizeof(UI_Renderer_Backend));
 
     //TODO: i should replace this with object counts // like max 1000 UI's on screen until i need to otherwise
     u32 ui_buffer_sizes = MB(1);

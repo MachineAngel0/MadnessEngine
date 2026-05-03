@@ -14,8 +14,8 @@ Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* re
     tetris_game_state->memory_tracker = memory_system_get_memory_tracker(
         memory_system->memory_tracker_system, STRING("Tetris"), arena_sizes);
 
-    arena_init(&tetris_game_state->arena, arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
-    arena_init(&tetris_game_state->frame_arena, frame_arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
+    allocator_init(&tetris_game_state->arena, arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
+    allocator_init(&tetris_game_state->frame_arena, frame_arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
 
 
     tetris_game_state->tetris_state = Tetris_State_Start;
@@ -30,14 +30,14 @@ Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* re
 
 void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds)
 {
-    tetris->tetris_clock = arena_alloc(&tetris->arena, sizeof(Tetris_Clock));
+    tetris->tetris_clock = allocator_alloc(&tetris->arena, sizeof(Tetris_Clock));
     tetris->tetris_clock->accumulated_time = block_move_speed_seconds;
     tetris->tetris_clock->move_block_trigger_seconds = block_move_speed_seconds;
 }
 
 void tetris_grid_init(Tetris_Game_State* tetris, int column, int row)
 {
-    tetris->tetris_grid = arena_alloc(&tetris->arena, sizeof(Tetris_Grid));
+    tetris->tetris_grid = allocator_alloc(&tetris->arena, sizeof(Tetris_Grid));
     tetris->tetris_grid->column = column;
     tetris->tetris_grid->row = row;
 
@@ -62,7 +62,7 @@ void tetris_grid_init(Tetris_Game_State* tetris, int column, int row)
 
 void tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
-    arena_clear(&tetris->frame_arena);
+    allocator_clear(&tetris->frame_arena);
 
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))

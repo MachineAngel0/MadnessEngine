@@ -5,16 +5,16 @@
 
 //create operations
 Transform* transform_from_position_rotation_scale(const vec3 position, const quat rotation, const vec3 scale,
-                                                  Arena* arena)
+                                                  Allocator* arena)
 {
-    Transform* out_transform = arena_alloc(arena, sizeof(Transform));
+    Transform* out_transform = allocator_alloc(arena, sizeof(Transform));
     out_transform->position = position;
     out_transform->rotation = rotation;
     out_transform->scale = scale;
     return out_transform;
 };
 
-Transform* transform_create(Arena* arena)
+Transform* transform_create(Allocator* arena)
 {
     Transform* out_transform =
         transform_from_position_rotation_scale(vec3_zero(), quat_identity(), vec3_one(), arena);
@@ -29,14 +29,14 @@ void transform_set_default(Transform* transform)
     transform->is_dirty = true;
 }
 
-Transform* transform_from_position(const vec3 position, Arena* arena)
+Transform* transform_from_position(const vec3 position, Allocator* arena)
 {
     Transform* out_transform =
         transform_from_position_rotation_scale(position, quat_identity(), vec3_one(), arena);
     return out_transform;
 }
 
-Transform* transform_from_rotation(const quat rotation, Arena* arena)
+Transform* transform_from_rotation(const quat rotation, Allocator* arena)
 {
     Transform* out_transform =
         transform_from_position_rotation_scale(vec3_zero(), rotation, vec3_one(), arena);
@@ -44,7 +44,7 @@ Transform* transform_from_rotation(const quat rotation, Arena* arena)
 }
 
 
-Transform* transform_from_scale(const vec3 scale, Arena* arena)
+Transform* transform_from_scale(const vec3 scale, Allocator* arena)
 {
     Transform* out_transform =
         transform_from_position_rotation_scale(vec3_zero(), quat_identity(), scale, arena);

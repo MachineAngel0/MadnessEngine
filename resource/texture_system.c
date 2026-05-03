@@ -242,7 +242,7 @@ Texture_Handle texture_system_get_default_texture(Texture_System* texture_system
 }
 
 bool texture_system_load_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle,
-                              Arena* arena)
+                              Allocator* arena)
 {
     u32 texture_id;
 
@@ -308,7 +308,7 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
     float scale = stbtt_ScaleForPixelHeight(&font_info, DEFAULT_FONT_CREATION_SIZE);
     int atlas_width = 1024 * 4;
     int atlas_height = 1024 * 4;
-    char* atlasPixels = arena_alloc(arena, atlas_width * atlas_height);
+    char* atlasPixels = allocator_alloc(arena, atlas_width * atlas_height);
 
     int x = 0, y = 0, rowHeight = 0;
 
@@ -380,7 +380,7 @@ bool texture_system_load_font(Texture_System* texture_system, const char* file_p
 
     // Convert to RGBA
     u64 atlasRGBA_size = atlas_width * atlas_height * 4;
-    unsigned char* atlas_RGBA_pixels = arena_alloc(arena, atlasRGBA_size);
+    unsigned char* atlas_RGBA_pixels = allocator_alloc(arena, atlasRGBA_size);
     for (int i = 0; i < atlas_width * atlas_height; i++)
     {
         unsigned char v = atlasPixels[i];
@@ -475,7 +475,7 @@ bool texture_system_get_font(Texture_System* texture_system, const Texture_Handl
 }
 
 bool texture_system_load_msdf_font(Texture_System* texture_system, const char* file_path, Texture_Handle* out_handle,
-                                   Frame_Arena* frame_arena)
+                                   Frame_Allocator* frame_arena)
 {
     u32 texture_idx;
 

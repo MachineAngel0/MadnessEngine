@@ -13,7 +13,7 @@
 
 #include "../resource/sprite_type.h"
 #include "camera.h"
-#include "darray.h"
+#include "../core/dsa/darray.h"
 #include "hash_table.h"
 #include "input.h"
 #include "resource_system.h"
@@ -691,8 +691,8 @@ typedef struct renderer
     camera main_camera;
     Render_Mode mode;
 
-    Arena arena; // total memory for the entire renderer
-    Arena frame_arena;
+    Allocator arena; // total memory for the entire renderer
+    Allocator frame_arena;
     Memory_Tracker* mem_tracker;
 
 

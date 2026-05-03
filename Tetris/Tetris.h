@@ -133,8 +133,8 @@ typedef struct Tetris_Game_State
     Tetris_Grid* tetris_grid;
     Tetromino current_tetromino;
 
-    Arena arena;
-    Frame_Arena frame_arena;
+    Allocator arena;
+    Frame_Allocator frame_arena;
     Sprite_Data_array* tetris_sprite_data; // info gets cleared every frame
 
     Memory_Tracker* memory_tracker;

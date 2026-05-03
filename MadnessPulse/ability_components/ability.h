@@ -1,82 +1,55 @@
 ﻿#ifndef ABILITIES_H
 #define ABILITIES_H
 
-#include "game_structs.h"
-#include "game_enums.h"
 #include "heal.h"
 #include "damage.h"
-#include "str.h"
 
-#define MAX_ABILITY_COMPONENTS 10
 
-typedef enum Ability_Component_Type
+
+
+
+void ability_type_process(Ability_Component_Type ability_component_type, Unit* unit, void* ability_data)
 {
-    Ability_Component_TYPE_HEAL,
-    Ability_Component_TYPE_DAMAGE,
-    Ability_Component_TYPE_MP_CHANGE,
-    Ability_Component_TYPE_AUGMENT_CHANGE,
-    Ability_Component_TYPE_CHARGE,
-    Ability_Component_TYPE_CONJURE,
-    Ability_Component_TYPE_DRAIN,
-    Ability_Component_TYPE_ACTION_CHANGE,
-    Ability_Component_TYPE_ABILITY_CHANGE,
-    Ability_Component_TYPE_RESISTANCE_CHANGE,
-    Ability_Component_TYPE_STATUS_CHANGE,
-    Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE,
-    Ability_Component_TYPE_MAX,
-} Ability_Component_Type;
+    switch (ability_component_type)
+    {
+    case Ability_Component_TYPE_HEAL:
+        heal_ability(unit, ability_data);
+        break;
+    case Ability_Component_TYPE_DAMAGE:
+        damage_ability(unit, ability_data);
+        break;
+        /*
+    case Ability_Component_TYPE_MP_CHANGE:
+        break;
+    case Ability_Component_TYPE_AUGMENT_CHANGE:
+        break;
+    case Ability_Component_TYPE_CHARGE:
+        break;
+    case Ability_Component_TYPE_CONJURE:
+        break;
+    case Ability_Component_TYPE_DRAIN:
+        break;
+    case Ability_Component_TYPE_ACTION_CHANGE:
+        break;
+    case Ability_Component_TYPE_ABILITY_CHANGE:
+        break;
+    case Ability_Component_TYPE_RESISTANCE_CHANGE:
+        break;
+    case Ability_Component_TYPE_STATUS_CHANGE:
+        break;
+    case Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE:
+        break;
+    case Ability_Component_TYPE_MAX:
+        break;
+        */
+        default:
+        MASSERT_MSG(false, "ABILITY PROCESS: ABILITY TYPE NOT IMPLEMENTED IN ");
+        break;
+    }
+}
 
-typedef void (*ability_effect)(Unit*, void*);
 
 
-static ability_effect ability_vtable[Ability_Component_TYPE_MAX] = {
-    [Ability_Component_TYPE_HEAL] = heal_ability,
-    [Ability_Component_TYPE_DAMAGE] = damage_ability,
-
-};
-
-typedef struct Ability_Component
-{
-    //ability vtable lookup
-    Ability_Component_Type type;
-    void* data;
-
-    //is it a normal, reversal
-    Ability_Activation_Type activation_type;
-    //single or multitarget
-    Target_Can_Affect target_can_affect;
-    //who is this targeting
-    Ability_Target_Type ability_target;
-} Ability_Component;
-
-typedef struct Ability
-{
-    u32 id;
-    Ability_Component components[MAX_ABILITY_COMPONENTS];
-    u32 component_count;
-
-    //madness or insanity type
-} Ability;
-
-typedef struct Ability_Info
-{
-    String ability_name; // = "Ability Not Named";
-    String ability_text; // "Implement Text Please";
-    String status_trigger_text; // = "NA";
-
-    String lore_text; //= "NA";
-
-    Fusion_Type fusion_type; // = EFusionType::ECS_Fire;
-
-    //every ability only gets one normal attack, primary tag, primarily used to determine the icon type
-    Ability_Type primary_ability_type; // = EAbilityType::ECS_Physical;
-
-    Ability_Target_Type ability_target_type;
-    Target_Can_Affect targets_can_affect;
-
-    int ability_action_cost; // = 1;
-    float mp_cost; // = 1.0f;
-} Ability_Info;
 
 void ability_add_component(Ability* ability, Ability_Component* component)
 {
@@ -88,7 +61,8 @@ void ability_process(Ability* ability, Unit* unit)
 {
     for (u32 i = 0; i < ability->component_count; i++)
     {
-        ability_vtable[ability->components[i].type](unit, ability->components[i].data);
+        Ability_Component* ability_component = &ability->components[i];
+        ability_type_process(ability_component->type, unit, ability_component->data);
     }
 }
 
@@ -105,7 +79,7 @@ void ability_testing()
     Ability ability;
     memset(&ability, 0, sizeof(ability));
 
-    Heal_Ability heal_component = heal_ability_create(Heal_Types_HealAmount, 10, false);
+    Heal_Component heal_component = heal_component_create(Heal_Types_HealAmount, 10, false);
 
     Damage_Ability damage_component = damage_ability_create(15);
 
@@ -127,7 +101,7 @@ Ability get_default_heal_ability()
 {
     Ability ability;
 
-    Heal_Ability heal_ability = heal_ability_create(Heal_Types_HealAmount, 10, false);
+    Heal_Component heal_ability = heal_component_create(Heal_Types_HealAmount, 10, false);
     Damage_Ability damage_component = damage_ability_create(15);
     Ability_Component a1 = {
         .type = Ability_Component_TYPE_HEAL, .data = &heal_ability
@@ -150,36 +124,7 @@ Ability get_default_damage_ability()
     return ability;
 }
 
-/*
 
-typedef struct Ability_Component
-{
-    Ability_Component_Type type;
-    void* data;
-} Ability_Component;
-
-typedef struct Ability
-{
-    u32 id;
-    Ability_Component components[MAX_ABILITY_COMPONENTS];
-    u32 component_count;
-} Ability;
-
-
- Damage_Table[params1, params2, params3...]
- Health_Table[params1, params2, params3...]
-
-
--> Ability[component 1 (heal), component 2(damage)]
-component 1 (heal) -> heal type, heal amount
-component 1 (damage) -> Damage_Component [table_ref 2]
-
-
-
-
-
-
-*/
 
 
 #endif

@@ -6,15 +6,15 @@ MAPI u64 c_string_length(const char* str);
 
 MAPI char* c_string_duplicate(const char* str);
 
-MAPI const char* c_string_concat(const char* str1, const char* str2, Arena* arena);
+MAPI const char* c_string_concat(const char* str1, const char* str2, Allocator* arena);
 
 
 // Performs string formatting to dest given format string and parameters.
-MAPI char* c_string_path_strip(const char* path, Arena* arena);
-MAPI char* c_string_ext_strip(const char* path, Arena* arena);
+MAPI char* c_string_path_strip(const char* path, Allocator* arena);
+MAPI char* c_string_ext_strip(const char* path, Allocator* arena);
 
 
-MAPI char* c_string_path_get_extension(const char* path, Arena* arena);
+MAPI char* c_string_path_get_extension(const char* path, Allocator* arena);
 MAPI bool c_string_path_is_extension(const char* path, const char* extensions_name);
 
 

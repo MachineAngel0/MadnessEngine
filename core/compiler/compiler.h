@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "darray.h"
+#include "../dsa/darray.h"
 #include "str_builder.h"
 
 
@@ -44,6 +44,7 @@ typedef enum Token_Type
 
 
     // Literals.
+    Token_MACRO,
     Token_String,
     Token_Identifier,
     Token_Number,
@@ -67,22 +68,27 @@ typedef enum Token_Type
     Token_RETURN,
     Token_VAR,
 
-    Token_u8,
-    Token_u16,
-    Token_u32,
-    Token_u64,
-    Token_i8,
-    Token_i16,
-    Token_i32,
-    Token_i64,
-    Token_f32,
-    Token_f64,
+    //Types
+    Token_U8,
+    Token_U16,
+    Token_U32,
+    Token_U64,
+    Token_I8,
+    Token_I16,
+    Token_I32,
+    Token_I64,
+    Token_F32,
+    Token_F64,
     Token_char,
     Token_size_t,
     Token_bool,
+    Token_string_type,//my custom type
+
+
     Token_const,
 
     Token_EndOfStream,
+    Token_MAX,
 } Token_Type;
 
 
@@ -115,6 +121,9 @@ Lexer* lexer_init();
 void lexer_generate_tokens(Lexer* lexer, const char* file_path);
 void lexer_test();
 
+Token* lexer_prune_tokens(Token* token_array, Token_Type* tokens_to_remove, u32 list_size);
+
+bool lexer_is_token_data_type(Token token);
 
 void skipWhitespace(Lexer* lexer);
 

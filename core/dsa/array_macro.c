@@ -1,6 +1,9 @@
-﻿#include "array_new.h"
+﻿#include "array_macro.h"
 
 #include <time.h>
+
+#include "defines.h"
+#include "logger.h"
 
 //NOTE: this is here for testing purposes to make sure there as little bugs as possilbe in the macros
 typedef struct u8_internal_array
@@ -9,32 +12,54 @@ typedef struct u8_internal_array
     u64 stride;
     u64 num_items;
     u8* data;
+    bool using_arena;
 } u8_internal_array;
 
-u8_internal_array* _u8_internal_array_create(u64 capacity)
+u8_internal_array* _u8_internal_array_create(u64 capacity, Allocator* arena)
 {
     if (capacity <= 0)
     {
         WARN("ARRAY MACRO CREATE: INVALID CAPACITY")
         return NULL;
     }
-    u8_internal_array* arr = malloc(sizeof(u8_internal_array));
-    memset(arr, 0, sizeof(u8_internal_array));
-    arr->data = malloc(sizeof(u8) * capacity);
-    memset(arr->data, 0, sizeof(u8) * capacity);
+
+    u8_internal_array* arr;
+    if (arena)
+    {
+        arr = allocator_alloc(arena, sizeof(u8_internal_array));
+        arr->data = allocator_alloc(arena, sizeof(u8) * capacity);
+        arr->using_arena = true;
+    }
+    else
+    {
+        arr = malloc(sizeof(u8_internal_array));
+        memset(arr, 0, sizeof(u8_internal_array));
+        arr->data = malloc(sizeof(u8) * capacity);
+        memset(arr->data, 0, sizeof(u8) * capacity);
+    }
+
     arr->capacity = capacity;
     arr->stride = sizeof(u8);
     arr->num_items = 0;
     return arr;
 };
 
-void _u8_internal_array_push(u8_internal_array* array, const u8* data)
+void _u8_internal_array_free(u8_internal_array* array)
 {
-    if (!array)
+    MASSERT_MSG(array, "ARRAY MACRO FREE: NULL ARRAY")
+    if (array->using_arena)
     {
-        WARN("ARRAY MACRO PUSH: NULL ARRAY")
         return;
     }
+    free(array->data);
+    free(array);
+};
+
+
+void _u8_internal_array_push(u8_internal_array* array, const u8* data)
+{
+    MASSERT_MSG(array, "ARRAY MACRO PUSH: NULL ARRAY");
+
     if (array->num_items >= array->capacity)
     {
         WARN("ARRAY MACRO PUSH: NULL ARRAY")
@@ -46,11 +71,7 @@ void _u8_internal_array_push(u8_internal_array* array, const u8* data)
 
 void _u8_internal_array_pop(u8_internal_array* array)
 {
-    if (!array)
-    {
-        WARN("ARRAY MACRO POP: NULL ARRAY")
-        return;
-    }
+    MASSERT_MSG(array, "ARRAY MACRO POP: NULL ARRAY");
     if (array->num_items <= 0)
     {
         WARN("ARRAY MACRO POP: NOTHING TO POP")
@@ -61,50 +82,33 @@ void _u8_internal_array_pop(u8_internal_array* array)
 
 void _u8_internal_array_clear(u8_internal_array* array)
 {
-    if (!array)
-    {
-        WARN("ARRAY MACRO CLEAR: NULL ARRAY")
-        return;
-    }
+    MASSERT_MSG(array, "ARRAY MACRO CLEAR: NULL ARRAY");
     array->num_items = 0;
 }
 
 void _u8_internal_array_zero(u8_internal_array* array)
 {
-    if (!array)
-    {
-        WARN("ARRAY MACRO ZERO: NULL ARRAY")
-        return;
-    }
+    MASSERT_MSG(array, "ARRAY MACRO ZERO: NULL ARRAY");
+
     memset(array->data, 0, array->stride * array->capacity);
 }
 
 u64 _u8_internal_array_get_bytes_used(u8_internal_array* array)
 {
-    if (!array)
-    {
-        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")
-        return 0;
-    }
+    MASSERT_MSG(array, "ARRAY MACRO GET BYTES USED: NULL ARRAY");
+
     return array->num_items * array->stride;
 }
 
 u64 _u8_internal_array_get_top_increment(u8_internal_array* array)
 {
-    if (!array)
-    {
-        WARN("ARRAY MACRO GET BYTES USED: NULL ARRAY")
-        return 0;
-    }
+    MASSERT_MSG(array, "ARRAY MACRO GET BYTES USED: NULL ARRAY");
+
     return array->data[array->num_items++];
 }
 
 
-
-
-
-
-typedef struct u8_internal_array_slice
+typedef struct u8_internal_darray_slice
 {
     u64 length;
     u8* ptr;
@@ -130,8 +134,8 @@ void array_macro_test()
     TEST_START("ARRAY MACRO");
 
     u64 test_capacity = 100;
-    u8_array* arr = u8_array_create(test_capacity);
-    u8_internal_array* arr_internal = _u8_internal_array_create(test_capacity);
+    u8_array* arr = u8_array_create(test_capacity, NULL);
+    u8_internal_array* arr_internal = _u8_internal_array_create(test_capacity, NULL);
 
     TEST_DEBUG(arr->capacity == test_capacity);
     TEST_DEBUG(arr->stride == sizeof(u8));

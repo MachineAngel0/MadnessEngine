@@ -40,7 +40,7 @@ void string_build(Arena* arena, String_Builder* builder, const char* string, con
 
 void string_builder_print(String_Builder* builder)
 {
-    printf("%.*s", (int)builder->current_length, builder->str);
+    printf("%.*s\n", (int)builder->current_length, builder->str);
 }
 
 void string_builder_append_string(String_Builder* str_builder, String* s)
@@ -138,10 +138,13 @@ String string_builder_to_string_non_pointer(const String_Builder* builder)
     return (String){builder->str, builder->current_length};
 }
 
-String* string_builder_to_c_string(const String_Builder* builder)
+char* string_builder_to_c_string(const String_Builder* builder)
 {
-    UNIMPLEMENTED();
-    return NULL;
+
+    char* out_string = malloc(builder->current_length+1);
+    memcpy(out_string, builder->str, builder->current_length);
+    out_string[builder->current_length] = '\0';
+    return out_string;
 }
 
 void string_builder_empty(String_Builder* builder)

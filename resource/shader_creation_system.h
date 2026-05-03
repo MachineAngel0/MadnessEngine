@@ -69,7 +69,7 @@ typedef enum BUFFER_LAYOUT_TYPE
 typedef struct Shader_Creation_System
 {
     bool unimplemented;
-    Arena* frame_arena;
+    Allocator* frame_arena;
     FILE* open_file;
     const char* current_file_name;
 
@@ -96,11 +96,11 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 {
     Shader_Creation_System* shader_creation_system = memory_system_alloc(memory_system, sizeof(Shader_Creation_System),
                                                                          MEMORY_SUBSYSTEM_RESOURCE);
-    shader_creation_system->frame_arena = memory_system_alloc(memory_system, sizeof(Arena), MEMORY_SUBSYSTEM_RESOURCE);
+    shader_creation_system->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_RESOURCE);
 
     u64 arena_memory_amount = KB(512);
     void* mem = memory_system_alloc(memory_system, arena_memory_amount, MEMORY_SUBSYSTEM_RESOURCE);
-    arena_init(shader_creation_system->frame_arena, mem, arena_memory_amount, NULL);
+    allocator_init(shader_creation_system->frame_arena, mem, arena_memory_amount, NULL);
 
 
 
@@ -111,7 +111,7 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation_system,
                                          const char* shader_name, Shader_Stage shader_stage)
 {
-    arena_clear(shader_creation_system->frame_arena); // really dumb but it does work, alternatively, we could use a stack arena
+    allocator_clear(shader_creation_system->frame_arena); // really dumb but it does work, alternatively, we could use a stack arena
     shader_creation_system->input_count = 0;
     shader_creation_system->output_count = 0;
     shader_creation_system->param_count = 0;

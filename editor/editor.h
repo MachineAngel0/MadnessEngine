@@ -21,8 +21,8 @@ typedef struct Editor
     Renderer* renderer; // ref
     Resource_System* resource_system; // ref
 
-    Arena* editor_arena;
-    Frame_Arena* editor_frame_arena;
+    Allocator* editor_arena;
+    Frame_Allocator* editor_frame_arena;
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
