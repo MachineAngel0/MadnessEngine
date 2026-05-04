@@ -24,4 +24,5 @@ Allocator_Interface stack_allocator_interface_create(Stack_Allocator* allocator)
 Allocator_Interface free_list_allocator_interface_create(Arena_Free_List* free_list);
 
 
+
 #endif //ALLOCATOR_INTERFACE_H

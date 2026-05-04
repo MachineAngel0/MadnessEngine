@@ -4,7 +4,6 @@
 #include "../core/dsa/allocator_stack.c"
 #include "../core/dsa/allocator_freelist.c"
 #include "../core/dsa/allocator_pool.c"
-#include "../core/dsa/array_macro.c"
 #include "../core/dsa/array.c"
 #include "../core/dsa/b_tree_red_black.c"
 #include "../core/dsa/binary_tree.c"

@@ -3,6 +3,10 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
+#include "_allocator_interface.h"
+
+//VOID* VERSION
+
 //fixed sized array, so no reallocating more space
 typedef struct Array
 {
@@ -11,36 +15,36 @@ typedef struct Array
     u32 num_items; // current/top index in our array
     void* data; //array of void* data
 
-#ifndef NDEBUG
-    //extra debug type info that gets removed in release builds
-    const char* debug_type_name;
-#endif
 } Array;
 
 
-Array* _array_create(const u64 data_stride, const u64 capacity, const char* type_name);
+Array* _array_create(const u64 data_stride, const u64 capacity);
 
 #define array_create(type, capacity)\
-    _array_create(sizeof(type), capacity, #type)
-
-
-bool _array_type_check(Array* array, const char* type_name);
-
-#define array_type_check(arr, type)\
-    _array_type_check(arr, #type)
-
+    _array_create(sizeof(type), capacity)
 
 void array_free(Array* array);
 void array_clear(Array* array);
 
-void array_print(Array* array, void (*print_func)(void*));
+void _array_push(Array* array, const void* new_data);
+void array_pop(Array* array);
 
+
+#define array_push(arr, value)\
+    _array_push(arr, (const void*)&value)
+
+
+void array_print(Array* array, void (*print_func)(void*));
 void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void*));
 
 bool array_is_empty(const Array* array);
 bool array_is_full(const Array* array);
 bool array_valid_index(const Array* array, const u64 index);
-void* array_get(Array* array, const u64 index);
+void* _array_get(Array* array, const u64 index);
+
+#define array_get(arr, type, index)\
+    (*(type*)_array_get(arr, index))
+
 void array_set(Array* array, const void* data, const u64 pos);
 
 
@@ -51,9 +55,7 @@ void array_fill(const Array* array, const void* data);
 //TODO: TEST
 // fills on a range array
 void array_fill_range(Array* array, u64 start, u64 end, void* data);
-void array_push(Array* array, void* new_data);
 
-void array_pop(Array* array);
 
 
 //shift the array, maintaining order
@@ -80,6 +82,154 @@ void array_test();
 //     array_new_contains_or_add_other(array, temp_value); \
 // }
 
+
+//MACRO VERSION
+
+#define _array_struct_macro(type)\
+    typedef struct type##_array{ \
+        Allocator_Interface allocator;\
+        u64 capacity; \
+        u64 num_items;\
+        type* data;\
+    }type##_array;
+
+#define _array_create_macro(type)\
+    type##_array* type##_array_create(u64 capacity, Allocator_Interface allocator) \
+    { \
+        if (capacity <= 0)\
+        {\
+            WARN("ARRAY MACRO CREATE: INVALID CAPACITY")\
+            return NULL;\
+        } \
+        MASSERT(allocator.alloc);\
+        MASSERT(allocator.free);\
+        MASSERT(allocator.allocator);\
+        type##_array* arr = allocator.alloc(allocator.allocator, sizeof(type##_array), DEFAULT_ALIGNMENT);\
+        arr->data = allocator.alloc(allocator.allocator, sizeof(type) * capacity, DEFAULT_ALIGNMENT); \
+        arr->allocator = allocator;\
+        arr->capacity = capacity;\
+        arr->num_items = 0; \
+        return arr; \
+    };
+
+#define _array_free_macro(type)\
+    void type##_array_free(type##_array* array)\
+    {\
+        MASSERT_MSG(array, "ARRAY MACRO FREE: NULL ARRAY")\
+        array->allocator.free(array->allocator.allocator, array->data); \
+        array->allocator.free(array->allocator.allocator, array);\
+    };
+
+
+#define _array_push_macro(type)\
+    void type##_array_push(type##_array* array, const type* data) \
+    {\
+        MASSERT_MSG(array, " ARRAY MACRO PUSH: NULL ARRAY");\
+        if (array->num_items >= array->capacity)\
+        {\
+            WARN(" ARRAY MACRO PUSH: NULL ARRAY")\
+            return;\
+        }\
+        memcpy((u8*)array->data + (sizeof(type) * array->num_items), data, sizeof(type));\
+        array->num_items++;\
+    }
+
+#define _array_intrusive_push_macro(type)\
+    void type##_array_intrusive_push(type##_array* array, const type* data) \
+    {\
+    MASSERT_MSG(array, "ARRAY MACRO INTRUSIVE PUSH: NULL ARRAY");\
+    if (array->num_items >= array->capacity)\
+    {\
+        WARN("ARRAY MACRO PUSH: FULL ARRAY")\
+        return;\
+    }\
+    array->data[array->num_items] = *data;\
+    array->num_items++;\
+    }
+
+#define _array_pop_macro(type)\
+    void type##_array_pop(type##_array* array) \
+    {\
+        MASSERT_MSG(array, "ARRAY MACRO POP: NULL ARRAY");\
+        if (array->num_items <= 0)\
+        {\
+            WARN("ARRAY MACRO POP: NOTHING TO POP")\
+            return;\
+        }\
+        array->num_items--;\
+    }
+#define _array_clear_macro(type)\
+    void type##_array_clear(type##_array* array) \
+    {\
+        MASSERT_MSG(array, "ARRAY MACRO CLEAR: NULL ARRAY");\
+        array->num_items = 0;\
+    }
+#define _array_zero_macro(type)\
+    void type##_array_zero(type##_array* array)\
+    {\
+        MASSERT_MSG(array, "ARRAY MACRO ZERO: NULL ARRAY");\
+        memset(array->data, 0, sizeof(type) * array->capacity);\
+    }
+#define _array_get_bytes_used(type)\
+    u64 type##_array_get_bytes_used(type##_array* array)\
+    {\
+        MASSERT_MSG(array, "ARRAY MACRO GET BYTES USED: NULL ARRAY");\
+        return array->num_items * sizeof(type);\
+    }
+#define _array_slice_macro(type) \
+    typedef struct type##_array_slice{\
+        u64 length;\
+        type* ptr;\
+    } type##_array_slice;\
+    \
+    type##_array_slice  type##_array_slice_create(type##_array* array, u64 slice_length)\
+    {\
+        MASSERT(slice_length <= array->capacity);\
+        return (type##_array_slice){.ptr = array->data, .length = slice_length};\
+    }\
+    \
+     type##_array_slice type##_array_slice_create_offset(type##_array* array, u64 slice_start, u64 slice_length)\
+    {\
+        MASSERT(slice_start < array->capacity)\
+        MASSERT(slice_length <= array->capacity);\
+        MASSERT(slice_start + slice_length <= array->capacity);\
+        return (type##_array_slice){.ptr = array->data + slice_start, .length = slice_length};\
+    }
+
+
+#define ARRAY_GENERATE_TYPE(type) \
+    _array_struct_macro(type)\
+    _array_create_macro(type)\
+    _array_free_macro(type)\
+    _array_push_macro(type)\
+    _array_intrusive_push_macro(type)\
+    _array_pop_macro(type)\
+    _array_clear_macro(type)\
+    _array_zero_macro(type)\
+    _array_get_bytes_used(type) \
+    _array_slice_macro(type)
+
+//TODO: functions
+// free, get, set, print, remove and remove_swap_back, sort function
+
+
+ARRAY_GENERATE_TYPE(u8)
+ARRAY_GENERATE_TYPE(u16)
+ARRAY_GENERATE_TYPE(u32)
+ARRAY_GENERATE_TYPE(u64)
+
+ARRAY_GENERATE_TYPE(i8)
+ARRAY_GENERATE_TYPE(i16)
+ARRAY_GENERATE_TYPE(i32)
+ARRAY_GENERATE_TYPE(i64)
+
+ARRAY_GENERATE_TYPE(f32)
+ARRAY_GENERATE_TYPE(f64)
+
+ARRAY_GENERATE_TYPE(bool)
+
+
+void array_macro_test();
 
 
 #endif //ARRAY_H

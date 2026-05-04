@@ -1,4 +1,6 @@
 ﻿
+#include "darray.h"
+
 int main(void)
 {
     u64 memory_request_size = MB(1);
@@ -11,11 +13,11 @@ int main(void)
     stack_allocator_test();
     free_list_test();
 
+    array_test();
     array_macro_test();
 
-    array_test();
-    _darray_test();
-
+    darray_test();
+    dynamic_array_macro_test();
 
     ring_queue_test();
 

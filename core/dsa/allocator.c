@@ -4,7 +4,7 @@
 #include "unit_test.h"
 
 
-void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size, Memory_Tracker* memory_tracker)
+void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size)
 {
     MASSERT(a);
     MASSERT(backing_buffer);
@@ -15,20 +15,12 @@ void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
 
-    if (memory_tracker)
-    {
-        a->memory_tracker = memory_tracker;
-    }
+
 }
 
 
 void allocator_clear(Allocator* a)
 {
-    if (a->memory_tracker)
-    {
-        memory_tracker_free_allocation(a->memory_tracker, MEMORY_CONTAINER_ALLOCATOR, a->current_offset);
-    }
-
     a->current_offset = 0;
     // memset(a->memory, 0, a->capacity); //NOTE: this is apparently super fucking slow
 }
@@ -53,11 +45,6 @@ void* allocator_alloc_align(Allocator* a, const u64 mem_request, const u64 align
     a->current_offset = offset + mem_request;
     // Zero new memory by default
     memset(ptr, 0, mem_request); // already offset so no need to include it
-
-    if (a->memory_tracker)
-    {
-        memory_tracker_track_allocation(a->memory_tracker, MEMORY_CONTAINER_ALLOCATOR, mem_request);
-    }
 
     return ptr; // return the memory
 }
@@ -120,7 +107,7 @@ void allocator_test(void)
     const u64 allocator_size = MB(1);
     void* mem = malloc(allocator_size);
     if (!mem) { MASSERT("ALLOCATOR ALLOC FAILED"); }
-    allocator_init(&a, mem, allocator_size, NULL);
+    allocator_init(&a, mem, allocator_size);
     TEST_DEBUG(a.capacity == MB(1));
 
 

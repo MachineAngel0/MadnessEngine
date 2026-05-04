@@ -59,7 +59,6 @@
 #include "../core/dsa/allocator_pool.h"
 #include "../core/dsa/_allocator_interface.h"
 #include "../core/dsa/array.h"
-#include "../core/dsa/array_macro.h"
 #include "../core/dsa/b_tree_red_black.h"
 #include "../core/dsa/binary_tree.h"
 #include "../core/dsa/darray.h"

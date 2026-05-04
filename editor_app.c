@@ -19,6 +19,7 @@ bool editor_app_run(Editor_Application* editor_app)
     reflection_test();
 
 
+
     app_internal = editor_app;
     Application_Core* application_core = &editor_app->application_core;
     Renderer_Plugin* renderer_plugin = &editor_app->renderer_plugin;

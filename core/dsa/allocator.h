@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include "defines.h"
-#include "memory/memory_tracker.h"
 
 #ifndef DEFAULT_ALIGNMENT
 //most likely to be 4 (32bit) or 8 (64bit) (* 2)
@@ -15,17 +14,13 @@ typedef struct Allocator
     u8* memory;
     u64 current_offset; // where in our memory we are
     u64 capacity; // how large our allocator is
-
-    //can be null
-    Memory_Tracker* memory_tracker;
 } Allocator;
 
 typedef Allocator Frame_Allocator;
 
 
 //NOTE: memory tracker is optional and can be NULL
-MAPI void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size,
-                         Memory_Tracker* memory_tracker);
+MAPI void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size);
 
 MAPI void allocator_clear(Allocator* a);
 

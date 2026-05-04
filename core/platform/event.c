@@ -9,7 +9,7 @@ Event_System* event_init(Memory_System* memory_system)
 
     event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
     
-    allocator_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement, event_system->mem_tracker);
+    allocator_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement);
     
     INFO("EVENT SYSTEM INIT")
 
@@ -45,7 +45,7 @@ void event_register(Event_System* event_system, const event_type event, const u3
     uint32_t registered_count = event_system->events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_system->events_table[event].subs_arr, i);
+        subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr, subscriber_data*, i);
         if (sub_data->subscriber_id == subscriber)
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
@@ -67,7 +67,7 @@ void event_unregister(Event_System* event_system, event_type event, u32 subscrib
     uint32_t registered_count = event_system->events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = (subscriber_data *) array_get(event_system->events_table[event].subs_arr, i);
+        subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr,  subscriber_data*, i);
         if ((sub_data->subscriber_id == subscriber) && (sub_data->callback == callback))
         {
             array_remove_swap(event_system->events_table[event].subs_arr, i);
@@ -89,7 +89,7 @@ void event_fire(Event_System* event_system, event_type event, u32 sender_id, eve
     for (uint32_t i = 0; i < event_system->events_table[event].subs_arr->num_items; i++)
     {
         //trigger all the callbacks in the event table
-        subscriber_data a = *(subscriber_data *) array_get(event_system->events_table[event].subs_arr, i);
+        subscriber_data a = array_get(event_system->events_table[event].subs_arr,  subscriber_data, i);
         if (a.callback(event, sender_id, a.subscriber_id, context))
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else

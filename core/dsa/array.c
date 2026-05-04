@@ -4,7 +4,7 @@
 #include "unit_test.h"
 
 
-Array* _array_create(const u64 data_stride, const u64 capacity, const char* type_name)
+Array* _array_create(const u64 data_stride, const u64 capacity)
 {
     Array* arr = (Array*)malloc(sizeof(Array));
     memset(arr, 0, sizeof(Array));
@@ -17,32 +17,11 @@ Array* _array_create(const u64 data_stride, const u64 capacity, const char* type
     arr->stride = data_stride;
     arr->capacity = capacity;
 
-#ifndef NDEBUG
-    arr->debug_type_name = type_name;
-    DEBUG("ARRAY CREATED WITH TYPE: %s", arr->debug_type_name);
-#endif
+
 
     return arr;
 }
 
-
-bool _array_type_check(Array* array, const char* type_name)
-{
-#ifndef NDEBUG
-
-    if (strcmp(array->debug_type_name, type_name) == 0)
-    {
-        DEBUG("SAME TYPES: %s", type_name)
-        return true;
-    }
-
-
-    WARN("DIFFERENT TYPES: ARRAY TYPE: %s, PASSED IN TYPE: %s", array->debug_type_name, type_name)
-    return false;
-#endif
-
-    return true; // going to assume you are using the right type, given this is release build
-};
 
 #define array_type_check(arr, type)\
     _array_type_check(arr, #type)
@@ -116,7 +95,7 @@ bool array_valid_index(const Array* array, const u64 index)
     return index < array->num_items;
 }
 
-void* array_get(Array* array, const u64 index)
+void* _array_get(Array* array, const u64 index)
 {
     if (!array)
     {
@@ -184,7 +163,7 @@ void array_fill_range(Array* array, u64 start, u64 end, void* data)
     }
 }
 
-void array_push(Array* array, void* new_data)
+void _array_push(Array* array, const void* new_data)
 {
     if (array_is_full(array))
     {
@@ -261,16 +240,12 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 
-
-
-
 void array_test()
 {
     TEST_START("ARRAY");
 
     Array* balling_arr = array_create(int, 10);
-    array_type_check(balling_arr, int);
-    array_type_check(balling_arr, float);
+
 
 
     printf("ARRAY START\n");
@@ -282,15 +257,16 @@ void array_test()
     Array* arr = array_create(int, arr_capacity);
 
     printf("ARRAY EMPLACE START\n");
-    array_push(arr, &num5);
-    array_push(arr, &num10);
-    array_push(arr, &num10);
-    array_push(arr, &num10);
-    array_push(arr, &num10);
-    array_push(arr, &num10); //this should fail
+    array_push(arr, num5);
+    array_push(arr, num10);
+    array_push(arr, num10);
+    array_push(arr, num10);
+    array_push(arr, num10);
+    array_push(arr, num10); //this should fail
     array_print(arr, print_int);
     TEST_DEBUG(arr->num_items == 5);
     printf("ARRAY EMPLACE END\n\n");
+
 
     printf("ARRAY POP START\n");
     array_pop(arr);
@@ -304,11 +280,11 @@ void array_test()
     TEST_DEBUG(arr->num_items == 0);
     printf("ARRAY POP END\n\n");
 
-    array_push(arr, &num10);
-    array_push(arr, &num5);
+    array_push(arr, num10);
+    array_push(arr, num5);
     printf("ARRAY GET START\n");
-    print_int(array_get(arr, 0));
-    TEST_DEBUG(*(int*)array_get(arr, 0) == num10);
+    print_int(_array_get(arr, 0));
+    TEST_DEBUG(array_get(arr, int, 0) == num10);
 
     printf("\n");
     printf("ARRAY GET END\n\n");
@@ -316,18 +292,18 @@ void array_test()
     printf("ARRAY SET START\n");
     array_set(arr, &num3, 2); // this should be invalid
     array_set(arr, &num3, 1); //overwrites the 10
-    TEST_DEBUG(*(int*)array_get(arr, 1) == num3);
+    TEST_DEBUG(array_get(arr, int, 1) == num3);
     array_print(arr, print_int);
     printf("ARRAY SET END\n\n");
 
     printf("ARRAY REMOVE START\n");
     array_remove(arr, 0);
-    TEST_DEBUG(*(int*)array_get(arr, 0) == num3);
+    TEST_DEBUG(array_get(arr, int, 0) == num3);
     array_print(arr, print_int);
-    array_push(arr, &num20);
-    array_push(arr, &num10);
-    array_push(arr, &num5);
-    array_push(arr, &num20);
+    array_push(arr, num20);
+    array_push(arr, num10);
+    array_push(arr, num5);
+    array_push(arr, num20);
     array_print(arr, print_int);
 
     array_remove(arr, arr_capacity); //should warn
@@ -346,4 +322,83 @@ void array_test()
     array_free(arr);
 
     TEST_REPORT("ARRAY");
+}
+
+
+void array_macro_test()
+{
+    TEST_START("ARRAY MACRO");
+
+    u64 test_capacity = 100;
+
+    Allocator* allocator = malloc(sizeof(Allocator));
+    size_t memory_size = MB(1);
+    void* memory = malloc(memory_size);
+    allocator_init(allocator, memory, memory_size);
+
+    u8_array* arr = u8_array_create(test_capacity, allocator_inferface_create(allocator));
+
+    TEST_DEBUG(arr->capacity == test_capacity);
+
+
+    for (u64 i = 0; i < test_capacity; i++)
+    {
+        u8 val = (u8)(rand() % test_capacity);
+        u8_array_push(arr, &val);
+    }
+
+    TEST_DEBUG((sizeof(u8) * test_capacity) == u8_array_get_bytes_used(arr));
+
+
+    for (int i = 0; i < test_capacity; i++)
+    {
+        u8_array_pop(arr);
+    }
+
+    for (u64 i = 0; i < test_capacity + 2; i++)
+    {
+        u8 val = (u8)(rand() % test_capacity);
+        u8_array_push(arr, &val);
+    }
+
+    u8_array_clear(arr);
+
+    u8* intrusive = malloc(sizeof(u8));
+    u8_array_push(arr, intrusive);
+    u8_array_intrusive_push(arr, intrusive);
+    if (memcmp(&arr->data[0], intrusive, sizeof(u8)) == 0)
+    {
+        INFO("yeah 1")
+    }
+    if (memcmp(&arr->data[1], intrusive, sizeof(u8)) == 0)
+    {
+        INFO("yeah 2")
+    }
+    u8_array_clear(arr);
+
+    u8 intrusive2 = 10;
+    u8_array_push(arr, &intrusive2);
+    u8_array_intrusive_push(arr, &intrusive2);
+    if (memcmp(&arr->data[0], &intrusive2, sizeof(u8)) == 0)
+    {
+        INFO("yeah 1")
+    }
+    if (memcmp(&arr->data[1], &intrusive2, sizeof(u8)) == 0)
+    {
+        INFO("yeah 2")
+    }
+
+
+    //TODO: test slices
+    u8_array_slice slice = u8_array_slice_create(arr, test_capacity / 2);
+
+    for (u64 i = 0; i < slice.length; i++)
+    {
+        TEST_DEBUG(slice.ptr[i] == slice.ptr[i]);
+    }
+
+    free(memory);
+    free(allocator);
+
+    TEST_END("ARRAY MACRO");
 }
