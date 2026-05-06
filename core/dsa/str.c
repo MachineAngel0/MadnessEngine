@@ -74,6 +74,11 @@ bool string_free(String* string)
 void string_print(const String* str)
 {
     MASSERT(str);
+    printf("%.*s", (int)str->length, str->chars);
+}
+void string_println(const String* str)
+{
+    MASSERT(str);
     printf("%.*s\n", (int)str->length, str->chars);
 }
 

@@ -12,7 +12,7 @@
 typedef struct Allocator_Interface
 {
     void*(*alloc)(void* allocator, u64 memory_byte_request, u8 alignment);
-    void (*free)(void* allocator, void* memory_block);
+    void (*free_memory)(void* allocator, void* memory_block);
     void* allocator;
 } Allocator_Interface;
 

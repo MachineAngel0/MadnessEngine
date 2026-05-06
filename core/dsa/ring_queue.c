@@ -92,7 +92,7 @@ bool ring_queue_peek(const ring_queue* q, void* out_data)
         return false;
     }
 
-    memcpy((u8*)q->data + (q->front * q->data_size), out_data, q->data_size);
+    memcpy( out_data,(u8*)q->data + (q->front * q->data_size), q->data_size);
 
     return true;
 }

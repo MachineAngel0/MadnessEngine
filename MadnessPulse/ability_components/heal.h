@@ -2,20 +2,22 @@
 #define HEAL_H
 
 
-#include "ability.h"
 #include "game_structs.h"
 
 
-
-Heal_Component heal_component_create(Heal_Types heal_types, float heal_amount, bool HealOnlyIfDead)
+Heal_Component heal_component_create(const Heal_Types heal_types, const float heal_amount, bool heal_only_if_dead)
 {
-    return (Heal_Component){ .heal_type = heal_types, .heal_amount = heal_amount, .heal_only_if_dead = HealOnlyIfDead};
+    return (Heal_Component){
+        .type = Ability_Component_TYPE_HEAL,
+        .heal_type = heal_types,
+        .heal_amount = heal_amount,
+        .heal_only_if_dead = heal_only_if_dead
+    };
 }
 
-void heal_ability(Unit* unit, void* data)
+void heal_ability(Unit* unit, Heal_Component heal_component)
 {
-    Heal_Component* heal_component = (Heal_Component*)data;
-    unit->health_component.current_health += heal_component->heal_amount;
+    unit->health_component.current_health += heal_component.heal_amount;
 }
 
 /*

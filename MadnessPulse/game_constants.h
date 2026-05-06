@@ -6,12 +6,22 @@
 //abilities
 #define MAX_ABILITY_COMPONENTS 10
 
+#define INSTA_KILL_DAMAGE 999999u;
 
 //unit
+
+#define MAX_HEALTH_DEFAULT 1000
+#define CURRENT_HEALTH_DEFAULT 1000
+
 #define INVENTORY_MAX_BATTLE_LIST 20
+
+
 
 //game state
 #define MAX_PLAYER_COUNT 4
+
+
+
 
 
 

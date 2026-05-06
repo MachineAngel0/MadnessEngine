@@ -11,14 +11,14 @@ Sprite_System* sprite_system_init(Memory_System* memory_system)
 
     Sprite_System* sprite_system = memory_system_alloc(memory_system, sizeof(Sprite_System), MEMORY_SUBSYSTEM_SPRITE);
 
-    sprite_system->arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_SPRITE);
+    sprite_system->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_SPRITE);
     sprite_system->frame_arena = memory_system_alloc(memory_system, sizeof(Frame_Allocator), MEMORY_SUBSYSTEM_SPRITE);
 
     void* arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
     void* frame_arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
 
-    allocator_init(sprite_system->arena, arena_memory, memory_capacity, NULL);
-    allocator_init(sprite_system->arena, frame_arena_memory, memory_capacity, NULL);
+    allocator_init(sprite_system->allocator, arena_memory, memory_capacity);
+    allocator_init(sprite_system->allocator, frame_arena_memory, memory_capacity);
 
 
     //create one sprite, that will get transformed based on the instance
@@ -27,10 +27,10 @@ Sprite_System* sprite_system_init(Memory_System* memory_system)
     memcpy(sprite_system->sprite_indices, default_sprite_indices, sizeof(default_sprite_indices));
 
 
-    sprite_system->sprites_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, NULL);
-    sprite_system->sprites_data_transient = Sprite_Data_array_create(MAX_SPRITE_COUNT, NULL);
-    sprite_system->ui_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, NULL);
-    sprite_system->text_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, NULL);
+    sprite_system->sprites_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
+    sprite_system->sprites_data_transient = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
+    sprite_system->ui_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
+    sprite_system->text_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
 
     //TODO: replace with a fill function later
     Sprite_Data instance_data = {0};

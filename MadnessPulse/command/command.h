@@ -1,54 +1,22 @@
 ﻿#ifndef ACTION_H
 #define ACTION_H
 
-#include "game_enums.h"
 #include "game_structs.h"
 #include "logger.h"
 #include "ring_queue.h"
 #include "stack.h"
 #include "str.h"
 
-//ACTION INTERFACE:
-typedef void (*action_execute)(Madness_Pulse_Game*);
-typedef void (*action_skip)(Madness_Pulse_Game*);
 
-typedef struct command
+Command_Handler* command_handler_init(Madness_Pulse_Game* game)
 {
-    action_execute execute;
-    action_skip skip;
-    String name; // TODO: this might just be an enum type instead
-    bool is_skippable; //TODO:
-
-    //TODO: figure this out when you have an animation system in place
-    // FQueueTimer QueueTimer;
-
-    // void ExecuteNextAction();
-    // void StartQueueTimer();
-
-    // void ExecuteNextActionWithActionOverride(ATurnBasedGameMode* GameMode);
-    // void StartQueueTimerWithOverride(ATurnBasedGameMode* GameMode);
-    // void BeforeExecuteNextActionOverride(ATurnBasedGameMode* GameMode);
-} Command;
-
-
-typedef struct Command_Handler
+    Command_Handler* ch = allocator_alloc(&game->allocator, sizeof(Command_Handler));
+    return ch;
+}
+void command_handler_destroy(Madness_Pulse_Game* game)
 {
-    /*FUNCTIONS AND VARIABLES*/
-
-    //TYPE: Action
-    ring_queue* command_queue;
-    Command* current_command;
-
-    // our already processed actions
-    stack* command_stack;
-
-    //set this to true to have the items used pushed to the stack
-    // bool push_to_stack = false; //NOTE: idk what this is for
-} Command_Handler;
-
-
-void command_handler_create(Command_Handler* action_handler);
-void command_handler_destroy(Command_Handler* action_handler);
+    UNIMPLEMENTED();
+}
 
 
 void command_handler_execute_next_action(Command_Handler* command_handler, Madness_Pulse_Game* game)
@@ -113,6 +81,19 @@ void action_handler_add_action(Command_Handler* command_handler, Command* comman
     ring_enqueue(command_handler->command_queue, command);
     // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
 }
+
+void action_handler_add_multiple_actions(Command_Handler* command_handler, Command_array* command_array)
+{
+    MASSERT(command_handler)
+    MASSERT(command_array)
+
+    for (int i = 0; i < command_array->num_items; i++)
+    {
+        ring_enqueue(command_handler->command_queue, &command_array->data[i]);
+    }
+    // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
+}
+
 
 
 #endif //ACTION_H

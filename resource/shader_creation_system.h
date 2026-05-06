@@ -100,7 +100,7 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 
     u64 arena_memory_amount = KB(512);
     void* mem = memory_system_alloc(memory_system, arena_memory_amount, MEMORY_SUBSYSTEM_RESOURCE);
-    allocator_init(shader_creation_system->frame_arena, mem, arena_memory_amount, NULL);
+    allocator_init(shader_creation_system->frame_arena, mem, arena_memory_amount);
 
 
 

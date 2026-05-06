@@ -36,6 +36,8 @@ typedef enum event_type
 
 typedef struct event_context
 {
+    //TODO: just use a proper struct type for the union data, we are not writing a generic engine anyway
+    // https://www.youtube.com/watch?v=_LB_wjvTJD0
     // 128 bytes
     union
     {

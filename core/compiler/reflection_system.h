@@ -376,7 +376,8 @@ void reflection_test()
 
     for (u64 i = 0; i < struct_size; i++)
     {
-        printf("TEST VALUES: %s\n", struct_info[i].name);
+        //TODO: bugged rn
+        // printf("TEST VALUES: %s\n", struct_info[i].name);
     }
 }
 

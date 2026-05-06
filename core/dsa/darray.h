@@ -157,7 +157,7 @@ type##_dynamic_array* type##_dynamic_array_create(u64 capacity, Allocator_Interf
     MASSERT_MSG(capacity > 0, "DARRAY MACRO CREATE: INVALID SIZE");\
     MASSERT_MSG(allocator.allocator, "DARRAY MACRO INVALID ALLOCATOR");\
     MASSERT_MSG(allocator.alloc, "DARRAY MACRO INVALID ALLOC");\
-    MASSERT_MSG(allocator.free, "DARRAY MACRO INVALID FREE");\
+    MASSERT_MSG(allocator.free_memory, "DARRAY MACRO INVALID FREE");\
     \
     type##_dynamic_array*  arr = allocator.alloc(allocator.allocator, sizeof(type##_dynamic_array), DEFAULT_ALIGNMENT);\
     arr->data = allocator.alloc(allocator.allocator, sizeof(type) * capacity, DEFAULT_ALIGNMENT);\
@@ -171,8 +171,8 @@ type##_dynamic_array* type##_dynamic_array_create(u64 capacity, Allocator_Interf
 void type##_dynamic_array_free(type##_dynamic_array* array)\
 {\
     MASSERT_MSG(array, "DARRAY MACRO FREE: NULL ARRAY");\
-    array->allocator.free(array->allocator.allocator, array->data);\
-    array->allocator.free(array->allocator.allocator, array);\
+    array->allocator.free_memory(array->allocator.allocator, array->data);\
+    array->allocator.free_memory(array->allocator.allocator, array);\
 }
 
 
@@ -182,7 +182,7 @@ void type##_dynamic_array_resize(type##_dynamic_array* array, u64 new_capacity)\
     MASSERT_MSG(array, "DARRAY MACRO PUSH: NULL ARRAY");\
     void* new_data = array->allocator.alloc(array->allocator.allocator, new_capacity * sizeof(type), DEFAULT_ALIGNMENT);\
     memcpy(new_data, array->data, sizeof(type) * array->num_items);\
-    array->allocator.free(array->allocator.allocator, array->data);\
+    array->allocator.free_memory(array->allocator.allocator, array->data);\
     array->data = new_data;\
 }
 

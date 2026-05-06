@@ -8,13 +8,13 @@
 
 void Resistance_Stats_Component_init_default(Resistance_Stats_Component* resistance_component)
 {
-    for (int i = 0; i < Damage_Type_MAX; ++i)
+    for (int i = 0; i < Element_Type_MAX; ++i)
     {
         resistance_component->Resistance[i] = Resistance_Type_Neutral;
     }
 }
 
-Resistance_Type ReturnResistanceType(Resistance_Stats_Component* resistance_component, Damage_Type DamageType)
+Resistance_Type ReturnResistanceType(Resistance_Stats_Component* resistance_component, Element_Type DamageType)
 {
     return resistance_component->Resistance[DamageType];
 }
@@ -38,18 +38,18 @@ static float CalculateResistanceValue(Resistance_Type ResistanceType)
     }
 }
 
-float ReturnResistanceValue(Resistance_Stats_Component* resistance_component, Damage_Type DamageType)
+float ReturnResistanceValue(Resistance_Stats_Component* resistance_component, Element_Type DamageType)
 {
     return CalculateResistanceValue(resistance_component->Resistance[DamageType]);
 }
 
-bool IsDamageTypeRedirectOrSpread(Resistance_Stats_Component* resistance_component, const Damage_Type DamageType)
+bool IsDamageTypeRedirectOrSpread(Resistance_Stats_Component* resistance_component, const Element_Type DamageType)
 {
     return resistance_component->Resistance[DamageType] == Resistance_Type_Redirect
         || resistance_component->Resistance[DamageType] == Resistance_Type_Spread;
 }
 
-void ChangeResistanceType(Resistance_Stats_Component* resistance_component, Damage_Type DamageType,
+void ChangeResistanceType(Resistance_Stats_Component* resistance_component, Element_Type DamageType,
                           Resistance_Type NewResistanceType)
 {
     resistance_component->Resistance[DamageType] = NewResistanceType;
@@ -57,7 +57,7 @@ void ChangeResistanceType(Resistance_Stats_Component* resistance_component, Dama
 
 void ChangeAllResistancesToType(Resistance_Stats_Component* resistance_component, Resistance_Type new_resistance_type)
 {
-    for (int i = 0; i < Damage_Type_MAX; ++i)
+    for (int i = 0; i < Element_Type_MAX; ++i)
     {
         resistance_component->Resistance[i] = new_resistance_type;
     }

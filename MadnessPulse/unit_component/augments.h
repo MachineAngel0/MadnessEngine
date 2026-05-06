@@ -48,35 +48,35 @@ void augment_component_create_default(Augment_Component* augment_component)
 int augment_component_clamp(Augment_Component augment_component, int Value, int LowerLimit, int UpperLimit);
 
 
-void ChangeStatus(Damage_Type AugmentTypeToAffect, int ChangeAmount);
-void SetStatus(Damage_Type AugmentTypeToAffect, int ChangeAmount);
-void ResetStatus(Damage_Type damage_type);
+void ChangeStatus(Element_Type AugmentTypeToAffect, int ChangeAmount);
+void SetStatus(Element_Type AugmentTypeToAffect, int ChangeAmount);
+void ResetStatus(Element_Type damage_type);
 void ResetAllStatus();
-int ReturnStatusPoints(Damage_Type AugmentDamageType);
+int ReturnStatusPoints(Element_Type AugmentDamageType);
 void MaxAllStatus();
 
 
-float ReturnStatusModifierForDamage(Damage_Type AugmentDamageType);
-float ReturnStatusModifierForStatus(Damage_Type AugmentDamageType);
+float ReturnStatusModifierForDamage(Element_Type AugmentDamageType);
+float ReturnStatusModifierForStatus(Element_Type AugmentDamageType);
 
-float ReturnStatusModifier(Damage_Type AugmentDamageType);
+float ReturnStatusModifier(Element_Type AugmentDamageType);
 
 int ReturnAllAugmentSum();
 int ReturnAllAugmentAverage();
 
-void SwapStatusValues(Damage_Type DamageType1, Damage_Type DamageType2);
+void SwapStatusValues(Element_Type DamageType1, Element_Type DamageType2);
 
 
 /*STATUS POINTS UTILITY*/
 
 //TODO: make these generic since they can definetly be made generic
-bool IsStatusMax(Damage_Type AugmentType);
-bool IsStatusMin(Damage_Type AugmentType);
+bool IsStatusMax(Element_Type AugmentType);
+bool IsStatusMin(Element_Type AugmentType);
 
-void ReturnHighestStatusMap(Damage_Type HighestType, int HighestValue);
-Damage_Type ReturnHighestStatusType();
-void ReturnLowestStatusMap(Damage_Type LowestType, int LowestValue);
-Damage_Type ReturnLowestStatusType();
+void ReturnHighestStatusMap(Element_Type HighestType, int HighestValue);
+Element_Type ReturnHighestStatusType();
+void ReturnLowestStatusMap(Element_Type LowestType, int LowestValue);
+Element_Type ReturnLowestStatusType();
 float ReturnAverageForStatusMap();
 
 

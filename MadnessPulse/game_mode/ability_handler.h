@@ -1,125 +1,76 @@
 ﻿#ifndef ABILITY_HANDLER_H
 #define ABILITY_HANDLER_H
 
-#include "game_enums.h"
-#include "game_structs.h"
-#include "../game_abilties.h"
-#include "command/command.h"
 
 
 
-//State the Ability Handler needs to use turn and reversal effects
-typedef struct Turn_Trigger_Component_Info
+Ability_Handler* ability_handler_init(Madness_Pulse_Game* game)
 {
-    //TODO: dont store pointers
-    FTurnComponentDuration TurnComponentDuration;
-    AAbilityBase* Ability;
-    UAbilityBaseComponent* TurnComponent;
-    TArray<UAbilityBaseComponent*> StatusComponents;
-    TArray<UAbilityBaseComponent*> ComponentsWithTurnTag;
-    Unit* Caster;
-    Unit* TurnTarget;
-}Turn_Trigger_Component_Info;
+    Ability_Handler* ability_handler =  allocator_alloc(&game->allocator, sizeof(Ability_Handler));
+    return ability_handler;
+}
 
-typedef struct Reversal_Component_Info
+
+/*
+// DELEGATES ?? //NOTE: IDK WHAT I WAS ON
+UVFXSubsystem* VFXSubsystem = nullptr;
+AClearStatusTriggersAction* ClearStatusAction;
+AClearReversalsAction* ClearReversalAction;
+AStatusTriggerAction* StatusTriggerAction;
+*/
+
+/* High level Components Logic Functions */
+Command_array* ability_handler_process_ability(Madness_Pulse_Game* game)
 {
-    //TODO: dont store pointers
-    //who is affected, reversal component, components with reversal tag
-    AAbilityBase* Ability;
-    UReversalComponent* ReversalComponent;
-    TArray<UAbilityBaseComponent*> ComponentsWithReversalTag;
-    Unit* Caster;
-    Unit* ReversalTarget; // who we put the reversal on
-    bool IsPermanent;
-}Reversal_Component_Info;
 
-typedef enum Action_Handler_Process_Stage
-{
-    ECS_None,
-    ECS_Normal,
-    ECS_Status,
-    ECS_ReversalTrigger,
-    ECS_Reversal,
-    ECS_TurnComponent,
-    ECS_TurnTrigger,
-    ECS_TurnEnd,
-}Action_Handler_Process_Stage;
+}
+
+/*
+Command_array* ProcessNormalComponents(Madness_Pulse_Game* game,
+                                         TArray<Unit*>& Targets,
+                                         TArray<Ability_Component*> NormalComponents);
 
 
-// this component is only responsible for telling the abilities to process themselves
-// also responsible for managing any conditional or turn based effects like status trigger, poison, or reversals
+Command_array* ProcessStatusTrigger(Madness_Pulse_Game* game,
+                                      TArray<Unit*> Targets,
+                                      TArray<Ability_Component*> StatusTriggerComponents);
 
-// Order: Normal components, -> Status triggers -> Reversal Triggers -> Reversal Add -> turn components Add -> Turn End
-typedef struct Ability_Handler
-{
-    void action_handler_init();
-
-
-    /*
-    // DELEGATES ?? //NOTE: IDK WHAT I WAS ON
-    UVFXSubsystem* VFXSubsystem = nullptr;
-    AClearStatusTriggersAction* ClearStatusAction;
-    AClearReversalsAction* ClearReversalAction;
-    AStatusTriggerAction* StatusTriggerAction;
-    */
-
-    /* High level Components Logic Functions */
-    TArray<Command*> ProcessAbility( Ability* ability_to_process, FTurnBasedGameState GameState,
-                                    TArray<Unit*> Targets);
-
-    /*
-    TArray<Command*> ProcessNormalComponents( FTurnBasedGameState& GameState,
-                                             TArray<Unit*>& Targets,
-                                             TArray<UAbilityBaseComponent*> NormalComponents);
+bool IsThereAReversalTrigger();
+Command_array* ProcessReversal(Madness_Pulse_Game* game);
 
 
-    TArray<Command*> ProcessStatusTrigger( FTurnBasedGameState GameState,
-                                          TArray<AUnitBase*> Targets,
-                                          TArray<UAbilityBaseComponent*> StatusTriggerComponents);
-
-    bool IsThereAReversalTrigger();
-    TArray<Command*> ProcessReversal( FTurnBasedGameState GameState);
-
-    AReversalPlayBackAction* ReversalPlayBackAction;
-
-    void AddReversalComponentToList(AAbilityBase* Ability,
-                                    TArray<UAbilityBaseComponent*>& ReversalTriggerComponents,
-                                    UReversalComponent*& ReversalComponent,
-                                    FTurnBasedGameState& GameState,
-                                    TArray<Unit*>& Targets);
 
 
-    void AddTurnComponentToList(TArray<UTurnComponentBase*>& TurnComponents,
-                                TArray<UAbilityBaseComponent*>& TurnTriggerComponents,
-                                TArray<UAbilityBaseComponent*>& StatusTriggerComponents,
-                                AAbilityBase*& AbilityToProcess,
-                                Unit* UnitCaster,
+
+void AddReversalComponentToList(Madness_Pulse_Game* game, Ability* Ability,
+                                TArray<Ability_Component*> ReversalTriggerComponents,
+                                UReversalComponent* ReversalComponent,
                                 TArray<Unit*>& Targets);
 
 
-    // turn start/ends checks //
-
-    //check the turn type for any turntype specific function calls, then process turn components
-    TArray<Command*> ProcessTurnType(
-        FTurnBasedGameState& GameState, ETurnActivationType TurnType);
-
-    //handles checking is a turn component can activate
-    TArray<Command*> ProcessTurnComponents(
-        FTurnBasedGameState& GameState, ETurnActivationType TurnType);
+void AddTurnComponentToList(Madness_Pulse_Game* game,
+    TArray<UTurnComponentBase*> TurnComponents,
+                            TArray<Ability_Component*> TurnTriggerComponents,
+                            TArray<Ability_Component*> StatusTriggerComponents,
+                            Ability* AbilityToProcess,
+                            Unit* UnitCaster,
+                            TArray<Unit*> Targets);
 
 
-    //called only on first turn start
-    void RemovalReversalFromTurnUnit(Unit* CurrentUnitsTurn);
+// turn start/ends checks //
+
+//check the turn type for any turntype specific function calls, then process turn components
+Command_array* ProcessTurnType(Madness_Pulse_Game* game, Turn_Activation_Type TurnType);
+
+//handles checking is a turn component can activate
+Command_array* ProcessTurnComponents(Madness_Pulse_Game* game, Turn_Activation_Type TurnType);
 
 
-    TArray<Reversal_Component_Info> TurnReversalList;
-
-    TArray<Turn_Trigger_Component_Info> TurnComponentsInfo;
-
-
-    //TODO:
-    void ResetActionManager();*/
-}Ability_Handler;
+//called only on first turn start
+void RemovalReversalFromTurnUnit(Unit* CurrentUnitsTurn);
 
 
+//TODO:
+void ResetActionManager();
+*/
 #endif //ABILITY_HANDLER_H

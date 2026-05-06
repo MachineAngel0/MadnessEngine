@@ -4,7 +4,6 @@
 
 #include "game_constants.h"
 #include "game_enums.h"
-#include "game_abilties.h"
 #include "game_structs.h"
 
 //UNIT Related Stuff
@@ -22,19 +21,27 @@
 #include "status_stat_component.h"
 #include "unit_base.h"
 
+//ability stuff
+#include "heal.h"
+#include "damage.h"
+#include "ability_registry.h"
+#include "ability.h"
+#include "ability_creation.h"
+
+
+//turn based game mode stuff
+#include "ability_handler.h"
 #include "command/command.h"
+#include "targeting_handler.h"
 
 
 #include "madness_pulse_game.h"
 #include "turn_based_game.h"
 
 
-#include "unit_base.h"
-#include "health.h"
 
 
-#include "ability.h"
-#include "heal.h"
+
 
 
 

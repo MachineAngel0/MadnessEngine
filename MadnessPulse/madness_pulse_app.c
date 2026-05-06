@@ -30,6 +30,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     app_internal->application_core.is_running = true;
 
     // Initialize subsystems.
+    // Event_System* event_system = event_init(&application_core->memory_system);
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
     application_core->resource_system = resource_system_init(&application_core->memory_system);
@@ -60,6 +61,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
+    //UI
+    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
                                                                      renderer_plugin->madness_ui,
                                                                      application_core->event_system,

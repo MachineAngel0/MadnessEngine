@@ -7,6 +7,7 @@
 
 //VOID* VERSION
 
+
 //fixed sized array, so no reallocating more space
 typedef struct Array
 {
@@ -15,7 +16,12 @@ typedef struct Array
     u32 num_items; // current/top index in our array
     void* data; //array of void* data
 
+#ifndef NDEBUG
+    char* type_name;
+#endif
 } Array;
+
+#define ARRAY_TYPE(type) Array
 
 
 Array* _array_create(const u64 data_stride, const u64 capacity);
@@ -26,12 +32,8 @@ Array* _array_create(const u64 data_stride, const u64 capacity);
 void array_free(Array* array);
 void array_clear(Array* array);
 
-void _array_push(Array* array, const void* new_data);
+void array_push(Array* array, const void* new_data);
 void array_pop(Array* array);
-
-
-#define array_push(arr, value)\
-    _array_push(arr, (const void*)&value)
 
 
 void array_print(Array* array, void (*print_func)(void*));
@@ -55,7 +57,6 @@ void array_fill(const Array* array, const void* data);
 //TODO: TEST
 // fills on a range array
 void array_fill_range(Array* array, u64 start, u64 end, void* data);
-
 
 
 //shift the array, maintaining order
@@ -102,7 +103,7 @@ void array_test();
             return NULL;\
         } \
         MASSERT(allocator.alloc);\
-        MASSERT(allocator.free);\
+        MASSERT(allocator.free_memory);\
         MASSERT(allocator.allocator);\
         type##_array* arr = allocator.alloc(allocator.allocator, sizeof(type##_array), DEFAULT_ALIGNMENT);\
         arr->data = allocator.alloc(allocator.allocator, sizeof(type) * capacity, DEFAULT_ALIGNMENT); \
@@ -110,32 +111,19 @@ void array_test();
         arr->capacity = capacity;\
         arr->num_items = 0; \
         return arr; \
-    };
+    }
 
 #define _array_free_macro(type)\
     void type##_array_free(type##_array* array)\
     {\
         MASSERT_MSG(array, "ARRAY MACRO FREE: NULL ARRAY")\
-        array->allocator.free(array->allocator.allocator, array->data); \
-        array->allocator.free(array->allocator.allocator, array);\
-    };
+        array->allocator.free_memory(array->allocator.allocator, array->data); \
+        array->allocator.free_memory(array->allocator.allocator, array);\
+    }
 
 
 #define _array_push_macro(type)\
     void type##_array_push(type##_array* array, const type* data) \
-    {\
-        MASSERT_MSG(array, " ARRAY MACRO PUSH: NULL ARRAY");\
-        if (array->num_items >= array->capacity)\
-        {\
-            WARN(" ARRAY MACRO PUSH: NULL ARRAY")\
-            return;\
-        }\
-        memcpy((u8*)array->data + (sizeof(type) * array->num_items), data, sizeof(type));\
-        array->num_items++;\
-    }
-
-#define _array_intrusive_push_macro(type)\
-    void type##_array_intrusive_push(type##_array* array, const type* data) \
     {\
     MASSERT_MSG(array, "ARRAY MACRO INTRUSIVE PUSH: NULL ARRAY");\
     if (array->num_items >= array->capacity)\
@@ -146,6 +134,27 @@ void array_test();
     array->data[array->num_items] = *data;\
     array->num_items++;\
     }
+
+#define _array_push_multi_macro(type)\
+void type##_array_push_multi(type##_array* array, const type* data, const u32 array_size) \
+{\
+    MASSERT_MSG(array, "ARRAY MACRO PUSH MULTI: NULL ARRAY");\
+    if (array->num_items >= array->capacity)\
+    {\
+        return;\
+    }\
+    if(array->num_items + array_size >=  array->capacity)\
+    {\
+        WARN("ARRAY MACRO PUSH MULTI: WILL OVERFLOW ARRAY")\
+        return;\
+    }\
+    for (int i = 0; i < array_size; i++)\
+    {\
+        array->data[array->num_items] = data[i];\
+        array->num_items++;\
+    }\
+}
+
 
 #define _array_pop_macro(type)\
     void type##_array_pop(type##_array* array) \
@@ -202,7 +211,7 @@ void array_test();
     _array_create_macro(type)\
     _array_free_macro(type)\
     _array_push_macro(type)\
-    _array_intrusive_push_macro(type)\
+    _array_push_multi_macro(type)\
     _array_pop_macro(type)\
     _array_clear_macro(type)\
     _array_zero_macro(type)\

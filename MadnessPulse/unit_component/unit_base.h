@@ -4,26 +4,10 @@
 #include "game_enums.h"
 #include "game_structs.h"
 
-//NOTE: the problem with this is that some values are meant to be set by the create function
-Health_Component health_component_list[Character_Name_MAX] = {
-
-    [Character_Name_Madness_Progenitor] = {.current_health = 100, .max_health = 100},
-    [Character_Name_Burning_Soul] = {
-        .current_health = 100, .max_health = 100, .max_health_limit = 100, .min_health_limit = 100,
-        .death_animation_flag = false, .revive_animation_flag = false
-    },
-};
-
-//TODO: actions are always the same for every character, so no need for a lookup table
-Action_Component action_component[Character_Name_MAX] = {
-    [Character_Name_Madness_Progenitor] = {.MaxActionsAvailable = 3, .ActionsAvailable = 2}
-};
-
-
-Unit* unit_create_default(Madness_Pulse_Game* game)
+Unit* unit_create_default(Madness_Pulse_Game* game, Character_Name character_name)
 {
-    Unit* unit = allocator_alloc(&game->arena, sizeof(Unit));
-    unit->name = Character_Name_None;
+    Unit* unit = allocator_alloc(&game->allocator, sizeof(Unit));
+    unit->name = character_name;
     unit->character_type = Character_Type_Player;
     unit->character_state = Character_State_Alive;
 
@@ -47,6 +31,79 @@ Unit* unit_create_default(Madness_Pulse_Game* game)
 
     return unit;
 }
+
+
+Unit* unit_create(Madness_Pulse_Game* game, Character_Name character_name)
+{
+
+    //if i want anythong on the unit modified, then do so in the switch
+    Unit* unit = unit_create_default(game, character_name);
+
+    switch (character_name)
+    {
+    case Character_Name_None:
+        MASSERT(false);
+        break;
+    case Character_Name_MAX:
+        MASSERT(false);
+        break;
+    case Character_Name_Red_Jester:
+        break;
+    case Character_Name_Madness_Progenitor:
+        break;
+    case Character_Name_Madness_ButterFly:
+        break;
+    case Character_Name_Madness_Wolf:
+        break;
+    case Character_Name_Madness_Envoy:
+        break;
+    case Character_Name_Worshipper:
+        break;
+    case Character_Name_Burning_Soul:
+        break;
+    case Character_Name_Ice_Queen:
+        break;
+    case Character_Name_Sun_Twin:
+        break;
+    case Character_Name_Moon_Twin:
+        break;
+    case Character_Name_Sun_Envoy:
+        break;
+    case Character_Name_Moon_Envoy:
+        break;
+    case Character_Name_Fusion_Mania:
+        break;
+    case Character_Name_Slime:
+        break;
+    case Character_Name_Metal_Star:
+        break;
+    case Character_Name_Persona:
+        break;
+    case Character_Name_Mask_of_Fire:
+        break;
+    case Character_Name_Mask_of_Ice:
+        break;
+    case Character_Name_Mask_of_Blood:
+        break;
+    case Character_Name_Mask_of_Poison:
+        break;
+    case Character_Name_Mask_of_Heavenly:
+        break;
+    case Character_Name_Mask_of_Abyss:
+        break;
+    case Character_Name_Dancer:
+        break;
+    case Character_Name_Outer_Angel:
+        break;
+    case Character_Name_Outer_God:
+        break;
+
+    }
+
+    return unit;
+
+}
+
 
 
 #endif

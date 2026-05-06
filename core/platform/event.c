@@ -45,7 +45,8 @@ void event_register(Event_System* event_system, const event_type event, const u3
     uint32_t registered_count = event_system->events_table[event].subs_arr->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr, subscriber_data*, i);
+        // subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr, subscriber_data*, i);
+        subscriber_data* sub_data =  (subscriber_data *)_array_get(event_system->events_table[event].subs_arr, i);
         if (sub_data->subscriber_id == subscriber)
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
@@ -68,6 +69,7 @@ void event_unregister(Event_System* event_system, event_type event, u32 subscrib
     for (uint32_t i = 0; i < registered_count; i++)
     {
         subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr,  subscriber_data*, i);
+        // subscriber_data* sub_data = (subscriber_data *) _array_get(event_system->events_table[event].subs_arr, i);
         if ((sub_data->subscriber_id == subscriber) && (sub_data->callback == callback))
         {
             array_remove_swap(event_system->events_table[event].subs_arr, i);
@@ -90,6 +92,7 @@ void event_fire(Event_System* event_system, event_type event, u32 sender_id, eve
     {
         //trigger all the callbacks in the event table
         subscriber_data a = array_get(event_system->events_table[event].subs_arr,  subscriber_data, i);
+        // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
         if (a.callback(event, sender_id, a.subscriber_id, context))
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else

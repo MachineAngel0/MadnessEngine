@@ -2,8 +2,6 @@
 #include "ability.h"
 #include "logger.h"
 
-#define MAX_HEALTH_DEFAULT 100
-#define CURRENT_HEALTH_DEFAULT 100
 
 
 Health_Component health_component_create()

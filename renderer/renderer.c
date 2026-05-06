@@ -63,11 +63,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement,
-               renderer->mem_tracker);
+    allocator_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement);
 
     void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size, renderer->mem_tracker);
+    allocator_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size);
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 

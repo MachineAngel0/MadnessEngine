@@ -17,14 +17,14 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
                                                                 STRING("MADNESS UI"),
                                                                 ui_arena_mem_size + ui_frame_arena_mem_size);
 
-    insanity_ui->arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
-    insanity_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    insanity_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    insanity_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
 
     void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
     void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
 
-    allocator_init(insanity_ui->arena, arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
-    allocator_init(insanity_ui->frame_arena, frame_arena_memory, ui_arena_mem_size, insanity_ui->mem_tracker);
+    allocator_init(insanity_ui->allocator, arena_memory, ui_arena_mem_size);
+    allocator_init(insanity_ui->frame_allocator, frame_arena_memory, ui_arena_mem_size);
 
     insanity_ui->input_system_reference = input_system;
     insanity_ui->resource_system = resource_system;
@@ -32,19 +32,19 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
-
-    insanity_ui->ui_nodes = Insanity_UI_Node_array_create(INSANITY_MAX_UI_NODE_COUNT, NULL); // TODO: use an allocator
+    insanity_ui->ui_nodes = Insanity_UI_Node_array_create(
+        INSANITY_MAX_UI_NODE_COUNT, allocator_inferface_create(insanity_ui->allocator)); // TODO: use an allocator
 
     //stacks
-    insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
-    insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
+    insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
+    insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
 
-    insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->arena);
-    insanity_ui->padding_stack = stack_create(sizeof(vec2), 100, insanity_ui->arena);
+    insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->allocator);
+    insanity_ui->padding_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
 
-    insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
+    insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->allocator);
 
-    insanity_ui->float_stack = stack_create(sizeof(float), 100, insanity_ui->arena);
+    insanity_ui->float_stack = stack_create(sizeof(float), 100, insanity_ui->allocator);
     // insanity_ui->style_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
 
 
@@ -76,7 +76,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     //
     if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
                                        &insanity_ui->default_font_handle,
-                                       insanity_ui->arena))
+                                       insanity_ui->allocator))
     {
         MASSERT_MSG(false, "UI SYSTEM Failed to load default msdf font");
     };
@@ -95,7 +95,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 {
     MASSERT(insanity_ui);
     //clear draw info and reset the hot id
-    allocator_clear(insanity_ui->frame_arena);
+    allocator_clear(insanity_ui->frame_allocator);
 
     //std::cout << "MOUSE STATE:" << Insanity_UI.mouse_down << '\n';
     insanity_ui->editor_style = (Insanity_UI_Editor_Style){
@@ -403,9 +403,9 @@ void insanity_ui_generate_draw(void)
 {
     //NEW DRAW DATA
 
-    insanity_ui->node_draw_data_array = allocator_alloc(insanity_ui->frame_arena,
-                                                    insanity_ui->ui_nodes->num_items * sizeof(
-                                                        Insanity_UI_Node_Draw_Data));
+    insanity_ui->node_draw_data_array = allocator_alloc(insanity_ui->frame_allocator,
+                                                        insanity_ui->ui_nodes->num_items * sizeof(
+                                                            Insanity_UI_Node_Draw_Data));
     insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
 
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
@@ -500,7 +500,7 @@ void insanity_ui_push_text(String text)
 char* insanity_ui_float_to_char(const float value)
 {
     int len = snprintf(NULL, 0, "%.3f", value);
-    char* result = allocator_alloc(insanity_ui->frame_arena, len + 1);
+    char* result = allocator_alloc(insanity_ui->frame_allocator, len + 1);
     snprintf(result, len + 1, "%.3f", value);
 
     return result;

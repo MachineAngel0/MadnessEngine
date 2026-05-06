@@ -5,12 +5,16 @@
 typedef enum Character_Name
 {
     Character_Name_None,
+    //DEBUG ENEMEIS
     Character_Name_Red_Jester,
+    Character_Name_Clown,
+    Character_Name_Puppet,
+    Character_Name_Doll,
 
     //Players
     Character_Name_Madness_Progenitor,
     Character_Name_Madness_ButterFly,
-    Character_Name_Madness_Wolf,
+    Character_Name_Madness_Wolf, //TODO: replace with something else
     Character_Name_Madness_Envoy,
 
     //
@@ -56,6 +60,8 @@ typedef enum Character_Name
     Character_Name_MAX
 } Character_Name;
 
+
+
 typedef enum Character_Type
 {
     Character_Type_Player,
@@ -74,8 +80,9 @@ typedef enum Character_State
 
 typedef enum Ability_Component_Type
 {
+    Ability_Component_TYPE_INVALID,
     Ability_Component_TYPE_HEAL,
-    Ability_Component_TYPE_DAMAGE,
+    Ability_Component_Type_Damage,
     Ability_Component_TYPE_MP_CHANGE,
     Ability_Component_TYPE_AUGMENT_CHANGE,
     Ability_Component_TYPE_CHARGE,
@@ -92,14 +99,19 @@ typedef enum Ability_Component_Type
 
 typedef enum Ability_Name
 {
+    Ability_Name_INVALID,
+
     //sort by missions
 
     //test/debug
+    Ability_Name_DEBUG_HEAL,
+    Ability_Name_DEBUG_DAMAGE,
     Ability_Name_Madness_Test,
-    Ability_Name_Madness_Buff_Test,
-    Ability_Name_Shield,
-    Ability_Name_BloodShield,
-    //default
+    Ability_Name_INSANITY_Test,
+    Ability_Name_REVERSAL_TEST,
+
+    // Starting abilties
+    Ability_Name_Pass,
 
     //mission 1
     //mission 2
@@ -111,6 +123,14 @@ typedef enum Ability_Name
 
     Ability_Name_MAX,
 } Ability_Name;
+
+
+typedef enum Reversal_Duration
+{
+    Reversal_Duration_Once,
+    Reversal_Duration_Casters_Turn, // resets when the casters turn begins
+    Reversal_Duration_Permanent,
+}Reversal_Duration;
 
 
 typedef enum Target_Area_Affect
@@ -130,7 +150,7 @@ typedef enum Ability_Target_Type
     Ability_Target_Type_All,
 } Ability_Target_Type;
 
-typedef enum Ability_Type
+typedef enum Ability_Icon_Type
 {
     //all the damage based types
     Ability_Type_Physical,
@@ -151,7 +171,7 @@ typedef enum Ability_Type
     Ability_Type_Reversal,
     Ability_Type_SpecialFlag,
     Ability_Type_Mana,
-} Ability_Type;
+} Ability_Icon_Type;
 
 typedef enum Ability_Activation_Type
 {
@@ -195,36 +215,66 @@ typedef enum Fusion_Type
 } Fusion_Type;
 
 
-typedef enum Damage_Type
+typedef enum Element_Type
 {
-    Damage_Type_Physical,
-    Damage_Type_Fire,
-    Damage_Type_Ice,
+    Element_Type_Madness,
+    Element_Type_Insanity,
 
-    Damage_Type_Poison,
-    Damage_Type_Blood,
-    Damage_Type_Heavenly,
-    Damage_Type_Abyss,
-    Damage_Type_Madness,
-    Damage_Type_Insanity,
+    Element_Type_Physical,
+    Element_Type_Fire,
+    Element_Type_Ice,
+
+    Element_Type_Poison,
+    Element_Type_Blood,
+    Element_Type_Heavenly,
+    Element_Type_Abyss,
+
+    //Element_Type_Colorless //kinda like almight, but the main point of it is that it gets around a lot of reversals
+    //Element_Type_Psychic
+    //Element_Type_Chaos, (the element of true randomness, also for the sequel)
+    //Element_Type_Lightning, both of these are for the sequel, does spread damage basically
+    //Element_Type_Wind, //
+    //Element_Type_Time, //
+    //Element_Type_God,
+    Element_Type_MAX,
+} Element_Type;
 
 
-    //Damage_Type_Psychic
-    //Damage_Type_Chaos, (the element of true randomness, also for the sequel)
-    //Damage_Type_Lightning, both of these are for the sequel
-    //Damage_Type_Wind,
-    //Damage_Type_Time,
-    //Damage_Type_God,
-    Damage_Type_MAX,
-} Damage_Type;
+typedef enum Damage_Status_Type
+{
+    ECS_Custom,
+
+    Damage_Status_Type_Dreamy,
+    Damage_Status_Type_Low,
+    Damage_Status_Type_Delusion,
+    Damage_Status_Type_High,
+    Damage_Status_Type_Visionary,
+    Damage_Status_Type_Imaginary,
+
+    Damage_Status_Type_Physical,
+    Damage_Status_Type_MAX,
+
+    /*
+    ECS_Illusion UMETA(DisplayName = "Illusion"),
+    ECS_Asphixiation UMETA(DisplayName = "Fogotten"),
+    ECS_Demise UMETA(DisplayName = "Fogotten"),
+    ECS_armageddon UMETA(DisplayName = "Fogotten"),
+    ECS_lunacy UMETA(DisplayName = "lunacy"),
+    */
+
+    // Power scaling
+    // Imaginary > Visionary > Heavy > Moderate > Competent > Weak > Brittle
+    // Damage and Status
+} Damage_Status_Type;
+
 
 typedef enum Heal_Types
 {
-    Heal_Types_HealAmount,
-    Heal_Types_HealSetter,
-    Heal_Types_HealPercent,
-    Heal_Types_HealToFull,
-    Heal_Types_HealByMultiplication,
+    Heal_Types_Heal_Amount,
+    Heal_Types_Heal_Setter,
+    Heal_Types_Heal_Percent,
+    Heal_Types_Heal_To_Full,
+    Heal_Types_Heal_By_Multiplication,
     Heal_Types_MAX,
 } Heal_Types;
 
@@ -324,8 +374,24 @@ typedef enum Conjure_Type
     Conjure_Type_Max,
 } Conjure_Type;
 
+typedef enum EPassiveTransferType
+{
+    ECS_CasterToTarget_PositiveValue,
+    ECS_CasterToTarget_NegativeValue,
+    ECS_CasterToTarget_DoubleLossGain,
+
+    ECS_TargetToCaster,
+    ECS_TargetToCasterNegativeValue,
+    ECS_TargetToCaster_DoubleLossGain,
+}EPassiveTransferType;
 
 // Turn Based Game //
+
+typedef enum Targeting_Direction
+{
+    Targeting_Direction_Left,
+    Targeting_Direction_Right,
+}Targeting_Direction;
 
 typedef enum Turn_Initiative
 {
@@ -337,18 +403,31 @@ typedef enum Turn_Phase
 {
     Turn_Phase_None,
     Turn_Phase_TurnStart,
-    Turn_Phase_AbilitySelection,
+    Turn_Phase_Ability_Selection,
     Turn_Phase_TargetSelection,
     Turn_Phase_AbilityProcessing,
     Turn_Phase_QueueProcessing,
     Turn_Phase_Turn_End,
-    Turn_Phase_EnemyTurn,
+    Turn_Phase_Enemy_Turn,
 
     Turn_Phase_Dialogue,
     Turn_Phase_Event, // might want to specify what type of event
 
     Turn_Phase_BattleOver,
 } Turn_Phase;
+
+typedef enum Action_Handler_Process_Stage
+{
+    ECS_None,
+    ECS_Normal,
+    ECS_Status,
+    ECS_ReversalTrigger,
+    ECS_Reversal,
+    ECS_TurnComponent,
+    ECS_TurnTrigger,
+    ECS_TurnEnd,
+} Action_Handler_Process_Stage;
+
 
 typedef enum Game_UI_States
 {

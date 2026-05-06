@@ -8,6 +8,8 @@
 //TODO: might be good to create two set of functions one for if the hash is going to own its own memory
 //TODO: if performance is an issue look into robin hood addressing
 
+#define HASH_SET(type) hash_set
+
 
 typedef enum hash_set_state
 {

@@ -12,6 +12,10 @@ void turn_start(Madness_Pulse_Game* game);
 
 void turn_end(Madness_Pulse_Game* game);
 
+//called once per frame to respond to any changes in teh game state, like user input
+void turn_update(Madness_Pulse_Game* game);
+
+
 void turn_based_reset_turn_queue(Madness_Pulse_Game* game);
 
 bool can_current_unit_act(Madness_Pulse_Game* game);
@@ -22,7 +26,6 @@ Unit* madness_pulse_get_unit(Madness_Pulse_Game* game, Character_Name name);
 
 /*FUTURE:
     void reset_battle(); //does a hard reset of the game state
-
  */
 
 #endif //TURN_BASED_GAME_H

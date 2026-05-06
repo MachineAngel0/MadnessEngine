@@ -1,36 +1,9 @@
 ﻿#ifndef DAMAGE_H
 #define DAMAGE_H
-#include <stdbool.h>
 
 #include "game_enums.h"
 
 
-typedef enum Damage_Status_Type
-{
-    ECS_Custom,
-
-    Damage_Status_Type_Dreamy,
-    Damage_Status_Type_Low,
-    Damage_Status_Type_Delusion,
-    Damage_Status_Type_High,
-    Damage_Status_Type_Visionary,
-    Damage_Status_Type_Imaginary,
-
-    Damage_Status_Type_Physical,
-    Damage_Status_Type_MAX,
-
-    /*
-    ECS_Illusion UMETA(DisplayName = "Illusion"),
-    ECS_Asphixiation UMETA(DisplayName = "Fogotten"),
-    ECS_Demise UMETA(DisplayName = "Fogotten"),
-    ECS_armageddon UMETA(DisplayName = "Fogotten"),
-    ECS_lunacy UMETA(DisplayName = "lunacy"),
-    */
-
-    // Power scaling
-    // Imaginary > Visionary > Heavy > Moderate > Competent > Weak > Brittle
-    // Damage and Status
-} Damage_Status_Type;
 
 float DamageValueLookUpTable[Damage_Status_Type_MAX] =
 {
@@ -62,16 +35,16 @@ float StatusValueLookUpTable[Damage_Status_Type_MAX] =
     [Damage_Status_Type_Physical] = 0.0f,
 };
 
-typedef struct Damage_Ability
+/*typedef struct Damage_Ability
 {
     //Final Values Used in Calculations, use custom enum below, if I want to set these manually
-    float DamageTypeToDamage[Damage_Type_MAX];
-    float StatusValues[Damage_Type_MAX];
+    float DamageTypeToDamage[Element_Type_MAX];
+    float StatusValues[Element_Type_MAX];
 
 
     //Enums used to make creating abilities go quicker, anything set to custom will need to be set manually in the above maps
-    Damage_Status_Type DamageToType[Damage_Type_MAX];
-    Damage_Status_Type StatusToType[Damage_Type_MAX]; /* = {
+    Damage_Status_Type DamageToType[Element_Type_MAX];
+    Damage_Status_Type StatusToType[Element_Type_MAX]; /* = {
         [Damage_Type_Physical] = Damage_Status_Type_Physical,
         [Damage_Type_Fire] = Damage_Status_Type_Low,
         [Damage_Type_Ice] = Damage_Status_Type_Low,
@@ -81,27 +54,23 @@ typedef struct Damage_Ability
         [Damage_Type_Abyss] = Damage_Status_Type_Low,
         [Damage_Type_Madness] = Damage_Status_Type_Low,
         [Damage_Type_Insanity] = Damage_Status_Type_Low,
-    };*/
+    };#1#
 
 
     // float SingleTargetStatusModifierValue = 3.0f;
     // float MultiTargetStatusModifierValue = 0.40f;
     float damage; // TODO: remove, its here just for testing
 
-} Damage_Ability;
+} Damage_Ability;*/
 
-Damage_Ability damage_ability_create(float damage_amount)
+Damage_Component damage_component_create(const Element_Type element, const float damage_amount)
 {
-    Damage_Ability damage_ability = {0};
-    damage_ability.damage = damage_amount;
-    return damage_ability;
+    return (Damage_Component){.type = Ability_Component_Type_Damage, .element = element, .damage = damage_amount};
 }
 
-void damage_ability(Unit* unit, void* data)
+void damage_ability(Unit* unit, Damage_Component damage_ability)
 {
-    Damage_Ability* damage_ability = (Damage_Ability*) data;
-
-    unit->health_component.current_health -= damage_ability->damage;
+    unit->health_component.current_health -= damage_ability.damage;
 }
 
 /*

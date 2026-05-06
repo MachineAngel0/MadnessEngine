@@ -154,7 +154,7 @@ typedef struct
 //rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
 typedef struct Madness_UI
 {
-    Allocator* arena; // rn mainly just for loading fonts, would be better as a pool arena
+    Allocator* allocator; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Allocator* frame_arena;
     Memory_Tracker* mem_tracker;
 

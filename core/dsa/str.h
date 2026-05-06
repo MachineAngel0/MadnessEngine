@@ -49,6 +49,7 @@ bool string_free(String* string);
 
 //UTILITY
 void string_print(const String* str);
+void string_println(const String* str);
 
 
 bool string_compare(const String* str1, const String* str2);

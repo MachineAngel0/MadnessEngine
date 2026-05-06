@@ -10,7 +10,7 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Madnes
 
     u64 game_memory_size = GB(0.5);
     void* game_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
-    allocator_init(&game->arena, game_memory, game_memory_size, NULL);
+    allocator_init(&game->allocator, game_memory, game_memory_size);
 
 
     game->madness_ui = madness_ui;
@@ -24,7 +24,7 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Madnes
 
 bool madness_pulse_game_shutdown(Madness_Pulse_Game* game, Memory_System* memory_system)
 {
-    memory_system_memory_free(memory_system, &game->arena, MEMORY_SUBSYSTEM_GAME);
+    memory_system_memory_free(memory_system, &game->allocator, MEMORY_SUBSYSTEM_GAME);
     // memory_system_memory_free(memory_system, &game->frame_arena, MEMORY_SUBSYSTEM_GAME);
 
     memory_system_memory_free(memory_system, game, MEMORY_SUBSYSTEM_GAME);
@@ -50,6 +50,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
         madness_pulse_level_select(game);
         break;
     case Game_State_Enum_Turn_Based:
+        madness_pulse_game_update(game, delta_time);
         break;
     case Game_State_Enum_MAX:
         break;

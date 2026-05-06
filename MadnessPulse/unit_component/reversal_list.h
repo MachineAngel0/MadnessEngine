@@ -20,7 +20,7 @@ void ClearReversalList(Reversal_List_Component* reversal_list)
     memset(reversal_list, 0, sizeof(Reversal_List_Component));
 }
 
-void AddToDamageReversal(Reversal_List_Component* reversal_list, Damage_Type DamageTypeToAdd, u32 unit_id)
+void AddToDamageReversal(Reversal_List_Component* reversal_list, Element_Type DamageTypeToAdd, u32 unit_id)
 {
     // DEBUG("DamageType: %s and reversal_list->unit_who_hit_us: %s"), *UEnum::GetValueAsString(DamageTypeToAdd), *unit_id->GetName());
     reversal_list->unit_who_hit_us = unit_id;
@@ -52,7 +52,7 @@ void AddToMPReversal(Reversal_List_Component* reversal_list, MP_Types MPTypeToAd
     reversal_list->MPReversal[MPTypeToAdd] = true;
 }
 
-void AddToAugmentReversal(Reversal_List_Component* reversal_list, Damage_Type AugmentTypeToAdd, u32 unit_id)
+void AddToAugmentReversal(Reversal_List_Component* reversal_list, Element_Type AugmentTypeToAdd, u32 unit_id)
 {
     // DEBUG("DamageType: %s and reversal_list->unit_who_hit_us: %s"), *UEnum::GetValueAsString(AugmentTypeToAdd), *unit_id->GetName());
     reversal_list->unit_who_hit_us = unit_id;

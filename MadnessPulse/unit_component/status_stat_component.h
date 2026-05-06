@@ -43,7 +43,7 @@ void Status_Stat_Component_init_default(Status_Stat_Component* status_stat_compo
 
 
 //utility
-void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component, const Damage_Type StatusTypeToCheck)
+void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component, const Element_Type StatusTypeToCheck)
 {
     status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
         status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
@@ -52,7 +52,7 @@ void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component,
     status_stat_component->StatusInfo[StatusTypeToCheck] = (u32)status_stat_component->StatusInfo[StatusTypeToCheck];
 }
 
-void ClampStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusTypeToCheck)
+void ClampStatusThreshold(Status_Stat_Component* status_stat_component, const Element_Type StatusTypeToCheck)
 {
     status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
         status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
@@ -60,7 +60,7 @@ void ClampStatusThreshold(Status_Stat_Component* status_stat_component, const Da
 }
 
 //build-ups
-void ChangeStatusBuildUp(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
+void ChangeStatusBuildUp(Status_Stat_Component* status_stat_component, const Element_Type StatusType,
                          const float StatusChangeValue)
 {
     status_stat_component->StatusInfo[StatusType] += StatusChangeValue;
@@ -75,7 +75,7 @@ void ChangeStatusBuildUp(Status_Stat_Component* status_stat_component, const Dam
     ClampAndTruncateStatusBuildup(status_stat_component, StatusType);
 }
 
-void ChangeStatusBuildUpByPercent(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
+void ChangeStatusBuildUpByPercent(Status_Stat_Component* status_stat_component, const Element_Type StatusType,
                                   const float StatusChangePercent)
 {
     status_stat_component->StatusInfo[StatusType] += status_stat_component->StatusThreshold[StatusType] *
@@ -88,13 +88,13 @@ void ChangeStatusBuildUpByPercent(Status_Stat_Component* status_stat_component, 
     ClampAndTruncateStatusBuildup(status_stat_component, StatusType);
 }
 
-float ReturnStatusChangeByPercent(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
+float ReturnStatusChangeByPercent(Status_Stat_Component* status_stat_component, Element_Type StatusType,
                                   float StatusChangePercent)
 {
     return status_stat_component->StatusThreshold[StatusType] * StatusChangePercent;
 }
 
-void SetStatusBuildUpToSpecificPercent(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
+void SetStatusBuildUpToSpecificPercent(Status_Stat_Component* status_stat_component, const Element_Type StatusType,
                                        const float StatusChangeToSetTo)
 {
     status_stat_component->StatusInfo[StatusType] = status_stat_component->StatusThreshold[StatusType] *
@@ -103,30 +103,30 @@ void SetStatusBuildUpToSpecificPercent(Status_Stat_Component* status_stat_compon
 }
 
 
-void ResetStatusBuildUp(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReset)
+void ResetStatusBuildUp(Status_Stat_Component* status_stat_component, Element_Type StatusTypeToReset)
 {
     status_stat_component->StatusInfo[StatusTypeToReset] = 0;
 }
 
-float ReturnDivisionValueBasedOnStatusBuildUp(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
+float ReturnDivisionValueBasedOnStatusBuildUp(Status_Stat_Component* status_stat_component, Element_Type StatusType,
                                               float DivisionValue)
 {
     return status_stat_component->StatusInfo[StatusType] / DivisionValue;
 }
 
-float ReturnStatusChangeToZero(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReset)
+float ReturnStatusChangeToZero(Status_Stat_Component* status_stat_component, Element_Type StatusTypeToReset)
 {
     return status_stat_component->StatusInfo[StatusTypeToReset];
 }
 
-float ReturnBuildUpPercentByType(Status_Stat_Component* status_stat_component, Damage_Type StatusTypeToReturn)
+float ReturnBuildUpPercentByType(Status_Stat_Component* status_stat_component, Element_Type StatusTypeToReturn)
 {
     return status_stat_component->StatusInfo[StatusTypeToReturn] / status_stat_component->StatusThreshold[
         StatusTypeToReturn];
 }
 
 int ReturnBuildUpNonDecimalPercentByType(Status_Stat_Component* status_stat_component,
-                                         Damage_Type StatusTypeToReturn)
+                                         Element_Type StatusTypeToReturn)
 {
     return (status_stat_component->StatusInfo[StatusTypeToReturn] / status_stat_component->StatusThreshold[
         StatusTypeToReturn]) * 100;
@@ -140,14 +140,14 @@ void ResetStatusTriggerOccurence(Status_Stat_Component* status_stat_component)
 }
 
 //threshold change
-void ChangeStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
+void ChangeStatusThreshold(Status_Stat_Component* status_stat_component, const Element_Type StatusType,
                            const float StatusChangeValue)
 {
     status_stat_component->StatusThreshold[StatusType] += StatusChangeValue;
     ClampStatusThreshold(status_stat_component, StatusType);
 }
 
-void SetStatusThreshold(Status_Stat_Component* status_stat_component, const Damage_Type StatusType,
+void SetStatusThreshold(Status_Stat_Component* status_stat_component, const Element_Type StatusType,
                         const float StatusChangeValue)
 {
     status_stat_component->StatusThreshold[StatusType] += status_stat_component->StatusThreshold[StatusType] *
@@ -155,7 +155,7 @@ void SetStatusThreshold(Status_Stat_Component* status_stat_component, const Dama
     ClampStatusThreshold(status_stat_component, StatusType);
 }
 
-void SetStatusByMultiplication(Status_Stat_Component* status_stat_component, Damage_Type StatusType,
+void SetStatusByMultiplication(Status_Stat_Component* status_stat_component, Element_Type StatusType,
                                float StatusChangeValue)
 {
     status_stat_component->StatusThreshold[StatusType] *= StatusChangeValue;

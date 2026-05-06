@@ -13,12 +13,12 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     u64 editor_memory_size = MB(5);
 
     void* editor_memory = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_arena, editor_memory, editor_memory_size, NULL);
+    allocator_init(editor->editor_arena, editor_memory, editor_memory_size);
 
 
     editor->editor_frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
     void* editor_memory_frame = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_frame_arena, editor_memory_frame, editor_memory_size, NULL);
+    allocator_init(editor->editor_frame_arena, editor_memory_frame, editor_memory_size);
 
 
     editor->renderer = renderer;

@@ -11,8 +11,11 @@ bool application_on_resized(const event_type code, u32 sender, u32 listener_inst
 
 static Editor_Application* app_internal;
 
+
 bool editor_app_run(Editor_Application* editor_app)
 {
+
+
 
     //TODO: testing lexer/parser stuff
     lexer_test();

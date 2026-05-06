@@ -163,7 +163,7 @@ void array_fill_range(Array* array, u64 start, u64 end, void* data)
     }
 }
 
-void _array_push(Array* array, const void* new_data)
+void array_push(Array* array, const void* new_data)
 {
     if (array_is_full(array))
     {
@@ -257,12 +257,12 @@ void array_test()
     Array* arr = array_create(int, arr_capacity);
 
     printf("ARRAY EMPLACE START\n");
-    array_push(arr, num5);
-    array_push(arr, num10);
-    array_push(arr, num10);
-    array_push(arr, num10);
-    array_push(arr, num10);
-    array_push(arr, num10); //this should fail
+    array_push(arr, &num5);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10);
+    array_push(arr, &num10); //this should fail
     array_print(arr, print_int);
     TEST_DEBUG(arr->num_items == 5);
     printf("ARRAY EMPLACE END\n\n");
@@ -280,8 +280,8 @@ void array_test()
     TEST_DEBUG(arr->num_items == 0);
     printf("ARRAY POP END\n\n");
 
-    array_push(arr, num10);
-    array_push(arr, num5);
+    array_push(arr, &num10);
+    array_push(arr, &num5);
     printf("ARRAY GET START\n");
     print_int(_array_get(arr, 0));
     TEST_DEBUG(array_get(arr, int, 0) == num10);
@@ -300,10 +300,10 @@ void array_test()
     array_remove(arr, 0);
     TEST_DEBUG(array_get(arr, int, 0) == num3);
     array_print(arr, print_int);
-    array_push(arr, num20);
-    array_push(arr, num10);
-    array_push(arr, num5);
-    array_push(arr, num20);
+    array_push(arr, &num20);
+    array_push(arr, &num10);
+    array_push(arr, &num5);
+    array_push(arr, &num20);
     array_print(arr, print_int);
 
     array_remove(arr, arr_capacity); //should warn
@@ -363,30 +363,17 @@ void array_macro_test()
 
     u8_array_clear(arr);
 
-    u8* intrusive = malloc(sizeof(u8));
-    u8_array_push(arr, intrusive);
-    u8_array_intrusive_push(arr, intrusive);
-    if (memcmp(&arr->data[0], intrusive, sizeof(u8)) == 0)
-    {
-        INFO("yeah 1")
-    }
-    if (memcmp(&arr->data[1], intrusive, sizeof(u8)) == 0)
-    {
-        INFO("yeah 2")
-    }
-    u8_array_clear(arr);
+    u32 multi_size = 3;
+    u8* multi = (u8*)malloc(sizeof(u8) * multi_size);
+    multi[0] = 0;
+    multi[1] = 1;
+    multi[2] = 2;
 
-    u8 intrusive2 = 10;
-    u8_array_push(arr, &intrusive2);
-    u8_array_intrusive_push(arr, &intrusive2);
-    if (memcmp(&arr->data[0], &intrusive2, sizeof(u8)) == 0)
-    {
-        INFO("yeah 1")
-    }
-    if (memcmp(&arr->data[1], &intrusive2, sizeof(u8)) == 0)
-    {
-        INFO("yeah 2")
-    }
+    u8_array_push_multi(arr, multi, multi_size);
+    TEST_DEBUG(arr->data[0] == 0);
+    TEST_DEBUG(arr->data[1] == 1);
+    TEST_DEBUG(arr->data[2] == 2);
+
 
 
     //TODO: test slices
