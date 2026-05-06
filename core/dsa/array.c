@@ -226,7 +226,7 @@ void array_remove_swap(Array* array, u64 index)
 
     //memcpy the last item into the removal spot
     memcpy((u8*)array->data + (array->stride * index),
-           (u8*)array->data + (array->stride - 1),
+           (u8*)array->data + (array->num_items - 1),
            array->stride);
     //minus one cause num_items always points to a free spot/ or nothing if full
     array->num_items--;

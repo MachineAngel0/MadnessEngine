@@ -35,7 +35,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 {
     if (input_key_released_unique(game->input_system, KEY_Q))
     {
-        game->game_state = (game->game_state + 1) % (Game_State_Enum_MAX - 1);
+        game->game_state = (game->game_state + 1) % (Game_State_Enum_MAX);
     }
 
     switch (game->game_state)
@@ -50,7 +50,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
         madness_pulse_level_select(game);
         break;
     case Game_State_Enum_Turn_Based:
-        madness_pulse_game_update(game, delta_time);
+        turn_update(game);
         break;
     case Game_State_Enum_MAX:
         break;
@@ -77,8 +77,8 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
     }
     if (madness_button_text(ui, "Quit", STRING("Quit")))
     {
-        event_context data = {0};
-        event_fire(game->event_system, EVENT_APP_QUIT, 0, data);
+        Event_Data data = {0};
+        event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game"), data);
     }
 }
 

@@ -7,10 +7,11 @@ Event_System* event_init(Memory_System* memory_system)
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
 
-    event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system, STRING("EVENT SYSTEM"), event_system_mem_requirement);
-    
+    event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
+                                                                 STRING("EVENT SYSTEM"), event_system_mem_requirement);
+
     allocator_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement);
-    
+
     INFO("EVENT SYSTEM INIT")
 
     return event_system;
@@ -28,72 +29,73 @@ bool event_shutdown(Event_System* event_system)
 }
 
 
-void event_register(Event_System* event_system, const event_type event, const u32 subscriber, const on_event callback)
+void event_register(Event_System* event_system, Event_Type event, String subscriber, const event_callback callback)
 {
-
     MASSERT(event_system)
 
     //TODO: hook in the linear allocator for this
     //check if the event arr has been alloacated
-    if (event_system->events_table[event].subs_arr == NULL)
+    if (event_system->events_table[event].subscriber_array == NULL)
     {
-        event_system->events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
+        event_system->events_table[event].subscriber_array = dynamic_array_create(
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, allocator_inferface_create(&event_system->event_system_arena));
     }
 
 
     //TODO: wrap in a debug if/else
-    uint32_t registered_count = event_system->events_table[event].subs_arr->num_items;
+    uint32_t registered_count = event_system->events_table[event].subscriber_array->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        // subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr, subscriber_data*, i);
-        subscriber_data* sub_data =  (subscriber_data *)_array_get(event_system->events_table[event].subs_arr, i);
-        if (sub_data->subscriber_id == subscriber)
+        // Subscriber_Data* sub_data = (Subscriber_Data*)_dynamic_array_get(event_system->events_table[event].subscriber_array, i);
+        Subscriber_Data* sub_data = dynamic_array_get(event_system->events_table[event].subscriber_array,
+                                                      Subscriber_Data*, i);
+        if (!string_compare(&sub_data->subscriber_name, &subscriber))
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
             return;
         };
     }
 
-    subscriber_data* new_sub_data = malloc(sizeof(subscriber_data));
-    new_sub_data->subscriber_id = subscriber;
+    Subscriber_Data* new_sub_data = malloc(sizeof(Subscriber_Data));
+    new_sub_data->subscriber_name = subscriber;
     new_sub_data->callback = callback;
-    array_push(event_system->events_table[event].subs_arr, new_sub_data);
+    dynamic_array_push(event_system->events_table[event].subscriber_array, new_sub_data);
 }
 
-void event_unregister(Event_System* event_system, event_type event, u32 subscriber, on_event callback)
+void event_unregister(Event_System* event_system, Event_Type event, String subscriber, event_callback callback)
 {
-
     MASSERT(event_system)
 
-    uint32_t registered_count = event_system->events_table[event].subs_arr->num_items;
+    uint32_t registered_count = event_system->events_table[event].subscriber_array->num_items;
     for (uint32_t i = 0; i < registered_count; i++)
     {
-        subscriber_data* sub_data = array_get(event_system->events_table[event].subs_arr,  subscriber_data*, i);
-        // subscriber_data* sub_data = (subscriber_data *) _array_get(event_system->events_table[event].subs_arr, i);
-        if ((sub_data->subscriber_id == subscriber) && (sub_data->callback == callback))
+        // subscriber_data* sub_data = (subscriber_data *) _dynamic_array_get(event_system->events_table[event].subs_arr, i);
+        Subscriber_Data* sub_data = dynamic_array_get(event_system->events_table[event].subscriber_array,
+                                                      Subscriber_Data*, i);
+        if (string_compare(&sub_data->subscriber_name, &subscriber) && (sub_data->callback == callback))
         {
-            array_remove_swap(event_system->events_table[event].subs_arr, i);
-        };
+            dynamic_array_remove_swap(event_system->events_table[event].subscriber_array, i);
+        }
     }
 }
 
-void event_fire(Event_System* event_system, event_type event, u32 sender_id, event_context context)
+void event_fire(Event_System* event_system, Event_Type event, String sender_name, Event_Data context)
 {
-
     MASSERT(event_system)
 
-    //check if the event arr has been allocated
-    if (event_system->events_table[event].subs_arr == NULL)
+    //check if the event array has been allocated
+    if (event_system->events_table[event].subscriber_array == NULL)
     {
-        event_system->events_table[event].subs_arr = array_create(subscriber_data, MAX_SUBSCRIBERS);
+        event_system->events_table[event].subscriber_array = dynamic_array_create(
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, allocator_inferface_create(&event_system->event_system_arena));
     }
 
-    for (uint32_t i = 0; i < event_system->events_table[event].subs_arr->num_items; i++)
+    for (uint32_t i = 0; i < event_system->events_table[event].subscriber_array->num_items; i++)
     {
         //trigger all the callbacks in the event table
-        subscriber_data a = array_get(event_system->events_table[event].subs_arr,  subscriber_data, i);
+        Subscriber_Data a = dynamic_array_get(event_system->events_table[event].subscriber_array, Subscriber_Data, i);
         // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
-        if (a.callback(event, sender_id, a.subscriber_id, context))
+        if (a.callback(event, sender_name, a.subscriber_name, context))
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else
             return;
@@ -101,18 +103,38 @@ void event_fire(Event_System* event_system, event_type event, u32 sender_id, eve
     }
 }
 
-bool test_event(event_type code, u32 sender_id, u32 subscriber_id, event_context data)
+void event_queue(Event_System* event_system, Event_Queue_Packet event_queue_packet)
 {
-    printf("MESSAGE: %c\n", data.data.c[0]);
-    return false;
+    ring_enqueue(event_system->event_queue, &event_queue_packet);
 }
 
-bool test_event2(event_type code, u32 sender_id, u32 subscriber_id, event_context data)
+void event_flush_queue(Event_System* event_system)
 {
-    printf("MESSAGE2: %c\n", data.data.c[0]);
-    return false;
+    while (!ring_queue_is_empty(event_system->event_queue))
+    {
+        Event_Queue_Packet data;
+        ring_dequeue(event_system->event_queue, &data);
+
+        for (uint32_t i = 0; i < event_system->events_table[data.event].subscriber_array->num_items; i++)
+        {
+            //trigger all the callbacks in the event table
+            Subscriber_Data a = dynamic_array_get(event_system->events_table[data.event].subscriber_array, Subscriber_Data, i);
+            // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
+            if (a.callback(data.event, data.sender_name, a.subscriber_name, data.context))
+            {
+                //the subscriber/listener is telling us we want to not fire this off for anyone else
+                return;
+            }
+        }
+    }
 }
 
+
+bool test_event(Event_Type code, String sender_name, String subscriber_name, Event_Data data)
+{
+    printf("i am the event, the awakening");
+    return true;
+}
 
 void event_test(Event_System* event_system)
 {
@@ -120,24 +142,22 @@ void event_test(Event_System* event_system)
 
     // event_init();
 
-    event_register(event_system, EVENT_TEST, 0, test_event);
-    event_register(event_system, EVENT_TEST, 1, test_event2);
+    event_register(event_system, EVENT_TEST, STRING("Sub1"), test_event);
 
-    event_register(event_system, EVENT_TEST2, 0, test_event2);
-    event_register(event_system, EVENT_TEST2, 1, test_event2);
 
-    event_context context;
-    context.data.c[0] = 'a';
+    Event_Data_Test test = {.yes = true, .numbers = 420, .words = STRING("Words")};
 
-    event_context context2;
-    context2.data.c[0] = 'g';
-    event_fire(event_system, EVENT_TEST, 0, context);
-    event_fire(event_system, EVENT_TEST, 0, context2);
-    event_fire(event_system, EVENT_TEST2, 0, context);
+    Event_Data context;
+    context.data.event_data_test.yes = true;
+    context.data.event_data_test.numbers = 420;
+    context.data.event_data_test.words = STRING("Words");
 
-    event_unregister(event_system, EVENT_TEST, 0, test_event);
+    Event_Data context2;
+    context2.data.event_data_test = test;
+
+
+    event_fire(event_system, EVENT_TEST, STRING("I am the sender"), context);
+    event_unregister(event_system, EVENT_TEST, STRING("I am the sender"), test_event);
 
     event_shutdown(event_system);
 }
-
-

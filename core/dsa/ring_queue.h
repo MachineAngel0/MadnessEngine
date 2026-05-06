@@ -23,6 +23,8 @@ typedef struct ring_queue
 
 } ring_queue;
 
+#define RING_QUEUE_TYPE(type) ring_queue
+
 
 ring_queue* ring_queue_create(u32 data_size, u32 capacity);
 
@@ -39,6 +41,7 @@ bool ring_enqueue(ring_queue* q, void* data);
 
 //pops(not technically a pop) from the front of the queue, also returns it
 bool ring_dequeue(ring_queue* q, void* out_data);
+
 
 bool ring_queue_peek(const ring_queue* q, void* out_data);
 

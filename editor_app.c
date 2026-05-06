@@ -2,11 +2,11 @@
 #include "shader_creation_system.h"
 
 
-bool application_on_event(const event_type code, u32 sender, u32 listener_inst, event_context context);
+bool application_on_event(const Event_Type code, u32 sender, u32 listener_inst, Event_Data context);
 
-bool application_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context);
+bool application_on_key(const Event_Type code, u32 sender, u32 listener_inst, Event_Data context);
 
-bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, event_context context);
+bool application_on_resized(const Event_Type code, u32 sender, u32 listener_inst, Event_Data context);
 
 
 static Editor_Application* app_internal;
@@ -187,7 +187,7 @@ bool editor_app_run(Editor_Application* editor_app)
     return true;
 }
 
-bool application_on_event(const event_type code, u32 sender, u32 listener_inst, const event_context context)
+bool application_on_event(const Event_Type code, u32 sender, u32 listener_inst, const Event_Data context)
 {
     switch (code)
     {
@@ -199,7 +199,7 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
     return false;
 }
 
-bool application_on_key(const event_type code, u32 sender, u32 listener_inst, const event_context context)
+bool application_on_key(const Event_Type code, u32 sender, u32 listener_inst, const Event_Data context)
 {
     if (code == EVENT_KEY_PRESSED)
     {
@@ -210,7 +210,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
         if (key_code == KEY_ESCAPE)
         {
             // NOTE: Technically firing an event to itself, but there may be other listeners.
-            event_context data = {};
+            Event_Data data = {};
             event_fire(app_internal->application_core.event_system, EVENT_APP_QUIT, 0, data);
 
             // Block anything else from processing this.
@@ -237,7 +237,7 @@ bool application_on_key(const event_type code, u32 sender, u32 listener_inst, co
     return false;
 }
 
-bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, const event_context context)
+bool application_on_resized(const Event_Type code, u32 sender, u32 listener_inst, const Event_Data context)
 {
     if (code == EVENT_APP_RESIZE)
     {

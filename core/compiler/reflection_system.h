@@ -92,12 +92,12 @@ Reflection_System* reflection_system_init()
     return reflection_system;
 }
 
-Reflection_System* reflection_system_shutdown()
+void reflection_system_shutdown()
 {
     //TODO: use an arena
 }
 
-Reflection_System* reflection_system_add_enum(Reflection_System* reflection_system, const char* enum_name)
+void reflection_system_add_enum(Reflection_System* reflection_system, const char* enum_name)
 {
     Reflection_Enum reflection_enum = {0};
     reflection_enum.type_list = darray_create_reserve(Reflection_Type_Info, 1);
@@ -105,7 +105,7 @@ Reflection_System* reflection_system_add_enum(Reflection_System* reflection_syst
     hash_table_insert(reflection_system->reflection_registry_enums, enum_name, &reflection_enum);
 }
 
-Reflection_System* reflection_system_add_enum_field(Reflection_System* reflection_system, const char* enum_name,
+void reflection_system_add_enum_field(Reflection_System* reflection_system, const char* enum_name,
                                                     const char* type_field_name, u32 enum_value)
 {
     Reflection_Enum reflection_enum = {0};
@@ -180,6 +180,7 @@ Reflection_Type_Info* reflection_system_struct_query(Reflection_System* reflecti
         return reflection_struct.type_list;
     }
     MASSERT(false);
+    return NULL;
 }
 
 Reflection_Type_Info* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
@@ -191,6 +192,7 @@ Reflection_Type_Info* reflection_system_generate_struct_offset(Reflection_System
         return reflection_enum.type_list;
     }
     MASSERT(false);
+    return NULL;
 }
 
 

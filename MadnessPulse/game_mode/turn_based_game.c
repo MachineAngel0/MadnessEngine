@@ -257,24 +257,50 @@ void turn_end(Madness_Pulse_Game* game)
 
 void turn_update(Madness_Pulse_Game* game)
 {
-    Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
 
-    for (int i = 0; i < unit->inventory_component.battle_list_size; ++i)
+    switch (game->turn_phase)
     {
-        String ability_name = ability_registry_get_ability_info(game->ability_registry, unit->inventory_component.battle_list_starting[i]).ability_name;
-        string_println(&ability_name);
+    case Turn_Phase_None:
+        break;
+    case Turn_Phase_TurnStart:
+        break;
+    case Turn_Phase_Ability_Selection:
+        Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
+
+        for (int i = 0; i < unit->inventory_component.battle_list_size; ++i)
+        {
+            String ability_name = ability_registry_get_ability_info(game->ability_registry, unit->inventory_component.battle_list_starting[i]).ability_name;
+            string_println(&ability_name);
+        }
+        break;
+    case Turn_Phase_TargetSelection:
+        if (input_is_mouse_button_released_unique(game->input_system, KEY_RIGHT))
+        {
+            targeting_handler_move_unit_targeting(game, Targeting_Direction_Right);
+        }
+        else if (input_is_mouse_button_released_unique(game->input_system, KEY_LEFT))
+        {
+            targeting_handler_move_unit_targeting(game, Targeting_Direction_Left);
+        }
+        break;
+    case Turn_Phase_AbilityProcessing:
+        break;
+    case Turn_Phase_QueueProcessing:
+        break;
+    case Turn_Phase_Turn_End:
+        break;
+    case Turn_Phase_Enemy_Turn:
+        break;
+    case Turn_Phase_Dialogue:
+        break;
+    case Turn_Phase_Event:
+        break;
+    case Turn_Phase_BattleOver:
+        break;
     }
 
 
 
-    if (input_is_mouse_button_released_unique(game->input_system, KEY_RIGHT))
-    {
-        targeting_handler_move_unit_targeting(game, Targeting_Direction_Right);
-    }
-    else if (input_is_mouse_button_released_unique(game->input_system, KEY_LEFT))
-    {
-        targeting_handler_move_unit_targeting(game, Targeting_Direction_Left);
-    }
 }
 
 

@@ -13,8 +13,8 @@ typedef struct Tokenkdjhb
 
 void someth()
 {
-    int aa;
-    double bobby;
+    int aa = 0;
+    double bobby = 0;
 
     if (aa == bobby)
     {

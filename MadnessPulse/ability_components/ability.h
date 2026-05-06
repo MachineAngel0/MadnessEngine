@@ -9,15 +9,6 @@
 #include "game_structs.h"
 
 
-
-
-//ability registry
-
-
-
-
-
-
 void ability_add_component(Ability* ability, Ability_Component* component)
 {
     ability->components[ability->component_count] = *component;

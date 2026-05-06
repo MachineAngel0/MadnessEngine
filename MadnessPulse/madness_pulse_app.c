@@ -4,8 +4,8 @@
 #include "madness_pulse_game.h"
 
 
-bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, event_context context);
-bool application_on_event(const event_type code, u32 sender, u32 listener_inst, const event_context context);
+bool application_on_resized(const Event_Type code, String sender, String listener_inst, Event_Data context);
+bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
 
 static Madness_Pulse_Application* app_internal;
@@ -39,8 +39,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     //register events needed for this application
-    event_register(application_core->event_system, EVENT_APP_QUIT, 10, application_on_event);
-    event_register(application_core->event_system, EVENT_APP_RESIZE, 0, application_on_resized);
+    event_register(application_core->event_system, EVENT_APP_QUIT, STRING("application"), application_on_event);
+    event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("application"), application_on_resized);
 
     //start the platform
     platform_startup(
@@ -57,12 +57,17 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               application_core->event_system,
                                               application_core->resource_system);
 
+    //UI
+    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
+
     renderer_plugin->madness_ui = madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
-    //UI
-    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
+
+
+
+
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
                                                                      renderer_plugin->madness_ui,
                                                                      application_core->event_system,
@@ -145,7 +150,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     return true;
 }
 
-bool application_on_event(const event_type code, u32 sender, u32 listener_inst, const event_context context)
+bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context)
 {
     switch (code)
     {
@@ -157,12 +162,12 @@ bool application_on_event(const event_type code, u32 sender, u32 listener_inst, 
     return false;
 }
 
-bool application_on_resized(const event_type code, u32 sender, u32 listener_inst, const event_context context)
+bool application_on_resized(const Event_Type code, String sender, String listener_inst, const Event_Data context)
 {
     if (code == EVENT_APP_RESIZE)
     {
-        u16 width = context.data.u16[0];
-        u16 height = context.data.u16[1];
+        u16 width = context.data.event_data_window_resize.width;
+        u16 height = context.data.event_data_window_resize.height;
         // Check if different. If so, trigger a resize event.
 
 

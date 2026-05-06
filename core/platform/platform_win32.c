@@ -227,8 +227,8 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         // Notify the OS that erasing will be handled by the application to prevent flicker.
         return 1;
     case WM_CLOSE:
-        event_context data = {};
-        event_fire(input_system->event_system_reference, EVENT_APP_QUIT, 0, data);
+        Event_Data data = {};
+        event_fire(input_system->event_system_reference, EVENT_APP_QUIT, STRING("win32 platform"), data);
         return true;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -241,10 +241,10 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             u32 height = r.bottom - r.top;
             // Fire the event. The application layer should pick this up, but not handle it
             // as it shouldn't be visible to other parts of the application.
-            event_context context;
-            context.data.u16[0] = (u16)width;
-            context.data.u16[1] = (u16)height;
-            event_fire(input_system->event_system_reference, EVENT_APP_RESIZE, 0, context);
+            Event_Data context;
+            context.data.event_data_window_resize.width = (u16)width;
+            context.data.event_data_window_resize.height = (u16)height;
+            event_fire(input_system->event_system_reference, EVENT_APP_RESIZE, STRING("win32 platform"), context);
         }
         break;
     case WM_KEYDOWN:

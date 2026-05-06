@@ -2,7 +2,6 @@
 #define ABILITIES_REGISTRY_H
 
 
-#include "asserts.h"
 #include "game_structs.h"
 #include "hash_set.h"
 
@@ -44,7 +43,12 @@ Ability_Info* ability_registry_get_new_ability_info(Ability_Registry* ability_re
 
 Ability* ability_registry_get_ability(Ability_Registry* ability_registry, Ability_Name name_query)
 {
-    UNIMPLEMENTED();
+    if (ability_registry_does_ability_exist(ability_registry, name_query))
+    {
+        return &ability_registry->ability_list[name_query];
+    }
+    MASSERT(false);
+    return NULL;
 }
 
 Ability_Info ability_registry_get_ability_info(Ability_Registry* ability_registry, Ability_Name name_query)

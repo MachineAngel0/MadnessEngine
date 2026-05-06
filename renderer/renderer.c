@@ -14,7 +14,7 @@
 #include "pipelines/sprite_render.h"
 
 //finally works, TODO: whatever the fuck the renderer needs from other applications
-bool renderer_on_key(const event_type code, u32 sender, u32 listener_inst, event_context context)
+bool renderer_on_key(const Event_Type code, String sender, String listener_inst, Event_Data context)
 {
     /*
     if (code == EVENT_KEY_RELEASED)
@@ -50,7 +50,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     renderer->resource_system = resource_system; //reference
 
-    event_register(event_system, EVENT_KEY_RELEASED, 0, renderer_on_key);
+    event_register(event_system, EVENT_KEY_RELEASED,  STRING("RENDERER"), renderer_on_key);
 
 
     //set up memory for the renderer

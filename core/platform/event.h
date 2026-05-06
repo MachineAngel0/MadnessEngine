@@ -2,17 +2,16 @@
 #define EVENT_H
 
 #include "allocator.h"
-#include "../dsa/array.h"
+#include "darray.h"
 #include "memory_system.h"
+#include "ring_queue.h"
 
 
-typedef enum event_type
+typedef enum Event_Type
 {
     EVENT_APP_QUIT,
     EVENT_APP_RESIZE,
     EVENT_HOT_RELOAD,
-    EVENT_TEST,
-    EVENT_TEST2,
 
     //INPUT
     EVENT_KEY_PRESSED,
@@ -30,64 +29,116 @@ typedef enum event_type
     EVENT_HOT_RELOAD_SHADER,
 
 
-
+    EVENT_TEST,
     MAX_EVENTS,
-} event_type;
+} Event_Type;
 
-typedef struct event_context
+
+typedef struct Event_Data_Test
+{
+    bool yes;
+    u32 numbers;
+    String words;
+} Event_Data_Test;
+
+
+typedef struct Event_Data_Quit
+{
+    bool quit;
+} Event_Data_Quit;
+
+typedef struct Event_Data_Window_Resize
+{
+    int width;
+    int height;
+} Event_Data_Window_Resize;
+
+typedef struct Event_Data_Input_KEY
+{
+    // keys key;
+    u16 key;
+} Event_Data_Input_KEY;
+
+typedef struct Event_Data_Input_Mouse_Movement
+{
+    // keys key;
+    u16 x;
+    u16 y;
+} Event_Data_Input_Mouse_Movement;
+
+typedef struct Event_Data_Input_Mouse_Wheel
+{
+    // keys key;
+    u16 z_delta;
+} Event_Data_Input_Mouse_Wheel;
+
+typedef struct Event_Data_Input_Button
+{
+    // keys key;
+    u16 button;
+} Event_Data_Input_Button;
+
+typedef struct Event_Data_Gamepad_Button
+{
+    // keys key;
+    u32 button;
+} Event_Data_Gamepad_Button;
+
+typedef struct Event_Data
 {
     //TODO: just use a proper struct type for the union data, we are not writing a generic engine anyway
     // https://www.youtube.com/watch?v=_LB_wjvTJD0
     // 128 bytes
     union
     {
-        int64_t i64[2];
-        uint64_t u64[2];
-        double f64[2];
-
-        int32_t i32[4];
-        uint32_t u32[4];
-        float f32[4];
-
-        int16_t i16[8];
-        uint16_t u16[8];
-
-        int8_t i8[16];
-        uint8_t u8[16];
-
-        char c[16];
+        Event_Data_Test event_data_test;
+        Event_Data_Quit event_data_quit;
+        Event_Data_Window_Resize event_data_window_resize;
+        Event_Data_Input_KEY event_data_input_key;
+        Event_Data_Input_Mouse_Movement event_data_input_mouse_movement;
+        Event_Data_Input_Mouse_Wheel event_data_input_mouse_wheel;
+        Event_Data_Input_Button event_data_input_button;
+        Event_Data_Gamepad_Button event_data_gamepad_button;
     } data;
-} event_context;
+} Event_Data;
+
+typedef struct Event_Queue_Packet
+{
+    Event_Type event;
+    String sender_name;
+    Event_Data context;
+} Event_Queue_Packet;
 
 
 //event code to be implemented by anyone interested
-typedef bool (*on_event)(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
+typedef bool (*event_callback)(Event_Type code, String sender_name, String subscriber_name, Event_Data data);
 
 //someone that sends events
 
 //list of events -> subscribers -> their respective reactions/callbacks
 
 // can be increased
-#define MAX_SUBSCRIBERS 1000 //idk if this is too much per event
+#define INITIAL_SUBSCRIBER_SIZE 10 //idk if this is too much per event
 
-typedef struct subscriber_data
+typedef struct Subscriber_Data
 {
-    //array of senders
-    u32 subscriber_id;
-    on_event callback; //events
-} subscriber_data;
+    String subscriber_name;
+    event_callback callback; //events
+} Subscriber_Data;
 
 
-typedef struct subscriber_list
+typedef struct Subscriber_List
 {
-    Array* subs_arr;
-} subscriber_list;
+    DYNAMIC_ARRAY_TYPE(Subscriber_Data)* subscriber_array;
+} Subscriber_List;
 
 typedef struct Event_System
 {
     //look up table for events
     //the event if the index into the array
-    subscriber_list events_table[MAX_EVENTS];
+    Subscriber_List events_table[MAX_EVENTS];
+
+    RING_QUEUE_TYPE(Event_Queue_Packet)* event_queue; // TODO:
 
     Allocator event_system_arena;
 
@@ -100,18 +151,16 @@ MAPI Event_System* event_init(Memory_System* memory_system);
 
 MAPI bool event_shutdown(Event_System* event_system);
 
-MAPI void event_register(Event_System* event_system, const event_type event, const u32 subscriber, const on_event callback);
+MAPI void event_register(Event_System* event_system, Event_Type event, String subscriber,
+                         event_callback callback);
 
-MAPI void event_unregister(Event_System* event_system, event_type event, u32 subscriber, on_event callback);
+MAPI void event_unregister(Event_System* event_system, Event_Type event, String subscriber, event_callback callback);
 
-MAPI void event_fire(Event_System* event_system, event_type event, u32 sender_id, event_context context);
+MAPI void event_fire(Event_System* event_system, Event_Type event, String sender_name, Event_Data context);
 
-//test functions
-bool test_event(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
-
-bool test_event2(event_type code, u32 sender_id, u32 subscriber_id, event_context data);
-
-void event_test(Event_System* event_system);
+//TODO:
+MAPI void event_queue(Event_System* event_system, Event_Queue_Packet event_queue_packet);
+MAPI void event_flush_queue(Event_System* event_system);
 
 
 #endif //EVENT_H

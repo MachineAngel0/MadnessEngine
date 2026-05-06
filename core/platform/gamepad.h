@@ -102,10 +102,10 @@ u32 gamepad_get_max_player_count(void);
 
 
 
-bool gamepad_button_recieve(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
+bool gamepad_button_recieve(Event_Type code, String sender_id, String subscriber_id, Event_Data data);
 
 
-bool gamepad_button_press(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data);
+bool gamepad_button_press(Event_Type code, String sender_id, String subscriber_id, Event_Data data);
 
 void gamepad_init(Memory_System* memory_system, Event_System* event_system);
 

@@ -70,16 +70,16 @@ u32 gamepad_get_max_player_count(void)
     return XUSER_MAX_COUNT;
 }
 
-bool gamepad_button_recieve(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data)
+bool gamepad_button_recieve(Event_Type code, String sender_id, String subscriber_id, Event_Data data)
 {
-    DEBUG("%s: RELEASED", gamepad_enum_to_string[data.data.u32[0]]);
+    DEBUG("%s: RELEASED", gamepad_enum_to_string[data.data.event_data_gamepad_button.button]);
     return true;
 }
 
 
-bool gamepad_button_press(event_type code, uint32_t sender_id, uint32_t subscriber_id, event_context data)
+bool gamepad_button_press(Event_Type code, String sender_id, String subscriber_id, Event_Data data)
 {
-    DEBUG("%s: PRESSED", gamepad_enum_to_string[data.data.u32[0]]);
+    DEBUG("%s: PRESSED", gamepad_enum_to_string[data.data.event_data_gamepad_button.button]);
     return true;
 }
 
@@ -92,8 +92,8 @@ void gamepad_init(Memory_System* memory_system, Event_System* event_system)
     gamepad.event_system = event_system;
 
 
-    event_register(event_system, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_register(event_system, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+    event_register(event_system, EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
+    event_register(event_system, EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
 }
 
 void gamepad_shutdown(Event_System* event_system)
@@ -102,8 +102,8 @@ void gamepad_shutdown(Event_System* event_system)
     memset(&gamepad, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
 
     //TODO: DEBUG WRAP
-    event_unregister(event_system, EVENT_GAMEPAD_RELEASE, 0, gamepad_button_recieve);
-    event_unregister(event_system, EVENT_GAMEPAD_PRESS, 0, gamepad_button_press);
+    event_unregister(event_system, EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
+    event_unregister(event_system, EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
 }
 
 void gamepad_poll(void)
@@ -188,11 +188,11 @@ void gamepad_poll(void)
                     if (gamepad.gamepad_player_info[controller_index].gamepad_current[i] != gamepad.gamepad_player_info[controller_index].
                         gamepad_previous[i])
                     {
-                        event_context context;
-                        context.data.u32[0] = i; // gamepad enum
+                        Event_Data context;
+                        context.data.event_data_gamepad_button.button = i; // gamepad enum
                         event_fire(gamepad.event_system, gamepad.gamepad_player_info[controller_index].gamepad_current[i]
                                              ? EVENT_GAMEPAD_PRESS
-                                             : EVENT_GAMEPAD_RELEASE, 0, context);
+                                             : EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), context);
                     }
                 }
             }

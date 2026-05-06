@@ -1,8 +1,6 @@
 ﻿#ifndef DARRAY_H
 #define DARRAY_H
 
-#include <stdlib.h>
-#include "unit_test.h"
 #include "allocator_stack.h"
 #include "_allocator_interface.h"
 #include "../memory/memory_tracker.h"
@@ -111,6 +109,7 @@ bool darray_contains_or_add_other(void* array, void* key);
 
 
 #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
+
 
 
 #define darray_contains_or_add_test(array, value)    \
@@ -347,5 +346,112 @@ void inline_macro_testing()
 }
 */
 
+
+#define DYNAMIC_ARRAY_RESIZE_VALUE  2
+#define DYNAMIC_DEFAULT_CAPACITY 1
+
+typedef struct Dynamic_Array
+{
+    Allocator_Interface allocator_interface;
+    u64 capacity; // max elements allowed in the array
+    u32 num_items; // length or top index in our array
+    u32 stride; // size of each void* data
+    void* data;
+
+    //String* type_name; // TODO: for type checking and debugging
+} Dynamic_Array;
+
+#define DYNAMIC_ARRAY_TYPE(type) Dynamic_Array
+
+
+Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Allocator_Interface allocator_interface)
+{
+    Dynamic_Array* array = allocator_interface.alloc(allocator_interface.allocator, sizeof(Dynamic_Array),
+                                                     DEFAULT_ALIGNMENT);
+    array->data = allocator_interface.alloc(allocator_interface.allocator, data_stride * capacity,
+                                            DEFAULT_ALIGNMENT);
+    array->allocator_interface = allocator_interface;
+    array->capacity = capacity;
+    array->stride = data_stride;
+    array->num_items = 0;
+
+    return array;
+}
+
+Dynamic_Array* dynamic_array_free(Dynamic_Array* array)
+{
+    array->allocator_interface.free_memory(array->allocator_interface.allocator, array->data);
+    array->allocator_interface.free_memory(array->allocator_interface.allocator, array);
+    return array;
+}
+
+void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
+{
+    void* new_data = array->allocator_interface.alloc(array->allocator_interface.allocator,
+                                                      new_capacity * array->stride, DEFAULT_ALIGNMENT);
+    memcpy(new_data, array->data, array->capacity);
+    array->allocator_interface.free_memory(array->allocator_interface.allocator, array->data);
+    array->data = new_data;
+    array->capacity = new_capacity;
+}
+
+
+void dynamic_array_push(Dynamic_Array* array, void* data)
+{
+    if (array->num_items >= array->capacity)
+    {
+        dynamic_array_resize(array, array->capacity * 2);
+    }
+
+    memcpy((u8*)array->data + (array->stride * array->num_items), data, array->stride);
+    array->num_items++;
+}
+
+void dynamic_array_pop(Dynamic_Array* array)
+{
+    if (array->num_items <= 0) return;
+    array->num_items--;
+}
+
+
+void dynamic_array_remove_swap(Dynamic_Array* array, u32 index)
+{
+    MASSERT(array)
+    MASSERT(index < array->num_items);
+    if (array->num_items <= 0) return;
+
+    //memcpy the last item into the removal spot
+    memcpy((u8*)array->data + (array->stride * index),
+           (u8*)array->data + (array->num_items - 1),
+           array->stride);
+    //minus one cause num_items always points to a free spot/ or nothing if full
+    array->num_items--;
+}
+
+void* _dynamic_array_get(Dynamic_Array* array, u32 index)
+{
+    MASSERT(index < array->num_items)
+
+    return ((u8*)array->data + (index * array->stride));
+}
+
+void dynamic_array_set(Dynamic_Array* array, void* data, u32 index)
+{
+    MASSERT(array)
+    MASSERT(data)
+    MASSERT(index < array->num_items)
+
+    memcpy((u8*)array->data + (array->stride * index), data, array->stride);
+}
+
+void dynamic_array_clear(Dynamic_Array* array)
+{
+    array->num_items = 0;
+}
+
+#define dynamic_array_create(type, initial_capacity, allocator_interface) \
+        _dynamic_array_create(sizeof(type), initial_capacity, allocator_interface);
+#define dynamic_array_get(arr, type, index)\
+        (*(type*)_dynamic_array_get(arr, index))
 
 #endif

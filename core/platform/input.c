@@ -53,9 +53,9 @@ void input_process_key(Input_System* input_system, keys key, bool pressed)
         input_system->keyboard_current.keys[key] = pressed;
 
         // Fire off an event for immediate processing.
-        event_context context;
-        context.data.u16[0] = key;
-        event_fire(input_system->event_system_reference, pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, 0, context);
+        Event_Data context;
+        context.data.event_data_input_key.key = key;
+        event_fire(input_system->event_system_reference, pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, STRING("Input_System"), context);
     }
 }
 
@@ -73,10 +73,10 @@ void input_process_mouse_move(Input_System* input_system, i16 x, i16 y)
         input_system->mouse_current.y = y;
 
         // Fire the event.
-        event_context context;
-        context.data.u16[0] = x;
-        context.data.u16[1] = y;
-        event_fire(input_system->event_system_reference, EVENT_MOUSE_MOVED, 0, context);
+        Event_Data context;
+        context.data.event_data_input_mouse_movement.x = x;
+        context.data.event_data_input_mouse_movement.y = y;
+        event_fire(input_system->event_system_reference, EVENT_MOUSE_MOVED, STRING("Input_System"), context);
     }
 }
 
@@ -87,9 +87,9 @@ void input_process_mouse_wheel(Input_System* input_system, i8 z_delta)
     // FATAL("Z DELTA: %d", z_delta)
     input_system->mouse_current.mouse_wheel_delta = z_delta;
     // Fire the event.
-    event_context context;
-    context.data.u8[0] = z_delta;
-    event_fire(input_system->event_system_reference, EVENT_MOUSE_WHEEL, 0, context);
+    Event_Data context;
+    context.data.event_data_input_mouse_wheel.z_delta = z_delta;
+    event_fire(input_system->event_system_reference, EVENT_MOUSE_WHEEL, STRING("Input_System"), context);
 }
 
 void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed)
@@ -103,9 +103,9 @@ void input_process_mouse_button(Input_System* input_system, mouse_buttons button
         input_system->mouse_current.buttons[button] = pressed;
 
         // Fire off an event for immediate processing.
-        event_context context;
-        context.data.u16[0] = button;
-        event_fire(input_system->event_system_reference, pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, 0, context);
+        Event_Data context;
+        context.data.event_data_input_button.button = button;
+        event_fire(input_system->event_system_reference, pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, STRING("Input_System"), context);
     }
 }
 
