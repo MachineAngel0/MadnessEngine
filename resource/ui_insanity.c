@@ -1,4 +1,4 @@
-﻿#include "insanity_ui.h"
+﻿#include "ui_insanity.h"
 #include "math_lib.h"
 
 
@@ -42,7 +42,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->allocator);
     insanity_ui->padding_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
 
-    insanity_ui->flag_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->allocator);
+    insanity_ui->flag_stack = stack_create(sizeof(UI_Property_Flags), 100, insanity_ui->allocator);
 
     insanity_ui->float_stack = stack_create(sizeof(float), 100, insanity_ui->allocator);
     // insanity_ui->style_stack = stack_create(sizeof(Insanity_UI_Property_Flags), 100, insanity_ui->arena);
@@ -114,7 +114,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
     Insanity_UI_Node_array_zero(insanity_ui->ui_nodes);
     Insanity_UI_Node_array_clear(insanity_ui->ui_nodes);
 
-    Insanity_UI_Property_Flags no_flag = UI_FLAG_NONE;
+    UI_Property_Flags no_flag = UI_FLAG_NONE;
     stack_clear(insanity_ui->flag_stack);
     stack_push(insanity_ui->flag_stack, &no_flag);
 
@@ -160,7 +160,7 @@ void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
 }
 
 
-void insanity_ui_end(Resource_System* resource_system)
+void insanity_ui_end(void)
 {
     MASSERT(insanity_ui);
 
@@ -405,13 +405,13 @@ void insanity_ui_generate_draw(void)
 
     insanity_ui->node_draw_data_array = allocator_alloc(insanity_ui->frame_allocator,
                                                         insanity_ui->ui_nodes->num_items * sizeof(
-                                                            Insanity_UI_Node_Draw_Data));
+                                                            UI_Node_Draw_Data));
     insanity_ui->node_draw_data_array_size = insanity_ui->ui_nodes->num_items;
 
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
         Insanity_UI_Node* node_data = &insanity_ui->ui_nodes->data[i];
-        Insanity_UI_Node_Draw_Data* draw_data = &insanity_ui->node_draw_data_array[i];
+        UI_Node_Draw_Data* draw_data = &insanity_ui->node_draw_data_array[i];
 
         draw_data->ui_flags = node_data->ui_flags;
         draw_data->pos = vec2_div(node_data->pos, insanity_ui->screen_size);
@@ -437,25 +437,25 @@ void insanity_ui_generate_draw(void)
     }
 }
 
-Insanity_UI_Render_Packet insanity_get_render_data()
+UI_Render_Packet insanity_get_render_data()
 {
     // return (Insanity_UI_Render_Packet){.ui_nodes = insanity_ui->node_draw_data_array, .ui_nodes_text = insanity_ui->ui_nodes_text};
-    return (Insanity_UI_Render_Packet){
+    return (UI_Render_Packet){
         .ui_data = insanity_ui->node_draw_data_array,
-        .ui_data_size = insanity_ui->node_draw_data_array_size,
-        .ui_data_bytes = insanity_ui->node_draw_data_array_size * sizeof(Insanity_UI_Node_Draw_Data),
+        .ui_data_count = insanity_ui->node_draw_data_array_size,
+        .ui_data_bytes = insanity_ui->node_draw_data_array_size * sizeof(UI_Node_Draw_Data),
     };
 }
 
-void insanity_ui_push_flags(Insanity_UI_Property_Flags flags)
+void insanity_ui_push_flags(UI_Property_Flags flags)
 {
-    Insanity_UI_Property_Flags flags_t = flags;
+    UI_Property_Flags flags_t = flags;
     stack_push(insanity_ui->flag_stack, &flags_t);
 }
 
-Insanity_UI_Property_Flags insanity_ui_get_flags()
+UI_Property_Flags insanity_ui_get_flags()
 {
-    return *(Insanity_UI_Property_Flags*)stack_peek(insanity_ui->flag_stack);
+    return *(UI_Property_Flags*)stack_peek(insanity_ui->flag_stack);
 }
 
 void insanity_ui_push_pos(vec2 pos)
@@ -705,7 +705,7 @@ void insanity_ui_text()
 {
     // proper screen pos and size
     vec2 base_position = *(vec2*)stack_peek(insanity_ui->pos_stack);
-    Insanity_UI_Property_Flags flags = insanity_ui_get_flags();
+    UI_Property_Flags flags = insanity_ui_get_flags();
     String text = insanity_ui->string_stack;
 
     f32 font_scalar = ((insanity_ui->editor_font_size) / insanity_ui->default_font_size);

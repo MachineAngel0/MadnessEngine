@@ -111,11 +111,11 @@ String* string_duplicate(const String* str)
 }
 
 //creates a new string from the two strings
-String* string_concat(const String* str1, const String* str2)
+String* string_concat(const String* str1, const String* str2, Allocator_Interface allocator_interface)
 {
-    String* out_str = malloc(sizeof(String));
+    String* out_str = allocator_interface.alloc(allocator_interface.allocator, sizeof(String), DEFAULT_ALIGNMENT);
     u64 combined_length = str1->length + str2->length;
-    out_str->chars = (char *) malloc(sizeof(char) * combined_length);
+    out_str->chars = (char *) allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length, DEFAULT_ALIGNMENT);
     memset(out_str->chars, 0, sizeof(char) * combined_length);
 
     out_str->length = combined_length;
@@ -338,6 +338,10 @@ void string_test(void)
 {
     TEST_START("STRING");
 
+    Allocator* string_allocator = malloc(sizeof(Allocator));
+    void* memory_block = malloc(100);
+    allocator_init(string_allocator, memory_block, 100);
+
     String stack_string = STRING("I WAS BORN ON THE STACK, FREED BY IT");
     string_print(&stack_string);
 
@@ -418,7 +422,7 @@ void string_test(void)
 
     const String* str_concat1 = STRING_CREATE("First ");
     const String* str_concat2 = STRING_CREATE("Second");
-    String* str_concat_final = string_concat(str_concat1, str_concat2);
+    String* str_concat_final = string_concat(str_concat1, str_concat2, allocator_inferface_create(string_allocator));
     string_print(str_concat_final);
 
 
@@ -427,7 +431,8 @@ void string_test(void)
     string_print(with_white_space);
     string_print(without_white_space);
 
-
+    free(memory_block);
+    free(string_allocator);
 
     TEST_REPORT("STRING");
 }

@@ -1,5 +1,5 @@
-﻿#ifndef VULKAN_TYPES_H
-#define VULKAN_TYPES_H
+﻿#ifndef VULKAN_STRUCT_TYPES_H
+#define VULKAN_STRUCT_TYPES_H
 
 
 #define VK_CHECK(expr)              \
@@ -10,19 +10,17 @@
 }
 
 
+#include "vulkan_enum_types.h"
 
-#include "../resource/sprite_type.h"
 #include "camera.h"
 #include "../core/dsa/darray.h"
 #include "hash_table.h"
 #include "input.h"
-#include "resource_system.h"
 #include "str.h"
-#include "maths/transforms.h"
 #include "../resource/resource_types.h"
 
-/// HANDLES ///
 
+/// HANDLES ///
 
 
 typedef struct Shader_Handle
@@ -63,18 +61,6 @@ typedef struct Vulkan_Texture
     // vk_image_type image_type;
 } Vulkan_Texture;
 
-
-
-
-typedef enum vulkan_render_pass_state
-{
-    READY,
-    RECORDING,
-    IN_RENDER_PASS,
-    RECORDING_ENDED,
-    SUBMITTED,
-    NOT_ALLOCATED
-} vulkan_render_pass_state;
 
 typedef struct vulkan_renderpass
 {
@@ -174,12 +160,6 @@ typedef struct vulkan_physical_device_queue_family_info
     u32 transfer_family_index;
 } vulkan_physical_device_queue_family_info;
 
-typedef enum vulkan_command_buffer_type
-{
-    COMMAND_BUFFER_TYPE_GRAPHICS,
-    COMMAND_BUFFER_TYPE_TRANSFER,
-    COMMAND_BUFFER_TYPE_COMPUTE,
-} vulkan_command_buffer_type;
 
 typedef struct vulkan_command_buffer
 {
@@ -193,30 +173,6 @@ typedef struct vulkan_shader_stage
     VkShaderModule handle;
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
 } vulkan_shader_stage;
-
-typedef enum Vulkan_Buffer_Type
-{
-    BUFFER_TYPE_INVALID,
-
-    BUFFER_TYPE_VERTEX, // meant to only be used with vkCmdBindVertexBuffers
-    BUFFER_TYPE_INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
-
-    //create this if the storage is bieng used large data
-    BUFFER_TYPE_CPU_STORAGE, // meant to be used in a descriptor set
-    // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
-    BUFFER_TYPE_INDIRECT,
-
-    //idk what these are used for yet, but they will probably be useful later
-    //UNIFORM_TEXEL,
-    //STORAGE_TEXEL,
-
-    //NOTE: TYPES BELOW ARE BUFFERS MEANT TO BE USED UPDATABLE WITHOUT A STAING BUFFER
-
-    //create this if the storage is used for compute or if the data is relatively small and updates every frame, or static/rarely gets updated
-    BUFFER_TYPE_GPU_STORAGE,
-    BUFFER_TYPE_STAGING,
-    BUFFER_TYPE_UNIFORM,
-} Vulkan_Buffer_Type;
 
 
 typedef struct Vulkan_Buffer
@@ -241,6 +197,7 @@ typedef struct vulkan_shader_pipeline
 } vulkan_shader_pipeline;
 
 #define AVAILABLE_TEXTURES 100
+
 typedef struct Shader_System
 {
     Vulkan_Texture textures[MAX_TEXTURE_COUNT];
@@ -259,7 +216,6 @@ typedef struct Shader_System
     u32 max_indexes;
 
     //TODO: ring_queue* texture_delete_queue
-
 } Shader_System;
 
 
@@ -322,8 +278,6 @@ typedef struct vertex_tex
 } vertex_tex;
 
 
-
-
 typedef struct vulkan_bindless_descriptors
 {
     VkDescriptorSetLayout descriptor_set_layout;
@@ -333,15 +287,12 @@ typedef struct vulkan_bindless_descriptors
 } vulkan_bindless_descriptors;
 
 
-
 typedef struct global_descriptor_sets
 {
     vulkan_bindless_descriptors uniform_descriptors;
     vulkan_bindless_descriptors texture_descriptors;
     vulkan_bindless_descriptors storage_descriptors;
 } global_descriptor_sets;
-
-
 
 
 typedef struct vulkan_context
@@ -384,7 +335,6 @@ typedef struct vulkan_context
     vulkan_command_buffer* compute_command_buffer; // darray
 
 
-
     //Semaphores and Fences
     // VkSemaphore* image_available_semaphores; // darray
     // VkSemaphore* queue_complete_semaphores; // darray
@@ -397,8 +347,6 @@ typedef struct vulkan_context
     // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
 } vulkan_context;
-
-
 
 
 typedef struct Directional_Light
@@ -466,16 +414,8 @@ typedef struct Light_System
 
     Buffer_Handle directional_light_staging_buffer_handle;
     Buffer_Handle point_light_staging_buffer_handle;
-
 } Light_System;
 
-typedef enum Render_Mode
-{
-    RENDER_MODE_NONE,
-    RENDER_MODE_NORMAL,
-    RENDER_MODE_LIGHTING,
-    RENDER_MODE_MAX,
-} Render_Mode;
 
 typedef struct global_ubo
 {
@@ -522,7 +462,6 @@ typedef struct global_ubo
 } Global_Ubo;
 
 
-
 typedef struct PipelinePermutation
 {
     //instead of storing every permutation known to man, we just store the ones we are actually going to use
@@ -530,11 +469,7 @@ typedef struct PipelinePermutation
     darray_type(String*) debug_shader_name;
     darray_type(uint32_t*) permutation_keys; // stores the index of all permutations that are in use
     u32 permutations_count;
-
-
-
 } Mesh_Pipeline_Permutations;
-
 
 
 typedef struct Descriptor_System
@@ -549,11 +484,7 @@ typedef struct Descriptor_System
     u32 texture_count;
     u32 storage_count;
     u32 attachment_count;
-
 } Descriptor_System;
-
-
-
 
 
 typedef struct pipeline_cache_file_header
@@ -573,8 +504,6 @@ typedef struct vulkan_pipeline_cache
 {
     VkPipelineCache handle;
 } vulkan_pipeline_cache;
-
-
 
 
 typedef struct UI_Renderer
@@ -604,13 +533,11 @@ typedef struct UI_Renderer
 
 
     u64 draw_count;
-
-}UI_Renderer_Backend;
+} UI_Renderer_Backend;
 
 
 typedef struct Sprite_Backend
 {
-
     u16 sprite_indices[6];
 
     VkIndexType index_type;
@@ -627,27 +554,23 @@ typedef struct Sprite_Backend
 
 
     u64 draw_count;
-
-}Sprite_Renderer;
+} Sprite_Renderer;
 
 
 typedef struct Transform_Renderer
 {
     Buffer_Handle transform_buffer_handle;
     Buffer_Handle transform_staging_buffer_handle;
-}Transform_Renderer;
+} Transform_Renderer;
 
 typedef struct Material_Renderer
 {
-
     Buffer_Handle instance_buffer_handle;
     Buffer_Handle instance_staging_buffer_handle;
 
     Buffer_Handle pbr_buffer_handle;
     Buffer_Handle pbr_staging_buffer_handle;
-
-
-}Material_Renderer;
+} Material_Renderer;
 
 typedef struct Mesh_Renderer
 {
@@ -671,7 +594,6 @@ typedef struct Mesh_Renderer
     Buffer_Handle draw_data_staging_buffer_handle;
 
 
-
     darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
 
     u32 indirect_draw_count;
@@ -681,9 +603,7 @@ typedef struct Mesh_Renderer
     //TODO:
     // Buffer_Handle bone_buffer_handle;
     // Buffer_Handle weights_buffer_handle;
-
-}Mesh_Renderer;
-
+} Mesh_Renderer;
 
 
 typedef struct renderer
@@ -713,11 +633,8 @@ typedef struct renderer
     Descriptor_System* descriptor_system;
 
 
-
     //draw systems
     UI_Renderer_Backend* ui_renderer;
-
-
 
 
     //mesh system
@@ -738,7 +655,6 @@ typedef struct renderer
     VkSemaphoreSubmitInfo transfer_sumbit_signal_semaphore;
 
 
-
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;
 
@@ -749,4 +665,4 @@ typedef struct renderer
 } Renderer;
 
 
-#endif //VULKAN_TYPES_H
+#endif //VULKAN_STRUCT_TYPES_H

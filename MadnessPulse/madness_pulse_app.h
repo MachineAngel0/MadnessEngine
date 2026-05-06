@@ -1,10 +1,6 @@
 ﻿#ifndef MADNESS_PULSE_APP_H
 #define MADNESS_PULSE_APP_H
 
-
-
-
-
 int main()
 {
     Madness_Pulse_Application madness_pulse_app = {0};

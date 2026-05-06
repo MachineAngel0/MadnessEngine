@@ -53,10 +53,10 @@ bool editor_app_run(Editor_Application* editor_app)
 
 
     //register events needed for this application
-    event_register(application_core->event_system, EVENT_APP_QUIT, 10, application_on_event);
-    event_register(application_core->event_system, EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(application_core->event_system, EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(application_core->event_system, EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(application_core->event_system, EVENT_APP_QUIT, STRING("Application"), application_on_event);
+    event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("Application"), application_on_resized);
+    event_register(application_core->event_system, EVENT_KEY_RELEASED, STRING("Application"), application_on_key);
+    event_register(application_core->event_system, EVENT_KEY_PRESSED, STRING("Application"), application_on_key);
 
 
     //start the platform
@@ -142,8 +142,8 @@ bool editor_app_run(Editor_Application* editor_app)
         editor_update(editor_plugin->editor);
 
 
-        madness_ui_end(renderer_plugin->madness_ui, application_core->resource_system);
-        insanity_ui_end(application_core->resource_system);
+        madness_ui_end(renderer_plugin->madness_ui);
+        insanity_ui_end();
 
 
 

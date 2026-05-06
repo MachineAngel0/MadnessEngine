@@ -63,19 +63,19 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_begin_layout(ui, "Main Menu", (vec2){25, 25}, (vec2){50, 50});
+    madness_ui_begin_window(ui, STRING("Main Menu"), (vec2){25, 25}, (vec2){50, 50});
 
 
-    if (madness_button_text(ui, "Load Game", STRING("Load Game")))
+    if (madness_button_text(ui, STRING("Load Game"), STRING("Load Game")))
     {
         //set new state for the load menu and load in menu metadata
         //TODO: for now just loading into the level select
         game->game_state = Game_State_Enum_Level_Select;
     }
-    if (madness_button_text(ui, "Settings", STRING("Settings")))
+    if (madness_button_text(ui, STRING("Settings"), STRING("Settings")))
     {
     }
-    if (madness_button_text(ui, "Quit", STRING("Quit")))
+    if (madness_button_text(ui, STRING("Quit"), STRING("Quit")))
     {
         Event_Data data = {0};
         event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game"), data);
@@ -86,28 +86,28 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_begin_layout(ui, "Level Select", (vec2){25, 25}, (vec2){50, 50});
+    madness_ui_begin_window(ui, STRING("Level Select"), (vec2){25, 25}, (vec2){50, 50});
     static scroll_box_state scroll_state;
     scroll_state.max_nodes_to_display = 10;
-    madness_scroll_box_begin(game->madness_ui, "level select", &scroll_state);
+    madness_scroll_box_begin(game->madness_ui, STRING("level select"), &scroll_state);
     {
         for (int i = 0; i < 30; i++)
         {
             char buffer[100];
             sprintf(buffer, "Level %d", i);
-            if (madness_button_text(ui, buffer, STRING(buffer)))
+            if (madness_button_text(ui, STRING(buffer), STRING(buffer)))
             {
                 //TODO: load the level based on the number
-                return;
+                DEBUG("Level Seleced: %d", i);
             }
         }
     }
-    madness_scroll_box_end(game->madness_ui, "level select", &scroll_state);
+    madness_scroll_box_end(game->madness_ui, STRING("level select"), &scroll_state);
 }
 
 
 void madness_pulse_ability_select(Madness_Pulse_Game* game)
 {
     Madness_UI* ui = game->madness_ui;
-    madness_ui_begin_layout(ui, "Ability Select", (vec2){25, 25}, (vec2){50, 50});
+    madness_ui_begin_window(ui,  STRING("Ability Select"), (vec2){25, 25}, (vec2){50, 50});
 }

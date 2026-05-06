@@ -1,7 +1,7 @@
 ﻿#ifndef VK_DESCRIPTOR_H
 #define VK_DESCRIPTOR_H
 
-#include "vulkan_types.h"
+#include "vulkan_enum_types.h"
 
 
 typedef enum Descriptor_Type

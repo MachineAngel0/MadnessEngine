@@ -13,6 +13,11 @@
 #include "renderer/build_renderer.h"
 #include "renderer/build_renderer.c"
 
+
+//EDITOR
+#include "build_editor.h"
+#include "build_editor.c"
+
 //GAME
 #include "build_madness.h"
 #include "build_madness.c"

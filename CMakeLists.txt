@@ -203,25 +203,26 @@ if (MINGW)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
 endif ()
 
+
 #BUILDS SHADERS TO SPIRV BEFORE BUILD
-foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
-    if (WIN32)
-        add_custom_command(TARGET ${tgt} PRE_BUILD
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
-                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.bat  # or .bat on Windows
-                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.bat # or .bat on Windows
-                COMMENT "BUILDING SHADERS SCRIPT"
-        )
-    endif ()
-    #TODO: linux version
-    if (UNIX)
+#foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+#    if (WIN32)
+#        add_custom_command(TARGET ${tgt} PRE_BUILD
+#                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
+#                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.bat  # or .bat on Windows
+#                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.bat # or .bat on Windows
+#                COMMENT "BUILDING SHADERS SCRIPT"
+#        )
+#    endif ()
+#    TODO: linux version
+#    if (UNIX)
 #        add_custom_command(TARGET ${tgt} PRE_BUILD
 #                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/renderer/shaders
 #                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/compile_shaders.sh  # or .bat on Windows
 #                COMMAND ${CMAKE_SOURCE_DIR}/renderer/shaders/disassemble_spriv.sh # or .bat on Windows
 #                COMMENT "BUILDING SHADERS SCRIPT"
 #        )
-    endif ()
-endforeach ()
+#    endif ()
+#endforeach ()
 
 

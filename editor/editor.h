@@ -2,18 +2,20 @@
 #define MADNESSENGINE_EDITOR_H
 #include <stdbool.h>
 
-#include "UI.h"
-#include "vulkan_types.h"
+#include "../resource/ui_madness.h"
 #include "memory/memory_system.h"
 
 typedef enum Editor_UI_State
 {
     EDITOR_UI_STATE_DEBUG,
     EDITOR_UI_STATE_SCENE,
+    EDITOR_UI_STATE_TEXTURE_VIEWER,
     EDITOR_UI_STATE_MATERIAL,
-    EDITOR_UI_STATE_UI_TEST,
+    EDITOR_UI_STATE_INSANITY_UI_TEST,
+    EDITOR_UI_STATE_MADNESS_UI_TEST,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
+
 
 typedef struct Editor
 {
@@ -41,6 +43,7 @@ void editor_ui(Editor* editor);
 void editor_ui_debug(Editor* editor);
 void editor_ui_scene(Editor* editor);
 void editor_material_nodes(Editor* editor);
+void editor_texture_view(Editor* editor);
 
 
 

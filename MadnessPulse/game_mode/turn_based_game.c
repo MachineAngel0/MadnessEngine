@@ -122,9 +122,7 @@ void turn_based_game_init(Madness_Pulse_Game* game)
     //
     create_starting_abilties(&game->players[0].inventory_component, game->ability_registry);
 
-
-
-    turn_start(game);
+    game->turn_phase = Turn_Phase_Turn_Start;
 }
 
 
@@ -257,14 +255,17 @@ void turn_end(Madness_Pulse_Game* game)
 
 void turn_update(Madness_Pulse_Game* game)
 {
-
     switch (game->turn_phase)
     {
     case Turn_Phase_None:
+        turn_based_game_init(game);
         break;
-    case Turn_Phase_TurnStart:
+    case Turn_Phase_Turn_Start:
+        turn_start(game);
         break;
     case Turn_Phase_Ability_Selection:
+
+        //show the player their ui and handle any inputs
         Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
 
         for (int i = 0; i < unit->inventory_component.battle_list_size; ++i)
@@ -273,19 +274,23 @@ void turn_update(Madness_Pulse_Game* game)
             string_println(&ability_name);
         }
         break;
-    case Turn_Phase_TargetSelection:
+    case Turn_Phase_Target_Select:
         if (input_is_mouse_button_released_unique(game->input_system, KEY_RIGHT))
         {
             targeting_handler_move_unit_targeting(game, Targeting_Direction_Right);
         }
-        else if (input_is_mouse_button_released_unique(game->input_system, KEY_LEFT))
+        if (input_is_mouse_button_released_unique(game->input_system, KEY_LEFT))
         {
             targeting_handler_move_unit_targeting(game, Targeting_Direction_Left);
         }
+        if (input_is_mouse_button_released_unique(game->input_system, KEY_C))
+        {
+            //process our ability
+        }
         break;
-    case Turn_Phase_AbilityProcessing:
+    case Turn_Phase_Ability_Process:
         break;
-    case Turn_Phase_QueueProcessing:
+    case Turn_Phase_Queue_Process:
         break;
     case Turn_Phase_Turn_End:
         break;
@@ -295,11 +300,9 @@ void turn_update(Madness_Pulse_Game* game)
         break;
     case Turn_Phase_Event:
         break;
-    case Turn_Phase_BattleOver:
+    case Turn_Phase_Battle_Over:
         break;
     }
-
-
 
 }
 

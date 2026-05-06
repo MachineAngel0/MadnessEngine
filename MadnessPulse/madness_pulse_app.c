@@ -58,14 +58,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               application_core->resource_system);
 
     //UI
-    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
+    insanity_ui_init(&application_core->memory_system, application_core->input_system,
+                     application_core->resource_system);
 
     renderer_plugin->madness_ui = madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
                                                   application_core->resource_system);
-
-
-
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
@@ -74,13 +72,21 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                                      application_core->input_system,
                                                                      application_core->resource_system);
 
-    // ability_testing();
-    turn_based_game_init(madness_pulse_game);
-
+    Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
+                                 renderer_plugin->madness_ui, application_core->resource_system);
 
     //MAIN LOOP
 
     clock_start(&application_core->clock);
+
+    typedef enum DEBUG_APP_STATE
+    {
+        DEBUG_APP_STATE_GAME,
+        DEBUG_APP_STATE_EDITOR,
+        DEBUG_APP_STATE_MAX,
+    } DEBUG_APP_STATE;
+
+    DEBUG_APP_STATE debug_game_mode = DEBUG_APP_STATE_EDITOR;
 
 
     while (application_core->is_running)
@@ -103,16 +109,41 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
         madness_ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                          renderer_plugin->renderer->context.framebuffer_height_new);
+        insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
+                          renderer_plugin->renderer->context.framebuffer_height_new);
+
+        //game and editor switch between
+        if (input_key_released_unique(application_core->input_system, KEY_TAB))
+        {
+            debug_game_mode = (debug_game_mode + 1) % (DEBUG_APP_STATE_MAX);
+        }
+        switch (debug_game_mode)
+        {
+        case DEBUG_APP_STATE_GAME:
+            madness_pulse_game_update(madness_pulse_game, application_core->clock.delta_time);
+            break;
+        case DEBUG_APP_STATE_EDITOR:
+            editor_update(editor);
+            break;
+        case DEBUG_APP_STATE_MAX:
+            FATAL("DEBUG GAME STATE should not be here");
+            break;
+        }
 
 
-        //game
-        madness_pulse_game_update(madness_pulse_game, application_core->clock.delta_time);
+        insanity_ui_push_size((vec2){0.5, 0.5});
 
-
-        madness_ui_end(renderer_plugin->madness_ui, application_core->resource_system);
+        madness_ui_end(renderer_plugin->madness_ui);
+        insanity_ui_end();
 
         //render packet
         resource_system_update_and_create_render_packet(application_core->resource_system);
+
+        application_core->resource_system->render_packet->ui_data_packet.ui_render_packet =
+            madness_ui_get_ui_render_data(renderer_plugin->madness_ui);
+        application_core->resource_system->render_packet->ui_data_packet.text_render_packet =
+            madness_ui_get_text_render_data(renderer_plugin->madness_ui);
+
         //render
         renderer_update(renderer_plugin->renderer,
                         application_core->clock.delta_time);
@@ -126,8 +157,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //NOTE: (go in reverse order)
 
     //look at memory before shutdown
+
     memory_tracker_system_print_all_memory_usage(application_core->memory_system.memory_tracker_system);
 
+    editor_shutdown(editor);
     madness_pulse_game_shutdown(madness_pulse_game, &application_core->memory_system);
 
 

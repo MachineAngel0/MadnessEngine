@@ -48,7 +48,6 @@ bool resource_system_update_and_create_render_packet(Resource_System* resource_s
 bool resource_system_generate_render_packet(Resource_System* resource_system)
 {
     sprite_system_generate_render_packet(resource_system->sprite_system,
-                                         &resource_system->render_packet->ui_data_packet,
                                          &resource_system->render_packet->sprite_data_packet);
 
     mesh_system_generate_render_packet(resource_system->mesh_system, &resource_system->render_packet->mesh_data_packet);

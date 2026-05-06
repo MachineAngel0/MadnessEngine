@@ -4,7 +4,7 @@
 #include "allocator.h"
 #include "stack.h"
 #include "str_builder.h"
-
+#include "ui_types.h"
 
 //IMMEDIATE MODE UI
 
@@ -43,38 +43,6 @@ typedef enum Insanity_UI_Alignment
 } Insanity_UI_Alignment;
 
 
-typedef enum Insanity_UI_Property_Flags
-{
-    UI_FLAG_NONE = BITFLAG(0),
-    UI_FLAG_BACKGROUND = BITFLAG(1),
-    UI_FLAG_CLICKABLE = BITFLAG(2),
-    UI_FLAG_IMAGE = BITFLAG(3),
-    UI_FLAG_TEXT = BITFLAG(4),
-    UI_FLAG_OUTLINE = BITFLAG(5),
-    UI_FLAG_SCROLL_VIEW = BITFLAG(6),
-    UI_FLAG_COLOR = BITFLAG(7), // this is kinda implied all the time
-    UI_FLAG_DRAGGABLE = BITFLAG(8), //NOTE: child elements are not draggable, only a root parent is draggable
-    UI_FLAG_ROUND_CORNER = BITFLAG(9),
-    UI_FLAG_CIRCLE = BITFLAG(10),
-    UI_FLAG_SCROLL_FLOAT = BITFLAG(11),
-    UI_FLAG_TEXT_INPUT = BITFLAG(12),
-    UI_FLAG_PRESSED = BITFLAG(13), //for handling states in which the item should have a different color if its in the selected state
-    // UI_FLAG_ = BITFLAG(14),
-    // UI_FLAG_ = BITFLAG(15),
-    // UI_FLAG_ = BITFLAG(16),
-} Insanity_UI_Property_Flags;
-
-typedef enum Insanity_UI_Interaction_Event
-{
-    UI_EVENT_HOVER = BITFLAG(0),
-    UI_EVENT_CLICK = BITFLAG(1),
-    UI_EVENT_DRAG = BITFLAG(2),
-    UI_EVENT_SCROLL = BITFLAG(3),
-    UI_EVENT_TEXT_INPUT = BITFLAG(4),
-    UI_EVENT_KEYBOARD = BITFLAG(5),
-    UI_EVENT_CONTROLLER = BITFLAG(6),
-    UI_EVENT_FLOAT_CHANGE = BITFLAG(7),
-} Insanity_UI_Interaction_Event;
 
 typedef struct Insanity_UI_Interaction_Result
 {
@@ -128,7 +96,7 @@ typedef struct Insanity_UI_Editor_Style
 
 typedef struct Insanity_UI_Node
 {
-    Insanity_UI_Property_Flags ui_flags;
+    UI_Property_Flags ui_flags;
 
     // screen size and pos, not normalized
     vec2 pos;
@@ -171,52 +139,16 @@ typedef struct Insanity_UI_Node
     Insanity_UI_Layout layout;
 
 
-
 } Insanity_UI_Node;
 
 
 
 ARRAY_GENERATE_TYPE(Insanity_UI_Node)
 
-typedef struct Insanity_UI_Node_Draw_Data
-{
-    Insanity_UI_Property_Flags ui_flags;
-
-    // screen size and pos, not normalized
-    vec2 pos;
-    vec2 size;
-    float rotation; // degrees, but gets converted to radians at draw time
-
-    //rounded
-    float rounded_radius; // 0-1 range
-
-    //outline
-    vec3 outline_color;
-    float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
 
 
-    //for circles
-    float thickness; // size of the circle is determined by the pos and size
-
-    //draw data
-    //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
-    u32 texture_handle;
-    vec2 uv_offset;
-    vec2 uv_size;
-
-    //colors
-    vec3 color;
-    vec3 background_color;
-} Insanity_UI_Node_Draw_Data;
 
 
-typedef struct Insanity_UI_Render_Packet
-{
-    Insanity_UI_Node_Draw_Data* ui_data;
-    u64 ui_data_size;
-    u64 ui_data_bytes;
-
-} Insanity_UI_Render_Packet;
 
 
 //rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
@@ -242,10 +174,10 @@ typedef struct Insanity_UI
     u32 ui_stack_count;
 
 
-    Insanity_UI_Node_Draw_Data* node_draw_data_array;
+    UI_Node_Draw_Data* node_draw_data_array;
     u64 node_draw_data_array_size;
 
-    Insanity_UI_Node_Draw_Data* text_draw_data_array;
+    UI_Node_Draw_Data* text_draw_data_array;
     u64 text_draw_data_array_size;
 
 
@@ -311,9 +243,9 @@ MAPI void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y);
 
 
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
-MAPI void insanity_ui_end(Resource_System* resource_system);
+MAPI void insanity_ui_end(void);
 
-MAPI Insanity_UI_Render_Packet insanity_get_render_data();
+MAPI UI_Render_Packet insanity_get_render_data();
 
 
 //part of the ui end function
@@ -337,7 +269,7 @@ void insanity_ui_pop_parent(void);
 
 //TODO: have the stack never go below 0
 
-MAPI void insanity_ui_push_flags(Insanity_UI_Property_Flags flags);
+MAPI void insanity_ui_push_flags(UI_Property_Flags flags);
 MAPI void insanity_ui_push_pos(vec2 pos);
 MAPI void insanity_ui_push_size(vec2 size);
 
@@ -365,7 +297,7 @@ MAPI void insanity_ui_push_text_float(float val);
 
 
 
-MAPI Insanity_UI_Property_Flags insanity_ui_get_flags();
+MAPI UI_Property_Flags insanity_ui_get_flags();
 MAPI Texture_Handle insanity_ui_get_image(void);
 
 

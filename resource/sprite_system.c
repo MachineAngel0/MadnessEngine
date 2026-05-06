@@ -86,14 +86,9 @@ Sprite_Data* sprite_system_get_text_sprite(Sprite_System* sprite_system)
     return &sprite_system->text_sprite_data->data[sprite_system->text_sprite_data->num_items++];
 }
 
-bool sprite_system_generate_render_packet(Sprite_System* sprite_system, Render_Packet_UI* out_ui_packet,
+bool sprite_system_generate_render_packet(Sprite_System* sprite_system,
                                           Render_Packet_Sprite* out_sprite_packet)
 {
-    out_ui_packet->system_name = "Madness UI";
-    out_ui_packet->text_data_packet = sprite_system->text_sprite_data;
-    out_ui_packet->ui_data_packet = sprite_system->ui_sprite_data;
-    out_ui_packet->ui_index_type = VK_INDEX_TYPE_UINT16;
-    out_ui_packet->text_index_type = VK_INDEX_TYPE_UINT16;
 
     out_sprite_packet->system_name = "Sprite System";
     out_sprite_packet->sprite_data = sprite_system->sprites_data;

@@ -81,14 +81,19 @@ typedef struct UI_Node
     //for circles
     float thickness;
 
-    const char* debug_id;
+    String string_id;
     u64 hash_id;
 
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     vec3 color;
+    UI_Property_Flags flags;
+
     Texture_Handle texture_handle;
-    Sprite_Flags flags;
+    // offset into a texture atlas if using one, otherwise {0, 0}
+    vec2 uv_offset;
+    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
+    vec2 uv_size;
 
 
     //TODO: for widgets that need some sort of child node, like a scroll box
@@ -105,7 +110,7 @@ typedef struct UI_Node_Text
 
     vec3 color;
     Texture_Handle texture_handle;
-    Sprite_Flags flags;
+    UI_Property_Flags flags;
 
     // offset into a texture atlas if using one, otherwise {0, 0}
     vec2 uv_offset;
@@ -143,15 +148,7 @@ typedef struct active_scroll_box_state
 } Parent_Node_State;
 
 
-typedef struct
-{
-    vec2* pos;
-    vec3* color;
-    //there is an interesting optimization given that all UI's are squares
-    VkDrawIndexedIndirectCommand* indirect_draw_array;
-} UI_Draw_data_new;
-
-//rn this is purely a ui for the editor, in game ui is for another time, when the game comes along
+//meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
 {
     Allocator* allocator; // rn mainly just for loading fonts, would be better as a pool arena
@@ -169,7 +166,15 @@ typedef struct Madness_UI
 
     UI_Node_array* ui_nodes;
     UI_Node_Text_array* ui_nodes_text;
-    // UI_Node_array* button_nodes; //TODO: we will see
+
+    //DRAW DATA //
+    UI_Node_Draw_Data* ui_draw_data;
+    u64 ui_draw_data_count;
+
+    UI_Node_Draw_Data* text_draw_data;
+    u64 text_draw_data_count;
+
+
 
     int hot;
     int active;
@@ -248,38 +253,43 @@ MAPI bool madness_ui_shutdown(Madness_UI* madness_ui);
 //pass in the size every frame, in the event the size changes
 MAPI void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
-MAPI void madness_ui_end(Madness_UI* madness_ui, Resource_System* resource_system);
+MAPI void madness_ui_end(Madness_UI* madness_ui);
+
+//must be retrieved after madness_ui_end
+MAPI UI_Render_Packet madness_ui_get_ui_render_data(Madness_UI* madness_ui);
+MAPI UI_Render_Packet madness_ui_get_text_render_data(Madness_UI* madness_ui);
 
 //API START (besides init/shutdown, begin/end)
 //TODO: drag the layout around
-MAPI void madness_ui_begin_layout(Madness_UI* madness_ui, const char* id, vec2 pos, vec2 size);
+MAPI void madness_ui_begin_window(Madness_UI* madness_ui, String header_name, vec2 pos, vec2 size);
 
 MAPI void madness_set_layout_direction(Madness_UI* madness_ui, UI_Layout_Direction layout_direction);
 
-MAPI bool madness_button(Madness_UI* madness_ui, const char* id);
-MAPI void madness_text(Madness_UI* madness_ui, const char* id, String text);
+MAPI bool madness_button(Madness_UI* madness_ui, String id);
+MAPI void madness_text(Madness_UI* madness_ui, String id, String text);
 
-MAPI bool madness_button_text(Madness_UI* madness_ui, const char* id, String text);
-MAPI bool madness_check_box(Madness_UI* madness_ui, const char* id, String text, bool* check_box_state);
+MAPI bool madness_button_text(Madness_UI* madness_ui, String id, String text);
+MAPI bool madness_check_box(Madness_UI* madness_ui, String id, String text, bool* check_box_state);
 
-MAPI void madness_icon(Madness_UI* madness_ui, const char* id, const char* icon_path);
+MAPI void madness_icon(Madness_UI* madness_ui, String id, const char* icon_path);
 
-MAPI void madness_slider_scroll(Madness_UI* madness_ui, const char* id, float* slider_val, float min, float max);
-MAPI void madness_slider_arrow(Madness_UI* madness_ui, const char* id, float* slider_val, float min, float max);
+MAPI void madness_slider_scroll(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
+//TODO: might get rid of the arrow version
+MAPI void madness_slider_arrow(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
 
-MAPI void madness_text_box(Madness_UI* madness_ui, const char* id);
+MAPI void madness_text_box(Madness_UI* madness_ui, String id);
 
-MAPI bool madness_ui_float(Madness_UI* madness_ui, const char* id, float* f, float increment_value);
-MAPI bool madness_ui_vec2(Madness_UI* madness_ui, const char* id, String text, vec2* v2, float increment_value);
-MAPI bool madness_ui_vec3(Madness_UI* madness_ui, const char* id, String text, vec3* v3, float increment_value);
+MAPI bool madness_ui_float(Madness_UI* madness_ui, String id, float* f, float increment_value);
+MAPI bool madness_ui_vec2(Madness_UI* madness_ui, String id, String text, vec2* v2, float increment_value);
+MAPI bool madness_ui_vec3(Madness_UI* madness_ui, String id, String text, vec3* v3, float increment_value);
 
 
-MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, const char* id, vec3* color_value);
+MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String id, vec3* color_value);
 
-MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
-MAPI void madness_scroll_box_end(Madness_UI* madness_ui, const char* id, scroll_box_state* scroll_box_state);
+MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, String id, scroll_box_state* scroll_box_state);
+MAPI void madness_scroll_box_end(Madness_UI* madness_ui, String id, scroll_box_state* scroll_box_state);
 
-MAPI bool madness_ui_circle(Madness_UI* madness_ui, const char* id, float* thickness);
+MAPI bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness);
 
 
 typedef struct Material_Link
@@ -319,14 +329,14 @@ typedef struct Material_Node
 // might need some additional state, just cause, the node draw order could be random,
 // and we will have no idea, if on a release, we are hovering over another node
 
-MAPI bool madness_ui_node_simple(Madness_UI* madness_ui, const char* id, vec2 pos, String inputs[], u8 input_size,
+MAPI bool madness_ui_node_simple(Madness_UI* madness_ui, String id, vec2 pos, String inputs[], u8 input_size,
                                  String outputs[], u8 output_size, u32 node_id);
 
-MAPI bool madness_ui_node_complex(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
-                          u8 output_size);
+MAPI bool madness_ui_node_complex(Madness_UI* madness_ui, String id, String inputs[], u8 input_size, String outputs[],
+                                  u8 output_size);
 
 
-MAPI bool madness_ui_node(Madness_UI* madness_ui, const char* id, String inputs[], u8 input_size, String outputs[],
+MAPI bool madness_ui_node(Madness_UI* madness_ui, String id, String inputs[], u8 input_size, String outputs[],
                           u8 output_size);
 
 MAPI bool madness_ui_drag_test(Madness_UI* madness_ui, vec2* pos);
@@ -341,7 +351,7 @@ MAPI bool madness_ui_cubic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2
 
 
 //these is only meant for internal use and not part of the API
-MAPI void madness_draw_quad(Madness_UI* madness_ui, const char* id, vec2* out_pos, vec2* out_size, UI_Node** out_node);
+MAPI void madness_draw_quad(Madness_UI* madness_ui, String id, vec2* out_pos, vec2* out_size, UI_Node** out_node);
 MAPI void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position);
 MAPI void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
 MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
@@ -354,6 +364,7 @@ MAPI bool skip_node(Madness_UI* madness_ui);
 MAPI void madness_ui_print_state(Madness_UI* madness_ui);
 
 MAPI void madness_ui_test(Madness_UI* madness_ui);
+MAPI void madness_ui_test_new(Madness_UI* madness_ui);
 
 
 //utility
@@ -399,6 +410,9 @@ MAPI bool can_be_active(Madness_UI* madness_ui);
 MAPI bool is_active(Madness_UI* madness_ui, int id);
 
 MAPI bool is_hot(Madness_UI* madness_ui, int id);
+
+
+
 
 
 

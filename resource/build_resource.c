@@ -8,4 +8,5 @@
 #include "mesh_system.c"
 #include "material_system.c"
 #include "shader_creation_system.c"
-#include "insanity_ui.c"
+#include "ui_insanity.c"
+#include "ui_madness.c"

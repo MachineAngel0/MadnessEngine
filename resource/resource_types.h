@@ -4,9 +4,11 @@
 
 #include "material_types.h"
 #include "ring_queue.h"
+#include "sprite_type.h"
 #include "stb_image.h"
 #include "stb_truetype.h"
 #include "transforms.h"
+#include "ui_types.h"
 
 
 /// HANDLES ///
@@ -548,14 +550,10 @@ typedef struct Render_Packet_Material
 
 typedef struct Render_Packet_UI
 {
-    const char* system_name;
-    Sprite_Data_array* ui_data_packet;
-    VkIndexType ui_index_type;
-
-    Sprite_Data_array* text_data_packet;
-    VkIndexType text_index_type;
-
+    UI_Render_Packet ui_render_packet;
+    UI_Render_Packet text_render_packet;
 } Render_Packet_UI;
+
 
 typedef struct Render_Packet_Sprite
 {

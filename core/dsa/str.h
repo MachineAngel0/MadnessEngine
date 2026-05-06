@@ -60,7 +60,7 @@ bool str_is_empty(const String* str);
 String* string_duplicate(const String* str);
 
 //creates a new string from the two strings
-String* string_concat(const String* str1, const String* str2);
+String* string_concat(const String* str1, const String* str2, Allocator_Interface allocator_interface);
 
 
 String* string_strip_whitespace(String* str);

@@ -10,4 +10,5 @@
 #include "mesh_system.h"
 #include "material_system.h"
 #include "shader_creation_system.h"
-#include "insanity_ui.h"
+#include "ui_insanity.h"
+#include "ui_madness.h"

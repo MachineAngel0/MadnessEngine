@@ -1,7 +1,7 @@
 ﻿#ifndef TRANSFORM_RENDER_H
 #define TRANSFORM_RENDER_H
 
-#include "../vulkan_types.h"
+#include "../vulkan_enum_types.h"
 
 MAPI Transform_Renderer* transform_renderer_init(Renderer* renderer, Resource_System* resource_system);
 

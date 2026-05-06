@@ -1,6 +1,5 @@
 ﻿#include "editor.h"
 
-#include "../app_types.h"
 #include "memory/memory_system.h"
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui,
@@ -24,7 +23,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     editor->renderer = renderer;
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
-    editor->state = EDITOR_UI_STATE_UI_TEST;
+    editor->state = EDITOR_UI_STATE_SCENE;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
     return editor;
@@ -57,6 +56,9 @@ void editor_ui(Editor* editor)
 
     switch (editor->state)
     {
+    case EDITOR_UI_STATE_MAX:
+        MASSERT(false);
+        break;
     case EDITOR_UI_STATE_DEBUG:
         editor_ui_debug(editor);
         break;
@@ -65,59 +67,60 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_MATERIAL:
         editor_material_nodes(editor);
-
         break;
-    case EDITOR_UI_STATE_UI_TEST:
-        // madness_ui_test(editor->madness_ui);
+    case EDITOR_UI_STATE_TEXTURE_VIEWER:
+        break;
+    case EDITOR_UI_STATE_INSANITY_UI_TEST:
         insanity_ui_test();
-
         break;
-    case EDITOR_UI_STATE_MAX:
+    case EDITOR_UI_STATE_MADNESS_UI_TEST:
+        // madness_ui_test(editor->madness_ui);
+        madness_ui_test_new(editor->madness_ui);
         break;
     }
 }
 
 //testing bezier curves
-static vec2 pos1 = {400,400};
-static vec2 pos2 = {500,600};
-static vec2 pos3 = {500,100};
-static vec2 pos4 = {600,150};
+static vec2 pos1 = {400, 400};
+static vec2 pos2 = {500, 600};
+static vec2 pos3 = {500, 100};
+static vec2 pos4 = {600, 150};
 
 void editor_ui_debug(Editor* editor)
 {
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_begin_layout(madness_ui, "Madness Editor", (vec2){5, 5}, (vec2){20, 90});
+    madness_ui_begin_window(madness_ui, STRING("Madness Editor"), (vec2){5, 5}, (vec2){20, 90});
 
-    if (madness_button_text(madness_ui, "Editor Button", STRING("Editor Button GO BRRR")))
+    if (madness_button_text(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
     {
         FATAL("DO A BARREL ROLL");
     };
 
-    if (madness_ui_vec3(madness_ui, "pos", STRING("pos"), &editor->resource_system->scene->transforms[0].position,
+    if (madness_ui_vec3(madness_ui, STRING("pos"), STRING("pos"), &editor->resource_system->scene->transforms[0].position,
                         1.0f))
     {
         transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
     }
-    if (madness_ui_vec3(madness_ui, "scale", STRING("scale"), &editor->resource_system->scene->transforms[0].scale,
+    if (madness_ui_vec3(madness_ui, STRING("scale"), STRING("scale"), &editor->resource_system->scene->transforms[0].scale,
                         1.0f))
     {
         transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
     }
     // madness_ui_vec3(madness_ui, "pos", STRING("translate"), &translate, 1.0f);
 
-    if (madness_button_text(madness_ui, "button", STRING("translate by 1")))
+    if (madness_button_text(madness_ui, STRING("button"), STRING("translate by 1")))
     {
         vec3 translate = {1, 1, 1};
         transform_translate(&editor->resource_system->scene->transforms[0], translate);
     }
 
-    if (madness_button_text(madness_ui, "material flags enable", STRING("material flags enable")))
+    if (madness_button_text(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
     {
         material_system_enable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
-    if (madness_button_text(madness_ui, "material flags disable", STRING("material flags disable")))
+    if (madness_button_text(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
     {
         material_system_disable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
@@ -128,12 +131,12 @@ void editor_ui_debug(Editor* editor)
     // transform_rotate(&editor->resource_system->scene->transforms[0], translate);
 
 
-    madness_ui_float(madness_ui, "thickess", &thick, 1.f);
-    madness_ui_circle(madness_ui, "circle", &thick);
+    madness_ui_float(madness_ui, STRING("thickess"), &thick, 1.f);
+    madness_ui_circle(madness_ui, STRING("circle"), &thick);
 
     static f32 rot;
     madness_ui->ui_nodes[0].data->rotation = rot;
-    if (madness_ui_float(madness_ui, "material flags disable", &rot, 15.f))
+    if (madness_ui_float(madness_ui, STRING("material flags disable"), &rot, 15.f))
     {
     }
 
@@ -147,25 +150,25 @@ void editor_ui_scene(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_begin_layout(madness_ui, "Scene", (vec2){5, 5}, (vec2){20, 90});
+    madness_ui_begin_window(madness_ui, STRING("Scene"), (vec2){5, 5}, (vec2){20, 90});
 
     static scroll_box_state scroll_box_state_test;
     scroll_box_state_test.max_nodes_to_display = 10;
-    madness_scroll_box_begin(madness_ui, "Scene Scroll Box", &scroll_box_state_test);
+    madness_scroll_box_begin(madness_ui, STRING("Scene Scroll Box"), &scroll_box_state_test);
 
     for (int i = 0; i < editor->resource_system->scene->transform_count; i++)
     {
         char buffer[50];
         sprintf(buffer, "pos%d", i);
 
-        if (madness_ui_vec3(madness_ui, buffer, STRING(buffer), &editor->resource_system->scene->transforms[i].position,
+        if (madness_ui_vec3(madness_ui, STRING(buffer), STRING(buffer), &editor->resource_system->scene->transforms[i].position,
                             1.0f))
         {
             transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
         }
     }
 
-    madness_scroll_box_end(madness_ui, "Scene Scroll Box", &scroll_box_state_test);
+    madness_scroll_box_end(madness_ui, STRING("Scene Scroll Box"), &scroll_box_state_test);
 }
 
 void editor_material_nodes(Editor* editor)
@@ -173,23 +176,28 @@ void editor_material_nodes(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     String inputs_String[] = {STRING("in1"), STRING("in2")};
     String output_String[] = {STRING("out 1"), STRING("out 2"), STRING("out 3")};
-    madness_ui_node(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,
+    madness_ui_node(madness_ui, STRING("node"), inputs_String, ARRAY_SIZE(inputs_String), output_String,
                     ARRAY_SIZE(output_String));
 
     static vec2 pos;
     madness_ui_drag_test(madness_ui, &pos);
 
     //think of it like a param node
-    madness_ui_node_simple(madness_ui, "node", (vec2){200, 200}, NULL, 0,
+    madness_ui_node_simple(madness_ui, STRING("node"), (vec2){200, 200}, NULL, 0,
                            output_String, ARRAY_SIZE(output_String), 1);
 
 
     String inputs_String2[] = {STRING("other in 1"), STRING("other in 2")};
 
     //takes inputs from the param
-    madness_ui_node_simple(madness_ui, "node", (vec2){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2),
+    madness_ui_node_simple(madness_ui, STRING("node"), (vec2){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2),
                            output_String, ARRAY_SIZE(output_String), 2);
 
     // madness_ui_node_complex(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,
     // ARRAY_SIZE(output_String));
+}
+
+void editor_texture_view(Editor* editor)
+{
+    FATAL("TODO: TEXTURE VIEW");
 }

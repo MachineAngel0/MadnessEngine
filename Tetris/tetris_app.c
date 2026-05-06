@@ -2,7 +2,7 @@
 #include "clock.h"
 #include "event.h"
 #include "input.h"
-#include "../renderer/UI.h"
+#include "../resource/UI.h"
 
 //this is here mainly for making handling events easier
 static Tetris_Application* app_internal;

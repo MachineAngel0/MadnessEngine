@@ -402,18 +402,18 @@ typedef enum Turn_Initiative
 typedef enum Turn_Phase
 {
     Turn_Phase_None,
-    Turn_Phase_TurnStart,
+    Turn_Phase_Turn_Start,
     Turn_Phase_Ability_Selection,
-    Turn_Phase_TargetSelection,
-    Turn_Phase_AbilityProcessing,
-    Turn_Phase_QueueProcessing,
+    Turn_Phase_Target_Select,
+    Turn_Phase_Ability_Process,
+    Turn_Phase_Queue_Process,
     Turn_Phase_Turn_End,
     Turn_Phase_Enemy_Turn,
 
     Turn_Phase_Dialogue,
     Turn_Phase_Event, // might want to specify what type of event
 
-    Turn_Phase_BattleOver,
+    Turn_Phase_Battle_Over,
 } Turn_Phase;
 
 typedef enum Action_Handler_Process_Stage

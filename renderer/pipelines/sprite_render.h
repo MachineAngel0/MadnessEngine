@@ -1,6 +1,6 @@
 ﻿#ifndef SPRITE_RENDER_H
 #define SPRITE_RENDER_H
-#include "../vulkan_types.h"
+#include "../vulkan_enum_types.h"
 
 
 //Sprite Renderer

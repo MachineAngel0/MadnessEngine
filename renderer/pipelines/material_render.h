@@ -1,7 +1,7 @@
 ﻿#ifndef MATERIAL_RENDER_H
 #define MATERIAL_RENDER_H
 
-#include "../vulkan_types.h"
+#include "../vulkan_enum_types.h"
 
 MAPI Material_Renderer* material_renderer_init(Renderer* renderer, Resource_System* resource_system);
 

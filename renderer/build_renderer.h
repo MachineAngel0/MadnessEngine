@@ -6,7 +6,8 @@
 #include "renderer.h"
 
 
-#include "vulkan_types.h"
+#include "vulkan_enum_types.h"
+#include "vulkan_struct_types.h"
 #include "spv_reflect.h"
 
 
@@ -31,4 +32,3 @@
 #include "pipelines/transform_render.h"
 #include "pipelines/mesh_render.h"
 
-#include "UI.h"

@@ -12,7 +12,7 @@ Targeting_Handler* targeting_handler_init(Madness_Pulse_Game* game)
     return targeting_handler;
 }
 
-Targeting_Handler* targeting_handler_shutdown(Madness_Pulse_Game* game)
+void targeting_handler_shutdown(Targeting_Handler* targeting_handler)
 {
 }
 

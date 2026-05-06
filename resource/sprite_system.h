@@ -2,7 +2,7 @@
 #define SPRITE_H
 
 
-#include "../renderer/vulkan_types.h"
+#include "../renderer/vulkan_enum_types.h"
 
 
 typedef struct Sprite_System_Config
@@ -32,7 +32,7 @@ MAPI Sprite_Data* sprite_system_get_text_sprite(Sprite_System* sprite_system);
 // these handles cant be from the transient or ui/text sprites
 MAPI Sprite_Data* sprite_system_get_new_sprite_handle(Sprite_System* sprite_system, Sprite_Handle* sprite_handle);
 
-bool sprite_system_generate_render_packet(Sprite_System* sprite_system, Render_Packet_UI* out_ui_packet,
-    Render_Packet_Sprite* out_sprite_packet);
+bool sprite_system_generate_render_packet(Sprite_System* sprite_system,
+                                          Render_Packet_Sprite* out_sprite_packet);
 
 #endif //SPRITE_H
