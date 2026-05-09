@@ -95,7 +95,7 @@ typedef struct Texture
 
 
 //FONT/TEXT
-#define DEFAULT_FONT_CREATION_SIZE 32.0f
+#define DEFAULT_FONT_CREATION_SIZE 32.0f // this should realy be 40
 #define GLYPH_LENGTH 96
 #define GLYPH_START 32
 #define GLYPH_END 128

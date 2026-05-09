@@ -23,7 +23,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     editor->renderer = renderer;
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
-    editor->state = EDITOR_UI_STATE_SCENE;
+    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
     return editor;
@@ -91,9 +91,9 @@ void editor_ui_debug(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_begin_window(madness_ui, STRING("Madness Editor"), (vec2){5, 5}, (vec2){20, 90});
+    madness_ui_window(madness_ui, STRING("Madness Editor"));
 
-    if (madness_button_text(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
+    if (madness_button(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
     {
         FATAL("DO A BARREL ROLL");
     };
@@ -110,17 +110,17 @@ void editor_ui_debug(Editor* editor)
     }
     // madness_ui_vec3(madness_ui, "pos", STRING("translate"), &translate, 1.0f);
 
-    if (madness_button_text(madness_ui, STRING("button"), STRING("translate by 1")))
+    if (madness_button(madness_ui, STRING("button"), STRING("translate by 1")))
     {
         vec3 translate = {1, 1, 1};
         transform_translate(&editor->resource_system->scene->transforms[0], translate);
     }
 
-    if (madness_button_text(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
+    if (madness_button(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
     {
         material_system_enable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
-    if (madness_button_text(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
+    if (madness_button(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
     {
         material_system_disable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
@@ -150,7 +150,7 @@ void editor_ui_scene(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_begin_window(madness_ui, STRING("Scene"), (vec2){5, 5}, (vec2){20, 90});
+    madness_ui_window(madness_ui, STRING("Scene"));
 
     static scroll_box_state scroll_box_state_test;
     scroll_box_state_test.max_nodes_to_display = 10;

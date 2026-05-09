@@ -25,9 +25,9 @@ void hash_table_destroy(hash_table* h)
 
 void hash_table_insert(hash_table* h, const char* key_str, void* value)
 {
-    MASSERT_MSG(h, "HASH MAP STRING INSERT: INVALID PARAMS")
-    MASSERT_MSG(key_str, "HASH MAP STRING INSERT: INVALID PARAMS");
-    MASSERT_MSG(value, "HASH MAP STRING INSERT: INVALID PARAMS");
+    MASSERT_MSG(h, "HASH TABLE INSERT: INVALID PARAMS")
+    MASSERT_MSG(key_str, "HASH TABLE INSERT: INVALID PARAMS");
+    MASSERT_MSG(value, "HASH TABLE INSERT: INVALID PARAMS");
 
     u64 string_size = strlen(key_str);
 
@@ -49,12 +49,12 @@ void hash_table_insert(hash_table* h, const char* key_str, void* value)
         }
     }
 
-    WARN("HASH TABLE STRING INSERT: NO INSERT SPOT, INCREASE SIZE OF HASH TABLE");
+    WARN("HASH TABLE INSERT: NO INSERT SPOT, INCREASE SIZE OF HASH TABLE");
 }
 
 bool hash_table_remove(hash_table* h, const char* key_str)
 {
-    MASSERT_MSG(h && key_str, "HASH MAP STRING DELETE: INVALID PARAMS");
+    MASSERT_MSG(h && key_str, "HASH TABLE DELETE: INVALID PARAMS");
 
     u64 string_size = strlen(key_str);
 
@@ -67,7 +67,7 @@ bool hash_table_remove(hash_table* h, const char* key_str)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH TABLE STRING REMOVE: COULD NOT FIND STRING");
+            WARN("HASH TABLE REMOVE: COULD NOT FIND STRING");
             return false;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)
@@ -103,7 +103,7 @@ bool hash_table_contains(hash_table* h, const char* key_str)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH MAP STRING CONTAINS: COULD NOT FIND STRING");
+            WARN("HASH TABLE CONTAINS: COULD NOT FIND STRING");
             return false;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)
@@ -117,7 +117,7 @@ bool hash_table_contains(hash_table* h, const char* key_str)
 
 bool hash_table_get(hash_table* h, const char* key_str, void* out_data)
 {
-    MASSERT_MSG(h && key_str, "HASH TABLE STRING SET: INVALID PARAMS");
+    MASSERT_MSG(h && key_str, "HASH TABLE SET: INVALID PARAMS");
 
     u64 string_size = strlen(key_str);
 
@@ -147,7 +147,7 @@ bool hash_table_get(hash_table* h, const char* key_str, void* out_data)
 
 void hash_table_set(hash_table* h, const char* key_str, void* value)
 {
-    MASSERT_MSG(h && key_str && value, "HASH MAP STRING SET: INVALID PARAMS");
+    MASSERT_MSG(h && key_str && value, "HASH TABLE SET: INVALID PARAMS");
 
 
     u64 string_size = strlen(key_str);
@@ -161,7 +161,7 @@ void hash_table_set(hash_table* h, const char* key_str, void* value)
     {
         if (h->key_str_data[cur_index] == NULL)
         {
-            WARN("HASH MAP STRING SET: COULD NOT FIND KEY: %s", key_str);
+            WARN("HASH TABLE SET: COULD NOT FIND KEY: %s", key_str);
             return;
         }
         if (strcmp(h->key_str_data[cur_index], key_str) == 0)
@@ -200,7 +200,7 @@ u64 hash_table_get_hash_id(hash_table* h, const char* key_str)
 void hash_table_test()
 {
     TEST_START("HASH TABLE");
-    hash_table* hm_test = HASH_TABLE_CREATE(i32, HT_STRING_TEST_CAPACITY);
+    hash_table* hm_test = HASH_TABLE_CREATE(i32, HASH_TABLE_DEFAULT_CAPACITY);
 
     i32 val = 100;
     hash_table_insert(hm_test, "key", &val);
@@ -231,7 +231,7 @@ void hash_table_test()
 
     // PTR TEST//
 
-    hash_table* hm_test_ptr = HASH_TABLE_CREATE(void*, HT_STRING_TEST_CAPACITY);
+    hash_table* hm_test_ptr = HASH_TABLE_CREATE(void*, HASH_TABLE_DEFAULT_CAPACITY);
     i32* val_ptr = malloc(sizeof(int));
     *val_ptr = 100;
 

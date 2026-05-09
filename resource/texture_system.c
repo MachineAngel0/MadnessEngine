@@ -549,8 +549,11 @@ bool texture_system_load_msdf_font(Texture_System* texture_system, const char* f
     MASSERT(file)
 
 
+    // float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
+    // float glyph_size = 32.f; // this you would just have to know, or force it based on texture_size
+
     float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
-    float glyph_size = 32.f; // this you would just have to know, or force it based on texture_size
+    float glyph_size = 40.f; // this you would just have to know, or force it based on texture_size
 
     char buffer[256];
     float ascender = 0.0f;
@@ -583,7 +586,7 @@ bool texture_system_load_msdf_font(Texture_System* texture_system, const char* f
     }
 
     // bake ascender into yoff so draw_text needs no correction
-    float ascender_px = ascender * 32.0f;
+    float ascender_px = ascender * glyph_size;
     for (int i = 0; i < GLYPH_LENGTH; i++)
     {
         font_structure->glyphs[i].yoff -= ascender_px;

@@ -44,31 +44,6 @@ bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin)
         return false;
     }
 
-    renderer_plugin->ui_init = (UI_init)platform_get_function_address(renderer_plugin->renderer_dll_handle, "madness_ui_init");
-    renderer_plugin->ui_shutdown = (UI_shutdown) platform_get_function_address(renderer_plugin->renderer_dll_handle, "madness_ui_shutdown");
-    renderer_plugin->ui_begin = (UI_begin)platform_get_function_address(renderer_plugin->renderer_dll_handle, "madness_ui_begin");
-    renderer_plugin->ui_end = (UI_end)platform_get_function_address(renderer_plugin->renderer_dll_handle, "madness_ui_end");
-
-    if (!renderer_plugin->ui_init)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER UI INIT")
-        return false;
-    }
-    if (!renderer_plugin->ui_shutdown)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER UI SHUTDOWN")
-        return false;
-    }
-    if (!renderer_plugin->ui_begin)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER UI BEGIN")
-        return false;
-    }
-    if (!renderer_plugin->ui_end)
-    {
-        FATAL("FAILED TO SET FUNCTION POINTER UI END")
-        return false;
-    }
 
 
     return true;

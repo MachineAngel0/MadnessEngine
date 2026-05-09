@@ -45,11 +45,6 @@ typedef struct Renderer_Plugin
     renderer_run renderer_run;
     renderer_terminate renderer_terminate;
     renderer_resize renderer_resize;
-
-    UI_init ui_init;
-    UI_shutdown ui_shutdown;
-    UI_begin ui_begin;
-    UI_end ui_end;
 } Renderer_Plugin;
 
 bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin);
