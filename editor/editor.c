@@ -75,7 +75,7 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test(editor->madness_ui);
-        madness_ui_test_new(editor->madness_ui);
+        madness_ui_example(editor->madness_ui);
         break;
     }
 }
@@ -93,34 +93,32 @@ void editor_ui_debug(Editor* editor)
 
     madness_ui_window(madness_ui, STRING("Madness Editor"));
 
-    if (madness_button(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
+    if (madness_ui_button(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
     {
         FATAL("DO A BARREL ROLL");
     };
 
-    if (madness_ui_vec3(madness_ui, STRING("pos"), STRING("pos"), &editor->resource_system->scene->transforms[0].position,
-                        1.0f))
+    if (madness_ui_vec3(madness_ui, STRING("pos"), &editor->resource_system->scene->transforms[0].position, 1.0f))
     {
         transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
     }
-    if (madness_ui_vec3(madness_ui, STRING("scale"), STRING("scale"), &editor->resource_system->scene->transforms[0].scale,
-                        1.0f))
+    if (madness_ui_vec3(madness_ui, STRING("scale"), &editor->resource_system->scene->transforms[0].scale, 1.0f))
     {
         transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
     }
     // madness_ui_vec3(madness_ui, "pos", STRING("translate"), &translate, 1.0f);
 
-    if (madness_button(madness_ui, STRING("button"), STRING("translate by 1")))
+    if (madness_ui_button(madness_ui, STRING("button"), STRING("translate by 1")))
     {
         vec3 translate = {1, 1, 1};
         transform_translate(&editor->resource_system->scene->transforms[0], translate);
     }
 
-    if (madness_button(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
+    if (madness_ui_button(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
     {
         material_system_enable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
-    if (madness_button(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
+    if (madness_ui_button(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
     {
         material_system_disable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
@@ -161,8 +159,7 @@ void editor_ui_scene(Editor* editor)
         char buffer[50];
         sprintf(buffer, "pos%d", i);
 
-        if (madness_ui_vec3(madness_ui, STRING(buffer), STRING(buffer), &editor->resource_system->scene->transforms[i].position,
-                            1.0f))
+        if (madness_ui_vec3(madness_ui, STRING(buffer), &editor->resource_system->scene->transforms[i].position, 1.0f))
         {
             transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
         }

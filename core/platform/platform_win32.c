@@ -625,6 +625,15 @@ void platform_get_cursor_pos(int* out_x, int* out_y)
     *out_y = lpPoint.y;
 }
 
+void platform_windows_resize(Platform_State* platform_state, int width, int height)
+{
+    internal_state* state =  platform_state->internal_state;
+
+    //change the size but does not move due to no move flag
+    SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE);
+
+}
+
 void platform_copy_to_clipboard(const char* c_string)
 {
     const size_t lens = strlen(c_string) + 1;

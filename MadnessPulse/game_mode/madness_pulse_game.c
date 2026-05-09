@@ -66,16 +66,16 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
     madness_ui_window(ui, STRING("Main Menu"));
 
 
-    if (madness_button(ui, STRING("Load Game"), STRING("Load Game")))
+    if (madness_ui_button(ui, STRING("Load Game"), STRING("Load Game")))
     {
         //set new state for the load menu and load in menu metadata
         //TODO: for now just loading into the level select
         game->game_state = Game_State_Enum_Level_Select;
     }
-    if (madness_button(ui, STRING("Settings"), STRING("Settings")))
+    if (madness_ui_button(ui, STRING("Settings"), STRING("Settings")))
     {
     }
-    if (madness_button(ui, STRING("Quit"), STRING("Quit")))
+    if (madness_ui_button(ui, STRING("Quit"), STRING("Quit")))
     {
         Event_Data data = {0};
         event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game"), data);
@@ -95,7 +95,7 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
         {
             char buffer[100];
             sprintf(buffer, "Level %d", i);
-            if (madness_button(ui, STRING(buffer), STRING(buffer)))
+            if (madness_ui_button(ui, STRING(buffer), STRING(buffer)))
             {
                 //TODO: load the level based on the number
                 DEBUG("Level Seleced: %d", i);
