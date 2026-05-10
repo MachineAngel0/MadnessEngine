@@ -81,6 +81,9 @@ typedef struct UI_Node
     String string_id;
     u64 hash_id;
 
+    //Text
+    String text;
+
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     vec3 color;
@@ -287,6 +290,8 @@ MAPI bool madness_ui_float3(Madness_UI* madness_ui, String text, float* x, float
 MAPI bool madness_ui_vec2(Madness_UI* madness_ui, String text, vec2* v, float increment_value);
 MAPI bool madness_ui_vec3(Madness_UI* madness_ui, String text, vec3* v, float increment_value);
 
+
+
 //TODO:
 MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String text);
 // >thing
@@ -300,6 +305,7 @@ MAPI bool madness_ui_combo_box(Madness_UI* madness_ui, String id, String text);
 // > wednesday
 MAPI bool madness_ui_grid_start(Madness_UI* madness_ui, String id, String text, int x_size, int y_size);
 MAPI bool madness_ui_grid_end(Madness_UI* madness_ui, String id, String text);
+MAPI void madness_ui_padding(Madness_UI* madness_ui, String text);
 
 
 MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String id, vec3* color_value);
@@ -388,6 +394,7 @@ MAPI void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_pos
 MAPI void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
 MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
 
+vec2 madness_calculate_get_text_size(Madness_UI* madness_ui, String text);
 
 MAPI bool skip_node(Madness_UI* madness_ui);
 

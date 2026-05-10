@@ -631,6 +631,37 @@ void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent
     madness_draw_text(madness_ui, text, text_pos);
 }
 
+vec2 madness_calculate_get_text_size(Madness_UI* madness_ui, String text)
+{
+    f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
+
+    vec2 out_text_size = vec2_zero();
+
+    Madness_Font font_data;
+    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+
+    for (u64 i = 0; i < text.length; i++)
+    {
+        const char c = text.chars[i];
+
+        if (c < 32 || c >= 128) continue; // skip unsupported characters
+
+
+        Glyph* g = &font_data.glyphs[c - 32];
+
+        f32 y_height = ((f32)g->height * font_scalar);
+
+        out_text_size.y = max(y_height, out_text_size.y);
+
+        //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
+
+        out_text_size.x += (g->advance) * font_scalar; // move offset forward
+    }
+
+    return out_text_size;
+}
+
+
 void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size)
 {
     f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
@@ -683,7 +714,6 @@ bool skip_node(Madness_UI* madness_ui)
 
 void _madness_ui_text_internal(Madness_UI* madness_ui, String text)
 {
-
     if (text.length == 0) return;
 
 
@@ -736,11 +766,34 @@ void madness_ui_text(Madness_UI* madness_ui, String text)
     madness_ui_advance_cursor(madness_ui, text_size);
 }
 
+void madness_ui_text_new(Madness_UI* madness_ui, String text)
+{
+    //We take the desired font size, scale it down proportional to the font size we created it at
+    //final size of the font ex: 36/48 = 0.75, 48*0.75 = 36
+    if (text.length == 0) return;
+
+    // proper screen pos and size
+
+    //generate the text
+    vec2 text_size = madness_calculate_get_text_size(madness_ui, text);
+
+    UI_Node* text_node = madness_ui_get_new_node(madness_ui);
+    text_node->pos = madness_ui->cursor_pos;
+    text_node->size = text_size;
+    text_node->color = COLOR_BLACK;
+    text_node->text = text;
+    // text_node->flags = UI_FLAG_TEXT;
+
+    //update ui state for the next element
+    madness_ui_advance_cursor(madness_ui, text_size);
+}
+
+
 bool madness_ui_button(Madness_UI* madness_ui, String id, String text)
 {
     // if (skip_node(madness_ui))
     // {
-        // return false;
+    // return false;
     // }
 
 
@@ -1960,6 +2013,8 @@ void madness_ui_example(Madness_UI* madness_ui)
     madness_ui_same_line(madness_ui);
     madness_ui_button(madness_ui, STRING("Button 2"), STRING("Button 2"));
     madness_ui_button(madness_ui, STRING("Button 3"), STRING("Button 3"));
+    madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
+
     // static bool checkbox;
     // madness_ui_check_box(madness_ui, STRING("checkbox 1"), STRING("click me"), &checkbox);
     // madness_ui_check_box(madness_ui, STRING("checkbox 2"), STRING("click me ah"), &checkbox);
