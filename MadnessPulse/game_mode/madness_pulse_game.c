@@ -63,7 +63,7 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window(ui, STRING("Main Menu"));
+    madness_ui_window_begin(ui, STRING("Main Menu"));
 
 
     if (madness_ui_button(ui, STRING("Load Game"), STRING("Load Game")))
@@ -80,13 +80,15 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
         Event_Data data = {0};
         event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game"), data);
     }
+    madness_ui_window_end(ui);
+
 }
 
 void madness_pulse_level_select(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window(ui, STRING("Level Select"));
+    madness_ui_window_begin(ui, STRING("Level Select"));
     static scroll_box_state scroll_state;
     scroll_state.max_nodes_to_display = 10;
     madness_scroll_box_begin(game->madness_ui, STRING("level select"), &scroll_state);
@@ -103,11 +105,15 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
         }
     }
     madness_scroll_box_end(game->madness_ui, STRING("level select"), &scroll_state);
+
+    madness_ui_window_end(ui);
+
 }
 
 
 void madness_pulse_ability_select(Madness_Pulse_Game* game)
 {
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window(ui, STRING("Ability Select"));
+    madness_ui_window_begin(ui, STRING("Ability Select"));
+    madness_ui_window_end(ui);
 }

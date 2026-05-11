@@ -91,7 +91,7 @@ void editor_ui_debug(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_window(madness_ui, STRING("Madness Editor"));
+    madness_ui_window_begin(madness_ui, STRING("Madness Editor"));
 
     if (madness_ui_button(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
     {
@@ -148,7 +148,7 @@ void editor_ui_scene(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_window(madness_ui, STRING("Scene"));
+    madness_ui_window_begin(madness_ui, STRING("Scene"));
 
     static scroll_box_state scroll_box_state_test;
     scroll_box_state_test.max_nodes_to_display = 10;

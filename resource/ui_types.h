@@ -68,6 +68,10 @@ typedef struct UI_Node_Draw_Data
     //colors
     vec3 color;
     vec3 background_color;
+
+    // //scissor data
+    // vec2 scissor_start;
+    // vec2 scissor_end;
 } UI_Node_Draw_Data;
 
 typedef struct UI_Render_Packet
@@ -76,6 +80,45 @@ typedef struct UI_Render_Packet
     u64 ui_data_count;
     u64 ui_data_bytes;
 } UI_Render_Packet;
+
+typedef enum UI_Draw_Type
+{
+    UI_Draw_Type_UI,
+    UI_Draw_Type_TEXT,
+    UI_Draw_Type_SCISSOR_START,
+    UI_Draw_Type_SCISSOR_END,
+}UI_Draw_Type;
+
+typedef struct UI_Draw_Type_Data
+{
+    union
+    {
+        struct draw
+        {
+            u32 data_start;
+            u32 data_length;
+        };
+        struct scissor
+        {
+            u32 scissor_offset;
+            u32 scissor_extent;
+        };
+    };
+}UI_Draw_Type_Data;
+
+
+typedef struct UI_Draw_Command
+{
+    UI_Draw_Type* ui_types; // this assumes 1 draw per ui object, easiest
+    u32 type_count;
+
+    UI_Node_Draw_Data* ui_data;
+    u64 ui_data_count;
+    u64 ui_data_bytes;
+
+} UI_Draw_Command;
+
+
 
 
 #endif//UI_TYPES_H

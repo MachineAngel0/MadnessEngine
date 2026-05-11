@@ -448,6 +448,11 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
+    // VkRect2D pScissors;
+    // pScissors.offset = (VkOffset2D){0, 0};
+    // pScissors.extent = (VkExtent2D){200, 150};
+    // vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &pScissors);
+
     ui_renderer_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
 
 

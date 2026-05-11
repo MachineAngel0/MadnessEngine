@@ -80,8 +80,8 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
     //TODO: replace with an in param
     madness_ui->screen_size = (vec2){800.0f, 600.0f};
 
-    madness_ui->element_padding_x = 5.0f;
-    madness_ui->element_padding_y = 5.0f;
+    madness_ui->element_padding_x = 8.0f;
+    madness_ui->element_padding_y = 8.0f;
 
     madness_ui->font_padding_x = 8.0f;
     madness_ui->font_padding_y = 8.0f;
@@ -164,17 +164,28 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
 
 void madness_ui_end(Madness_UI* madness_ui)
 {
-    //Generate Draw Data
-    madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
-                                               madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
-    madness_ui->ui_draw_data_count = madness_ui->ui_nodes->num_items;
-    madness_ui->text_draw_data = allocator_alloc(madness_ui->frame_arena,
-                                                 madness_ui->ui_nodes_text->num_items * sizeof(UI_Node_Draw_Data));
-    madness_ui->text_draw_data_count = madness_ui->ui_nodes_text->num_items;
+    u32 allocation_count = madness_ui->ui_nodes->num_items;
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
         UI_Node* node_data = &madness_ui->ui_nodes->data[i];
-        UI_Node_Draw_Data* draw_data = &madness_ui->ui_draw_data[i];
+        allocation_count += node_data->text.length;
+    }
+
+    //rect start, draw commands, rect end
+
+    //Generate Draw Data
+    // madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
+    //                                            madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
+    madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
+                                               allocation_count * sizeof(UI_Node_Draw_Data));
+    madness_ui->ui_draw_data_count = madness_ui->ui_nodes->num_items;
+
+    madness_ui->text_draw_data_count = madness_ui->ui_nodes_text->num_items;
+    u32 draw_data_index = 0;
+    for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
+    {
+        UI_Node* node_data = &madness_ui->ui_nodes->data[i];
+        UI_Node_Draw_Data* draw_data = &madness_ui->ui_draw_data[draw_data_index];
 
         draw_data->ui_flags = node_data->flags;
         draw_data->pos = vec2_div(node_data->pos, madness_ui->screen_size);
@@ -195,7 +206,12 @@ void madness_ui_end(Madness_UI* madness_ui)
         // draw_data->outline_color = node_data->outline_color;
         // draw_data->outline_thickness = node_data->outline_thickness;
         // draw_data->background_color = node_data->background_color;
+        draw_data_index++;
     }
+
+
+    madness_ui->text_draw_data = allocator_alloc(madness_ui->frame_arena,
+                                                 madness_ui->ui_nodes_text->num_items * sizeof(UI_Node_Draw_Data));
     for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
     {
         UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
@@ -403,7 +419,7 @@ UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
 {
     if (madness_ui->ui_nodes->num_items > 0)
     {
-        return &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items--];
+        return &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items - 1];
     }
     return NULL;
 }
@@ -411,7 +427,7 @@ UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
 
 void madness_ui_same_line(Madness_UI* madness_ui)
 {
-    madness_ui->cursor_pos.x += madness_ui->prev_item_size.x;
+    madness_ui->cursor_pos.x = madness_ui->prev_line.x + madness_ui->prev_item_size.x + madness_ui->element_padding_x;
     madness_ui->cursor_pos.y -= madness_ui->prev_item_size.y + madness_ui->element_padding_y;
 }
 
@@ -428,7 +444,7 @@ void madness_ui_advance_cursor(Madness_UI* madness_ui, vec2 ui_screen_size)
     // }
 
     madness_ui->prev_item_size = ui_screen_size;
-    // madness_ui->prev_line = madness_ui->cursor_pos;
+    madness_ui->prev_line = madness_ui->cursor_pos;
     madness_ui->cursor_pos.x = madness_ui->current_layout_screen_pos.x;
     madness_ui->cursor_pos.y += madness_ui->prev_item_size.y + madness_ui->element_padding_y;
 }
@@ -451,6 +467,8 @@ char* madness_ui_float_to_char(Madness_UI* madness_ui, const float value)
     return result;
 }
 
+
+
 void madness_ui_menu_bar(Madness_UI* madness_ui, String id)
 {
     //create the title bar
@@ -471,21 +489,30 @@ void madness_ui_menu_bar(Madness_UI* madness_ui, String id)
 
 bool madness_ui_menu_item(Madness_UI* madness_ui, String menu_name)
 {
-    vec2 text_size = {};
-    madness_calculate_text_size(madness_ui, menu_name, madness_ui->cursor_pos, &text_size);
-    madness_ui_text(madness_ui, menu_name);
-
-
-    return region_hit(madness_ui, madness_ui->cursor_pos, text_size);
+    madness_ui_text_new(madness_ui, menu_name);
+    return false;;
 }
 
-void madness_ui_window(Madness_UI* madness_ui, String header_name)
+void madness_ui_window_begin(Madness_UI* madness_ui, String header_name)
 {
     Window_State window_state;
     if (!hash_table_string_get(madness_ui->window_state, header_name, &window_state))
     {
         window_state = (Window_State){.pos = {0.1, 0.1}, .size = {0.2, 0.8}};
         hash_table_string_insert(madness_ui->window_state, header_name, &window_state);
+    }
+
+    if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+    {
+        window_state.scroll_amount -= 10;
+        window_state.scroll_amount = clamp_float(window_state.scroll_amount, 0, madness_ui->screen_size.y);
+        hash_table_string_set(madness_ui->window_state, header_name, &window_state);
+    }
+    if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+    {
+        window_state.scroll_amount += 10;
+        window_state.scroll_amount = clamp_float(window_state.scroll_amount, 0, madness_ui->screen_size.y);
+        hash_table_string_set(madness_ui->window_state, header_name, &window_state);
     }
 
     //normalize the position and size
@@ -516,20 +543,13 @@ void madness_ui_window(Madness_UI* madness_ui, String header_name)
     header_node->size = header_size;
     header_node->color = madness_ui->editor_style.layout_accent_color;
     header_node->string_id = header_name;
-
-    madness_ui_advance_cursor(madness_ui, header_size);
-
-    //sizing and position of text
-    vec2 text_size;
-    madness_calculate_text_size(madness_ui, header_name, madness_ui->current_layout_screen_pos, &text_size);
-    vec2 text_pos;
-    madness_ui_center_child_node(madness_ui->current_layout_screen_pos, header_size, text_size, &text_pos);
-
-    madness_draw_text(madness_ui, header_name,
-                      (vec2){madness_ui->current_layout_screen_pos.x + madness_ui->element_padding_y, text_pos.y});
+    header_node->hash_id = string_hash_u64(header_name);
 
 
-    if (region_hit(madness_ui, header_node->pos, header_size))
+    madness_ui_text_new(madness_ui, header_name);
+
+    madness_ui_set_interaction_state(madness_ui, header_node);
+    if (is_active(madness_ui, header_node->hash_id))
     {
         if (madness_ui->mouse_down)
         {
@@ -538,6 +558,36 @@ void madness_ui_window(Madness_UI* madness_ui, String header_name)
             hash_table_string_set(madness_ui->window_state, header_name, &window_state);
         }
     }
+    else if (is_hot(madness_ui, header_node->hash_id))
+    {
+        header_node->color = madness_ui->editor_style.hovered_color;
+    }
+
+
+    madness_ui->cursor_pos.y += window_state.scroll_amount;
+
+    //scroll bar
+
+
+
+    UI_Node* slider_bar = madness_ui_get_new_node(madness_ui);
+    slider_bar->size = (vec2){8.f, madness_ui->current_layout_screen_size.y*0.1};
+    slider_bar->color = madness_ui->editor_style.layout_accent_color;
+    slider_bar->string_id = header_name;
+    slider_bar->hash_id = string_hash_u64(header_name);
+    slider_bar->color = COLOR_BLUE;
+
+    float scroll_bar_pos_x = madness_ui->current_layout_screen_pos.x +  madness_ui->current_layout_screen_size.x - slider_bar->size.x;
+    float scroll_bar_pos_y = madness_ui->current_layout_screen_pos.y;
+    slider_bar->pos = (vec2){scroll_bar_pos_x, scroll_bar_pos_y};
+
+
+
+}
+
+void madness_ui_window_end(Madness_UI* madness_ui)
+{
+
 }
 
 
@@ -631,7 +681,7 @@ void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent
     madness_draw_text(madness_ui, text, text_pos);
 }
 
-vec2 madness_calculate_get_text_size(Madness_UI* madness_ui, String text)
+vec2 madness_get_text_size(Madness_UI* madness_ui, String text)
 {
     f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
 
@@ -763,7 +813,7 @@ void madness_ui_text(Madness_UI* madness_ui, String text)
     madness_draw_text(madness_ui, text, ui_screen_pos);
 
     //update ui state for the next element
-    madness_ui_advance_cursor(madness_ui, text_size);
+    // madness_ui_advance_cursor(madness_ui, text_size);
 }
 
 void madness_ui_text_new(Madness_UI* madness_ui, String text)
@@ -775,8 +825,7 @@ void madness_ui_text_new(Madness_UI* madness_ui, String text)
     // proper screen pos and size
 
     //generate the text
-    vec2 text_size = madness_calculate_get_text_size(madness_ui, text);
-
+    vec2 text_size = madness_get_text_size(madness_ui, text);
     UI_Node* text_node = madness_ui_get_new_node(madness_ui);
     text_node->pos = madness_ui->cursor_pos;
     text_node->size = text_size;
@@ -784,39 +833,14 @@ void madness_ui_text_new(Madness_UI* madness_ui, String text)
     text_node->text = text;
     // text_node->flags = UI_FLAG_TEXT;
 
+    // TODO: temporary, we want to call this and generate the node data, during generate draw
+    madness_ui_text(madness_ui, text);
     //update ui state for the next element
     madness_ui_advance_cursor(madness_ui, text_size);
 }
 
-
-bool madness_ui_button(Madness_UI* madness_ui, String id, String text)
+void madness_ui_set_interaction_state(Madness_UI* madness_ui, UI_Node* new_node)
 {
-    // if (skip_node(madness_ui))
-    // {
-    // return false;
-    // }
-
-
-    // 0-1 range
-    const float button_ratio_to_layout_size = 0.8f;
-
-    // proper screen pos and size
-    vec2 button_screen_pos = madness_ui->cursor_pos;
-    vec2 button_screen_size = (vec2){
-        madness_ui->current_layout_screen_size.x * button_ratio_to_layout_size,
-        32
-    };
-    button_screen_pos.x += (madness_ui->current_layout_screen_size.x - button_screen_size.x) / 2.f;
-
-    //grab a node
-    UI_Node* new_node = madness_ui_get_new_node(madness_ui);
-    new_node->string_id = id;
-    new_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
-    new_node->pos = button_screen_pos;
-    // new_node->size = button_screen_size;
-    new_node->size = (vec2){button_screen_size.x, madness_ui->editor_font_size + madness_ui->font_padding_y};
-
-
     if (region_hit(madness_ui, new_node->pos, new_node->size))
     {
         set_hot(madness_ui, new_node->hash_id);
@@ -830,48 +854,57 @@ bool madness_ui_button(Madness_UI* madness_ui, String id, String text)
             set_active(madness_ui, new_node->hash_id);
         }
     }
-
-
-    //active state
-    if (is_active(madness_ui, new_node->hash_id))
-    {
-        new_node->color = madness_ui->editor_style.pressed_color;
-    }
-    //hot state
-    else if (is_hot(madness_ui, new_node->hash_id))
-    {
-        new_node->color = madness_ui->editor_style.hovered_color;
-    }
-    // normal state
-    else
-    {
-        new_node->color = madness_ui->editor_style.color;
-    }
-
-    //draw text
-    madness_ui->cursor_pos = new_node->pos;
-    // madness_draw_text_centered(madness_ui, text, button_screen_pos, button_screen_size);
-    // madness_ui_text(madness_ui, text);
-    _madness_ui_text_internal(madness_ui, text);
-
-
-    //update ui state for the next element
-    madness_ui_advance_cursor(madness_ui, new_node->size);
-
-
-    //check if we clicked the button
-    return use_ui_element(madness_ui, new_node->hash_id, button_screen_pos, button_screen_size);
 }
 
-bool madness_ui_check_box(Madness_UI* madness_ui, String id, String text, bool* check_box_state)
+bool madness_ui_button(Madness_UI* madness_ui, String id, String text)
+{
+    // 0-1 range
+    const float button_ratio_to_layout_size = 0.8f;
+
+    // proper screen pos and size
+    vec2 button_screen_pos = madness_ui->cursor_pos;
+    vec2 button_screen_size = (vec2){
+        madness_ui->current_layout_screen_size.x * button_ratio_to_layout_size,
+        32
+    };
+    button_screen_pos.x += (madness_ui->current_layout_screen_size.x - button_screen_size.x) / 2.f;
+
+    //grab a node
+    UI_Node* button_node = madness_ui_get_new_node(madness_ui);
+    button_node->string_id = id;
+    button_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
+    button_node->pos = button_screen_pos;
+    button_node->size = (vec2){button_screen_size.x, madness_ui->editor_font_size + madness_ui->font_padding_y};
+    button_node->flags = UI_FLAG_CLICKABLE;
+    button_node->color = madness_ui->editor_style.color;
+
+    madness_ui_text_new(madness_ui, text);
+
+    madness_ui_set_interaction_state(madness_ui, button_node);
+
+    //active state
+    if (is_active(madness_ui, button_node->hash_id))
+    {
+        button_node->color = madness_ui->editor_style.pressed_color;
+    }
+    //hot state
+    else if (is_hot(madness_ui, button_node->hash_id))
+    {
+        button_node->color = madness_ui->editor_style.hovered_color;
+    }
+
+    return use_ui_element(madness_ui, button_node->hash_id, button_screen_pos, button_screen_size);
+}
+
+bool madness_ui_check_box(Madness_UI* madness_ui, String label, bool* check_box_state)
 {
     //TODO: make into an image or at least have the button colors change somehow
 
     UI_Node* checkbox_node = madness_ui_get_new_node(madness_ui);
-    checkbox_node->string_id = id;
-    checkbox_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
+    checkbox_node->string_id = label;
+    checkbox_node->hash_id = generate_hash_key_64bit((u8*)label.chars, label.length);
     checkbox_node->pos = madness_ui->cursor_pos;
-    checkbox_node->size = (vec2){32, 32};
+    checkbox_node->size = (vec2){24, 24};
 
     checkbox_node->flags |= UI_FLAG_OUTLINE;
 
@@ -885,25 +918,22 @@ bool madness_ui_check_box(Madness_UI* madness_ui, String id, String text, bool* 
     }
 
     madness_ui_advance_cursor(madness_ui, checkbox_node->size);
-
+    madness_ui_same_line(madness_ui);
     //draw text next to the quad
-    madness_draw_text(madness_ui, text, madness_ui->cursor_pos);
+    // madness_draw_text(madness_ui, label, madness_ui->cursor_pos);
+    madness_ui_text_new(madness_ui, label);
 
 
-    if (region_hit(madness_ui, checkbox_node->pos, checkbox_node->size))
+    madness_ui_set_interaction_state(madness_ui, checkbox_node);
+
+    if (is_active(madness_ui, checkbox_node->hash_id))
     {
-        set_hot(madness_ui, checkbox_node->hash_id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active(madness_ui))
-        {
-            set_active(madness_ui, checkbox_node->hash_id);
-        }
-    };
-
+        checkbox_node->color = madness_ui->editor_style.pressed_color;
+    }
+    else if (is_hot(madness_ui, checkbox_node->hash_id))
+    {
+        checkbox_node->color = madness_ui->editor_style.hovered_color;
+    }
 
     if (use_ui_element(madness_ui, checkbox_node->hash_id, checkbox_node->pos, checkbox_node->size))
     {
@@ -1161,54 +1191,27 @@ void madness_text_box(Madness_UI* madness_ui, String id)
     madness_ui_advance_cursor(madness_ui, out_size);
 }
 
-bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float increment_value)
+bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, float increment_value)
 {
-    //get our string version of the float
-    //draw quad, then text
-    // check for events to increment the float value
+    UI_Node* node = madness_ui_get_new_node(madness_ui);
+    node->string_id = text;
+    node->hash_id = generate_hash_key_64bit((u8*)text.chars, text.length);
+    node->pos = madness_ui->cursor_pos;
+    node->size = (vec2){madness_ui->current_layout_screen_size.x * 0.3, 32};
+    node->color = madness_ui->editor_style.color;
 
     char* float_char = madness_ui_float_to_char(madness_ui, *f);
     String float_string = {float_char, strlen(float_char)};
+    madness_ui_text_new(madness_ui, float_string);
 
-    float size_shink_value = 0.3f;
+    bool has_changed = false;
 
-    vec2 out_pos;
-    vec2 out_size;
-    UI_Node* quad_node = NULL;
-    madness_draw_quad(madness_ui, text, &out_pos, &out_size, &quad_node);
-    out_size.x *= size_shink_value;
-    quad_node->size.x *= size_shink_value;
-    madness_draw_text_centered(madness_ui, float_string, out_pos, out_size);
-    madness_ui_advance_cursor(madness_ui, out_size);
+    madness_ui_set_interaction_state(madness_ui, node);
 
-    bool has_chaned = false;
 
-    //check if we are inside any of the squares
-    if (region_hit(madness_ui, out_pos, out_size))
+    if (is_active(madness_ui, node->hash_id))
     {
-        quad_node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
-        {
-            *f += increment_value;
-            has_chaned = true;
-        }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
-        {
-            *f -= increment_value;
-            has_chaned = true;
-        }
-
-        set_hot(madness_ui, quad_node->hash_id);
-
-        if (can_be_active(madness_ui))
-        {
-            set_active(madness_ui, quad_node->hash_id);
-        }
-    }
-
-    if (is_active(madness_ui, quad_node->hash_id))
-    {
-        quad_node->color = madness_ui->editor_style.pressed_color;
+        node->color = madness_ui->editor_style.pressed_color;
 
         if (madness_ui->mouse_down)
         {
@@ -1224,32 +1227,62 @@ bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float incre
             {
                 *f += increment_value / increment_smoother_value;
                 // *f += increment_override;
-                has_chaned = true;
+                has_changed = true;
             }
             if (mouse_change_x < 0)
             {
                 *f -= increment_value / increment_smoother_value;
                 // *f -= increment_override;
-                has_chaned = true;
+                has_changed = true;
             }
         }
     }
+    else if (is_hot(madness_ui, node->hash_id))
+    {
+        node->color = madness_ui->editor_style.hovered_color;
+        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        {
+            *f += increment_value;
+            has_changed = true;
+        }
+        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        {
+            *f -= increment_value;
+            has_changed = true;
+        }
 
+        set_hot(madness_ui, node->hash_id);
 
-    return has_chaned;
+        if (can_be_active(madness_ui))
+        {
+            set_active(madness_ui, node->hash_id);
+        }
+    }
+
+    return has_changed;
+}
+
+bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float increment_value)
+{
+    madness_ui_text_new(madness_ui, text);
+    madness_ui_same_line(madness_ui);
+
+    return madness_ui_float_internal(madness_ui, text, f, increment_value);
 }
 
 
 bool madness_ui_float2(Madness_UI* madness_ui, String text, float* x, float* y, float increment_value)
 {
-    madness_ui_text(madness_ui, text);
+    madness_ui_text_new(madness_ui, text);
+    madness_ui_same_line(madness_ui);
 
     String* x_id = string_concat(&text, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
     String* y_id = string_concat(&text, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
 
 
-    bool has_moved1 = madness_ui_float(madness_ui, *x_id, x, increment_value);
-    bool has_moved2 = madness_ui_float(madness_ui, *y_id, y, increment_value);
+    bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, x, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved2 = madness_ui_float_internal(madness_ui, *y_id, y, increment_value);
 
 
     if (has_moved1) { return true; }
@@ -1267,55 +1300,11 @@ bool madness_ui_float3(Madness_UI* madness_ui, String text, float* x, float* y, 
     String* y_id = string_concat(&text, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
 
 
-    bool has_moved1 = madness_ui_float(madness_ui, *x_id, x, increment_value);
-    bool has_moved2 = madness_ui_float(madness_ui, *y_id, y, increment_value);
-
-
-    if (has_moved1) { return true; }
-    if (has_moved2) { return true; }
-
-
-    return false;
-}
-
-bool madness_ui_vec2(Madness_UI* madness_ui, String text, vec2* v, float increment_value)
-{
-    madness_ui_text(madness_ui, text);
-
-    String* x_id = string_concat(&text, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
-    String* y_id = string_concat(&text, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
-
-
-    bool has_moved1 = madness_ui_float(madness_ui, *x_id, &v->x, increment_value);
-    bool has_moved2 = madness_ui_float(madness_ui, *y_id, &v->y, increment_value);
-
-
-    if (has_moved1) { return true; }
-    if (has_moved2) { return true; }
-
-
-    return false;
-}
-
-bool madness_ui_vec3(Madness_UI* madness_ui, String text, vec3* v, float increment_value)
-{
-    if (skip_node(madness_ui))
-    {
-        return false;
-    }
-
-    //draw text on top, then below the vec values
-    madness_ui_text(madness_ui, text);
-
-
-    String* x_id = string_concat(&text, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
-    String* y_id = string_concat(&text, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
-    String* z_id = string_concat(&text, &STRING("z"), allocator_inferface_create(madness_ui->frame_arena));
-
-
-    bool has_moved1 = madness_ui_float(madness_ui, *x_id, &v->x, increment_value);
-    bool has_moved2 = madness_ui_float(madness_ui, *y_id, &v->y, increment_value);
-    bool has_moved3 = madness_ui_float(madness_ui, *z_id, &v->z, increment_value);
+    bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, x, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved2 = madness_ui_float_internal(madness_ui, *y_id, y, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved3 = madness_ui_float_internal(madness_ui, *y_id, y, increment_value);
 
 
     if (has_moved1) { return true; }
@@ -1324,6 +1313,69 @@ bool madness_ui_vec3(Madness_UI* madness_ui, String text, vec3* v, float increme
 
 
     return false;
+}
+
+bool madness_ui_vec2(Madness_UI* madness_ui, String label, vec2* v, float increment_value)
+{
+    madness_ui_text_new(madness_ui, label);
+    madness_ui_same_line(madness_ui);
+
+
+    String* x_id = string_concat(&label, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
+    String* y_id = string_concat(&label, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
+
+
+    bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved2 = madness_ui_float_internal(madness_ui, *y_id, &v->y, increment_value);
+
+
+    if (has_moved1) { return true; }
+    if (has_moved2) { return true; }
+
+
+    return false;
+}
+
+bool madness_ui_vec3(Madness_UI* madness_ui, String label, vec3* v, float increment_value)
+{
+    if (skip_node(madness_ui))
+    {
+        return false;
+    }
+
+    //draw text on top, then below the vec values
+    madness_ui_text_new(madness_ui, label);
+    madness_ui_same_line(madness_ui);
+
+
+    String* x_id = string_concat(&label, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
+    String* y_id = string_concat(&label, &STRING("y"), allocator_inferface_create(madness_ui->frame_arena));
+    String* z_id = string_concat(&label, &STRING("z"), allocator_inferface_create(madness_ui->frame_arena));
+
+
+    bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved2 = madness_ui_float_internal(madness_ui, *y_id, &v->y, increment_value);
+    madness_ui_same_line(madness_ui);
+    bool has_moved3 = madness_ui_float_internal(madness_ui, *z_id, &v->z, increment_value);
+
+
+    if (has_moved1) { return true; }
+    if (has_moved2) { return true; }
+    if (has_moved3) { return true; }
+
+
+    return false;
+}
+
+bool madness_ui_combo_box(Madness_UI* madness_ui, String label)
+{
+    UI_Node* combo_box_quad = madness_ui_get_new_node(madness_ui);
+    combo_box_quad->pos = madness_ui->cursor_pos;
+    combo_box_quad->size = (vec2){madness_ui->current_layout_screen_size.x * 0.6, 32};
+
+    madness_ui_text_new(madness_ui, label);
 }
 
 
@@ -1915,7 +1967,7 @@ void madness_ui_test(Madness_UI* madness_ui)
             DEFAULT_FONT_SIZE);
     */
 
-    madness_ui_window(madness_ui, STRING("Madness UI Test Layout"));
+    madness_ui_window_begin(madness_ui, STRING("Madness UI Test Layout"));
 
     if (madness_ui_button(madness_ui, STRING("first button"), STRING("these are buttons")))
     {
@@ -1935,7 +1987,7 @@ void madness_ui_test(Madness_UI* madness_ui)
         //if we want a layout change, specify so,
         static bool check_box_test;
 
-        if (madness_ui_check_box(madness_ui, STRING("check_box"), STRING("Check Box"), &check_box_test))
+        if (madness_ui_check_box(madness_ui, STRING("Check Box"), &check_box_test))
         {
             madness_ui->editor_style.text_color = COLOR_PURPLE_PALETTE_LIGHT;
             WARN("%d", check_box_test);
@@ -1945,8 +1997,8 @@ void madness_ui_test(Madness_UI* madness_ui)
             madness_ui->editor_style.text_color = COLOR_WHITE;
         }
 
-        madness_ui_check_box(madness_ui, STRING("check_box2"), STRING("Other"), &check_box_test);
-        madness_ui_check_box(madness_ui, STRING("check_box3"), STRING("Next"), &check_box_test);
+        madness_ui_check_box(madness_ui, STRING("Other"), &check_box_test);
+        madness_ui_check_box(madness_ui, STRING("Next"), &check_box_test);
     }
 
     madness_ui_text(madness_ui, STRING("GOD DAMN IT BOBBY"));
@@ -1997,7 +2049,6 @@ void madness_ui_test(Madness_UI* madness_ui)
 void madness_ui_example(Madness_UI* madness_ui)
 {
     madness_ui_menu_bar(madness_ui, STRING("title bar"));
-    madness_ui_same_line(madness_ui);
     if (madness_ui_menu_item(madness_ui, STRING("file")))
     {
         WARN("file hover")
@@ -2007,17 +2058,30 @@ void madness_ui_example(Madness_UI* madness_ui)
     madness_ui_same_line(madness_ui);
     madness_ui_menu_item(madness_ui, STRING("option"));
 
-    //TODO: text overrides the largest move down value
-    madness_ui_window(madness_ui, STRING("Madness UI Test Layout"));
-    madness_ui_button(madness_ui, STRING("Button 1"), STRING("Button 1"));
-    madness_ui_same_line(madness_ui);
-    madness_ui_button(madness_ui, STRING("Button 2"), STRING("Button 2"));
-    madness_ui_button(madness_ui, STRING("Button 3"), STRING("Button 3"));
-    madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
 
-    // static bool checkbox;
-    // madness_ui_check_box(madness_ui, STRING("checkbox 1"), STRING("click me"), &checkbox);
+    //TODO: text overrides the largest move down value
+    madness_ui_window_begin(madness_ui, STRING("Madness UI Test Layout"));
+
+    madness_ui_button(madness_ui, STRING("Button"), STRING("Click Me"));
+    madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
+    //
+    static float a;
+    madness_ui_float(madness_ui, STRING("floating"), &a, 1);
+
+    static vec2 v2;
+    madness_ui_vec2(madness_ui, STRING("vec2"), &v2, 1);
+
+    static vec3 v3;
+    madness_ui_vec3(madness_ui, STRING("vec3"), &v3, 1);
+
+
+    static bool checkbox;
+    madness_ui_check_box(madness_ui, STRING("the box is evil"), &checkbox);
     // madness_ui_check_box(madness_ui, STRING("checkbox 2"), STRING("click me ah"), &checkbox);
+
+    madness_ui_combo_box(madness_ui, STRING("enums"));
+
+    madness_ui_window_end(madness_ui);
 
 
     // madness_ui_config_menu(madness_ui);
@@ -2026,10 +2090,11 @@ void madness_ui_example(Madness_UI* madness_ui)
 
 void madness_ui_config_menu(Madness_UI* madness_ui)
 {
-    madness_ui_window(madness_ui, STRING("UI Config"));
+    madness_ui_window_begin(madness_ui, STRING("UI Config"));
     madness_ui_text(madness_ui, STRING("font size"));
     madness_ui_float(madness_ui, STRING("font size"), &madness_ui->editor_font_size, 1);
 
     madness_ui_float2(madness_ui, STRING("Padding f2 x&y"),
                       &madness_ui->element_padding_x, &madness_ui->element_padding_y, 1);
+    madness_ui_window_end(madness_ui);
 }

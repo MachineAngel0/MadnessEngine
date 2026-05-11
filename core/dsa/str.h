@@ -89,7 +89,13 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens);
 //returns copy of the strings
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
 
+
+u64 string_hash_u64(String string);
+
+
 void string_test(void);
+
+
 
 
 #endif

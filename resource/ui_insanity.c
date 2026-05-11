@@ -325,15 +325,13 @@ void insanity_ui_passes()
             {
                 node->color = insanity_ui->editor_style.color;
 
+                if (insanity_ui->mouse_down)
                 {
-                    if (insanity_ui->mouse_down)
-                    {
-                        node->color = insanity_ui->editor_style.pressed_color;
-                    }
-                    else
-                    {
-                        node->color = insanity_ui->editor_style.hovered_color;
-                    }
+                    node->color = insanity_ui->editor_style.pressed_color;
+                }
+                else
+                {
+                    node->color = insanity_ui->editor_style.hovered_color;
                 }
             }
         }

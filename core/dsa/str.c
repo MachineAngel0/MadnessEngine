@@ -328,7 +328,10 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens)
     }
 }
 
-
+u64 string_hash_u64(String string)
+{
+    return generate_hash_key_64bit((u8*)string.chars, string.length);
+}
 
 
 //returns copy of the strings
