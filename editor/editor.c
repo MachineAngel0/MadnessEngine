@@ -150,9 +150,8 @@ void editor_ui_scene(Editor* editor)
 
     madness_ui_window_begin(madness_ui, STRING("Scene"),  (vec2){0.1,0.1});
 
-    static scroll_box_state scroll_box_state_test;
-    scroll_box_state_test.max_nodes_to_display = 10;
-    madness_scroll_box_begin(madness_ui, STRING("Scene Scroll Box"), &scroll_box_state_test);
+
+    madness_scroll_box_begin(madness_ui, STRING("Scene Scroll Box"));
 
     for (int i = 0; i < editor->resource_system->scene->transform_count; i++)
     {
@@ -165,7 +164,7 @@ void editor_ui_scene(Editor* editor)
         }
     }
 
-    madness_scroll_box_end(madness_ui, STRING("Scene Scroll Box"), &scroll_box_state_test);
+    madness_scroll_box_end(madness_ui);
 }
 
 void editor_material_nodes(Editor* editor)

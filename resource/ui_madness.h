@@ -131,18 +131,6 @@ typedef struct scroll_box_state
     u32 scroll_amount;
 } scroll_box_state;
 
-//this could be more general
-typedef struct active_scroll_box_state
-{
-    //UI_Node_Type kind;
-
-    bool is_active;
-
-    //scroll box
-    u32 slider_count; // at what point an element is allowed to be rendered
-    u32 current_attempt_count; // how many up to this point have tried to render
-    u32 max_nodes;
-} Parent_Node_State;
 
 
 
@@ -170,12 +158,11 @@ typedef struct Menu_Item_State
     bool is_active;
 } Menu_Item_State;
 
-typedef struct Menu_Bar_State
+typedef struct Scroll_Box_State
 {
-    String name;
-    bool is_active;
-} Menu_Bar_State;
-
+    String id;
+    float scroll_offet;
+} Scroll_Box_State;
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
@@ -210,6 +197,10 @@ typedef struct Madness_UI
 
     HASH_TABLE_STR_TYPE(String_Builder*)* text_box_states;
 
+    // HASH_TABLE_STR_TYPE(String_Builder*)* scroll_box_states; // TODO:
+    float scroll_offset; // TEMP: to be replaced by scroll box state
+    UI_Node* top_scroll_box; // TEMP: to be replaced by scroll box state
+
 
     // ARRAY_TYPE(Window_State)* window_states_array; // keep a list of windows, gets updated every frame
     //stack is for positions
@@ -233,8 +224,6 @@ typedef struct Madness_UI
     char released_key;
 
 
-
-    Parent_Node_State parent_node_state;
 
     //Keep an array of strings used in textboxes
     //should be an array at some point,
@@ -267,8 +256,9 @@ typedef struct Madness_UI
     float element_padding_x; // space between each ui element, when using same line
     float element_padding_y; // space between each ui element, when advancing the cursor
 
-    float font_padding_x; // space between each ui element, when using same line
-    float font_padding_y; // space between each ui element, when advancing the cursor
+    // space between each ui element and its inner text
+    float text_padding_x;
+    float text_padding_y;
 
     //Material Node
     bool input_pressed;
@@ -363,8 +353,8 @@ MAPI void madness_ui_padding(Madness_UI* madness_ui, String text);
 
 MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String id, vec3* color_value);
 
-MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, String id, scroll_box_state* scroll_box_state);
-MAPI void madness_scroll_box_end(Madness_UI* madness_ui, String id, scroll_box_state* scroll_box_state);
+MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, String id);
+MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
 
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness);
 
@@ -450,7 +440,6 @@ MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 
 MAPI vec2 madness_ui_get_text_size(Madness_UI* madness_ui, String text);
 MAPI float madness_ui_get_default_element_height(Madness_UI* madness_ui);
 
-MAPI bool skip_node(Madness_UI* madness_ui);
 
 
 //debug and test

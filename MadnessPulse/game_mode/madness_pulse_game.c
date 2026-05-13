@@ -89,9 +89,7 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
     //run the ui
     Madness_UI* ui = game->madness_ui;
     madness_ui_window_begin(ui, STRING("Level Select"),  (vec2){0.1,0.1});
-    static scroll_box_state scroll_state;
-    scroll_state.max_nodes_to_display = 10;
-    madness_scroll_box_begin(game->madness_ui, STRING("level select"), &scroll_state);
+    madness_scroll_box_begin(game->madness_ui, STRING("level select"));
     {
         for (int i = 0; i < 30; i++)
         {
@@ -104,7 +102,7 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
             }
         }
     }
-    madness_scroll_box_end(game->madness_ui, STRING("level select"), &scroll_state);
+    madness_scroll_box_end(game->madness_ui);
 
     madness_ui_window_end(ui);
 
