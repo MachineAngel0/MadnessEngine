@@ -23,7 +23,7 @@ typedef struct Array
 
 #define ARRAY_TYPE(type) Array
 
-
+//TODO: use the allocator interface
 Array* _array_create(const u64 data_stride, const u64 capacity);
 
 #define array_create(type, capacity)\
@@ -36,6 +36,7 @@ void array_push(Array* array, const void* new_data);
 void array_pop(Array* array);
 
 
+
 void array_print(Array* array, void (*print_func)(void*));
 void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void*));
 
@@ -43,6 +44,9 @@ bool array_is_empty(const Array* array);
 bool array_is_full(const Array* array);
 bool array_valid_index(const Array* array, const u64 index);
 void* _array_get(Array* array, const u64 index);
+
+#define array_top(arr, type)\
+    (*(type*)_array_get(arr, arr->num_items-1))
 
 #define array_get(arr, type, index)\
     (*(type*)_array_get(arr, index))

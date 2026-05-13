@@ -95,11 +95,8 @@ typedef struct UI_Node
     // start from offset and this will give us our bottom right uv, which tells us all the other info we need
     vec2 uv_size;
 
-
-    //TODO: for widgets that need some sort of child node, like a scroll box
-    struct UI_Node* parent;
-    struct UI_Node* children[10];
-    u32 child_node_count;
+    vec2 scissor_pos;
+    vec2 scissor_size;
 } UI_Node;
 
 typedef struct UI_Node_Text
@@ -147,13 +144,37 @@ typedef struct active_scroll_box_state
     u32 max_nodes;
 } Parent_Node_State;
 
+
+
+typedef enum UI_Window_Type
+{
+    UI_WINDOW_TYPE_NONE,
+    UI_WINDOW_TYPE_MENU_BAR,
+    UI_WINDOW_TYPE_WINDOW,
+    UI_WINDOW_TYPE_MAX,
+} UI_Window_Type;
+
 typedef struct Window_State
 {
+    String window_name;
+    UI_Window_Type window_type;
     vec2 pos;
     vec2 size;
 
-    float scroll_amount;
+    float scroll_amount; // should ideally be in a range of size, and then we increment the size by that
 } Window_State;
+
+typedef struct Menu_Item_State
+{
+    String name;
+    bool is_active;
+} Menu_Item_State;
+
+typedef struct Menu_Bar_State
+{
+    String name;
+    bool is_active;
+} Menu_Bar_State;
 
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
@@ -183,6 +204,18 @@ typedef struct Madness_UI
     u64 text_draw_data_count;
 
     HASH_TABLE_STR_TYPE(Window_State)* window_state;
+    STACK_TYPE(Window_State)* window_states_stack;
+
+    ARRAY_TYPE(Menu_Item_State)* menu_item_array;
+
+    HASH_TABLE_STR_TYPE(String_Builder*)* text_box_states;
+
+
+    // ARRAY_TYPE(Window_State)* window_states_array; // keep a list of windows, gets updated every frame
+    //stack is for positions
+
+    //TODO: open combo menus, basically
+
 
     int hot;
     int active;
@@ -199,9 +232,7 @@ typedef struct Madness_UI
 
     char released_key;
 
-    //stores id and the ui state they are in the previous frame, if applicable
-    hash_table* button_hash_states; // only for buttons
-    hash_table* combo_box_states; // only for checkboxes
+
 
     Parent_Node_State parent_node_state;
 
@@ -245,6 +276,14 @@ typedef struct Madness_UI
     vec2 input_pos;
     bool output_pressed;
     u32 output_pressed_id;
+
+    //type,  type
+    // push push push, push push
+    // count 3, count 2
+    // offset 3, count 5
+    DYNAMIC_ARRAY_TYPE(UI_Draw_Command)* draw_command_list;
+    UI_Draw_Command current_draw_command;
+
 } Madness_UI;
 
 
@@ -266,17 +305,26 @@ MAPI UI_Render_Packet madness_ui_get_text_render_data(Madness_UI* madness_ui);
 
 
 //API START (besides init/shutdown, begin/end)
-//TODO: drag the layout around
-MAPI void madness_ui_window_begin(Madness_UI* madness_ui, String header_name);
+//TODO: drag the layout around, probably as a flag
+MAPI void madness_ui_window_begin(Madness_UI* madness_ui, String header_name, vec2 starting_position);
 MAPI void madness_ui_window_end(Madness_UI* madness_ui);
-MAPI void madness_ui_menu_bar(Madness_UI* madness_ui, String id);
+
+MAPI void madness_ui_menu_bar_begin(Madness_UI* madness_ui, String id);
+MAPI void madness_ui_menu_bar_end(Madness_UI* madness_ui);
 MAPI bool madness_ui_menu_item(Madness_UI* madness_ui, String menu_name);
 // file | settings | quit | etc...
+MAPI bool madness_ui_menu_drop_down(Madness_UI* madness_ui, String id); // TODO: for another time
+// file |
+//| Option1 |
+//| Option2 |
+
 
 //TEXT//
 MAPI void madness_ui_text(Madness_UI* madness_ui, String text); //TODO: remove
 MAPI void madness_text_box(Madness_UI* madness_ui, String id);
-MAPI void madness_ui_text_new(Madness_UI* madness_ui, String text);
+
+MAPI UI_Node* madness_ui_text_new(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
+MAPI UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size, UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
 
 
 MAPI bool madness_ui_button(Madness_UI* madness_ui, String id, String text);
@@ -399,7 +447,8 @@ MAPI void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_pos
 MAPI void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
 MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
 
-MAPI vec2 madness_get_text_size(Madness_UI* madness_ui, String text);
+MAPI vec2 madness_ui_get_text_size(Madness_UI* madness_ui, String text);
+MAPI float madness_ui_get_default_element_height(Madness_UI* madness_ui);
 
 MAPI bool skip_node(Madness_UI* madness_ui);
 
@@ -410,12 +459,21 @@ MAPI void madness_ui_print_state(Madness_UI* madness_ui);
 
 //utility
 MAPI UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
-MAPI UI_Node* madness_ui_get_parent_node(Madness_UI* madness_ui);
 MAPI UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
+
+UI_Node* madness_ui_new_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
+void madness_ui_new_scissor_end(Madness_UI* madness_ui);
+
+
+
 
 
 MAPI void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_size, vec2* out_pos);
 MAPI char* madness_ui_float_to_char(Madness_UI* madness_ui, float value);
+
+
+//draw list
+void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Type draw_type);
 
 
 MAPI bool is_ui_hot(Madness_UI* madness_ui, int id);
@@ -429,7 +487,7 @@ MAPI bool region_hit(Madness_UI* madness_ui, vec2 pos, vec2 size);
 //UTILITY
 
 //check if we can use the button
-MAPI bool use_ui_element(Madness_UI* madness_ui, int id, vec2 pos, vec2 size);
+MAPI bool madness_ui_use_ui_element(Madness_UI* madness_ui, int id, vec2 pos, vec2 size);
 
 MAPI int generate_id(Madness_UI* madness_ui);
 
@@ -445,10 +503,11 @@ MAPI bool is_hot(Madness_UI* madness_ui, int id);
 void madness_ui_set_interaction_state(Madness_UI* madness_ui, UI_Node* new_node);
 
 
-/*TODO:
 
-// combo box
 
-*/
+
+
+
+
 
 #endif //UI_H

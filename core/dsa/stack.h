@@ -11,6 +11,7 @@ typedef struct stack
     u64 capacity; // size of the array
 } stack;
 
+#define STACK_TYPE(type) stack
 
 
 //Arena can be NULL
@@ -35,9 +36,13 @@ void stack_push(stack* s, const void* data);
 void stack_pop(stack* s);
 
 // Peek element
-void* stack_peek(stack* s);
-// Peek element
-void stack_top(stack* s, void* out_data);
+void* stack_top_(stack* s);
+
+
+#define stack_top(s, type)\
+    (*(type*)stack_top_((s)))
+
+
 u64 stack_size(const stack* s);
 
 //clears the stack, just sets the num_items = 0

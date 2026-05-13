@@ -453,7 +453,7 @@ void insanity_ui_push_flags(UI_Property_Flags flags)
 
 UI_Property_Flags insanity_ui_get_flags()
 {
-    return *(UI_Property_Flags*)stack_peek(insanity_ui->flag_stack);
+    return *(UI_Property_Flags*)stack_top_(insanity_ui->flag_stack);
 }
 
 void insanity_ui_push_pos(vec2 pos)
@@ -599,11 +599,11 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
     node->id = id;
     node->ui_flags = insanity_ui_get_flags();
 
-    node->pos = *(vec2*)stack_peek(insanity_ui->pos_stack);
-    node->size = *(vec2*)stack_peek(insanity_ui->size_stack);
+    node->pos = *(vec2*)stack_top_(insanity_ui->pos_stack);
+    node->size = *(vec2*)stack_top_(insanity_ui->size_stack);
 
-    node->layout = *(Insanity_UI_Layout*)stack_peek(insanity_ui->layout_stack);
-    node->padding = *(vec2*)stack_peek(insanity_ui->padding_stack);
+    node->layout = *(Insanity_UI_Layout*)stack_top_(insanity_ui->layout_stack);
+    node->padding = *(vec2*)stack_top_(insanity_ui->padding_stack);
 
 
     node->color = insanity_ui->editor_style.color;
@@ -670,7 +670,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
         }
         else
         {
-            hash_table_insert(insanity_ui->float_state, node->id, stack_peek(insanity_ui->float_stack));
+            hash_table_insert(insanity_ui->float_state, node->id, stack_top_(insanity_ui->float_stack));
         }
     }
     if (node->ui_flags & UI_FLAG_TEXT_INPUT)
@@ -702,7 +702,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
 void insanity_ui_text()
 {
     // proper screen pos and size
-    vec2 base_position = *(vec2*)stack_peek(insanity_ui->pos_stack);
+    vec2 base_position = *(vec2*)stack_top_(insanity_ui->pos_stack);
     UI_Property_Flags flags = insanity_ui_get_flags();
     String text = insanity_ui->string_stack;
 

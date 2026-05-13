@@ -18,12 +18,11 @@ typedef enum UI_Property_Flags
     UI_FLAG_SCROLL_FLOAT = BITFLAG(11),
     UI_FLAG_TEXT_INPUT = BITFLAG(12),
     UI_FLAG_PRESSED = BITFLAG(13), //for handling states in which the item should have a different color if its in the selected state
-    // UI_FLAG_ = BITFLAG(14),
+    UI_FLAG_SCISSOR = BITFLAG(14),
     // UI_FLAG_ = BITFLAG(15),
     // UI_FLAG_ = BITFLAG(16),
     // UI_FLAG_ = BITFLAG(32),
 } UI_Property_Flags;
-
 
 
 typedef enum UI_Interaction_Event
@@ -38,6 +37,17 @@ typedef enum UI_Interaction_Event
     UI_EVENT_FLOAT_CHANGE = BITFLAG(7),
     // UI_EVENT_ = BITFLAG(32),
 } UI_Interaction_Event;
+
+typedef enum UI_Alignment
+{
+    //you can use x and y alignments to get something like bottom right
+    //can be used as a nine slice
+    UI_ALIGNMENT_LEFT,
+    UI_ALIGNMENT_CENTER,
+    UI_ALIGNMENT_RIGHT,
+} UI_Alignment;
+
+
 
 typedef struct UI_Node_Draw_Data
 {
@@ -83,40 +93,17 @@ typedef struct UI_Render_Packet
 
 typedef enum UI_Draw_Type
 {
-    UI_Draw_Type_UI,
-    UI_Draw_Type_TEXT,
-    UI_Draw_Type_SCISSOR_START,
-    UI_Draw_Type_SCISSOR_END,
+    UI_DRAW_TYPE_DRAW,
+    UI_DRAW_TYPE_SCISSOR_START,
+    UI_DRAW_TYPE_SCISSOR_END,
 }UI_Draw_Type;
 
-typedef struct UI_Draw_Type_Data
-{
-    union
-    {
-        struct draw
-        {
-            u32 data_start;
-            u32 data_length;
-        };
-        struct scissor
-        {
-            u32 scissor_offset;
-            u32 scissor_extent;
-        };
-    };
-}UI_Draw_Type_Data;
-
-
-typedef struct UI_Draw_Command
-{
-    UI_Draw_Type* ui_types; // this assumes 1 draw per ui object, easiest
-    u32 type_count;
-
-    UI_Node_Draw_Data* ui_data;
-    u64 ui_data_count;
-    u64 ui_data_bytes;
-
+typedef struct UI_Draw_Command{
+    UI_Draw_Type type;
+    u32 count;
+    u32 offset;
 } UI_Draw_Command;
+
 
 
 

@@ -97,7 +97,7 @@ void stack_pop(stack* s)
 }
 
 // Peek element
-void* stack_peek(stack* s)
+void* stack_top_(stack* s)
 {
     MASSERT(s);
     if (stack_is_empty(s)) return NULL;
@@ -105,16 +105,7 @@ void* stack_peek(stack* s)
     return (uint8_t*)s->data + (s->stride * (s->num_items - 1));
 }
 
-// Peek element
-void stack_top(stack* s, void* out_data)
-{
-    MASSERT(s);
-    if (stack_is_empty(s)) return;
 
-    memcpy((u8*)out_data,
-           ((uint8_t*)s->data + (s->stride * (s->num_items - 1))),
-           s->stride);
-}
 
 u64 stack_size(const stack* s)
 {
@@ -159,7 +150,7 @@ void stack_test()
     stack_push(stack, &num15);
     stack_push(stack, &num20);
     stack_print(stack, print_int);
-    printf("PEEK: %d\n", *(int*)stack_peek(stack));
+    printf("PEEK: %d\n", *(int*)stack_top_(stack));
 
     stack_pop(stack);
 

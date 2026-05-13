@@ -378,6 +378,8 @@ Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Allocator_In
     return array;
 }
 
+
+
 Dynamic_Array* dynamic_array_free(Dynamic_Array* array)
 {
     array->allocator_interface.free_memory(array->allocator_interface.allocator, array->data);
@@ -449,9 +451,15 @@ void dynamic_array_clear(Dynamic_Array* array)
     array->num_items = 0;
 }
 
+bool dynamic_array_is_empty(Dynamic_Array* array)
+{
+    return array->num_items == 0;
+}
+
 #define dynamic_array_create(type, initial_capacity, allocator_interface) \
         _dynamic_array_create(sizeof(type), initial_capacity, allocator_interface);
 #define dynamic_array_get(arr, type, index)\
         (*(type*)_dynamic_array_get(arr, index))
+
 
 #endif

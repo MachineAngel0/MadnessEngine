@@ -26,22 +26,6 @@
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 100
 
 //UI
-typedef enum Insanity_UI_Alignment
-{
-    //basically just a nine slice
-    Insanity_UI_ALIGNMENT_LEFT, // left should be the default
-    Insanity_UI_ALIGNMENT_CENTER,
-    Insanity_UI_ALIGNMENT_RIGHT,
-    //TODO: not supporting the below rn
-    // Insanity_UI_ALIGNMENT_TOP,
-    // Insanity_UI_ALIGNMENT_BOTTOM,
-    // Insanity_UI_ALIGNMENT_TOP_LEFT,
-    // Insanity_UI_ALIGNMENT_TOP_RIGHT,
-    // Insanity_UI_ALIGNMENT_BOTTOM_LEFT,
-    // Insanity_UI_ALIGNMENT_BOTTOM_RIGHT,
-    // Insanity_UI_ALIGNMENT_MAX,
-} Insanity_UI_Alignment;
-
 
 
 typedef struct Insanity_UI_Interaction_Result
@@ -225,7 +209,7 @@ typedef struct Insanity_UI
     Texture_Handle image_stack;
     float rounded_radius_stack;
     float outline_thickness_stack;
-    Insanity_UI_Alignment text_alignment_stack;
+    UI_Alignment text_alignment_stack;
 
     stack* float_stack;
     float increment_value_stack;
