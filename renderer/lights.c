@@ -18,11 +18,11 @@ Light_System* light_system_init(Renderer* renderer)
         allocator_alloc(&renderer->arena, sizeof(Directional_Light) * out_light_system->directional_light_count);
 
 
-    for (int point_light_idx = 0; point_light_idx < out_light_system->point_light_count; point_light_idx++)
+    for (u32 point_light_idx = 0; point_light_idx < out_light_system->point_light_count; point_light_idx++)
     {
         point_light_init(&out_light_system->point_lights[point_light_idx]);
     }
-    for (int directional_light_idx = 0; directional_light_idx < out_light_system->directional_light_count;
+    for (u32 directional_light_idx = 0; directional_light_idx < out_light_system->directional_light_count;
          directional_light_idx++)
     {
         directional_light_init(&out_light_system->directional_lights[directional_light_idx]);

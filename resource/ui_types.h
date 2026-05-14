@@ -18,8 +18,8 @@ typedef enum UI_Property_Flags
     UI_FLAG_SCROLL_FLOAT = BITFLAG(11),
     UI_FLAG_TEXT_INPUT = BITFLAG(12),
     UI_FLAG_PRESSED = BITFLAG(13), //for handling states in which the item should have a different color if its in the selected state
-    UI_FLAG_SCISSOR = BITFLAG(14),
-    // UI_FLAG_ = BITFLAG(15),
+    UI_FLAG_SCISSOR_START = BITFLAG(14),
+    UI_FLAG_SCISSOR_END = BITFLAG(15),
     // UI_FLAG_ = BITFLAG(16),
     // UI_FLAG_ = BITFLAG(32),
 } UI_Property_Flags;

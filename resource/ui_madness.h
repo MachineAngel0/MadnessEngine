@@ -58,6 +58,9 @@ typedef struct UI_Editor_Style
 #define MAX_UI_TEXT_NODE_COUNT 1000
 #define MAX_UI_NODE_CHILD_COUNT 10
 
+#define MIN_UI_NODE_SCREEN_SIZE 250
+
+
 struct UI_Circle
 {
     float radius;
@@ -132,13 +135,12 @@ typedef struct scroll_box_state
 } scroll_box_state;
 
 
-
-
 typedef enum UI_Window_Type
 {
     UI_WINDOW_TYPE_NONE,
-    UI_WINDOW_TYPE_MENU_BAR,
     UI_WINDOW_TYPE_WINDOW,
+    UI_WINDOW_TYPE_MENU_BAR,
+    UI_WINDOW_TYPE_SCROLLBAR,
     UI_WINDOW_TYPE_MAX,
 } UI_Window_Type;
 
@@ -146,11 +148,19 @@ typedef struct Window_State
 {
     String window_name;
     UI_Window_Type window_type;
-    vec2 pos;
-    vec2 size;
 
-    float scroll_amount; // should ideally be in a range of size, and then we increment the size by that
+    vec2 window_region_pos;
+    vec2 window_region_size;
+
+    // only for actual windows and not scroll boxes
+    // should be used as an offset to get to the proper scroll region
+    //NOTE:  the header position is at the same spot where the window starts01
+    vec2 header_size;
+
+    float scroll_offset; // should ideally be in a range of size, and then we increment the size by that
+    float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
 } Window_State;
+
 
 typedef struct Menu_Item_State
 {
@@ -158,11 +168,9 @@ typedef struct Menu_Item_State
     bool is_active;
 } Menu_Item_State;
 
-typedef struct Scroll_Box_State
-{
-    String id;
-    float scroll_offet;
-} Scroll_Box_State;
+
+
+
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
@@ -183,6 +191,9 @@ typedef struct Madness_UI
     UI_Node_array* ui_nodes;
     UI_Node_Text_array* ui_nodes_text;
 
+    UI_Node_array* deffered_ui_nodes;
+
+
     //DRAW DATA //
     UI_Node_Draw_Data* ui_draw_data;
     u64 ui_draw_data_count;
@@ -190,12 +201,17 @@ typedef struct Madness_UI
     UI_Node_Draw_Data* text_draw_data;
     u64 text_draw_data_count;
 
-    HASH_TABLE_STR_TYPE(Window_State)* window_state;
+    //a window is anything with which things are drawn to inside of it
+    HASH_TABLE_STR_TYPE(Window_State)* window_state_hash;
     STACK_TYPE(Window_State)* window_states_stack;
 
     ARRAY_TYPE(Menu_Item_State)* menu_item_array;
 
     HASH_TABLE_STR_TYPE(String_Builder*)* text_box_states;
+
+    String active_combo_box;
+
+
 
     // HASH_TABLE_STR_TYPE(String_Builder*)* scroll_box_states; // TODO:
     float scroll_offset; // TEMP: to be replaced by scroll box state
@@ -242,10 +258,8 @@ typedef struct Madness_UI
 
     UI_Editor_Style editor_style;
 
-    vec2 current_layout_pos; // converted pos of current layout
-    vec2 current_layout_size; // converted size of current layout
-    vec2 current_layout_screen_pos; // converted pos of current layout
-    vec2 current_layout_screen_size; // converted size of current layout
+    vec2 current_window_screen_pos; // converted pos of current layout
+    vec2 current_window_screen_size; // converted size of current layout
 
 
     vec2 cursor_pos;
@@ -315,6 +329,7 @@ MAPI void madness_text_box(Madness_UI* madness_ui, String id);
 
 MAPI UI_Node* madness_ui_text_new(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
 MAPI UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size, UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
+MAPI UI_Node* madness_ui_text_deffered_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size, UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
 
 
 MAPI bool madness_ui_button(Madness_UI* madness_ui, String id, String text);
@@ -341,7 +356,9 @@ MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String te
 //   >thing
 //   >thing
 
-MAPI bool madness_ui_combo_box(Madness_UI* madness_ui, String label);
+MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
+MAPI bool madness_ui_combo_box_string(Madness_UI* madness_ui, String id, u32* selected_value, String* string_array, u32 string_array_size);
+// MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
 // < enum day <selected dat> -> enum day <Tuesday>
 // > monday
 // > tuesday
@@ -432,7 +449,6 @@ MAPI void madness_ui_example(Madness_UI* madness_ui);
 
 
 //these is only meant for internal use and not part of the API
-MAPI void madness_draw_quad(Madness_UI* madness_ui, String id, vec2* out_pos, vec2* out_size, UI_Node** out_node);
 MAPI void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position);
 MAPI void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
 MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
@@ -453,7 +469,9 @@ MAPI UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
 UI_Node* madness_ui_new_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
 void madness_ui_new_scissor_end(Madness_UI* madness_ui);
 
-
+UI_Node* madness_ui_get_deffered_new_node(Madness_UI* madness_ui);
+UI_Node* madness_ui_new_deffered_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
+void madness_ui_new_deffered_scissor_end(Madness_UI* madness_ui);
 
 
 
