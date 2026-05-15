@@ -317,10 +317,7 @@ MAPI void madness_ui_menu_bar_begin(Madness_UI* madness_ui, String id);
 MAPI void madness_ui_menu_bar_end(Madness_UI* madness_ui);
 MAPI bool madness_ui_menu_item(Madness_UI* madness_ui, String menu_name);
 // file | settings | quit | etc...
-MAPI bool madness_ui_menu_drop_down(Madness_UI* madness_ui, String id); // TODO: for another time
-// file |
-//| Option1 |
-//| Option2 |
+MAPI bool madness_ui_menu_drop_down(Madness_UI* madness_ui, String label);
 
 
 //TEXT//
@@ -349,6 +346,7 @@ MAPI bool madness_ui_vec2(Madness_UI* madness_ui, String label, vec2* v, float i
 MAPI bool madness_ui_vec3(Madness_UI* madness_ui, String label, vec3* v, float increment_value);
 
 
+MAPI bool madness_ui_drop_down(Madness_UI* madness_ui, String label, bool* state);
 
 //TODO:
 MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String text);
@@ -356,7 +354,7 @@ MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String te
 //   >thing
 //   >thing
 
-MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
+MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_value, char** string_array);
 MAPI bool madness_ui_combo_box_string(Madness_UI* madness_ui, String id, u32* selected_value, String* string_array, u32 string_array_size);
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
 // < enum day <selected dat> -> enum day <Tuesday>
@@ -368,7 +366,7 @@ MAPI bool madness_ui_grid_end(Madness_UI* madness_ui, String id, String text);
 MAPI void madness_ui_padding(Madness_UI* madness_ui, String text);
 
 
-MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String id, vec3* color_value);
+MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* color_value);
 
 MAPI void madness_scroll_box_begin(Madness_UI* madness_ui, String id);
 MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
