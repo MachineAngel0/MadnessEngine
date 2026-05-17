@@ -51,6 +51,9 @@ void* _array_get(Array* array, const u64 index);
 #define array_get(arr, type, index)\
     (*(type*)_array_get(arr, index))
 
+#define array_top_free(arr, type)\
+    (*(type*)_array_get(arr, arr->num_items))
+
 void array_set(Array* array, const void* data, const u64 pos);
 
 

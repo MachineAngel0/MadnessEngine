@@ -52,6 +52,12 @@ typedef struct UI_Editor_Style
     vec3 outline_color;
 
     vec3 permanent_active;
+
+    vec3 header_color;
+    vec3 pop_up_color;
+
+
+
 } UI_Editor_Style;
 
 
@@ -170,7 +176,7 @@ typedef struct Pop_Up_State
     String pop_up_name;
 
     vec2 cursor_original_pos;
-    vec2 pop_up_start_pos;
+    vec2 pop_up_pos;
     vec2 pop_up_size;
 
     UI_Node* pop_up_node;
@@ -226,7 +232,8 @@ typedef struct Madness_UI
     STACK_TYPE(Window_State)* window_states_stack;
 
     STACK_TYPE(Pop_Up_State)* pop_up_stack;
-    ARRAY_TYPE(Window_State)* pop_up_persistant_state;
+    ARRAY_TYPE(Pop_Up_State)* pop_up_frame_state;
+    bool nuke_pop_up;
 
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
@@ -389,8 +396,7 @@ MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String te
 //   >thing
 //   >thing
 
-MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_value, char** string_array);
-MAPI bool madness_ui_combo_box_string(Madness_UI* madness_ui, String id, u32* selected_value, String* string_array,
+MAPI bool madness_ui_combo_box(Madness_UI* madness_ui, String id, u32* selected_value, String* string_array,
                                       u32 string_array_size);
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
 // < enum day <selected dat> -> enum day <Tuesday>
