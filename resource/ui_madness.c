@@ -29,11 +29,6 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
     madness_ui->resource_system = resource_system;
 
 
-    madness_ui->ui_data = Sprite_Data_array_create(
-        MAX_UI_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
-    madness_ui->text_data = Sprite_Data_array_create(
-        MAX_UI_TEXT_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
-
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
     madness_ui->editor_font_size = EDITOR_FONT_SIZE;
 
@@ -57,21 +52,20 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
                                                              false);
 
     //TODO: change the allocator interface
-    madness_ui->window_states_stack = stack_create(sizeof(Window_State), 10, madness_ui->allocator);
+    madness_ui->window_states_stack = stack_create(sizeof(Window_State), 100, madness_ui->allocator);
 
-    //TODO: change the allocator interface
-    madness_ui->menu_item_array = array_create(Menu_Item_State, 10);
 
+    madness_ui->window_pos_stack = stack_create(sizeof(vec2), 100, madness_ui->allocator);
+    madness_ui->window_size_stack = stack_create(sizeof(vec2), 100, madness_ui->allocator);
 
     madness_ui->cursor_pos = vec2_zero();
 
+    madness_ui->menu_bar_state = (Menu_Bar_State){
+        .menu_bar_pos = vec2_zero(),
+        .menu_bar_size = vec2_zero(),
+        .active_menu_item = STRING("INVALID"),
+    };
 
-    // for (u64 ui_node_index = 0; ui_node_index < MAX_UI_NODE_COUNT; ui_node_index++)
-    // {
-    //     UI_Node* node = arena_alloc(Madness_UI->arena, sizeof(UI_Node));
-    //     Madness_UI->ui_stack[ui_node_index] = node;
-    //     Madness_UI->ui_nodes_array[ui_node_index] = node;
-    // }
 
     madness_ui->active = -1;
     madness_ui->hot = -1;
@@ -100,7 +94,8 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
         .custom_widget_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT,
         .color = COLOR_PURPLE_PALETTE_PURPLE_STRONG, .hovered_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT2,
         .pressed_color = COLOR_PURPLE_PALETTE_DARK2,
-        .outline_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT
+        .outline_color = COLOR_PURPLE_PALETTE_PURPLE_LIGHT,
+        .permanent_active = COLOR_HOT_PINK,
     };
 
 
@@ -121,7 +116,6 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
     };
 
 
-
     INFO("UI SYSTEM CREATED");
     return madness_ui;
 }
@@ -131,13 +125,14 @@ bool madness_ui_shutdown(Madness_UI* madness_ui)
     return true;
 }
 
+
 void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y)
 {
     //clear draw info and reset the hot id
     allocator_clear(madness_ui->frame_arena);
 
 
-
+    //on resize, scale the ui window size's accordingly
     if (madness_ui->screen_size.x != screen_size_x || madness_ui->screen_size.y != screen_size_y)
     {
         float x_update_size = screen_size_x / madness_ui->screen_size.x;
@@ -169,9 +164,9 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->screen_size.y = screen_size_y;
 
 
-    Sprite_Data_array_clear(madness_ui->ui_data);
-    Sprite_Data_array_clear(madness_ui->text_data);
-
+    madness_ui->prev_item_size = vec2_zero();
+    stack_clear(madness_ui->window_pos_stack);
+    stack_clear(madness_ui->window_size_stack);
 
     UI_Node_array_zero(madness_ui->ui_nodes);
     UI_Node_array_clear(madness_ui->ui_nodes);
@@ -208,10 +203,11 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     madness_ui->released_key = input_get_first_released_key(madness_ui->input_system_reference);
 
 
-    //TODO: clear anything whos state relies on a click
     if (madness_ui->mouse_released_unique)
     {
         madness_ui->active_combo_box = STRING("INVALID");
+
+        madness_ui->menu_bar_state.active_menu_item = STRING("INVALID");
     }
 }
 
@@ -313,6 +309,7 @@ void madness_ui_end(Madness_UI* madness_ui)
 
     //printf("HOT ID: %d, HOT LAYER: %d\n", Madness_UI->hot.ID, Madness_UI->hot.layer);
     //printf("ACTIVE ID: %d, ACTIVE LAYER: %d\n", Madness_UI->active.ID, Madness_UI->active.layer);
+    //TODO: clear anything whos state relies on a click
 
 
     if (input_is_mouse_button_released(madness_ui->input_system_reference, MOUSE_BUTTON_LEFT))
@@ -595,6 +592,7 @@ void madness_ui_menu_bar_begin(Madness_UI* madness_ui, String id)
     madness_ui->cursor_pos = menu_pos;
     madness_ui->cursor_pos.x += madness_ui->element_padding_x;
 
+
     madness_ui_new_scissor_start(madness_ui, menu_pos, header_size);
 
 
@@ -604,133 +602,129 @@ void madness_ui_menu_bar_begin(Madness_UI* madness_ui, String id)
     title_bar_node->color = madness_ui->editor_style.textbox_color; // TODO:
     title_bar_node->string_id = id;
 
-    Window_State window = {
-        .window_name = id,
-        .window_type = UI_WINDOW_TYPE_MENU_BAR,
-        .window_region_pos = menu_pos,
-        .window_region_pos = header_size,
-        .scroll_offset = 0,
+    madness_ui->menu_bar_state = (Menu_Bar_State){
+        .menu_bar_pos = title_bar_node->pos,
+        .menu_bar_size = title_bar_node->size,
+        .menu_cursor_position = (vec2){title_bar_node->pos.x + madness_ui->element_padding_x, title_bar_node->pos.y},
+        .active_menu_item = madness_ui->menu_bar_state.active_menu_item,
     };
 
-    stack_push(madness_ui->window_states_stack, &window);
+    madness_ui->cursor_pos.x += madness_ui->element_padding_x;
 }
 
 void madness_ui_menu_bar_end(Madness_UI* madness_ui)
 {
     madness_ui_new_scissor_end(madness_ui);
-    stack_pop(madness_ui->window_states_stack);
 }
 
 
 bool madness_ui_menu_item(Madness_UI* madness_ui, String menu_name)
 {
-    Window_State window_state = stack_top(madness_ui->window_states_stack, Window_State);
-
-    UI_Node* text_node = madness_ui_text_internal(madness_ui, menu_name, madness_ui->cursor_pos,
-                                                  window_state.window_region_size,
-                                                  UI_ALIGNMENT_LEFT,
-                                                  UI_ALIGNMENT_CENTER);
-    text_node->hash_id = string_hash_u64(menu_name);
-    text_node->string_id = menu_name;
-
-    madness_ui_advance_cursor(madness_ui, text_node->size);
-
-    madness_ui_same_line(madness_ui);
-
-    madness_ui_set_interaction_state(madness_ui, text_node);
-
-    bool found = false;
-    u32 found_index = 0;
-    Menu_Item_State menu_state = {0};
-    for (int i = 0; i < madness_ui->menu_item_array->num_items; ++i)
-    {
-        Menu_Item_State item_state = array_get(madness_ui->menu_item_array, Menu_Item_State, i);
-        if (string_compare(&item_state.name, &menu_name))
-        {
-            menu_state = item_state;
-            found_index = i;
-            found = true;
-            break;
-        }
-    }
-    if (!found)
-    {
-        Menu_Item_State menu_item_state = {.name = menu_name, .is_active = false,};
-        array_push(madness_ui->menu_item_array, &menu_item_state);
-        return false;
+    vec2 text_size = madness_ui_get_text_size(madness_ui, menu_name);
+    vec2 button_size = (vec2){
+        text_size.x + madness_ui->text_padding_x,
+        madness_ui_get_default_element_height(madness_ui),
     };
 
+    UI_Node* background_node = madness_ui_get_new_node(madness_ui);
+    background_node->pos = madness_ui->menu_bar_state.menu_cursor_position;
+    background_node->size = button_size;
+    //center node
+    float vertical_space_remaining = madness_ui->menu_bar_state.menu_bar_size.y - background_node->size.y;
+    background_node->pos.y += (vertical_space_remaining / 2);
 
-    if (madness_ui_use_ui_element(madness_ui, text_node->hash_id, text_node->pos, text_node->size))
+    background_node->string_id = menu_name;
+    background_node->hash_id = string_hash_u64(menu_name);
+    background_node->color = madness_ui->editor_style.textbox_color;
+
+
+    UI_Node* text_node = madness_ui_text_internal(madness_ui, menu_name, background_node->pos,
+                                                  background_node->size,
+                                                  UI_ALIGNMENT_CENTER,
+                                                  UI_ALIGNMENT_CENTER);
+
+
+    madness_ui->menu_bar_state.menu_cursor_position.x += background_node->size.x + madness_ui->element_padding_x;
+
+
+    madness_ui_set_interaction_state(madness_ui, background_node);
+
+    if (is_hot(madness_ui, background_node->hash_id))
     {
-        menu_state.is_active = true;
-        array_set(madness_ui->menu_item_array, &menu_state, found_index);
+        background_node->color = madness_ui->editor_style.hovered_color;
+    }
+    if (is_active(madness_ui, background_node->hash_id))
+    {
+        background_node->color = madness_ui->editor_style.pressed_color;
     }
 
-    return menu_state.is_active;
-}
 
-bool madness_ui_menu_drop_down(Madness_UI* madness_ui, String label)
-{
+    if (madness_ui_use_ui_element(madness_ui, background_node->hash_id, background_node->pos, background_node->size))
+    {
+        madness_ui->menu_bar_state.active_menu_item = menu_name;
+    }
+    if (string_compare(&madness_ui->menu_bar_state.active_menu_item, &menu_name))
+    {
+        background_node->color = madness_ui->editor_style.permanent_active;
+        madness_ui->menu_bar_state.drop_down_pos = (vec2){
+            background_node->pos.x, background_node->pos.y + background_node->size.y + madness_ui->element_padding_y
+        };
+        madness_ui->cursor_pos = madness_ui->menu_bar_state.drop_down_pos;
+        madness_ui->current_window_screen_pos = madness_ui->cursor_pos;
+        madness_ui->current_window_screen_size = vec2_mul_scalar(background_node->size, 3.f);
+        madness_ui->menu_bar_state.drop_down_size = vec2_mul_scalar(background_node->size, 3.f);
+
+        return true;
+    }
+
     return false;
 }
 
-bool madness_ui_drop_down(Madness_UI* madness_ui, String label, bool* state)
+bool madness_ui_menu_dropdown_item(Madness_UI* madness_ui, String label)
 {
-    UI_Node* drop_down_header_node = madness_ui_get_new_node(madness_ui);
-    drop_down_header_node->pos = madness_ui->cursor_pos;
-    drop_down_header_node->size = (vec2){
-        madness_ui->current_window_screen_size.x * 0.8,
-        madness_ui_get_default_element_height(madness_ui)
-    };
-    drop_down_header_node->string_id = label;
-    drop_down_header_node->hash_id = string_hash_u64(label);
+    vec2 size = madness_ui_get_text_size(madness_ui, label);
 
-    String* modified_label;
-    if (*state)
+    UI_Node* node = madness_ui_get_deffered_new_node(madness_ui);
+    node->pos = madness_ui->menu_bar_state.drop_down_pos;
+    node->size = vec2_add(size, (vec2){madness_ui->text_padding_x, madness_ui->text_padding_y});
+    node->string_id = label;
+    node->hash_id = string_hash_u64(label);
+
+    madness_ui_text_deffered_internal(madness_ui, label, node->pos, node->size, UI_ALIGNMENT_CENTER,
+                                      UI_ALIGNMENT_CENTER);
+
+
+    madness_ui->menu_bar_state.drop_down_pos.y += node->size.y + madness_ui->element_padding_y;
+
+    madness_ui_set_interaction_state(madness_ui, node);
+
+    if (is_hot(madness_ui, node->hash_id))
     {
-        modified_label = string_concat(&STRING("(<>) "), &label, allocator_inferface_create(madness_ui->frame_arena));
+        node->color = madness_ui->editor_style.hovered_color;
     }
-    else
+    if (is_active(madness_ui, node->hash_id))
     {
-        modified_label = string_concat(&STRING("(><) "), &label, allocator_inferface_create(madness_ui->frame_arena));
-    }
-
-    madness_ui_text_internal(madness_ui, *modified_label, drop_down_header_node->pos, drop_down_header_node->size,
-                             UI_ALIGNMENT_LEFT, UI_ALIGNMENT_CENTER);
-
-    madness_ui_set_interaction_state(madness_ui, drop_down_header_node);
-
-    if (is_hot(madness_ui, drop_down_header_node->hash_id))
-    {
-        drop_down_header_node->color = madness_ui->editor_style.hovered_color;
-    }
-    if (is_active(madness_ui, drop_down_header_node->hash_id))
-    {
-        drop_down_header_node->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *state = !*state;
-        }
+        node->color = madness_ui->editor_style.pressed_color;
     }
 
-    madness_ui_advance_cursor(madness_ui, drop_down_header_node->size);
-
-
-    return *state;
+    return madness_ui_use_ui_element(madness_ui, node->hash_id, node->pos, node->size);
 }
 
-void madness_ui_window_begin(Madness_UI* madness_ui, String header_name, vec2 starting_position)
+
+void madness_ui_window_begin(Madness_UI* madness_ui, String header_name)
 {
     Window_State window_state;
     if (!hash_table_string_get(madness_ui->window_state_hash, header_name, &window_state))
     {
+        vec2 pos = madness_ui_get_window_pos(madness_ui);
+        vec2 size = madness_ui_get_window_size(madness_ui);
+
         vec2 starting_size = {.x = 0.2, .y = 0.8};
         window_state = (Window_State){
             .window_name = header_name,
             .window_type = UI_WINDOW_TYPE_WINDOW,
-            .window_region_pos = vec2_mul(starting_position, madness_ui->screen_size),
-            .window_region_size = vec2_mul(starting_size, madness_ui->screen_size),
+            .window_region_pos = pos,
+            .window_region_size = size,
             .header_size = vec2_zero(),
             .scroll_offset = 0,
         };
@@ -808,6 +802,7 @@ void madness_ui_window_begin(Madness_UI* madness_ui, String header_name, vec2 st
     stack_push(madness_ui->window_states_stack, &window_state);
 }
 
+
 void madness_ui_window_end(Madness_UI* madness_ui)
 {
     madness_ui_new_scissor_end(madness_ui);
@@ -824,6 +819,142 @@ void madness_ui_window_end(Madness_UI* madness_ui)
     if (content_overflow > 0)
     {
         //scroll bar
+        UI_Node* slider_bar = madness_ui_get_new_node(madness_ui);
+        slider_bar->size = (vec2){8.f, state.window_region_size.y * 0.1};
+        slider_bar->color = madness_ui->editor_style.layout_accent_color;
+        slider_bar->string_id = *string_concat(&state.window_name, &STRING("SLIDER"),
+                                               allocator_inferface_create(madness_ui->frame_arena));
+        slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
+        slider_bar->color = COLOR_BLUE;
+
+        //determines where the slider should be proportionally
+        float scroll_bar_pos_x = state.window_region_pos.x + state.window_region_size.x - slider_bar->size.x;
+        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+            scroll_bar_percent_offset);
+        slider_bar->pos = (vec2){scroll_bar_pos_x, scroll_bar_pos_y};
+
+        madness_ui_set_interaction_state(madness_ui, slider_bar);
+        if (is_hot(madness_ui, slider_bar->hash_id))
+        {
+            slider_bar->color = madness_ui->editor_style.hovered_color;
+            //handle window scrolling
+            if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+            {
+                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset - 0.1, 0, 1);
+                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
+                state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
+            }
+            if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+            {
+                // state.scroll_offset += 10;
+                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset + 0.1, 0, 1);
+                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
+                state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
+            }
+        }
+        if (is_active(madness_ui, slider_bar->hash_id))
+        {
+            float track_width = scroll_region_size_y - slider_bar->size.y;
+            float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
+            float t = clamp_float(relative_y / track_width, 0.0f, 1.0f);
+
+            state.scroll_bar_percent_offset = 0 + t * (1 - 0);
+            state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
+            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+                scroll_bar_percent_offset);
+        }
+    }
+
+    // resize bar
+
+    UI_Node* resize_node = madness_ui_get_new_node(madness_ui);
+    resize_node->size = (vec2){12, 12};
+    resize_node->string_id = *string_concat(&state.window_name, &STRING("resize"),
+                                            allocator_inferface_create(madness_ui->frame_arena));
+    resize_node->hash_id = string_hash_u64(resize_node->string_id);
+
+    vec2 pos_before_adjustment = vec2_add(state.window_region_pos, state.window_region_size);
+
+    resize_node->pos = vec2_sub(pos_before_adjustment, resize_node->size);
+    resize_node->color = COLOR_GREEN;
+
+    madness_ui_set_interaction_state(madness_ui, resize_node);
+
+    if (is_active(madness_ui, resize_node->hash_id))
+    {
+        state.window_region_size.x += madness_ui->mouse_delta_x;
+        state.window_region_size.y += madness_ui->mouse_delta_y;
+        state.window_region_size.x = clamp_float(state.window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
+                                                 madness_ui->screen_size.x);
+        state.window_region_size.y = clamp_float(state.window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                 madness_ui->screen_size.y);
+    }
+
+    hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
+}
+
+
+void madness_scroll_box_begin(Madness_UI* madness_ui, String id)
+{
+    u32 scroll_height_in_elements = 10;
+    vec2 scroll_box_size = (vec2){
+        madness_ui->current_window_screen_size.x * 0.95,
+        madness_ui_get_default_element_height(madness_ui) * scroll_height_in_elements
+    };
+
+    madness_ui_new_scissor_start(madness_ui, madness_ui->cursor_pos, scroll_box_size);
+
+    UI_Node* scroll_box_node = madness_ui_get_new_node(madness_ui);
+    scroll_box_node->string_id = id;
+    scroll_box_node->pos = madness_ui->cursor_pos;
+    scroll_box_node->size = scroll_box_size;
+    scroll_box_node->color = COLOR_HOT_PINK;
+
+    //we mainly just want the scroll bar offset
+    Window_State window_state;
+    if (!hash_table_string_get(madness_ui->window_state_hash, id, &window_state))
+    {
+        // vec2 pos = madness_ui_get_window_pos(madness_ui);
+        // vec2 size = madness_ui_get_window_size(madness_ui);
+
+        window_state = (Window_State){
+            .window_name = id, .window_type = UI_WINDOW_TYPE_SCROLLBAR,
+            .window_region_pos = scroll_box_node->pos,
+            .window_region_size = scroll_box_node->size,
+            .header_size = vec2_zero(),
+            .scroll_bar_percent_offset = 0,
+            .scroll_offset = 0,
+        };
+        hash_table_string_insert(madness_ui->window_state_hash, id, &window_state);
+    }
+
+    //offset by scroll offset
+    madness_ui->cursor_pos.y -= window_state.scroll_offset;
+    madness_ui->cursor_pos.x += window_state.scroll_offset;
+
+    stack_push(madness_ui->window_states_stack, &window_state);
+}
+
+
+void madness_scroll_box_end(Madness_UI* madness_ui)
+{
+    madness_ui_new_scissor_end(madness_ui);
+
+    Window_State state = stack_top(madness_ui->window_states_stack, Window_State);
+    stack_pop(madness_ui->window_states_stack);
+
+    madness_ui_new_scissor_end(madness_ui);
+
+
+    //scroll bar
+    float scroll_region_start_pos = (state.window_region_pos.y + state.header_size.y);
+    float scroll_region_size_y = (state.window_region_size.y - state.header_size.y);
+
+    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos;
+    float content_overflow = content_height - scroll_region_size_y;
+
+    if (content_overflow > 0)
+    {
         UI_Node* slider_bar = madness_ui_get_new_node(madness_ui);
         slider_bar->size = (vec2){8.f, state.window_region_size.y * 0.1};
         slider_bar->color = madness_ui->editor_style.layout_accent_color;
@@ -869,34 +1000,48 @@ void madness_ui_window_end(Madness_UI* madness_ui)
     }
 
 
-    // resize bar
+    madness_ui->cursor_pos = state.window_region_pos;
+    madness_ui_advance_cursor(madness_ui, vec2_add(state.window_region_size,
+                                                   state.header_size));
 
-    UI_Node* resize_node = madness_ui_get_new_node(madness_ui);
-    resize_node->size = (vec2){12, 12};
-    resize_node->string_id = *string_concat(&state.window_name, &STRING("resize"),
-                                            allocator_inferface_create(madness_ui->frame_arena));
-    resize_node->hash_id = string_hash_u64(resize_node->string_id);
-
-    vec2 pos_before_adjustment = vec2_add(state.window_region_pos, state.window_region_size);
-
-    resize_node->pos = vec2_sub(pos_before_adjustment, resize_node->size);
-    resize_node->color = COLOR_GREEN;
-
-    madness_ui_set_interaction_state(madness_ui, resize_node);
-
-    if (is_active(madness_ui, resize_node->hash_id))
-    {
-        state.window_region_size.x += madness_ui->mouse_delta_x;
-        state.window_region_size.y += madness_ui->mouse_delta_y;
-        state.window_region_size.x = clamp_float(state.window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
-                                                 madness_ui->screen_size.x);
-        state.window_region_size.y = clamp_float(state.window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                 madness_ui->screen_size.y);
-    }
 
     hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
 }
 
+
+void madness_ui_set_window_pos(Madness_UI* madness_ui, u32 x, u32 y)
+{
+    vec2 push_data = {.x = x, .y = y};
+    stack_push(madness_ui->window_pos_stack, &push_data);
+}
+
+void madness_ui_set_window_size(Madness_UI* madness_ui, u32 width, u32 height)
+{
+    vec2 push_data = {.x = width, .y = height};
+    stack_push(madness_ui->window_size_stack, &push_data);
+}
+
+vec2 madness_ui_get_window_pos(Madness_UI* madness_ui)
+{
+    if (stack_is_empty(madness_ui->window_pos_stack))
+    {
+        return (vec2){.x = MIN_UI_NODE_SCREEN_SIZE, .y = MIN_UI_NODE_SCREEN_SIZE};
+    }
+    vec2 out = stack_top(madness_ui->window_pos_stack, vec2);
+    stack_pop(madness_ui->window_pos_stack);
+    return out;
+}
+
+vec2 madness_ui_get_window_size(Madness_UI* madness_ui)
+{
+    if (stack_is_empty(madness_ui->window_size_stack))
+    {
+        return (vec2){.x = MIN_UI_NODE_SCREEN_SIZE, .y = MIN_UI_NODE_SCREEN_SIZE};
+    }
+    vec2 out = stack_top(madness_ui->window_size_stack, vec2);
+    stack_pop(madness_ui->window_size_stack);
+    return out;
+}
 
 void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position)
 {
@@ -1033,6 +1178,52 @@ void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 scree
     }
 }
 
+bool madness_ui_drop_down(Madness_UI* madness_ui, String label, bool* state)
+{
+    UI_Node* drop_down_header_node = madness_ui_get_new_node(madness_ui);
+    drop_down_header_node->pos = madness_ui->cursor_pos;
+    drop_down_header_node->size = (vec2){
+        madness_ui->current_window_screen_size.x * 0.8,
+        madness_ui_get_default_element_height(madness_ui)
+    };
+    drop_down_header_node->string_id = label;
+    drop_down_header_node->hash_id = string_hash_u64(label);
+    drop_down_header_node->color = madness_ui->editor_style.color;
+
+    String* modified_label;
+    if (*state)
+    {
+        modified_label = string_concat(&STRING("(<>) "), &label, allocator_inferface_create(madness_ui->frame_arena));
+        drop_down_header_node->color = madness_ui->editor_style.permanent_active;
+    }
+    else
+    {
+        modified_label = string_concat(&STRING("(><) "), &label, allocator_inferface_create(madness_ui->frame_arena));
+    }
+
+    madness_ui_text_internal(madness_ui, *modified_label, drop_down_header_node->pos, drop_down_header_node->size,
+                             UI_ALIGNMENT_LEFT, UI_ALIGNMENT_CENTER);
+
+    madness_ui_set_interaction_state(madness_ui, drop_down_header_node);
+
+    if (is_hot(madness_ui, drop_down_header_node->hash_id))
+    {
+        drop_down_header_node->color = madness_ui->editor_style.hovered_color;
+    }
+    if (is_active(madness_ui, drop_down_header_node->hash_id))
+    {
+        drop_down_header_node->color = madness_ui->editor_style.pressed_color;
+        if (madness_ui->mouse_released_unique)
+        {
+            *state = !*state;
+        }
+    }
+
+    madness_ui_advance_cursor(madness_ui, drop_down_header_node->size);
+
+
+    return *state;
+}
 
 void madness_ui_text(Madness_UI* madness_ui, String text)
 {
@@ -1121,6 +1312,8 @@ UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 pare
     text_node->size = text_size;
     text_node->color = COLOR_BLACK;
     text_node->text = text;
+    text_node->string_id = text;
+    text_node->hash_id = string_hash_u64(text);
     // text_node->flags = UI_FLAG_TEXT;
 
     // TODO: temporary, we want to call this and generate the node data, during generate draw
@@ -1206,23 +1399,23 @@ void madness_ui_set_interaction_state(Madness_UI* madness_ui, UI_Node* new_node)
     }
 }
 
-bool madness_ui_button(Madness_UI* madness_ui, String id, String text)
+bool madness_ui_button(Madness_UI* madness_ui, String label)
 {
-    vec2 text_size = madness_ui_get_text_size(madness_ui, text);
+    vec2 text_size = madness_ui_get_text_size(madness_ui, label);
     vec2 button_size = (vec2){
         text_size.x + madness_ui->text_padding_x,
         madness_ui_get_default_element_height(madness_ui),
     };
 
     UI_Node* button_node = madness_ui_get_new_node(madness_ui);
-    button_node->string_id = id;
-    button_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
+    button_node->string_id = label;
+    button_node->hash_id = string_hash_u64(label);
     button_node->pos = madness_ui->cursor_pos;
     button_node->size = button_size;
     button_node->flags = UI_FLAG_CLICKABLE;
     button_node->color = madness_ui->editor_style.color;
 
-    madness_ui_text_internal(madness_ui, text, button_node->pos, button_node->size, UI_ALIGNMENT_CENTER,
+    madness_ui_text_internal(madness_ui, label, button_node->pos, button_node->size, UI_ALIGNMENT_CENTER,
                              UI_ALIGNMENT_CENTER);
 
     madness_ui_advance_cursor(madness_ui, button_size);
@@ -1462,7 +1655,7 @@ void madness_slider_arrow(Madness_UI* madness_ui, String id, float* slider_val, 
 }
 
 
-void madness_text_box(Madness_UI* madness_ui, String id)
+void madness_ui_text_box(Madness_UI* madness_ui, String id)
 {
     UI_Node* label_node = madness_ui_text_internal(madness_ui, STRING("Text Box:"), madness_ui->cursor_pos,
                                                    (vec2){0, 0},
@@ -1817,14 +2010,17 @@ bool madness_ui_combo_box_string(Madness_UI* madness_ui, String id, u32* selecte
 
 bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* color_value)
 {
-    UI_Node* text_node = madness_ui_text_internal(madness_ui, label, madness_ui->cursor_pos, (vec2){0,0}, UI_ALIGNMENT_LEFT, UI_ALIGNMENT_LEFT);
+    UI_Node* text_node = madness_ui_text_internal(madness_ui, label, madness_ui->cursor_pos, (vec2){0, 0},
+                                                  UI_ALIGNMENT_LEFT, UI_ALIGNMENT_LEFT);
     madness_ui_advance_cursor(madness_ui, text_node->size);
 
     madness_ui_same_line(madness_ui);
     UI_Node* color_node = madness_ui_get_new_node(madness_ui);
     color_node->color = *color_value;
     color_node->pos = madness_ui->cursor_pos;
-    color_node->size = (vec2){madness_ui_get_default_element_height(madness_ui), madness_ui_get_default_element_height(madness_ui)};
+    color_node->size = (vec2){
+        madness_ui_get_default_element_height(madness_ui), madness_ui_get_default_element_height(madness_ui)
+    };
     madness_ui_advance_cursor(madness_ui, color_node->size);
 
 
@@ -1849,76 +2045,6 @@ bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* color_v
     return false;
 }
 
-
-void madness_scroll_box_begin(Madness_UI* madness_ui, String id)
-{
-    u32 scroll_height_in_elements = 10;
-    vec2 scroll_box_size = (vec2){
-        madness_ui->current_window_screen_size.x * 0.9,
-        madness_ui_get_default_element_height(madness_ui) * scroll_height_in_elements
-    };
-
-    madness_ui_new_scissor_start(madness_ui, madness_ui->cursor_pos, scroll_box_size);
-
-    UI_Node* scroll_box_node = madness_ui_get_new_node(madness_ui);
-    scroll_box_node->string_id = id;
-    scroll_box_node->pos = madness_ui->cursor_pos;
-    scroll_box_node->size = scroll_box_size;
-    scroll_box_node->color = COLOR_HOT_PINK;
-
-    madness_ui->top_scroll_box = scroll_box_node;
-
-
-    madness_ui->cursor_pos.y -= madness_ui->scroll_offset;
-
-    //TODO: slider
-    //TODO: increment all the ui elements by the amount specified (maybe this comes at end, so its not drawn over)
-
-    Window_State scroll_window_state = {
-        .window_name = id, .window_type = UI_WINDOW_TYPE_SCROLLBAR,
-        .window_region_pos = scroll_box_node->pos,
-        .window_region_size = scroll_box_node->size,
-        .header_size = (vec2){0, 0},
-        .scroll_bar_percent_offset = 0,
-        .scroll_offset = 69,
-    };
-    stack_push(madness_ui->window_states_stack, &scroll_window_state);
-}
-
-
-void madness_scroll_box_end(Madness_UI* madness_ui)
-{
-    madness_ui_new_scissor_end(madness_ui);
-
-
-    Window_State scroll_window_state = stack_top(madness_ui->window_states_stack, Window_State);
-    stack_pop(madness_ui->window_states_stack);
-
-    madness_ui->cursor_pos = scroll_window_state.window_region_pos;
-
-    madness_ui_advance_cursor(madness_ui, vec2_add(scroll_window_state.window_region_size,
-                                                   scroll_window_state.header_size));
-
-
-    //take the offset from where the scroll box starts, and where the cursor position ends
-    //that will basically how many elements we have, which we can then use to find out, if we even need a slider
-    // and if the elements even can be allowed to move up
-
-    //TEMP
-    if (region_hit(madness_ui, madness_ui->top_scroll_box->pos, madness_ui->top_scroll_box->size))
-    {
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
-        {
-            madness_ui->scroll_offset -= 1;
-            madness_ui->scroll_offset = clamp_float(madness_ui->scroll_offset, 0, 1000);
-        }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
-        {
-            madness_ui->scroll_offset += 1;
-            madness_ui->scroll_offset = clamp_float(madness_ui->scroll_offset, 0, 1000);
-        }
-    }
-}
 
 bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness)
 {
@@ -2312,17 +2438,17 @@ void madness_ui_test(Madness_UI* madness_ui)
             DEFAULT_FONT_SIZE);
     */
 
-    madness_ui_window_begin(madness_ui, STRING("Madness UI Test Layout"), (vec2){0.1, 0.1});
+    madness_ui_window_begin(madness_ui, STRING("Madness UI Test Layout"));
 
-    if (madness_ui_button(madness_ui, STRING("first button"), STRING("these are buttons")))
+    if (madness_ui_button(madness_ui, STRING("these are buttons")))
     {
         FATAL("YOU HAVE PRESSED THE BUTTON OH LORD WHY!");
     };
-    if (madness_ui_button(madness_ui, STRING("test button 2"), STRING("le_button 2")))
+    if (madness_ui_button(madness_ui, STRING("le_button 2")))
     {
         FATAL("YOU HAVE PRESSED THE BUTTON OH LORD WHY!");
     }
-    madness_ui_button(madness_ui, STRING("test button 3"), STRING("Le Button 3"));
+    madness_ui_button(madness_ui, STRING("Le Button 3"));
     madness_ui_text(madness_ui, STRING("editor_font_size"));
     madness_ui_float(madness_ui, STRING("editor_font_slider"), &madness_ui->editor_font_size, 1.f);
     madness_ui_text(madness_ui, STRING("default_font_size"));
@@ -2347,7 +2473,7 @@ void madness_ui_test(Madness_UI* madness_ui)
     }
 
     madness_ui_text(madness_ui, STRING("GOD DAMN IT BOBBY"));
-    if (madness_ui_button(madness_ui, STRING("test button text"), STRING("AND SO IT GOES")))
+    if (madness_ui_button(madness_ui, STRING("AND SO IT GOES")))
     {
         FATAL(" BUTTONS AND DEATH");
     }
@@ -2360,7 +2486,7 @@ void madness_ui_test(Madness_UI* madness_ui)
 
     madness_slider_arrow(madness_ui, STRING("slider arrow"), &slider_val, slider_min, slider_max);
 
-    madness_text_box(madness_ui, STRING("textbox"));
+    madness_ui_text_box(madness_ui, STRING("textbox"));
 
     static vec3 vec3_test;
     float vec3_change_value = 10.5f;
@@ -2375,94 +2501,136 @@ void madness_ui_test(Madness_UI* madness_ui)
 
     madness_scroll_box_begin(madness_ui, STRING("scroll box"));
     {
-        madness_ui_button(madness_ui, STRING("Scollbox Button 1"), STRING("Scroll Around 1"));
-        madness_ui_button(madness_ui, STRING("Scollbox Button 2"), STRING("Scroll Around 2"));
-        if (madness_ui_button(madness_ui, STRING("Scollbox Button 3"), STRING("Scroll Around 3")))
+        madness_ui_button(madness_ui, STRING("Scroll Around 1"));
+        madness_ui_button(madness_ui, STRING("Scroll Around 2"));
+        if (madness_ui_button(madness_ui, STRING("Scroll Around 3")))
         {
             FATAL("BUTTONS AND DEATH");
         }
-        madness_ui_button(madness_ui, STRING("Scollbox Button 4"), STRING("Scroll Around 4"));
-        madness_ui_button(madness_ui, STRING("Scollbox Button 5"), STRING("Scroll Around 5"));
-        madness_ui_button(madness_ui, STRING("Scollbox Button 6"), STRING("Scroll Around 6"));
+        madness_ui_button(madness_ui, STRING("Scroll Around 4"));
+        madness_ui_button(madness_ui, STRING("Scroll Around 5"));
+        madness_ui_button(madness_ui, STRING("Scroll Around 6"));
     }
     madness_scroll_box_end(madness_ui);
 }
 
 void madness_ui_example(Madness_UI* madness_ui)
 {
-    madness_ui_menu_bar_begin(madness_ui, STRING("menu bar"));
+    String states[] = {};
+
+
+    madness_ui_menu_bar_begin(madness_ui, STRING("Menu Bar"));
     {
-        if (madness_ui_menu_item(madness_ui, STRING("file")))
+        if (madness_ui_menu_item(madness_ui, STRING("File")))
         {
-            FATAL("file hover")
-            //combo box
-            // madness_ui_combo_box(madness_ui, STRING("global combo"));
-            if (madness_ui_menu_drop_down(madness_ui, STRING("do a thing")))
+            // if (madness_ui_menu_dropdown_item(madness_ui, STRING("option 1")))
+            // {
+            //     FATAL("YAESADNALSDKskdnjla;skdjl;aksdjlkasjdlkasjd")
+            // }
+            // madness_ui_menu_dropdown_item(madness_ui, STRING("option 2"));
+            // madness_ui_menu_dropdown_item(madness_ui, STRING("option 3"));
+            static bool state = false;
+            if (madness_ui_drop_down(madness_ui, STRING("saodoa"), &state))
             {
-                FATAL("DROP_DOWN_LIFE")
-            } // TODO: for another time
-        };
-        madness_ui_menu_item(madness_ui, STRING("name"));
-        madness_ui_menu_item(madness_ui, STRING("option"));
+                madness_ui_button(madness_ui, STRING("File button"));
+
+            };
+
+            madness_scroll_box_begin(madness_ui, STRING("File Scroll"));
+            {
+                if (madness_ui_button(madness_ui, STRING("File button")))
+                {
+                    FATAL("BUTTONS AND DEATH");
+                };
+            }
+            madness_scroll_box_end(madness_ui);
+        }
+
+        if (madness_ui_menu_item(madness_ui, STRING("Menu")))
+        {
+            madness_scroll_box_begin(madness_ui, STRING("File Scroll"));
+            {
+                static float a = 0;
+                madness_slider_scroll(madness_ui, STRING("sad"), &a, -1, 10);
+                madness_ui_text_box(madness_ui, STRING("lama"));
+            }
+            madness_scroll_box_end(madness_ui);
+        }
+        if (madness_ui_menu_item(madness_ui, STRING("Quit")))
+        {
+            madness_scroll_box_begin(madness_ui, STRING("File Scroll"));
+            {
+                if (madness_ui_button(madness_ui, STRING("File button")))
+                {
+                    FATAL("BUTTONS AND DEATH");
+                };
+            }
+            madness_scroll_box_end(madness_ui);
+        }
+
     }
     madness_ui_menu_bar_end(madness_ui);
 
 
-    madness_ui_window_begin(madness_ui, STRING("Madness UI Example"), (vec2){0.1, 0.1});
-
-    if (madness_ui_button(madness_ui, STRING("Button"), STRING("Click Me")))
+    madness_ui_set_window_pos(madness_ui, 100, 100);
+    madness_ui_set_window_size(madness_ui, 250, 500);
+    madness_ui_window_begin(madness_ui, STRING("Madness UI Example"));
     {
-        FATAL("I HAVE BEEN CLICKED");
-    };
-    madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
+        if (madness_ui_button(madness_ui, STRING("Click Me")))
+        {
+            FATAL("I HAVE BEEN CLICKED");
+        }
+        madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
 
-    //
-    static float a;
-    madness_ui_float(madness_ui, STRING("floating"), &a, 1);
+        //
+        static float a;
+        madness_ui_float(madness_ui, STRING("floating"), &a, 1);
 
-    static vec2 v2;
-    madness_ui_vec2(madness_ui, STRING("vec2"), &v2, 1);
+        static vec2 v2;
+        madness_ui_vec2(madness_ui, STRING("vec2"), &v2, 1);
 
-    static vec3 v3;
-    madness_ui_vec3(madness_ui, STRING("vec3"), &v3, 1);
+        static vec3 v3;
+        madness_ui_vec3(madness_ui, STRING("vec3"), &v3, 1);
 
-    static bool checkbox;
-    madness_ui_check_box(madness_ui, STRING("the box is evil"), &checkbox);
-    madness_ui_button(madness_ui, STRING("Button1"), STRING("Click Me1"));
+        static bool checkbox;
+        madness_ui_check_box(madness_ui, STRING("the box is evil"), &checkbox);
+        madness_ui_button(madness_ui, STRING("Click Me1"));
 
-    static u32 combo_box_selected = 0;
-    const char* combo_box_list[] = {"Button1", "Button2", "Button3"};
-    madness_ui_combo_box_char(madness_ui, STRING("combo box"), &combo_box_selected, combo_box_list);
+        static u32 combo_box_selected = 0;
+        const char* combo_box_list[] = {"Button1", "Button2", "Button3"};
+        madness_ui_combo_box_char(madness_ui, STRING("combo box"), &combo_box_selected, combo_box_list);
 
-    String string_arr[] = {STRING("oh no"), STRING("whats up 2"), STRING("oaisd")};
-    madness_ui_combo_box_string(madness_ui, STRING("combo box 2"), &combo_box_selected, string_arr,
-                                ARRAY_SIZE(string_arr));
+        String string_arr[] = {STRING("oh no"), STRING("whats up 2"), STRING("oaisd")};
+        madness_ui_combo_box_string(madness_ui, STRING("combo box 2"), &combo_box_selected, string_arr,
+                                    ARRAY_SIZE(string_arr));
 
-    madness_text_box(madness_ui, STRING("text box"));
+        madness_ui_text_box(madness_ui, STRING("text box"));
 
-    static float slider_val;
-    static float slider_arrow;
-    madness_slider_scroll(madness_ui, STRING("slider"), &slider_val, 0, 1);
-    madness_slider_arrow(madness_ui, STRING("Arrow Slider"), &slider_arrow, 0, 1);
+        static float slider_val;
+        static float slider_arrow;
+        madness_slider_scroll(madness_ui, STRING("slider"), &slider_val, 0, 1);
+        madness_slider_arrow(madness_ui, STRING("Arrow Slider"), &slider_arrow, 0, 1);
+
+        madness_scroll_box_begin(madness_ui, STRING("scroll box"));
+        {
+            if (madness_ui_button(madness_ui, STRING("Click Tha")))
+            {
+                FATAL("I HAVE BEEN CLICKED");
+            }
+            madness_ui_button(madness_ui, STRING("Click Wha"));
+            madness_ui_button(madness_ui, STRING("Click Nah"));
+        }
+        madness_scroll_box_end(madness_ui);
 
 
-    madness_scroll_box_begin(madness_ui, STRING("scroll box"));
-    {
-        madness_ui_button(madness_ui, STRING("Buadstton"), STRING("Cliadsck Me"));
-        madness_ui_button(madness_ui, STRING("Buadstton"), STRING("Cliadsck Me"));
-        madness_ui_button(madness_ui, STRING("Buadstton"), STRING("Cliadsck Me"));
+        static bool drop_down;
+        if (madness_ui_drop_down(madness_ui, STRING("Drop Down"), &drop_down))
+        {
+            madness_ui_button(madness_ui, STRING("hahahah"));
+            madness_ui_button(madness_ui, STRING("mooooooooo"));
+        }
+        madness_ui_button(madness_ui, STRING("After Drop Down"));
     }
-    madness_scroll_box_end(madness_ui);
-
-    static bool drop_down;
-    if (madness_ui_drop_down(madness_ui, STRING("Drop Down"), &drop_down))
-    {
-        madness_ui_button(madness_ui, STRING("DROP BUTTON 1"), STRING("hahahah"));
-        madness_ui_button(madness_ui, STRING("DROP BUTTON 2"), STRING("mooooooooo"));
-    }
-    madness_ui_button(madness_ui, STRING("DROP BUTTON 1"), STRING("After Drop Down"));
-
-
     madness_ui_window_end(madness_ui);
 
 
@@ -2472,7 +2640,9 @@ void madness_ui_example(Madness_UI* madness_ui)
 
 void madness_ui_config_menu(Madness_UI* madness_ui)
 {
-    madness_ui_window_begin(madness_ui, STRING("UI Config"), (vec2){0.7, 0.1});
+    madness_ui_set_window_pos(madness_ui, 700, 100);
+    madness_ui_set_window_size(madness_ui, 350, 500);
+    madness_ui_window_begin(madness_ui, STRING("UI Config"));
     {
         madness_ui_text(madness_ui, STRING("font size"));
         madness_ui_float(madness_ui, STRING("font size"), &madness_ui->editor_font_size, 1);
@@ -2484,7 +2654,6 @@ void madness_ui_config_menu(Madness_UI* madness_ui)
                           &madness_ui->text_padding_x, &madness_ui->text_padding_y, 1);
 
         madness_ui_color_picker(madness_ui, STRING("Default Color"), &madness_ui->editor_style.color);
-
     }
     madness_ui_window_end(madness_ui);
 }

@@ -91,9 +91,9 @@ void editor_ui_debug(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_window_begin(madness_ui, STRING("Madness Editor"),  (vec2){0.1,0.1});
+    madness_ui_window_begin(madness_ui, STRING("Madness Editor"));
 
-    if (madness_ui_button(madness_ui, STRING("Editor Button"), STRING("Editor Button GO BRRR")))
+    if (madness_ui_button(madness_ui, STRING("Editor Button GO BRRR")))
     {
         FATAL("DO A BARREL ROLL");
     };
@@ -108,17 +108,17 @@ void editor_ui_debug(Editor* editor)
     }
     // madness_ui_vec3(madness_ui, "pos", STRING("translate"), &translate, 1.0f);
 
-    if (madness_ui_button(madness_ui, STRING("button"), STRING("translate by 1")))
+    if (madness_ui_button(madness_ui, STRING("translate by 1")))
     {
         vec3 translate = {1, 1, 1};
         transform_translate(&editor->resource_system->scene->transforms[0], translate);
     }
 
-    if (madness_ui_button(madness_ui, STRING("material flags enable"), STRING("material flags enable")))
+    if (madness_ui_button(madness_ui, STRING("material flags enable")))
     {
         material_system_enable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
-    if (madness_ui_button(madness_ui, STRING("material flags disable"), STRING("material flags disable")))
+    if (madness_ui_button(madness_ui, STRING("material flags disable")))
     {
         material_system_disable_flag(editor->resource_system->material_system, (Material_Handle){0}, MATERIAL_FLAG_PBR);
     }
@@ -148,7 +148,7 @@ void editor_ui_scene(Editor* editor)
     Madness_UI* madness_ui = editor->madness_ui;
     // madness_ui_test(madness_ui);
 
-    madness_ui_window_begin(madness_ui, STRING("Scene"),  (vec2){0.1,0.1});
+    madness_ui_window_begin(madness_ui, STRING("Scene"));
 
 
     madness_scroll_box_begin(madness_ui, STRING("Scene Scroll Box"));

@@ -63,19 +63,19 @@ void madness_pulse_main_menu(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window_begin(ui, STRING("Main Menu"),  (vec2){0.1,0.1});
+    madness_ui_window_begin(ui, STRING("Main Menu"));
 
 
-    if (madness_ui_button(ui, STRING("Load Game"), STRING("Load Game")))
+    if (madness_ui_button(ui, STRING("Load Game")))
     {
         //set new state for the load menu and load in menu metadata
         //TODO: for now just loading into the level select
         game->game_state = Game_State_Enum_Level_Select;
     }
-    if (madness_ui_button(ui, STRING("Settings"), STRING("Settings")))
+    if (madness_ui_button(ui, STRING("Settings")))
     {
     }
-    if (madness_ui_button(ui, STRING("Quit"), STRING("Quit")))
+    if (madness_ui_button(ui, STRING("Quit")))
     {
         Event_Data data = {0};
         event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game"), data);
@@ -88,14 +88,14 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
 {
     //run the ui
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window_begin(ui, STRING("Level Select"),  (vec2){0.1,0.1});
+    madness_ui_window_begin(ui, STRING("Level Select"));
     madness_scroll_box_begin(game->madness_ui, STRING("level select"));
     {
         for (int i = 0; i < 30; i++)
         {
             char buffer[100];
             sprintf(buffer, "Level %d", i);
-            if (madness_ui_button(ui, STRING(buffer), STRING(buffer)))
+            if (madness_ui_button(ui, STRING(buffer)))
             {
                 //TODO: load the level based on the number
                 DEBUG("Level Seleced: %d", i);
@@ -112,6 +112,6 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
 void madness_pulse_ability_select(Madness_Pulse_Game* game)
 {
     Madness_UI* ui = game->madness_ui;
-    madness_ui_window_begin(ui, STRING("Ability Select"),  (vec2){0.1,0.1});
+    madness_ui_window_begin(ui, STRING("Ability Select"));
     madness_ui_window_end(ui);
 }
