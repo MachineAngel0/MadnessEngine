@@ -3,7 +3,6 @@
 
 #include "allocator.h"
 #include "stack.h"
-#include "str_builder.h"
 #include "ui_types.h"
 
 //IMMEDIATE MODE UI

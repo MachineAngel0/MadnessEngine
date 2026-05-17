@@ -142,6 +142,7 @@ typedef enum UI_Window_Type
     UI_WINDOW_TYPE_NONE,
     UI_WINDOW_TYPE_WINDOW,
     UI_WINDOW_TYPE_SCROLLBAR,
+    UI_WINDOW_TYPE_POPUP,
     UI_WINDOW_TYPE_MAX,
 } UI_Window_Type;
 
@@ -164,6 +165,22 @@ typedef struct Window_State
     float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
 } Window_State;
 
+typedef struct Pop_Up_State
+{
+    String pop_up_name;
+
+    vec2 cursor_original_pos;
+    vec2 pop_up_start_pos;
+    vec2 pop_up_size;
+
+    UI_Node* pop_up_node;
+    UI_Node* pop_up_scissor_start_node;
+
+
+
+} Pop_Up_State;
+
+
 typedef struct Menu_Bar_State
 {
     vec2 menu_bar_pos;
@@ -172,9 +189,6 @@ typedef struct Menu_Bar_State
     vec2 menu_cursor_position;
 
     String active_menu_item;
-
-    vec2 drop_down_pos;
-    vec2 drop_down_size;
 
 } Menu_Bar_State;
 
@@ -197,7 +211,7 @@ typedef struct Madness_UI
     UI_Node_array* ui_nodes;
     UI_Node_Text_array* ui_nodes_text;
 
-    UI_Node_array* deffered_ui_nodes; // pop up nodes
+    UI_Node_array* pop_up_ui_nodes; // pop up nodes
 
 
     //DRAW DATA //
@@ -210,6 +224,9 @@ typedef struct Madness_UI
     //a window is anything with which things are drawn to inside of it
     HASH_TABLE_STR_TYPE(Window_State)* window_state_hash;
     STACK_TYPE(Window_State)* window_states_stack;
+
+    STACK_TYPE(Pop_Up_State)* pop_up_stack;
+    ARRAY_TYPE(Window_State)* pop_up_persistant_state;
 
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
@@ -288,7 +305,12 @@ typedef struct Madness_UI
 } Madness_UI;
 
 
-// FUNCTION POINTERS //
+
+
+// the best way im thinking to solve it is to have a formal concept of a pop up context,
+// where when we get nodes, they are added to a pop up context, which is permanent in state,
+// until we click outside the pop up area, and ideally if a pop up creates another pop up,
+// then we need to know that as well
 
 MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system,
                                  Resource_System* resource_system);
@@ -309,10 +331,11 @@ MAPI UI_Render_Packet madness_ui_get_text_render_data(Madness_UI* madness_ui);
 
 void madness_ui_menu_bar_begin(Madness_UI* madness_ui, String id);
 void madness_ui_menu_bar_end(Madness_UI* madness_ui);
-bool madness_ui_menu_item(Madness_UI* madness_ui, String menu_name);
-bool madness_ui_menu_dropdown_item(Madness_UI* madness_ui, String label);
+bool madness_ui_menu_item_begin(Madness_UI* madness_ui, String menu_name);
+bool madness_ui_menu_item_end(Madness_UI* madness_ui);
 
-
+bool madness_ui_pop_up_open(Madness_UI* madness_ui, String pop_up_name, vec2 pop_up_start_location);
+bool madness_ui_pop_up_close(Madness_UI* madness_ui);
 
 
 MAPI void madness_ui_window_begin(Madness_UI* madness_ui, String header_name);
@@ -338,9 +361,7 @@ MAPI void madness_ui_text_box(Madness_UI* madness_ui, String id);
 MAPI UI_Node* madness_ui_text_new(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
 MAPI UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size,
                                        UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
-MAPI UI_Node* madness_ui_text_deffered_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size,
-                                                UI_Alignment alignment_x,
-                                                UI_Alignment alignment_y); // TODO: pass in the pos
+
 
 
 MAPI bool madness_ui_button(Madness_UI* madness_ui, String label);
@@ -443,6 +464,7 @@ MAPI bool madness_ui_cubic_bezier(Madness_UI* madness_ui, vec2* pos1, vec2* pos2
 
 void madness_ui_same_line(Madness_UI* madness_ui);
 void madness_ui_advance_cursor(Madness_UI* madness_ui, vec2 ui_screen_size);
+void madness_ui_advance_cursor_horizontal(Madness_UI* madness_ui, vec2 ui_screen_size);
 
 void madness_ui_set_button_size(Madness_UI* madness_ui, float button_size);
 void madness_ui_set_font_size(Madness_UI* madness_ui, float font_size);
@@ -475,13 +497,10 @@ MAPI void madness_ui_print_state(Madness_UI* madness_ui);
 //utility
 MAPI UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
 MAPI UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
+UI_Node* madness_ui_get_pop_up_node(Madness_UI* madness_ui);
 
 UI_Node* madness_ui_new_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
 void madness_ui_new_scissor_end(Madness_UI* madness_ui);
-
-UI_Node* madness_ui_get_deffered_new_node(Madness_UI* madness_ui);
-UI_Node* madness_ui_new_deffered_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
-void madness_ui_new_deffered_scissor_end(Madness_UI* madness_ui);
 
 
 MAPI void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_size, vec2* out_pos);
