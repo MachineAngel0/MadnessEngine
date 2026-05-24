@@ -24,6 +24,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
     editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
+    // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
     return editor;

@@ -268,6 +268,7 @@ void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_ca
         WARN("VULKAN PIPELINE system init: didn't read correct amount of data from the file")
         pipeline_cache_size = 0;
         *pipeline_cache_data = NULL;
+        pipeline_info->handle = 0;
     }
 
     fclose(fptr);

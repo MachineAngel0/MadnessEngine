@@ -398,6 +398,8 @@ MAPI bool madness_ui_drop_down_tree(Madness_UI* madness_ui, String id, String te
 
 MAPI bool madness_ui_combo_box(Madness_UI* madness_ui, String id, u32* selected_value, String* string_array,
                                       u32 string_array_size);
+MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_value, char** char_array,
+                                      u32 char_array_size);
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
 // < enum day <selected dat> -> enum day <Tuesday>
 // > monday

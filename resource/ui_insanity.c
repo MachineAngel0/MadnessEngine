@@ -828,7 +828,7 @@ void insanity_ui_test()
     //     }
     // }
 
-    //game ui recreaction
+    //game ui recreation
 
     insanity_ui_push_pos((vec2){.03, .1});
     insanity_ui_push_size((vec2){.2, .05});

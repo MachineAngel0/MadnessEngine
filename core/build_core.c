@@ -61,6 +61,7 @@
 
 //CORE - Compiler
 #include "../core/compiler/compiler.c"
+#include "../core/compiler/reflection_system.c"
 
 
 #include "unit_test.c"

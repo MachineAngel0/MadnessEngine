@@ -94,8 +94,8 @@ typedef enum Token_Type
 
 typedef struct Token
 {
-    Token_Type type;
     String_Builder string_builder;
+    Token_Type type;
     u32 line;
 } Token;
 

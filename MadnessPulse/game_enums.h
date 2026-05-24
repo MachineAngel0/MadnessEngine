@@ -171,6 +171,7 @@ typedef enum Ability_Icon_Type
     Ability_Type_Reversal,
     Ability_Type_SpecialFlag,
     Ability_Type_Mana,
+    Ability_Type_MAX,
 } Ability_Icon_Type;
 
 typedef enum Ability_Activation_Type

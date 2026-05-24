@@ -3,12 +3,43 @@
 
 #include <stdbool.h>
 
+#include "game_constants.h"
+
 //array enums
 ARRAY_GENERATE_TYPE(Character_Name)
 DARRAY_GENERATE_TYPE(Character_Name)
 
+typedef struct Nonsense_Struct
+{
+    bool hi;
+} Nonsense_Struct;
+
 
 /// ABILITIES ///
+typedef struct Reflection_Test_Struct
+{
+    //type -> name
+    //type -> name->[array]
+    //type* -> name
+    //name(struct/enum) -> name
+    //name(struct/enum) -> name[array]
+    //name(struct/enum)* -> name
+
+    float type;
+    float* type_ptr;
+    float type_stack_ptr[10];
+    // float type_stack_ptr[Constant]; // there is the case of constants, that I should load in as well
+
+    Character_Name enum_type;
+    Character_Name* enum_type_ptr;
+    Character_Name enum_type_stack_ptr[10];
+
+
+    Nonsense_Struct struct_type;
+    Nonsense_Struct* struct_type_ptr;
+    Nonsense_Struct struct_type_stack_ptr[10];
+
+} Reflection_Test_Struct;
 
 
 typedef struct Heal_Component
@@ -27,6 +58,7 @@ typedef struct Damage_Component
     Element_Type element;
     float damage; // TODO: remove, its here just for testing
 } Damage_Component;
+
 
 typedef struct UAbilityAdderComponent
 {
@@ -168,7 +200,7 @@ typedef struct UStatusThresholdChanger
     float amount;
 } UStatusThresholdChanger;
 
-typedef  struct FTurnComponentDuration
+typedef struct FTurnComponentDuration
 {
     int EffectLength;
     int TurnsUntilTriggered;
@@ -466,13 +498,11 @@ typedef struct UPassivePooling
 
 typedef struct UPassiveTransferComponent
 {
-
-
     //TODO: it would be funny to transfer any negative augments onto another character,
     // like if you debuff the enemy then they will use this ability and debuff you instead
     // EPassiveTransferType TransferFlow;//TODO:
 
-    int MinMaxValueForTransfer;// = 0;
+    int MinMaxValueForTransfer; // = 0;
     // void PositiveTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
     // void NegativeTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
     // void AnyTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
@@ -700,7 +730,7 @@ typedef struct UNegationPassiveSetter
 } UNegationPassiveSetter;
 
 
-typedef  struct UPassiveReverse
+typedef struct UPassiveReverse
 {
     /*Turn any negative passive (status, damage, negation) positive */
     bool ReverseStatus; // = false;
@@ -709,10 +739,8 @@ typedef  struct UPassiveReverse
 } UPassiveReverse;
 
 
-
 typedef struct Ability_Component
 {
-
     //is it a normal, reversal etc
     Ability_Activation_Type activation_type;
     //single or multitarget
@@ -729,8 +757,7 @@ typedef struct Ability_Component
 
         Heal_Component heal;
         Damage_Component damage;
-    }data;
-
+    } data;
 } Ability_Component;
 
 typedef struct Ability
@@ -761,7 +788,7 @@ typedef struct Ability_Info
     float mp_cost; // = 1.0f;
 } Ability_Info;
 
-struct Ability_UI_INFO
+typedef struct Ability_UI_INFO
 {
     String ability_name; // = "Ability Not Named";
     String ability_text; // "Implement Text Please";
@@ -776,7 +803,7 @@ struct Ability_UI_INFO
 
     u32 ability_action_cost; // = 1;
     float mp_cost; // = 1.0f;
-};
+}Ability_UI_INFO;
 
 ARRAY_GENERATE_TYPE(Ability)
 ARRAY_GENERATE_TYPE(Ability_Component)
@@ -921,9 +948,7 @@ typedef struct Inventory_Component
     //TODO: this actually has to be a dynamic array
     Ability_Name* battle_list_dynamic; // list containing all abilities usable in the battle
     u8 battle_list_dynamic_size;
-
 } Inventory_Component;
-
 
 
 typedef struct Conjure_List_Component
@@ -1108,9 +1133,6 @@ typedef struct Ability_Registry
     u32 ability_count;
     // Ability_Component ability_component_list[Ability_Name_MAX * 10];
     // u32 ability_component_count;
-
-
-
 } Ability_Registry;
 
 
@@ -1157,11 +1179,9 @@ typedef struct Ability_Handler
 } Ability_Handler;
 
 
-//ACTION INTERFACE:
-typedef void (*action_execute)(struct Madness_Pulse_Game*);
-typedef void (*action_skip)(struct Madness_Pulse_Game*);
 
-typedef struct command
+
+typedef struct Command
 {
     action_execute execute;
     action_skip skip;
@@ -1206,7 +1226,6 @@ typedef struct Targeting_Handler
 
     // current targets count that we are locked onto, only applicable to single target
     u8 targeting_count;
-
 
 
     //TODO: you can just calculate targets available size, and if its 1 or less, dont move the target lock

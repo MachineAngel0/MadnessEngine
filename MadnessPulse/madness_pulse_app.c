@@ -2,6 +2,7 @@
 
 #include "ability.h"
 #include "madness_pulse_game.h"
+#include "ui_madness.h"
 
 
 bool application_on_resized(const Event_Type code, String sender, String listener_inst, Event_Data context);
@@ -25,6 +26,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     memory_system_init(&app_internal->application_core.memory_system, memory_request_size);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
     clock_init(&app_internal->application_core.clock);
+
+    //TODO: testing lexer/parser stuff
+    reflection_test();
 
 
     app_internal->application_core.is_running = true;
@@ -66,6 +70,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->resource_system);
 
 
+
+
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
                                                                      renderer_plugin->madness_ui,
                                                                      application_core->event_system,
@@ -91,6 +97,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     while (application_core->is_running)
     {
+
+
+
         clock_update_frame_start(&application_core->clock);
         clock_print_info(&application_core->clock);
 
@@ -130,8 +139,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             break;
         }
 
-
-        insanity_ui_push_size((vec2){0.5, 0.5});
+        madness_ui_window_begin(renderer_plugin->madness_ui, STRING("TESTTEST"));
+        {
+            static u32 i = 0;
+            madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
+                                      Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
+        }
+        madness_ui_window_end(renderer_plugin->madness_ui);
 
         madness_ui_end(renderer_plugin->madness_ui);
         insanity_ui_end();

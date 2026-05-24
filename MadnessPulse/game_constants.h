@@ -6,7 +6,7 @@
 //abilities
 #define MAX_ABILITY_COMPONENTS 10
 
-#define INSTA_KILL_DAMAGE 999999u;
+#define INSTA_KILL_DAMAGE 999999u
 
 //unit
 
@@ -20,6 +20,11 @@
 //game state
 #define MAX_PLAYER_COUNT 4
 
+
+
+//ACTION INTERFACE:
+typedef void (*action_execute)(struct Madness_Pulse_Game*);
+typedef void (*action_skip)(struct Madness_Pulse_Game*);
 
 
 

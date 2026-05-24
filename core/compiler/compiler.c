@@ -7,6 +7,7 @@ void lexer_test()
 
     Lexer* lexer2 = lexer_init();
     lexer_generate_tokens(lexer2, "../core/compiler/shader_test_file.madnessshader");
+    u64 token_size = darray_get_size(lexer2->tokens);
 }
 
 Lexer* lexer_init()
@@ -56,6 +57,9 @@ void lexer_generate_tokens(Lexer* lexer, const char* file_path)
 
     u64 size = darray_get_size(lexer->tokens);
     DEBUG("token size: %d", size)
+
+
+    //have to merge any number values into one value
 }
 
 Token* lexer_prune_tokens(Token* token_array, Token_Type* tokens_to_remove, u32 list_size)
@@ -284,7 +288,7 @@ void nextToken(Lexer* lexer, Token* token)
 
             string_builder_append_single_char(&token->string_builder, lexer->position);
 
-            while (lexer->position[0] &&
+            while (lexer->position[0] && lexer->position[0] != ' ' &&
                 lexer->position[0] != '\n')
             {
                 ++lexer->position;
@@ -435,6 +439,13 @@ void nextToken(Lexer* lexer, Token* token)
             else if (IsNumber(c))
             {
                 token->type = Token_Number;
+                //this loop is here so we can get all the number values and not just the individual value
+                while (lexer->position[0] &&  IsNumber(lexer->position[0]) && lexer->position[0] != ' ' &&
+                    lexer->position[0] != '\n')
+                {
+                    string_builder_append_single_char(&token->string_builder, lexer->position);
+                    ++lexer->position;
+                }
             }
             else
             {

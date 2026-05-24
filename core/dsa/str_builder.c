@@ -147,6 +147,20 @@ char* string_builder_to_c_string(const String_Builder* builder)
     return out_string;
 }
 
+
+u64 string_builder_to_number(const String_Builder* builder)
+{
+    u64 out_value = 0;
+    for (u64 i = 0; i < builder->current_length; i++)
+    {
+        u64 val = builder->str[i] - '0';
+        // ex: 10 + 3 = 103 (Wrong), 10 * 10 = 100 + 3 = 103 (Correct)
+        out_value = out_value * 10 + val;
+    }
+
+    return out_value;
+}
+
 void string_builder_empty(String_Builder* builder)
 {
     builder->current_length = 0;
