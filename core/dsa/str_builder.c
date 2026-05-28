@@ -142,7 +142,7 @@ char* string_builder_to_c_string(const String_Builder* builder)
 {
 
     char* out_string = malloc(builder->current_length+1);
-    memcpy(out_string, builder->str, builder->current_length);
+    out_string = memcpy(out_string, builder->str, builder->current_length);
     out_string[builder->current_length] = '\0';
     return out_string;
 }

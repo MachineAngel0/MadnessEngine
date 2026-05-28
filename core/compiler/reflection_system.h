@@ -73,11 +73,18 @@ typedef struct Reflection_Enum
     u32 enum_size;
 } Reflection_Enum;
 
+typedef struct Reflection_Enum_Query_List
+{
+    const char** enum_names;
+    u32 enum_sizes;
+} Reflection_Enum_Query_List;
+
 
 typedef struct Reflection_Type_Struct
 {
     const char* name;
     Reflection_Type type; // size is implicit in the type
+    const char* type_name; // size is implicit in the type
     size_t offset; // this is here because padding is a thing
     bool is_ptr_type; //TODO:
     bool is_ptr_stack_type;
@@ -123,17 +130,21 @@ void reflection_system_add_enum_field(Reflection_System* reflection_system, cons
 Reflection_Enum reflection_system_enum_query(Reflection_System* reflection_system, const char* enum_name);
 bool reflection_system_does_enum_exist(Reflection_System* reflection_system, const char* enum_name);
 
+
+Reflection_Enum_Query_List reflection_system_enum_query_list(Reflection_System* reflection_system,
+                                                             const char* enum_name, Frame_Allocator* frame_allocator);
+
 //Struct
 bool reflection_system_add_struct(Reflection_System* reflection_system, const char* struct_name);
 
 
 bool reflection_system_add_struct_field(Reflection_System* reflection_system, const char* struct_name,
-                                        Reflection_Type reflection_type, const char* type_struct_name);
+                                        Reflection_Type reflection_type, const char* type_name, const char* struct_member_name);
 
 bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_system, const char* struct_name,
-                                            Reflection_Type reflection_type, const char* type_struct_name);
+                                                 Reflection_Type reflection_type, const char* type_name, const char* struct_member_name);
 bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_system, const char* struct_name,
-                                                  Reflection_Type reflection_type, const char* type_struct_name, u64 array_size);
+                                                  Reflection_Type reflection_type, const char* type_name, const char* struct_member_name, u64 array_size);
 
 Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
 
@@ -144,6 +155,6 @@ bool reflection_system_does_struct_exist(Reflection_System* reflection_system, c
 Reflection_Type_Struct* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
                                                                  const char* struct_name);
 
-void reflection_test();
+Reflection_System* reflection_game_data();
 
 #endif //REFLECTION_H

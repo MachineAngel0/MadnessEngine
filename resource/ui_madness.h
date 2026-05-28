@@ -416,6 +416,9 @@ MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* co
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness);
 
 
+MAPI bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_System* reflection_system, const char* struct_name);
+
+
 typedef struct Material_Link
 {
     //nodes that we are connecting to

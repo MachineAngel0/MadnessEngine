@@ -1,0 +1,33 @@
+﻿
+//opaque
+fire pipeline -> maps directly to a material/material index
+mesh pbr default pipelines
+mesh with special effects pipelines
+water pipeline
+ice pipeline
+
+//transulscent
+mesh pbr default pipelines
+glass pipelines
+
+
+1 vertex buffer []
+1 index buffer []
+1 transform buffer []
+
+1 material buffer per pipeline[]
+
+mesh{
+}
+submesh{}
+
+struct mesh_mat_stuff
+{
+    vulkan_shader_pipeline shader_pipeline;
+    char material_name[64];
+    void* material_data
+
+};
+
+
+

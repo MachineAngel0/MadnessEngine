@@ -606,6 +606,7 @@ typedef struct Mesh_Renderer
 } Mesh_Renderer;
 
 
+
 typedef struct renderer
 {
     camera main_camera;
@@ -663,6 +664,13 @@ typedef struct renderer
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;
 } Renderer;
+
+
+
+
+
+
+
 
 
 #endif //VULKAN_STRUCT_TYPES_H

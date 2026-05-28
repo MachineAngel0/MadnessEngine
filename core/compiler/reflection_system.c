@@ -87,6 +87,27 @@ bool reflection_system_does_enum_exist(Reflection_System* reflection_system, con
     return hash_table_contains(reflection_system->reflection_registry_enums, enum_name);
 }
 
+Reflection_Enum_Query_List reflection_system_enum_query_list(Reflection_System* reflection_system,
+                                                             const char* enum_name, Frame_Allocator* frame_allocator)
+{
+    //generate the enums first and then the struct data we would want
+    Reflection_Enum enum_info = reflection_system_enum_query(reflection_system, enum_name);
+
+    u64 enum_iteration_size = darray_get_size(enum_info.type_list);
+
+    Reflection_Enum_Query_List query_list = {0};
+    query_list.enum_sizes = enum_iteration_size;
+    query_list.enum_names = allocator_alloc(frame_allocator, sizeof(char*) * query_list.enum_sizes);
+
+    for (u64 j = 0; j < enum_iteration_size; j++)
+    {
+        query_list.enum_names[j] = enum_info.type_list[j].name;
+    }
+
+
+    return query_list;
+}
+
 
 bool reflection_system_add_struct(Reflection_System* reflection_system, const char* struct_name)
 {
@@ -99,15 +120,17 @@ bool reflection_system_add_struct(Reflection_System* reflection_system, const ch
 }
 
 bool reflection_system_add_struct_field(Reflection_System* reflection_system, const char* struct_name,
-                                        Reflection_Type reflection_type, const char* type_struct_name)
+                                        Reflection_Type reflection_type, const char* type_name,
+                                        const char* struct_member_name)
 {
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
         Reflection_Type_Struct type_info = {0};
-        type_info.name = type_struct_name;
+        type_info.name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.offset = 0; //TODO: idk what to do about this, other than manually generating these
+        type_info.type_name = type_name;
+        type_info.offset = 0;
         type_info.is_ptr_type = false;
         type_info.is_ptr_stack_type = false;
 
@@ -124,16 +147,18 @@ bool reflection_system_add_struct_field(Reflection_System* reflection_system, co
 }
 
 bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_system, const char* struct_name,
-                                                 Reflection_Type reflection_type, const char* type_struct_name)
+                                                 Reflection_Type reflection_type, const char* type_name,
+                                                 const char* struct_member_name)
 {
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
         Reflection_Type_Struct type_info = {0};
-        type_info.name = type_struct_name;
+        type_info.name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.offset = 0; //TODO: idk what to do about this, other than manually generating these
-        type_info.is_ptr_type = true; //TODO: idk what to do about this, other than manually generating these
+        type_info.type_name = type_name;
+        type_info.offset = 0;
+        type_info.is_ptr_type = true;
         type_info.is_ptr_stack_type = false;
         darray_push(reflection_struct.type_list, type_info);
 
@@ -149,16 +174,18 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
 
 
 bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_system, const char* struct_name,
-                                                  Reflection_Type reflection_type, const char* type_struct_name,
-                                                  u64 array_size)
+                                                  Reflection_Type reflection_type, const char* type_name,
+                                                  const char* struct_member_name, u64 array_size)
+
 {
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
         Reflection_Type_Struct type_info = {0};
-        type_info.name = type_struct_name;
+        type_info.name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.offset = 0; //TODO: idk what to do about this, other than manually generating these
+        type_info.type_name = type_name;
+        type_info.offset = 0;
         type_info.is_ptr_stack_type = true;
         type_info.is_ptr_type = false;
         type_info.stack_size = array_size;
@@ -201,7 +228,7 @@ Reflection_Type_Struct* reflection_system_generate_struct_offset(Reflection_Syst
 }
 
 
-void reflection_test()
+Reflection_System* reflection_game_data()
 {
     //TODO: we are not freeing anything and especially nothing using the string_builder to C-string function
 
@@ -212,7 +239,6 @@ void reflection_test()
     u64 token_size_constants = darray_get_size(lexer_constants->tokens);
 
 
-    //TODO:
     DEBUG("CONSTANTS PARSE START")
     for (u64 i = 0; i < token_size_constants; i++)
     {
@@ -351,6 +377,8 @@ void reflection_test()
                                 reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
                                                                              token_list[i].type,
                                                                              string_builder_to_c_string(
+                                                                                 &token_list[i].string_builder),
+                                                                             string_builder_to_c_string(
                                                                                  &token_list[i + 1].string_builder),
                                                                              array_size);
                                 i += 3;
@@ -359,6 +387,8 @@ void reflection_test()
                             {
                                 reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
                                                                              token_list[i].type,
+                                                                             string_builder_to_c_string(
+                                                                                 &token_list[i].string_builder),
                                                                              string_builder_to_c_string(
                                                                                  &token_list[i + 1].string_builder),
                                                                              string_builder_to_number(
@@ -370,7 +400,7 @@ void reflection_test()
                         {
                             reflection_system_add_struct_field(reflection_system, struct_name,
                                                                token_list[i].type,
-                                                               string_builder_to_c_string(
+                                                               "", string_builder_to_c_string(
                                                                    &token_list[i + 1].string_builder));
                             i += 1;
                         }
@@ -383,6 +413,8 @@ void reflection_test()
                             //generate the array member
                             reflection_system_add_struct_field_ptr_heap(reflection_system,
                                                                         struct_name, token_list[i].type,
+                                                                        string_builder_to_c_string(
+                                                                            &token_list[i].string_builder),
                                                                         string_builder_to_c_string(
                                                                             &token_list[i + 2].string_builder));
                             i += 2;
@@ -406,7 +438,8 @@ void reflection_test()
                                         reflection_system,
                                         string_builder_to_c_string(&token_list[i + 3].string_builder));
                                     reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        REFLECTION_TYPE_ENUM,
+                                        Token_Enum, string_builder_to_c_string(
+                                            &token_list[i].string_builder),
                                         string_builder_to_c_string(
                                             &token_list[i + 1].string_builder),
                                         array_size);
@@ -415,7 +448,8 @@ void reflection_test()
                                 else if (token_list[i + 3].type == Token_Number)
                                 {
                                     reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        REFLECTION_TYPE_ENUM,
+                                        Token_Enum, string_builder_to_c_string(
+                                            &token_list[i].string_builder),
                                         string_builder_to_c_string(
                                             &token_list[i + 1].string_builder),
                                         string_builder_to_number(
@@ -426,7 +460,9 @@ void reflection_test()
                             else // basic type
                             {
                                 reflection_system_add_struct_field(reflection_system, struct_name,
-                                                                   REFLECTION_TYPE_ENUM,
+                                                                   Token_Enum,
+                                                                   string_builder_to_c_string(
+                                                                       &token_list[i].string_builder),
                                                                    string_builder_to_c_string(
                                                                        &token_list[i + 1].string_builder));
                                 i += 1;
@@ -439,7 +475,9 @@ void reflection_test()
                             {
                                 //generate the array member
                                 reflection_system_add_struct_field_ptr_heap(reflection_system,
-                                                                            struct_name, REFLECTION_TYPE_ENUM,
+                                                                            struct_name, Token_Enum,
+                                                                            string_builder_to_c_string(
+                                                                                &token_list[i].string_builder),
                                                                             string_builder_to_c_string(
                                                                                 &token_list[i + 2].string_builder));
                                 i += 2;
@@ -462,7 +500,8 @@ void reflection_test()
                                         reflection_system,
                                         string_builder_to_c_string(&token_list[i + 3].string_builder));
                                     reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        REFLECTION_TYPE_STRUCT,
+                                        Token_Struct, string_builder_to_c_string(
+                                            &token_list[i].string_builder),
                                         string_builder_to_c_string(
                                             &token_list[i + 1].string_builder),
                                         array_size);
@@ -471,7 +510,8 @@ void reflection_test()
                                 else if (token_list[i + 3].type == Token_Number)
                                 {
                                     reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        REFLECTION_TYPE_STRUCT,
+                                        Token_Struct, string_builder_to_c_string(
+                                            &token_list[i].string_builder),
                                         string_builder_to_c_string(
                                             &token_list[i + 1].string_builder),
                                         string_builder_to_number(
@@ -482,7 +522,9 @@ void reflection_test()
                             else // basic type
                             {
                                 reflection_system_add_struct_field(reflection_system, struct_name,
-                                                                   REFLECTION_TYPE_STRUCT,
+                                                                   Token_Struct,
+                                                                   string_builder_to_c_string(
+                                                                       &token_list[i].string_builder),
                                                                    string_builder_to_c_string(
                                                                        &token_list[i + 1].string_builder));
                                 i += 1;
@@ -495,7 +537,9 @@ void reflection_test()
                             {
                                 //generate the array member
                                 reflection_system_add_struct_field_ptr_heap(reflection_system,
-                                                                            struct_name, REFLECTION_TYPE_STRUCT,
+                                                                            struct_name, Token_Struct,
+                                                                            string_builder_to_c_string(
+                                                                                &token_list[i].string_builder),
                                                                             string_builder_to_c_string(
                                                                                 &token_list[i + 2].string_builder));
                                 i += 2;
@@ -511,7 +555,7 @@ void reflection_test()
 
     //generate the enums first and then the struct data we would want
     FILE* reflection_file = fopen("../MadnessPulse/game_reflection_generated.c", "w");
-    const char *header =
+    const char* header =
         "#include <stddef.h>\n"
         "#include \"game_constants.h\"\n"
         "#include \"game_enums.h\"\n"
@@ -525,7 +569,7 @@ void reflection_test()
         if (!reflection_system->reflection_registry_enums->key_str_data[i]) { continue; }
 
         Reflection_Enum enum_info = reflection_system_enum_query(
-               reflection_system, reflection_system->reflection_registry_enums->key_str_data[i]);
+            reflection_system, reflection_system->reflection_registry_enums->key_str_data[i]);
         if (!enum_info.name) { continue; }
 
         fwrite("const char* ", strlen("const char* "), 1, reflection_file);
@@ -546,37 +590,39 @@ void reflection_test()
     }
 
 
-/*
-    for (u64 i = 0; i < reflection_system->reflection_registry_structs->capacity; i++)
-    {
-        if (!reflection_system->reflection_registry_structs->key_str_data[i]) { continue; }
-
-        Reflection_Struct struct_info = reflection_system_struct_query(
-               reflection_system, reflection_system->reflection_registry_structs->key_str_data[i]);
-        if (!struct_info.type_list->name) { continue; }
-        // struct_info->name;
-        u64 struct_iteration_size = darray_get_size(struct_info.type_list);
-
-        // void component_serialize(){
-        fwrite("void", strlen("void"), 1, reflection_file);
-        fwrite(" ", 1, 1, reflection_file);
-        fwrite(struct_info.name, strlen(struct_info.name), 1, reflection_file);
-        const char* function_name = "_serialize(){\n";
-        fwrite(function_name, strlen(function_name), 1, reflection_file);
-
-        for (u64 j = 0; j < struct_iteration_size; j++)
+    /*
+        for (u64 i = 0; i < reflection_system->reflection_registry_structs->capacity; i++)
         {
-            if (!struct_info.type_list[j].name) { continue; }
-            //offsetof(struct_info.name, struct_info.type_list[j].name);
-            fwrite("\toffsetof(", strlen("\toffsetof("), 1, reflection_file);
+            if (!reflection_system->reflection_registry_structs->key_str_data[i]) { continue; }
+
+            Reflection_Struct struct_info = reflection_system_struct_query(
+                   reflection_system, reflection_system->reflection_registry_structs->key_str_data[i]);
+            if (!struct_info.type_list->name) { continue; }
+            // struct_info->name;
+            u64 struct_iteration_size = darray_get_size(struct_info.type_list);
+
+            // void component_serialize(){
+            fwrite("void", strlen("void"), 1, reflection_file);
+            fwrite(" ", 1, 1, reflection_file);
             fwrite(struct_info.name, strlen(struct_info.name), 1, reflection_file);
-            fwrite(", ", strlen(", "), 1, reflection_file);
-            fwrite(struct_info.type_list[j].name, strlen(struct_info.type_list[j].name), 1, reflection_file);
-            fwrite(");\n", strlen(");\n"), 1, reflection_file);
+            const char* function_name = "_serialize(){\n";
+            fwrite(function_name, strlen(function_name), 1, reflection_file);
+
+            for (u64 j = 0; j < struct_iteration_size; j++)
+            {
+                if (!struct_info.type_list[j].name) { continue; }
+                //offsetof(struct_info.name, struct_info.type_list[j].name);
+                fwrite("\toffsetof(", strlen("\toffsetof("), 1, reflection_file);
+                fwrite(struct_info.name, strlen(struct_info.name), 1, reflection_file);
+                fwrite(", ", strlen(", "), 1, reflection_file);
+                fwrite(struct_info.type_list[j].name, strlen(struct_info.type_list[j].name), 1, reflection_file);
+                fwrite(");\n", strlen(");\n"), 1, reflection_file);
+            }
+            fwrite("}\n\n", strlen("}\n\n"), 1, reflection_file);
         }
-        fwrite("}\n\n", strlen("}\n\n"), 1, reflection_file);
-    }
-*/
+    */
 
     fclose(reflection_file);
+
+    return reflection_system;
 }

@@ -319,11 +319,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     //Materials
     ubo.material_instance_idx = renderer->material_renderer->instance_buffer_handle.handle;
     ubo.material_pbr_idx = renderer->material_renderer->pbr_buffer_handle.handle;
-    // ubo.material_wave_idx;
-    // ubo.material_black_hole_idx;
-    // ubo.material_uv_animation_idx;
-    // ubo.material_blend1_idx;
-    // ubo.material_blend2_idx;
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.

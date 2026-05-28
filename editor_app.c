@@ -19,7 +19,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     //TODO: testing lexer/parser stuff
     lexer_test();
-    reflection_test();
+    reflection_game_data();
 
 
 

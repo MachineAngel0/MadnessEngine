@@ -22,6 +22,19 @@ String* string_create(const char* word, const u64 length)
     return str;
 }
 
+String* string_create_allocator(const char* word, const u64 length, Allocator* allocator)
+{
+    //creates a string without the null terminator
+    String* str = (String*)allocator_alloc(allocator, sizeof(String));
+    //memset(str, 0, sizeof(MString));
+    str->length = length;
+    //important to note that we use -1 to not include the null terminated string
+    str->chars = (char*)allocator_alloc(allocator,sizeof(char) * str->length);
+    memset(str->chars, 0, sizeof(char) * str->length);
+    memcpy(str->chars, word, sizeof(char) * str->length);
+
+    return str;
+}
 
 
 String* string_create_internal(const String* s)

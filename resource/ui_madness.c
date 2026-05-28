@@ -191,6 +191,7 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
 
 
     stack_clear(madness_ui->window_states_stack);
+    stack_clear(madness_ui->pop_up_stack);
 
 
     madness_ui->cursor_pos = vec2_zero();
@@ -2020,8 +2021,8 @@ bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_
 {
     //TODO: should size to the largest element or currently named string
     char* temp = char_array[*selected_value];
-    String selected_string = *STRING_CREATE_FROM_BUFFER(temp);
-    vec2 text_size = madness_ui_get_text_size(madness_ui, selected_string);
+    String* selected_string = string_create_allocator(temp, strlen(temp), madness_ui->frame_arena);
+    vec2 text_size = madness_ui_get_text_size(madness_ui, *selected_string);
 
     UI_Node* combo_box_node = madness_ui_get_new_node(madness_ui);
     combo_box_node->string_id = id;
@@ -2033,7 +2034,7 @@ bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_
     combo_box_node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_text_internal(madness_ui, selected_string, combo_box_node->pos, combo_box_node->size,
+    madness_ui_text_internal(madness_ui, *selected_string, combo_box_node->pos, combo_box_node->size,
                              UI_ALIGNMENT_LEFT,
                              UI_ALIGNMENT_CENTER);
     madness_ui_advance_cursor(madness_ui, combo_box_node->size);
@@ -2061,8 +2062,8 @@ bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_
 
         for (u32 i = 0; i < char_array_size; i++)
         {
-            char* temp = char_array[i];
-            String draw = *STRING_CREATE_FROM_BUFFER(temp);
+            char* inner_temp = char_array[i];
+            String draw = *string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_arena);
             UI_Node* string_node = madness_ui_text_internal(madness_ui, draw, madness_ui->cursor_pos,
                                                             combo_box_node->size,
                                                             UI_ALIGNMENT_LEFT,
@@ -2200,6 +2201,80 @@ bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness)
 
     //check if we clicked the button
     return madness_ui_use_ui_element(madness_ui, new_node->hash_id, button_screen_pos, button_screen_size);
+}
+
+bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_System* reflection_system,
+                                const char* struct_name)
+{
+    Reflection_Struct struct_info = reflection_system_struct_query(reflection_system, struct_name);
+    u32 struct_list_size = darray_get_size(struct_info.type_list);
+
+     static float x = 0;
+     static u32 selected_i = 0;
+     static bool bool_state = false;
+
+
+    for (u32 i = 0; i < struct_list_size; i++)
+    {
+        Reflection_Type_Struct type_info = struct_info.type_list[i];
+        switch (struct_info.type_list[i].type)
+        {
+        case REFLECTION_TYPE_INVALID:
+            break;
+        case REFLECTION_TYPE_U8:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_U16:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_U32:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_U64:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_S8:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_S16:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_S32:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_S64:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_F32:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_F64:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_SIZE_T:
+            madness_ui_float(madness_ui, STRING(type_info.name), &x, 1.0);
+            break;
+        case REFLECTION_TYPE_BOOL:
+            madness_ui_check_box(madness_ui, STRING(type_info.name), &bool_state);
+            break;
+        case REFLECTION_TYPE_STRING:
+            madness_ui_text_box(madness_ui, STRING(type_info.name));
+            break;
+        case REFLECTION_TYPE_CHAR:
+            madness_ui_text_box(madness_ui, STRING(type_info.name));
+            break;
+        case REFLECTION_TYPE_ENUM:
+            //TODO: hella bugged rn, if i use more than one of these
+            // Reflection_Enum_Query_List list = reflection_system_enum_query_list(reflection_system, type_info.type_name, madness_ui->frame_arena);
+            // madness_ui_combo_box_char(madness_ui, STRING(type_info.name), &selected_i, list.enum_names, list.enum_sizes);
+            break;
+        case REFLECTION_TYPE_STRUCT:
+            madness_ui_reflection_test(madness_ui, reflection_system, type_info.name);
+            break;
+        case REFLECTION_TYPE_MAX:
+            break;
+        }
+    }
 }
 
 bool madness_ui_node_simple(Madness_UI* madness_ui, String id, vec2 pos, String inputs[], u8 input_size,

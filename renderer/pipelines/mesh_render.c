@@ -1,5 +1,9 @@
 ﻿#include "mesh_render.h"
 
+
+
+
+
 Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system)
 {
     Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->arena, sizeof(Mesh_Renderer));

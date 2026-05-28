@@ -28,7 +28,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     clock_init(&app_internal->application_core.clock);
 
     //TODO: testing lexer/parser stuff
-    reflection_test();
+    Reflection_System* reflection_system = reflection_game_data();
 
 
     app_internal->application_core.is_running = true;
@@ -141,9 +141,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
         madness_ui_window_begin(renderer_plugin->madness_ui, STRING("TESTTEST"));
         {
-            static u32 i = 0;
-            madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
-                                      Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
+            // static u32 i = 0;
+            // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
+                                      // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
+
+            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_system, "Heal_Component");
+            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_system, "Damage_Component");
         }
         madness_ui_window_end(renderer_plugin->madness_ui);
 

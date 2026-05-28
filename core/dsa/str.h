@@ -32,6 +32,7 @@ typedef enum DELIMITER_BEHAVIOR
 
 //NOTE: do not call this, just use STRING_CREATE(string) unless you specifically need to pass in the size for some reason
 String* string_create(const char* word, const u64 length);
+String* string_create_allocator(const char* word, const u64 length, Allocator* allocator);
 
 
 String* string_create_internal(const String* s);
