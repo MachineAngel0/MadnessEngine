@@ -575,8 +575,7 @@ char* madness_ui_float_to_char(Madness_UI* madness_ui, const float value)
 
 void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command draw_type)
 {
-    dynamic_array_push(madness_ui->draw_command_list, &madness_ui->current_draw_command);
-    madness_ui->current_draw_command = draw_type;
+    dynamic_array_push(madness_ui->draw_command_list, &draw_type);
 }
 
 

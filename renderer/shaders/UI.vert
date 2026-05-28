@@ -7,8 +7,6 @@
 #include "shader_includes/2d_structs.glsl"
 #include "shader_includes/test_uniform.glsl"
 
-layout(location = 0) in vec2 in_pos;
-
 layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out vec2 out_local_pos;
@@ -18,20 +16,20 @@ layout(location = 4) out flat uint out_material_buffer_location;
 
 void main() {
 
-//    uint instance_idx = gl_InstanceIndex;
-    uint instance_idx = gl_BaseInstanceARB;
-    UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(instance_idx)];
+    uint instance_idx = gl_InstanceIndex;
     out_material_buffer_location = instance_idx;
+    UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(instance_idx)];
 
-    vec2 vertices[6] =
-    {
-    inst_data.pos,
-    vec2(inst_data.pos + vec2(0.0, inst_data.size.y)),
-    vec2(inst_data.pos + vec2(inst_data.size.x, inst_data.size.y)),
-    vec2(inst_data.pos + vec2(inst_data.size.x, 0.0)),
-    vec2(inst_data.pos + vec2(0.0, inst_data.size.y)),
-    vec2(inst_data.pos + inst_data.size),
-    };
+    //we are manually generating the index and vertex data, since its always the same just with offsets and positions
+    int indices[6] = int[6](0, 1, 2, 2, 3, 0);
+    int idx = indices[gl_VertexIndex];
+
+    vec2 local_positions[4] = vec2[4](
+    vec2(0.0, 0.0),  // 0 top-left
+    vec2(0.0, 1.0),  // 1 bottom-left
+    vec2(1.0, 1.0),  // 2 bottom-right
+    vec2(1.0, 0.0)   // 3 top-right
+    );
 
     //rotations
     // using a rotation matrix, calculated on the gpu
@@ -43,13 +41,13 @@ void main() {
     float c = cos(inst_data.rotation);
     float s = sin(inst_data.rotation);
 
-    vec2 v = vertices[gl_VertexIndex];
+//    vec2 v = vertices[gl_VertexIndex];
+    vec2 v =  inst_data.pos + local_positions[idx] * inst_data.size;
     v -= center;
     v = vec2(v.x * c - v.y * s, v.x * s + v.y * c);
     v += center;
 
     vec2 ndc = v * 2.0 - 1.0;
-//    vec2 ndc = (vec2(vertices[gl_VertexIndex])) * 2.0 - 1.0;
     gl_Position = vec4(ndc, 0.0, 1.0);
     out_color = inst_data.color;
 
@@ -66,18 +64,10 @@ void main() {
     vec2(right, top),
     };
 
-    out_uv = uvs[gl_VertexIndex];
+    out_uv = uvs[idx];
     out_texture_idx = inst_data.texture_handle;
 
-    // Always output local UVs
-    vec2 local_position[6] = {
-    vec2(0.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 1.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 1.0),
-    };
-    out_local_pos = local_position[gl_VertexIndex];
+
+    out_local_pos = local_positions[idx];
 
 }

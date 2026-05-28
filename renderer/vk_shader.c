@@ -353,38 +353,15 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
 
-    VkVertexInputBindingDescription input_binding_description[1];
-    //vertex
-    input_binding_description[0].binding = 0;
-    input_binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    // input_binding_description[0].stride = sizeof(Quad_Vertex); // size of vec2
-    input_binding_description[0].stride = sizeof(Sprite); // size of vec2 + vec3
-
-
-    spirv_reflect_input_variable_info* attribute_info =
-        spriv_reflect_get_input_variable(NULL, "../renderer/shaders/UI.vert.spv");
-    u32 offset_total = 0;
-    VkVertexInputAttributeDescription* attribute_descriptions = malloc(
-        sizeof(VkVertexInputAttributeDescription) * attribute_info->input_count);
-    for (u32 attribute_index = 0; attribute_index < attribute_info->input_count; attribute_index++)
-    {
-        attribute_descriptions[attribute_index].binding = 0;
-        attribute_descriptions[attribute_index].location = attribute_info->locations[attribute_index];
-        attribute_descriptions[attribute_index].format = (VkFormat)attribute_info->formats[attribute_index];
-
-        offset_total += attribute_info->offsets[attribute_index];
-        attribute_descriptions[attribute_index].offset = offset_total;
-    }
-
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
-    vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    vertex_input_state_create_info.pVertexBindingDescriptions = input_binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
-    vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
+    vertex_input_state_create_info.pVertexBindingDescriptions = 0;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount =0;
+    vertex_input_state_create_info.pVertexAttributeDescriptions = 0;
 
     //The VkPipelineInputAssemblyStateCreateInfo struct describes two things: what kind of geometry will be drawn from the vertices
     //and if primitive restart should be enabled.

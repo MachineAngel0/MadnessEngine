@@ -56,6 +56,7 @@ Sprite default_sprite[4] = {
     {.pos = { 1.f,  1.f}, .tex = {1.0f, 1.0f}},  // bottom-right
     {.pos = { 1.f, -1.f}, .tex = {1.0f, 0.0f}},  // top-right
 };
+
 u16 default_sprite_indices[6] = {
     0, 1, 2, 2, 3, 0
 };

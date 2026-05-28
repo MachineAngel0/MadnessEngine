@@ -88,15 +88,6 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
                             &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
                                 current_frame], 0, 0);
 
-    VkDeviceSize offsets_bindless[1] = {0};
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
-                           &vert_buffer->handle, offsets_bindless);
-
-    vkCmdBindIndexBuffer(command_buffer->handle,
-                         index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16
-    );
-
     PC_UI pc_ui = {
         renderer->buffer_system->global_ubo_handle.handle,
         get_buffer_device_address(renderer->context.device.logical_device, vulkan_buffer_get(renderer, ui_renderer->ui_material_ssbo_handle)->handle),
@@ -123,10 +114,10 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 
             vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                               renderer->ui_pipeline.handle);
+
             vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
-            vkCmdDrawIndexed(command_buffer->handle,
-                             ARRAY_SIZE(default_sprite_indices),
-                             1, 0, 0, i);
+            // firstInstance -> gl_InstanceIndex
+            vkCmdDraw(command_buffer->handle, 6, 1, 0, i);
             break;
         case UI_DRAW_TYPE_TEXT:
             //bind pipeline

@@ -94,11 +94,25 @@ layout(set = 2, binding = 0, scalar) readonly buffer SPRITE_INSTANCE_BUFFER{
     Sprite_Data sprite_instance_data[];
 }Sprite_Instance_Buffer[];
 
-layout(buffer_reference, scalar) readonly buffer UI_INSTANCE_BUFFER{
+layout(buffer_reference, scalar) readonly buffer UI_Instance_Buffer{
     UI_Data ui_data[];
-}UI_Instance_Buffer;
+};
+
+struct Sprite
+{
+    vec2 pos;
+    vec2 tex;
+};
+
+layout(buffer_reference, scalar) readonly buffer Sprite_Vertex{
+    Sprite vertice[];
+};
+layout(buffer_reference, scalar) readonly buffer Sprite_Index{
+    uint indices[];
+};
+
 
 layout(push_constant, scalar) uniform PushConstant_2D{
     uint ubo_buffer_idx;
-    UI_INSTANCE_BUFFER material_buffer;
+    UI_Instance_Buffer material_buffer;
 }PC_2D;
