@@ -35,6 +35,7 @@ typedef enum Vulkan_Buffer_Type
     BUFFER_TYPE_CPU_STORAGE, // meant to be used in a descriptor set
     // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
     BUFFER_TYPE_INDIRECT,
+    BUFFER_TYPE_INDIRECT_HOST_VISIBLE, // for small buffers, mostly for things like ui draws
 
     //idk what these are used for yet, but they will probably be useful later
     //UNIFORM_TEXEL,

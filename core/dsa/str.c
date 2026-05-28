@@ -124,10 +124,10 @@ String* string_duplicate(const String* str)
 }
 
 //creates a new string from the two strings
-String* string_concat(const String* str1, const String* str2, Allocator_Interface allocator_interface)
+String* string_concat(const String* str1, const String* str2, const Allocator_Interface allocator_interface)
 {
     String* out_str = allocator_interface.alloc(allocator_interface.allocator, sizeof(String), DEFAULT_ALIGNMENT);
-    u64 combined_length = str1->length + str2->length;
+    const u64 combined_length = str1->length + str2->length;
     out_str->chars = (char *) allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length, DEFAULT_ALIGNMENT);
     memset(out_str->chars, 0, sizeof(char) * combined_length);
 
@@ -140,7 +140,7 @@ String* string_concat(const String* str1, const String* str2, Allocator_Interfac
 }
 
 
-String* string_strip_whitespace(String* str)
+String* string_strip_whitespace(const String* str)
 {
     String* out_string = string_duplicate(str);
 
@@ -219,7 +219,7 @@ String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 s
     return new_string_str;
 }
 
-String* string_strip_from_end(String* str, const char stop_character)
+String* string_strip_from_end(const String* str, const char stop_character)
 {
     //mostly used for path string, so that the end value will be removed
     //includes the stop character in the final result
@@ -270,7 +270,7 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     return str_tokens;
 }
 
-String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array, bool ignore_whitespace)
+String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array, const bool ignore_whitespace)
 {
     //so the behavior should be something like this: delimeter = "<>" before<token> ->  before,<, token, >
 
@@ -341,7 +341,12 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens)
     }
 }
 
-u64 string_hash_u64(String string)
+u32 string_hash_u32(const String string)
+{
+    return generate_hash_key_32bit((u8*)string.chars, string.length);
+}
+
+u64 string_hash_u64(const String string)
 {
     return generate_hash_key_64bit((u8*)string.chars, string.length);
 }

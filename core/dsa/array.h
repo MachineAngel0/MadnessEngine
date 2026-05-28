@@ -31,6 +31,7 @@ Array* _array_create(const u64 data_stride, const u64 capacity);
 
 void array_free(Array* array);
 void array_clear(Array* array);
+void array_zero(Array* array);
 
 void array_push(Array* array, const void* new_data);
 void array_pop(Array* array);

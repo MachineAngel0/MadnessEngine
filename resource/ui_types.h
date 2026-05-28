@@ -47,12 +47,6 @@ typedef enum UI_Alignment
     UI_ALIGNMENT_RIGHT,
 } UI_Alignment;
 
-typedef enum UI_Draw_Command
-{
-    UI_DRAW_TYPE_UI, // everything is in one shader with lots of instancing
-    UI_DRAW_TYPE_SCISSOR_START,
-    UI_DRAW_TYPE_SCISSOR_END,
-}UI_Draw_Command;
 
 typedef struct UI_Node_Draw_Data
 {
@@ -90,13 +84,29 @@ typedef struct UI_Node_Draw_Data
 } UI_Node_Draw_Data;
 
 
+typedef enum UI_Draw_Command_Type
+{
+    UI_DRAW_TYPE_DRAW, // everything is in one shader with lots of instancing
+    UI_DRAW_TYPE_SCISSOR_START,
+    UI_DRAW_TYPE_SCISSOR_END,
+}UI_Draw_Command_Type;
+
+typedef struct UI_Draw_Command{
+    UI_Draw_Command_Type type;
+    u32 offset;
+    u32 count;
+    vec2 scissor_pos;
+    vec2 scissor_size;
+}UI_Draw_Command;
+
+
 typedef struct UI_Render_Packet
 {
     UI_Node_Draw_Data* ui_material_data;
     u64 ui_material_data_count;
     u64 ui_material_bytes;
     UI_Draw_Command* draw_command;
-    u64 draw_command_count;
+    u32 draw_command_count;
 } UI_Render_Packet;
 
 

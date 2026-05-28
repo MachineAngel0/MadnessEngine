@@ -64,7 +64,7 @@ String* string_duplicate(const String* str);
 String* string_concat(const String* str1, const String* str2, Allocator_Interface allocator_interface);
 
 
-String* string_strip_whitespace(String* str);
+String* string_strip_whitespace(const String* str);
 
 /*C-STRING*/
 
@@ -77,7 +77,7 @@ String* string_slice_from(const String* s, const u64 slice_size);
 
 String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 slice_end);
 
-String* string_strip_from_end(String* str, const char stop_character);
+String* string_strip_from_end(const String* str, const char stop_character);
 
 
 //creates a copy of the string/words passed in
@@ -91,6 +91,7 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens);
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
 
 
+u32 string_hash_u32(String string);
 u64 string_hash_u64(String string);
 
 

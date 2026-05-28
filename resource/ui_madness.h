@@ -65,6 +65,7 @@ typedef struct UI_Editor_Style
 #define MAX_UI_NODE_COUNT 1000
 #define MAX_UI_TEXT_NODE_COUNT 1000
 #define MAX_UI_NODE_CHILD_COUNT 10
+#define MAX_UI_DRAW_COUNT 500
 
 #define MIN_UI_NODE_SCREEN_SIZE 250
 
@@ -94,6 +95,7 @@ typedef struct UI_Node
 
     //Text
     String text;
+    char character;
 
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
@@ -494,7 +496,7 @@ MAPI char* madness_ui_float_to_char(Madness_UI* madness_ui, float value);
 
 
 //draw list
-void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command draw_type);
+void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command_Type draw_type);
 
 
 MAPI bool is_ui_hot(Madness_UI* madness_ui, int id);

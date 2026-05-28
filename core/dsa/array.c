@@ -38,6 +38,12 @@ void array_clear(Array* array)
     array->num_items = 0;
 }
 
+void array_zero(Array* array)
+{
+    memset(array->data, 0, array->num_items * array->stride);
+}
+
+
 void array_print(Array* array, void (*print_func)(void*))
 {
     for (u64 i = 0; i < array->num_items; i++)
