@@ -49,12 +49,9 @@ typedef enum UI_Alignment
 
 typedef enum UI_Draw_Command
 {
-    UI_DRAW_TYPE_QUAD,
-    // UI_DRAW_TYPE_IMAGE, //maybe
-    UI_DRAW_TYPE_TEXT,
+    UI_DRAW_TYPE_UI, // everything is in one shader with lots of instancing
     UI_DRAW_TYPE_SCISSOR_START,
     UI_DRAW_TYPE_SCISSOR_END,
-    //anything else can be for specific shaders that I might want later, like for the game ui
 }UI_Draw_Command;
 
 typedef struct UI_Node_Draw_Data

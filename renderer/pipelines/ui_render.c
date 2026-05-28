@@ -103,32 +103,24 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     push_constant_info_ui.pValues = &pc_ui;
     push_constant_info_ui.pNext = NULL;
 
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                           renderer->ui_pipeline.handle);
+
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
+    //two pipelines are slower than one, and much faster if i use instancing for them
+
     //draw
     for (u32 i = 0; i < ui_renderer->madness_ui_render_packet->draw_command_count; i++)
     {
         switch (ui_renderer->madness_ui_render_packet->draw_command[i])
         {
-        case UI_DRAW_TYPE_QUAD:
+        case UI_DRAW_TYPE_UI:
             //bind pipeline
             //push constant, issue draw at material index
 
-            vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                              renderer->ui_pipeline.handle);
 
-            vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
             // firstInstance -> gl_InstanceIndex
             vkCmdDraw(command_buffer->handle, 6, 1, 0, i);
-            break;
-        case UI_DRAW_TYPE_TEXT:
-            //bind pipeline
-            //push constant, issue draw at material index
-
-            // vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            //                   renderer->text_pipeline.handle);
-            // vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
-            // vkCmdDrawIndexed(command_buffer->handle,
-            //                  ARRAY_SIZE(default_sprite_indices),
-            //                  1, 0, 0, i);
             break;
         case UI_DRAW_TYPE_SCISSOR_START:
             // ui_renderer->madness_ui_render_packet->ui_material_data[i].scissor_pos;

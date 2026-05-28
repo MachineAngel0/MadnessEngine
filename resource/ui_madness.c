@@ -35,8 +35,6 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
     madness_ui->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
     madness_ui->pop_up_ui_nodes = UI_Node_array_create(
         MAX_UI_NODE_COUNT / 10, allocator_inferface_create(madness_ui->allocator));
-    madness_ui->ui_nodes_text = UI_Node_Text_array_create(
-        MAX_UI_TEXT_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
 
 
     madness_ui->string_builder = string_builder_create(100);
@@ -181,9 +179,6 @@ void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size
     UI_Node_array_zero(madness_ui->pop_up_ui_nodes);
     UI_Node_array_clear(madness_ui->pop_up_ui_nodes);
 
-    UI_Node_Text_array_zero(madness_ui->ui_nodes_text);
-    UI_Node_Text_array_clear(madness_ui->ui_nodes_text);
-
 
     memset(&madness_ui->current_draw_command, 0, sizeof(UI_Draw_Command));
     dynamic_array_clear(madness_ui->draw_command_list);
@@ -259,7 +254,6 @@ void madness_ui_end(Madness_UI* madness_ui)
     }
 
 
-
     u32 allocation_count = madness_ui->ui_nodes->num_items;
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
@@ -304,7 +298,6 @@ void madness_ui_end(Madness_UI* madness_ui)
         // draw_data->background_color = node_data->background_color;
         draw_data_index++;
     }
-
 
 
     //SET UI STATE FOR NEXT FRAME //
@@ -456,7 +449,7 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
         return out_node;
     }
     UI_Node* out_node = &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items++];
-    madness_ui_add_draw_command(madness_ui, UI_DRAW_TYPE_QUAD);
+    madness_ui_add_draw_command(madness_ui, UI_DRAW_TYPE_UI);
     return out_node;
 }
 
@@ -506,13 +499,6 @@ void madness_ui_new_scissor_end(Madness_UI* madness_ui)
     madness_ui_add_draw_command(madness_ui, UI_DRAW_TYPE_SCISSOR_END);
 }
 
-
-UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui)
-{
-    UI_Node_Text* out_node = &madness_ui->ui_nodes_text->data[madness_ui->ui_nodes_text->num_items];
-    madness_ui->ui_nodes_text->num_items++;
-    return out_node;
-}
 
 UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
 {
@@ -1075,69 +1061,6 @@ vec2 madness_ui_get_window_size(Madness_UI* madness_ui)
     return out;
 }
 
-void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position)
-{
-    f32 font_scalar = ((madness_ui->editor_font_size) / madness_ui->default_font_size);
-
-    Madness_Font font_data;
-    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
-                            &font_data);
-    vec2 text_size = {};
-
-    for (u64 i = 0; i < text.length; i++)
-    {
-        const char c = text.chars[i];
-
-        if (c < 32 || c >= 128) continue; // skip unsupported characters
-
-
-        Glyph* g = &font_data.glyphs[c - 32];
-
-        // Quad position in screen coords and scaled by the font scalar
-        f32 x_position = screen_position.x + ((float)g->xoff * font_scalar);
-        f32 y_position = screen_position.y + ((float)g->yoff * font_scalar);
-
-        f32 x_width = ((f32)g->width * font_scalar);
-        f32 y_height = ((f32)g->height * font_scalar);
-
-        //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
-
-
-        // UVs from the atlas
-        // vec2 uv0 = {g->u0, g->v0}; // uv pos/offset
-        // vec2 uv1 = {g->u1, g->v1}; // uv size
-
-        UI_Node_Text* text_node = madness_ui_get_new_node_text(madness_ui);
-        text_node->character = c;
-        text_node->pos = (vec2){x_position, y_position};
-        text_node->size = (vec2){x_width, y_height};
-        text_node->uv_offset = (vec2){g->u0, g->v0};
-        text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
-        text_node->color = COLOR_WHITE;
-        text_node->texture_handle = madness_ui->default_font_handle;
-
-        if (i == 0)
-        {
-            text_node->start_text = true;
-        }
-
-        screen_position.x += (g->advance) * font_scalar; // move offset forward
-
-        text_size.x += text_node->size.x;
-        text_size.y = max_f(text_size.y, text_node->size.y);
-    }
-}
-
-void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size)
-{
-    //center the text
-    vec2 text_size;
-    madness_calculate_text_size(madness_ui, text, parent_pos, &text_size);
-
-    vec2 text_pos;
-    madness_ui_center_child_node(parent_pos, parent_size, text_size, &text_pos);
-    madness_draw_text(madness_ui, text, text_pos);
-}
 
 vec2 madness_ui_get_text_size(Madness_UI* madness_ui, String text)
 {
@@ -1257,44 +1180,14 @@ bool madness_ui_drop_down(Madness_UI* madness_ui, String label, bool* state)
     return *state;
 }
 
-void madness_ui_text(Madness_UI* madness_ui, String text)
-{
-    //We take the desired font size, scale it down proportional to the font size we created it at
-    //final size of the font ex: 36/48 = 0.75, 48*0.75 = 36
-
-    if (text.length == 0) return;
-
-
-    //roughly 80% the size of the layout
-    const float button_ratio_to_layout_size = 0.8f;
-    const float button_vertical_normalized_size = 0.1f;
-    vec2 normalized_size;
-    normalized_size.x = madness_ui->current_window_screen_size.x * button_ratio_to_layout_size;
-    normalized_size.y = button_vertical_normalized_size;
-
-
-    // proper screen pos and size
-    vec2 ui_screen_pos = madness_ui->cursor_pos;
-    vec2 ui_screen_size = vec2_mul(normalized_size, madness_ui->screen_size);
-
-
-    //generate the text
-    vec2 text_size;
-    madness_calculate_text_size(madness_ui, text, ui_screen_pos, &text_size);
-    madness_draw_text(madness_ui, text, ui_screen_pos);
-
-    //update ui state for the next element
-    // madness_ui_advance_cursor(madness_ui, text_size);
-}
-
-
-UI_Node* madness_ui_text_new(Madness_UI* madness_ui, String text)
+UI_Node* madness_ui_text(Madness_UI* madness_ui, String text)
 {
     UI_Node* ui_node = madness_ui_text_internal(madness_ui, text, madness_ui->cursor_pos, (vec2){0, 0},
                                                 UI_ALIGNMENT_LEFT, UI_ALIGNMENT_LEFT);
     madness_ui_advance_cursor(madness_ui, ui_node->size);
     return ui_node;
 }
+
 
 UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos,
                                   vec2 parent_size, UI_Alignment alignment_x, UI_Alignment alignment_y)
@@ -1338,21 +1231,50 @@ UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 pare
     }
 
 
-    UI_Node* text_node = madness_ui_get_new_node(madness_ui);
+    UI_Node* debug_text_node = madness_ui_get_new_node(madness_ui);
     // text_node->pos = madness_ui->cursor_pos;
-    text_node->pos = text_pos;
-    text_node->size = text_size;
-    text_node->color = COLOR_BLACK;
-    text_node->text = text;
-    text_node->string_id = text;
-    text_node->hash_id = string_hash_u64(text);
-    // text_node->flags = UI_FLAG_TEXT;
+    debug_text_node->pos = text_pos;
+    debug_text_node->size = text_size;
+    debug_text_node->color = COLOR_BLACK;
+    debug_text_node->text = text;
+    debug_text_node->string_id = text;
+    debug_text_node->hash_id = string_hash_u64(text);
 
-    // TODO: temporary, we want to call this and generate the node data, during generate draw
-    madness_ui_text(madness_ui, text);
+    //generate the actual text now that we have the proper position
+    vec2 text_current_pos = text_pos;
+    f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
+    Madness_Font font_data;
+    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
+                            &font_data);
+
+    for (u64 i = 0; i < text.length; i++)
+    {
+        const char c = text.chars[i];
+
+        if (c < 32 || c >= 128) continue; // skip unsupported characters
+
+        Glyph* g = &font_data.glyphs[c - 32];
+
+        f32 x_position = text_current_pos.x + ((float)g->xoff * font_scalar);
+        f32 y_position = text_current_pos.y + ((float)g->yoff * font_scalar);
+
+        f32 x_width = ((f32)g->width * font_scalar);
+        f32 y_height = ((f32)g->height * font_scalar);
+
+        UI_Node* text_node = madness_ui_get_new_node(madness_ui);
+        text_node->pos = (vec2){x_position, y_position};
+        text_node->size = (vec2){x_width, y_height};
+        text_node->uv_offset = (vec2){g->u0, g->v0};
+        text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
+        text_node->color = COLOR_WHITE;
+        text_node->texture_handle = madness_ui->default_font_handle;
+        text_node->flags |= UI_FLAG_TEXT;
+
+        text_current_pos.x += (g->advance) * font_scalar; // move offset forward
+    }
 
 
-    return text_node;
+    return debug_text_node;
 }
 
 
@@ -1760,7 +1682,7 @@ bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, fl
 
 bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float increment_value)
 {
-    madness_ui_text_new(madness_ui, text);
+    madness_ui_text(madness_ui, text);
     madness_ui_same_line(madness_ui);
 
     return madness_ui_float_internal(madness_ui, text, f, increment_value);
@@ -1769,7 +1691,7 @@ bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float incre
 
 bool madness_ui_float2(Madness_UI* madness_ui, String text, float* x, float* y, float increment_value)
 {
-    madness_ui_text_new(madness_ui, text);
+    madness_ui_text(madness_ui, text);
     madness_ui_same_line(madness_ui);
 
     String* x_id = string_concat(&text, &STRING("x"), allocator_inferface_create(madness_ui->frame_arena));
@@ -1813,7 +1735,7 @@ bool madness_ui_float3(Madness_UI* madness_ui, String text, float* x, float* y, 
 
 bool madness_ui_vec2(Madness_UI* madness_ui, String label, vec2* v, float increment_value)
 {
-    madness_ui_text_new(madness_ui, label);
+    madness_ui_text(madness_ui, label);
     madness_ui_same_line(madness_ui);
 
 
@@ -1836,7 +1758,7 @@ bool madness_ui_vec2(Madness_UI* madness_ui, String label, vec2* v, float increm
 bool madness_ui_vec3(Madness_UI* madness_ui, String label, vec3* v, float increment_value)
 {
     //draw text on top, then below the vec values
-    madness_ui_text_new(madness_ui, label);
+    madness_ui_text(madness_ui, label);
     madness_ui_same_line(madness_ui);
 
 
@@ -1949,9 +1871,6 @@ bool madness_ui_combo_box(Madness_UI* madness_ui, String id, u32* selected_value
                                                             combo_box_node->size,
                                                             UI_ALIGNMENT_LEFT,
                                                             UI_ALIGNMENT_CENTER);
-            string_node->string_id = draw;
-            string_node->hash_id = string_hash_u64(draw);
-
             madness_ui_set_interaction_state(madness_ui, string_node);
             if (is_hot(madness_ui, string_node->hash_id))
             {
@@ -2031,8 +1950,6 @@ bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_
                                                             combo_box_node->size,
                                                             UI_ALIGNMENT_LEFT,
                                                             UI_ALIGNMENT_CENTER);
-            string_node->string_id = draw;
-            string_node->hash_id = string_hash_u64(draw);
 
             madness_ui_set_interaction_state(madness_ui, string_node);
             if (is_hot(madness_ui, string_node->hash_id))
@@ -2265,7 +2182,7 @@ bool madness_ui_node_simple(Madness_UI* madness_ui, String id, vec2 pos, String 
         vec2 tex_pos = {x_pos, y_pos};
         vec2 text_size;
         madness_calculate_text_size(madness_ui, inputs[i], tex_pos, &text_size);
-        madness_draw_text(madness_ui, inputs[i], tex_pos);
+        // madness_draw_text(madness_ui, inputs[i], tex_pos);
 
 
         if (region_hit(madness_ui, tex_pos, text_size))
@@ -2287,7 +2204,7 @@ bool madness_ui_node_simple(Madness_UI* madness_ui, String id, vec2 pos, String 
         vec2 tex_pos = {x_pos + 50, y_pos};
         vec2 text_size;
         madness_calculate_text_size(madness_ui, outputs[i], tex_pos, &text_size);
-        madness_draw_text(madness_ui, outputs[i], tex_pos);
+        // madness_draw_text(madness_ui, outputs[i], tex_pos);
 
         if (region_hit(madness_ui, tex_pos, text_size))
         {
@@ -2332,12 +2249,12 @@ bool madness_ui_node(Madness_UI* madness_ui, String id, String inputs[], u8 inpu
     for (u8 i = 0; i < input_size; i++)
     {
         size_input += (i * size_y_increment);
-        madness_draw_text(madness_ui, inputs[i], (vec2){50, 50 + (i * size_y_increment)});
+        // madness_draw_text(madness_ui, inputs[i], (vec2){50, 50 + (i * size_y_increment)});
     }
     for (u8 i = 0; i < output_size; i++)
     {
         size_output += (i * size_y_increment);
-        madness_draw_text(madness_ui, outputs[i], (vec2){100, 50 + (i * size_y_increment)});
+        // madness_draw_text(madness_ui, outputs[i], (vec2){100, 50 + (i * size_y_increment)});
     }
 
     background->size.y = max_f(size_input, size_output);
@@ -2708,7 +2625,7 @@ void madness_ui_example(Madness_UI* madness_ui)
         {
             FATAL("I HAVE BEEN CLICKED");
         }
-        madness_ui_text_new(madness_ui, STRING("Yous a bitch"));
+        madness_ui_text(madness_ui, STRING("Yous a bitch"));
 
         //
         static float a;

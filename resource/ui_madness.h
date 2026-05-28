@@ -110,28 +110,9 @@ typedef struct UI_Node
     vec2 scissor_size;
 } UI_Node;
 
-typedef struct UI_Node_Text
-{
-    char character;
-    vec2 pos;
-    vec2 size;
-
-    vec3 color;
-    Texture_Handle texture_handle;
-    UI_Property_Flags flags;
-
-    // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
-    // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
-
-    // is the first character in a series of strings
-    bool start_text;
-} UI_Node_Text;
 
 
 ARRAY_GENERATE_TYPE(UI_Node)
-ARRAY_GENERATE_TYPE(UI_Node_Text)
 
 
 typedef struct scroll_box_state
@@ -215,7 +196,6 @@ typedef struct Madness_UI
     float editor_font_size;
 
     UI_Node_array* ui_nodes;
-    UI_Node_Text_array* ui_nodes_text;
 
     UI_Node_array* pop_up_ui_nodes; // pop up nodes
 
@@ -360,10 +340,9 @@ MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
 
 
 //TEXT//
-MAPI void madness_ui_text(Madness_UI* madness_ui, String text); //TODO: remove
 MAPI void madness_ui_text_box(Madness_UI* madness_ui, String id);
 
-MAPI UI_Node* madness_ui_text_new(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
+MAPI UI_Node* madness_ui_text(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
 MAPI UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size,
                                        UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
 
@@ -491,8 +470,6 @@ MAPI void madness_ui_example(Madness_UI* madness_ui);
 
 
 //these is only meant for internal use and not part of the API
-MAPI void madness_draw_text(Madness_UI* madness_ui, String text, vec2 screen_position);
-MAPI void madness_draw_text_centered(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size);
 MAPI void madness_calculate_text_size(Madness_UI* madness_ui, String text, vec2 screen_position, vec2* out_text_size);
 
 MAPI vec2 madness_ui_get_text_size(Madness_UI* madness_ui, String text);
@@ -505,7 +482,6 @@ MAPI void madness_ui_print_state(Madness_UI* madness_ui);
 
 //utility
 MAPI UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
-MAPI UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
 UI_Node* madness_ui_get_pop_up_node(Madness_UI* madness_ui);
 
 UI_Node* madness_ui_new_text_node(Madness_UI* madness_ui);
