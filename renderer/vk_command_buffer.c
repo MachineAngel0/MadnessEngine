@@ -223,6 +223,17 @@ void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_bu
     vkDestroyFence(context->device.logical_device, fence, 0);
 }
 
+void vulkan_command_buffer_begin_debug_label(vulkan_command_buffer* command_buffer, const char* name)
+{
+    // VkDebugUtilsLabelEXT debug_label = {.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, .pNext = NULL, .pLabelName = name, .color = {1.0,0.0,0.0,1.0}};
+    // vkCmdBeginDebugUtilsLabelEXT(command_buffer->handle, &debug_label);
+}
+
+void vulkan_command_buffer_end_debug_label(vulkan_command_buffer* command_buffer)
+{
+    // vkCmdEndDebugUtilsLabelEXT(command_buffer->handle);
+}
+
 
 /*
 void command_pool_allocate(vulkan_context* vulkan_context, Command_Buffer_Context* command_buffer_context)

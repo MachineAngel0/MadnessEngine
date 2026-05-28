@@ -439,9 +439,9 @@ UI_Render_Packet insanity_get_render_data()
 {
     // return (Insanity_UI_Render_Packet){.ui_nodes = insanity_ui->node_draw_data_array, .ui_nodes_text = insanity_ui->ui_nodes_text};
     return (UI_Render_Packet){
-        .ui_data = insanity_ui->node_draw_data_array,
-        .ui_data_count = insanity_ui->node_draw_data_array_size,
-        .ui_data_bytes = insanity_ui->node_draw_data_array_size * sizeof(UI_Node_Draw_Data),
+        .ui_material_data = insanity_ui->node_draw_data_array,
+        .ui_material_data_count = insanity_ui->node_draw_data_array_size,
+        .ui_material_bytes = insanity_ui->node_draw_data_array_size * sizeof(UI_Node_Draw_Data),
     };
 }
 

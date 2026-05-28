@@ -3,10 +3,6 @@
 #extension GL_EXT_buffer_reference : require
 
 
-layout(push_constant, scalar) uniform PushConstant_2D{
-    uint ubo_buffer_idx;
-    uint instance_buffer_idx;
-}PC_2D;
 
 #define BITFLAG(x) (1 << (x))
 #define SPRITE_FLAG_NONE BITFLAG(1)
@@ -29,8 +25,8 @@ layout(push_constant, scalar) uniform PushConstant_2D{
 #define UI_FLAG_DRAGGABLE BITFLAG(8)
 #define UI_FLAG_ROUND_CORNER BITFLAG(9)
 #define UI_FLAG_CIRCLE BITFLAG(10)
-#define UI_FLAG_SCROLL_FLOAT BITFLAG(11),
-#define UI_FLAG_TEXT_INPUT BITFLAG(12),
+#define UI_FLAG_SCROLL_FLOAT BITFLAG(11)
+#define UI_FLAG_TEXT_INPUT BITFLAG(12)
 
 
 
@@ -98,6 +94,11 @@ layout(set = 2, binding = 0, scalar) readonly buffer SPRITE_INSTANCE_BUFFER{
     Sprite_Data sprite_instance_data[];
 }Sprite_Instance_Buffer[];
 
-layout(set = 2, binding = 0, scalar) readonly buffer UI_INSTANCE_BUFFER{
-    UI_Data ui_instance_data[];
-}UI_Instance_Buffer[];
+layout(buffer_reference, scalar) readonly buffer UI_INSTANCE_BUFFER{
+    UI_Data ui_data[];
+}UI_Instance_Buffer;
+
+layout(push_constant, scalar) uniform PushConstant_2D{
+    uint ubo_buffer_idx;
+    UI_INSTANCE_BUFFER material_buffer;
+}PC_2D;

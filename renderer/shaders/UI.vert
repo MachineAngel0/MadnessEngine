@@ -1,6 +1,9 @@
 #version 450
 
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
+
 #include "shader_includes/2d_structs.glsl"
 #include "shader_includes/test_uniform.glsl"
 
@@ -15,13 +18,10 @@ layout(location = 4) out flat uint out_material_buffer_location;
 
 void main() {
 
-
-    uint material_instance_buffer_idx = PC_2D.instance_buffer_idx;
-    out_material_buffer_location = gl_InstanceIndex;
-
-    UI_Data inst_data =
-    UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(gl_InstanceIndex)];
-
+//    uint instance_idx = gl_InstanceIndex;
+    uint instance_idx = gl_BaseInstanceARB;
+    UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(instance_idx)];
+    out_material_buffer_location = instance_idx;
 
     vec2 vertices[6] =
     {

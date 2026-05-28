@@ -159,7 +159,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Sprite Backend
     renderer->sprite_renderer = sprite_render_init(renderer, renderer->resource_system);
     // UI Backend
-    renderer->ui_renderer = ui_render_init(renderer);
+    renderer->ui_renderer = ui_render_init(renderer, renderer->context.graphics_command_buffer);
 
 
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
@@ -342,14 +342,13 @@ void renderer_update(Renderer* renderer, float delta_time)
     transform_renderer_upload_data(renderer, renderer->transform_renderer, render_packets, graphics_command_buffer);
     material_renderer_upload_data(renderer, renderer->material_renderer, &render_packets->material_data_packet, graphics_command_buffer);
 
-    // ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
-    // ui_renderer_upload_insanity_draw_data(renderer->ui_renderer, renderer, graphics_command_buffer);
-    ui_renderer_upload_dual_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+    ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+
 
     mesh_renderer_upload_draw_data_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     // mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     mesh_renderer_construct_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
+    // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     memory_barrier_transfer(renderer,  graphics_command_buffer);
@@ -441,15 +440,14 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
                      &renderer->indirect_mesh_pipeline);
 
-    sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
+    // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
     // VkRect2D pScissors;
     // pScissors.offset = (VkOffset2D){0, 0};
     // pScissors.extent = (VkExtent2D){200, 150};
     // vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &pScissors);
 
-    ui_renderer_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
-
+    ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
 
     // vkCmdDrawIndexedIndirect()
     //END FRAME//

@@ -1,9 +1,6 @@
 ﻿#ifndef COMMAND_BUFFER_H
 #define COMMAND_BUFFER_H
 
-
-
-
 // used by the renderer, the rest are helper functions
 void vulkan_renderer_command_buffers_create(vulkan_context* vk_context);
 void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context);
@@ -56,8 +53,12 @@ VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer* command_buffer, VkQueue queue);
 
 void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                            VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
-                                            VkSemaphoreSubmitInfo* signal_semaphore);
+                                      VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
+                                      VkSemaphoreSubmitInfo* signal_semaphore);
+
+//TODO: rn will break compile, have to load in the funciton pointers
+void vulkan_command_buffer_begin_debug_label(vulkan_command_buffer* command_buffer, const char* name);
+void vulkan_command_buffer_end_debug_label(vulkan_command_buffer* command_buffer);
 
 
 //TODO: refactor

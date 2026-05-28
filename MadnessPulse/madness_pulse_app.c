@@ -28,7 +28,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     clock_init(&app_internal->application_core.clock);
 
     //TODO: testing lexer/parser stuff
-    Reflection_System* reflection_system = reflection_game_data();
+    // Reflection_System* reflection_system = reflection_game_data();
 
 
     app_internal->application_core.is_running = true;
@@ -139,6 +139,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             break;
         }
 
+        /*
         madness_ui_window_begin(renderer_plugin->madness_ui, STRING("TESTTEST"));
         {
             // static u32 i = 0;
@@ -149,6 +150,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_system, "Damage_Component");
         }
         madness_ui_window_end(renderer_plugin->madness_ui);
+        */
 
         madness_ui_end(renderer_plugin->madness_ui);
         insanity_ui_end();
@@ -156,10 +158,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         //render packet
         resource_system_update_and_create_render_packet(application_core->resource_system);
 
-        application_core->resource_system->render_packet->ui_data_packet.ui_render_packet =
+        application_core->resource_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data(renderer_plugin->madness_ui);
-        application_core->resource_system->render_packet->ui_data_packet.text_render_packet =
-            madness_ui_get_text_render_data(renderer_plugin->madness_ui);
+        //TODO:
+        // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
+            // insanity_get_render_data();
 
         //render
         renderer_update(renderer_plugin->renderer,

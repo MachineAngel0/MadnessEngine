@@ -11,11 +11,11 @@
 //Vertex Data
 
 
-typedef struct PC_2D
+typedef struct PC_UI
 {
     u32 ubo_buffer_idx;
-    u32 material_buffer_idx;
-} PC_2D;
+    VkDeviceAddress material_bda;
+} PC_UI;
 
 typedef struct Material_2D_Param_Data
 {
@@ -224,8 +224,7 @@ typedef struct Madness_UI
     UI_Node_Draw_Data* ui_draw_data;
     u64 ui_draw_data_count;
 
-    UI_Node_Draw_Data* text_draw_data;
-    u64 text_draw_data_count;
+
 
     //a window is anything with which things are drawn to inside of it
     HASH_TABLE_STR_TYPE(Window_State)* window_state_hash;
@@ -331,7 +330,6 @@ MAPI void madness_ui_end(Madness_UI* madness_ui);
 
 //NOTE: must be retrieved after madness_ui_end
 MAPI UI_Render_Packet madness_ui_get_ui_render_data(Madness_UI* madness_ui);
-MAPI UI_Render_Packet madness_ui_get_text_render_data(Madness_UI* madness_ui);
 
 
 //API START (besides init/shutdown, begin/end)
@@ -510,6 +508,7 @@ MAPI UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui);
 MAPI UI_Node_Text* madness_ui_get_new_node_text(Madness_UI* madness_ui);
 UI_Node* madness_ui_get_pop_up_node(Madness_UI* madness_ui);
 
+UI_Node* madness_ui_new_text_node(Madness_UI* madness_ui);
 UI_Node* madness_ui_new_scissor_start(Madness_UI* madness_ui, vec2 scissor_pos, vec2 scissor_size);
 void madness_ui_new_scissor_end(Madness_UI* madness_ui);
 
@@ -519,7 +518,7 @@ MAPI char* madness_ui_float_to_char(Madness_UI* madness_ui, float value);
 
 
 //draw list
-void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Type draw_type);
+void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command draw_type);
 
 
 MAPI bool is_ui_hot(Madness_UI* madness_ui, int id);

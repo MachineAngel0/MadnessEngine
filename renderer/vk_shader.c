@@ -293,7 +293,7 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     VkPushConstantRange push_constant[1] = {0};
     push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
-    push_constant[0].size = sizeof(PC_2D);
+    push_constant[0].size = sizeof(PC_UI);
 
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
@@ -568,7 +568,7 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     VkPushConstantRange push_constant[1] = {0};
     push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
-    push_constant[0].size = sizeof(PC_2D);
+    push_constant[0].size = sizeof(PC_UI);
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -834,7 +834,7 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     VkPushConstantRange push_constant[1] = {0};
     push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
-    push_constant[0].size = sizeof(PC_2D);
+    push_constant[0].size = sizeof(PC_UI);
 
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};

@@ -550,8 +550,9 @@ typedef struct Render_Packet_Material
 
 typedef struct Render_Packet_UI
 {
-    UI_Render_Packet ui_render_packet;
-    UI_Render_Packet text_render_packet;
+    UI_Render_Packet madness_ui_render_packet;
+    UI_Render_Packet insanity_ui_render_packet;
+
 } Render_Packet_UI;
 
 

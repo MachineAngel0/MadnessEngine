@@ -258,8 +258,6 @@ void madness_ui_end(Madness_UI* madness_ui)
         }
     }
 
-    //push anything left into the draw list
-    dynamic_array_push(madness_ui->draw_command_list, &madness_ui->current_draw_command);
 
 
     u32 allocation_count = madness_ui->ui_nodes->num_items;
@@ -278,7 +276,6 @@ void madness_ui_end(Madness_UI* madness_ui)
                                                allocation_count * sizeof(UI_Node_Draw_Data));
     madness_ui->ui_draw_data_count = madness_ui->ui_nodes->num_items;
 
-    madness_ui->text_draw_data_count = madness_ui->ui_nodes_text->num_items;
     u32 draw_data_index = 0;
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
     {
@@ -309,23 +306,6 @@ void madness_ui_end(Madness_UI* madness_ui)
     }
 
 
-    madness_ui->text_draw_data = allocator_alloc(madness_ui->frame_arena,
-                                                 madness_ui->ui_nodes_text->num_items * sizeof(UI_Node_Draw_Data));
-    for (u32 i = 0; i < madness_ui->ui_nodes_text->num_items; i++)
-    {
-        UI_Node_Text* node_to_draw = &madness_ui->ui_nodes_text->data[i];
-        UI_Node_Draw_Data* draw_data = &madness_ui->text_draw_data[i];
-        draw_data->pos = vec2_div(node_to_draw->pos, madness_ui->screen_size);
-        draw_data->size = vec2_div(node_to_draw->size, madness_ui->screen_size);
-
-        draw_data->uv_offset = node_to_draw->uv_offset;
-        draw_data->uv_size = node_to_draw->uv_size;
-
-        draw_data->color = node_to_draw->color;
-        draw_data->texture_handle = node_to_draw->texture_handle.handle;
-        draw_data->ui_flags = node_to_draw->flags;
-    }
-
 
     //SET UI STATE FOR NEXT FRAME //
 
@@ -353,18 +333,11 @@ void madness_ui_end(Madness_UI* madness_ui)
 UI_Render_Packet madness_ui_get_ui_render_data(Madness_UI* madness_ui)
 {
     return (UI_Render_Packet){
-        .ui_data = madness_ui->ui_draw_data,
-        .ui_data_count = madness_ui->ui_draw_data_count,
-        .ui_data_bytes = madness_ui->ui_draw_data_count * sizeof(UI_Node_Draw_Data),
-    };
-}
-
-UI_Render_Packet madness_ui_get_text_render_data(Madness_UI* madness_ui)
-{
-    return (UI_Render_Packet){
-        .ui_data = madness_ui->text_draw_data,
-        .ui_data_count = madness_ui->text_draw_data_count,
-        .ui_data_bytes = madness_ui->text_draw_data_count * sizeof(UI_Node_Draw_Data),
+        .ui_material_data = madness_ui->ui_draw_data,
+        .ui_material_data_count = madness_ui->ui_draw_data_count,
+        .ui_material_bytes = madness_ui->ui_draw_data_count * sizeof(UI_Node_Draw_Data),
+        .draw_command = madness_ui->draw_command_list->data,
+        .draw_command_count = madness_ui->draw_command_list->num_items,
     };
 }
 
@@ -483,7 +456,7 @@ UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
         return out_node;
     }
     UI_Node* out_node = &madness_ui->ui_nodes->data[madness_ui->ui_nodes->num_items++];
-    madness_ui_add_draw_command(madness_ui, UI_DRAW_TYPE_DRAW);
+    madness_ui_add_draw_command(madness_ui, UI_DRAW_TYPE_QUAD);
     return out_node;
 }
 
@@ -600,19 +573,10 @@ char* madness_ui_float_to_char(Madness_UI* madness_ui, const float value)
     return result;
 }
 
-void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Type draw_type)
+void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command draw_type)
 {
-    if (madness_ui->current_draw_command.type == draw_type)
-    {
-        madness_ui->current_draw_command.count++;
-    }
-    else
-    {
-        dynamic_array_push(madness_ui->draw_command_list, &madness_ui->current_draw_command);
-        madness_ui->current_draw_command.offset += madness_ui->current_draw_command.count;
-        madness_ui->current_draw_command.count = 0;
-        madness_ui->current_draw_command.type = draw_type;
-    }
+    dynamic_array_push(madness_ui->draw_command_list, &madness_ui->current_draw_command);
+    madness_ui->current_draw_command = draw_type;
 }
 
 
@@ -2209,9 +2173,9 @@ bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_System* refle
     Reflection_Struct struct_info = reflection_system_struct_query(reflection_system, struct_name);
     u32 struct_list_size = darray_get_size(struct_info.type_list);
 
-     static float x = 0;
-     static u32 selected_i = 0;
-     static bool bool_state = false;
+    static float x = 0;
+    static u32 selected_i = 0;
+    static bool bool_state = false;
 
 
     for (u32 i = 0; i < struct_list_size; i++)

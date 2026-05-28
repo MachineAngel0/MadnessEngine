@@ -46,13 +46,10 @@ float screenPxRange(sampler2D msdf, vec2 uv) {
 }
 
 void main() {
-    uint material_instance_buffer_idx = PC_2D.instance_buffer_idx;
+    UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(in_material_buffer_location)];
 
     vec2 screen_dimensions = ubo[nonuniformEXT(PC_2D.ubo_buffer_idx)].screen_dimensions;
     float aspect_ratio = screen_dimensions.x / screen_dimensions.y;
-
-    UI_Data inst_data =
-    UI_Instance_Buffer[nonuniformEXT(material_instance_buffer_idx)].ui_instance_data[nonuniformEXT(in_material_buffer_location)];
 
     vec3 fill_color = in_color;
 

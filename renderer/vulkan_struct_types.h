@@ -506,33 +506,22 @@ typedef struct vulkan_pipeline_cache
 } vulkan_pipeline_cache;
 
 
+
 typedef struct UI_Renderer
 {
     Buffer_Handle ui_vertex_buffer_handle;
     Buffer_Handle ui_index_buffer_handle;
-    Buffer_Handle ui_indirect_buffer_handle;
-    Buffer_Handle ui_instance_ssbo_handle;
-
-    Buffer_Handle text_vertex_buffer_handle;
-    Buffer_Handle text_index_buffer_handle;
-    Buffer_Handle text_instance_ssbo_handle;
-    Buffer_Handle text_indirect_buffer_handle;
-
-    // Buffer_Handle ui_quad_texture_vertex_buffer_handle;
-    // Buffer_Handle ui_quad_texture_index_buffer_handle;
+    Buffer_Handle ui_material_ssbo_handle;
 
     Buffer_Handle ui_vertex_staging_buffer_handle;
     Buffer_Handle ui_index_staging_buffer_handle;
-    Buffer_Handle ui_quad_indirect_staging_buffer_handle;
-    Buffer_Handle ui_instance_staging_ssbo_handle;
+    Buffer_Handle ui_material_staging_ssbo_handle;
 
-    Buffer_Handle text_vertex_staging_buffer_handle;
-    Buffer_Handle text_index_staging_buffer_handle;
-    Buffer_Handle text_instance_staging_ssbo_handle;
-    Buffer_Handle text_indirect_staging_buffer_handle;
 
 
     u64 draw_count;
+
+    UI_Render_Packet* madness_ui_render_packet;
 } UI_Renderer_Backend;
 
 

@@ -47,7 +47,15 @@ typedef enum UI_Alignment
     UI_ALIGNMENT_RIGHT,
 } UI_Alignment;
 
-
+typedef enum UI_Draw_Command
+{
+    UI_DRAW_TYPE_QUAD,
+    // UI_DRAW_TYPE_IMAGE, //maybe
+    UI_DRAW_TYPE_TEXT,
+    UI_DRAW_TYPE_SCISSOR_START,
+    UI_DRAW_TYPE_SCISSOR_END,
+    //anything else can be for specific shaders that I might want later, like for the game ui
+}UI_Draw_Command;
 
 typedef struct UI_Node_Draw_Data
 {
@@ -79,30 +87,23 @@ typedef struct UI_Node_Draw_Data
     vec3 color;
     vec3 background_color;
 
-    // //scissor data
-    // vec2 scissor_start;
-    // vec2 scissor_end;
+    // scissor data
+    // vec2 scissor_pos;
+    // vec2 scissor_size;
 } UI_Node_Draw_Data;
+
 
 typedef struct UI_Render_Packet
 {
-    UI_Node_Draw_Data* ui_data;
-    u64 ui_data_count;
-    u64 ui_data_bytes;
+    UI_Node_Draw_Data* ui_material_data;
+    u64 ui_material_data_count;
+    u64 ui_material_bytes;
+    UI_Draw_Command* draw_command;
+    u64 draw_command_count;
 } UI_Render_Packet;
 
-typedef enum UI_Draw_Type
-{
-    UI_DRAW_TYPE_DRAW,
-    UI_DRAW_TYPE_SCISSOR_START,
-    UI_DRAW_TYPE_SCISSOR_END,
-}UI_Draw_Type;
 
-typedef struct UI_Draw_Command{
-    UI_Draw_Type type;
-    u32 count;
-    u32 offset;
-} UI_Draw_Command;
+
 
 
 

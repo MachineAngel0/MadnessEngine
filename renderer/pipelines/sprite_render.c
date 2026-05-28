@@ -128,7 +128,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
 
 
     //grab material_handle
-    PC_2D pc_2d_ui = {
+    PC_UI pc_2d_ui = {
         renderer->buffer_system->global_ubo_handle.handle,
         sprite_backend->sprite_instance_ssbo_buffer.handle,
     };
@@ -138,7 +138,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, v
     push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_info_ui.layout = renderer->sprite_pipeline.pipeline_layout;
     push_constant_info_ui.offset = 0;
-    push_constant_info_ui.size = sizeof(PC_2D);
+    push_constant_info_ui.size = sizeof(PC_UI);
     push_constant_info_ui.pValues = &pc_2d_ui;
     push_constant_info_ui.pNext = NULL;
 
