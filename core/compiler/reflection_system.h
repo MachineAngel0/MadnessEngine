@@ -115,10 +115,22 @@ Reflection_System* reflection_system_init();
 void reflection_system_shutdown();
 
 
+//API
+
+//builds the structures
+void reflection_system_parse(Reflection_System* reflection_system, const char* constant_file_path, const char* enum_file_path, const char* struct_file_path);
+
+u64 reflection_system_constant_query(Reflection_System* reflection_system, const char* constant_name);
+
+Reflection_Enum_Query_List reflection_system_enum_query_list(Reflection_System* reflection_system,
+                                                             const char* enum_name, Frame_Allocator* frame_allocator);
+Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
+
+//INTERNAL
+
 //Constants
 void reflection_system_add_constant(Reflection_System* reflection_system, const char* constant_name, const u64 value);
 
-u64 reflection_system_constant_query(Reflection_System* reflection_system, const char* constant_name);
 
 
 //Enum
@@ -131,8 +143,6 @@ Reflection_Enum reflection_system_enum_query(Reflection_System* reflection_syste
 bool reflection_system_does_enum_exist(Reflection_System* reflection_system, const char* enum_name);
 
 
-Reflection_Enum_Query_List reflection_system_enum_query_list(Reflection_System* reflection_system,
-                                                             const char* enum_name, Frame_Allocator* frame_allocator);
 
 //Struct
 bool reflection_system_add_struct(Reflection_System* reflection_system, const char* struct_name);
@@ -146,7 +156,6 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
 bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_system, const char* struct_name,
                                                   Reflection_Type reflection_type, const char* type_name, const char* struct_member_name, u64 array_size);
 
-Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name);
 

@@ -195,3 +195,28 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
     }
     return -1;
 }
+
+size_t c_string_to_number(const char* string, u32 string_size)
+{
+
+     size_t out_value = 0;
+     for (u64 i = 0; i < string_size; i++)
+     {
+         if (string[i] == '\0'){ return out_value;}
+         if (string[i] > '0' || string[i] < '9' )
+         {
+             u64 val = string[i] - '0';
+             // ex: 10 + 3 = 103 (Wrong), 10 * 10 = 100 + 3 = 103 (Correct)
+             out_value = out_value * 10 + val;
+         }
+
+     }
+
+     return out_value;
+}
+
+f64 c_string_to_float(const char* string)
+{
+     return strtof(string, NULL);
+     // return (f64)atof(string);
+}

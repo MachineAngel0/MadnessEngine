@@ -1394,6 +1394,16 @@ bool madness_ui_check_box(Madness_UI* madness_ui, String label, bool* check_box_
     return *check_box_state;
 }
 
+void madness_image(Madness_UI* madness_ui, String id, Texture_System* texture_system, const char* icon_path)
+{
+    //TODO:
+}
+
+void madness_image_handle(Madness_UI* madness_ui, String id, Texture_Handle handle)
+{
+    //TODO:
+}
+
 float map_range(float v, float a, float b, float x, float y)
 {
     return x + (v - a) * (y - x) / (b - a);

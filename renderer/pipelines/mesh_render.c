@@ -230,7 +230,7 @@ void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer
 void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
                         vulkan_shader_pipeline* pipeline)
 {
-    INFO("MESH SYSTEM DRAW CALLS")
+    // INFO("MESH SYSTEM DRAW CALLS")
 
     //only bind the vertex and index, the storage buffers are in bindless
     Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_renderer->indirect_buffer_handle);

@@ -29,6 +29,8 @@ void byte_buffer_print_info(const byte_buffer* buffer);
 /*
  * serialize unsigned int
 */
+
+
 void serialize_u8(byte_buffer* buffer, uint8_t val);
 
 void serialize_u16(byte_buffer* buffer, uint16_t val);

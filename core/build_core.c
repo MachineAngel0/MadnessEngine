@@ -58,6 +58,7 @@
 //CORE - SERIALIZATION
 #include "../core/serialization/network_serialization.c"
 #include "../core/serialization/file_serialization.c"
+#include "../core/serialization/madness_txt.c"
 
 //CORE - Compiler
 #include "../core/compiler/compiler.c"

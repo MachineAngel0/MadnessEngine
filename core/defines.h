@@ -48,6 +48,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define MADNESS_DEFAULT_STRUCT {0}
 #define BITFLAG(x) (1 << (x))
 
+#define PACKED_STRUCT __attribute__((packed))
+
 
 //easy lookups
 #define KB_SIZE 1024ULL

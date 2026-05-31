@@ -30,6 +30,7 @@
 //CORE - SERIALIZATION
 #include "../core/serialization/network_serialization.h"
 #include "../core/serialization/file_serialization.h"
+#include "../core/serialization/madness_txt.h"
 #include "../core/asserts.h"
 
 //CORE - MEMORY
@@ -80,3 +81,6 @@
 #include "../core/compiler/compiler_test_file.h"
 #include "../core/compiler/compiler.h"
 #include "../core/compiler/reflection_system.h"
+
+
+

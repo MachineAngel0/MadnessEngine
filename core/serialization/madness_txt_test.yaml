@@ -1,0 +1,39 @@
+﻿#madness_txt_file_format:
+
+#there are no maps/associated data, just use two arrays for that
+#
+
+#flag type description
+bool_type[bool]:
+- false
+int_type[i32]:
+- 10
+unsigned_int_type[u32]:
+- 10
+float_type[f32]:
+- 10.8
+char_type[char]:
+- a
+string_type[str]:
+- words are words
+
+
+#arrays must be fixed size
+array_type[u32][3]:
+- 10
+- 20
+- 30
+
+maps_key[u32][4]:
+- 10
+- 11
+- 15
+- 85
+maps_value[u32][4]:
+- 50
+- 150
+- 40
+- 87
+
+enum_type[enum]:
+- 1: enum_name

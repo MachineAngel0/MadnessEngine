@@ -368,6 +368,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .bufferDeviceAddress = VK_TRUE,
         .bufferDeviceAddressMultiDevice = VK_TRUE,
         .drawIndirectCount = VK_TRUE,
+        .timelineSemaphore = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =

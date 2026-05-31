@@ -2,6 +2,7 @@
 
 #include "ability.h"
 #include "madness_pulse_game.h"
+#include "madness_txt.h"
 #include "ui_madness.h"
 
 
@@ -29,6 +30,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //TODO: testing lexer/parser stuff
     // Reflection_System* reflection_system = reflection_game_data();
+
+    //testing text format
+    Madness_txt* txt = madness_txt_init(NULL);
+    madness_txt_object_test_example(txt);
 
 
     app_internal->application_core.is_running = true;
@@ -69,7 +74,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
-
+    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
+                       &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                       renderer_plugin->renderer->resource_system);
+        mesh_load_gltf_new(application_core->resource_system->mesh_system,
+                           "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
+                           &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                           renderer_plugin->renderer->resource_system);
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
@@ -79,7 +90,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                                      application_core->resource_system);
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
-                                 renderer_plugin->madness_ui, application_core->resource_system);
+                                 renderer_plugin->madness_ui, application_core->resource_system, &application_core->clock);
 
     //MAIN LOOP
 
@@ -101,7 +112,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
         clock_update_frame_start(&application_core->clock);
-        clock_print_info(&application_core->clock);
+        // clock_print_info(&application_core->clock);
 
         input_update(application_core->input_system);
         platform_pump_messages(&application_core->plat_state);

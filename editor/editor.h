@@ -13,6 +13,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_MATERIAL,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
+    EDITOR_UI_STATE_ENGINE_STATS,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
@@ -22,6 +23,7 @@ typedef struct Editor
     Madness_UI* madness_ui; // ref
     Renderer* renderer; // ref
     Resource_System* resource_system; // ref
+    Clock* clock; // ref
 
     Allocator* editor_arena;
     Frame_Allocator* editor_frame_arena;
@@ -29,11 +31,15 @@ typedef struct Editor
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
 
+    float lowest_ms;
+    float highest_ms;
+
     Editor_UI_State state;
 } Editor;
 
 
-MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui, Resource_System* resource_system);
+MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui, Resource_System* resource_system, Clock*
+                         clock);
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
 
@@ -44,6 +50,7 @@ void editor_ui_debug(Editor* editor);
 void editor_ui_scene(Editor* editor);
 void editor_material_nodes(Editor* editor);
 void editor_texture_view(Editor* editor);
+void editor_ui_stats(Editor* editor);
 
 
 

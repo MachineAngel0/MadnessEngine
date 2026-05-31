@@ -1,0 +1,26 @@
+﻿string: "hi"
+
+hi: [ 10 ]
+boolean: true
+hash: { 10: 50.0 }
+other_hash: { 10: 50.0 }
+string_string: { "asd": "ajshdj" }
+
+
+integers:
+canonical_integer: 9876
+decimal: +9876
+octal: 0o14
+hexadecimal: 0x7B
+-hexadecimal: 0x7B
+
+
+#health_component
+health:
+- 100
+max_health:
+- 200
+min_heath:
+- 200
+
+

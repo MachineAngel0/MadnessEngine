@@ -33,7 +33,7 @@ void clock_update_frame_end(Clock* clock)
     f64 frame_end_time = platform_get_absolute_time() - clock->start_time;
     // f64 remaining_time = clock->time_elapsed - frame_end_time;
     f64 remaining_time = frame_end_time - clock->time_elapsed;
-    DEBUG("FRAME END TIME %f, REMAINING TIME %f, delta time: %f", frame_end_time, remaining_time, clock->delta_time)
+    // DEBUG("FRAME END TIME %f, REMAINING TIME %f, delta time: %f", frame_end_time, remaining_time, clock->delta_time)
 
     /*
     //todo: either have this set manually or get the screen refresh rate

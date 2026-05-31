@@ -79,7 +79,7 @@ bool editor_app_run(Editor_Application* editor_app)
                                                   application_core->resource_system);
 
     editor_plugin->editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
-                                        renderer_plugin->madness_ui, application_core->resource_system);
+                                        renderer_plugin->madness_ui, application_core->resource_system, &application_core->clock);
 
     Shader_Creation_System* shader_creation_system = shader_creation_system_init(&application_core->memory_system);
     shader_creation_system_test(shader_creation_system);
