@@ -233,10 +233,10 @@ typedef struct Madness_UI
 
     bool mouse_down;
     bool mouse_released_unique;
-    i16 mouse_pos_x;
-    i16 mouse_pos_y;
-    i16 mouse_delta_x;
-    i16 mouse_delta_y;
+    s16 mouse_pos_x;
+    s16 mouse_pos_y;
+    s16 mouse_delta_x;
+    s16 mouse_delta_y;
 
     //TODO: keep track if backspace has been held down for a certain period of time
     // for the backspace functionality of the textbox
@@ -305,7 +305,7 @@ MAPI Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* inp
 MAPI bool madness_ui_shutdown(Madness_UI* madness_ui);
 
 //pass in the size every frame, in the event the size changes
-MAPI void madness_ui_begin(Madness_UI* madness_ui, i32 screen_size_x, i32 screen_size_y);
+MAPI void madness_ui_begin(Madness_UI* madness_ui, s32 screen_size_x, s32 screen_size_y);
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
 MAPI void madness_ui_end(Madness_UI* madness_ui);
 
@@ -396,7 +396,7 @@ MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* co
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness);
 
 
-MAPI bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_System* reflection_system, const char* struct_name);
+MAPI bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* reflection_registry, const char* struct_name, const char* identifier);
 
 
 typedef struct Material_Link

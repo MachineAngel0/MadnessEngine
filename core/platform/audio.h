@@ -13,7 +13,8 @@ typedef struct Sound_Data
 
 typedef struct Madness_Audio
 {
-    ma_engine engine;
+    // ma_engine* engine;
+    bool unimplemented;
 }Madness_Audio;
 
 typedef struct Audio_Handle

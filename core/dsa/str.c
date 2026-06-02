@@ -77,6 +77,7 @@ bool string_free(String* string)
 
 //this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
+#define STRING_STRLEN(string) ((String){.chars = (char*)(string), .length = strlen(string)})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed
 #define STRING_CREATE(string) string_create(string, sizeof(string))
 //create a string from an already existing char[]/char* that excludes the null terminated string
@@ -163,7 +164,7 @@ String* string_strip_whitespace(const String* str)
 
 /*C-STRING*/
 
-const char* string_convert_to_c_string(const String* s)
+const char* string_to_c_string(const String* s)
 {
     //when you need to convert it to a valid directory, this function is nice
     char* c_string = malloc(sizeof(char) * (s->length + 1)); // +1 for the null terminated string
@@ -172,6 +173,20 @@ const char* string_convert_to_c_string(const String* s)
     return c_string;
 }
 
+bool string_compare_c_string(const String* str1, const char* c_str)
+{
+
+    MASSERT(str1 != NULL);
+    MASSERT(c_str != NULL);
+
+    for (uint32_t i = 0; i < str1->length; i++)
+    {
+        if (str1->chars[i] != c_str[i]) return false;
+    }
+
+    return true;
+
+}
 
 
 /*STRING SLICE*/
@@ -412,7 +427,7 @@ void string_test(void)
 
     const char* string_before_c = "String_convert_to_C_String";
     String* string_created_from_c_string = STRING_CREATE_FROM_BUFFER(string_before_c);
-    const char* c_string = string_convert_to_c_string(string_created_from_c_string);
+    const char* c_string = string_to_c_string(string_created_from_c_string);
     printf("%s\n", c_string);
     TEST_DEBUG((strcmp(string_before_c, c_string) == 0));
 

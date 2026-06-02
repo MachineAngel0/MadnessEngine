@@ -8,7 +8,7 @@
 #include "platform.h"
 
 
-i32 get_threads_available()
+s32 get_threads_available()
 {
     SYSTEM_INFO info;
     GetSystemInfo(&info);
@@ -167,7 +167,7 @@ bool mutex_unlock(Madness_Mutex* madness_mutex)
         WARN("Mutex Unlock: INVALID MUTEX")
         return false;
     }
-    i32 result = ReleaseMutex(madness_mutex->data);
+    s32 result = ReleaseMutex(madness_mutex->data);
     return result != 0;
 }
 

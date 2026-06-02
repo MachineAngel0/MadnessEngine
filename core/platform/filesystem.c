@@ -63,7 +63,7 @@
 //
 // bool filesystem_write_line(file_handle* handle, const char* text) {
 //     if (handle->handle) {
-//         i32 result = fputs(text, (FILE*)handle->handle);
+//         s32 result = fputs(text, (FILE*)handle->handle);
 //         if (result != EOF) {
 //             result = fputc('\n', (FILE*)handle->handle);
 //         }

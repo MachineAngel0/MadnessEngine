@@ -48,7 +48,7 @@ void hash_set_delete(hash_set* h, void* key);
 bool hash_set_contains(const hash_set* h, void* key);
 
 
-i32 hash_set_contains_index(const hash_set* h, void* key);
+s32 hash_set_contains_index(const hash_set* h, void* key);
 
 u64 hash_set_get_hash_key(const hash_set* h, void* key);
 

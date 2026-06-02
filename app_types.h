@@ -27,8 +27,8 @@ typedef struct Application_Core
     //rn used for when the window is minimized
     bool is_suspended;
 
-    i16 width;
-    i16 height;
+    s16 width;
+    s16 height;
 } Application_Core;
 
 

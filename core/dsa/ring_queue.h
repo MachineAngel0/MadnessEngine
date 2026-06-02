@@ -9,8 +9,8 @@ typedef struct ring_queue
     void* data;
 
     //you can also think of these as the head and tail
-    i32 front;
-    i32 back;
+    s32 front;
+    s32 back;
 
     //number of items in the queue
     u32 num_items;

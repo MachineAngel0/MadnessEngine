@@ -59,7 +59,7 @@ void input_process_key(Input_System* input_system, keys key, bool pressed)
     }
 }
 
-void input_process_mouse_move(Input_System* input_system, i16 x, i16 y)
+void input_process_mouse_move(Input_System* input_system, s16 x, s16 y)
 {
     MASSERT(input_system);
     // Only process if actually different
@@ -80,7 +80,7 @@ void input_process_mouse_move(Input_System* input_system, i16 x, i16 y)
     }
 }
 
-void input_process_mouse_wheel(Input_System* input_system, i8 z_delta)
+void input_process_mouse_wheel(Input_System* input_system, s8 z_delta)
 {
     MASSERT(input_system);
     // DEBUG("Z DELTA: %d", z_delta)
@@ -239,21 +239,21 @@ char input_key_to_char(Input_System* input_system, keys key)
 
 
 //mouse related
-void input_get_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y)
+void input_get_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_current.x;
     *out_y = input_system->mouse_current.y;
 }
 
-void input_get_previous_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y)
+void input_get_previous_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_previous.x;
     *out_y = input_system->mouse_previous.y;
 }
 
-void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y)
+void input_get_mouse_change(Input_System* input_system, s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_current.x - input_system->mouse_previous.x;
@@ -319,7 +319,7 @@ bool input_has_mouse_wheel_changed_last_frame(Input_System* input_system)
     return input_system->mouse_previous.mouse_wheel_delta != 0;
 }
 
-void input_get_mouse_wheel_value(Input_System* input_system, i32* z_delta)
+void input_get_mouse_wheel_value(Input_System* input_system, s32* z_delta)
 {
     MASSERT(input_system);
     *z_delta = input_system->mouse_previous.mouse_wheel_delta;

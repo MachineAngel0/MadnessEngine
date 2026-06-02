@@ -26,7 +26,7 @@ object_handle madness_txt_object_create(Madness_txt* txt, const char* name)
 }
 
 
-void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const char* field_name, madness_txt_type type,
+void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const char* field_name, Reflection_Type type,
                                  u32 array_size)
 {
     madness_txt_object_subfield* new_subfield = malloc(sizeof(madness_txt_object_subfield));
@@ -52,7 +52,7 @@ void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const c
     }
 }
 
-void madness_txt_object_write_data(Madness_txt* txt, object_handle handle, const char* field_name,
+void madness_txt_object_write_data_single(Madness_txt* txt, object_handle handle, const char* field_name,
                                    void* data)
 {
     madness_txt_object* object = &txt->objects[handle.handle];
@@ -67,7 +67,7 @@ void madness_txt_object_write_data(Madness_txt* txt, object_handle handle, const
         }
         size_t type_size = madness_txt_type_size(cur->type);
 
-        if (cur->type == madness_txt_str)
+        if (cur->type == REFLECTION_TYPE_STRING)
         {
             const char** data_strings = (const char**)data;
             if (!cur->string)
@@ -98,6 +98,48 @@ void madness_txt_object_write_data(Madness_txt* txt, object_handle handle, const
     }
 }
 
+void madness_txt_object_write_data_full(Madness_txt* txt, object_handle handle, void* struct_data)
+{
+    /*madness_txt_object* object = &txt->objects[handle.handle];
+    madness_txt_object_subfield* cur = object->head;
+
+    u64 offset;
+
+    while (cur)
+    {
+        size_t type_size = madness_txt_type_size(cur->type);
+
+        if (cur->type == REFLECTION_TYPE_STRING)
+        {
+            const char** data_strings = (const char**)struct_data->data;
+            if (!cur->string)
+            {
+                cur->string = malloc(sizeof(String*) * cur->array_count);
+            }
+            for (int i = 0; i < cur->array_count; ++i)
+            {
+                cur->string[i].length = strlen(data_strings[i]);
+                cur->string[i].chars = strdup(data_strings[i]);
+            }
+        }
+        else
+        {
+            if (!cur->data)
+            {
+                cur->data = malloc(type_size * cur->array_count);
+            }
+
+            for (int i = 0; i < cur->array_count; ++i)
+            {
+                memcpy((u8*)cur->data + (type_size * i), (u8*)data + (type_size * i), type_size);
+            }
+        }
+
+
+        return;
+    }*/
+}
+
 void madness_txt_object_write_data_arg(Madness_txt* txt, object_handle handle, ...)
 {
     va_list args;
@@ -111,7 +153,7 @@ void madness_txt_object_write_data_arg(Madness_txt* txt, object_handle handle, .
         void* data = va_arg(args, void*);
         size_t type_size = madness_txt_type_size(cur->type);
 
-        if (cur->type == madness_txt_str)
+        if (cur->type == REFLECTION_TYPE_STRING)
         {
             const char** data_strings = (const char**)data;
             if (!cur->string)
@@ -159,27 +201,47 @@ void madness_txt_object_write_file(Madness_txt* txt, const char* file_path, obje
         //write out the type
         switch (cur->type)
         {
-        case madness_txt_bool:
+        case REFLECTION_TYPE_BOOL:
             fwrite("[bool]", strlen("[bool]"), 1, fptr);
             break;
-        case madness_txt_i32:
-            fwrite("[i32]", strlen("[i32]"), 1, fptr);
+        case REFLECTION_TYPE_S32:
+            fwrite("[s32]", strlen("[s32]"), 1, fptr);
             break;
-        case madness_txt_u32:
+        case REFLECTION_TYPE_U32:
             fwrite("[u32]", strlen("[u32]"), 1, fptr);
             break;
-        case madness_txt_f32:
+        case REFLECTION_TYPE_F32:
             fwrite("[f32]", strlen("[f32]"), 1, fptr);
             break;
-        case madness_txt_char:
+        case REFLECTION_TYPE_CHAR:
             fwrite("[char]", strlen("[char]"), 1, fptr);
             break;
-        case madness_txt_str:
+        case REFLECTION_TYPE_STRING:
             fwrite("[str]", strlen("[str]"), 1, fptr);
             break;
-        case madness_txt_enum:
+        case REFLECTION_TYPE_INVALID:
             break;
-        case madness_txt_max:
+        case REFLECTION_TYPE_U8:
+            break;
+        case REFLECTION_TYPE_U16:
+            break;
+        case REFLECTION_TYPE_U64:
+            break;
+        case REFLECTION_TYPE_S8:
+            break;
+        case REFLECTION_TYPE_S16:
+            break;
+        case REFLECTION_TYPE_S64:
+            break;
+        case REFLECTION_TYPE_F64:
+            break;
+        case REFLECTION_TYPE_SIZE_T:
+            break;
+        case REFLECTION_TYPE_ENUM:
+            break;
+        case REFLECTION_TYPE_STRUCT:
+            break;
+        case REFLECTION_TYPE_MAX:
             break;
         }
 
@@ -200,7 +262,7 @@ void madness_txt_object_write_file(Madness_txt* txt, const char* file_path, obje
             //write out the data
             switch (cur->type)
             {
-            case madness_txt_bool:
+            case REFLECTION_TYPE_BOOL:
 
                 if (*(bool*)((u8*)cur->data + (i * sizeof(bool))))
                 {
@@ -211,31 +273,51 @@ void madness_txt_object_write_file(Madness_txt* txt, const char* file_path, obje
                     fwrite("false", strlen("false"), 1, fptr);
                 }
                 break;
-            case madness_txt_i32:
+            case REFLECTION_TYPE_S32:
                 char str[64];
-                sprintf(str, "%d", *(i32*)((u8*)cur->data + (i * sizeof(i32))));
+                sprintf(str, "%d", *(s32*)((u8*)cur->data + (i * sizeof(s32))));
                 fwrite(str, strlen(str), 1, fptr);
                 break;
-            case madness_txt_u32:
+            case REFLECTION_TYPE_U32:
                 char str_u[64];
                 sprintf(str_u, "%d", *(u32*)((u8*)cur->data + (i * sizeof(u32))));
                 fwrite(str_u, strlen(str_u), 1, fptr);
                 break;
 
-            case madness_txt_f32:
+            case REFLECTION_TYPE_F32:
                 char str_f[64];
                 sprintf(str_f, "%f", *(f32*)((u8*)cur->data + (i * sizeof(f32))));
                 fwrite(str_f, strlen(str_f), 1, fptr);
                 break;
-            case madness_txt_char:
+            case REFLECTION_TYPE_CHAR:
                 fwrite((u8*)cur->data + (i * sizeof(char)), sizeof(char), 1, fptr);
                 break;
-            case madness_txt_str:
+            case REFLECTION_TYPE_STRING:
                 fwrite(cur->string[i].chars, cur->string[i].length, 1, fptr);
                 break;
-            case madness_txt_enum:
+            case REFLECTION_TYPE_INVALID:
                 break;
-            case madness_txt_max:
+            case REFLECTION_TYPE_U8:
+                break;
+            case REFLECTION_TYPE_U16:
+                break;
+            case REFLECTION_TYPE_U64:
+                break;
+            case REFLECTION_TYPE_S8:
+                break;
+            case REFLECTION_TYPE_S16:
+                break;
+            case REFLECTION_TYPE_S64:
+                break;
+            case REFLECTION_TYPE_F64:
+                break;
+            case REFLECTION_TYPE_SIZE_T:
+                break;
+            case REFLECTION_TYPE_ENUM:
+                break;
+            case REFLECTION_TYPE_STRUCT:
+                break;
+            case REFLECTION_TYPE_MAX:
                 break;
             }
             fwrite("\n", strlen("\n"), 1, fptr);
@@ -343,7 +425,7 @@ void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handl
                     //do a conversion based on the type
                     switch (cur->type)
                     {
-                    case madness_txt_bool:
+                    case REFLECTION_TYPE_BOOL:
                         if (strcmp(field_data, "true") == 0)
                         {
                             bool t = true;
@@ -359,29 +441,49 @@ void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handl
                             MASSERT(false);
                         }
                         break;
-                    case madness_txt_i32:
-                        i32 num = (i32)c_string_to_number(field_data, strlen(field_data));
-                        memcpy((u8*)cur->data + (type_size * arr_index), &num, sizeof(i32));
+                    case REFLECTION_TYPE_S32:
+                        s32 num = (s32)c_string_to_number(field_data, strlen(field_data));
+                        memcpy((u8*)cur->data + (type_size * arr_index), &num, sizeof(s32));
                         break;
-                    case madness_txt_u32:
+                    case REFLECTION_TYPE_U32:
                         u32 u_num = (u32)c_string_to_number(field_data, strlen(field_data));
                         u32* u_data = cur->data;
                         memcpy(&u_data[arr_index], &u_num, sizeof(u32));
                         break;
-                    case madness_txt_f32:
+                    case REFLECTION_TYPE_F32:
                         f32 f_num = (f32)c_string_to_float(field_data);
                         memcpy((u8*)cur->data + (type_size * arr_index), &f_num, sizeof(f32));
                         break;
-                    case madness_txt_char:
+                    case REFLECTION_TYPE_CHAR:
                         memcpy((u8*)cur->data + (type_size * arr_index), &field_data, sizeof(char));
                         break;
-                    case madness_txt_str:
+                    case REFLECTION_TYPE_STRING:
                         cur->string[i].chars = field_data;
                         cur->string[i].length = strlen(field_data);
                         break;
-                    case madness_txt_enum:
+                    case REFLECTION_TYPE_INVALID:
                         break;
-                    case madness_txt_max:
+                    case REFLECTION_TYPE_U8:
+                        break;
+                    case REFLECTION_TYPE_U16:
+                        break;
+                    case REFLECTION_TYPE_U64:
+                        break;
+                    case REFLECTION_TYPE_S8:
+                        break;
+                    case REFLECTION_TYPE_S16:
+                        break;
+                    case REFLECTION_TYPE_S64:
+                        break;
+                    case REFLECTION_TYPE_F64:
+                        break;
+                    case REFLECTION_TYPE_SIZE_T:
+                        break;
+                    case REFLECTION_TYPE_ENUM:
+                        break;
+                    case REFLECTION_TYPE_STRUCT:
+                        break;
+                    case REFLECTION_TYPE_MAX:
                         break;
                     }
                 }
@@ -424,7 +526,7 @@ void madness_txt_object_read(Madness_txt* txt, object_handle handle, const char*
         }
         size_t type_size = madness_txt_type_size(cur->type);
 
-        if (cur->type == madness_txt_str)
+        if (cur->type == REFLECTION_TYPE_STRING)
         {
             const char** data_strings = (const char**)write_to_data;
             for (int i = 0; i < cur->array_count; ++i)
@@ -459,9 +561,9 @@ size_t madness_txt_str_to_type(char* str)
         //TODO: special case, handle it differently
         return sizeof(char*);
     }
-    if (strcmp(str, "i32") == 0)
+    if (strcmp(str, "s32") == 0)
     {
-        return sizeof(i32);
+        return sizeof(s32);
     }
     if (strcmp(str, "u32") == 0)
     {
@@ -475,35 +577,65 @@ size_t madness_txt_str_to_type(char* str)
     return 0;
 }
 
-size_t madness_txt_type_size(madness_txt_type type)
+size_t madness_txt_type_size(Reflection_Type type)
 {
     u32 size = 0;
     switch (type)
     {
-    case madness_txt_bool:
-        size = sizeof(bool);
+    case REFLECTION_TYPE_INVALID:
+        size = 0;
         break;
-    case madness_txt_i32:
-        size = sizeof(i32);
+    case REFLECTION_TYPE_U8:
+        size = sizeof(u8);
         break;
-    case madness_txt_u32:
+    case REFLECTION_TYPE_U16:
+        size = sizeof(u16);
+        break;
+    case REFLECTION_TYPE_U32:
         size = sizeof(u32);
         break;
-    case madness_txt_char:
-        size = sizeof(char);
+    case REFLECTION_TYPE_U64:
+        size = sizeof(u64);
         break;
-    case madness_txt_str:
-        size = sizeof(char*);
+    case REFLECTION_TYPE_S8:
+        size = sizeof(s8);
         break;
-    case madness_txt_f32:
+    case REFLECTION_TYPE_S16:
+        size = sizeof(s16);
+        break;
+    case REFLECTION_TYPE_S32:
+        size = sizeof(s32);
+        break;
+    case REFLECTION_TYPE_S64:
+        size = sizeof(s32);
+        break;
+    case REFLECTION_TYPE_F32:
         size = sizeof(f32);
         break;
-    case madness_txt_max:
+    case REFLECTION_TYPE_F64:
+        size = sizeof(f64);
         break;
-    case madness_txt_enum:
+    case REFLECTION_TYPE_SIZE_T:
+        size = sizeof(size_t);
+        break;
+    case REFLECTION_TYPE_BOOL:
+        size = sizeof(bool);
+        break;
+    case REFLECTION_TYPE_STRING:
+        size = sizeof(char*);
+        break;
+    case REFLECTION_TYPE_CHAR:
+        size = sizeof(char);
+        break;
+    case REFLECTION_TYPE_ENUM:
+        size = sizeof(u32);
+        break;
+    case REFLECTION_TYPE_STRUCT:
+        size = 0;
+        break;
+    case REFLECTION_TYPE_MAX:
         break;
     }
-
     return size;
 }
 
@@ -531,26 +663,32 @@ void madness_txt_object_test_example(Madness_txt* txt)
     };
 
     object_handle handle_example = madness_txt_object_create(txt, "madness test structure");
-    madness_txt_object_add_item(txt, handle_example, "bool_type", madness_txt_bool, 1);
-    madness_txt_object_add_item(txt, handle_example, "signed_int_type", madness_txt_i32, 1);
-    madness_txt_object_add_item(txt, handle_example, "unsigned_int_type", madness_txt_u32, 1);
-    madness_txt_object_add_item(txt, handle_example, "float_type", madness_txt_f32, 1);
-    madness_txt_object_add_item(txt, handle_example, "char_type", madness_txt_char, 1);
-    madness_txt_object_add_item(txt, handle_example, "string_type", madness_txt_str, 1);
+    madness_txt_object_add_item(txt, handle_example, "bool_type", REFLECTION_TYPE_BOOL, 1);
+    madness_txt_object_add_item(txt, handle_example, "signed_int_type", REFLECTION_TYPE_S32, 1);
+    madness_txt_object_add_item(txt, handle_example, "unsigned_int_type", REFLECTION_TYPE_U32, 1);
+    madness_txt_object_add_item(txt, handle_example, "float_type", REFLECTION_TYPE_F32, 1);
+    madness_txt_object_add_item(txt, handle_example, "char_type", REFLECTION_TYPE_CHAR, 1);
+    madness_txt_object_add_item(txt, handle_example, "string_type", REFLECTION_TYPE_STRING, 1);
 
-    madness_txt_object_add_item(txt, handle_example, "array_type", madness_txt_u32, example_struct.array_size);
+    madness_txt_object_add_item(txt, handle_example, "array_type", REFLECTION_TYPE_U32, example_struct.array_size);
+    madness_txt_object_add_item(txt, handle_example, "array_size", REFLECTION_TYPE_U32, 1);
 
-    madness_txt_object_add_item(txt, handle_example, "unsigned_key", madness_txt_u32, 1);
-    madness_txt_object_add_item(txt, handle_example, "float_value", madness_txt_f32, 1);
+    madness_txt_object_add_item(txt, handle_example, "unsigned_key", REFLECTION_TYPE_U32, 1);
+    madness_txt_object_add_item(txt, handle_example, "float_value", REFLECTION_TYPE_F32, 1);
 
-    madness_txt_object_add_item(txt, handle_example, "unsigned_key_arr", madness_txt_u32,
+    madness_txt_object_add_item(txt, handle_example, "unsigned_key_arr", REFLECTION_TYPE_U32,
                                 example_struct.hash_arr_size);
-    madness_txt_object_add_item(txt, handle_example, "unsigned_value_arr", madness_txt_u32,
+    madness_txt_object_add_item(txt, handle_example, "unsigned_value_arr", REFLECTION_TYPE_U32,
                                 example_struct.hash_arr_size);
-    madness_txt_object_add_item(txt, handle_example, "string_array_type", madness_txt_str,
+    madness_txt_object_add_item(txt, handle_example, "hash_arr_size", REFLECTION_TYPE_U32,1);
+
+    madness_txt_object_add_item(txt, handle_example, "string_array_type", REFLECTION_TYPE_STRING,
                                 example_struct.string_array_size);
-    madness_txt_object_add_item(txt, handle_example, "char_array_type", madness_txt_char,
+    madness_txt_object_add_item(txt, handle_example, "string_array_size", REFLECTION_TYPE_U32,1);
+
+    madness_txt_object_add_item(txt, handle_example, "char_array_type", REFLECTION_TYPE_CHAR,
                                 example_struct.char_array_size);
+    madness_txt_object_add_item(txt, handle_example, "char_array_size", REFLECTION_TYPE_U32,1);
 
     //write
     /*madness_txt_object_set_write_data(txt, handle_example, "bool_type", &example_struct.bool_type);
@@ -629,21 +767,21 @@ void madness_txt_object_test_example(Madness_txt* txt)
     madness_txt_object_read(txt, handle_example, "char_array_type",
                             example_struct2.char_array_type);
 
-    // madness_txt_object_write_data(txt, handle_example, "bool_type", &example_struct.bool_type);
-    // madness_txt_object_write_data(txt, handle_example, "signed_int_type", &example_struct.signed_int_type);
-    // madness_txt_object_write_data(txt, handle_example, "float_type", &example_struct.float_value);
-    // madness_txt_object_write_data(txt, handle_example, "char_type", &example_struct.char_type);
-    // madness_txt_object_write_data(txt, handle_example, "string_type", &example_struct.string_type);
+    // madness_txt_object_write_data_single(txt, handle_example, "bool_type", &example_struct.bool_type);
+    // madness_txt_object_write_data_single(txt, handle_example, "signed_int_type", &example_struct.signed_int_type);
+    // madness_txt_object_write_data_single(txt, handle_example, "float_type", &example_struct.float_value);
+    // madness_txt_object_write_data_single(txt, handle_example, "char_type", &example_struct.char_type);
+    // madness_txt_object_write_data_single(txt, handle_example, "string_type", &example_struct.string_type);
     //
-    // madness_txt_object_write_data(txt, handle_example, "array_type", &example_struct.array_type);
+    // madness_txt_object_write_data_single(txt, handle_example, "array_type", &example_struct.array_type);
     //
-    // madness_txt_object_write_data(txt, handle_example, "unsigned_key", &example_struct.unsigned_key);
-    // madness_txt_object_write_data(txt, handle_example, "float_value", &example_struct.float_value);
+    // madness_txt_object_write_data_single(txt, handle_example, "unsigned_key", &example_struct.unsigned_key);
+    // madness_txt_object_write_data_single(txt, handle_example, "float_value", &example_struct.float_value);
     //
-    // madness_txt_object_write_data(txt, handle_example, "unsigned_key_arr", &example_struct.unsigned_key_arr);
-    // madness_txt_object_write_data(txt, handle_example, "unsigned_value_arr", &example_struct.unsigned_value_arr);
-    // madness_txt_object_write_data(txt, handle_example, "string_array_type",
+    // madness_txt_object_write_data_single(txt, handle_example, "unsigned_key_arr", &example_struct.unsigned_key_arr);
+    // madness_txt_object_write_data_single(txt, handle_example, "unsigned_value_arr", &example_struct.unsigned_value_arr);
+    // madness_txt_object_write_data_single(txt, handle_example, "string_array_type",
     //                               example_struct.string_array_type);
-    // madness_txt_object_write_data(txt, handle_example, "char_array_type",
+    // madness_txt_object_write_data_single(txt, handle_example, "char_array_type",
     //                               example_struct.char_array_type);
 }

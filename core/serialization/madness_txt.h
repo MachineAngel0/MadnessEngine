@@ -79,32 +79,17 @@ write_map(name, type)
 
 #include "defines.h"
 #include "_allocator_interface.h"
+#include "compiler/reflection_system.h"
 
 //NOTE: ILL BE USING A YAML FILE SINCE IT HAS SYNTAX HIGHLIGHTING, AND IS KIDNA BASED ON THAT FORMAT ANYWAY
 
-typedef enum madness_txt_type
-{
-    madness_txt_bool,
-    madness_txt_i32,
-    madness_txt_u32,
-
-    madness_txt_f32,
-    madness_txt_char,
-    madness_txt_str,
-    //TODO: make these distinct types
-    // madness_txt_cstr,
-    // madness_txt_str,
-    madness_txt_enum,
-
-    madness_txt_max,
-} madness_txt_type;
 
 
 typedef struct madness_txt_object_subfield
 {
     const char* field_name;
 
-    madness_txt_type type;
+    Reflection_Type type;
     u32 array_count;
     union
     {
@@ -153,13 +138,15 @@ void madness_txt_shutdown(Madness_txt* txt);
 
 //object
 object_handle madness_txt_object_create(Madness_txt* txt, const char* name);
-void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const char* field_name, madness_txt_type type,
+void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const char* field_name, Reflection_Type type,
                                  u32 array_size);
 
 
 //write
-void madness_txt_object_write_data(Madness_txt* txt, object_handle handle, const char* field_name,
+void madness_txt_object_write_data_single(Madness_txt* txt, object_handle handle, const char* field_name,
                                        void* data);
+
+void madness_txt_object_write_data_full(Madness_txt* txt, object_handle handle, void* struct_data);
 
 
 //struct needs to be read in proper order that it was defined when using object add type
@@ -179,7 +166,7 @@ void madness_txt_object_read(Madness_txt* txt, object_handle handle, const char*
 
 //internal
 size_t madness_txt_str_to_type(char* str);
-size_t madness_txt_type_size(madness_txt_type type);
+size_t madness_txt_type_size(Reflection_Type type);
 
 
 
@@ -188,7 +175,7 @@ size_t madness_txt_type_size(madness_txt_type type);
 typedef struct madness_txt_test_struct_example
 {
     bool bool_type;
-    i32 signed_int_type;
+    s32 signed_int_type;
     u32 unsigned_int_type;
     f32 float_type;
     char char_type;

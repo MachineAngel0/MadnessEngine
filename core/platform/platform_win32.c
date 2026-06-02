@@ -115,7 +115,7 @@ bool platform_startup(
 
     // Show the window
     b32 should_activate = 1; // TODO: if the window should not accept input, this should be false.
-    i32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
+    s32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
     // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
     // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
     ShowWindow(state->hwnd, show_window_command_flags);
@@ -181,7 +181,7 @@ void* platform_copy_memory(void* dest, const void* source, u64 size)
     return memcpy(dest, source, size);
 }
 
-void* platform_set_memory(void* dest, i32 value, u64 size)
+void* platform_set_memory(void* dest, s32 value, u64 size)
 {
     return memset(dest, value, size);
 }
@@ -291,15 +291,15 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
     case WM_MOUSEMOVE:
         {
             // Mouse move
-            i32 x_position = GET_X_LPARAM(l_param);
-            i32 y_position = GET_Y_LPARAM(l_param);
+            s32 x_position = GET_X_LPARAM(l_param);
+            s32 y_position = GET_Y_LPARAM(l_param);
 
             input_process_mouse_move(input_system, x_position, y_position);
         }
         break;
     case WM_MOUSEWHEEL:
         {
-            i32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
+            s32 z_delta = GET_WHEEL_DELTA_WPARAM(w_param);
             if (z_delta != 0)
             {
                 // Flatten the input to an OS-independent (-1, 1)

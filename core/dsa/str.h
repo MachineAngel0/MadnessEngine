@@ -7,18 +7,17 @@
 
 //immutable string, not meant to be modified,
 //all functions that need to make modifications will return you a new string, leaving the original untouched
-//does not retain the null terminator
+//does not retain the null terminator, you can call string_to_c_string to get one with a null terminator
 typedef struct String
 {
-    char* chars;
     u64 length;
-    // we never retain the null terminated char, but it might be that there is one based on the function used
+    char* chars;
 } String;
 
 typedef struct String_Tokenizer
 {
-    String** strings;
     u64 number_of_strings;
+    String** strings;
 } String_Tokenizer;
 
 //TODO: idk of i really want to implement this
@@ -36,13 +35,12 @@ String* string_create_allocator(const char* word, const u64 length, Allocator* a
 
 
 String* string_create_internal(const String* s);
-
 bool string_free(String* string);
 
 
 //this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
-//will convert the string into the correct size, for some reason doesn't work after the string has been passed
+//will convert the string into the correct size, for some reason doesn't work after the string has been passed as a param
 #define STRING_CREATE(string) string_create(string, sizeof(string))
 //create a string from an already existing char[]/char* that excludes the null terminated string
 #define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
@@ -54,6 +52,7 @@ void string_println(const String* str);
 
 
 bool string_compare(const String* str1, const String* str2);
+
 
 
 bool str_is_empty(const String* str);
@@ -68,7 +67,8 @@ String* string_strip_whitespace(const String* str);
 
 /*C-STRING*/
 
-const char* string_convert_to_c_string(const String* s);
+const char* string_to_c_string(const String* s);
+bool string_compare_c_string(const String* str1, const char* c_str);
 
 
 /*STRING SLICE*/

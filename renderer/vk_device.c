@@ -251,8 +251,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     INFO("Creating logical device...");
 
     // NOTE: Do not create additional queues for shared indices.
-    hash_set* indices = hash_set_init(sizeof(i32), 10);
-    i32* index_array = darray_create_reserve(i32, 10);
+    hash_set* indices = hash_set_init(sizeof(s32), 10);
+    s32* index_array = darray_create_reserve(s32, 10);
     if (hash_set_insert(indices, &vulkan_context->device.graphics_queue_index))
     {
         darray_push(index_array, vulkan_context->device.graphics_queue_index);
@@ -272,7 +272,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     u64 index_count = hash_set_get_size(indices);
     u64 index_array_size = darray_get_size(index_array);
-    // i32 hash_set_contains_index(const hash_set* h, void* key)
+    // s32 hash_set_contains_index(const hash_set* h, void* key)
 
     f32 default_queue_priority = 1.0f;
     //get device queue info for each unique queue family

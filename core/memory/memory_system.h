@@ -18,6 +18,7 @@ typedef enum memory_subsystem_type
     MEMORY_SUBSYSTEM_MESH,
     MEMORY_SUBSYSTEM_UI,
     MEMORY_SUBSYSTEM_EDITOR,
+    MEMORY_SUBSYSTEM_REFLECTION,
 
 
     MEMORY_SUBSYSTEM_MAX,
@@ -37,6 +38,7 @@ static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
     [MEMORY_SUBSYSTEM_MESH] = "MEMORY_SUBSYSTEM_MESH",
     [MEMORY_SUBSYSTEM_UI] = "MEMORY_SUBSYSTEM_UI",
     [MEMORY_SUBSYSTEM_EDITOR] = "MEMORY_SUBSYSTEM_EDITOR",
+    [MEMORY_SUBSYSTEM_REFLECTION] = "MEMORY_SUBSYSTEM_REFLECTION",
 };
 
 
@@ -81,7 +83,7 @@ MAPI void memory_system_zero_memory(void* memory, u64 size);
 
 MAPI void memory_system_copy(void* dest, void* source, u64 size);
 
-MAPI void memory_system_set(void* dest, i32 val, u64 size);
+MAPI void memory_system_set(void* dest, s32 val, u64 size);
 
 
 #endif //MEMORY_SYSTEM_H

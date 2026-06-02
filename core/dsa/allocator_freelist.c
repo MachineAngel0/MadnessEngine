@@ -124,6 +124,7 @@ void arena_free_list_coalescence(Arena_Free_List* fl, Free_List_Node* prev_node,
         prev_node->block_size += free_node->next->block_size;
         arena_free_list_node_remove(&fl->head, prev_node, free_node);
     }
+
 }
 
 Free_List_Node* arena_free_list_find_first(Arena_Free_List* fl, size_t size, size_t alignment, size_t* out_padding,

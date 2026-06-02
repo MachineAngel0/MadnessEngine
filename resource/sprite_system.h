@@ -15,7 +15,7 @@ typedef struct Sprite_System_Config
 Sprite_System* sprite_system_init(Memory_System* memory_system);
 bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_system);
 
-MAPI void sprite_system_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 screen_size_y);
+MAPI void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 screen_size_y);
 
 MAPI Sprite_Handle sprite_system_get_new_sprite(Sprite_System* sprite_system, Sprite_Data* out_sprite_data);
 

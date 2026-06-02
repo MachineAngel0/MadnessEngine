@@ -19,7 +19,7 @@ void ability_add_component(Ability* ability, Ability_Component* component)
 void ability_type_process(Unit* unit, Ability_Component* ability_data)
 {
     //all components have type as their first param, so if for some reason its not set it will be considered invalid
-    switch (ability_data->data.type)
+    switch (ability_data->type)
     {
     case Ability_Component_TYPE_INVALID:
         MASSERT_MSG(false, "INVALID ABILITY COMPONENT TYPE");

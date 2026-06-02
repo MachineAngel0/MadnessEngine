@@ -7,16 +7,16 @@
 typedef struct Platform_Config
 {
     // Window starting position x axis, if applicable.
-    i16 start_pos_x;
+    s16 start_pos_x;
 
     // Window starting position y axis, if applicable.
-    i16 start_pos_y;
+    s16 start_pos_y;
 
     // Window starting width, if applicable.
-    i16 start_width;
+    s16 start_width;
 
     // Window starting height, if applicable.
-    i16 start_height;
+    s16 start_height;
 
     // The application name used in windowing, if applicable.
     char* name;
@@ -67,7 +67,7 @@ void* platform_zero_memory(void* block, u64 size);
 
 void* platform_copy_memory(void* dest, const void* source, u64 size);
 
-void* platform_set_memory(void* dest, i32 value, u64 size);
+void* platform_set_memory(void* dest, s32 value, u64 size);
 
 //TIME
 f64 platform_get_absolute_time(void);

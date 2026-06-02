@@ -55,7 +55,7 @@ bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_
     return true;
 }
 
-void sprite_system_begin(Sprite_System* sprite_system, i32 screen_size_x, i32 screen_size_y)
+void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 screen_size_y)
 {
     MASSERT(sprite_system)
     sprite_system->screen_size.x = (float)screen_size_x;

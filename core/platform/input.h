@@ -179,10 +179,10 @@ typedef struct keyboard_state
 typedef struct mouse_state
 {
     //x and y only track the change in mouse movement
-    i16 x;
-    i16 y;
+    s16 x;
+    s16 y;
     uint8_t buttons[MOUSE_BUTTON_MAX_BUTTONS];
-    i32 mouse_wheel_delta;
+    s32 mouse_wheel_delta;
 } mouse_state;
 
 typedef struct Input_System
@@ -208,9 +208,9 @@ MAPI void input_update(Input_System* input_system);
 
 MAPI void input_process_key(Input_System* input_system, keys key, bool pressed);
 
-MAPI void input_process_mouse_move(Input_System* input_system, i16 x, i16 y);
+MAPI void input_process_mouse_move(Input_System* input_system, s16 x, s16 y);
 
-MAPI void input_process_mouse_wheel(Input_System* input_system, i8 z_delta);
+MAPI void input_process_mouse_wheel(Input_System* input_system, s8 z_delta);
 
 MAPI void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed);
 
@@ -241,11 +241,11 @@ char input_key_to_char(Input_System* input_system, keys key);
 //mouse related
 
 // mouse position
-MAPI void input_get_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
+MAPI void input_get_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y);
 
-MAPI void input_get_previous_mouse_pos(Input_System* input_system, i16* out_x, i16* out_y);
+MAPI void input_get_previous_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y);
 
-MAPI void input_get_mouse_change(Input_System* input_system, i16* out_x, i16* out_y);
+MAPI void input_get_mouse_change(Input_System* input_system, s16* out_x, s16* out_y);
 
 MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y);
 
@@ -269,7 +269,7 @@ MAPI bool input_is_mouse_button_released_unique(Input_System* input_system, mous
 MAPI bool input_has_mouse_wheel_changed_this_frame(Input_System* input_system);
 bool input_has_mouse_wheel_changed_last_frame(Input_System* input_system);
 
-MAPI void input_get_mouse_wheel_value(Input_System* input_system, i32* z_delta);
+MAPI void input_get_mouse_wheel_value(Input_System* input_system, s32* z_delta);
 
 MAPI bool input_is_mouse_wheel_up(Input_System* input_system);
 

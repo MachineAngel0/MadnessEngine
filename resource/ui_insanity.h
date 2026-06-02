@@ -170,10 +170,10 @@ typedef struct Insanity_UI
     //
     bool mouse_down;
     bool mouse_released_unique;
-    i16 mouse_pos_x;
-    i16 mouse_pos_y;
-    i16 mouse_delta_x;
-    i16 mouse_delta_y;
+    s16 mouse_pos_x;
+    s16 mouse_pos_y;
+    s16 mouse_delta_x;
+    s16 mouse_delta_y;
 
     //for input key
     char first_released_key;
@@ -222,7 +222,7 @@ MAPI bool insanity_ui_init(Memory_System* memory_system, Input_System* input_sys
 MAPI bool insanity_ui_shutdown(void);
 
 //pass in the size every frame, in the event the size changes
-MAPI void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y);
+MAPI void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y);
 
 
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data

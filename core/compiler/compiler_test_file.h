@@ -23,7 +23,7 @@ void someth()
 }
 
 
-i32* x = NULL;
+s32* x = NULL;
 char* str = "astring wow";
 
 

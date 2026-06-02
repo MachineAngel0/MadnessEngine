@@ -140,7 +140,7 @@ void allocator_test(void)
     u64* u64_arr = allocator_alloc(&a, 100 * sizeof(u64));
     //912 due to alignemnt
     TEST_DEBUG(a.current_offset == 912);
-    i32* i32_arr = allocator_alloc(&a, 100 * sizeof(i32));
+    s32* i32_arr = allocator_alloc(&a, 100 * sizeof(s32));
     TEST_DEBUG(a.current_offset == 1312);
 
 

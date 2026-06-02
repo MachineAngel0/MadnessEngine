@@ -115,10 +115,10 @@ typedef struct vulkan_device
     VkDevice logical_device;
     vulkan_swapchain_capabilities_info swapchain_capabilities;
 
-    i32 graphics_queue_index;
-    i32 present_queue_index;
-    i32 transfer_queue_index;
-    i32 compute_queue_index;
+    s32 graphics_queue_index;
+    s32 present_queue_index;
+    s32 transfer_queue_index;
+    s32 compute_queue_index;
 
     //family queues
     VkQueue graphics_queue;

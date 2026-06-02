@@ -50,7 +50,7 @@ void memory_tracker_print_memory_usage(Memory_Tracker* memory_tracker)
     DEBUG("CONTAINER MEMORY");
     u64 memory_container_total_size = 0;
 
-    for (i32 i = 0; i < MEMORY_CONTAINER_MAX; i++)
+    for (s32 i = 0; i < MEMORY_CONTAINER_MAX; i++)
     {
         u32 container_usage = 0;
         if (memory_tracker->memory_container_usage[i] >= GB(1))

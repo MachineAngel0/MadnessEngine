@@ -29,7 +29,7 @@ u64 thread_get_id();
 // void thread_join();
 
 //get logical processor cores
-i32 get_threads_available();
+s32 get_threads_available();
 
 // Mutex
 bool mutex_create(Madness_Mutex* out_mutex);

@@ -91,7 +91,7 @@ bool insanity_ui_shutdown(void)
     return true;
 }
 
-void insanity_ui_begin(i32 screen_size_x, i32 screen_size_y)
+void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
 {
     MASSERT(insanity_ui);
     //clear draw info and reset the hot id

@@ -79,69 +79,69 @@ typedef union vec4f
 
 typedef union vec2i
 {
-    i32 elements[2];
+    s32 elements[2];
 
     struct
     {
         union
         {
-            i32 x, r, u;
+            s32 x, r, u;
         };
 
         union
         {
-            i32 y, g, v;
+            s32 y, g, v;
         };
     };
 } vec2i;
 
 typedef union vec3i
 {
-    i32 elements[3];
+    s32 elements[3];
 
     struct
     {
         union
         {
-            i32 x, r, u;
+            s32 x, r, u;
         };
 
         union
         {
-            i32 y, g, v;
+            s32 y, g, v;
         };
 
         union
         {
-            i32 z, b, w;
+            s32 z, b, w;
         };
     };
 } vec3i;
 
 typedef union vec4i
 {
-     i32 elements[4];
+     s32 elements[4];
 
      struct
     {
         union
         {
-            i32 x, r, u;
+            s32 x, r, u;
         };
 
         union
         {
-            i32 y, g, v;
+            s32 y, g, v;
         };
 
         union
         {
-            i32 z, b;
+            s32 z, b;
         };
 
         union
         {
-            i32 w, a;
+            s32 w, a;
         };
     };
 } vec4i;

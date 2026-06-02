@@ -39,8 +39,8 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
 
-    // i32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    i32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, memory_flags);
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, memory_flags);
     if (memory_type == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -173,8 +173,8 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
 
-    // i32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    i32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_type == -1)
     {
@@ -290,8 +290,8 @@ void create_texture_image(vulkan_context* context, vulkan_command_buffer* comman
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
 
-    // i32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    i32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_type == -1)
     {

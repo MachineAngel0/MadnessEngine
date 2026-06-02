@@ -135,7 +135,7 @@ bool hash_set_contains(const hash_set* h, void* key)
     return false;
 }
 
-i32 hash_set_contains_index(const hash_set* h, void* key)
+s32 hash_set_contains_index(const hash_set* h, void* key)
 {
     //return index where the value is stored, returns -1 if not found
 

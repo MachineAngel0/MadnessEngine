@@ -136,7 +136,7 @@ void memory_system_copy(void* dest, void* source, u64 size)
     platform_copy_memory(dest, source, size);
 }
 
-void memory_system_set(void* dest, i32 val, u64 size)
+void memory_system_set(void* dest, s32 val, u64 size)
 {
     platform_set_memory(dest, val, size);
 }

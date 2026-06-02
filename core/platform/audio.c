@@ -3,7 +3,7 @@
 #include "defines.h"
 #include "logger.h"
 
-static ma_engine engine;
+static ma_engine audio_engine;
 
 Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system)
 {
@@ -13,27 +13,26 @@ Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* 
 
     // https://github.com/mackron/miniaudio
 
-    ma_result result;
 
-    result = ma_engine_init(NULL, &engine);
+    ma_result result = ma_engine_init(NULL, &audio_engine);
     MASSERT_MSG(result == MA_SUCCESS, "ma_engine_init failed");
 
     //NOTE: these will play at the same time
-    // ma_engine_play_sound(&engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
-    // ma_engine_play_sound(&engine, "..\\z_assets\\audio\\file_example_WAV_1MG.wav", NULL);
+    // ma_engine_play_sound(&audio_engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
+    // ma_engine_play_sound(&audio_engine, "..\\z_assets\\audio\\file_example_WAV_1MG.wav", NULL);
 
     return madness_audio;
 }
 
 bool audio_system_shutdown(Madness_Audio* madness_audio)
 {
-    ma_engine_uninit(&engine);
+    ma_engine_uninit(&audio_engine);
     return true;
 }
 
 void audio_play_sound_effects(const char* file_path)
 {
-    ma_engine_play_sound(&engine, file_path, NULL);
+    ma_engine_play_sound(&audio_engine, file_path, NULL);
 }
 
 void audio_play_sound(const char* file_path)

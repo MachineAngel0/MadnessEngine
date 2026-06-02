@@ -27,7 +27,7 @@ void heal_ability(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
     {
         Health_Component* CurrentTargetHealthComponent = Target->HealthComponent;
 
-        if (HealOnlyIfDead)
+        if (heal_only_if_dead)
         {
             if (CurrentTargetHealthComponent->IsAlive())
             {

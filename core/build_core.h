@@ -31,6 +31,7 @@
 #include "../core/serialization/network_serialization.h"
 #include "../core/serialization/file_serialization.h"
 #include "../core/serialization/madness_txt.h"
+#include "../core/serialization/runtime_registry.h"
 #include "../core/asserts.h"
 
 //CORE - MEMORY

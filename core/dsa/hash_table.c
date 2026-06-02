@@ -11,6 +11,7 @@ hash_table* _hash_table_create(u64 value_data_size, u64 capacity)
 
     h->value_data = malloc(value_data_size * capacity);
     memset(h->value_data, 0, value_data_size * capacity);
+    h->num_entries = 0;
 
 
     return h;
@@ -200,9 +201,9 @@ u64 hash_table_get_hash_id(hash_table* h, const char* key_str)
 void hash_table_test()
 {
     TEST_START("HASH TABLE");
-    hash_table* hm_test = HASH_TABLE_CREATE(i32, HASH_TABLE_DEFAULT_CAPACITY);
+    hash_table* hm_test = HASH_TABLE_CREATE(s32, HASH_TABLE_DEFAULT_CAPACITY);
 
-    i32 val = 100;
+    s32 val = 100;
     hash_table_insert(hm_test, "key", &val);
     hash_table_print(hm_test, print_int);
 
@@ -210,10 +211,10 @@ void hash_table_test()
     hash_table_print(hm_test, print_int);
 
 
-    i32 val2 = 101;
+    s32 val2 = 101;
     hash_table_insert(hm_test, "key2", &val2);
 
-    i32 check_value;
+    s32 check_value;
     hash_table_get(hm_test, "key2", &check_value);
     TEST_DEBUG(check_value == val2);
 
@@ -232,7 +233,7 @@ void hash_table_test()
     // PTR TEST//
 
     hash_table* hm_test_ptr = HASH_TABLE_CREATE(void*, HASH_TABLE_DEFAULT_CAPACITY);
-    i32* val_ptr = malloc(sizeof(int));
+    s32* val_ptr = malloc(sizeof(int));
     *val_ptr = 100;
 
     hash_table_insert(hm_test_ptr, "key", &val_ptr);
@@ -241,12 +242,12 @@ void hash_table_test()
     hash_table_remove(hm_test_ptr, "key");
     hash_table_print(hm_test_ptr, print_int);
 
-    i32* val2_ptr = malloc(sizeof(int));
+    s32* val2_ptr = malloc(sizeof(int));
     *val2_ptr = 101;
     hash_table_insert(hm_test_ptr, "key2", &val2_ptr);
 
 
-    i32* check_value_ptr;
+    s32* check_value_ptr;
     hash_table_get(hm_test_ptr, "key2", &check_value_ptr);
     TEST_DEBUG(check_value_ptr == val2_ptr);
     TEST_DEBUG(*check_value_ptr == *val2_ptr);

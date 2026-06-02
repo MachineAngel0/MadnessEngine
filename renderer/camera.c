@@ -129,8 +129,8 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
         camera_process_keyboard(cam, CAMERA_MOVEMENT_RIGHT, dt);
     }
 
-    i16 x;
-    i16 y;
+    s16 x;
+    s16 y;
     input_get_mouse_change(input_system, &x, &y);
     camera_process_mouse_movement(cam, dt, -x, -y, true);
 

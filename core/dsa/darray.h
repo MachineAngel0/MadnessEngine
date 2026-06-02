@@ -274,13 +274,13 @@ DARRAY_GENERATE_TYPE(u32)
 
 DARRAY_GENERATE_TYPE(u64)
 
-DARRAY_GENERATE_TYPE(i8)
+DARRAY_GENERATE_TYPE(s8)
 
-DARRAY_GENERATE_TYPE(i16)
+DARRAY_GENERATE_TYPE(s16)
 
-DARRAY_GENERATE_TYPE(i32)
+DARRAY_GENERATE_TYPE(s32)
 
-DARRAY_GENERATE_TYPE(i64)
+DARRAY_GENERATE_TYPE(s64)
 
 DARRAY_GENERATE_TYPE(f32)
 
@@ -363,6 +363,8 @@ typedef struct Dynamic_Array
 
 #define DYNAMIC_ARRAY_TYPE(type) Dynamic_Array
 
+#define DYNAMIC_ARRAY_ITERATION_MACRO_DONT_USE(darray)\
+for (u32 i; i < darray->num_items; i++)
 
 Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Allocator_Interface allocator_interface)
 {
@@ -391,7 +393,7 @@ void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
 {
     void* new_data = array->allocator_interface.alloc(array->allocator_interface.allocator,
                                                       new_capacity * array->stride, DEFAULT_ALIGNMENT);
-    memcpy(new_data, array->data, array->capacity);
+    memcpy(new_data, array->data, array->capacity * array->stride);
     array->allocator_interface.free_memory(array->allocator_interface.allocator, array->data);
     array->data = new_data;
     array->capacity = new_capacity;

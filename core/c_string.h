@@ -22,11 +22,11 @@ MAPI bool c_string_path_is_extension(const char* path, const char* extensions_na
 MAPI bool c_strings_equal(const char* str0, const char* str1);
 
 // Performs variadic string formatting to dest given format string and va_list.
-MAPI i32 c_string_format_v(char* dest, const char* format, void* va_list);
+MAPI s32 c_string_format_v(char* dest, const char* format, void* va_list);
 
 
 // Performs string formatting to dest given format string and parameters.
-MAPI i32 c_string_format(char* dest, const char* format, ...);
+MAPI s32 c_string_format(char* dest, const char* format, ...);
 
 
 

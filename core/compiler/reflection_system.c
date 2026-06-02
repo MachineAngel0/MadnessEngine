@@ -1,13 +1,30 @@
 ﻿#include "reflection_system.h"
 
 #include "array.h"
+#include "memory_system.h"
 
-Reflection_System* reflection_system_init()
+Reflection_System* reflection_system_init(Memory_System* memory_system)
 {
-    Reflection_System* reflection_system = (Reflection_System*)malloc(sizeof(Reflection_System));
+    Reflection_System* reflection_system = memory_system_alloc(memory_system, sizeof(Allocator),
+                                                               MEMORY_SUBSYSTEM_REFLECTION);
     reflection_system->reflection_registry_constants = HASH_TABLE_CREATE(Reflection_Constant, 1000);
     reflection_system->reflection_registry_enums = HASH_TABLE_CREATE(Reflection_Enum, 1000);
     reflection_system->reflection_registry_structs = HASH_TABLE_CREATE(Reflection_Struct, 1000);
+
+
+    u64 mem_size = MB(16);
+
+    reflection_system->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_REFLECTION);
+    void* alloc_memory = memory_system_alloc(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
+    allocator_init(reflection_system->allocator, alloc_memory, mem_size);
+
+    reflection_system->frame_allocator = memory_system_alloc(memory_system, sizeof(Frame_Allocator),
+                                                             MEMORY_SUBSYSTEM_REFLECTION);
+    void* frame_alloc_memory = memory_system_alloc(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
+    allocator_init(reflection_system->frame_allocator, frame_alloc_memory, mem_size);
+
+    reflection_system->allocator_interface = allocator_inferface_create(reflection_system->allocator);
+    reflection_system->frame_allocator_interface = frame_allocator_interface_create(reflection_system->allocator);
 
 
     return reflection_system;
@@ -16,6 +33,293 @@ Reflection_System* reflection_system_init()
 void reflection_system_shutdown()
 {
     //TODO: use an arena
+}
+
+void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer)
+{
+    MASSERT(reflection_system);
+    MASSERT(lexer);
+    DEBUG("CONSTANTS PARSE START")
+
+    u64 token_size = darray_get_size(lexer->tokens);
+
+    for (u64 i = 0; i < token_size; i++)
+    {
+        if (lexer->tokens[i].type == Token_MACRO)
+        {
+            if (&lexer->tokens[i + 1] && lexer->tokens[i + 1].type == Token_Identifier)
+            {
+                if (&lexer->tokens[i + 2] && lexer->tokens[i + 2].type == Token_Number)
+                {
+                    reflection_system_add_constant(reflection_system,
+                                                   string_builder_to_c_string(
+                                                       &lexer->tokens[i + 1].string_builder),
+                                                   string_builder_to_number(
+                                                       &lexer->tokens[i + 2].string_builder));
+                    i += 2;
+                }
+            }
+        }
+    }
+}
+
+void reflection_system_parse_enums(Reflection_System* reflection_system, Lexer* lexer)
+{
+    MASSERT(reflection_system);
+    MASSERT(lexer);
+    DEBUG("ENUM PARSE START")
+
+    u64 token_size = darray_get_size(lexer->tokens);
+
+    for (u64 i = 0; i < token_size; i++)
+    {
+        if (lexer->tokens[i].type == Token_Enum)
+        {
+            //create a registry with the specific name
+            i++; // get the name
+
+            // string_builder_print(&lexer3->tokens[i].string_builder);
+            const char* enum_name = string_builder_to_c_string(&lexer->tokens[i].string_builder);
+            reflection_system_add_enum(reflection_system, enum_name);
+
+            i++; // offset into the enum structure
+
+            u32 enum_value = 0;
+            while (i < token_size && lexer->tokens[i].type != Token_CloseBrace)
+            {
+                if (lexer->tokens[i].type == Token_Identifier)
+                {
+                    // string_builder_print(&lexer3->tokens[i].string_builder);
+                    reflection_system_add_enum_field(reflection_system, enum_name,
+                                                     string_builder_to_c_string(&lexer->tokens[i].string_builder));
+                    enum_value++;
+                }
+                i++;
+            }
+        }
+    }
+}
+
+static void reflection_system_parse_fields_for_structs(
+    Reflection_System* reflection_system,
+    Token* tokens,
+    u64* i,
+    const char* struct_name,
+    Token_Type field_token_type, // the type tag passed to add functions
+    const char* type_name_str) // string name of the type
+{
+    u64 j = *i;
+
+    if (tokens[j + 1].type == Token_Identifier)
+    {
+        const char* field_name = string_builder_to_c_string(&tokens[j + 1].string_builder);
+
+        if (tokens[j + 2].type == Token_OpenBracket)
+        {
+            // stack array: type name[SIZE]:
+            if (tokens[j + 3].type == Token_Identifier)
+            {
+                u64 array_size = reflection_system_constant_query(
+                    reflection_system,
+                    string_builder_to_c_string(&tokens[j + 3].string_builder));
+                reflection_system_add_struct_field_ptr_stack(
+                    reflection_system, struct_name,
+                    field_token_type, type_name_str,
+                    field_name, array_size);
+                *i += 3;
+            }
+            else if (tokens[j + 3].type == Token_Number)
+            {
+                reflection_system_add_struct_field_ptr_stack(
+                    reflection_system, struct_name,
+                    field_token_type, type_name_str,
+                    field_name,
+                    string_builder_to_number(&tokens[j + 3].string_builder));
+                *i += 3;
+            }
+        }
+        else
+        {
+            // basic field: type name
+            reflection_system_add_struct_field(
+                reflection_system, struct_name,
+                field_token_type, type_name_str, field_name);
+            *i += 1;
+        }
+    }
+    else if (tokens[j + 1].type == Token_Asterisk)
+    {
+        if (tokens[j + 2].type == Token_Identifier)
+        {
+            // heap pointer: type* name
+            reflection_system_add_struct_field_ptr_heap(
+                reflection_system, struct_name,
+                field_token_type, type_name_str,
+                string_builder_to_c_string(&tokens[j + 2].string_builder));
+            *i += 2;
+        }
+    }
+}
+
+void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer* lexer)
+{
+    Token_Type keep_list[] = {
+        //single char tokens
+        Token_OpenParen,
+        Token_CloseParen,
+        Token_Colon,
+        Token_Semicolon,
+        Token_Asterisk,
+        Token_OpenBracket,
+        Token_CloseBracket,
+        Token_OpenBrace,
+        Token_CloseBrace,
+
+        // Literals.
+        Token_String,
+        Token_Identifier,
+        Token_Number,
+
+        //keywords
+        Token_Enum,
+        Token_Struct,
+
+        Token_U8,
+        Token_U16,
+        Token_U32,
+        Token_U64,
+        Token_I8,
+        Token_I16,
+        Token_I32,
+        Token_I64,
+        Token_F32,
+        Token_F64,
+        Token_char,
+        Token_size_t,
+        Token_bool,
+
+    };
+
+    MASSERT(reflection_system);
+    MASSERT(lexer);
+    DEBUG("STRUCT PARSE START")
+
+    Token* pruned_tokens = lexer_prune_tokens(lexer->tokens, keep_list, ARRAY_SIZE(keep_list));
+    u64 pruned_token_list_size = darray_get_size(pruned_tokens);
+
+
+    for (u64 i = 0; i < pruned_token_list_size; i++)
+    {
+        if (pruned_tokens[i].type == Token_Struct)
+        {
+            i++; // move past the struct
+            // string_builder_print(&token_list[i].string_builder); // struct name
+            const char* struct_name = string_builder_to_c_string(&pruned_tokens[i].string_builder);
+            reflection_system_add_struct(reflection_system, struct_name);
+
+            i++; // move past the open bracket
+            while (i < pruned_token_list_size && pruned_tokens[i].type != Token_CloseBrace)
+            {
+                if (lexer_is_token_data_type(pruned_tokens[i]))
+                {
+                    reflection_system_parse_fields_for_structs(
+                        reflection_system, pruned_tokens, &i,
+                        struct_name,
+                        pruned_tokens[i].type,
+                        string_builder_to_c_string(&pruned_tokens[i].string_builder));
+                }
+                else if (pruned_tokens[i].type == Token_Identifier)
+                {
+                    const char* type_name = string_builder_to_c_string(&pruned_tokens[i].string_builder);
+
+                    if (reflection_system_does_enum_exist(reflection_system, type_name))
+                    {
+                        reflection_system_parse_fields_for_structs(
+                            reflection_system, pruned_tokens, &i,
+                            struct_name, Token_Enum, type_name);
+                    }
+                    else if (reflection_system_does_struct_exist(reflection_system, type_name))
+                    {
+                        reflection_system_parse_fields_for_structs(
+                            reflection_system, pruned_tokens, &i,
+                            struct_name, Token_Struct, type_name);
+                    }
+                }
+                i++;
+            }
+        }
+    }
+}
+
+Reflection_Compact_List reflection_system_get_data(Reflection_System* reflection_system)
+{
+    Reflection_Compact_List list = {0};
+    list.constant_list = malloc(
+        sizeof(Reflection_Constant) * reflection_system->reflection_registry_constants->num_entries);
+    list.constant_list_size = reflection_system->reflection_registry_constants->num_entries;
+
+    list.enum_list = malloc(sizeof(Reflection_Enum) * reflection_system->reflection_registry_enums->num_entries);
+    list.enum_list_size = reflection_system->reflection_registry_enums->num_entries;
+
+    list.struct_list = malloc(sizeof(Reflection_Struct) * reflection_system->reflection_registry_structs->num_entries);
+    list.struct_list_size = reflection_system->reflection_registry_structs->num_entries;
+
+    u32 constant_count = 0;
+    u32 enum_count = 0;
+    u32 struct_count = 0;
+
+
+    for (u64 i = 0; i < reflection_system->reflection_registry_constants->capacity; i++)
+    {
+        if (!reflection_system->reflection_registry_constants->key_str_data[i]) { continue; }
+
+        Reflection_Constant* reflection_constant = &((Reflection_Constant*)reflection_system->
+                                                                           reflection_registry_constants->value_data)[
+            i];
+        list.constant_list[constant_count] = *reflection_constant;
+        constant_count++;
+    }
+
+    for (u64 i = 0; i < reflection_system->reflection_registry_enums->capacity; i++)
+    {
+        if (!reflection_system->reflection_registry_enums->key_str_data[i]) { continue; }
+        Reflection_Enum* reflection_enum = &((Reflection_Enum*)reflection_system->reflection_registry_enums->value_data)
+            [i];
+        list.enum_list[enum_count] = *reflection_enum;
+        enum_count++;
+    }
+
+    for (u64 i = 0; i < reflection_system->reflection_registry_structs->capacity; i++)
+    {
+        if (!reflection_system->reflection_registry_structs->key_str_data[i]) { continue; }
+        Reflection_Struct* reflection_struct = &((Reflection_Struct*)reflection_system->reflection_registry_structs->
+            value_data)[i];
+        list.struct_list[struct_count] = *reflection_struct;
+        struct_count++;
+    }
+
+    return list;
+}
+
+
+void reflection_system_parse(Reflection_System* reflection_system, const char* file_path,
+                             const Reflection_Parse_Type parse_type)
+{
+    Lexer* lexer = lexer_init();
+    lexer_generate_tokens(lexer, file_path);
+
+    switch (parse_type)
+    {
+    case REFLECTION_PARSE_CONSTANT:
+        reflection_system_parse_constants(reflection_system, lexer);
+        break;
+    case REFLECTION_PARSE_ENUM:
+        reflection_system_parse_enums(reflection_system, lexer);
+        break;
+    case REFLECTION_PARSE_STRUCT:
+        reflection_system_parse_struct(reflection_system, lexer);
+        break;
+    }
 }
 
 
@@ -87,21 +391,21 @@ bool reflection_system_does_enum_exist(Reflection_System* reflection_system, con
     return hash_table_contains(reflection_system->reflection_registry_enums, enum_name);
 }
 
-Reflection_Enum_Query_List reflection_system_enum_query_list(Reflection_System* reflection_system,
-                                                             const char* enum_name, Frame_Allocator* frame_allocator)
+Reflection_Enum_Query_Array reflection_system_enum_query_list(Reflection_System* reflection_system,
+                                                              const char* enum_name, Frame_Allocator* frame_allocator)
 {
     //generate the enums first and then the struct data we would want
     Reflection_Enum enum_info = reflection_system_enum_query(reflection_system, enum_name);
 
     u64 enum_iteration_size = darray_get_size(enum_info.type_list);
 
-    Reflection_Enum_Query_List query_list = {0};
-    query_list.enum_sizes = enum_iteration_size;
-    query_list.enum_names = allocator_alloc(frame_allocator, sizeof(char*) * query_list.enum_sizes);
+    Reflection_Enum_Query_Array query_list = {0};
+    query_list.enum_array_sizes = enum_iteration_size;
+    query_list.enum_array_names = allocator_alloc(frame_allocator, sizeof(char*) * query_list.enum_array_sizes);
 
     for (u64 j = 0; j < enum_iteration_size; j++)
     {
-        query_list.enum_names[j] = enum_info.type_list[j].name;
+        query_list.enum_array_names[j] = enum_info.type_list[j].name;
     }
 
 
@@ -113,7 +417,7 @@ bool reflection_system_add_struct(Reflection_System* reflection_system, const ch
 {
     Reflection_Struct reflection_struct = {0};
     reflection_struct.name = struct_name;
-    reflection_struct.type_list = darray_create_reserve(Reflection_Type_Struct, 1);
+    reflection_struct.type_list = darray_create_reserve(Reflection_Struct_Field, 1);
     reflection_struct.struct_size = 0;
     hash_table_insert(reflection_system->reflection_registry_structs, struct_name, &reflection_struct);
     return true;
@@ -126,13 +430,11 @@ bool reflection_system_add_struct_field(Reflection_System* reflection_system, co
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
-        Reflection_Type_Struct type_info = {0};
-        type_info.name = struct_member_name;
+        Reflection_Struct_Field type_info = {0};
+        type_info.field_name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
         type_info.type_name = type_name;
-        type_info.offset = 0;
-        type_info.is_ptr_type = false;
-        type_info.is_ptr_stack_type = false;
+        type_info.container_type = Reflection_Container_Type_VARIABLE;
 
         darray_push(reflection_struct.type_list, type_info);
 
@@ -153,13 +455,11 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
-        Reflection_Type_Struct type_info = {0};
-        type_info.name = struct_member_name;
+        Reflection_Struct_Field type_info = {0};
+        type_info.field_name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
         type_info.type_name = type_name;
-        type_info.offset = 0;
-        type_info.is_ptr_type = true;
-        type_info.is_ptr_stack_type = false;
+        type_info.container_type = Reflection_Container_Type_POINTER;
         darray_push(reflection_struct.type_list, type_info);
 
         hash_table_set(reflection_system->reflection_registry_structs, struct_name, &reflection_struct);
@@ -181,13 +481,11 @@ bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_
     Reflection_Struct reflection_struct = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
-        Reflection_Type_Struct type_info = {0};
-        type_info.name = struct_member_name;
+        Reflection_Struct_Field type_info = {0};
+        type_info.field_name = struct_member_name;
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
         type_info.type_name = type_name;
-        type_info.offset = 0;
-        type_info.is_ptr_stack_type = true;
-        type_info.is_ptr_type = false;
+        type_info.container_type = Reflection_Container_Type_STACK_ARRAY;
         type_info.stack_size = array_size;
 
         darray_push(reflection_struct.type_list, type_info);
@@ -215,8 +513,8 @@ bool reflection_system_does_struct_exist(Reflection_System* reflection_system, c
     return hash_table_contains(reflection_system->reflection_registry_structs, struct_name);
 }
 
-Reflection_Type_Struct* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
-                                                                 const char* struct_name)
+Reflection_Struct_Field* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
+                                                                  const char* struct_name)
 {
     Reflection_Struct reflection_enum = {0};
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_enum))
@@ -227,402 +525,196 @@ Reflection_Type_Struct* reflection_system_generate_struct_offset(Reflection_Syst
     return NULL;
 }
 
+static const char* reflection_type_to_str(Reflection_Type type)
+{
+    switch (type)
+    {
+    case REFLECTION_TYPE_U8: return "REFLECTION_TYPE_U8";
+    case REFLECTION_TYPE_U16: return "REFLECTION_TYPE_U16";
+    case REFLECTION_TYPE_U32: return "REFLECTION_TYPE_U32";
+    case REFLECTION_TYPE_U64: return "REFLECTION_TYPE_U64";
+    case REFLECTION_TYPE_S8: return "REFLECTION_TYPE_S8";
+    case REFLECTION_TYPE_S16: return "REFLECTION_TYPE_S16";
+    case REFLECTION_TYPE_S32: return "REFLECTION_TYPE_S32";
+    case REFLECTION_TYPE_S64: return "REFLECTION_TYPE_S64";
+    case REFLECTION_TYPE_F32: return "REFLECTION_TYPE_F32";
+    case REFLECTION_TYPE_F64: return "REFLECTION_TYPE_F64";
+    case REFLECTION_TYPE_SIZE_T: return "REFLECTION_TYPE_SIZE_T";
+    case REFLECTION_TYPE_BOOL: return "REFLECTION_TYPE_BOOL";
+    case REFLECTION_TYPE_STRING: return "REFLECTION_TYPE_STRING";
+    case REFLECTION_TYPE_CHAR: return "REFLECTION_TYPE_CHAR";
+    case REFLECTION_TYPE_ENUM: return "REFLECTION_TYPE_ENUM";
+    case REFLECTION_TYPE_STRUCT: return "REFLECTION_TYPE_STRUCT";
+    default: return "REFLECTION_TYPE_INVALID";
+    }
+}
 
-Reflection_System* reflection_game_data()
+void reflection_game_data(Reflection_System* reflection_system)
 {
     //TODO: we are not freeing anything and especially nothing using the string_builder to C-string function
+    MASSERT(reflection_system);
 
-    Reflection_System* reflection_system = reflection_system_init();
-
-    Lexer* lexer_constants = lexer_init();
-    lexer_generate_tokens(lexer_constants, "../MadnessPulse/game_constants.h");
-    u64 token_size_constants = darray_get_size(lexer_constants->tokens);
-
-
-    DEBUG("CONSTANTS PARSE START")
-    for (u64 i = 0; i < token_size_constants; i++)
-    {
-        if (lexer_constants->tokens[i].type == Token_MACRO)
-        {
-            if (&lexer_constants->tokens[i + 1] && lexer_constants->tokens[i + 1].type == Token_Identifier)
-            {
-                if (&lexer_constants->tokens[i + 2] && lexer_constants->tokens[i + 2].type == Token_Number)
-                {
-                    reflection_system_add_constant(reflection_system,
-                                                   string_builder_to_c_string(
-                                                       &lexer_constants->tokens[i + 1].string_builder),
-                                                   string_builder_to_number(
-                                                       &lexer_constants->tokens[i + 2].string_builder));
-                    i += 2;
-                }
-            }
-        }
-    }
-
-    // u64 val =  reflection_system_constant_query(reflection_system, "INVENTORY_MAX_BATTLE_LIST");
+    reflection_system_parse(reflection_system, "../MadnessPulse/game_constants.h", REFLECTION_PARSE_CONSTANT);
+    reflection_system_parse(reflection_system, "../MadnessPulse/game_enums.h", REFLECTION_PARSE_ENUM);
+    reflection_system_parse(reflection_system, "../MadnessPulse/game_structs.h", REFLECTION_PARSE_STRUCT);
 
 
-    Lexer* lexer3 = lexer_init();
-    lexer_generate_tokens(lexer3, "../MadnessPulse/game_enums.h");
-    u64 token_size = darray_get_size(lexer3->tokens);
-
-    DEBUG("ENUM PARSE START")
-    for (u64 i = 0; i < token_size; i++)
-    {
-        if (lexer3->tokens[i].type == Token_Enum)
-        {
-            //create a registry with the specific name
-            i++; // get the name
-
-            // string_builder_print(&lexer3->tokens[i].string_builder);
-            const char* enum_name = string_builder_to_c_string(&lexer3->tokens[i].string_builder);
-            reflection_system_add_enum(reflection_system, enum_name);
-
-            i++; // offset into the enum structure
-
-            u32 enum_value = 0;
-            while (i < token_size && lexer3->tokens[i].type != Token_CloseBrace)
-            {
-                if (lexer3->tokens[i].type == Token_Identifier)
-                {
-                    // string_builder_print(&lexer3->tokens[i].string_builder);
-                    reflection_system_add_enum_field(reflection_system, enum_name,
-                                                     string_builder_to_c_string(&lexer3->tokens[i].string_builder));
-                    enum_value++;
-                }
-                i++;
-            }
-        }
-    }
-
-
-    Lexer* lexer4 = lexer_init();
-    lexer_generate_tokens(lexer4, "../MadnessPulse/game_structs.h");
-
-    Token_Type keep_list[] = {
-        //single char tokens
-        Token_OpenParen,
-        Token_CloseParen,
-        Token_Colon,
-        Token_Semicolon,
-        Token_Asterisk,
-        Token_OpenBracket,
-        Token_CloseBracket,
-        Token_OpenBrace,
-        Token_CloseBrace,
-
-        // Literals.
-        Token_String,
-        Token_Identifier,
-        Token_Number,
-
-        //keywords
-        Token_Enum,
-        Token_Struct,
-
-        Token_U8,
-        Token_U16,
-        Token_U32,
-        Token_U64,
-        Token_I8,
-        Token_I16,
-        Token_I32,
-        Token_I64,
-        Token_F32,
-        Token_F64,
-        Token_char,
-        Token_size_t,
-        Token_bool,
-
-    };
-    Token* token_list = lexer_prune_tokens(lexer4->tokens, keep_list, ARRAY_SIZE(keep_list));
-    u64 pruned_token_list_size = darray_get_size(token_list);
-
-
-    DEBUG("STRUCT PARSE START")
-    for (u64 i = 0; i < pruned_token_list_size; i++)
-    {
-        if (token_list[i].type == Token_Struct)
-        {
-            i++; // move past the struct
-            // string_builder_print(&token_list[i].string_builder); // struct name
-            const char* struct_name = string_builder_to_c_string(&token_list[i].string_builder);
-            reflection_system_add_struct(reflection_system, struct_name);
-
-            i++; // move past the open bracket
-            while (i < pruned_token_list_size && token_list[i].type != Token_CloseBrace)
-            {
-                //what are our cases
-                //type -> name
-                //type* -> name
-                //type -> name->[array]
-                //name(struct/enum) -> name
-                //name(struct/enum)* -> name
-                //name(struct/enum) -> name[array]
-
-
-                //process a basic type first
-                if (lexer_is_token_data_type(token_list[i]))
-                {
-                    if (token_list[i + 1].type == Token_Identifier)
-                    {
-                        //check for stack pointer
-                        if (token_list[i + 2].type == Token_OpenBracket)
-                        {
-                            if (token_list[i + 3].type == Token_Identifier)
-                            {
-                                //generate the array member
-                                u64 array_size = reflection_system_constant_query(
-                                    reflection_system, string_builder_to_c_string(&token_list[i + 3].string_builder));
-                                reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                                                             token_list[i].type,
-                                                                             string_builder_to_c_string(
-                                                                                 &token_list[i].string_builder),
-                                                                             string_builder_to_c_string(
-                                                                                 &token_list[i + 1].string_builder),
-                                                                             array_size);
-                                i += 3;
-                            }
-                            else if (token_list[i + 3].type == Token_Number)
-                            {
-                                reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                                                             token_list[i].type,
-                                                                             string_builder_to_c_string(
-                                                                                 &token_list[i].string_builder),
-                                                                             string_builder_to_c_string(
-                                                                                 &token_list[i + 1].string_builder),
-                                                                             string_builder_to_number(
-                                                                                 &token_list[i + 3].string_builder));
-                                i += 3;
-                            }
-                        }
-                        else // basic type
-                        {
-                            reflection_system_add_struct_field(reflection_system, struct_name,
-                                                               token_list[i].type,
-                                                               "", string_builder_to_c_string(
-                                                                   &token_list[i + 1].string_builder));
-                            i += 1;
-                        }
-                    }
-                    //check for heap pointer
-                    else if (token_list[i + 1].type == Token_Asterisk)
-                    {
-                        if (token_list[i + 2].type == Token_Identifier)
-                        {
-                            //generate the array member
-                            reflection_system_add_struct_field_ptr_heap(reflection_system,
-                                                                        struct_name, token_list[i].type,
-                                                                        string_builder_to_c_string(
-                                                                            &token_list[i].string_builder),
-                                                                        string_builder_to_c_string(
-                                                                            &token_list[i + 2].string_builder));
-                            i += 2;
-                        }
-                    }
-                }
-                else if (token_list[i].type == Token_Identifier) // this can be either a struct or an enum
-                {
-                    if (reflection_system_does_enum_exist(reflection_system,
-                                                          string_builder_to_c_string(&token_list[i].string_builder)))
-                    {
-                        if (token_list[i + 1].type == Token_Identifier)
-                        {
-                            //check for stack pointer
-                            if (token_list[i + 2].type == Token_OpenBracket)
-                            {
-                                if (token_list[i + 3].type == Token_Identifier)
-                                {
-                                    //generate the array member
-                                    u64 array_size = reflection_system_constant_query(
-                                        reflection_system,
-                                        string_builder_to_c_string(&token_list[i + 3].string_builder));
-                                    reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        Token_Enum, string_builder_to_c_string(
-                                            &token_list[i].string_builder),
-                                        string_builder_to_c_string(
-                                            &token_list[i + 1].string_builder),
-                                        array_size);
-                                    i += 3;
-                                }
-                                else if (token_list[i + 3].type == Token_Number)
-                                {
-                                    reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        Token_Enum, string_builder_to_c_string(
-                                            &token_list[i].string_builder),
-                                        string_builder_to_c_string(
-                                            &token_list[i + 1].string_builder),
-                                        string_builder_to_number(
-                                            &token_list[i + 3].string_builder));
-                                    i += 3;
-                                }
-                            }
-                            else // basic type
-                            {
-                                reflection_system_add_struct_field(reflection_system, struct_name,
-                                                                   Token_Enum,
-                                                                   string_builder_to_c_string(
-                                                                       &token_list[i].string_builder),
-                                                                   string_builder_to_c_string(
-                                                                       &token_list[i + 1].string_builder));
-                                i += 1;
-                            }
-                        }
-                        //check for heap pointer
-                        else if (token_list[i + 1].type == Token_Asterisk)
-                        {
-                            if (token_list[i + 2].type == Token_Identifier)
-                            {
-                                //generate the array member
-                                reflection_system_add_struct_field_ptr_heap(reflection_system,
-                                                                            struct_name, Token_Enum,
-                                                                            string_builder_to_c_string(
-                                                                                &token_list[i].string_builder),
-                                                                            string_builder_to_c_string(
-                                                                                &token_list[i + 2].string_builder));
-                                i += 2;
-                            }
-                        }
-                    }
-                    else if (reflection_system_does_struct_exist(reflection_system,
-                                                                 string_builder_to_c_string(
-                                                                     &token_list[i].string_builder)))
-                    {
-                        if (token_list[i + 1].type == Token_Identifier)
-                        {
-                            //check for stack pointer
-                            if (token_list[i + 2].type == Token_OpenBracket)
-                            {
-                                if (token_list[i + 3].type == Token_Identifier)
-                                {
-                                    //generate the array member
-                                    u64 array_size = reflection_system_constant_query(
-                                        reflection_system,
-                                        string_builder_to_c_string(&token_list[i + 3].string_builder));
-                                    reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        Token_Struct, string_builder_to_c_string(
-                                            &token_list[i].string_builder),
-                                        string_builder_to_c_string(
-                                            &token_list[i + 1].string_builder),
-                                        array_size);
-                                    i += 3;
-                                }
-                                else if (token_list[i + 3].type == Token_Number)
-                                {
-                                    reflection_system_add_struct_field_ptr_stack(reflection_system, struct_name,
-                                        Token_Struct, string_builder_to_c_string(
-                                            &token_list[i].string_builder),
-                                        string_builder_to_c_string(
-                                            &token_list[i + 1].string_builder),
-                                        string_builder_to_number(
-                                            &token_list[i + 3].string_builder));
-                                    i += 3;
-                                }
-                            }
-                            else // basic type
-                            {
-                                reflection_system_add_struct_field(reflection_system, struct_name,
-                                                                   Token_Struct,
-                                                                   string_builder_to_c_string(
-                                                                       &token_list[i].string_builder),
-                                                                   string_builder_to_c_string(
-                                                                       &token_list[i + 1].string_builder));
-                                i += 1;
-                            }
-                        }
-                        //check for heap pointer
-                        else if (token_list[i + 1].type == Token_Asterisk)
-                        {
-                            if (token_list[i + 2].type == Token_Identifier)
-                            {
-                                //generate the array member
-                                reflection_system_add_struct_field_ptr_heap(reflection_system,
-                                                                            struct_name, Token_Struct,
-                                                                            string_builder_to_c_string(
-                                                                                &token_list[i].string_builder),
-                                                                            string_builder_to_c_string(
-                                                                                &token_list[i + 2].string_builder));
-                                i += 2;
-                            }
-                        }
-                    }
-                }
-                i++;
-            }
-        }
-    }
+    Reflection_Compact_List reflection_data = reflection_system_get_data(reflection_system);
 
 
     //generate the enums first and then the struct data we would want
-    FILE* reflection_file = fopen("../MadnessPulse/game_reflection_generated.c", "w");
+    FILE* enum_to_string_lut_file = fopen("../MadnessPulse/game_reflection_enums_generated.c", "w");
     const char* header =
         "#include <stddef.h>\n"
         "#include \"game_constants.h\"\n"
         "#include \"game_enums.h\"\n"
-        "#include \"game_structs.h\"\n\n";
+        "#include \"game_structs.h\"\n\n"
+        "#include \"runtime_registry.h\"\n\n";
 
-    fwrite(header, strlen(header), 1, reflection_file);
+    fwrite(header, strlen(header), 1, enum_to_string_lut_file);
 
 
-    for (u64 i = 0; i < reflection_system->reflection_registry_enums->capacity; i++)
+    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
     {
-        if (!reflection_system->reflection_registry_enums->key_str_data[i]) { continue; }
-
-        Reflection_Enum enum_info = reflection_system_enum_query(
-            reflection_system, reflection_system->reflection_registry_enums->key_str_data[i]);
+        Reflection_Enum enum_info = reflection_data.enum_list[i];
         if (!enum_info.name) { continue; }
 
-        fwrite("const char* ", strlen("const char* "), 1, reflection_file);
-        fwrite(enum_info.name, strlen(enum_info.name), 1, reflection_file);
-        fwrite("_enum_string[] = {\n", strlen("_Enum_String[] = {\n"), 1, reflection_file);
+        fwrite("const char* ", strlen("const char* "), 1, enum_to_string_lut_file);
+        fwrite(enum_info.name, strlen(enum_info.name), 1, enum_to_string_lut_file);
+        fwrite("_enum_string[] = {\n", strlen("_enum_string[] = {\n"), 1, enum_to_string_lut_file);
 
         u64 enum_iteration_size = darray_get_size(enum_info.type_list);
         for (u64 j = 0; j < enum_iteration_size; j++)
         {
-            fwrite("\t[", strlen("\t["), 1, reflection_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, reflection_file);
-            fwrite("]= \"", strlen("]= \""), 1, reflection_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, reflection_file);
-            fwrite("\", \n", strlen("\", \n"), 1, reflection_file);
+            fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
+            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
+            fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
+            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
+            fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
         }
 
-        fwrite("};\n\n", strlen("};\n\n"), 1, reflection_file);
+        fwrite("};\n\n", strlen("};\n\n"), 1, enum_to_string_lut_file);
     }
 
 
-    /*
-        for (u64 i = 0; i < reflection_system->reflection_registry_structs->capacity; i++)
+    fprintf(enum_to_string_lut_file, "void generate_runtime_enums(Reflection_Registry* reflection_registry)\n{\n");
+
+    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
+    {
+        Reflection_Enum enum_info = reflection_data.enum_list[i];
+        if (!enum_info.name) { continue; }
+
+        //this is basically what its writing
+        /*void generate_enum_data(Reflection_Registry* reflection_registry)
         {
-            if (!reflection_system->reflection_registry_structs->key_str_data[i]) { continue; }
-
-            Reflection_Struct struct_info = reflection_system_struct_query(
-                   reflection_system, reflection_system->reflection_registry_structs->key_str_data[i]);
-            if (!struct_info.type_list->name) { continue; }
-            // struct_info->name;
-            u64 struct_iteration_size = darray_get_size(struct_info.type_list);
-
-            // void component_serialize(){
-            fwrite("void", strlen("void"), 1, reflection_file);
-            fwrite(" ", 1, 1, reflection_file);
-            fwrite(struct_info.name, strlen(struct_info.name), 1, reflection_file);
-            const char* function_name = "_serialize(){\n";
-            fwrite(function_name, strlen(function_name), 1, reflection_file);
-
-            for (u64 j = 0; j < struct_iteration_size; j++)
+            const Reflection_Runtime_Enum Resistance_Type_Enum =
             {
-                if (!struct_info.type_list[j].name) { continue; }
-                //offsetof(struct_info.name, struct_info.type_list[j].name);
-                fwrite("\toffsetof(", strlen("\toffsetof("), 1, reflection_file);
-                fwrite(struct_info.name, strlen(struct_info.name), 1, reflection_file);
-                fwrite(", ", strlen(", "), 1, reflection_file);
-                fwrite(struct_info.type_list[j].name, strlen(struct_info.type_list[j].name), 1, reflection_file);
-                fwrite(");\n", strlen(");\n"), 1, reflection_file);
+                .name = "Resistance_Type",
+                .enum_names = Resistance_Type_enum_string_test,
+                .count = ARRAY_SIZE(Resistance_Type_enum_string_test),
+            };
+            reflection_registry_add_enums(reflection_registry, Resistance_Type_Enum);
+
+            //write the next field
+        }*/
+
+        fprintf(enum_to_string_lut_file,
+                "\tconst Reflection_Runtime_Enum %s_enum =\n"
+                "\t{\n"
+                "\t\t.name = \"%s\",\n"
+                "\t\t.enum_names = %s_enum_string,\n"
+                "\t\t.count = ARRAY_SIZE(%s_enum_string),\n"
+                "\t};\n"
+                "\treflection_registry_add_enums(reflection_registry, %s_enum);\n\n",
+                enum_info.name,
+                enum_info.name,
+                enum_info.name,
+                enum_info.name,
+                enum_info.name);
+    }
+    fprintf(enum_to_string_lut_file, "}\n");
+
+    fclose(enum_to_string_lut_file);
+
+
+    FILE* reflection_offset_file = fopen("../MadnessPulse/game_reflection_struct_generated.c", "w");
+    fwrite(header, strlen(header), 1, reflection_offset_file);
+
+    fprintf(reflection_offset_file, "void generate_runtime_structs(Reflection_Registry* reflection_registry)\n{\n");
+
+    for (u64 i = 0; i < reflection_data.struct_list_size; i++)
+    {
+        Reflection_Struct struct_info = reflection_data.struct_list[i];
+        if (!struct_info.name) { continue; }
+
+        u64 field_count = darray_get_size(struct_info.type_list);
+
+        // fields array
+        fprintf(reflection_offset_file,
+                "\tconst Reflection_Runtime_Struct_Field %s_Fields[] =\n"
+                "\t{\n",
+                struct_info.name);
+
+        for (u64 j = 0; j < field_count; j++)
+        {
+            Reflection_Struct_Field field = struct_info.type_list[j];
+            if (!field.field_name) { continue; }
+
+            // for enum/struct we also emit .type_name
+            if (field.type == REFLECTION_TYPE_ENUM || field.type == REFLECTION_TYPE_STRUCT)
+            {
+                fprintf(reflection_offset_file,
+                        "\t\t{\n"
+                        "\t\t\t.name = \"%s\",\n"
+                        "\t\t\t.type = %s,\n"
+                        "\t\t\t.type_name = \"%s\",\n"
+                        "\t\t\t.offset = offsetof(%s, %s)\n"
+                        "\t\t},\n",
+                        field.field_name,
+                        reflection_type_to_str(field.type),
+                        field.type_name ? field.type_name : "",
+                        struct_info.name,
+                        field.field_name);
             }
-            fwrite("}\n\n", strlen("}\n\n"), 1, reflection_file);
+            else
+            {
+                fprintf(reflection_offset_file,
+                        "\t\t{\n"
+                        "\t\t\t.name = \"%s\",\n"
+                        "\t\t\t.type = %s,\n"
+                        "\t\t\t.offset = offsetof(%s, %s)\n"
+                        "\t\t},\n",
+                        field.field_name,
+                        reflection_type_to_str(field.type),
+                        struct_info.name,
+                        field.field_name);
+            }
         }
-    */
 
-    fclose(reflection_file);
+        fprintf(reflection_offset_file, "\t};\n\n");
 
-    return reflection_system;
+        // struct info
+        fprintf(reflection_offset_file,
+                "\tconst Reflection_Runtime_Struct %s_Runtime_Struct =\n"
+                "\t{\n"
+                "\t\t.name = \"%s\",\n"
+                "\t\t.fields = %s_Fields,\n"
+                "\t\t.field_count = %llu,\n"
+                "\t\t.struct_size = sizeof(%s)\n"
+                "\t};\n\n",
+                struct_info.name,
+                struct_info.name,
+                struct_info.name,
+                field_count,
+                struct_info.name);
+
+        fprintf(reflection_offset_file,
+                "\treflection_registry_add_struct(reflection_registry, %s_Runtime_Struct);\n\n",
+                struct_info.name);
+    }
+
+    fprintf(reflection_offset_file, "}\n");
+    fclose(reflection_offset_file);
 }
+
+

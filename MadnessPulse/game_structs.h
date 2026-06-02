@@ -60,40 +60,40 @@ typedef struct Damage_Component
 } Damage_Component;
 
 
-typedef struct UAbilityAdderComponent
+typedef struct Ability_Adder_Component
 {
-    Ability_Name AbilitiesToAdd;
+    Ability_Name abilities_to_add;
     u32 count;
-} UAbilityAdderComponent;
+} Ability_Adder_Component;
 
-typedef struct UAbilityRemoverComponent
+typedef struct Ability_Remover_Component
 {
-    Ability_Name AbilitiesToRemove;
+    Ability_Name abilities_to_remove;
     u32 count;
-} UAbilityRemoverComponent;
+} Ability_Remover_Component;
 
-typedef struct URemoveAllAbilityComponent
+typedef struct Remove_All_Ability_Component
 {
-    Ability_Name AbilityToRemove;
+    Ability_Name ability_to_remove;
     // bool RemoveAllAbilities;
-} URemoveAllAbilityComponent;
+} Remove_All_Ability_Component;
 
-typedef struct UActionRemoveComponent
+typedef struct Action_Remove_Component
 {
     u32 action_amount_to_remove;
-} UActionRemoveComponent;
+} Action_Remove_Component;
 
-typedef struct UActionAddComponent
+typedef struct Action_Add_Component
 {
     u32 action_amount_to_add;
-} UActionAddComponent;
+} Action_Add_Component;
 
-typedef struct UAugmentChangerComponent
+typedef struct Augment_Changer_Component
 {
-    // TMap<EDamageType, int> AugmentTypeToChangeValue;
+    // TMap<EDamageType, int> augment_type_to_change_value;
     Element_Type damage_type;
     int augment_change_value;
-} UAugmentChangerComponent;
+} Augment_Changer_Component;
 
 typedef struct Charge_Attack_Component
 {
@@ -104,7 +104,7 @@ typedef struct Charge_Attack_Component
 
 typedef struct Conjure_Component
 {
-    Conjure_Type ConjureType;
+    Conjure_Type conjure_type;
 } Conjure_Component;
 
 typedef struct Drain_Component
@@ -119,7 +119,7 @@ typedef struct UHealComponent
     // TMap<EHealTypes, float> HealTypes;
     Heal_Types heal_type;
     float heal_amount;
-    bool HealOnlyIfDead; // = false;
+    bool heal_only_if_dead; // = false;
 } UHealComponent;
 
 typedef struct UMPChangerComponent
@@ -135,27 +135,27 @@ typedef struct UPermanentActionChangerComponent
     u32 amount_to_change;
 } UPermanentActionChangerComponent;
 
-typedef struct UResistanceChangerComponent
+typedef struct Resistance_Changer_Component
 {
     // TMap<EDamageType, EResistanceType> ResistanceToChangeMap;
-    Resistance_Type ResistanceToChangeMap[Element_Type_MAX];
-} UResistanceChangerComponent;
+    Resistance_Type resistance_to_change_map[Element_Type_MAX];
+} Resistance_Changer_Component;
 
-typedef struct UResistanceChangerRandomComponent
+typedef struct Resistance_Changer_Random_Component
 {
-    int RandomAmount; // = 1;
+    int random_amount; // = 1;
     //basically saying the resistance we are changing to is not random
-    Resistance_Type ResistanceToChangeTo;
-} UResistanceChangerRandomComponent;
+    Resistance_Type resistance_to_change_to;
+} Resistance_Changer_Random_Component;
 
-typedef struct UResistanceResetterComponent
+typedef struct Resistance_Resetter_Component
 {
     //NOTE: this straight up had nothing in it
     bool unimplemented;
-} UResistanceResetterComponent;
+} Resistance_Resetter_Component;
 
 
-typedef struct UReversalComponent
+typedef struct Reversal_Component
 {
     //TODO: this might actually make sense as bitflags
     // and there is no reason to have reversals on things like fucking heal types, just on a heal in general
@@ -164,238 +164,238 @@ typedef struct UReversalComponent
     bool AnythingNotDamage; // = false;
     bool AnyDamage; // = false;
 
-    bool DamageConditions[Element_Type_MAX];
     bool Heal;
     bool Drain;
     bool Mp;
+    bool DamageConditions[Element_Type_MAX];
     bool AugmentCondition[Element_Type_MAX];
     bool ActionChangeCondition[Action_Changer_Type_MAX];
     bool AbilityChangeCondition[Ability_Changer_Type_MAX];
     bool NegationCondition; //= false;
     bool DamagePassiveCondition; // = false;
-} UReversalComponent;
+} Reversal_Component;
 
 
-typedef struct UStatusChangerComponent
+typedef struct Status_Changer_Component
 {
     // EStatusChangeTypes StatusChangeType = EStatusChangeTypes::ECS_StatusPercent;
     // TMap<EDamageType, float> StatusTypeToChangeAmount;
     Status_Change_Types status_change_types;
     Element_Type damage_type;
     float status_change_amount;
-} UStatusChangerComponent;
+} Status_Changer_Component;
 
-typedef struct USpecialAbilityFlagSetterComponent
+typedef struct Special_Ability_Flag_Setter_Component
 {
     bool unimplemented;
     // Special_Ability_Flag_List_Component flags_to_set; //TODO:
     //FSpecialAbilityFlagList FlagsToDisable;//TODO: if i did want this, it would be its own special type of component
-} USpecialAbilityFlagSetterComponent;
+} Special_Ability_Flag_Setter_Component;
 
-typedef struct UStatusThresholdChanger
+typedef struct Status_Threshold_Changer
 {
-    Status_Threshold_Types StatusThresholdType;
+    Status_Threshold_Types status_threshold_type;
     // TMap<EDamageType, float> StatusThresholdChangeMap;
     Element_Type damage_type;
     float amount;
-} UStatusThresholdChanger;
+} Status_Threshold_Changer;
 
-typedef struct FTurnComponentDuration
+typedef struct Turn_Component_Duration
 {
-    int EffectLength;
-    int TurnsUntilTriggered;
-} FTurnComponentDuration;
+    int effect_length;
+    int turns_until_triggered;
+} Turn_Component_Duration;
 
-typedef struct UTurnComponentBase
+typedef struct Turn_Component_Base
 {
-    Turn_Activation_Type TurnActivation;
-    FTurnComponentDuration TurnComponentDuration;
-} UTurnComponentBase;
+    Turn_Activation_Type turn_activation;
+    Turn_Component_Duration turn_component_duration;
+} Turn_Component_Base;
 
 //Battle Info
-typedef struct DamageBounce
+typedef struct Damage_Bounce_Component
 {
-    bool ImpactMirror; // = false;
-    float DamageMultiplier; // = 1.0f;
-} DamageBounce;
+    bool impact_mirror; // = false;
+    float damage_multiplier; // = 1.0f;
+} Damage_Bounce_Component;
 
-typedef struct UDrainBounce
+typedef struct Drain_Bounce_Component
 {
     //TODO: split these into different components
     //only select one
-    bool DrainTwice; // = false;
-    bool HealAfterDrain; // = false;
-} UDrainBounce;
+    bool drain_twice; // = false;
+    bool heal_after_drain; // = false;
+} Drain_Bounce_Component;
 
-typedef struct UHealBounce
+typedef struct Heal_Bounce_Component
 {
     /* will damage the unit by the health gain multiplied by a multiplier */
-    float HealBounceMultiplier; // = 2.0f;
-} UHealBounce;
+    float heal_bounce_multiplier; // = 2.0f;
+} Heal_Bounce_Component;
 
-typedef struct URewindStats
+typedef struct Rewind_Stats_Component
 {
-    bool RewindHealth; // = false;
-    bool RewindStatus; // = false;
-    bool RewindDamage; // = false;
-    bool RewindNegation; // = false;
-} URewindStats;
+    bool rewind_health; // = false;
+    bool rewind_status; // = false;
+    bool rewind_damage; // = false;
+    bool rewind_negation; // = false;
+} Rewind_Stats_Component;
 
 typedef struct Heal_Based_On_Damage_Taken_Component
 {
     /*meant to be used as a reversal, heals for any damage the caster just took*/
-    float HealPercentage; // = 0.8;
+    float heal_percentage; // = 0.8;
 } Heal_Based_On_Damage_Taken_Component;
 
 
 //Boss Specific
 
-typedef struct UAbilitySwapper
+typedef struct Ability_Swapper_Component
 {
-    int NumberOfAbilitiesToSwap; // = 1;
-} UAbilitySwapper;
+    int number_of_abilities_to_swap; // = 1;
+} Ability_Swapper_Component;
 
-typedef struct UDeadUnitDamage
+typedef struct Dead_Unit_Damage_Component
 {
     bool unimplemented;
     // FDeadAllyBonus DeadAllyBonus; //TODO:
     // EDamageType DamageType; ??idk what this is for and doesn't make much sense anyway
-} UDeadUnitDamage;
+} Dead_Unit_Damage_Component;
 
-typedef struct UEmperorMadness
+typedef struct Emperor_Madness_Component
 {
     /*Removes all abilities that were not originally in the players inventory ex: madness abilities or fusion abilities */
     //NOTE: FOUND IT LIKE THAT
     bool unimplemented;
-} UEmperorMadness;
+} Emperor_Madness_Component;
 
-typedef struct UEmperorsInsanity
+typedef struct Emperors_Insanity_Component
 {
     /*Removes all abilities from the target based on how many times that ability was used */
-    int CountForAbilityToBeRemoved; // = 3;
-} UEmperorsInsanity;
+    int count_for_ability_to_be_removed; // = 3;
+} Emperors_Insanity_Component;
 
-typedef struct UEmperorZero
+typedef struct Emperor_Zero_Component
 {
     /*Resets everything on the battleinfo, except maybe turn info */
     //NOTE: special ability flag
     bool unimplemented;
-} UEmperorZero;
+} Emperor_Zero_Component;
 
-typedef struct UKillByCondition
+typedef struct Kill_By_Condition_Component
 {
     //TODO: split these out into their own components
     /*checks a condition and then determines if it should kill the target */
-    bool UseKillByHealthAbovePercent; // = false;
-    float HealthPercentForKill; // = 0.7f;
-    bool UseKillByManaAbovePercent; // = false;
-    float MPPercentForKill; // = 0.7f;
+    bool use_kill_by_health_above_percent; // = false;
+    float health_percent_for_kill; // = 0.7f;
+    bool use_kill_by_mana_above_percent; // = false;
+    float mp_percent_for_kill; // = 0.7f;
 
     /*
     bool HasNotTakenDamage= false;
     bool HadNotChangedStatus= false;
     bool HadNotChangedNegation = false;
 */
-} UKillByCondition;
+} Kill_By_Condition_Component;
 
 
-typedef struct UMPActionGainer
+typedef struct MP_Action_Gainer_Component
 {
-    Action_Changer_Type ActionType; // = EActionChangerType::ECS_ActionAdd;
-    float MPPerActionConversion; // = 1000.f;
-} UMPActionGainer;
+    Action_Changer_Type action_type; // = EActionChangerType::ECS_ActionAdd;
+    float mp_per_action_conversion; // = 1000.f;
+} MP_Action_Gainer_Component;
 
-typedef struct UMPDamage
+typedef struct MP_Damage_Component
 {
     /*
  * TODO:
  * Does a flat damage number based on the casters Mp with a damage multiplier like *10 on the targets
  * this does not use any mp, use mp changer to have mp go down
  */
-    MP_Types MPType;
-    float MPValue;
-    float DamageMultiplier; // = 2.0f;
-} UMPDamage;
+    MP_Types mp_type;
+    float mp_value;
+    float damage_multiplier; // = 2.0f;
+} MP_Damage_Component;
 
-typedef struct UMPHeal
+typedef struct MP_Heal_Component
 {
     /*
   * Note: does not use up mp. if you want to use the mp changer
   * uses the casters mp as the heal value on the target(which will most likely be yourself)
   */
-    float HealMultiplier; // = 1.0;
-} UMPHeal;
+    float heal_multiplier; // = 1.0;
+} MP_Heal_Component;
 
-typedef struct UMPStealer
+typedef struct MP_Stealer_Component
 {
     /*
      * Takes Mp from the target and add it to the caster
     */
 
     //do not choose to full
-    MP_Types MPStealType; // = EMPTypes::ECS_MPPercent;
+    MP_Types mp_steal_type; // = EMPTypes::ECS_MPPercent;
     //make a positive value
-    float MPStealAmount;
-} UMPStealer;
+    float mp_steal_amount;
+} MP_Stealer_Component;
 
-typedef struct UPrimaveraBloom
+typedef struct Primavera_Bloom_Component
 {
     /*Deal damage for each resistance on the caster that is not changed from superweak to redirect (or something similar) */
-    Resistance_Type ResistanceTypeToCheck; // = EResistanceType::ECS_SuperWeak;
-    float DamageAmount; // = 1000.0f;
-} UPrimaveraBloom;
+    Resistance_Type resistance_type_to_check; // = EResistanceType::ECS_SuperWeak;
+    float damage_amount; // = 1000.0f;
+} Primavera_Bloom_Component;
 
-typedef struct UPrimaveraFaith
+typedef struct Primavera_Faith_Component
 {
     /**
   *checks the opponents inventory for any copies of primavera worship, removes all of them, and for each one removed does damage
   */
     //TODO: these can both just be changed to ability name
-    String AbilityName; // = "Primavera Faith";
+    String ability_name; // = "Primavera Faith";
     // primavera faith here
     // TSubclassOf<AAbilityBase> AbilityClass;
-    float DamageAmount; // = 1000.0f;
-} UPrimaveraFaith;
+    float damage_amount; // = 1000.0f;
+} Primavera_Faith_Component;
 
 
-typedef struct UPrimaveraFlower
+typedef struct Primavera_Flower_Component
 {
     //Gain health based on the damage and negation, meant to have the damage and negation set to zero when it's done, use another ability
-    float HealMultiplier; // = 100.0f;
-} UPrimaveraFlower;
+    float heal_multiplier; // = 100.0f;
+} Primavera_Flower_Component;
 
-typedef struct UPrimaveraLight
+typedef struct Primavera_Light_Component
 {
     //every time primavera is hit, this will check what element she was hit by and change the corresponding resistances to redirect
     bool unimplemented;
-} UPrimaveraLight;
+} Primavera_Light_Component;
 
 
 //Conditional
-typedef struct UConditionalFatComponent
+typedef struct Conditional_Fat_Component
 {
-    bool TestCondition; // = false;
+    bool test_condition; // = false;
 
-    bool CasterMPAtZero; // = false;
+    bool caster_mp_at_zero; // = false;
 
-    bool CasterHasPositiveDamage; // = false;
-} UConditionalFatComponent;
+    bool caster_has_positive_damage; // = false;
+} Conditional_Fat_Component;
 
 
 //Custom
-typedef struct UDamageBasedOnPassive
+typedef struct Damage_Based_On_Passive_Component
 {
-    bool UseStatus;
+    bool use_status;
     // TSet<Element_Type> DamageTypeToCheckFor; //TODO:
-    bool UseDamage;
-    bool UseNegation;
+    bool use_damage;
+    bool use_negation;
 
 
-    float DamageAmountPerPoint; // = 100;
-    int ApplyDamageEveryPointAmount; // = 1;
-} UDamageBasedOnPassive;
+    float damage_amount_per_point; // = 100;
+    int apply_damage_every_point_amount; // = 1;
+} Damage_Based_On_Passive_Component;
 
-typedef struct UDrainBattleHealDamage
+typedef struct Drain_Battle_Heal_Damage_Component
 {
     /*
      *Values are based on all allies and then we use that to heal or damage the target
@@ -403,147 +403,147 @@ typedef struct UDrainBattleHealDamage
 
     // TSet<EBattleInfoLifeTimeType> LifeTimeType; //TODO:
 
-    bool MustBeDead; // = true;
+    bool must_be_dead; // = true;
 
     //only one of these should be active
-    bool ShouldHeal; // = false;
-    bool ShouldDamage; // = false;
-} UDrainBattleHealDamage;
+    bool should_heal; // = false;
+    bool should_damage; // = false;
+} Drain_Battle_Heal_Damage_Component;
 
 
-typedef struct UDrainBattleInfoComponents
+typedef struct Drain_Battle_Info_Component
 {
     //TODO: All this can be moved out to a its own typedef struct for reuse, since this is going to keep coming up
     // the only thing is having two bool specifically set for use on what values we want to use
     // TSet<EBattleInfoLifeTimeType> LifeTimeType; //TODO:
 
     //translate to +1 to someonething for health Drained
-    float DivisionValue; // = 0;
+    float division_value; // = 0;
     // TSet<EDamageType> StatusToGain; //TODO:
-    bool GainDefense;
-    bool GainDamage;
-    bool DealDamageOfDrainLost;
-} UDrainBattleInfoComponents;
+    bool gain_defense;
+    bool gain_damage;
+    bool deal_damage_of_drain_lost;
+} Drain_Battle_Info_Component;
 
-typedef struct UFusionManiaComponent
+typedef struct Fusion_Mania_Component
 {
     //TODO: im assuming this sets a special ability flag
     bool unimplemented;
-    float KillDamageAmount; // = 999999.0f;
-} UFusionManiaComponent;
+    float kill_damage_amount; // = 999999.0f;
+} Fusion_Mania_Component;
 
 
-typedef struct UHealAsphyxiation
+typedef struct Heal_Asphyxiation_Component
 {
     /*
      * Targets a dead party member and take all their health until they hit the max negative value
      */
     bool unimplemented;
-} UHealAsphyxiation;
+} Heal_Asphyxiation_Component;
 
-typedef struct UHealByTargetHealth
+typedef struct Heal_By_Target_Health_Component
 {
     bool unimplemented;
-} UHealByTargetHealth;
+} Heal_By_Target_Health_Component;
 
-typedef struct UHealthPoolingTransfer
+typedef struct Health_Pooling_Transfer
 {
     /**
  * take health from the targets and give them to the caster until their health is full
  */
     bool unimplemented;
-} UHealthPoolingTransfer;
+} Health_Pooling_Transfer;
 
-typedef struct UHealthSacrifice
+typedef struct Health_Sacrifice
 {
     /* Will sacrifice casters health until the is at 100% HP */
     bool unimplemented;
-} UHealthSacrifice;
+} Health_Sacrifice;
 
-typedef struct UHighLowTypeAugmentComponent
+typedef struct High_Low_Type_Augment_Component
 {
-    // TMap<EDamageType, int> AugmentTypeToChangeValue;
-    int AugmentTypeToChangeValue[Element_Type_MAX];
-    High_Low_Type HighLow;
-} UHighLowTypeAugmentComponent;
+    // TMap<EDamageType, int> augment_type_to_change_value;
+    int augment_type_to_change_value[Element_Type_MAX];
+    High_Low_Type high_low;
+} High_Low_Type_Augment_Component;
 
 
-typedef struct UPassiveAntiPooling
+typedef struct Passive_Anti_Pooling_Component
 {
     /**
      * we take the casters passives, and then reduce the opponents passive by that amount
      */
-    // TSet<EDamageType> ElementsToCheckFor;
-    bool ElementsToCheckFor[Element_Type_MAX];
+    // TSet<EDamageType> elements_to_check_for;
+    bool elements_to_check_for[Element_Type_MAX];
 
-    bool PoolDamage; // = false;
-    bool PoolStatus; // = false;
-    bool PoolNegation; // = false;
-} UPassiveAntiPooling;
+    bool pool_damage; // = false;
+    bool pool_status; // = false;
+    bool pool_negation; // = false;
+} Passive_Anti_Pooling_Component;
 
 
-typedef struct UPassivePooling
+typedef struct Passive_Pooling_Component
 {
     /*
  * Takes the combined points of a passive from their allies and adds to onto the caster
  */
-    // TSet<EDamageType> ElementsToCheckFor;
-    bool ElementsToCheckFor[Element_Type_MAX];
+    // TSet<EDamageType> elements_to_check_for;
+    bool elements_to_check_for[Element_Type_MAX];
 
-    bool PoolDamage; // = false;
-    bool PoolStatus; // = false;
-    bool PoolNegation; // = false;
-} UPassivePooling;
+    bool pool_damage; // = false;
+    bool pool_status; // = false;
+    bool pool_negation; // = false;
+} Passive_Pooling_Component;
 
 
-typedef struct UPassiveTransferComponent
+typedef struct Passive_Transfer_Component
 {
     //TODO: it would be funny to transfer any negative augments onto another character,
     // like if you debuff the enemy then they will use this ability and debuff you instead
-    // EPassiveTransferType TransferFlow;//TODO:
+    // Passive_Transfer_Type TransferFlow;//TODO:
 
-    int MinMaxValueForTransfer; // = 0;
+    int min_max_value_for_transfer; // = 0;
     // void PositiveTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
     // void NegativeTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
     // void AnyTransfer(AUnitBase* FromTarget, AUnitBase* ToTarget);
 
     //Basically just make sure that the passive type we check for a positive value
-    // TSet<EDamageType> StatusPassiveToTransfer;
-    bool StatusPassiveToTransfer[Element_Type_MAX];
-    bool DamagePassivesToTransfer; // = false;
-    bool NegationPassiveToTransfer; // = false;
-} UPassiveTransferComponent;
+    // TSet<EDamageType> status_passive_to_transfer;
+    bool status_passive_to_transfer[Element_Type_MAX];
+    bool damage_passives_to_transfer; // = false;
+    bool negation_passive_to_transfer; // = false;
+} Passive_Transfer_Component;
 
-typedef struct URandomAbilityRemover
+typedef struct Random_Ability_Remover_Component
 {
-    int RemovalAmount; // = 1;
-} URandomAbilityRemover;
+    int removal_amount; // = 1;
+} Random_Ability_Remover_Component;
 
 
-typedef struct URandomAugmentComponent
+typedef struct Random_Augment_Component
 {
-    int AugmentChangeAmount; // = 0;
-} URandomAugmentComponent;
+    int augment_change_amount; // = 0;
+} Random_Augment_Component;
 
-typedef struct URandomDamageComponent /*: public UDamageComponent*/ // TODO:
+typedef struct Random_Damage_Component /*: public UDamageComponent*/ // TODO:
 {
-    bool ExcludeInsanity; // = false;
-    Damage_Status_Type IntendedDamageAmount; // = EDamageStatusType::ECS_High;
-    Damage_Status_Type IntendedDamageBuildUpAmount; // = EDamageStatusType::ECS_High;
-} URandomDamageComponent;
+    bool exclude_insanity; // = false;
+    Damage_Status_Type intended_damage_amount; // = EDamageStatusType::ECS_High;
+    Damage_Status_Type intended_damage_build_up_amount; // = EDamageStatusType::ECS_High;
+} Random_Damage_Component;
 
-typedef struct USacrificialBomb
+typedef struct Sacrificial_Bomb_Component
 {
     /**
  * will kill all allies excpet caster and inflict the health as damage to the target
  */
     Element_Type element_type; // = EDamageType::ECS_Fire;
     //set this to either 2.0f for double or 0.5f for half damage
-    float DamageMultiplier; // = 1.0f;
-} USacrificialBomb;
+    float damage_multiplier; // = 1.0f;
+} Sacrificial_Bomb_Component;
 
 
-typedef struct UStatusBarDrainComponent
+typedef struct Status_Bar_Drain_Component
 {
     /*
     TSet<EDamageType> StatusBarsToDrain{
@@ -557,7 +557,7 @@ typedef struct UStatusBarDrainComponent
         {EDamageType::ECS_Madness},
         {EDamageType::ECS_Insanity},
     };
-    float DivisionValueBonus = 1.0f;
+    float division_value_bonus = 1.0f;
 
     TSet<EDamageType> TypesForGainStatus{
         {EDamageType::ECS_Physical},
@@ -570,15 +570,15 @@ typedef struct UStatusBarDrainComponent
         {EDamageType::ECS_Madness},
         {EDamageType::ECS_Insanity},
     };*/
-    bool GainStatus; // = false;
-    bool GainDamage; // = false;
-    bool GainNegation; // = false;
-    bool GainHealth; // = false;
-    bool DealDamage; // = false;
-} UStatusBarDrainComponent;
+    bool gain_status; // = false;
+    bool gain_damage; // = false;
+    bool gain_negation; // = false;
+    bool gain_health; // = false;
+    bool deal_damage; // = false;
+} Status_Bar_Drain_Component;
 
 
-typedef struct UStatusDrainDisfiguredMass
+typedef struct Status_Drain_Disfigured_Mass_Component
 {
     /*Drains from Allies and does some sort of effect onto the Targets(most likely your opponents)*/
     /*TSet<EDamageType> StatusBarsToDrain{
@@ -592,7 +592,7 @@ typedef struct UStatusDrainDisfiguredMass
         {EDamageType::ECS_Madness},
         {EDamageType::ECS_Insanity},
     };*/
-    float DivisionValueBonus; // = 1.0f;
+    float division_value_bonus; // = 1.0f;
 
     /*TSet<EDamageType> TypesForGainStatus{
         {EDamageType::ECS_Physical},
@@ -605,24 +605,24 @@ typedef struct UStatusDrainDisfiguredMass
         {EDamageType::ECS_Madness},
         {EDamageType::ECS_Insanity},
     };*/
-    bool AffectStatus; // = false;
-    bool AffectDamage; // = false;
-    bool AffectNegation; // = false;
-    bool DealDamage; // = false;
-} UStatusDrainDisfiguredMass;
+    bool affect_status; // = false;
+    bool affect_damage; // = false;
+    bool affect_negation; // = false;
+    bool deal_damage; // = false;
+} Status_Drain_Disfigured_Mass_Component;
 
-typedef struct UTradeActionChanger
+typedef struct Trade_Action_Changer_Component
 {
     // will make the add/lose action change irrelevant, will remove all from caster and add them to one target
-    bool LoseAll; // = true;
+    bool lose_all; // = true;
 
     //if we dont lose all then we use this amount, ideally we clamp it to the max moves we have left,
     //but maybe going into turn debt is funny as well
-    // TMap<EActionChangerType, int> ActionTypeToActionChange;
-    int ActionTypeToActionChange[Action_Changer_Type_MAX];
-} UTradeActionChanger;
+    // TMap<EActionChangerType, int> action_type_to_action_change;
+    int action_type_to_action_change[Action_Changer_Type_MAX];
+} Trade_Action_Changer_Component;
 
-typedef struct UAugmentRedistribution
+typedef struct Augment_Redistribution_Component
 {
     /*
  * TODO: wouldn't be the worse idea to make this a passive redistribution, if needed
@@ -630,113 +630,113 @@ typedef struct UAugmentRedistribution
 
     //NOTE: from what i can tell this averages all the augment values and redistributed them evenly
     bool unimplemented;
-} UAugmentRedistribution;
+} Augment_Redistribution_Component;
 
-typedef struct UAugmentSetterComponent
+typedef struct Augment_Setter_Component
 {
-    // TMap<EDamageType, int> AugmentTypeToSetterValue;
-    int AugmentTypeToSetterValue[Element_Type_MAX];
-    bool SpecialCondition; // = false;
-    int MustBeBelowCertainValue; // = 0;
-} UAugmentSetterComponent;
+    // TMap<EDamageType, int> augment_type_to_setter_value;
+    int augment_type_to_setter_value[Element_Type_MAX];
+    bool special_condition; // = false;
+    int must_be_below_certain_value; // = 0;
+} Augment_Setter_Component;
 
 //Passive
 
 
-typedef struct UAugmentSwapper
+typedef struct Augment_Swapper_Component
 {
     /*Swap the values of the targets status values at random*/
-    int SwapAttempts; // = 3;
-} UAugmentSwapper;
+    int swap_attempts; // = 3;
+} Augment_Swapper_Component;
 
 
-typedef struct UBonusBasedOnStatus
+typedef struct Bonus_Based_On_Status_Component
 {
     /*we gain bonuses based on the status point value of the selected elements, bonus is specifically given to the caster*/
 
-    // TSet<EDamageType> ElementsToGainBonusFrom;
-    bool ElementsToGainBonusFrom[Element_Type_MAX];
+    // TSet<EDamageType> elements_to_gain_bonus_from;
+    bool elements_to_gain_bonus_from[Element_Type_MAX];
 
 
     //this gets multiplied by the points we get from the status values
-    float BonusPerPoint; // = 1;
+    float bonus_per_point; // = 1;
 
-    bool GainDamage; // = false;
-    bool GainNegation; // = false;
+    bool gain_damage; // = false;
+    bool gain_negation; // = false;
 
-    // TSet<EDamageType> StatusBarElementToIncrease;
-    bool StatusBarElementToIncrease[Element_Type_MAX];
-    bool GainStatusBar; // = false; //TODO:, not done yet
-} UBonusBasedOnStatus;
+    // TSet<EDamageType> status_bar_element_to_increase;
+    bool status_bar_element_to_increase[Element_Type_MAX];
+    bool gain_status_bar; // = false; //TODO:, not done yet
+} Bonus_Based_On_Status_Component;
 
-typedef struct UDamageNegationComponent
+typedef struct Damage_Negation_Component
 {
     //values are intended to be percents
-    int DamageNegationChangeAmount; // = 0;
-} UDamageNegationComponent;
+    int damage_negation_change_amount; // = 0;
+} Damage_Negation_Component;
 
-typedef struct UDamagePassive
+typedef struct Damage_Passive_Component
 {
     //values are intended to be percents
     // these need to be small values like 0.05 = 5%
-    int DamagePassiveChangeAmount; // = 0;
-} UDamagePassive;
+    int damage_passive_change_amount; // = 0;
+} Damage_Passive_Component;
 
-typedef struct UHighLowAugmentComponent
+typedef struct High_Low_Augment_Component
 {
     /**
  * Gets the highest augment in general and changes it by the amount we specify
  */
 
-    High_Low_Type HighLow;
+    High_Low_Type high_low_type;
 
-    bool ToZero; // = false;
-    int ValueChange; // = 0;
-} UHighLowAugmentComponent;
+    bool to_zero; // = false;
+    int value_change; // = 0;
+} High_Low_Augment_Component;
 
-typedef struct UHighLowDamage
+typedef struct High_Low_Damage_Component
 {
     /*
      * Finds the target with the highest defense or attack and reduces it to zero or by a set amount
      *
      */
 
-    bool ToZero; // = false;
-    int ValueChange; //= 0;
-} UHighLowDamage;
+    bool to_zero; // = false;
+    int value_change; //= 0;
+} High_Low_Damage_Component;
 
-typedef struct UHighLowNegation
+typedef struct High_Low_Negation_Component
 {
-    bool ToZero; // = false;
-    int ValueChange; // = 0;
-} UHighLowNegation;
+    bool to_zero; // = false;
+    int value_change; // = 0;
+} High_Low_Negation_Component;
 
-typedef struct UNegationBasedOnHealth
+typedef struct Negation_Based_On_Health_Component
 {
     /*Will give targets defense boost based on casters health */
 
 
-    int DivisionValue; // = 1;
-} UNegationBasedOnHealth;
+    int division_value; // = 1;
+} Negation_Based_On_Health_Component;
 
 
-typedef struct UNegationPassiveSetter
+typedef struct Negation_Passive_Setter_Component
 {
     /*will set negation to the specific value*/
 
     //values are intended to be percents
     // these need to be small values like 0.05 = 5%
-    int SetToValue; // = 0;
-} UNegationPassiveSetter;
+    int set_to_value; // = 0;
+} Negation_Passive_Setter_Component;
 
 
-typedef struct UPassiveReverse
+typedef struct Passive_Reverse_Component
 {
     /*Turn any negative passive (status, damage, negation) positive */
-    bool ReverseStatus; // = false;
-    bool ReverseDamage; // = false;
-    bool ReverseNegation; //= false;
-} UPassiveReverse;
+    bool reverse_status; // = false;
+    bool reverse_damage; // = false;
+    bool reverse_negation; //= false;
+} Passive_Reverse_Component;
 
 
 typedef struct Ability_Component
@@ -748,13 +748,12 @@ typedef struct Ability_Component
     //who is this targeting, enemies, allies, self etc
     Ability_Target_Type ability_target;
 
+    Ability_Component_Type type;
     //ability switch lookup to find which function to execute
-    union
+    union data
     {
         // NOTE: default to this if nothing is set, and 0 is an invalid type
         // NOTE: all ability components must have ability component type on them, as type if implicit based on the component
-        Ability_Component_Type type;
-
         Heal_Component heal;
         Damage_Component damage;
     } data;
@@ -762,7 +761,7 @@ typedef struct Ability_Component
 
 typedef struct Ability
 {
-    u32 id;
+    Ability_Name id;
     Ability_Component components[MAX_ABILITY_COMPONENTS];
     u32 component_count;
     //madness or insanity type
@@ -916,7 +915,7 @@ typedef struct Status_Stat_Component
     f32 LowerClampValue;
     f32 UpperClampValue;
 
-    i32 StatusTriggerOccurrence;
+    s32 StatusTriggerOccurrence;
 
     f32 LowerThresholdClampValue;
     f32 UpperThresholdClampValue;
@@ -1140,7 +1139,7 @@ typedef struct Ability_Registry
 typedef struct Turn_Trigger_Component_Info
 {
     //TODO: dont store pointers
-    FTurnComponentDuration TurnComponentDuration;
+    Turn_Component_Duration TurnComponentDuration;
     Ability* Ability;
     Ability_Component* TurnComponent;
     Ability_Component_array* StatusComponents;
@@ -1154,7 +1153,7 @@ typedef struct Reversal_Component_Info
     //TODO: dont store pointers
     //who is affected, reversal component, components with reversal tag
     Ability* Ability;
-    UReversalComponent* ReversalComponent;
+    Reversal_Component* ReversalComponent;
     Ability_Component_array* ComponentsWithReversalTag;
     Unit* Caster;
     Unit* ReversalTarget; // who we put the reversal on
@@ -1317,6 +1316,5 @@ typedef struct Madness_Pulse_Game
     Ability_Handler* ability_handler;
     Command_Handler* command_handler;
 } Madness_Pulse_Game;
-
 
 #endif //GAME_TYPES_H

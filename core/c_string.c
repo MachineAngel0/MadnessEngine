@@ -166,13 +166,13 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 }
 
 // Performs variadic string formatting to dest given format string and va_list.
- i32 c_string_format_v(char* dest, const char* format, void* va_list)
+ s32 c_string_format_v(char* dest, const char* format, void* va_list)
 {
     if (dest)
     {
         // Big, but can fit on the stack.
         char buffer[1024];
-        i32 written = vsnprintf(buffer, 1024, format, va_list);
+        s32 written = vsnprintf(buffer, 1024, format, va_list);
         buffer[written] = 0;
         memcpy(dest, buffer, written + 1);
 
@@ -183,13 +183,13 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 
 // Performs string formatting to dest given format string and parameters.
- i32 c_string_format(char* dest, const char* format, ...)
+ s32 c_string_format(char* dest, const char* format, ...)
 {
     if (dest)
     {
         va_list arg_ptr;
         va_start(arg_ptr, format);
-        i32 written = c_string_format_v(dest, format, arg_ptr);
+        s32 written = c_string_format_v(dest, format, arg_ptr);
         va_end(arg_ptr);
         return written;
     }

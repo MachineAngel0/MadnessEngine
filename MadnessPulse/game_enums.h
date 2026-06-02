@@ -243,8 +243,6 @@ typedef enum Element_Type
 
 typedef enum Damage_Status_Type
 {
-    ECS_Custom,
-
     Damage_Status_Type_Dreamy,
     Damage_Status_Type_Low,
     Damage_Status_Type_Delusion,
@@ -375,16 +373,16 @@ typedef enum Conjure_Type
     Conjure_Type_Max,
 } Conjure_Type;
 
-typedef enum EPassiveTransferType
+typedef enum Passive_Transfer_Type
 {
-    ECS_CasterToTarget_PositiveValue,
-    ECS_CasterToTarget_NegativeValue,
-    ECS_CasterToTarget_DoubleLossGain,
+    Passive_Transfer_Type_CasterToTarget_PositiveValue,
+    Passive_Transfer_Type_CasterToTarget_NegativeValue,
+    Passive_Transfer_Type_CasterToTarget_DoubleLossGain,
 
-    ECS_TargetToCaster,
-    ECS_TargetToCasterNegativeValue,
-    ECS_TargetToCaster_DoubleLossGain,
-}EPassiveTransferType;
+    Passive_Transfer_Type_TargetToCaster,
+    Passive_Transfer_Type_TargetToCasterNegativeValue,
+    Passive_Transfer_Type_TargetToCaster_DoubleLossGain,
+}Passive_Transfer_Type;
 
 // Turn Based Game //
 
@@ -475,6 +473,7 @@ typedef enum Battle_Info_Life_Time_Type
     Battle_Info_Life_Time_Type_TurnStartLifeTime,
     Battle_Info_Life_Time_Type_RewindLifeTime,
     Battle_Info_Life_Time_Type_FightLifeTime,
+    Battle_Info_Life_Time_Type_MAX,
 } Battle_Info_Life_Time_Type;
 
 
