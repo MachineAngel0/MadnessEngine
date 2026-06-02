@@ -84,17 +84,17 @@ void allocator_interface_free(void* allocator, void* memory_block)
 
 //typically this will be used in local scope, and freed off the stack when done,
 //so its recommended that it's not a pointer
-Allocator_Temp temp_allocator_memory_begin(Allocator* a)
+Scratch_Allocator scratch_allocator_begin(Allocator* a)
 {
     MASSERT_MSG(a, "TEMP ALLOCATOR INVALID ALLOCATOR PASSED IN");
 
-    Allocator_Temp temp;
+    Scratch_Allocator temp;
     temp.allocator = a;
     temp.prev_offset = a->current_offset;
     return temp;
 }
 
-void temp_allocator_memory_end(Allocator_Temp temp)
+void scratch_allocator_end(Scratch_Allocator temp)
 {
     temp.allocator->current_offset = temp.prev_offset;
 }

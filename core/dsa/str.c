@@ -25,11 +25,11 @@ String* string_create(const char* word, const u64 length)
 String* string_create_allocator(const char* word, const u64 length, Allocator* allocator)
 {
     //creates a string without the null terminator
-    String* str = (String*)allocator_alloc(allocator, sizeof(String));
+    String* str = allocator_alloc(allocator, sizeof(String));
     //memset(str, 0, sizeof(MString));
     str->length = length;
     //important to note that we use -1 to not include the null terminated string
-    str->chars = (char*)allocator_alloc(allocator,sizeof(char) * str->length);
+    str->chars = allocator_alloc(allocator,sizeof(char) * str->length);
     memset(str->chars, 0, sizeof(char) * str->length);
     memcpy(str->chars, word, sizeof(char) * str->length);
 
@@ -75,13 +75,6 @@ bool string_free(String* string)
 }
 
 
-//this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
-#define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
-#define STRING_STRLEN(string) ((String){.chars = (char*)(string), .length = strlen(string)})
-//will convert the string into the correct size, for some reason doesn't work after the string has been passed
-#define STRING_CREATE(string) string_create(string, sizeof(string))
-//create a string from an already existing char[]/char* that excludes the null terminated string
-#define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 
 
 //UTILITY
@@ -130,12 +123,10 @@ String* string_concat(const String* str1, const String* str2, const Allocator_In
     String* out_str = allocator_interface.alloc(allocator_interface.allocator, sizeof(String), DEFAULT_ALIGNMENT);
     const u64 combined_length = str1->length + str2->length;
     out_str->chars = (char *) allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length, DEFAULT_ALIGNMENT);
-    memset(out_str->chars, 0, sizeof(char) * combined_length);
-
     out_str->length = combined_length;
 
     memcpy(out_str->chars, str1->chars, sizeof(char) * str1->length);
-    memcpy(&out_str->chars[str1->length], str2->chars, sizeof(char) * str2->length);
+    memcpy(out_str->chars + str1->length, str2->chars, sizeof(char) * str2->length);
 
     return out_str;
 }

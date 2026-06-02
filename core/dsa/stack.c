@@ -60,7 +60,7 @@ void stack_copy(stack* dest, const stack* src)
 bool stack_is_empty(const stack* s)
 {
     MASSERT(s);
-    return s->num_items == 0;
+    return s->num_items <= 0;
 }
 
 bool stack_is_full(const stack* s)
@@ -79,7 +79,7 @@ void stack_push(stack* s, const void* data)
     }
 
     // get the start location, then memcpy it
-    uint8_t* dest = ((uint8_t*)s->data) + (s->stride * (s->num_items));
+    void* dest = ((u8*)s->data) + (s->stride * (s->num_items));
     memcpy(dest, data, s->stride);
 
     s->num_items++;

@@ -18,7 +18,7 @@
 
 typedef struct file_read_data
 {
-    char* data;
+    u8* data;
     u64 size;
 }file_read_data;
 

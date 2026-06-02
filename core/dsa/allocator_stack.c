@@ -157,7 +157,9 @@ void* stack_allocator_interface_alloc(void* allocator, u64 memory_byte_request, 
 
 void stack_allocator_interface_free(void* allocator, void* memory_block)
 {
-    //stack pops should be handled manually and not by the interface
+    //NOTE: the reason we dont use this is because we have no way of knowing what actually was on top when we free, therefore free manually
+    // Stack_Allocator* a = (Stack_Allocator*) allocator;
+    // stack_allocator_pop(a, memory_block);
     return;
 }
 

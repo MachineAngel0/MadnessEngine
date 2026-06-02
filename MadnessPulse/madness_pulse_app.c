@@ -30,15 +30,16 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //TODO: testing lexer/parser stuff
     //TODO: make sure the lexer free's its data
-    // Reflection_System* reflection_system = reflection_system_init(&app_internal->application_core.memory_system);
-    // reflection_game_data(reflection_system);
+    /*Reflection_System* reflection_system = reflection_system_init(&app_internal->application_core.memory_system);
+    reflection_game_data(reflection_system);*/
 
     //testing text format
     // Madness_txt* txt = madness_txt_init(NULL);
 
-    Reflection_Registry* reflection_registry = Reflection_Registry_init(&app_internal->application_core.memory_system);
+    Reflection_Registry* reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
     generate_runtime_enums(reflection_registry);
     generate_runtime_structs(reflection_registry);
+    reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
 
 
     Heal_Component heal_comp_write = {
@@ -164,14 +165,23 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             break;
         }
 
-        madness_ui_window_begin(renderer_plugin->madness_ui, STRING("TESTTEST"));
+        madness_ui_window_begin(renderer_plugin->madness_ui, STRING("RUNTIME TESTING"));
         {
             // static u32 i = 0;
             // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
                                       // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
 
-            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "");
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Damage_Component", "");
+            if (madness_ui_button(renderer_plugin->madness_ui, STRING("Serialize Runtime Data")))
+            {
+                reflection_registry_runtime_serialize_all_data_to_txt_format(reflection_registry);
+            }
+
+            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "1");
+            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "2");
+            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Damage_Component", "1");
+
+
+
         }
         madness_ui_window_end(renderer_plugin->madness_ui);
 

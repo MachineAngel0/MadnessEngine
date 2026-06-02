@@ -3,13 +3,13 @@
 
 
 // Returns the length of the given string.
- u64 c_string_length(const char* str)
+u64 c_string_length(const char* str)
 {
     //does not count the null terminated string
     return strlen(str);
 }
 
- char* c_string_duplicate(const char* str)
+char* c_string_duplicate(const char* str)
 {
     u64 length = c_string_length(str);
     char* copy = malloc(length + 1);
@@ -160,13 +160,13 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 
 // Case-sensitive string comparison. True if the same, otherwise false.
- bool c_strings_equal(const char* str0, const char* str1)
+bool c_strings_equal(const char* str0, const char* str1)
 {
     return strcmp(str0, str1) == 0;
 }
 
 // Performs variadic string formatting to dest given format string and va_list.
- s32 c_string_format_v(char* dest, const char* format, void* va_list)
+s32 c_string_format_v(char* dest, const char* format, void* va_list)
 {
     if (dest)
     {
@@ -183,7 +183,7 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 
 // Performs string formatting to dest given format string and parameters.
- s32 c_string_format(char* dest, const char* format, ...)
+s32 c_string_format(char* dest, const char* format, ...)
 {
     if (dest)
     {
@@ -198,25 +198,23 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 size_t c_string_to_number(const char* string, u32 string_size)
 {
+    size_t out_value = 0;
+    for (u64 i = 0; i < string_size; i++)
+    {
+        if (string[i] == '\0') { return out_value; }
+        if (string[i] > '0' || string[i] < '9')
+        {
+            u64 val = string[i] - '0';
+            // ex: 10 + 3 = 103 (Wrong), 10 * 10 = 100 + 3 = 103 (Correct)
+            out_value = out_value * 10 + val;
+        }
+    }
 
-     size_t out_value = 0;
-     for (u64 i = 0; i < string_size; i++)
-     {
-         if (string[i] == '\0'){ return out_value;}
-         if (string[i] > '0' || string[i] < '9' )
-         {
-             u64 val = string[i] - '0';
-             // ex: 10 + 3 = 103 (Wrong), 10 * 10 = 100 + 3 = 103 (Correct)
-             out_value = out_value * 10 + val;
-         }
-
-     }
-
-     return out_value;
+    return out_value;
 }
 
 f64 c_string_to_float(const char* string)
 {
-     return strtof(string, NULL);
-     // return (f64)atof(string);
+    return strtof(string, NULL);
+    // return (f64)atof(string);
 }

@@ -135,7 +135,7 @@ String* string_builder_to_string(const String_Builder* builder)
 }
 String string_builder_to_string_non_pointer(const String_Builder* builder)
 {
-    return (String){builder->str, builder->current_length};
+    return (String){.chars = builder->str, .length = builder->current_length};
 }
 
 char* string_builder_to_c_string(const String_Builder* builder)

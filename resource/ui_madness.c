@@ -35,7 +35,7 @@ Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_sy
 
     madness_ui->ui_nodes = UI_Node_array_create(MAX_UI_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
     madness_ui->pop_up_ui_nodes = UI_Node_array_create(
-        MAX_UI_NODE_COUNT / 10, allocator_inferface_create(madness_ui->allocator));
+        MAX_UI_NODE_COUNT, allocator_inferface_create(madness_ui->allocator));
 
 
     madness_ui->string_builder = string_builder_create(100);
@@ -454,9 +454,11 @@ void madness_ui_add_draw_command(Madness_UI* madness_ui, UI_Draw_Command_Type dr
 
 UI_Node* madness_ui_get_new_node(Madness_UI* madness_ui)
 {
+    MASSERT(madness_ui->ui_nodes->num_items < madness_ui->ui_nodes->capacity);
     //check if we get a pop up node or a normal node
     if (!stack_is_empty(madness_ui->pop_up_stack))
     {
+        MASSERT(madness_ui->pop_up_ui_nodes->num_items < madness_ui->pop_up_ui_nodes->capacity);
         UI_Node* out_node = &madness_ui->pop_up_ui_nodes->data[madness_ui->pop_up_ui_nodes->num_items++];
         return out_node;
     }
@@ -629,7 +631,7 @@ bool madness_ui_menu_item_begin(Madness_UI* madness_ui, String menu_name)
     background_node->color = madness_ui->editor_style.textbox_color;
 
 
-    UI_Node* text_node = madness_ui_text_internal(madness_ui, menu_name, background_node->pos,
+    madness_ui_text_internal(madness_ui, menu_name, background_node->pos,
                                                   background_node->size,
                                                   UI_ALIGNMENT_CENTER,
                                                   UI_ALIGNMENT_CENTER);
@@ -1240,11 +1242,12 @@ UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 pare
     }
 
 
+    // debug the location of the text
     UI_Node* debug_text_node = madness_ui_get_new_node(madness_ui);
     // text_node->pos = madness_ui->cursor_pos;
     debug_text_node->pos = text_pos;
     debug_text_node->size = text_size;
-    debug_text_node->color = COLOR_BLACK;
+    debug_text_node->color = COLOR_BLACK; // TODO: transparency
     debug_text_node->text = text;
     debug_text_node->string_id = text;
     debug_text_node->hash_id = string_hash_u64(text);
@@ -1964,8 +1967,8 @@ bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* selected_
         for (u32 i = 0; i < char_array_size; i++)
         {
             char* inner_temp = char_array[i];
-            String draw = *string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_arena);
-            UI_Node* string_node = madness_ui_text_internal(madness_ui, draw, madness_ui->cursor_pos,
+            String* draw = string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_arena);
+            UI_Node* string_node = madness_ui_text_internal(madness_ui, *draw, madness_ui->cursor_pos,
                                                             combo_box_node->size,
                                                             UI_ALIGNMENT_LEFT,
                                                             UI_ALIGNMENT_CENTER);
@@ -2105,11 +2108,10 @@ bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness)
 bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* reflection_registry,
                                 const char* struct_name, const char* identifier)
 {
-    Reflection_Runtime_Struct struct_info = reflection_registry_get_struct(reflection_registry, struct_name);
-
-    static float x = 0;
-    static u32 selected_enum = 0;
-    static bool bool_state = false;
+    Reflection_Runtime_Data runtime_data = reflection_registry_get_or_create_runtime_data(
+        reflection_registry, struct_name, identifier);
+    Reflection_Runtime_Struct struct_info = reflection_registry_get_runtime_data_struct(
+        reflection_registry, runtime_data);
 
 
     // madness_ui_text(madness_ui, *string_create_allocator(struct_info.name, strlen(struct_info.name), madness_ui->frame_arena));
@@ -2118,58 +2120,67 @@ bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* ref
     for (u32 field_index = 0; field_index < struct_info.field_count; field_index++)
     {
         Reflection_Runtime_Struct_Field field_info = struct_info.fields[field_index];
+        void* data = (u8*)runtime_data.data + field_info.offset;
+
+        String* intermediate_name = string_concat(&STRING_STRLEN(struct_name), &STRING_STRLEN(identifier),
+                                                  frame_allocator_interface_create(madness_ui->frame_arena));
+        String* custom_name = string_concat(intermediate_name, &STRING_STRLEN(field_info.name),
+                                            frame_allocator_interface_create(madness_ui->frame_arena));
+
         switch (field_info.type)
         {
         case REFLECTION_TYPE_INVALID:
             break;
         case REFLECTION_TYPE_U8:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_U16:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_U32:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_U64:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S8:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S16:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S32:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S64:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_F32:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_F64:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_SIZE_T:
-            madness_ui_float(madness_ui, STRING_STRLEN(field_info.name), &x, 1.0);
+            madness_ui_float(madness_ui, *custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_BOOL:
-            madness_ui_check_box(madness_ui, STRING_STRLEN(field_info.name), &bool_state);
+            madness_ui_check_box(madness_ui, *custom_name, data);
             break;
         case REFLECTION_TYPE_STRING:
-            madness_ui_text_box(madness_ui, STRING_STRLEN(field_info.name));
+            madness_ui_text_box(madness_ui, *custom_name);
             break;
         case REFLECTION_TYPE_CHAR:
-            madness_ui_text_box(madness_ui, STRING_STRLEN(field_info.name));
+            madness_ui_text_box(madness_ui, *custom_name);
             break;
         case REFLECTION_TYPE_ENUM:
-            Reflection_Runtime_Enum runtime_enum =  reflection_registry_get_enum(reflection_registry, field_info.type_name);
-            madness_ui_combo_box_char(madness_ui, STRING(runtime_enum.name), &selected_enum, runtime_enum.enum_names, runtime_enum.count);
+            Reflection_Runtime_Enum runtime_enum = reflection_registry_get_enum(
+                reflection_registry, field_info.type_name);
+            madness_ui_combo_box_char(madness_ui, *custom_name, data,
+                                      runtime_enum.enum_names, runtime_enum.count);
             break;
         case REFLECTION_TYPE_STRUCT:
-            madness_ui_reflection_test(madness_ui, reflection_registry, field_info.name, "");
+            madness_ui_reflection_test(madness_ui, reflection_registry, field_info.name, identifier);
             break;
         case REFLECTION_TYPE_MAX:
             break;
@@ -2595,7 +2606,6 @@ void madness_ui_example(Madness_UI* madness_ui)
                 {
                     FATAL("A Fatal Poem");
                 }
-
             }
 
             madness_scroll_box_begin(madness_ui, STRING("File Scroll"));

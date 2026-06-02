@@ -43,17 +43,17 @@ MAPI void allocator_interface_free(void* allocator, void* memory_block);
 
 //also called a Scratch Allocator
 //used allocator memory temporarily before resetting it back to its prev offset
-typedef struct Allocator_Temp
+typedef struct Scratch_Allocator
 {
     Allocator* allocator;
     size_t prev_offset;
-} Allocator_Temp;
+} Scratch_Allocator;
 
 //typically this will be used in local scope, and freed off the stack when done,
 //so its recommended that it's not a pointer
-MAPI Allocator_Temp temp_allocator_memory_begin(Allocator* a);
+MAPI Scratch_Allocator scratch_allocator_begin(Allocator* a);
 
-MAPI void temp_allocator_memory_end(Allocator_Temp temp);
+MAPI void scratch_allocator_end(Scratch_Allocator temp);
 
 
 void allocator_test(void);

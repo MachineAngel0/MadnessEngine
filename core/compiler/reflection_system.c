@@ -651,7 +651,7 @@ void reflection_game_data(Reflection_System* reflection_system)
 
         // fields array
         fprintf(reflection_offset_file,
-                "\tconst Reflection_Runtime_Struct_Field %s_Fields[] =\n"
+                "\tReflection_Runtime_Struct_Field %s_Fields[] =\n"
                 "\t{\n",
                 struct_info.name);
 
@@ -660,42 +660,26 @@ void reflection_game_data(Reflection_System* reflection_system)
             Reflection_Struct_Field field = struct_info.type_list[j];
             if (!field.field_name) { continue; }
 
-            // for enum/struct we also emit .type_name
-            if (field.type == REFLECTION_TYPE_ENUM || field.type == REFLECTION_TYPE_STRUCT)
-            {
-                fprintf(reflection_offset_file,
-                        "\t\t{\n"
-                        "\t\t\t.name = \"%s\",\n"
-                        "\t\t\t.type = %s,\n"
-                        "\t\t\t.type_name = \"%s\",\n"
-                        "\t\t\t.offset = offsetof(%s, %s)\n"
-                        "\t\t},\n",
-                        field.field_name,
-                        reflection_type_to_str(field.type),
-                        field.type_name ? field.type_name : "",
-                        struct_info.name,
-                        field.field_name);
-            }
-            else
-            {
-                fprintf(reflection_offset_file,
-                        "\t\t{\n"
-                        "\t\t\t.name = \"%s\",\n"
-                        "\t\t\t.type = %s,\n"
-                        "\t\t\t.offset = offsetof(%s, %s)\n"
-                        "\t\t},\n",
-                        field.field_name,
-                        reflection_type_to_str(field.type),
-                        struct_info.name,
-                        field.field_name);
-            }
+
+            fprintf(reflection_offset_file,
+                    "\t\t{\n"
+                    "\t\t\t.name = \"%s\",\n"
+                    "\t\t\t.type = %s,\n"
+                    "\t\t\t.type_name = \"%s\",\n"
+                    "\t\t\t.offset = offsetof(%s, %s)\n"
+                    "\t\t},\n",
+                    field.field_name,
+                    reflection_type_to_str(field.type),
+                    field.type_name ? field.type_name : "",
+                    struct_info.name,
+                    field.field_name);
         }
 
         fprintf(reflection_offset_file, "\t};\n\n");
 
         // struct info
         fprintf(reflection_offset_file,
-                "\tconst Reflection_Runtime_Struct %s_Runtime_Struct =\n"
+                "\t Reflection_Runtime_Struct %s_Runtime_Struct =\n"
                 "\t{\n"
                 "\t\t.name = \"%s\",\n"
                 "\t\t.fields = %s_Fields,\n"
@@ -716,5 +700,3 @@ void reflection_game_data(Reflection_System* reflection_system)
     fprintf(reflection_offset_file, "}\n");
     fclose(reflection_offset_file);
 }
-
-
