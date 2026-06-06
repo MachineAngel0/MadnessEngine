@@ -93,6 +93,10 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens);
 #define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
 
 
+bool string_serialize(String* string, FILE* fptr);
+bool string_deserialize(String* string, FILE* fptr, Allocator* allocator);
+
+
 u32 string_hash_u32(String string);
 u64 string_hash_u64(String string);
 

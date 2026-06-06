@@ -142,209 +142,10 @@ void darray_test(void);
 void darray_macro_test();
 
 
-#define _dynamic_array_struct_macro(type)\
-typedef struct type##_dynamic_array{ \
-    Allocator_Interface allocator;\
-    u64 capacity; \
-    u64 num_items;\
-    type* data;\
-}type##_dynamic_array;
-
-#define _dynamic_array_create_macro(type)\
-type##_dynamic_array* type##_dynamic_array_create(u64 capacity, Allocator_Interface allocator)\
-{\
-    MASSERT_MSG(capacity > 0, "DARRAY MACRO CREATE: INVALID SIZE");\
-    MASSERT_MSG(allocator.allocator, "DARRAY MACRO INVALID ALLOCATOR");\
-    MASSERT_MSG(allocator.alloc, "DARRAY MACRO INVALID ALLOC");\
-    MASSERT_MSG(allocator.free_memory, "DARRAY MACRO INVALID FREE");\
-    \
-    type##_dynamic_array*  arr = allocator.alloc(allocator.allocator, sizeof(type##_dynamic_array), DEFAULT_ALIGNMENT);\
-    arr->data = allocator.alloc(allocator.allocator, sizeof(type) * capacity, DEFAULT_ALIGNMENT);\
-    arr->allocator = allocator;\
-    arr->capacity = capacity;\
-    arr->num_items = 0;\
-    return arr;\
-}
-
-#define _dynamic_array_free_macro(type)\
-void type##_dynamic_array_free(type##_dynamic_array* array)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO FREE: NULL ARRAY");\
-    array->allocator.free_memory(array->allocator.allocator, array->data);\
-    array->allocator.free_memory(array->allocator.allocator, array);\
-}
-
-
-#define _dynamic_array_realloc_macro(type)\
-void type##_dynamic_array_resize(type##_dynamic_array* array, u64 new_capacity)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO PUSH: NULL ARRAY");\
-    void* new_data = array->allocator.alloc(array->allocator.allocator, new_capacity * sizeof(type), DEFAULT_ALIGNMENT);\
-    memcpy(new_data, array->data, sizeof(type) * array->num_items);\
-    array->allocator.free_memory(array->allocator.allocator, array->data);\
-    array->data = new_data;\
-}
-
-#define _dynamic_array_push_macro(type)\
-void type##_dynamic_array_push(type##_dynamic_array* array, const type* data)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO PUSH: NULL ARRAY");\
-    if (array->num_items >= array->capacity)\
-    {\
-        type##_dynamic_array_resize(array, array->capacity * 2);\
-    }\
-    memcpy((u8*)array->data + (sizeof(type) * array->num_items), data, sizeof(type));\
-    array->num_items++;\
-}
-#define _dynamic_array_pop_macro(type)\
-void type##_dynamic_array_pop(type##_dynamic_array* array)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO POP: NULL ARRAY");\
-    if (array->num_items <= 0)\
-    {\
-        WARN("DARRAY MACRO POP: NOTHING TO POP")\
-        return;\
-    }\
-    array->num_items--;\
-}
-
-
-#define _dynamic_array_clear_macro(type)\
-void type##_dynamic_array_clear(type##_dynamic_array* array)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO CLEAR: NULL ARRAY");\
-    array->num_items = 0;\
-}
-
-
-#define _dynamic_array_zero_memory_macro(type)\
-void type##_dynamic_array_zero_memory(type##_dynamic_array* array)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO ZERO: NULL ARRAY");\
-    memset(array->data, 0, sizeof(type) * array->capacity);\
-}
-
-#define _dynamic_array_get_bytes_used_macro(type)\
-u64 type##_dynamic_array_get_bytes_used(type##_dynamic_array* array)\
-{\
-    MASSERT_MSG(array, "DARRAY MACRO GET BYTES USED: NULL ARRAY");\
-    return array->num_items * sizeof(type);\
-}
-
-#define _dynamic_array_slice_macro(type)\
-typedef struct type##_dynamic_array_slice\
-{\
-    u64 length;\
-    type* ptr;\
-} type##_dynamic_array_slice;\
-type##_dynamic_array_slice type##_dynamic_array_slice_create(type##_dynamic_array* array, u64 slice_length)\
-{\
-    MASSERT(slice_length <= array->capacity);\
-    return (type##_dynamic_array_slice){.ptr = array->data, .length = slice_length};\
-}\
-type##_dynamic_array_slice type##_dynamic_array_slice_create_offset(type##_dynamic_array* array, u64 slice_start,\
-                                                                u64 slice_length)\
-{\
-    MASSERT(slice_start < array->capacity);\
-    MASSERT(slice_length <= array->capacity);\
-    MASSERT(slice_start + slice_length <= array->capacity);\
-    return (type##_dynamic_array_slice){.ptr = array->data + slice_start, .length = slice_length};\
-}
-
-#define _dynamic_array_macro(type)\
-     _dynamic_array_struct_macro(type)\
-     _dynamic_array_create_macro(type)\
-     _dynamic_array_free_macro(type)\
-     _dynamic_array_realloc_macro(type)\
-     _dynamic_array_push_macro(type)\
-     _dynamic_array_pop_macro(type)\
-     _dynamic_array_clear_macro(type)\
-     _dynamic_array_zero_memory_macro(type)\
-    _dynamic_array_get_bytes_used_macro(type)\
-    _dynamic_array_slice_macro(type)
-
-#define DARRAY_GENERATE_TYPE(type) \
-    _dynamic_array_macro(type)
-
-DARRAY_GENERATE_TYPE(u8)
-
-DARRAY_GENERATE_TYPE(u16)
-
-DARRAY_GENERATE_TYPE(u32)
-
-DARRAY_GENERATE_TYPE(u64)
-
-DARRAY_GENERATE_TYPE(s8)
-
-DARRAY_GENERATE_TYPE(s16)
-
-DARRAY_GENERATE_TYPE(s32)
-
-DARRAY_GENERATE_TYPE(s64)
-
-DARRAY_GENERATE_TYPE(f32)
-
-DARRAY_GENERATE_TYPE(f64)
-
-DARRAY_GENERATE_TYPE(bool)
-
-DARRAY_GENERATE_TYPE(char)
-
-DARRAY_GENERATE_TYPE(String)
-
-
 void dynamic_array_macro_test();
 
 
-/*
-//another type of macro version where you inline the procedure,
-//but i dont really like it, weak type safety, but it does allow you to use something like char*
-#define vector(T, Name) \
-typedef struct {\
-T* data; \
-size_t length; \
-size_t capacity; \
-}Name;
-
-#define vector_create(v, intial_capacity){\
-v = malloc(sizeof(v));\
-v->data = malloc(sizeof(v->data) * intial_capacity);\
-v->length = 0;\
-v->capacity = initial_capacity;\
-}
-#define vector_resize(v, new_capacity){\
-    v->data = realloc(v->data, v->capacity*2);\
-}
-
-#define vector_append(v, element) ({ \
-v->data[v->length] = (element); \
-v->length++; \
-})
-
-#define vector_pop(v) ({ \
-v->length--; \
-})
-
-#define vector_clear(v) { \
-free((v)->data); \
-(v)->data = NULL; \
-(v)->capacity = 0; \
-(v)->length = 0; \
-}
-
-typedef vector(char*, Vector_str);
-
-
-void inline_macro_testing()
-{
-    Vector_str* v = {0};
-    int initial_capacity = 10;
-    vector_create(v, initial_capacity);
-    vector_resize(v);
-    vector_append(v, "abc");
-    vector_clear(v);
-}
-*/
+//THE OTHER DYNAMIC ARRAY
 
 
 #define DYNAMIC_ARRAY_RESIZE_VALUE  2
@@ -381,7 +182,6 @@ Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Allocator_In
 }
 
 
-
 Dynamic_Array* dynamic_array_free(Dynamic_Array* array)
 {
     array->allocator_interface.free_memory(array->allocator_interface.allocator, array->data);
@@ -402,7 +202,7 @@ void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
 
 void dynamic_array_push(Dynamic_Array* array, void* data)
 {
-    if (array->num_items >= array->capacity)
+    while (array->num_items >= array->capacity)
     {
         dynamic_array_resize(array, array->capacity * 2);
     }
@@ -410,6 +210,19 @@ void dynamic_array_push(Dynamic_Array* array, void* data)
     memcpy((u8*)array->data + (array->stride * array->num_items), data, array->stride);
     array->num_items++;
 }
+
+void dynamic_array_push_multi(Dynamic_Array* array, void* data, u32 count)
+{
+    //TODO:
+    while (array->num_items + count >= array->capacity)
+    {
+        dynamic_array_resize(array, array->capacity * 2);
+    }
+
+    memcpy((u8*)array->data + (array->stride * array->num_items), data, array->stride * count);
+    array->num_items += count;
+}
+
 
 void dynamic_array_pop(Dynamic_Array* array)
 {
@@ -462,6 +275,35 @@ bool dynamic_array_is_empty(Dynamic_Array* array)
         _dynamic_array_create(sizeof(type), initial_capacity, allocator_interface);
 #define dynamic_array_get(arr, type, index)\
         (*(type*)_dynamic_array_get(arr, index))
+
+
+bool dynamic_array_serialize(Dynamic_Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fwrite(&array->stride, sizeof(array->stride), 1, fptr);
+    fwrite(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fwrite(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fwrite(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+}
+
+
+bool dynamic_array_deserialize(Dynamic_Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fread(&array->stride, sizeof(array->stride), 1, fptr);
+    fread(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fread(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fread(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+}
 
 
 #endif

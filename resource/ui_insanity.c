@@ -388,7 +388,7 @@ void insanity_ui_passes()
 
                     if (insanity_ui->first_released_key)
                     {
-                        string_builder_append_char(builder, &insanity_ui->first_released_key, 1);
+                        string_builder_append_c_string(builder, &insanity_ui->first_released_key);
                     }
                 }
             }

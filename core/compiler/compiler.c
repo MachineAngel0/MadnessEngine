@@ -195,7 +195,7 @@ void nextToken(Lexer* lexer, Token* token)
 
     // Initialize token
     token->type = Token_Unknown;
-    string_builder_append_single_char(&token->string_builder, lexer->position);
+    string_builder_append_char(&token->string_builder, *lexer->position);
     token->line = lexer->line;
 
     char c = lexer->position[0];
@@ -257,7 +257,7 @@ void nextToken(Lexer* lexer, Token* token)
         {
             token->type = Token_String;
 
-            string_builder_append_single_char(&token->string_builder, lexer->position);
+            string_builder_append_char(&token->string_builder, *lexer->position);
 
             while (lexer->position[0] &&
                 lexer->position[0] != '"')
@@ -266,10 +266,10 @@ void nextToken(Lexer* lexer, Token* token)
                     lexer->position[1])
                 {
                     ++lexer->position;
-                    string_builder_append_single_char(&token->string_builder, lexer->position);
+                    string_builder_append_char(&token->string_builder, *lexer->position);
                 }
                 ++lexer->position;
-                string_builder_append_single_char(&token->string_builder, lexer->position);
+                string_builder_append_char(&token->string_builder, *lexer->position);
             }
 
             // Saves total string length
@@ -278,7 +278,7 @@ void nextToken(Lexer* lexer, Token* token)
             if (lexer->position[0] == '"')
             {
                 ++lexer->position;
-                string_builder_append_single_char(&token->string_builder, lexer->position);
+                string_builder_append_char(&token->string_builder, *lexer->position);
             }
         }
         break;
@@ -286,13 +286,13 @@ void nextToken(Lexer* lexer, Token* token)
         {
             token->type = Token_MACRO;
 
-            string_builder_append_single_char(&token->string_builder, lexer->position);
+            string_builder_append_char(&token->string_builder, *lexer->position);
 
             while (lexer->position[0] && lexer->position[0] != ' ' &&
                 lexer->position[0] != '\n')
             {
                 ++lexer->position;
-                string_builder_append_single_char(&token->string_builder, lexer->position);
+                string_builder_append_char(&token->string_builder, *lexer->position);
             }
             // Saves total string length
             // token->text.length = lexer->position - token->text.str;
@@ -307,7 +307,7 @@ void nextToken(Lexer* lexer, Token* token)
 
                 while (IsAlpha(lexer->position[0]) || IsNumber(lexer->position[0]) || (lexer->position[0] == '_'))
                 {
-                    string_builder_append_single_char(&token->string_builder, lexer->position);
+                    string_builder_append_char(&token->string_builder, *lexer->position);
 
                     ++lexer->position;
                 }
@@ -443,7 +443,7 @@ void nextToken(Lexer* lexer, Token* token)
                 while (lexer->position[0] &&  IsNumber(lexer->position[0]) && lexer->position[0] != ' ' &&
                     lexer->position[0] != '\n')
                 {
-                    string_builder_append_single_char(&token->string_builder, lexer->position);
+                    string_builder_append_char(&token->string_builder, *lexer->position);
                     ++lexer->position;
                 }
             }

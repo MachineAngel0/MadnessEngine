@@ -57,6 +57,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define GB_SIZE 1024ULL * 1024ULL * 1024ULL
 #define TB_SIZE 1024ULL * 1024ULL * 1024ULL * 1024ULL
 
+#define BYTES_M(x) (x) // bytes
 #define KB(x) (1024ULL * x) // kilobytes
 #define MB(x) (1024ULL * KB(x)) // megabytes
 #define GB(x) (1024ULL * MB(x)) //gigabytes

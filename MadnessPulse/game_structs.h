@@ -5,9 +5,6 @@
 
 #include "game_constants.h"
 
-//array enums
-ARRAY_GENERATE_TYPE(Character_Name)
-DARRAY_GENERATE_TYPE(Character_Name)
 
 typedef struct Nonsense_Struct
 {
@@ -759,6 +756,32 @@ typedef struct Ability_Component
     } data;
 } Ability_Component;
 
+
+#define Component_Size (BYTES_M(64))
+_Static_assert(sizeof(Heal_Component) <= Component_Size);
+_Static_assert(sizeof(Damage_Component) <= Component_Size);
+_Static_assert(sizeof(Passive_Reverse_Component) <= Component_Size);
+
+//damage enemy, and heal self ability
+// ability
+// -> damage (activation type/area affect/target type) -> damage info
+// -> heal (activation type/area affect/target type)
+// -> {type, index} -> heal info
+
+typedef struct Ability_Component_List
+{
+    DYNAMIC_ARRAY_TYPE(Heal_Component)* heal_component[10];
+    Damage_Component damage_component[10];
+    Passive_Reverse_Component passive_reverse_component[10];
+    //madness or insanity type
+
+    //how do you even get this back from a function call????
+    // Dynamic_Array* get_list(type); // i guess??
+    //we can make each component a 32kb data blob and just take the data from a pool
+    //if we have 1000 abilties loaded in, and we use 5 component for each 64*1000*5 - 312.5kb
+
+} Ability_Component_List;
+
 typedef struct Ability
 {
     Ability_Name id;
@@ -766,6 +789,7 @@ typedef struct Ability
     u32 component_count;
     //madness or insanity type
 } Ability;
+
 
 typedef struct Ability_Info
 {
@@ -784,7 +808,7 @@ typedef struct Ability_Info
     Target_Area_Affect ability_target_area;
 
     u32 ability_action_cost; // = 1;
-    float mp_cost; // = 1.0f;
+    u32 mp_cost; // = 1.0f;
 } Ability_Info;
 
 typedef struct Ability_UI_INFO
@@ -1198,8 +1222,6 @@ typedef struct Command
     // void BeforeExecuteNextActionOverride(ATurnBasedGameMode* GameMode);
 } Command;
 
-ARRAY_GENERATE_TYPE(Command)
-
 
 typedef struct Command_Handler
 {
@@ -1217,7 +1239,7 @@ typedef struct Command_Handler
 typedef struct Targeting_Handler
 {
     //current targets available
-    Character_Name_array* targets_available;
+    DYNAMIC_ARRAY_TYPE(Character_Name)* targets_available;
     // Character_Name_dynamic_array* targets_available;
 
     //target we are locked onto

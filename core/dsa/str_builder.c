@@ -69,9 +69,10 @@ void string_builder_append_string(String_Builder* str_builder, String* s)
     str_builder->current_length += s->length;
 }
 
-void string_builder_append_char(String_Builder* str_builder, const char* word, const u64 word_size)
+void string_builder_append_c_string(String_Builder* str_builder, const char* word)
 {
     //check if we have enough space
+    u32 word_size = strlen(word);
     if (str_builder->current_length + word_size > str_builder->capacity)
     {
         u64 length_requested = str_builder->current_length + word_size;
@@ -93,7 +94,7 @@ void string_builder_append_char(String_Builder* str_builder, const char* word, c
     str_builder->current_length += word_size;
 }
 
-void string_builder_append_single_char(String_Builder* str_builder, const char* word)
+void string_builder_append_char(String_Builder* str_builder, const char character)
 {
     //check if we have enough space
     if (str_builder->current_length + 1 > str_builder->capacity)
@@ -110,12 +111,11 @@ void string_builder_append_single_char(String_Builder* str_builder, const char* 
             str_builder->str = realloc(str_builder->str, new_capacity);
             str_builder->capacity = new_capacity;
         }
-    };
+    }
 
     //copy the word into the string
-    memcpy(str_builder->str + str_builder->current_length, word, 1);
+    memcpy(str_builder->str + str_builder->current_length, &character, 1);
     str_builder->current_length += 1;
-
 
 }
 
@@ -187,7 +187,7 @@ bool string_builder_compare_with_char(String_Builder* builder, const char* word,
 
 }
 
-#define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_char(builder, string, sizeof(string)-1)
+#define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_c_string(builder, string, sizeof(string)-1)
 
 
 void string_builder_test(void)

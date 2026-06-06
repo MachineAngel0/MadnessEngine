@@ -8,7 +8,7 @@ Targeting_Handler* targeting_handler_init(Madness_Pulse_Game* game)
 {
     Targeting_Handler* targeting_handler = allocator_alloc(&game->allocator, sizeof(Targeting_Handler));
     u8 max_targets_available = 10; //TODO: completely abritrary value, will either set a hard limit or dynamic allocate
-    targeting_handler->targets_available = Character_Name_array_create(max_targets_available, allocator_inferface_create(&game->allocator));
+    targeting_handler->targets_available = dynamic_array_create(Character_Name, max_targets_available, allocator_inferface_create(&game->allocator));
     return targeting_handler;
 }
 
@@ -20,49 +20,48 @@ void targeting_handler_create_targeting_info(Targeting_Handler* targeting_handle
 {
     Ability_Info info = ability_registry_get_ability_info(game->ability_registry, game->currently_selected_ability);
 
-    Character_Name_array_clear(targeting_handler->targets_available);
+    dynamic_array_clear(targeting_handler->targets_available);
 
     switch (info.ability_target_type)
     {
     case Ability_Target_Type_Self:
-        Character_Name_array_push(targeting_handler->targets_available, &game->current_units_turn);
+        dynamic_array_push(targeting_handler->targets_available, &game->current_units_turn);
         break;
     case Ability_Target_Type_Allies:
         // TODO: remove self
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->player_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->player_character_names,
                                         game->player_count);
         break;
     case Ability_Target_Type_SelfAndAllies:
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->player_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->player_character_names,
                                         game->player_count);
         break;
     case Ability_Target_Type_Enemies:
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
                                         game->enemy_count);
         break;
     case Ability_Target_Type_SelfAndEnemies:
-        Character_Name_array_push(targeting_handler->targets_available, &game->current_units_turn);
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
+        dynamic_array_push(targeting_handler->targets_available, &game->current_units_turn);
+        dynamic_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
                                         game->enemy_count);
         break;
     case Ability_Target_Type_AlliesAndEnemies:
         // TODO: remove self
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->player_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->player_character_names,
                                         game->player_count);
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
                                         game->enemy_count);
         break;
     case Ability_Target_Type_All:
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->player_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->player_character_names,
                                         game->player_count);
-        Character_Name_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
+        dynamic_array_push_multi(targeting_handler->targets_available, game->enemy_character_names,
                                         game->enemy_count);
         break;
     default:
         FATAL("Failed To Create Ability Targeting Array");
         break;
     }
-
 
     //set target lock and targeting display info
     switch (info.ability_target_area)
@@ -169,13 +168,14 @@ void target_handler_clear_all_target_locks(Targeting_Handler* targeting_handler,
 {
     for (int i = 0; i < targeting_handler->targets_available->num_items; ++i)
     {
-        Unit* unit = madness_pulse_get_unit(game, targeting_handler->targets_available->data[i]);
+        Unit* unit = madness_pulse_get_unit(game, dynamic_array_get(targeting_handler->targets_available, Character_Name, i));
         // LockOnTargets->HideTargetLock();
         // LockOnTargets->HideTargetLockResistanceDisplay();
     }
 }
 
-Character_Name_array* ReturnTargetsForActionManager(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game, Ability* AbilityChoosen)
+// Character_Name_array* ReturnTargetsForActionManager(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game, Ability* AbilityChoosen)
+Dynamic_Array* ReturnTargetsForActionManager(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game, Ability* AbilityChoosen)
 {
     Ability_Info info = ability_registry_get_ability_info(game->ability_registry, game->currently_selected_ability);
 
@@ -184,11 +184,11 @@ Character_Name_array* ReturnTargetsForActionManager(Targeting_Handler* targeting
         return targeting_handler->targets_available;
     }
 
-    //implied that this is single target is it reaches this point
+    //implied that this is single target if it reaches this point
     // if (info.ability_target_area ==  Target_Area_Affect_Single_Target)
 
-    Character_Name_array* temp_array = Character_Name_array_create(1, frame_allocator_interface_create(&game->frame_allocator));
-    Character_Name_array_push(temp_array, &targeting_handler->targets_available->data[targeting_handler->targeting_count]);
+    Dynamic_Array* temp_array = dynamic_array_create(Character_Name, 1, frame_allocator_interface_create(&game->frame_allocator));
+    dynamic_array_push(temp_array, _dynamic_array_get(targeting_handler->targets_available, targeting_handler->targeting_count));
 
     return temp_array;
 }

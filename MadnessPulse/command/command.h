@@ -82,14 +82,14 @@ void action_handler_add_action(Command_Handler* command_handler, Command* comman
     // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
 }
 
-void action_handler_add_multiple_actions(Command_Handler* command_handler, Command_array* command_array)
+void action_handler_add_multiple_actions(Command_Handler* command_handler, Array* command_array)
 {
     MASSERT(command_handler)
     MASSERT(command_array)
 
     for (int i = 0; i < command_array->num_items; i++)
     {
-        ring_enqueue(command_handler->command_queue, &command_array->data[i]);
+        ring_enqueue(command_handler->command_queue, &array_get(command_array->data, Command, i));
     }
     // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
 }

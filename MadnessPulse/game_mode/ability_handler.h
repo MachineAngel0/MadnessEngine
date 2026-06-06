@@ -20,7 +20,7 @@ AStatusTriggerAction* StatusTriggerAction;
 */
 
 /* High level Components Logic Functions */
-Command_array* ability_handler_process_ability(Madness_Pulse_Game* game)
+Array* ability_handler_process_ability(Madness_Pulse_Game* game)
 {
 
 }

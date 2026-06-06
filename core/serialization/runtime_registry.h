@@ -41,6 +41,8 @@ typedef struct Reflection_Runtime_Struct
 // meant to be used for the ui rn
 typedef struct Reflection_Runtime_Data
 {
+    // "struct name" + "identifier" ex: health_component + 1 = health_component1
+    const char* struct_name;
     const char* identifier;
     void* data;
     u32 struct_index_reference;
@@ -50,7 +52,9 @@ typedef struct Reflection_Runtime_Data
 
 typedef struct Reflection_Runtime_Meta_File
 {
-    String string;
+    String file_string;
+    String struct_name;
+    String identifier;
 } Reflection_Runtime_Meta_File;
 
 
@@ -117,6 +121,12 @@ Reflection_Registry* reflection_registry_init(Memory_System* memory_system)
     return reflection_registry;
 }
 
+
+void reflection_registry_shutdown(Reflection_Registry* reflection_registry)
+{
+    free(reflection_registry);
+}
+
 void reflection_registry_load_meta_data(Reflection_Registry* reflection_registry, const char* file_path)
 {
     FILE* fptr = fopen(file_path, "rb");
@@ -136,19 +146,18 @@ void reflection_registry_load_meta_data(Reflection_Registry* reflection_registry
     }
     for (u32 i = 0; i < file_header.data_count; i++)
     {
-        String read_in_string;
-        fread(&read_in_string.length, sizeof(read_in_string.length), 1, fptr);
-        read_in_string.chars = allocator_alloc(reflection_registry->allocator, read_in_string.length);
-        fread(read_in_string.chars, read_in_string.length, 1, fptr);
-        dynamic_array_push(reflection_registry->meta_file_data, &read_in_string);
+        Reflection_Runtime_Meta_File meta_data = {0};
+
+        string_deserialize(&meta_data.file_string, fptr, reflection_registry->allocator);
+        string_deserialize(&meta_data.struct_name, fptr, reflection_registry->allocator);
+        string_deserialize(&meta_data.identifier, fptr, reflection_registry->allocator);
+
+        dynamic_array_push(reflection_registry->meta_file_data, &meta_data);
     }
 
-    //do the actual load
-
-
-
-
     fclose(fptr);
+
+    //TODO: after loading the type data we have to load in the actual yaml data, for all our files
 }
 
 void reflection_registry_save_meta_data(Reflection_Registry* reflection_registry, const char* file_path)
@@ -174,18 +183,14 @@ void reflection_registry_save_meta_data(Reflection_Registry* reflection_registry
     {
         Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data,
                                                               Reflection_Runtime_Meta_File, i);
-        fwrite(&data.string.length, sizeof(data.string.length), 1, fptr);
-        fwrite(data.string.chars, data.string.length, 1, fptr);
+        string_serialize(&data.file_string, fptr);
+        string_serialize(&data.struct_name, fptr);
+        string_serialize(&data.identifier, fptr);
     }
 
     fclose(fptr);
 }
 
-
-void reflection_registry_shutdown(Reflection_Registry* reflection_registry)
-{
-    free(reflection_registry);
-}
 
 void reflection_registry_add_enums(Reflection_Registry* reflection_registry, Reflection_Runtime_Enum reflection_enum)
 {
@@ -250,9 +255,6 @@ Reflection_Runtime_Struct reflection_registry_get_struct(Reflection_Registry* re
 Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflection_Registry* reflection_registry,
                                                                        const char* struct_name, const char* identifier)
 {
-    Scratch_Allocator scratch_allocator = scratch_allocator_begin(reflection_registry->allocator);
-    const char* struct_identifier = c_string_concat(struct_name, identifier, scratch_allocator.allocator);
-
     //typically this will be used in local scope, and freed off the stack when done,
     //so its recommended that it's not a pointer
 
@@ -260,16 +262,16 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
     for (u32 i = 0; i < reflection_registry->runtime_data->num_items; i++)
     {
         runtime_data = dynamic_array_get(reflection_registry->runtime_data, Reflection_Runtime_Data, i);
-        if (strcmp(runtime_data.identifier, struct_identifier) == 0)
+        if (strcmp(runtime_data.struct_name, struct_name) == 0)
         {
-            scratch_allocator_end(scratch_allocator);
-            return runtime_data;
+            if (strcmp(runtime_data.identifier, identifier) == 0)
+            {
+                return runtime_data;
+            }
         }
     }
-    scratch_allocator_end(scratch_allocator);
 
-
-    //if we get here that means the data does not exist so we create it
+    //if we get here that means the data does not exist so we create it, if we find the struct name/type
     Reflection_Runtime_Struct runtime_struct = {0};
     u32 found_index = INT_MAX;
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
@@ -287,17 +289,33 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
     MASSERT(found_index != INT_MAX);
 
     Reflection_Runtime_Data new_runtime_data;
-    new_runtime_data.data = reflection_registry->allocator_interface.alloc(
-        reflection_registry->allocator_interface.allocator, runtime_struct.struct_size, DEFAULT_ALIGNMENT);
-    new_runtime_data.identifier = c_string_concat(struct_name, identifier, reflection_registry->allocator);
+    new_runtime_data.data = allocator_alloc(reflection_registry->allocator, runtime_struct.struct_size);
+    new_runtime_data.struct_name = struct_name;
+    new_runtime_data.identifier = identifier;
     new_runtime_data.struct_index_reference = found_index;
     dynamic_array_push(reflection_registry->runtime_data, &new_runtime_data);
+
+    //TODO: this leaks memory from the allocator, replace with a string builder
+    const char* replace_later_path = "../z_assets/abilities/";
+    const char* intermediate_file_path = c_string_concat(replace_later_path, new_runtime_data.struct_name,
+                                                         reflection_registry->allocator);
+    const char* intermediate_file_path2 = c_string_concat(intermediate_file_path, new_runtime_data.identifier,
+                                                          reflection_registry->allocator);
+
+    const char* final_file_path = c_string_concat(intermediate_file_path2, ".yaml", reflection_registry->allocator);
+    Reflection_Runtime_Meta_File meta_file = {
+        .file_string = STRING_STRLEN(final_file_path),
+        .struct_name = STRING_STRLEN(new_runtime_data.struct_name),
+        .identifier = STRING_STRLEN(new_runtime_data.identifier),
+    };
+    dynamic_array_push(reflection_registry->meta_file_data, &meta_file);
+
 
     return new_runtime_data;
 }
 
-Reflection_Runtime_Struct reflection_registry_get_runtime_data_struct(Reflection_Registry* reflection_registry,
-                                                                      Reflection_Runtime_Data runtime_data)
+Reflection_Runtime_Struct reflection_registry_get_struct_from_runtime_data(Reflection_Registry* reflection_registry,
+                                                                           Reflection_Runtime_Data runtime_data)
 {
     return dynamic_array_get(reflection_registry->struct_list, Reflection_Runtime_Struct,
                              runtime_data.struct_index_reference);
@@ -356,7 +374,9 @@ void reflection_registry_to_txt_format(Reflection_Registry* reflection_registry,
         //check if we found the correct struct
         if (strcmp(runtime_struct.name, struct_name) != 0) { continue; }
 
-        fprintf(file, "#%s%s\n", struct_name, identifier);
+        //#struct_name
+        //#identifier
+        fprintf(file, "#%s\n#%s\n", struct_name, identifier);
 
         for (u32 field_index = 0; field_index < runtime_struct.field_count; field_index++)
         {
@@ -547,7 +567,7 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
 
     //TODO: Free
     const char* hash_struct = c_string_concat("#", struct_name, NULL);
-    const char* struct_identifier = c_string_concat(hash_struct, identifier, NULL);
+    const char* hash_identifier = c_string_concat("#", identifier, NULL);
 
 
     char* line = strtok((char*)buffer, "\n");
@@ -559,7 +579,13 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
             continue;
         }
 
-        if (strcmp(line, struct_identifier) != 0)
+        if (strcmp(line, hash_struct) != 0)
+        {
+            line = strtok(NULL, "\n");
+            continue;
+        }
+        line = strtok(NULL, "\n");
+        if (strcmp(line, hash_identifier) != 0)
         {
             line = strtok(NULL, "\n");
             continue;
@@ -697,25 +723,18 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
 
 void reflection_registry_runtime_load_data_from_txt(Reflection_Registry* reflection_registry)
 {
-    for (int i = 0; i < reflection_registry->runtime_data->num_items; ++i)
+    for (int i = 0; i < reflection_registry->meta_file_data->num_items; ++i)
     {
-        Reflection_Runtime_Data runtime_data = dynamic_array_get(reflection_registry->runtime_data,
-                                                                 Reflection_Runtime_Data, i);
+        Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data,
+                                                              Reflection_Runtime_Meta_File, i);
+        //create the runtime data
+        //NOTE: this could be more optimized, since we are going a check first to find if the data exists, which we know doesn't at load time
+        Reflection_Runtime_Data runtime_data = reflection_registry_get_or_create_runtime_data(reflection_registry,
+            data.struct_name.chars, data.identifier.chars);
 
-        Reflection_Runtime_Struct runtime_struct = reflection_registry_get_runtime_data_struct(
-            reflection_registry, runtime_data);
-
-        Scratch_Allocator scratch_allocator = scratch_allocator_begin(reflection_registry->allocator);
-
-        const char* replace_later_path = "../z_assets/abilities/";
-        const char* intermediate_file_path = c_string_concat(replace_later_path, runtime_data.identifier,
-                                                             scratch_allocator.allocator);
-        const char* final_file_path = c_string_concat(intermediate_file_path, ".yaml", scratch_allocator.allocator);
-
-        reflection_registry_to_txt_format(reflection_registry, runtime_struct.name,
-                                          runtime_data.identifier, runtime_data.data, final_file_path);
-
-        scratch_allocator_end(scratch_allocator);
+        //load runtime data from the file
+        reflection_registry_read_from_txt_format(reflection_registry, data.struct_name.chars,
+                                                 data.identifier.chars, runtime_data.data, data.file_string.chars);
     }
 }
 
@@ -726,24 +745,20 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
         Reflection_Runtime_Data runtime_data = dynamic_array_get(reflection_registry->runtime_data,
                                                                  Reflection_Runtime_Data, i);
 
-        Reflection_Runtime_Struct runtime_struct = reflection_registry_get_runtime_data_struct(
+        Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct_from_runtime_data(
             reflection_registry, runtime_data);
 
         Scratch_Allocator scratch_allocator = scratch_allocator_begin(reflection_registry->allocator);
 
         const char* replace_later_path = "../z_assets/abilities/";
-        const char* intermediate_file_path = c_string_concat(replace_later_path, runtime_data.identifier,
+        const char* intermediate_file_path = c_string_concat(replace_later_path, runtime_data.struct_name,
                                                              scratch_allocator.allocator);
-        const char* final_file_path = c_string_concat(intermediate_file_path, ".yaml", scratch_allocator.allocator);
+        const char* intermediate_file_path2 = c_string_concat(intermediate_file_path, runtime_data.identifier,
+                                                              scratch_allocator.allocator);
+        const char* final_file_path = c_string_concat(intermediate_file_path2, ".yaml", scratch_allocator.allocator);
 
         reflection_registry_to_txt_format(reflection_registry, runtime_struct.name,
                                           runtime_data.identifier, runtime_data.data, final_file_path);
-
-        Reflection_Runtime_Meta_File meta_file = {.string = STRING_STRLEN(final_file_path)};
-
-        // TODO: this is causing duplicates
-        // also load in the .yaml data, which means splitting the
-        dynamic_array_push(reflection_registry->meta_file_data, &meta_file);
 
         scratch_allocator_end(scratch_allocator);
     }

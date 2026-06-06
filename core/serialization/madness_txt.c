@@ -53,7 +53,7 @@ void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const c
 }
 
 void madness_txt_object_write_data_single(Madness_txt* txt, object_handle handle, const char* field_name,
-                                   void* data)
+                                          void* data)
 {
     madness_txt_object* object = &txt->objects[handle.handle];
     madness_txt_object_subfield* cur = object->head;
@@ -426,6 +426,7 @@ void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handl
                     switch (cur->type)
                     {
                     case REFLECTION_TYPE_BOOL:
+
                         if (strcmp(field_data, "true") == 0)
                         {
                             bool t = true;
@@ -441,18 +442,35 @@ void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handl
                             MASSERT(false);
                         }
                         break;
-                    case REFLECTION_TYPE_S32:
-                        s32 num = (s32)c_string_to_number(field_data, strlen(field_data));
-                        memcpy((u8*)cur->data + (type_size * arr_index), &num, sizeof(s32));
+                    case REFLECTION_TYPE_U8:
+                        u8 u8_num = (u8)c_string_to_number(field_data, strlen(field_data));
+                        u8* u8_data = cur->data;
+                        memcpy(&u8_data[arr_index], &u8_num, sizeof(u8));
+                        break;
+                    case REFLECTION_TYPE_U16:
                         break;
                     case REFLECTION_TYPE_U32:
                         u32 u_num = (u32)c_string_to_number(field_data, strlen(field_data));
                         u32* u_data = cur->data;
                         memcpy(&u_data[arr_index], &u_num, sizeof(u32));
                         break;
+                    case REFLECTION_TYPE_U64:
+                        break;
+                    case REFLECTION_TYPE_S8:
+                        break;
+                    case REFLECTION_TYPE_S16:
+                        break;
+                    case REFLECTION_TYPE_S32:
+                        s32 num = (s32)c_string_to_number(field_data, strlen(field_data));
+                        memcpy((u8*)cur->data + (type_size * arr_index), &num, sizeof(s32));
+                        break;
+                    case REFLECTION_TYPE_S64:
+                        break;
                     case REFLECTION_TYPE_F32:
                         f32 f_num = (f32)c_string_to_float(field_data);
                         memcpy((u8*)cur->data + (type_size * arr_index), &f_num, sizeof(f32));
+                        break;
+                    case REFLECTION_TYPE_F64:
                         break;
                     case REFLECTION_TYPE_CHAR:
                         memcpy((u8*)cur->data + (type_size * arr_index), &field_data, sizeof(char));
@@ -461,27 +479,13 @@ void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handl
                         cur->string[i].chars = field_data;
                         cur->string[i].length = strlen(field_data);
                         break;
-                    case REFLECTION_TYPE_INVALID:
-                        break;
-                    case REFLECTION_TYPE_U8:
-                        break;
-                    case REFLECTION_TYPE_U16:
-                        break;
-                    case REFLECTION_TYPE_U64:
-                        break;
-                    case REFLECTION_TYPE_S8:
-                        break;
-                    case REFLECTION_TYPE_S16:
-                        break;
-                    case REFLECTION_TYPE_S64:
-                        break;
-                    case REFLECTION_TYPE_F64:
-                        break;
                     case REFLECTION_TYPE_SIZE_T:
                         break;
                     case REFLECTION_TYPE_ENUM:
                         break;
                     case REFLECTION_TYPE_STRUCT:
+                        break;
+                    case REFLECTION_TYPE_INVALID:
                         break;
                     case REFLECTION_TYPE_MAX:
                         break;
@@ -680,15 +684,15 @@ void madness_txt_object_test_example(Madness_txt* txt)
                                 example_struct.hash_arr_size);
     madness_txt_object_add_item(txt, handle_example, "unsigned_value_arr", REFLECTION_TYPE_U32,
                                 example_struct.hash_arr_size);
-    madness_txt_object_add_item(txt, handle_example, "hash_arr_size", REFLECTION_TYPE_U32,1);
+    madness_txt_object_add_item(txt, handle_example, "hash_arr_size", REFLECTION_TYPE_U32, 1);
 
     madness_txt_object_add_item(txt, handle_example, "string_array_type", REFLECTION_TYPE_STRING,
                                 example_struct.string_array_size);
-    madness_txt_object_add_item(txt, handle_example, "string_array_size", REFLECTION_TYPE_U32,1);
+    madness_txt_object_add_item(txt, handle_example, "string_array_size", REFLECTION_TYPE_U32, 1);
 
     madness_txt_object_add_item(txt, handle_example, "char_array_type", REFLECTION_TYPE_CHAR,
                                 example_struct.char_array_size);
-    madness_txt_object_add_item(txt, handle_example, "char_array_size", REFLECTION_TYPE_U32,1);
+    madness_txt_object_add_item(txt, handle_example, "char_array_size", REFLECTION_TYPE_U32, 1);
 
     //write
     /*madness_txt_object_set_write_data(txt, handle_example, "bool_type", &example_struct.bool_type);

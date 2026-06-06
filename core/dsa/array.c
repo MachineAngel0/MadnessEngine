@@ -18,7 +18,6 @@ Array* _array_create(const u64 data_stride, const u64 capacity)
     arr->capacity = capacity;
 
 
-
     return arr;
 }
 
@@ -192,6 +191,34 @@ void array_pop(Array* array)
     array->num_items--;
 }
 
+bool array_serialize(Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fwrite(&array->stride, sizeof(array->stride), 1, fptr);
+    fwrite(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fwrite(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fwrite(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+}
+
+bool array_deserialize(Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fread(&array->stride, sizeof(array->stride), 1, fptr);
+    fread(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fread(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fread(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+
+}
+
 
 //shift the array, maintaining order
 void array_remove(Array* array, const u64 index)
@@ -251,7 +278,6 @@ void array_test()
     TEST_START("ARRAY");
 
     Array* balling_arr = array_create(int, 10);
-
 
 
     printf("ARRAY START\n");
@@ -379,7 +405,6 @@ void array_macro_test()
     TEST_DEBUG(arr->data[0] == 0);
     TEST_DEBUG(arr->data[1] == 1);
     TEST_DEBUG(arr->data[2] == 2);
-
 
 
     //TODO: test slices

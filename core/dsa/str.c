@@ -29,7 +29,7 @@ String* string_create_allocator(const char* word, const u64 length, Allocator* a
     //memset(str, 0, sizeof(MString));
     str->length = length;
     //important to note that we use -1 to not include the null terminated string
-    str->chars = allocator_alloc(allocator,sizeof(char) * str->length);
+    str->chars = allocator_alloc(allocator, sizeof(char) * str->length);
     memset(str->chars, 0, sizeof(char) * str->length);
     memcpy(str->chars, word, sizeof(char) * str->length);
 
@@ -43,7 +43,7 @@ String* string_create_internal(const String* s)
     //memset(str, 0, sizeof(MString));
 
     //important to note that we use -1 to not include the null terminated string
-    out_str->chars = (char *) malloc(sizeof(char) * s->length);
+    out_str->chars = (char*)malloc(sizeof(char) * s->length);
     memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
 
     out_str->length = s->length;
@@ -75,14 +75,13 @@ bool string_free(String* string)
 }
 
 
-
-
 //UTILITY
 void string_print(const String* str)
 {
     MASSERT(str);
     printf("%.*s", (int)str->length, str->chars);
 }
+
 void string_println(const String* str)
 {
     MASSERT(str);
@@ -122,7 +121,8 @@ String* string_concat(const String* str1, const String* str2, const Allocator_In
 {
     String* out_str = allocator_interface.alloc(allocator_interface.allocator, sizeof(String), DEFAULT_ALIGNMENT);
     const u64 combined_length = str1->length + str2->length;
-    out_str->chars = (char *) allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length, DEFAULT_ALIGNMENT);
+    out_str->chars = (char*)allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length,
+                                                      DEFAULT_ALIGNMENT);
     out_str->length = combined_length;
 
     memcpy(out_str->chars, str1->chars, sizeof(char) * str1->length);
@@ -166,7 +166,6 @@ const char* string_to_c_string(const String* s)
 
 bool string_compare_c_string(const String* str1, const char* c_str)
 {
-
     MASSERT(str1 != NULL);
     MASSERT(c_str != NULL);
 
@@ -176,7 +175,6 @@ bool string_compare_c_string(const String* str1, const char* c_str)
     }
 
     return true;
-
 }
 
 
@@ -211,7 +209,7 @@ String* string_slice_from_to(const String* s, const u64 slice_begin, const u64 s
     String* new_string_str = malloc(sizeof(String));
     const u64 new_length = slice_end - slice_begin;
 
-    new_string_str->chars = (char *) malloc(sizeof(char) * new_length);
+    new_string_str->chars = (char*)malloc(sizeof(char) * new_length);
     memset(new_string_str->chars, 0, sizeof(char) * new_length);
 
     new_string_str->length = new_length;
@@ -240,7 +238,7 @@ String* string_strip_from_end(const String* str, const char stop_character)
     }
 
     //where ever i ends up is the new length of the string
-    return string_slice_from(str, i+1);
+    return string_slice_from(str, i + 1);
 }
 
 
@@ -249,7 +247,7 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
 {
     String_Tokenizer* str_tokens = malloc(sizeof(String_Tokenizer));
     //theoretically the longest it can be
-    str_tokens->strings = malloc(sizeof(String *) * s->length);
+    str_tokens->strings = malloc(sizeof(String*) * s->length);
     str_tokens->number_of_strings = 0;
 
 
@@ -257,8 +255,6 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     u64 index = 0;
     while (index < s->length)
     {
-
-
         if (s->chars[index] == delimiter)
         {
             String* temp = string_slice_from_to(s, prev_index, index + 1);
@@ -276,7 +272,8 @@ String_Tokenizer* string_tokenize_delimiter(const String* s, const char delimite
     return str_tokens;
 }
 
-String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array, const bool ignore_whitespace)
+String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array,
+                                                  const bool ignore_whitespace)
 {
     //so the behavior should be something like this: delimeter = "<>" before<token> ->  before,<, token, >
 
@@ -285,7 +282,7 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
 
     String_Tokenizer* str_tokens = malloc(sizeof(String_Tokenizer));
     //theoretically the longest it can be
-    str_tokens->strings = malloc(sizeof(String *) * s->length);
+    str_tokens->strings = malloc(sizeof(String*) * s->length);
     str_tokens->number_of_strings = 0;
 
 
@@ -305,21 +302,18 @@ String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String*
 
         for (u64 i = 0; i < delimiter_array->length; i++)
         {
-
             if (s->chars[index] == delimiter_array->chars[i])
             {
-
-
-
                 //take everything before the delimiter,
-                if (index - prev_index > 0){
+                if (index - prev_index > 0)
+                {
                     String* temp = string_slice_from_to(s, prev_index, index);
                     str_tokens->strings[str_tokens->number_of_strings] = temp;
                     str_tokens->number_of_strings++;
                 }
 
                 //we want to isolate the delimiter
-                String* delimiter = string_slice_from_to(s, index, index+1);
+                String* delimiter = string_slice_from_to(s, index, index + 1);
                 str_tokens->strings[str_tokens->number_of_strings] = delimiter;
                 str_tokens->number_of_strings++;
 
@@ -347,6 +341,32 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens)
     }
 }
 
+bool string_serialize(String* string, FILE* fptr)
+{
+    MASSERT(string);
+    MASSERT(string->chars);
+    MASSERT(fptr);
+
+    fwrite(&string->length, sizeof(string->length), 1, fptr);
+    fwrite(string->chars, string->length, 1, fptr);
+    return true;
+}
+
+bool string_deserialize(String* string, FILE* fptr, Allocator* allocator)
+{
+    MASSERT(fptr);
+    MASSERT(allocator);
+
+    fread(&string->length, sizeof(string->length), 1, fptr);
+    // Allocate extra space for null terminator
+    string->chars = allocator_alloc(allocator, string->length + 1);
+    fread(string->chars, string->length, 1, fptr);
+    // Null-terminate the string
+    string->chars[string->length] = '\0';
+
+    return true;
+}
+
 u32 string_hash_u32(const String string)
 {
     return generate_hash_key_32bit((u8*)string.chars, string.length);
@@ -371,7 +391,6 @@ void string_test(void)
 
     String stack_string = STRING("I WAS BORN ON THE STACK, FREED BY IT");
     string_print(&stack_string);
-
 
 
     String* test1 = STRING_CREATE("testing something");
@@ -446,7 +465,6 @@ void string_test(void)
     string_tokenizer_print(super_token);
 
 
-
     const String* str_concat1 = STRING_CREATE("First ");
     const String* str_concat2 = STRING_CREATE("Second");
     String* str_concat_final = string_concat(str_concat1, str_concat2, allocator_inferface_create(string_allocator));
@@ -463,6 +481,3 @@ void string_test(void)
 
     TEST_REPORT("STRING");
 }
-
-
-

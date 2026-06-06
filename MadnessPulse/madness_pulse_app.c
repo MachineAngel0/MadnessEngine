@@ -40,6 +40,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     generate_runtime_enums(reflection_registry);
     generate_runtime_structs(reflection_registry);
     reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
+    reflection_registry_runtime_load_data_from_txt(reflection_registry);
 
 
     Heal_Component heal_comp_write = {
@@ -179,6 +180,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "1");
             madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "2");
             madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Damage_Component", "1");
+
+
+            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Component", "1");
+            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Info", "1");
+            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability", "1");
 
 
 

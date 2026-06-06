@@ -36,6 +36,9 @@ void array_zero(Array* array);
 void array_push(Array* array, const void* new_data);
 void array_pop(Array* array);
 
+bool array_serialize(Array* array, FILE* fptr);
+bool array_deserialize(Array* array, FILE* file);
+
 
 
 void array_print(Array* array, void (*print_func)(void*));

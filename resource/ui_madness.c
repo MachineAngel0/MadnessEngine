@@ -1606,7 +1606,7 @@ void madness_ui_text_box(Madness_UI* madness_ui, String id)
 
         if (madness_ui->released_key)
         {
-            string_builder_append_char(madness_ui->string_builder, &madness_ui->released_key, 1);
+            string_builder_append_c_string(madness_ui->string_builder, &madness_ui->released_key);
         }
     }
 
@@ -2110,7 +2110,7 @@ bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* ref
 {
     Reflection_Runtime_Data runtime_data = reflection_registry_get_or_create_runtime_data(
         reflection_registry, struct_name, identifier);
-    Reflection_Runtime_Struct struct_info = reflection_registry_get_runtime_data_struct(
+    Reflection_Runtime_Struct struct_info = reflection_registry_get_struct_from_runtime_data(
         reflection_registry, runtime_data);
 
 
@@ -2180,7 +2180,7 @@ bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* ref
                                       runtime_enum.enum_names, runtime_enum.count);
             break;
         case REFLECTION_TYPE_STRUCT:
-            madness_ui_reflection_test(madness_ui, reflection_registry, field_info.name, identifier);
+            madness_ui_reflection_test(madness_ui, reflection_registry, field_info.type_name, identifier);
             break;
         case REFLECTION_TYPE_MAX:
             break;
