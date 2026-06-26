@@ -16,7 +16,6 @@ Ability_Registry* ability_registry_init(Madness_Pulse_Game* game)
 
 void ability_registry_shutdown()
 {
-
 }
 
 
@@ -31,7 +30,11 @@ Ability* ability_registry_get_new_ability(Ability_Registry* ability_registry, Ab
 {
     //TODO: have a sparse/packed array for quick traversal if i need it
     // return &ability_registry->ability_list[ability_registry->ability_count++];
-    return &ability_registry->ability_list[ability_name];
+
+    Ability* out_ability = &ability_registry->ability_list[ability_name];
+    out_ability->id = ability_name;
+    hash_set_insert(ability_registry->registered_abilities, &ability_name);
+    return out_ability;
 }
 
 Ability_Info* ability_registry_get_new_ability_info(Ability_Registry* ability_registry, Ability_Name ability_name)
@@ -57,9 +60,15 @@ Ability_Info ability_registry_get_ability_info(Ability_Registry* ability_registr
 }
 
 
+const char* ability_get_name(const Ability_Name name)
+{
+    return Ability_Name_enum_string[name];
+}
 
-
-
+String ability_get_name_string(const Ability_Name name)
+{
+    return STRING_STRLEN(Ability_Name_enum_string[name]);
+}
 
 
 #endif //ABILITIES_REGISTRY_H

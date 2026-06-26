@@ -78,7 +78,6 @@ write_map(name, type)
 #include <stdbool.h>
 
 #include "defines.h"
-#include "_allocator_interface.h"
 #include "compiler/reflection_system.h"
 
 //NOTE: ILL BE USING A YAML FILE SINCE IT HAS SYNTAX HIGHLIGHTING, AND IS KIDNA BASED ON THAT FORMAT ANYWAY
@@ -115,7 +114,6 @@ typedef struct Madness_txt
 {
     madness_txt_object objects[MADNESS_TXT_OBJECT_MAX];
     u32 object_count;
-    Allocator_Interface allocator_interface;
 
     //file parsed valuedata
 } Madness_txt;
@@ -131,7 +129,7 @@ typedef struct object_handle
 //API
 
 //TODO: use the allocator
-Madness_txt* madness_txt_init(Allocator_Interface* allocator_interface);
+Madness_txt* madness_txt_init(Memory_System* memory_system);
 
 //TODO:
 void madness_txt_shutdown(Madness_txt* txt);

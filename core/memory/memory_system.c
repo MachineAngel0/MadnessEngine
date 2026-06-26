@@ -11,14 +11,9 @@ void memory_system_init(Memory_System* memory_system, u64 memory_request_size)
 
 
     //TODO: if freeing memory actually becomes a concern then we can replace this with a freelist allocator
-    arena_free_list_init(&memory_system->application_arena_free_list, memory, memory_request_size);
+    allocator_heap_init(&memory_system->application_allocator, memory, memory_request_size);
 
-    memory_system->memory_tracker_system = arena_free_list_alloc(&memory_system->application_arena_free_list,
-                                                                 sizeof(Memory_Tracker_System));
-    memory_system->memory_tracker_system->memory_tracker = arena_free_list_alloc(
-        &memory_system->application_arena_free_list, sizeof(Memory_Tracker) * DEFAULT_MEMORY_TRACKERS_COUNT);
-    memory_system->memory_tracker_system->capacity = DEFAULT_MEMORY_TRACKERS_COUNT;
-    memory_system->memory_tracker_system->size = 0;
+
     INFO("MEMORY SYSTEM SUCCESSFULLY ALLOCATED")
 }
 
@@ -32,12 +27,12 @@ void memory_system_shutdown(Memory_System* memory_system)
 
     //nice thing to have to about memory allocations throught out the applications lifetime
     INFO("APP MEMORY INFO: Current amount allocated %llu, Total Amount Available: %llu, Amount Left: %llu",
-         memory_system->application_arena_free_list.used,
-         memory_system->application_arena_free_list.capacity,
-         (memory_system->application_arena_free_list.capacity - memory_system->application_arena_free_list.used))
+         memory_system->application_allocator.used,
+         memory_system->application_allocator.capacity,
+         (memory_system->application_allocator.capacity - memory_system->application_allocator.used))
 
-    arena_free_list_free_all(&memory_system->application_arena_free_list);
-    platform_free(memory_system->application_arena_free_list.data);
+    allocator_heap_free_all(&memory_system->application_allocator);
+    platform_free(memory_system->application_allocator.data);
 
     INFO("MEMORY SYSTEM SHUTDOWN");
 }
@@ -52,7 +47,7 @@ void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size,
     memory_system->memory_subsystem_usage[memory_subsystem_type] += memory_request_size;
 
     //hand out the memory
-    return arena_free_list_alloc(&memory_system->application_arena_free_list, memory_request_size);
+    return allocator_heap_alloc(&memory_system->application_allocator, memory_request_size);
 }
 
 void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type)
@@ -60,7 +55,16 @@ void memory_system_memory_free(Memory_System* memory_system, void* memory_block,
     MASSERT(memory_system);
     MASSERT(memory_block);
 
-    arena_free_list_free(&memory_system->application_arena_free_list, memory_block);
+    allocator_heap_free(&memory_system->application_allocator, memory_block);
+}
+
+Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type)
+{
+    Allocator* out_allocator = memory_system_alloc(memory_system, sizeof(Allocator), memory_subsystem_type);
+    void* allocator_memory = memory_system_alloc(memory_system, memory_request_size, memory_subsystem_type);
+    allocator_init(out_allocator, allocator_memory, memory_request_size);
+
+    return out_allocator;
 }
 
 void memory_system_print_subsystem_memory_usage(Memory_System* memory_system)
@@ -123,7 +127,6 @@ void memory_system_print_subsystem_memory_usage(Memory_System* memory_system)
 
 void memory_system_print_all_memory_usage(Memory_System* memory_system)
 {
-    memory_tracker_system_print_all_memory_usage(memory_system->memory_tracker_system);
 }
 
 void memory_system_zero_memory(void* memory, u64 size)

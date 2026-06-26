@@ -16,6 +16,12 @@ ring_queue* ring_queue_create(u32 data_size, u32 capacity)
     return queue;
 }
 
+void ring_queue_destroy(ring_queue* queue)
+{
+    free(queue->data);
+    free(queue);
+}
+
 void ring_queue_free(ring_queue* queue)
 {
     MASSERT(queue);

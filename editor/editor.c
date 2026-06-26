@@ -3,7 +3,7 @@
 #include "memory/memory_system.h"
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI* madness_ui,
-                    Resource_System* resource_system, Clock* clock)
+                    Resource_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry)
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
@@ -24,6 +24,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer, Madness_UI
     editor->madness_ui = madness_ui;
     editor->resource_system = resource_system;
     editor->clock = clock;
+    editor->reflection_registry = reflection_registry;
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
@@ -85,6 +86,31 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_ENGINE_STATS:
         editor_ui_stats(editor);
         break;
+    case EDITOR_UI_STATE_REFLECTION_ABILITY:
+        madness_ui_window_begin(editor->madness_ui, STRING("RUNTIME TESTING"));
+        {
+        // static u32 i = 0;
+        // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
+        // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
+
+        if (madness_ui_button(editor->madness_ui, STRING("Serialize Runtime Data")))
+        {
+            reflection_registry_runtime_serialize_all_data_to_txt_format(editor->reflection_registry);
+        }
+
+        madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Heal_Component", "1");
+        madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Heal_Component", "2");
+        madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Damage_Component", "1");
+
+        // madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Game_Level_Data", "1");
+
+
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Component", "1");
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Info", "1");
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability", "1");
+        }
+        madness_ui_window_end(editor->madness_ui);
+        break;
     }
 }
 
@@ -143,7 +169,7 @@ void editor_ui_debug(Editor* editor)
         madness_ui_circle(madness_ui, STRING("circle"), &thick);
 
         static f32 rot;
-        madness_ui->ui_nodes[0].data->rotation = rot;
+        array_get(madness_ui->ui_nodes, UI_Node, 0).rotation = rot;
         if (madness_ui_float(madness_ui, STRING("material flags disable"), &rot, 15.f))
         {
         }

@@ -19,7 +19,7 @@ char* c_string_duplicate(const char* str)
 
 
 //the arena is optional
-const char* c_string_concat(const char* str1, const char* str2, Allocator* arena)
+const char* c_string_concat(const char* str1, const char* str2, Allocator* allocator)
 {
     u64 str1_length = c_string_length(str1);
     u64 str2_length = c_string_length(str2);
@@ -29,9 +29,9 @@ const char* c_string_concat(const char* str1, const char* str2, Allocator* arena
     //+1 for the null char
     u32 allocation_size = str1_length + str2_length + 1;
 
-    if (arena)
+    if (allocator)
     {
-        out_str = allocator_alloc(arena, allocation_size);
+        out_str = allocator_alloc(allocator, allocation_size);
     }
     else
     {
@@ -43,6 +43,34 @@ const char* c_string_concat(const char* str1, const char* str2, Allocator* arena
     out_str[str1_length + str2_length] = '\0';
 
     return out_str;
+}
+
+const char* c_string_concat_fl(const char* str1, const char* str2, Heap_Allocator* allocator)
+{
+    u64 str1_length = c_string_length(str1);
+    u64 str2_length = c_string_length(str2);
+
+
+    char* out_str;
+    //+1 for the null char
+    u32 allocation_size = str1_length + str2_length + 1;
+
+    if (allocator)
+    {
+        out_str = allocator_heap_alloc(allocator, allocation_size);
+    }
+    else
+    {
+        out_str = malloc(allocation_size);
+    }
+
+    memcpy(out_str, str1, str1_length);
+    memcpy(out_str + str1_length, str2, str2_length);
+    out_str[str1_length + str2_length] = '\0';
+
+    return out_str;
+
+
 }
 
 

@@ -112,9 +112,6 @@ typedef struct UI_Node
 
 
 
-ARRAY_GENERATE_TYPE(UI_Node)
-
-
 typedef struct scroll_box_state
 {
     u32 max_nodes_to_display; // user sets info
@@ -183,9 +180,9 @@ typedef struct Menu_Bar_State
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
 {
-    Allocator* allocator; // rn mainly just for loading fonts, would be better as a pool arena
+    Heap_Allocator* free_list_allocator;
+    Allocator* allocator; //permanent storage location, rn mainly just for loading fonts, would be better as a pool arena
     Frame_Allocator* frame_arena;
-    Memory_Tracker* mem_tracker;
 
     Input_System* input_system_reference; // does not own memory
     Resource_System* resource_system;
@@ -195,9 +192,9 @@ typedef struct Madness_UI
     float default_font_size;
     float editor_font_size;
 
-    UI_Node_array* ui_nodes;
+    ARRAY_TYPE(UI_Node)* ui_nodes;
 
-    UI_Node_array* pop_up_ui_nodes; // pop up nodes
+    ARRAY_TYPE(UI_Node)* pop_up_ui_nodes; // pop up nodes
 
 
     //DRAW DATA //
@@ -342,11 +339,10 @@ MAPI void madness_scroll_box_end(Madness_UI* madness_ui);
 //TEXT//
 MAPI void madness_ui_text_box(Madness_UI* madness_ui, String id);
 
-MAPI UI_Node* madness_ui_text(Madness_UI* madness_ui, String text); // TODO: should replace ui_text at some point
-MAPI UI_Node* madness_ui_text_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size,
+MAPI UI_Node* madness_ui_string(Madness_UI* madness_ui, String text);
+MAPI UI_Node* madness_ui_string_internal(Madness_UI* madness_ui, String text, vec2 parent_pos, vec2 parent_size,
                                        UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
-
-
+MAPI UI_Node* madness_ui_c_string(Madness_UI* madness_ui, const char* text);
 
 MAPI bool madness_ui_button(Madness_UI* madness_ui, String label);
 MAPI bool madness_ui_check_box(Madness_UI* madness_ui, String label, bool* check_box_state);
@@ -358,6 +354,7 @@ MAPI void madness_slider_scroll(Madness_UI* madness_ui, String id, float* slider
 //TODO: might get rid of the arrow version
 MAPI void madness_slider_arrow(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
 
+MAPI bool madness_ui_u8(Madness_UI* madness_ui, String text, u8* i, u32 increment_value);
 
 MAPI bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float increment_value);
 MAPI bool madness_ui_float2(Madness_UI* madness_ui, String text, float* x, float* y, float increment_value);
@@ -385,7 +382,7 @@ MAPI bool madness_ui_combo_box_char(Madness_UI* madness_ui, String id, u32* sele
 // > wednesday
 MAPI bool madness_ui_grid_start(Madness_UI* madness_ui, String id, String text, int x_size, int y_size);
 MAPI bool madness_ui_grid_end(Madness_UI* madness_ui, String id, String text);
-MAPI void madness_ui_padding(Madness_UI* madness_ui, String text);
+MAPI void madness_ui_padding(Madness_UI* madness_ui, const char* identifier);
 
 
 MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* color_value);

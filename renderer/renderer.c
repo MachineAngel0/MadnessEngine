@@ -57,9 +57,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     u64 renderer_system_mem_requirement = GB(0.5);
     u64 frame_arena_mem_size = GB(0.5);
 
-    renderer->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
-                                                             STRING("RENDERER"),
-                                                             (renderer_system_mem_requirement + frame_arena_mem_size));
 
 
     void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);

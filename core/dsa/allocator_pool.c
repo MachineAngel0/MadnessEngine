@@ -4,10 +4,9 @@
 
 
 
-Pool_Allocator* pool_allocator_init(void* backing_buffer, size_t backing_buffer_length,
+void pool_allocator_init(Pool_Allocator* allocator, void* backing_buffer, size_t backing_buffer_length,
                                     size_t chunk_size, size_t chunk_alignment)
 {
-    Pool_Allocator* a = malloc(sizeof(Pool_Allocator));
     // Align backing buffer to the specified chunk alignment
     uintptr_t initial_start = (uintptr_t)backing_buffer;
     uintptr_t start = align_forward_uintptr(initial_start, (uintptr_t)chunk_alignment);
@@ -16,15 +15,14 @@ Pool_Allocator* pool_allocator_init(void* backing_buffer, size_t backing_buffer_
     // Align chunk size up to the required chunk_alignment
     chunk_size = align_forward_size(chunk_size, chunk_alignment);
 
-    a->memory = (u8*)backing_buffer;
-    a->chunk_size = chunk_size;
-    a->capacity = backing_buffer_length;
-    a->head = NULL;
+    allocator->memory = (u8*)backing_buffer;
+    allocator->chunk_size = chunk_size;
+    allocator->capacity = backing_buffer_length;
+    allocator->head = NULL;
 
     // Set up the free list for free chunks
-    pool_allocator_free_all(a);
+    pool_allocator_free_all(allocator);
 
-    return a;
 }
 
 void* pool_allocator_alloc(Pool_Allocator* p)
@@ -45,18 +43,6 @@ void* pool_allocator_alloc(Pool_Allocator* p)
     return memset(node, 0, p->chunk_size);
 }
 
-void* pool_allocator_interface_alloc(void* allocator, u64 memory_byte_request, u8 alignment)
-{
-    Pool_Allocator* pool_allocator = (Pool_Allocator*)allocator;
-    return pool_allocator_alloc(allocator);
-
-}
-
-void pool_allocator_interface_free(void* allocator, void* memory_block)
-{
-    Pool_Allocator* pool_allocator = (Pool_Allocator*)allocator;
-    pool_allocator_free(pool_allocator, memory_block);
-}
 
 
 void pool_allocator_free(Pool_Allocator* a, void* ptr)
@@ -87,10 +73,9 @@ void pool_allocator_free(Pool_Allocator* a, void* ptr)
 void pool_allocator_free_all(Pool_Allocator* a)
 {
     size_t chunk_count = a->capacity / a->chunk_size;
-    size_t i;
 
     // Set all chunks to be free
-    for (i = 0; i < chunk_count; i++)
+    for (size_t i = 0; i < chunk_count; i++)
     {
         void* ptr = &a->memory[i * a->chunk_size];
         Pool_Free_Node* node = (Pool_Free_Node*)ptr;

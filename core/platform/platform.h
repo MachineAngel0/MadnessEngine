@@ -26,8 +26,12 @@ void platform_config_use_defaults(Platform_Config* config)
 {
     config->start_pos_x = 100;
     config->start_pos_y = 100;
-    config->start_width = 1280;
-    config->start_height = 720;
+    // config->start_width = 1280;
+    // config->start_height = 720;
+
+    config->start_width = 1920;
+    config->start_height = 1080;
+
     config->name = "Madness Engine";
 }
 

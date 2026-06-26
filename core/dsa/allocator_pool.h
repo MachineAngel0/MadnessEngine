@@ -21,8 +21,8 @@ typedef struct Pool_Allocator
 } Pool_Allocator;
 
 
-Pool_Allocator* pool_allocator_init(void* backing_buffer, size_t backing_buffer_length,
-                            size_t chunk_size, size_t chunk_alignment);
+void pool_allocator_init(Pool_Allocator* allocator, void* backing_buffer, size_t backing_buffer_length,
+                                    size_t chunk_size, size_t chunk_alignment);
 
 void pool_allocator_free_all(Pool_Allocator* a);
 
@@ -30,12 +30,13 @@ void pool_allocator_free(Pool_Allocator* a, void* ptr);
 
 void* pool_allocator_alloc(Pool_Allocator* p);
 
-//INTERFACE
-MAPI void* pool_allocator_interface_alloc(void* allocator,  u64 memory_byte_request, u8 alignment);
-MAPI void pool_allocator_interface_free(void* allocator, void* memory_block);
-
 
 uintptr_t align_forward_uintptr(uintptr_t ptr, uintptr_t align);
 size_t align_forward_size(size_t ptr, size_t align);
+
+
+//TODO:
+// void pool_allocator_test(void);
+
 
 #endif

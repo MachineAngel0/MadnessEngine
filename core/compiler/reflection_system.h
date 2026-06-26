@@ -138,8 +138,7 @@ typedef struct Reflection_System
     Allocator* allocator;
     Frame_Allocator* frame_allocator;
 
-    Allocator_Interface allocator_interface;
-    Allocator_Interface frame_allocator_interface;
+
 
 } Reflection_System;
 

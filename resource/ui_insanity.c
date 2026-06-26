@@ -13,9 +13,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     u64 ui_arena_mem_size = MB(16);
     u64 ui_frame_arena_mem_size = MB(16);
-    insanity_ui->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
-                                                                STRING("MADNESS UI"),
-                                                                ui_arena_mem_size + ui_frame_arena_mem_size);
+
 
     insanity_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
     insanity_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
@@ -32,8 +30,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
-    insanity_ui->ui_nodes = Insanity_UI_Node_array_create(
-        INSANITY_MAX_UI_NODE_COUNT, allocator_inferface_create(insanity_ui->allocator)); // TODO: use an allocator
+    insanity_ui->ui_nodes = array_create(Insanity_UI, INSANITY_MAX_UI_NODE_COUNT, insanity_ui->allocator);
 
     //stacks
     insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
@@ -111,8 +108,8 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     insanity_ui->screen_size.y = screen_size_y;
 
 
-    Insanity_UI_Node_array_zero(insanity_ui->ui_nodes);
-    Insanity_UI_Node_array_clear(insanity_ui->ui_nodes);
+    array_zero(insanity_ui->ui_nodes);
+    array_clear(insanity_ui->ui_nodes);
 
     UI_Property_Flags no_flag = UI_FLAG_NONE;
     stack_clear(insanity_ui->flag_stack);
@@ -197,7 +194,7 @@ void insanity_ui_passes()
     //debug check
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
         if (node->size.x > 1.0f)
         {
             M_ERROR("OVER 1 X SIZE ON NODE: %s", node->id)
@@ -216,7 +213,7 @@ void insanity_ui_passes()
         //size child to a percentage of the parent
         //the order ensures all parents are sized first before the children are sized
 
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
         float overflow_x = 0;
         float overflow_y = 0;
 
@@ -254,7 +251,7 @@ void insanity_ui_passes()
     //position pass
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
         float pos_x = node->pos.x;
         float pos_y = node->pos.y;
 
@@ -280,7 +277,7 @@ void insanity_ui_passes()
     // feature pass before scaling images up
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
         if (node->ui_flags & UI_FLAG_IMAGE)
         {
             //properly ratio the texture
@@ -304,7 +301,7 @@ void insanity_ui_passes()
     // instead of directly modifying the screen position value ie: 1280x720
     for (int i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
 
         node->pos = vec2_mul(node->pos, insanity_ui->screen_size);
         node->size = vec2_mul(node->size, insanity_ui->screen_size);
@@ -314,7 +311,8 @@ void insanity_ui_passes()
     //feature pass
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node = &insanity_ui->ui_nodes->data[i];
+
+        Insanity_UI_Node* node = _array_get(insanity_ui->ui_nodes, i);
 
         bool hover_hit = (insanity_rect_hit(node->pos, node->size));
 
@@ -408,7 +406,8 @@ void insanity_ui_generate_draw(void)
 
     for (u32 i = 0; i < insanity_ui->ui_nodes->num_items; i++)
     {
-        Insanity_UI_Node* node_data = &insanity_ui->ui_nodes->data[i];
+        Insanity_UI_Node* node_data = _array_get(insanity_ui->ui_nodes, i);
+
         UI_Node_Draw_Data* draw_data = &insanity_ui->node_draw_data_array[i];
 
         draw_data->ui_flags = node_data->ui_flags;
@@ -508,7 +507,7 @@ void insanity_ui_push_text_float(float val)
 {
     stack_push(insanity_ui->float_stack, &val);
     char* float_char = insanity_ui_float_to_char(val);
-    String float_string = {float_char, strlen(float_char)};
+    String float_string = STRING_STRLEN(float_char);
     insanity_ui_push_text(float_string);
 }
 
@@ -525,7 +524,7 @@ Texture_Handle insanity_ui_get_image(void)
 
 Insanity_UI_Node* insanity_ui_get_new_node()
 {
-    Insanity_UI_Node* out_node = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items];
+    Insanity_UI_Node* out_node = _array_get(insanity_ui->ui_nodes->data, insanity_ui->ui_nodes->num_items);
 
     if (insanity_ui->ui_stack_count > 0)
     {
@@ -549,19 +548,21 @@ Insanity_UI_Node* insanity_ui_get_parent_node()
 {
     //get the parent
     //we point to an empty node, so we go back one, and then grab that nodes parent
-    Insanity_UI_Node* parent_node = insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1].parent;
+    Insanity_UI_Node* out_node = &array_get(insanity_ui->ui_nodes->data, Insanity_UI_Node, insanity_ui->ui_nodes->num_items-1);
+    Insanity_UI_Node* parent_node = out_node->parent;
+
     if (parent_node)
     {
         return parent_node;
     }
 
     //fallback
-    return &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
+    return (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items - 1);
 }
 
 Insanity_UI_Node* insanity_ui_get_top_node()
 {
-    return &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
+    return (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items - 1);
 }
 
 bool insanity_rect_hit(vec2 pos, vec2 size)
@@ -760,7 +761,7 @@ void insanity_ui_push_parent(const char* id)
     insanity_ui_draw_rect(id);
 
     //get the node we just drew
-    Insanity_UI_Node* new_parent = &insanity_ui->ui_nodes->data[insanity_ui->ui_nodes->num_items - 1];
+    Insanity_UI_Node* new_parent = (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items - 1);
 
     insanity_ui->ui_stack[insanity_ui->ui_stack_count] = new_parent;
     insanity_ui->ui_stack_count++;

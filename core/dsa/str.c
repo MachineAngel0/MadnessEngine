@@ -1,5 +1,7 @@
 ﻿#include "str.h"
 
+#include "allocator_malloc.h"
+
 
 //immutable string, not meant to be modified,
 //all functions that need to make modifications will return you a new string, leaving the original untouched
@@ -20,36 +22,6 @@ String* string_create(const char* word, const u64 length)
     memcpy(str->chars, word, sizeof(char) * str->length);
 
     return str;
-}
-
-String* string_create_allocator(const char* word, const u64 length, Allocator* allocator)
-{
-    //creates a string without the null terminator
-    String* str = allocator_alloc(allocator, sizeof(String));
-    //memset(str, 0, sizeof(MString));
-    str->length = length;
-    //important to note that we use -1 to not include the null terminated string
-    str->chars = allocator_alloc(allocator, sizeof(char) * str->length);
-    memset(str->chars, 0, sizeof(char) * str->length);
-    memcpy(str->chars, word, sizeof(char) * str->length);
-
-    return str;
-}
-
-
-String* string_create_internal(const String* s)
-{
-    String* out_str = malloc(sizeof(String));
-    //memset(str, 0, sizeof(MString));
-
-    //important to note that we use -1 to not include the null terminated string
-    out_str->chars = (char*)malloc(sizeof(char) * s->length);
-    memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
-
-    out_str->length = s->length;
-
-
-    return out_str;
 }
 
 bool string_free(String* string)
@@ -73,6 +45,58 @@ bool string_free(String* string)
 
     return true;
 }
+
+String* string_create_allocator(const char* word, const u64 length, Allocator* allocator)
+{
+    //creates a string without the null terminator
+    String* str = allocator_alloc(allocator, sizeof(String));
+    //memset(str, 0, sizeof(MString));
+    str->length = length;
+    //important to note that we use -1 to not include the null terminated string
+    str->chars = allocator_alloc(allocator, sizeof(char) * str->length);
+    memset(str->chars, 0, sizeof(char) * str->length);
+    memcpy(str->chars, word, sizeof(char) * str->length);
+
+    return str;
+}
+
+String* string_create_allocator_freelist(const char* word, const u64 length, Heap_Allocator* allocator)
+{
+    //creates a string without the null terminator
+    String* str = allocator_heap_alloc(allocator, sizeof(String));
+    //memset(str, 0, sizeof(MString));
+    str->length = length;
+    //important to note that we use -1 to not include the null terminated string
+    str->chars = allocator_heap_alloc(allocator, sizeof(char) * str->length);
+    memset(str->chars, 0, sizeof(char) * str->length);
+    memcpy(str->chars, word, sizeof(char) * str->length);
+
+    return str;
+}
+
+bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator)
+{
+    MASSERT(string);
+    if (!string)
+    {
+        WARN("INVALID STRING CANT FREE");
+        return false;
+    }
+    if (!string->chars)
+    {
+        WARN("INVALID CHAR* INSIDE STRING CANT FREE");
+        return false;
+    }
+
+    allocator_heap_free(allocator, string->chars);
+    allocator_heap_free(allocator, string);
+
+    return true;
+}
+
+
+
+
 
 
 //UTILITY
@@ -113,16 +137,21 @@ bool str_is_empty(const String* str)
 String* string_duplicate(const String* str)
 {
     //plus one cause we don't have a null string terminator
-    return string_create_internal(str);
+    const String* s = str;
+    String* out_str = malloc(sizeof(String));
+    //important to note that we use -1 to not include the null terminated string
+    out_str->chars = (char*)malloc(sizeof(char) * s->length);
+    memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
+    out_str->length = s->length;
+    return out_str;
 }
 
-//creates a new string from the two strings
-String* string_concat(const String* str1, const String* str2, const Allocator_Interface allocator_interface)
+String* string_concat_malloc(const String* str1, const String* str2)
 {
-    String* out_str = allocator_interface.alloc(allocator_interface.allocator, sizeof(String), DEFAULT_ALIGNMENT);
+
+    String* out_str = allocator_malloc(sizeof(String));
     const u64 combined_length = str1->length + str2->length;
-    out_str->chars = (char*)allocator_interface.alloc(allocator_interface.allocator, sizeof(char) * combined_length,
-                                                      DEFAULT_ALIGNMENT);
+    out_str->chars = (char*)allocator_malloc(sizeof(char) * combined_length);
     out_str->length = combined_length;
 
     memcpy(out_str->chars, str1->chars, sizeof(char) * str1->length);
@@ -130,6 +159,34 @@ String* string_concat(const String* str1, const String* str2, const Allocator_In
 
     return out_str;
 }
+
+String* string_concat(const String* str1, const String* str2, Allocator* allocator)
+{
+    String* out_str = allocator_alloc(allocator, sizeof(String));
+    const u64 combined_length = str1->length + str2->length;
+    out_str->chars = (char*)allocator_alloc(allocator, sizeof(char) * combined_length);
+    out_str->length = combined_length;
+
+    memcpy(out_str->chars, str1->chars, sizeof(char) * str1->length);
+    memcpy(out_str->chars + str1->length, str2->chars, sizeof(char) * str2->length);
+
+    return out_str;
+}
+
+String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator* allocator)
+{
+
+    String* out_str = allocator_heap_alloc(allocator, sizeof(String));
+    const u64 combined_length = str1->length + str2->length;
+    out_str->chars = allocator_heap_alloc(allocator, sizeof(char) * combined_length);
+    out_str->length = combined_length;
+
+    memcpy(out_str->chars, str1->chars, sizeof(char) * str1->length);
+    memcpy(out_str->chars + str1->length, str2->chars, sizeof(char) * str2->length);
+
+    return out_str;
+}
+
 
 
 String* string_strip_whitespace(const String* str)
@@ -352,7 +409,7 @@ bool string_serialize(String* string, FILE* fptr)
     return true;
 }
 
-bool string_deserialize(String* string, FILE* fptr, Allocator* allocator)
+bool string_deserialize(String* string, FILE* fptr, Frame_Allocator* allocator)
 {
     MASSERT(fptr);
     MASSERT(allocator);
@@ -360,6 +417,39 @@ bool string_deserialize(String* string, FILE* fptr, Allocator* allocator)
     fread(&string->length, sizeof(string->length), 1, fptr);
     // Allocate extra space for null terminator
     string->chars = allocator_alloc(allocator, string->length + 1);
+    fread(string->chars, string->length, 1, fptr);
+    // Null-terminate the string
+    string->chars[string->length] = '\0';
+
+    return true;
+}
+
+bool string_serialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator)
+{
+    MASSERT(fptr);
+    MASSERT(allocator);
+
+    fread(&string->length, sizeof(string->length), 1, fptr);
+    // Allocate extra space for null terminator
+    string->chars = allocator_heap_alloc(allocator, string->length + 1);
+    fread(string->chars, string->length, 1, fptr);
+    // Null-terminate the string
+    string->chars[string->length] = '\0';
+
+    allocator_heap_free(allocator, string->chars);
+
+
+    return true;
+}
+
+bool string_deserialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator)
+{
+    MASSERT(fptr);
+    MASSERT(allocator);
+
+    fread(&string->length, sizeof(string->length), 1, fptr);
+    // Allocate extra space for null terminator
+    string->chars = allocator_heap_alloc(allocator, string->length + 1);
     fread(string->chars, string->length, 1, fptr);
     // Null-terminate the string
     string->chars[string->length] = '\0';
@@ -467,7 +557,7 @@ void string_test(void)
 
     const String* str_concat1 = STRING_CREATE("First ");
     const String* str_concat2 = STRING_CREATE("Second");
-    String* str_concat_final = string_concat(str_concat1, str_concat2, allocator_inferface_create(string_allocator));
+    String* str_concat_final = string_concat(str_concat1, str_concat2, string_allocator);
     string_print(str_concat_final);
 
 

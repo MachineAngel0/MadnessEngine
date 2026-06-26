@@ -50,9 +50,6 @@ void* stack_allocator_alloc_align(Stack_Allocator* a, const size_t mem_request, 
 
 void arena_stack_debug_print(Stack_Allocator* a);
 
-//INTERFACE
-MAPI void* stack_allocator_interface_alloc(void* allocator,  u64 memory_byte_request, u8 alignment);
-MAPI void stack_allocator_interface_free(void* allocator, void* memory_block);
 
 
 

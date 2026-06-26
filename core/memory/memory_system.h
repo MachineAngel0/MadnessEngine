@@ -1,8 +1,7 @@
 ﻿#ifndef MEMORY_SYSTEM_H
 #define MEMORY_SYSTEM_H
 
-#include "allocator_freelist.h"
-#include "memory_tracker.h"
+#include "allocator_heap.h"
 
 typedef enum memory_subsystem_type
 {
@@ -19,6 +18,7 @@ typedef enum memory_subsystem_type
     MEMORY_SUBSYSTEM_UI,
     MEMORY_SUBSYSTEM_EDITOR,
     MEMORY_SUBSYSTEM_REFLECTION,
+    MEMORY_SUBSYSTEM_THREAD,
 
 
     MEMORY_SUBSYSTEM_MAX,
@@ -39,6 +39,7 @@ static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
     [MEMORY_SUBSYSTEM_UI] = "MEMORY_SUBSYSTEM_UI",
     [MEMORY_SUBSYSTEM_EDITOR] = "MEMORY_SUBSYSTEM_EDITOR",
     [MEMORY_SUBSYSTEM_REFLECTION] = "MEMORY_SUBSYSTEM_REFLECTION",
+    [MEMORY_SUBSYSTEM_THREAD] = "MEMORY_SUBSYSTEM_THREAD",
 };
 
 
@@ -53,15 +54,24 @@ typedef struct
 } Memory_System_Config;
 
 
+
 typedef struct Memory_System
 {
     // Memory_System_Config mem_config; // a copy of the data
-    Arena_Free_List application_arena_free_list;
+    Heap_Allocator application_allocator;
 
     u64 memory_subsystem_usage[MEMORY_SUBSYSTEM_MAX];
 
-    //TODO: likely have to create a free list, with this as a backup just to clear memory on resets
-    Memory_Tracker_System* memory_tracker_system;
+    //TODO: it should be that everytime an allocator wants to get created it goes through here, and gets a tagged names
+    // then the memory system can do a query on each allocator
+    Allocator* allocator_list;
+    u32 allocator_count;
+    Heap_Allocator* fl_allocator_list;
+    u32 freelist_allocator_count;
+    Pool_Allocator* pool_allocator_list;
+    u32 pool_allocator_count;
+
+
 } Memory_System;
 
 
@@ -74,7 +84,11 @@ MAPI void memory_system_shutdown(Memory_System* memory_system);
 MAPI void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
 MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type);
 
-//hand out memory trackers
+
+MAPI Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
+
+
+//TODO: not in use rn
 MAPI void memory_system_print_subsystem_memory_usage(Memory_System* memory_system);
 MAPI void memory_system_print_all_memory_usage(Memory_System* memory_system);
 

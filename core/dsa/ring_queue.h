@@ -27,6 +27,7 @@ typedef struct ring_queue
 
 
 ring_queue* ring_queue_create(u32 data_size, u32 capacity);
+void ring_queue_destroy(ring_queue* queue);
 
 void ring_queue_free(ring_queue* queue);
 

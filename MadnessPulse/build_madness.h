@@ -5,6 +5,11 @@
 #include "game_constants.h"
 #include "game_enums.h"
 #include "game_structs.h"
+#include "game_luts.h"
+
+#include "game_reflection_enums_generated.h"
+#include "game_reflection_struct_generated.h"
+
 
 //UNIT Related Stuff
 #include "actions.h"
@@ -22,23 +27,30 @@
 #include "unit_base.h"
 
 //ability stuff
-#include "heal.h"
-#include "damage.h"
 #include "ability_registry.h"
 #include "ability.h"
 #include "ability_creation.h"
+
+#include "heal.h"
+#include "damage.h"
+#include "conjure_summoner.h"
+
 
 
 //turn based game mode stuff
 #include "ability_handler.h"
 #include "command/command.h"
 #include "targeting_handler.h"
+#include "overflow_handler.h"
 
 
 #include "madness_pulse_game.h"
 #include "turn_based_game.h"
 
 
+//save stuff
+#include "game_levels.h"
+#include "save_game.h"
 
 
 

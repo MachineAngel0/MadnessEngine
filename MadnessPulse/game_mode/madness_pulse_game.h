@@ -13,6 +13,7 @@ bool madness_pulse_game_shutdown(Madness_Pulse_Game* game, Memory_System* memory
 bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time);
 
 void madness_pulse_main_menu(Madness_Pulse_Game* game);
+void madness_pulse_load_save(Madness_Pulse_Game* game);
 void madness_pulse_level_select(Madness_Pulse_Game* game);
 void madness_pulse_ability_select(Madness_Pulse_Game* game);
 

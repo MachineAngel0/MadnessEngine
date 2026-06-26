@@ -123,7 +123,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
 
-            Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(tetris->resource_system->sprite_system);
+            Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
             sprite_create_minimal(&tetris->frame_arena);
             sprite_data->pos = (vec2){x, y};
             sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
@@ -143,7 +143,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
         };
         vec2 size = {CELL_SIZE,CELL_SIZE};
 
-        Sprite_Data* sprite_data = sprite_system_get_new_sprite_transient(tetris->resource_system->sprite_system);
+        Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
         sprite_data->pos = pos;
         sprite_data->size = size;
         sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];
@@ -231,11 +231,15 @@ void tetris_update_ui(Tetris_Game_State* tetris)
     switch (tetris->tetris_state)
     {
     case Tetris_State_Start:
-        madness_ui_begin_layout(tetris->madness_ui, "", (vec2){50,50}, (vec2){25,25});
-        if (madness_button_text(tetris->madness_ui, "Start Button", STRING("Start Game")))
+        madness_ui_set_window_pos(tetris->madness_ui, 50,50);
+        madness_ui_set_window_size(tetris->madness_ui, 25,25);
+        madness_ui_window_begin(tetris->madness_ui, STRING("Tetris"));
+        if (madness_ui_button(tetris->madness_ui, STRING("Start Game")))
         {
             tetris->tetris_state = Tetris_State_Play;
         }
+        madness_ui_window_end(tetris->madness_ui);
+
         break;
     case Tetris_State_Play:
         break;

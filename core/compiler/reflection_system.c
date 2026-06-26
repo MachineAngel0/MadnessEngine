@@ -23,8 +23,7 @@ Reflection_System* reflection_system_init(Memory_System* memory_system)
     void* frame_alloc_memory = memory_system_alloc(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
     allocator_init(reflection_system->frame_allocator, frame_alloc_memory, mem_size);
 
-    reflection_system->allocator_interface = allocator_inferface_create(reflection_system->allocator);
-    reflection_system->frame_allocator_interface = frame_allocator_interface_create(reflection_system->allocator);
+
 
 
     return reflection_system;
@@ -563,7 +562,7 @@ void reflection_game_data(Reflection_System* reflection_system)
 
 
     //generate the enums first and then the struct data we would want
-    FILE* enum_to_string_lut_file = fopen("../MadnessPulse/game_reflection_enums_generated.c", "w");
+    FILE* enum_to_string_lut_file = fopen("../MadnessPulse/game_reflection_enums_generated.h", "w");
     const char* header =
         "#include <stddef.h>\n"
         "#include \"game_constants.h\"\n"
@@ -637,7 +636,7 @@ void reflection_game_data(Reflection_System* reflection_system)
     fclose(enum_to_string_lut_file);
 
 
-    FILE* reflection_offset_file = fopen("../MadnessPulse/game_reflection_struct_generated.c", "w");
+    FILE* reflection_offset_file = fopen("../MadnessPulse/game_reflection_struct_generated.h", "w");
     fwrite(header, strlen(header), 1, reflection_offset_file);
 
     fprintf(reflection_offset_file, "void generate_runtime_structs(Reflection_Registry* reflection_registry)\n{\n");

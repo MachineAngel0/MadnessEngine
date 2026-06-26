@@ -73,7 +73,7 @@ void command_handler_debug_print(Command_Handler* command_handler)
 
 }
 
-void action_handler_add_action(Command_Handler* command_handler, Command* command)
+void command_handler_add_action(Command_Handler* command_handler, Command* command)
 {
     MASSERT(command_handler)
     MASSERT(command)
@@ -82,7 +82,7 @@ void action_handler_add_action(Command_Handler* command_handler, Command* comman
     // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
 }
 
-void action_handler_add_multiple_actions(Command_Handler* command_handler, Array* command_array)
+void command_handler_add_multiple_actions(Command_Handler* command_handler, Array* command_array)
 {
     MASSERT(command_handler)
     MASSERT(command_array)

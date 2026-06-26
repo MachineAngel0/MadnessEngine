@@ -36,7 +36,7 @@ void* allocator_alloc_align(Allocator* a, const u64 mem_request, const u64 align
     //see if we have space left
     if (offset + mem_request > a->capacity)
     {
-        FATAL("ALLOCATOR OUT OF MEMORY");
+        MASSERT("ALLOCATOR OUT OF MEMORY");
         return NULL;
     }
 

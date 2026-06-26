@@ -13,30 +13,30 @@
 void heal_debug_create(Ability* ability, Ability_Info* ability_info)
 {
     *ability_info = (Ability_Info){
-        .ability_name = STRING("Heal Debug"), .ability_text = STRING("does a heal"),
+        .ability_name = Ability_Name_DEBUG_HEAL, .ability_text = STRING("does a heal"),
         .lore_text = "NA",
         .overflow_trigger_text = STRING("NA"),
         .ability_target_type = Ability_Target_Type_Enemies,
         .ability_target_area = Target_Area_Affect_Single_Target,
-        .ability_action_cost = 1,
+        .ability_action_cost = Ability_Action_Cost_Type_1,
         .mp_cost = 1,
     };
 
 
-    Ability_Component a1 = {
-        .activation_type = Ability_Activation_Type_Normal,
-        .target_can_affect = Target_Area_Affect_Single_Target,
-        .ability_target = Ability_Target_Type_Enemies,
-        .data.heal = heal_component_create(Heal_Types_Heal_Amount, 10, false)
-    };
+    Ability_Component ac1 = {0};
 
-    ability_add_component(ability, &a1);
+    ability_component_set_properties(&ac1, Ability_Activation_Type_Normal, Target_Area_Affect_Single_Target,
+                                     Ability_Target_Type_Enemies);
+    heal_component_create(&ac1, Heal_Types_Heal_Amount, 10, false);
+
+
+    ability_add_component(ability, &ac1);
 }
 
 void damage_debug_create(Ability* ability, Ability_Info* ability_info)
 {
     *ability_info = (Ability_Info){
-        .ability_name = STRING("Damage Debug"), .ability_text = STRING("does a Damage"),
+        .ability_name = Ability_Name_DEBUG_DAMAGE, .ability_text = STRING("does a Damage"),
         .lore_text = "NA",
         .overflow_trigger_text = STRING("NA"),
         .ability_target_type = Ability_Target_Type_Enemies,
@@ -45,20 +45,50 @@ void damage_debug_create(Ability* ability, Ability_Info* ability_info)
         .mp_cost = 1,
     };
 
-    Ability_Component a2 = (Ability_Component){
-        .activation_type = Ability_Activation_Type_Normal,
-        .target_can_affect = Target_Area_Affect_Single_Target,
-        .ability_target = Ability_Target_Type_Enemies,
-        .data.damage = damage_component_create(Element_Type_Fire, 15)
+
+    Ability_Component ac1 = {0};
+
+
+    ability_component_set_properties(&ac1, Ability_Activation_Type_Normal, Target_Area_Affect_Single_Target,
+                                     Ability_Target_Type_Enemies);
+    damage_component_create(&ac1, Element_Type_Fire, 15);
+
+    ability_add_component(ability, &ac1);
+}
+
+
+void debug_turn_ability_create(Ability* ability, Ability_Info* ability_info)
+{
+    *ability_info = (Ability_Info){
+        .ability_name = Ability_Name_DEBUG_TURN_EFFECT, .ability_text = STRING("does a thing in x turns"),
+        .lore_text = "NA",
+        .overflow_trigger_text = STRING("NA"),
+        .ability_target_type = Ability_Target_Type_Enemies,
+        .ability_target_area = Target_Area_Affect_Single_Target,
+        .ability_action_cost = 1,
+        .mp_cost = 1,
     };
 
-    ability_add_component(ability, &a2);
+
+    ability_add_turn_info_component(ability, Turn_Activation_Type_First_Start, 2, 0);
+
+
+    //fire ability for now
+    Ability_Component ac1 = {0};
+
+
+    ability_component_set_properties(&ac1, Ability_Activation_Type_Turn, Target_Area_Affect_Single_Target,
+                                     Ability_Target_Type_Enemies);
+    damage_component_create(&ac1, Element_Type_Fire, 15);
+
+    ability_add_component(ability, &ac1);
 }
+
 
 
 void ability_creation_table(Ability_Registry* registry, const Ability_Name ability_name)
 {
-    if (ability_registry_does_ability_exist(registry, Ability_Name_DEBUG_DAMAGE))
+    if (ability_registry_does_ability_exist(registry, ability_name))
     {
         return;
     }

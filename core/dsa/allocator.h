@@ -35,9 +35,7 @@ MAPI u64 allocator_get_memory_left(const Allocator* a);
 MAPI void allocator_debug_print(Allocator* a);
 
 
-//INTERFACE
-MAPI void* allocator_interface_alloc(void* allocator,  u64 memory_byte_request, u8 alignment);
-MAPI void allocator_interface_free(void* allocator, void* memory_block);
+
 
 
 

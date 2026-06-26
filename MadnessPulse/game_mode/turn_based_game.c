@@ -3,6 +3,8 @@
 #include "ability.h"
 #include "ability_handler.h"
 #include "logger.h"
+#include "ui_madness.h"
+#include "unit_base.h"
 #include "command/command.h"
 
 
@@ -65,62 +67,75 @@ void turn_based_game_init(Madness_Pulse_Game* game)
     // OnTurnBasedGameModeStarted.Broadcast(this);
 
 
-    //NOTE: testing code
-
     game->targeting_handler = targeting_handler_init(game);
     game->ability_handler = ability_handler_init(game);
     game->command_handler = command_handler_init(game);
     game->ability_registry = ability_registry_init(game);
 
 
-    game->players[0] = *unit_create(game, Character_Name_Madness_Progenitor);
-    game->players[1] =  *unit_create(game, Character_Name_Madness_ButterFly);
-    game->players[2] =  *unit_create(game, Character_Name_Madness_Wolf);
-    game->players[3] =  *unit_create(game, Character_Name_Madness_Envoy);
-    game->player_character_names[0] = game->players[0].name;
-    game->player_character_names[1] = game->players[1].name;
-    game->player_character_names[2] = game->players[2].name;
-    game->player_character_names[3] = game->players[3].name;
-    game->player_count = 4;
+    //NOTE: testing code
+    Game_Level_Data level_data = get_level_data(Level_Name_Sandbox);
+    // level_data.enemy_units;
+    // level_data.enemy_count;
+    // level_data.starting_turn_initiative;
 
-
-
-    game->enemies = allocator_alloc(&game->allocator, sizeof(Unit) * 2);
-    game->enemies[0] = *unit_create(game, Character_Name_Red_Jester);
-    game->enemies[1] = *unit_create(game, Character_Name_Clown);
-    game->enemies[2] = *unit_create(game, Character_Name_Puppet);
-    game->enemies[3] = *unit_create(game, Character_Name_Doll);
-    game->enemy_character_names[0] = game->enemies[0].name;
-    game->enemy_character_names[1] = game->enemies[1].name;
-    game->enemy_character_names[2] = game->enemies[2].name;
-    game->enemy_character_names[3] = game->enemies[3].name;
-    game->enemy_count = 4;
-
-    //list of all the units
-    game->units_count = game->player_count + game->enemy_count;
-    game->units = allocator_alloc(&game->allocator, sizeof(Unit*) * game->units_count);
-    for (int i = 0; i < game->player_count; ++i)
+    for (u32 i = 0; i < MAX_PLAYER_UNIT_COUNT; ++i)
     {
-        game->units[i] = game->players[i];
-    }
-    for (int i = game->player_count; i < game->player_count + game->enemy_count; ++i)
-    {
-        game->units[i] = game->enemies[i];
+        game->save_game->player_save_info[i];
+
+        //add abilites to players thang
+        //TODO: when you wake up, should the inventory/abilites available be seperated from the player, then loaded into the units inventory
+        // rn im thinking yes, this also lets us validate the inventory if there is ever a save corruption on the inventory
     }
 
-    game->turn_queue = ring_queue_create(sizeof(Character_Name), game->units_count);
+
+    //TODO: replace with a proper free list allocator, also this is more than enough for testing
+    u32 temp_unit_max_count = 20;
+    game->units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->unit_handles = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
+    game->players = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
+    game->enemies = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
+    //load player
+    unit_create(game, Character_Name_Madness_Progenitor);
+    unit_create(game, Character_Name_Madness_ButterFly);
+    unit_create(game, Character_Name_Madness_Wolf);
+    unit_create(game, Character_Name_Madness_Envoy);
+
+    //load enemies
+    unit_create(game, Character_Name_Red_Jester);
+    unit_create(game, Character_Name_Clown);
+    unit_create(game, Character_Name_Puppet);
+    unit_create(game, Character_Name_Doll);
+
+    //puts units into their proper enemy or player list
+    game_resolve_unit_character_list_types(game);
+
+
+    game->turn_queue = ring_queue_create(sizeof(Unit_Handle), game->units_count);
     game->starting_turn_initiative = Turn_Initiative_Player;
-    game->current_units_turn = Character_Name_None; // will cause turn start to pick the proper character
+    // will cause turn start to pick the proper character
+    game->current_units_turn = (Unit_Handle){INT_MAX, Character_Name_None};
     turn_based_reset_turn_queue(game);
 
 
     //TODO: init some abilities and have it display
     // game->players[0].inventory_component.ability_battle_list;
-    inventory_component_add_to_starting_battle_list(&game->players[0].inventory_component, Ability_Name_DEBUG_DAMAGE);
-    inventory_component_add_to_starting_battle_list(&game->players[0].inventory_component, Ability_Name_DEBUG_HEAL);
+    game->units_count = game->player_count + game->enemy_count;
+    for (u32 i = 0; i < game->units_count; ++i)
+    {
+        inventory_component_copy_to_battle_inventory(&game->units[i]->battle_inventory_component,
+                                                     &game->units[i]->inventory_component);
 
-    //
-    create_starting_abilties(&game->players[0].inventory_component, game->ability_registry);
+        //TODO: remove these later
+        battle_inventory_add_debug_ability(&game->units[i]->battle_inventory_component, Ability_Name_DEBUG_DAMAGE);
+        battle_inventory_add_debug_ability(&game->units[i]->battle_inventory_component, Ability_Name_DEBUG_HEAL);
+    }
+
+    //create the abilities
+    for (u32 i = 0; i < game->units_count; ++i)
+    {
+        create_starting_abilties(&game->units[i]->inventory_component, game->ability_registry);
+    }
 
     game->turn_phase = Turn_Phase_Turn_Start;
 }
@@ -131,9 +146,9 @@ void turn_start(Madness_Pulse_Game* game)
     DEBUG("Turn Start Processing");
 
     //First Turn Start
-    Character_Name top_of_queue_name;
+    Unit_Handle top_of_queue_name;
     ring_queue_peek(game->turn_queue, &top_of_queue_name);
-    if (game->current_units_turn != top_of_queue_name)
+    if (game->current_units_turn.index != top_of_queue_name.index)
     {
         //update to the new units turn
         game->current_units_turn = top_of_queue_name;
@@ -251,6 +266,8 @@ void turn_end(Madness_Pulse_Game* game)
     ActionHandlerComponent->AddAction(TurnStartAction);
     ActionHandlerComponent->ExecuteNextAction();
     */
+
+    game->turn_phase = Turn_Phase_Turn_Start;
 }
 
 void turn_update(Madness_Pulse_Game* game)
@@ -268,13 +285,74 @@ void turn_update(Madness_Pulse_Game* game)
         //show the player their ui and handle any inputs
         Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
 
-        for (int i = 0; i < unit->inventory_component.battle_list_size; ++i)
+
+        madness_ui_set_window_pos(game->madness_ui, 100, 400);
+        madness_ui_set_window_size(game->madness_ui, 500, 400);
+        madness_ui_window_begin(game->madness_ui, STRING("Ability Select"));
         {
-            String ability_name = ability_registry_get_ability_info(game->ability_registry, unit->inventory_component.battle_list_starting[i]).ability_name;
-            string_println(&ability_name);
+            Unit* cur_unit = madness_pulse_get_unit(game, game->current_units_turn);
+            madness_ui_c_string(game->madness_ui, Character_Name_enum_string[cur_unit->name]);
+            madness_scroll_box_begin(game->madness_ui, STRING("Ability Scroll list"));
+            {
+                for (int i = 0; i < cur_unit->battle_inventory_component.battle_list_dynamic->num_items; ++i)
+                {
+                    Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry,
+                        dynamic_array_get(cur_unit->battle_inventory_component.battle_list_dynamic, Ability_Name, i));
+
+                    if (madness_ui_button(game->madness_ui,
+                                          STRING_STRLEN(Ability_Name_enum_string[ability_info.ability_name])))
+                    {
+                        FATAL("A THINGS SELECTED");
+                        game->currently_selected_ability = ability_info.ability_name;
+                        targeting_handler_create_targeting_info(game);
+                        game->turn_phase = Turn_Phase_Target_Select;
+                    }
+                    madness_ui_same_line(game->madness_ui);
+                    float temp_madness_counter = 0;
+                    madness_ui_float(game->madness_ui, STRING("Count:"), &temp_madness_counter, 0);
+                }
+            }
+            madness_scroll_box_end(game->madness_ui);
         }
+        madness_ui_window_end(game->madness_ui);
+
         break;
     case Turn_Phase_Target_Select:
+        madness_ui_window_begin(game->madness_ui, STRING("Target Select"));
+        {
+            Ability_Info ability_info = ability_registry_get_ability_info(
+                game->ability_registry, game->currently_selected_ability);
+
+            //we want to grab the target lock information, from the target handler
+            String pretext = STRING("Selected Target: ");
+
+            String* selected_target_string = string_concat(
+                &pretext, &STRING_STRLEN(
+                    madness_pulse_get_unit_name(game,game->targeting_handler->current_lock_on_target)),
+                &game->frame_allocator);
+
+            madness_ui_string(game->madness_ui, *selected_target_string);
+
+            madness_ui_string(game->madness_ui, STRING("Available Targets: "));
+
+            for (int i = 0; i < game->targeting_handler->targets_available_array->num_items; ++i)
+            {
+                if (madness_ui_button(game->madness_ui,
+                                      STRING_STRLEN(madness_pulse_get_unit_name(game, dynamic_array_get(
+                                          game->targeting_handler->targets_available_array, Unit_Handle, i)))))
+                {
+                    //we have selected our target
+                    game->targeting_handler->current_lock_on_target = dynamic_array_get(
+                        game->targeting_handler->targets_available_array, Unit_Handle, i);
+
+                    game->turn_phase = Turn_Phase_Ability_Process;
+                }
+            }
+        }
+        madness_ui_window_end(game->madness_ui);
+
+        //TODO:
+        /*
         if (input_is_mouse_button_released_unique(game->input_system, KEY_RIGHT))
         {
             targeting_handler_move_unit_targeting(game, Targeting_Direction_Right);
@@ -286,13 +364,17 @@ void turn_update(Madness_Pulse_Game* game)
         if (input_is_mouse_button_released_unique(game->input_system, KEY_C))
         {
             //process our ability
-        }
+        }*/
         break;
     case Turn_Phase_Ability_Process:
+        ability_handler_process_ability(game);
+        // TODO: this should go to the queue process first, then end turn from the queue
+        game->turn_phase = Turn_Phase_Turn_End;
         break;
     case Turn_Phase_Queue_Process:
         break;
     case Turn_Phase_Turn_End:
+        turn_end(game);
         break;
     case Turn_Phase_Enemy_Turn:
         break;
@@ -304,22 +386,74 @@ void turn_update(Madness_Pulse_Game* game)
         break;
     }
 
+
+    if (game->turn_phase != Turn_Phase_None)
+    {
+        turn_based_game_display_debug_info(game);
+
+        //display character info
+        madness_ui_set_window_pos(game->madness_ui, 1400, 50);
+        madness_ui_set_window_size(game->madness_ui, 400, 800);
+        madness_ui_window_begin(game->madness_ui, STRING("Units Info"));
+        {
+            madness_ui_string(game->madness_ui, STRING("PLAYER"));
+            for (u32 i = 0; i < game->player_count; i++)
+            {
+                Unit* unit = madness_pulse_get_unit(game, game->players[i]);
+                madness_ui_c_string(game->madness_ui, Character_Name_enum_string[unit->name]);
+
+                //health
+                madness_ui_float(game->madness_ui, STRING("Health"), &unit->health_component.current_health, 0);
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_string(game->madness_ui, STRING("\\"));
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_float(game->madness_ui, STRING(""), &unit->health_component.max_health, 0);
+
+                //mp
+                madness_ui_float(game->madness_ui, STRING("MP"), &unit->mp_component.current_mp, 0);
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_string(game->madness_ui, STRING("\\"));
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_float(game->madness_ui, STRING(""), &unit->mp_component.max_mp, 0);
+            }
+            madness_ui_padding(game->madness_ui, "player to enemy padding");
+            madness_ui_string(game->madness_ui, STRING("ENEMIES"));
+            for (u32 i = 0; i < game->enemy_count; i++)
+            {
+                Unit* unit = madness_pulse_get_unit(game, game->enemies[i]);
+                madness_ui_c_string(game->madness_ui, Character_Name_enum_string[unit->name]);
+
+                madness_ui_float(game->madness_ui, STRING("Health"), &unit->health_component.current_health, 0);
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_string(game->madness_ui, STRING("\\"));
+                madness_ui_same_line(game->madness_ui);
+                madness_ui_float(game->madness_ui, STRING(""), &unit->health_component.max_health, 0);
+            }
+        }
+        madness_ui_window_end(game->madness_ui);
+    }
+
+    //TODO: seperate the ui and put it here
 }
 
 
 void turn_based_reset_turn_queue(Madness_Pulse_Game* game)
 {
+    //fixes the list for any minion type units
+    game_resolve_unit_character_list_types(game);
+
+
     //determines who goes into the queue first
     switch (game->starting_turn_initiative)
     {
     case Turn_Initiative_Player:
         for (u32 i = 0; i < game->player_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->player_character_names[i]);
+            ring_enqueue(game->turn_queue, &game->players[i]);
         }
         for (u32 i = 0; i < game->enemy_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->enemy_character_names[i]);
+            ring_enqueue(game->turn_queue, &game->enemies[i]);
         }
 
         break;
@@ -336,6 +470,37 @@ void turn_based_reset_turn_queue(Madness_Pulse_Game* game)
     }
 }
 
+void game_resolve_unit_character_list_types(Madness_Pulse_Game* game)
+{
+    //puts units into the proper player or enemy lists
+    game->unit_handles_count = game->units_count;
+    game->player_count = 0;
+    game->enemy_count = 0;
+
+
+    for (int i = 0; i < game->units_count; ++i)
+    {
+        Unit* current_unit = game->units[i];;
+        game->unit_handles[i] = (Unit_Handle){i, current_unit->name};
+
+
+        switch (current_unit->character_type)
+        {
+        case Character_Type_Player:
+            game->players[game->player_count++] = (Unit_Handle){i, current_unit->name};
+            break;
+        case Character_Type_Enemy:
+            game->enemies[game->enemy_count++] = (Unit_Handle){i, current_unit->name};
+            break;
+        }
+    }
+
+
+    //idk the enemy unit count at start up since its different every map
+    Unit* enemies;
+    u8 enemy_count;
+}
+
 bool can_current_unit_act(Madness_Pulse_Game* game)
 {
     //can act if the unit if the unit has actions and is alive
@@ -345,17 +510,40 @@ bool can_current_unit_act(Madness_Pulse_Game* game)
         &unit->health_component);
 }
 
-Unit* madness_pulse_get_unit(Madness_Pulse_Game* game, Character_Name name)
+Unit* madness_pulse_get_unit(const Madness_Pulse_Game* game, const Unit_Handle handle)
 {
-    for (int i = 0; i < game->units_count; ++i)
+    return game->units[handle.index];
+}
+
+const char* madness_pulse_get_unit_name(const Madness_Pulse_Game* game, Unit_Handle handle)
+{
+    return Character_Name_enum_string[madness_pulse_get_unit(game, handle)->name];
+}
+
+
+bool character_handle_compare(const Unit_Handle a, const Unit_Handle b)
+{
+    if (a.name != b.name) return false;
+    if (a.index != b.index) return false;
+
+    //TODO:
+    // if (a.generation != b.generation) return false;
+
+    return true;
+}
+
+
+void turn_based_game_display_debug_info(Madness_Pulse_Game* game)
+{
+    madness_ui_set_window_pos(game->madness_ui, 0, 0);
+    madness_ui_window_begin(game->madness_ui, STRING("GAME DEBUG INFO"));
     {
-        if (game->units[i].name == name)
+        madness_ui_string(game->madness_ui, STRING_STRLEN(Turn_Phase_enum_string[game->turn_phase]));
+
+        for (int i = 0; i < game->units_count; ++i)
         {
-            {
-                return &game->units[i];
-            }
+            madness_ui_string(game->madness_ui, STRING_STRLEN(Character_Name_enum_string[game->units[i]->name]));
         }
     }
-    MASSERT(false);
-    return NULL;
+    madness_ui_window_end(game->madness_ui);
 }

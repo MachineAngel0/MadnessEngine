@@ -6,6 +6,7 @@
 #include "allocator.h"
 
 //TODO: use the allocator properly, like dynamic allocations when writing or reading
+//TODO: write to a file and read from a file
 typedef struct byte_buffer
 {
     //small but probably negligible performance hit, but it just makes the code nicer in not having to remember to zero offset on a read/write
@@ -13,13 +14,13 @@ typedef struct byte_buffer
     u64 write_offset;
     u64 read_offset;
     uint8_t* data;
-    Allocator* Arena; // removed capacity and this is return in favor of it
+    Allocator* allocator; // removed capacity and this is returned in favor of it
 } byte_buffer;
 
 byte_buffer* byte_buffer_init(uint32_t capacity);
 
 // void byte_buffer_free(byte_buffer* buffer);
-byte_buffer* byte_buffer_init_arena(Allocator* arena, const uint32_t capacity);
+byte_buffer* byte_buffer_init_arena(uint32_t capacity, Allocator* arena);
 
 
 

@@ -3,7 +3,7 @@
 #include "c_string.h"
 
 
-Madness_txt* madness_txt_init(Allocator_Interface* allocator_interface)
+Madness_txt* madness_txt_init(Memory_System* memory_system)
 {
     Madness_txt* system = (Madness_txt*)malloc(sizeof(Madness_txt));
     system->object_count = 0;

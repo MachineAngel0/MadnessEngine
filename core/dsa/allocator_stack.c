@@ -60,43 +60,6 @@ void stack_allocator_pop(Stack_Allocator* a, void* ptr)
 }
 
 
-size_t calc_padding_with_header(uintptr_t ptr, uintptr_t alignment, size_t header_size)
-{
-    uintptr_t p, a, modulo, padding, needed_space;
-
-    MASSERT(is_power_of_two(alignment));
-
-    p = ptr;
-    a = alignment;
-    modulo = p & (a - 1); // (p % a) as it assumes alignment is a power of two
-
-    padding = 0;
-    needed_space = 0;
-
-    if (modulo != 0)
-    {
-        // Same logic as 'align_forward'
-        padding = a - modulo;
-    }
-
-    needed_space = (uintptr_t)header_size;
-
-    if (padding < needed_space)
-    {
-        needed_space -= padding;
-
-        if ((needed_space & (a - 1)) != 0)
-        {
-            padding += a * (1 + (needed_space / a));
-        }
-        else
-        {
-            padding += a * (needed_space / a);
-        }
-    }
-
-    return (size_t)padding;
-}
 
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8
@@ -149,19 +112,7 @@ void arena_stack_debug_print(Stack_Allocator* a)
     INFO("ARENA STACK MEMORY LEFT: %llu", a->capacity - a->current_offset);
 }
 
-void* stack_allocator_interface_alloc(void* allocator, u64 memory_byte_request, u8 alignment)
-{
-    Stack_Allocator* a = (Stack_Allocator*)allocator;
-    return stack_allocator_alloc(a, memory_byte_request);
-}
 
-void stack_allocator_interface_free(void* allocator, void* memory_block)
-{
-    //NOTE: the reason we dont use this is because we have no way of knowing what actually was on top when we free, therefore free manually
-    // Stack_Allocator* a = (Stack_Allocator*) allocator;
-    // stack_allocator_pop(a, memory_block);
-    return;
-}
 
 
 void stack_allocator_test(void)

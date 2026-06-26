@@ -5,7 +5,7 @@
 
 
 
-float DamageValueLookUpTable[Damage_Status_Type_MAX] =
+float damage_value_look_up_table[Damage_Status_Type_MAX] =
 {
     [Damage_Status_Type_Dreamy] = 10.0f,
     [Damage_Status_Type_Low] = 25.0f,
@@ -18,22 +18,8 @@ float DamageValueLookUpTable[Damage_Status_Type_MAX] =
     [Damage_Status_Type_Physical] = 800.0f,
 };
 
-//Note: these values are indicating how many times a status trigger will happen given everything at neutral - so heavy is 4 status triggers guaranteed
-float StatusValueLookUpTable[Damage_Status_Type_MAX] =
-{
-    //0.5,1,2,3,4,5,10
-    [Damage_Status_Type_Dreamy] = 0.5f,
-    [Damage_Status_Type_Low] = 1.0f,
-    [Damage_Status_Type_Delusion] = 2.0f,
-    [Damage_Status_Type_High] = 4.0f,
-    [Damage_Status_Type_Visionary] = 6.0f,
-    [Damage_Status_Type_Imaginary] = 10.0f,
-    // buff and debuff abilties bieng at high status build up just feels right
-    // damage abilties bieng at low just feels right
-
-    //literally just for physical abilities
-    [Damage_Status_Type_Physical] = 0.0f,
-};
+#define SINGLE_TARGET_STATUS_MODIFIER_VALUE 3.0f;
+#define MULTI_TARGET_STATUS_MODIFIER_VALUE 0.40f;
 
 /*typedef struct Damage_Ability
 {
@@ -57,16 +43,17 @@ float StatusValueLookUpTable[Damage_Status_Type_MAX] =
     };#1#
 
 
-    // float SingleTargetStatusModifierValue = 3.0f;
-    // float MultiTargetStatusModifierValue = 0.40f;
-    float damage; // TODO: remove, its here just for testing
+
 
 } Damage_Ability;*/
 
-Damage_Component damage_component_create(const Element_Type element, const float damage_amount)
+
+void damage_component_create(Ability_Component* Ability_component, const Element_Type element, const float damage_amount)
 {
-    return (Damage_Component){.type = Ability_Component_Type_Damage, .element = element, .damage = damage_amount};
+    Ability_component->type = Ability_Component_Type_Damage;
+    Ability_component->data.damage = (Damage_Component){.element = element, .damage = damage_amount};
 }
+
 
 void damage_ability(Unit* unit, Damage_Component damage_ability)
 {

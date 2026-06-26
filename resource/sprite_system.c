@@ -27,17 +27,9 @@ Sprite_System* sprite_system_init(Memory_System* memory_system)
     memcpy(sprite_system->sprite_indices, default_sprite_indices, sizeof(default_sprite_indices));
 
 
-    sprite_system->sprites_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
-    sprite_system->sprites_data_transient = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
-    sprite_system->ui_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
-    sprite_system->text_sprite_data = Sprite_Data_array_create(MAX_SPRITE_COUNT, allocator_inferface_create(sprite_system->allocator));
+    sprite_system->sprites_data = freelist_array_create(Sprite_Data, MAX_SPRITE_COUNT, sprite_system->allocator);
+    sprite_system->sprites_frame_data = array_create(Sprite_Data, MAX_SPRITE_COUNT, sprite_system->allocator);
 
-    //TODO: replace with a fill function later
-    Sprite_Data instance_data = {0};
-    for (u64 i = 0; i < sprite_system->sprites_data->capacity; i++)
-    {
-        sprite_system->sprites_data->data[i] = instance_data;
-    }
 
 
     return sprite_system;
@@ -61,38 +53,43 @@ void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 sc
     sprite_system->screen_size.x = (float)screen_size_x;
     sprite_system->screen_size.y = (float)screen_size_y;
 
-    Sprite_Data_array_clear(sprite_system->sprites_data_transient);
-    Sprite_Data_array_clear(sprite_system->ui_sprite_data);
-    Sprite_Data_array_clear(sprite_system->text_sprite_data);
+    array_clear(sprite_system->sprites_frame_data);
 
     allocator_clear(sprite_system->frame_arena);
     // Sprite_Data_array_clear(sprite_system->sprites_data);
 }
 
-
-
-Sprite_Data* sprite_system_get_new_sprite_transient(Sprite_System* sprite_system)
+Sprite_Handle sprite_system_new_sprite(Sprite_System* sprite_system)
 {
-    return &sprite_system->sprites_data_transient->data[sprite_system->sprites_data_transient->num_items++];
+    Freelist_Array_Handle handle = fl_array_new(sprite_system->sprites_data);
+    return (Sprite_Handle){handle.handle, handle.gen};
 }
 
-Sprite_Data* sprite_system_get_ui_sprite(Sprite_System* sprite_system)
+Sprite_Data* sprite_system_get_sprite_data(Sprite_System* sprite_system, Sprite_Handle* sprite_handle)
 {
-    return &sprite_system->ui_sprite_data->data[sprite_system->ui_sprite_data->num_items++];
+    return _fl_array_query(sprite_system->sprites_data, (Freelist_Array_Handle){sprite_handle->handle, sprite_handle->gen});
 }
 
-Sprite_Data* sprite_system_get_text_sprite(Sprite_System* sprite_system)
+void sprite_system_sprite_release(Sprite_System* sprite_system, Sprite_Handle sprite_handle)
 {
-    return &sprite_system->text_sprite_data->data[sprite_system->text_sprite_data->num_items++];
+    fl_array_release(sprite_system->sprites_data, (Freelist_Array_Handle){sprite_handle.handle, sprite_handle.gen});
 }
+
+
+Sprite_Data* sprite_system_new_frame_sprite(Sprite_System* sprite_system)
+{
+    return _array_get(sprite_system->sprites_frame_data, sprite_system->sprites_frame_data->num_items++);
+}
+
+
 
 bool sprite_system_generate_render_packet(Sprite_System* sprite_system,
                                           Render_Packet_Sprite* out_sprite_packet)
 {
 
     out_sprite_packet->system_name = "Sprite System";
-    out_sprite_packet->sprite_data = sprite_system->sprites_data;
-    out_sprite_packet->sprite_data_transient = sprite_system->sprites_data_transient;
+    out_sprite_packet->sprite_data = sprite_system->sprites_data->array;
+    out_sprite_packet->sprite_data_transient = sprite_system->sprites_frame_data;
     memcpy(out_sprite_packet->sprite_indices, sprite_system->sprite_indices, sizeof(u16) * 6);
 
 

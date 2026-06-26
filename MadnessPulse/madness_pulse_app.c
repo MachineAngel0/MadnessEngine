@@ -30,8 +30,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //TODO: testing lexer/parser stuff
     //TODO: make sure the lexer free's its data
-    /*Reflection_System* reflection_system = reflection_system_init(&app_internal->application_core.memory_system);
-    reflection_game_data(reflection_system);*/
+    // Reflection_System* reflection_system = reflection_system_init(&app_internal->application_core.memory_system);
+    // reflection_game_data(reflection_system);
 
     //testing text format
     // Madness_txt* txt = madness_txt_init(NULL);
@@ -44,14 +44,15 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     Heal_Component heal_comp_write = {
-        .type = Ability_Component_TYPE_HEAL, .heal_type = Heal_Types_Heal_To_Full, .heal_amount = 10.8f,
+        .heal_type = Heal_Types_Heal_To_Full,
+        .heal_amount = 10.8f,
         .heal_only_if_dead = false
     };
     reflection_registry_to_txt_format(reflection_registry, "Heal_Component", "1", &heal_comp_write,
                                       "../z_assets/abilities/abilities.yaml");
     Heal_Component heal_comp_read = {0};
     reflection_registry_read_from_txt_format(reflection_registry, "Heal_Component", "1", &heal_comp_read,
-                                      "../z_assets/abilities/abilities.yaml");
+                                             "../z_assets/abilities/abilities.yaml");
 
     app_internal->application_core.is_running = true;
 
@@ -73,6 +74,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         application_core->input_system,
         application_core->event_system,
         platform_config);
+
+    //start the job system
+    // Job_System* job_system = job_system_initialize(&application_core->memory_system);
 
 
     //start the renderer and UI
@@ -109,7 +113,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
                                  renderer_plugin->madness_ui, application_core->resource_system,
-                                 &application_core->clock);
+                                 &application_core->clock, reflection_registry);
 
     //MAIN LOOP
 
@@ -166,30 +170,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             break;
         }
 
-        madness_ui_window_begin(renderer_plugin->madness_ui, STRING("RUNTIME TESTING"));
-        {
-            // static u32 i = 0;
-            // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
-                                      // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
 
-            if (madness_ui_button(renderer_plugin->madness_ui, STRING("Serialize Runtime Data")))
-            {
-                reflection_registry_runtime_serialize_all_data_to_txt_format(reflection_registry);
-            }
-
-            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "1");
-            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Heal_Component", "2");
-            madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Damage_Component", "1");
-
-
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Component", "1");
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Info", "1");
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability", "1");
-
-
-
-        }
-        madness_ui_window_end(renderer_plugin->madness_ui);
 
         madness_ui_end(renderer_plugin->madness_ui);
         insanity_ui_end();
@@ -217,7 +198,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //look at memory before shutdown
 
-    memory_tracker_system_print_all_memory_usage(application_core->memory_system.memory_tracker_system);
 
     editor_shutdown(editor);
     madness_pulse_game_shutdown(madness_pulse_game, &application_core->memory_system);
@@ -234,7 +214,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     resource_system_shutdown(application_core->resource_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
-    event_shutdown(application_core->event_system);
+    event_shutdown(application_core->event_system, &application_core->memory_system);
 
 
     memory_system_shutdown(&application_core->memory_system);

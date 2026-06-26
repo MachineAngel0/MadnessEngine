@@ -51,6 +51,7 @@ typedef struct Transform_Handle
 typedef struct Sprite_Handle
 {
     u32 handle;
+    u32 gen;
 } Sprite_Handle;
 
 
@@ -394,14 +395,13 @@ typedef struct Sprite_System
 
 
     Sprite sprites[4]; // literally just need one quad for a vertex buffer
-    Sprite_Data_array* sprites_data; //TODO: keep a free list of available indicies
-    Sprite_Data_array* sprites_data_transient; // this only lasts for the frame
     u16 sprite_indices[6];
 
 
-    //probably gonna want this
-    Sprite_Data_array* ui_sprite_data;
-    Sprite_Data_array* text_sprite_data;
+    Free_List_ARRAY_TYPE(Sprite_Data)* sprites_data;
+    ARRAY_TYPE(Sprite_Data)* sprites_frame_data;
+
+
 } Sprite_System;
 
 
@@ -559,8 +559,8 @@ typedef struct Render_Packet_UI
 typedef struct Render_Packet_Sprite
 {
     const char* system_name;
-    Sprite_Data_array* sprite_data;
-    Sprite_Data_array* sprite_data_transient;
+    ARRAY_TYPE(Sprite_Data)* sprite_data;
+    ARRAY_TYPE(Sprite_Data)* sprite_data_transient;
     u16 sprite_indices[6];
 } Render_Packet_Sprite;
 

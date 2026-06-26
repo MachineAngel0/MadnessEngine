@@ -1,4 +1,6 @@
 ﻿
+#include "allocator_heap.h"
+#include "allocator_malloc.h"
 #include "darray.h"
 
 int main(void)
@@ -11,13 +13,15 @@ int main(void)
 
     allocator_test();
     stack_allocator_test();
-    free_list_test();
+    allocator_heap_test();
+    allocator_malloc_test();
+    //TODO:
+    // pool_allocator_test();
 
     array_test();
-    array_macro_test();
+    free_list_array_test();
 
     darray_test();
-    dynamic_array_macro_test();
 
     ring_queue_test();
 

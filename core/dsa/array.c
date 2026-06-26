@@ -4,14 +4,21 @@
 #include "unit_test.h"
 
 
-Array* _array_create(const u64 data_stride, const u64 capacity)
+Array* _array_create(const u64 data_stride, const u64 capacity, Allocator* allocator)
 {
-    Array* arr = (Array*)malloc(sizeof(Array));
-    memset(arr, 0, sizeof(Array));
+    MASSERT(allocator)
 
-    //alloc and zero
-    arr->data = malloc(capacity * data_stride);
-    memset(arr->data, 0, capacity * data_stride);
+    Array* arr = NULL;
+    arr = allocator_alloc(allocator, sizeof(Array));
+    arr->data = allocator_alloc(allocator, capacity * data_stride);
+
+    /*if (fl_allocator)
+    {
+        arr = allocator_fl_alloc(fl_allocator, sizeof(Array));
+        arr->data = allocator_fl_alloc(fl_allocator, capacity * data_stride);
+        arr->allocator_fl = fl_allocator;
+    }*/
+
 
     arr->num_items = 0;
     arr->stride = data_stride;
@@ -28,8 +35,13 @@ Array* _array_create(const u64 data_stride, const u64 capacity)
 
 void array_free(Array* array)
 {
-    free(array->data);
-    free(array);
+    /*if (array->allocator_fl)
+    {
+        allocator_fl_free(array->allocator_fl, array->data);
+        allocator_fl_free(array->allocator_fl, array);
+    }*/
+
+    //rn does nothing
 }
 
 void array_clear(Array* array)
@@ -100,6 +112,11 @@ bool array_valid_index(const Array* array, const u64 index)
     return index < array->num_items;
 }
 
+u64 array_get_bytes_used(const Array* array)
+{
+    return array->num_items * array->stride;
+}
+
 void* _array_get(Array* array, const u64 index)
 {
     if (!array)
@@ -107,17 +124,23 @@ void* _array_get(Array* array, const u64 index)
         WARN("ARRAY GET: INVALID ARRAY");
         return NULL;
     }
-    if (!array_valid_index(array, index))
-    {
-        WARN("ARRAY GET: INVALID INDEX");
-        return NULL;
-    }
     if (array_is_empty(array))
     {
         WARN("ARRAY GET: ARRAY IS EMPTY");
         return NULL;
     }
+    if (!array_valid_index(array, index))
+    {
+        WARN("ARRAY GET: INVALID INDEX");
+        return NULL;
+    }
+
     return (u8*)array->data + ((index) * array->stride);
+}
+
+void* _array_top(Array* array)
+{
+     return _array_get(array, array->num_items);
 }
 
 void array_set(Array* array, const void* data, const u64 pos)
@@ -191,6 +214,15 @@ void array_pop(Array* array)
     array->num_items--;
 }
 
+void _array_push_c_array(Array* array, const void* new_data, const u32 count)
+{
+    for (u32 i = 0; i < count; i++)
+    {
+        void* push_data = ((u8*)new_data + (array->stride * i));
+        array_push(array, push_data);
+    }
+}
+
 bool array_serialize(Array* array, FILE* fptr)
 {
     MASSERT(array);
@@ -216,7 +248,6 @@ bool array_deserialize(Array* array, FILE* fptr)
     fread(array->data, array->num_items * array->stride, 1, fptr);
 
     return true;
-
 }
 
 
@@ -277,7 +308,13 @@ void array_test()
 {
     TEST_START("ARRAY");
 
-    Array* balling_arr = array_create(int, 10);
+    Allocator allocator;
+    u64 memory_size = 10000;
+    void* memory = malloc(memory_size);
+    allocator_init(&allocator, memory, memory_size);
+
+
+    Array* balling_arr = array_create(int, 10, &allocator);
 
 
     printf("ARRAY START\n");
@@ -286,7 +323,7 @@ void array_test()
     int num10 = 10;
     int num20 = 20;
     int arr_capacity = 5;
-    Array* arr = array_create(int, arr_capacity);
+    Array* arr = array_create(int, arr_capacity, &allocator);
 
     printf("ARRAY EMPLACE START\n");
     array_push(arr, &num5);
@@ -353,70 +390,8 @@ void array_test()
 
     array_free(arr);
 
-    TEST_REPORT("ARRAY");
-}
-
-
-void array_macro_test()
-{
-    TEST_START("ARRAY MACRO");
-
-    u64 test_capacity = 100;
-
-    Allocator* allocator = malloc(sizeof(Allocator));
-    size_t memory_size = MB(1);
-    void* memory = malloc(memory_size);
-    allocator_init(allocator, memory, memory_size);
-
-    u8_array* arr = u8_array_create(test_capacity, allocator_inferface_create(allocator));
-
-    TEST_DEBUG(arr->capacity == test_capacity);
-
-
-    for (u64 i = 0; i < test_capacity; i++)
-    {
-        u8 val = (u8)(rand() % test_capacity);
-        u8_array_push(arr, &val);
-    }
-
-    TEST_DEBUG((sizeof(u8) * test_capacity) == u8_array_get_bytes_used(arr));
-
-
-    for (int i = 0; i < test_capacity; i++)
-    {
-        u8_array_pop(arr);
-    }
-
-    for (u64 i = 0; i < test_capacity + 2; i++)
-    {
-        u8 val = (u8)(rand() % test_capacity);
-        u8_array_push(arr, &val);
-    }
-
-    u8_array_clear(arr);
-
-    u32 multi_size = 3;
-    u8* multi = (u8*)malloc(sizeof(u8) * multi_size);
-    multi[0] = 0;
-    multi[1] = 1;
-    multi[2] = 2;
-
-    u8_array_push_multi(arr, multi, multi_size);
-    TEST_DEBUG(arr->data[0] == 0);
-    TEST_DEBUG(arr->data[1] == 1);
-    TEST_DEBUG(arr->data[2] == 2);
-
-
-    //TODO: test slices
-    u8_array_slice slice = u8_array_slice_create(arr, test_capacity / 2);
-
-    for (u64 i = 0; i < slice.length; i++)
-    {
-        TEST_DEBUG(slice.ptr[i] == slice.ptr[i]);
-    }
 
     free(memory);
-    free(allocator);
 
-    TEST_END("ARRAY MACRO");
+    TEST_REPORT("ARRAY");
 }

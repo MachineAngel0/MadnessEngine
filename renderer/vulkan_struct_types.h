@@ -603,7 +603,6 @@ typedef struct renderer
 
     Allocator arena; // total memory for the entire renderer
     Allocator frame_arena;
-    Memory_Tracker* mem_tracker;
 
 
     Input_System* input_system; //meant only to be used for debugging

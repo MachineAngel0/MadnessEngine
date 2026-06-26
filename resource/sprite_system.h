@@ -17,20 +17,13 @@ bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_
 
 MAPI void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 screen_size_y);
 
-MAPI Sprite_Handle sprite_system_get_new_sprite(Sprite_System* sprite_system, Sprite_Data* out_sprite_data);
-
-MAPI Sprite_Handle sprite_system_get_sprite(Sprite_System* sprite_system,  Sprite_Handle sprite_handle);
-MAPI Sprite_Handle sprite_system_sprite_release(Sprite_System* sprite_system, Sprite_Handle sprite_handle);
-
-
-MAPI Sprite_Data* sprite_system_get_new_sprite_transient(Sprite_System* sprite_system);
-
-MAPI Sprite_Data* sprite_system_get_ui_sprite(Sprite_System* sprite_system);
-MAPI Sprite_Data* sprite_system_get_text_sprite(Sprite_System* sprite_system);
+MAPI Sprite_Handle sprite_system_new_sprite(Sprite_System* sprite_system);
+MAPI Sprite_Data* sprite_system_get_sprite_data(Sprite_System* sprite_system, Sprite_Handle* sprite_handle);
+MAPI void sprite_system_sprite_release(Sprite_System* sprite_system, Sprite_Handle sprite_handle);
 
 
-// these handles cant be from the transient or ui/text sprites
-MAPI Sprite_Data* sprite_system_get_new_sprite_handle(Sprite_System* sprite_system, Sprite_Handle* sprite_handle);
+MAPI Sprite_Data* sprite_system_new_frame_sprite(Sprite_System* sprite_system);
+
 
 bool sprite_system_generate_render_packet(Sprite_System* sprite_system,
                                           Render_Packet_Sprite* out_sprite_packet);

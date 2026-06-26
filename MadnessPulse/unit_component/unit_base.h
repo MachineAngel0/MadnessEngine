@@ -15,6 +15,7 @@ Unit* unit_create_default(Madness_Pulse_Game* game, Character_Name character_nam
     health_component_init_default(&unit->health_component);
     mp_component_create_default(&unit->mp_component);
     inventory_component_init(&unit->inventory_component);
+    battle_inventory_component_init(game, &unit->battle_inventory_component);
 
     augment_component_create_default(&unit->augment_component);
 
@@ -35,9 +36,22 @@ Unit* unit_create_default(Madness_Pulse_Game* game, Character_Name character_nam
 
 Unit* unit_create(Madness_Pulse_Game* game, Character_Name character_name)
 {
-
-    //if i want anythong on the unit modified, then do so in the switch
+    //if i want anything on the unit modified, then do so in the switch
     Unit* unit = unit_create_default(game, character_name);
+
+
+    if (character_name == Character_Name_Madness_Progenitor ||
+        character_name == Character_Name_Madness_ButterFly ||
+        character_name == Character_Name_Madness_Wolf ||
+        character_name == Character_Name_Madness_Envoy)
+    {
+        unit->character_type = Character_Type_Player;
+    }
+    else
+    {
+        unit->character_type = Character_Type_Enemy;
+    }
+
 
     switch (character_name)
     {
@@ -47,8 +61,6 @@ Unit* unit_create(Madness_Pulse_Game* game, Character_Name character_name)
     case Character_Name_MAX:
         MASSERT(false);
         break;
-    case Character_Name_Red_Jester:
-        break;
     case Character_Name_Madness_Progenitor:
         break;
     case Character_Name_Madness_ButterFly:
@@ -56,6 +68,14 @@ Unit* unit_create(Madness_Pulse_Game* game, Character_Name character_name)
     case Character_Name_Madness_Wolf:
         break;
     case Character_Name_Madness_Envoy:
+        break;
+    case Character_Name_Red_Jester:
+        break;
+    case Character_Name_Clown:
+        break;
+    case Character_Name_Puppet:
+        break;
+    case Character_Name_Doll:
         break;
     case Character_Name_Worshipper:
         break;
@@ -97,12 +117,22 @@ Unit* unit_create(Madness_Pulse_Game* game, Character_Name character_name)
         break;
     case Character_Name_Outer_God:
         break;
-
     }
 
-    return unit;
 
+    game->units[game->units_count++] = unit;
+
+    return unit;
 }
+
+Unit* unit_minion_create(Madness_Pulse_Game* game, Character_Name character_name, Character_Type character_type)
+{
+    Unit* unit = unit_create(game, character_name);
+    unit->character_type = character_type;
+
+    return unit;
+}
+
 
 
 

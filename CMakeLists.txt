@@ -79,6 +79,7 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/ability_components)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/game_mode)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/unit_component)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/game_serialization)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)

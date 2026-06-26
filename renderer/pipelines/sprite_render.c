@@ -66,11 +66,11 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
                                                    sprite_backend->sprite_instance_staging_buffer, command_buffer,
                                                    sprite_render_packet->sprite_data->data,
-                                                   Sprite_Data_array_get_bytes_used(sprite_render_packet->sprite_data));
+                                                   array_get_bytes_used(sprite_render_packet->sprite_data));
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
                                                    sprite_backend->sprite_instance_staging_buffer, command_buffer,
                                                    sprite_render_packet->sprite_data_transient->data,
-                                                   Sprite_Data_array_get_bytes_used(
+                                                   array_get_bytes_used(
                                                        sprite_render_packet->sprite_data_transient));
 
     //generate indirect draw data

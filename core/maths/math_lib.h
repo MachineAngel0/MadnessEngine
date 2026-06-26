@@ -1885,7 +1885,11 @@ static const vec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 /*** RANDOM ***/
 static bool rand_seeded = false;
 
-//TODO: rand func
+void rand_reseed()
+{
+    srand(platform_get_absolute_time());
+}
+
 uint32_t randi(void)
 {
     if (!rand_seeded)

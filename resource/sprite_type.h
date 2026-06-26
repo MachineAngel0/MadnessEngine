@@ -48,7 +48,6 @@ typedef struct Sprite_Data
 } Sprite_Data;
 
 
-ARRAY_GENERATE_TYPE(Sprite_Data)
 
 Sprite default_sprite[4] = {
     {.pos = {-1.f, -1.f}, .tex = {0.0f, 0.0f}},  // top-left

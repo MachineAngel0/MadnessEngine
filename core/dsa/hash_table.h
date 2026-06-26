@@ -4,6 +4,7 @@
 
 #define HASH_TABLE_DEFAULT_CAPACITY 100
 #include "dsa_utility.h"
+#include "str.h"
 
 
 typedef struct hash_table
@@ -56,56 +57,74 @@ typedef struct hash_table_string
     String* key_data;
     void* value_data;
 
-    Allocator_Interface allocator_interface;
-    bool can_resize;
+    Allocator* allocator;
+    Heap_Allocator* free_list_allocator;
 } hash_table_string;
 
 #define HASH_TABLE_STR_TYPE(type) hash_table_string
 
 
-hash_table_string* hash_table_string_create(u64 data_stride, u64 capacity, Allocator_Interface allocator_interface,
-                                            bool allow_resize)
+hash_table_string* hash_table_string_create(u64 data_stride, u64 capacity, Allocator* allocator,
+                                            Heap_Allocator* free_list_allocator)
 {
-    hash_table_string* h = allocator_interface.alloc(allocator_interface.allocator, sizeof(hash_table_string),
-                                                     DEFAULT_ALIGNMENT);
+    if (allocator && free_list_allocator)
+    {
+        MASSERT_MSG(false, "CANNOT HAVE BOTH TYPES IN USE");
+    }
 
-    h->capacity = capacity;
-    h->value_data_size = data_stride;
-    h->allocator_interface = allocator_interface;
-    h->can_resize = allow_resize;
+    MASSERT(allocator || free_list_allocator);
 
-    h->key_data = allocator_interface.alloc(allocator_interface.allocator,
-                                            sizeof(String) * capacity,
-                                            DEFAULT_ALIGNMENT);
-    h->value_data = allocator_interface.alloc(allocator_interface.allocator,
-                                              capacity * data_stride,
-                                              DEFAULT_ALIGNMENT);
 
-    memset(h->key_data, 0, sizeof(String) * data_stride);
-    memset(h->value_data, 0, data_stride * capacity);
+    hash_table_string* hts = {0};
 
-    return h;
+    if (allocator)
+    {
+        hts = allocator_alloc(allocator, sizeof(hash_table_string));
+        hts->key_data = allocator_alloc(allocator, sizeof(String) * capacity);
+        hts->value_data = allocator_alloc(allocator, capacity * data_stride);
+
+        hts->allocator = allocator;
+    }
+
+    if (free_list_allocator)
+    {
+        hts = allocator_heap_alloc(free_list_allocator, sizeof(hash_table_string));
+        hts->key_data = allocator_heap_alloc(free_list_allocator, sizeof(String) * capacity);
+        hts->value_data = allocator_heap_alloc(free_list_allocator, capacity * data_stride);
+
+        hts->free_list_allocator = free_list_allocator;
+    }
+
+
+    hts->capacity = capacity;
+    hts->value_data_size = data_stride;
+
+    memset(hts->key_data, 0, sizeof(String) * data_stride);
+    memset(hts->value_data, 0, data_stride * capacity);
+
+    return hts;
 }
 
 void hash_table_string_destroy(hash_table_string* h)
 {
-    h->allocator_interface.free_memory(h->allocator_interface.allocator, h->key_data);
-    h->allocator_interface.free_memory(h->allocator_interface.allocator, h->value_data);
-    h->allocator_interface.free_memory(h->allocator_interface.allocator, h);
+    if (h->free_list_allocator)
+    {
+        allocator_heap_free(h->free_list_allocator, h->key_data);
+        allocator_heap_free(h->free_list_allocator, h->value_data);
+        allocator_heap_free(h->free_list_allocator, h);
+    }
 }
 
 
 void hash_table_str_resize(hash_table_string* h, u64 new_capacity)
 {
-    void* new_key_data = h->allocator_interface.alloc(h->allocator_interface.allocator,
-                                                      sizeof(String*) * new_capacity,
-                                                      DEFAULT_ALIGNMENT);
-    void* new_value_data = h->allocator_interface.alloc(h->allocator_interface.allocator,
-                                                        sizeof(hash_table_string) * new_capacity,
-                                                        DEFAULT_ALIGNMENT);
+    if (!h->free_list_allocator) { return; }
 
-    h->allocator_interface.free_memory(h->allocator_interface.allocator, h->key_data);
-    h->allocator_interface.free_memory(h->allocator_interface.allocator, h->value_data);
+    void* new_key_data = allocator_heap_alloc(h->free_list_allocator, sizeof(String*) * new_capacity);
+    void* new_value_data = allocator_heap_alloc(h->free_list_allocator, sizeof(hash_table_string) * new_capacity);
+
+    allocator_heap_free(h->free_list_allocator, h->key_data);
+    allocator_heap_free(h->free_list_allocator, h->value_data);
 
     h->capacity = new_capacity;
 

@@ -492,7 +492,7 @@ void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle stagi
 {
     if (data_size <= 0)
     {
-        WARN("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
+        TRACE("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
         return;
     }
 
@@ -620,7 +620,7 @@ void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_H
 {
     if (data_size <= 0)
     {
-        WARN("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
+        TRACE("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
         return;
 
     }

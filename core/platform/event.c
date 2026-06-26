@@ -7,23 +7,23 @@ Event_System* event_init(Memory_System* memory_system)
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
 
-    event_system->mem_tracker = memory_system_get_memory_tracker(memory_system->memory_tracker_system,
-                                                                 STRING("EVENT SYSTEM"), event_system_mem_requirement);
+    allocator_heap_init(&event_system->heap_allocator, event_system_mem, event_system_mem_requirement);
 
-    allocator_init(&event_system->event_system_arena, event_system_mem, event_system_mem_requirement);
 
     INFO("EVENT SYSTEM INIT")
-
     return event_system;
 }
 
-bool event_shutdown(Event_System* event_system)
+bool event_shutdown(Event_System* event_system, Memory_System* memory_system)
 {
     MASSERT(event_system)
+    MASSERT(memory_system)
     INFO("EVENT SYSTEM SHUTDOWN")
 
 
-    allocator_clear(&event_system->event_system_arena);
+    memory_system_memory_free(memory_system, event_system->heap_allocator.data, MEMORY_SUBSYSTEM_EVENT);
+    memory_system_memory_free(memory_system, event_system, MEMORY_SUBSYSTEM_EVENT);
+
 
     return true;
 }
@@ -38,7 +38,7 @@ void event_register(Event_System* event_system, Event_Type event, String subscri
     if (event_system->events_table[event].subscriber_array == NULL)
     {
         event_system->events_table[event].subscriber_array = dynamic_array_create(
-            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, allocator_inferface_create(&event_system->event_system_arena));
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
     }
 
 
@@ -87,7 +87,7 @@ void event_fire(Event_System* event_system, Event_Type event, String sender_name
     if (event_system->events_table[event].subscriber_array == NULL)
     {
         event_system->events_table[event].subscriber_array = dynamic_array_create(
-            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, allocator_inferface_create(&event_system->event_system_arena));
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
     }
 
     for (uint32_t i = 0; i < event_system->events_table[event].subscriber_array->num_items; i++)
@@ -136,7 +136,7 @@ bool test_event(Event_Type code, String sender_name, String subscriber_name, Eve
     return true;
 }
 
-void event_test(Event_System* event_system)
+void event_test(Event_System* event_system, Memory_System* memory_system)
 {
     MASSERT(event_system)
 
@@ -159,5 +159,5 @@ void event_test(Event_System* event_system)
     event_fire(event_system, EVENT_TEST, STRING("I am the sender"), context);
     event_unregister(event_system, EVENT_TEST, STRING("I am the sender"), test_event);
 
-    event_shutdown(event_system);
+    event_shutdown(event_system, memory_system);
 }

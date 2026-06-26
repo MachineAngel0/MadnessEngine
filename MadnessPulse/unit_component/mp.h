@@ -12,32 +12,32 @@
 MP_Component mp_component_create()
 {
     MP_Component mp_component;
-    mp_component.CurrentMP = MP_DEFAULT_AMOUNT;
-    mp_component.MaxMP = MP_DEFAULT_AMOUNT;
-    mp_component.MaxAllowedMP = mp_component.MaxMP*2;
+    mp_component.current_mp = MP_DEFAULT_AMOUNT;
+    mp_component.max_mp = MP_DEFAULT_AMOUNT;
+    mp_component.MaxAllowedMP = mp_component.max_mp*2;
     return mp_component;
 }
 
 void mp_component_create_default(MP_Component* mp_component)
 {
-    mp_component->CurrentMP = MP_DEFAULT_AMOUNT;
-    mp_component->MaxMP = MP_DEFAULT_AMOUNT;
-    mp_component->MaxAllowedMP = mp_component->MaxMP*2;
+    mp_component->current_mp = MP_DEFAULT_AMOUNT;
+    mp_component->max_mp = MP_DEFAULT_AMOUNT;
+    mp_component->MaxAllowedMP = mp_component->max_mp*2;
 }
 
 
 
-void ClampMP(MP_Component* mp_component)
+void mp_component_clamp(MP_Component* mp_component)
 {
-    mp_component->CurrentMP = clamp_float(mp_component->CurrentMP, -mp_component->MaxMP * 2, mp_component->MaxMP * 2);
+    mp_component->current_mp = clamp_float(mp_component->current_mp, -mp_component->max_mp * 2, mp_component->max_mp * 2);
 }
 
-float GetMPPercent(MP_Component* mp_component)
+float mp_component_GetMPPercent(MP_Component* mp_component)
 {
-    return mp_component->CurrentMP / mp_component->MaxMP;
+    return mp_component->current_mp / mp_component->max_mp;
 }
 
-void ChangeMP(Unit* unit, MP_Component* mp_component, float MPChangeValue)
+void mp_component_ChangeMP(Unit* unit, MP_Component* mp_component, float MPChangeValue)
 {
     DEBUG("Called Change MP by Amount");
 
@@ -57,52 +57,52 @@ void ChangeMP(Unit* unit, MP_Component* mp_component, float MPChangeValue)
         AdjustedMPValue = MPChangeValue * 2;
     }
 
-    mp_component->CurrentMP += AdjustedMPValue;
-    ClampMP(mp_component);
+    mp_component->current_mp += AdjustedMPValue;
+    mp_component_clamp(mp_component);
 }
 
-void ReduceMP(MP_Component* mp_component, float MPChangeValue)
+void mp_component_reduce_mp(MP_Component* mp_component, float MPChangeValue)
 {
    DEBUG("Called Reduce MP by Amount");
 
 
-    mp_component->CurrentMP -= MPChangeValue;
-    ClampMP(mp_component);
+    mp_component->current_mp -= MPChangeValue;
+    mp_component_clamp(mp_component);
 }
 
-void ChangeMPByPercent(MP_Component* mp_component, float MPPercentValue)
+void mp_component_change_mp_by_percent(MP_Component* mp_component, float MPPercentValue)
 {
     DEBUG("Called Change MP by Percent");
 
-    mp_component->CurrentMP += mp_component->CurrentMP * MPPercentValue;
-    ClampMP(mp_component);
+    mp_component->current_mp += mp_component->current_mp * MPPercentValue;
+    mp_component_clamp(mp_component);
 }
 
-void ReduceMPByPercent(MP_Component* mp_component, float MPPercentValue)
+void mp_component_reduce_mp_by_percent(MP_Component* mp_component, float MPPercentValue)
 {
     DEBUG("Called Reduce MP by Percent");
 
-    mp_component->CurrentMP -= mp_component->CurrentMP * MPPercentValue;
-    ClampMP(mp_component);
+    mp_component->current_mp -= mp_component->current_mp * MPPercentValue;
+    mp_component_clamp(mp_component);
 }
 
-void MPToFull(MP_Component* mp_component)
+void mp_component_mp_to_full(MP_Component* mp_component)
 {
     DEBUG("Called Set MP To Full");
 
-    mp_component->CurrentMP = mp_component->MaxMP;
-    ClampMP(mp_component);
+    mp_component->current_mp = mp_component->max_mp;
+    mp_component_clamp(mp_component);
 }
 
-void MPToZero(MP_Component* mp_component)
+void mp_component_mp_to_zero(MP_Component* mp_component)
 {
     DEBUG("Called Set MP To Zero");
 
-    mp_component->CurrentMP = 0;
-    ClampMP(mp_component);
+    mp_component->current_mp = 0;
+    mp_component_clamp(mp_component);
 }
 
-bool CanAffordAbilityCost(Unit* caster, MP_Component* mp_component, float MPCost)
+bool mp_component_can_afford_ability_cost(Unit* caster, float MPCost)
 {
     // if our mp is greater than the cost, or we have the infinite mp flag on
 
@@ -119,7 +119,7 @@ bool CanAffordAbilityCost(Unit* caster, MP_Component* mp_component, float MPCost
         AdjustedMPCost = MPCost * 2.0f;
     }
 
-    if (mp_component->CurrentMP >= AdjustedMPCost || InfiniteMPFlag || PermanentMPFlag)
+    if (caster->mp_component.current_mp >= AdjustedMPCost || InfiniteMPFlag || PermanentMPFlag)
     {
         return true;
     }

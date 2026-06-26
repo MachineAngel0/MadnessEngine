@@ -1,6 +1,57 @@
 ﻿#ifndef GAME_ENUMS_H
 #define GAME_ENUMS_H
 
+
+//SAVE/LEVEL
+//TODO: a string lookup table for the names
+// keeps a list of mission names
+typedef enum Level_Name
+{
+    Level_Name_None,
+    Level_Name_Sandbox,
+
+    Level_Name_Tutorial,
+    Level_Name_Worshipper,
+    Level_Name_BurningSoul,
+    Level_Name_IceQueen,
+    Level_Name_SunMoonTwin,
+    Level_Name_BrotherInArms,
+    Level_Name_BloodBrothers,
+    Level_Name_HealSquad,
+    Level_Name_Freezer,
+    Level_Name_MetalStar,
+    Level_Name_Abyssal,
+    Level_Name_Slimes,
+    Level_Name_CountDown,
+    Level_Name_ReversalReversal,
+    Level_Name_Angel,
+    Level_Name_Demon,
+    Level_Name_FusionMania,
+    Level_Name_Persona,
+    Level_Name_DisfiguredMass,
+    Level_Name_InsanityProgenitor,
+    Level_Name_Dancer,
+    Level_Name_Player,
+    Level_Name_Law,
+    Level_Name_Shield,
+    Level_Name_Time1,
+    Level_Name_Time2,
+    Level_Name_Time3,
+    Level_Name_Time4,
+    Level_Name_Time5,
+    Level_Name_Tribe,
+    Level_Name_Conjure,
+    Level_Name_3SisterFather,
+    Level_Name_MultiElemental,
+    Level_Name_MPDrainer,
+    Level_Name_BlackBloodStar,
+    Level_Name_Planets,
+    Level_Name_OuterGodsAngels,
+    Level_Name_OuterGod,
+    Level_Name_MAX,
+} Level_Name;
+
+
 // UNIT//
 typedef enum Character_Name
 {
@@ -61,7 +112,6 @@ typedef enum Character_Name
 } Character_Name;
 
 
-
 typedef enum Character_Type
 {
     Character_Type_Player,
@@ -103,12 +153,21 @@ typedef enum Ability_Name
 
     //sort by missions
 
-    //test/debug
+    //placeholder debug
+    Ability_Name_DEBUG_1,
+    Ability_Name_DEBUG_2,
+    Ability_Name_DEBUG_3,
+    Ability_Name_DEBUG_4,
+
+    //test abilities
     Ability_Name_DEBUG_HEAL,
     Ability_Name_DEBUG_DAMAGE,
     Ability_Name_Madness_Test,
     Ability_Name_INSANITY_Test,
     Ability_Name_REVERSAL_TEST,
+    Ability_Name_DEBUG_TURN_EFFECT,
+    Ability_Name_DEBUG_POISON,
+    Ability_Name_,
 
     // Starting abilties
     Ability_Name_Pass,
@@ -130,7 +189,7 @@ typedef enum Reversal_Duration
     Reversal_Duration_Once,
     Reversal_Duration_Casters_Turn, // resets when the casters turn begins
     Reversal_Duration_Permanent,
-}Reversal_Duration;
+} Reversal_Duration;
 
 
 typedef enum Target_Area_Affect
@@ -150,39 +209,74 @@ typedef enum Ability_Target_Type
     Ability_Target_Type_All,
 } Ability_Target_Type;
 
-typedef enum Ability_Icon_Type
+typedef enum Ability_Primary_Type
 {
+    ABILITY_PRIMARY_TYPE_MADNESS,
+    ABILITY_PRIMARY_TYPE_INSANITY,
+} Ability_Primary_Type;
+
+typedef enum Ability_Secondary_Type
+{
+    ABILITY_SECONDARY_TYPE_MADNESS,
+    ABILITY_SECONDARY_TYPE_INSANITY,
+
     //all the damage based types
-    Ability_Type_Physical,
-    Ability_Type_Fire,
-    Ability_Type_Ice,
-    Ability_Type_Poison,
-    Ability_Type_Blood,
-    Ability_Type_Heavenly,
-    Ability_Type_Abyss,
-    Ability_Type_Madness,
-    Ability_Type_Insanity,
+    ABILITY_SECONDARY_TYPE_FIRE,
+    ABILITY_SECONDARY_TYPE_Physical,
+    ABILITY_SECONDARY_TYPE_Fire,
+    ABILITY_SECONDARY_TYPE_Ice,
+    ABILITY_SECONDARY_TYPE_Poison,
+    ABILITY_SECONDARY_TYPE_Blood,
+    ABILITY_SECONDARY_TYPE_Heavenly,
+    ABILITY_SECONDARY_TYPE_Abyss,
 
-    Ability_Type_MultiElemental,
+    ABILITY_SECONDARY_TYPE_MultiElemental,
 
-    // special? yes, normal special, then special special
-    Ability_Type_Abnormal, // nothing abnormal just stuff that doesn't fit in the other catergories
-    Ability_Type_Conjure,
-    Ability_Type_Reversal,
-    Ability_Type_SpecialFlag,
-    Ability_Type_Mana,
-    Ability_Type_MAX,
-} Ability_Icon_Type;
+    ABILITY_SECONDARY_TYPE_HEAL,
+    ABILITY_SECONDARY_TYPE_MANA,
+    ABILITY_SECONDARY_TYPE_REVERSAL,
+
+    ABILITY_SECONDARY_TYPE_Conjure,
+
+    //TODO: flesh out the rest of the types properly like if they are buffs or modifiers etc
+    ABILITY_SECONDARY_TYPE_SpecialFlag,
+    ABILITY_SECONDARY_TYPE_MAX,
+} Ability_Secondary_Type;
+
+typedef enum Ability_Overflow_Value_Type
+{
+    Ability_Overflow_Value_Type_Base, // 1.0
+    Ability_Overflow_Value_Type_Created, // 0.2
+    // reserve these for something else
+    Ability_Overflow_Value_Type_Other1,
+    Ability_Overflow_Value_Type_Other2,
+    Ability_Overflow_Value_Type_Max,
+} Ability_Overflow_Value_Type;
+
+typedef enum Ability_Action_Cost_Type
+{
+    Ability_Action_Cost_Type_1,
+    Ability_Action_Cost_Type_2,
+    Ability_Action_Cost_Type_3,
+    Ability_Action_Cost_Type_Max,
+} Ability_Action_Cost_Type;
+
 
 typedef enum Ability_Activation_Type
 {
+    // no need to put conjure here, as it just activates normally
     Ability_Activation_Type_Normal,
     Ability_Activation_Type_Status,
     Ability_Activation_Type_Turn,
+    Ability_Activation_Type_Turn_Info,
+    // this is the specific component that gives us info on how the turn based components are meant to be used
+
     Ability_Activation_Type_Reversal,
+    Ability_Activation_Type_Reversal_Info,
+    // this is the specific component that gives us info on how the turn based components are meant to be used
+
     // component type that gets checked first, to make sure the ability is allowed to activate, otherwise the ability will fail
     Ability_Activation_Type_Conditional,
-    // no need to put conjure here, as it just activates normally
 } Ability_Activation_Type;
 
 typedef enum Ability_Trigger_Target
@@ -194,26 +288,6 @@ typedef enum Ability_Trigger_Target
     Ability_Trigger_Target_All,
 } Ability_Trigger_Target;
 
-typedef enum Fusion_Type
-{
-    // for things like heal they go with their primary element type so in this case heavenly
-    // drain -> blood
-    // augment -> augment type
-
-    Fusion_Type_Physical,
-    Fusion_Type_Fire,
-    Fusion_Type_Ice,
-    Fusion_Type_Poison,
-    Fusion_Type_Blood,
-    Fusion_Type_Heavenly,
-    Fusion_Type_Abyss,
-    Fusion_Type_Madness,
-    Fusion_Type_Insanity,
-
-    //Fusion_Type_MultiElemental, idk about this
-    Fusion_Type_Reversal,
-    Fusion_Type_MAX,
-} Fusion_Type;
 
 
 typedef enum Element_Type
@@ -291,7 +365,7 @@ typedef enum Status_Threshold_Types
     Status_Threshold_Types_Threshold_Specific_Value,
     Status_Threshold_Types_Threshold_By_Multiplication,
     Status_Threshold_Types_MAX,
-}Status_Threshold_Types;
+} Status_Threshold_Types;
 
 typedef enum Drain_Types
 {
@@ -373,24 +447,44 @@ typedef enum Conjure_Type
     Conjure_Type_Max,
 } Conjure_Type;
 
+typedef enum Summoner_Type
+{
+    //NOTE: these are all temporary for testing
+    Summoner_Type_Doll,
+    Summoner_Type_RedJester,
+    Summoner_Type_Clown,
+    Summoner_Type_Puppet,
+    //actual summons down here
+    Summoner_Type_Max,
+} Summoner_Type;
+
 typedef enum Passive_Transfer_Type
 {
-    Passive_Transfer_Type_CasterToTarget_PositiveValue,
-    Passive_Transfer_Type_CasterToTarget_NegativeValue,
-    Passive_Transfer_Type_CasterToTarget_DoubleLossGain,
-
-    Passive_Transfer_Type_TargetToCaster,
-    Passive_Transfer_Type_TargetToCasterNegativeValue,
-    Passive_Transfer_Type_TargetToCaster_DoubleLossGain,
-}Passive_Transfer_Type;
+    Passive_Transfer_Type_Caster_To_Target,
+    Passive_Transfer_Type_Target_To_Caster,
+} Passive_Transfer_Type;
 
 // Turn Based Game //
+
+//NOTE: I dont have a decent name for this rn
+typedef enum Madness_Pulse_Game_State
+{
+    Game_State_Enum_Main_Menu,
+    Game_State_Enum_Turn_Based,
+    Game_State_Load_Save,
+    Game_State_New_Save,
+    Game_State_Enum_Ability_Select,
+    Game_State_Enum_Level_Select,
+    Game_State_Settings,
+    Game_State_Enum_MAX,
+} Madness_Pulse_Game_State;
+
 
 typedef enum Targeting_Direction
 {
     Targeting_Direction_Left,
     Targeting_Direction_Right,
-}Targeting_Direction;
+} Targeting_Direction;
 
 typedef enum Turn_Initiative
 {
@@ -435,7 +529,7 @@ typedef enum Game_UI_States
     Game_UI_State_Unit_Info,
     Game_UI_State_Fusion,
     Game_UI_State_System,
-}Turn_Based_UI_States;
+} Turn_Based_UI_States;
 
 // Camera Perspective
 //TODO: have this replace the current blueprint Camera Type

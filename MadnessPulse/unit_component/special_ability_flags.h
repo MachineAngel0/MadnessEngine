@@ -73,7 +73,7 @@ void special_ability_flag_list_reset_flags(Special_Ability_Flag_List_Component* 
 }
 
 
-bool CanUseMirage(Special_Ability_Flag_List_Component* special_ability_flag_list)
+bool can_use_mirage(Special_Ability_Flag_List_Component* special_ability_flag_list)
 {
     //check if we can use and that the count is above zero
     // we also want to decrement the count

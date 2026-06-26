@@ -5,14 +5,17 @@
 #include "game_structs.h"
 
 
-Heal_Component heal_component_create(const Heal_Types heal_types, const float heal_amount, bool heal_only_if_dead)
+void heal_component_create(Ability_Component* ac, const Heal_Types heal_types, const float heal_amount,
+                                     const bool heal_only_if_dead)
 {
-    return (Heal_Component){
-        .type = Ability_Component_TYPE_HEAL,
+    ac->type = Ability_Component_TYPE_HEAL;
+    ac->data.heal = (Heal_Component){
         .heal_type = heal_types,
         .heal_amount = heal_amount,
         .heal_only_if_dead = heal_only_if_dead
     };
+
+
 }
 
 void heal_ability(Unit* unit, Heal_Component heal_component)

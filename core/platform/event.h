@@ -140,16 +140,15 @@ typedef struct Event_System
 
     RING_QUEUE_TYPE(Event_Queue_Packet)* event_queue; // TODO:
 
-    Allocator event_system_arena;
+    Heap_Allocator heap_allocator;
 
-    Memory_Tracker* mem_tracker;
 } Event_System;
 
 //TODO: event queue
 
 MAPI Event_System* event_init(Memory_System* memory_system);
 
-MAPI bool event_shutdown(Event_System* event_system);
+bool event_shutdown(Event_System* event_system, Memory_System* memory_system);
 
 MAPI void event_register(Event_System* event_system, Event_Type event, String subscriber,
                          event_callback callback);

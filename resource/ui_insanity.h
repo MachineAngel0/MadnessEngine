@@ -7,6 +7,14 @@
 
 //IMMEDIATE MODE UI
 
+
+//TODO: the rewrite and features needed:
+// UI sizes and positions should be modifiable with a GUI and saved into a file somewhere for loading, without me needing to constantly recompile the game
+// think of the ui system in silver case
+// things need to be able to be ordered as lists, and need to be able to be nested inside other ui elements
+// explore functions like, draw_below or draw inbetween two nodes, and something like an early resolve
+// animations - specify the state of one thing, and then the end state of that thing, size, pos, rotation, color,
+
 //NOTE: the smallest likely screen size for a laptop is likely to be a 1024*600 or more commonly 1024 * 768
 // smalles ill let it be is 600*600
 
@@ -25,7 +33,6 @@
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 100
 
 //UI
-
 
 typedef struct Insanity_UI_Interaction_Result
 {
@@ -126,7 +133,6 @@ typedef struct Insanity_UI_Node
 
 
 
-ARRAY_GENERATE_TYPE(Insanity_UI_Node)
 
 
 
@@ -139,7 +145,6 @@ typedef struct Insanity_UI
 {
     Allocator* allocator; // rn mainly just for loading fonts, would be better as a pool arena
     Frame_Allocator* frame_allocator;
-    Memory_Tracker* mem_tracker;
 
     Input_System* input_system_reference; // does not own memory
     Resource_System* resource_system;
@@ -150,7 +155,7 @@ typedef struct Insanity_UI
     float editor_font_size;
     // Font fonts[100];
 
-    Insanity_UI_Node_array* ui_nodes;
+    ARRAY_TYPE(Insanity_UI_Node)* ui_nodes;
     // UI_Node_array* button_nodes; //TODO: we will see
 
     Insanity_UI_Node* ui_stack[100];

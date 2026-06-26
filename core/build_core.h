@@ -16,6 +16,34 @@
 #include "../core/logger.h"
 #include "../core/id_gen.h"
 
+
+
+//CORE - DSA
+#include "../core/dsa/allocator.h"
+#include "../core/dsa/allocator_stack.h"
+#include "../core/dsa/allocator_heap.h"
+#include "../core/dsa/allocator_pool.h"
+#include "../core/dsa/allocator_malloc.h"
+#include "../core/dsa/allocator_segregated_list.h"
+#include "../core/dsa/allocator_tagged_frame.h"
+#include "../core/dsa/array.h"
+#include "../core/dsa/b_tree_red_black.h"
+#include "../core/dsa/binary_tree.h"
+#include "../core/dsa/darray.h"
+#include "../core/dsa/dsa_utility.h"
+#include "../core/dsa/hash_map.h"
+#include "../core/dsa/hash_set.h"
+#include "../core/dsa/hash_table.h"
+#include "../core/dsa/heap.h"
+#include "../core/dsa/linked_list.h"
+#include "../core/dsa/stack.h"
+#include "../core/dsa/str.h"
+#include "../core/dsa/str_builder.h"
+#include "../core/dsa/ring_queue.h"
+
+#include "../core/dsa/unions.h"
+#include "../core/dsa/array_freelist.h"
+
 //MATH
 #include "../core/maths/math_types.h"
 #include "../core/misc_util.h"
@@ -25,7 +53,8 @@
 
 #include "../core/c_string.h"
 
-
+//CORE - MEMORY
+#include "../core/memory/memory_system.h"
 
 //CORE - SERIALIZATION
 #include "../core/serialization/network_serialization.h"
@@ -34,9 +63,7 @@
 #include "../core/serialization/runtime_registry.h"
 #include "../core/asserts.h"
 
-//CORE - MEMORY
-#include "../core/memory/memory_tracker.h"
-#include "../core/memory/memory_system.h"
+
 
 //CORE - SUBSYSTEMS
 #include "../core/platform/event.h"
@@ -54,28 +81,7 @@
 
 
 
-//CORE - DSA
-#include "../core/dsa/allocator.h"
-#include "../core/dsa/allocator_stack.h"
-#include "../core/dsa/allocator_freelist.h"
-#include "../core/dsa/allocator_pool.h"
-#include "../core/dsa/_allocator_interface.h"
-#include "../core/dsa/array.h"
-#include "../core/dsa/b_tree_red_black.h"
-#include "../core/dsa/binary_tree.h"
-#include "../core/dsa/darray.h"
-#include "../core/dsa/dsa_utility.h"
-#include "../core/dsa/hash_map.h"
-#include "../core/dsa/hash_set.h"
-#include "../core/dsa/hash_table.h"
-#include "../core/dsa/heap.h"
-#include "../core/dsa/linked_list.h"
-#include "../core/dsa/stack.h"
-#include "../core/dsa/str.h"
-#include "../core/dsa/str_builder.h"
-#include "../core/dsa/ring_queue.h"
 
-#include "../core/dsa/unions.h"
 
 
 //CORE - Compiler

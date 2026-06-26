@@ -194,7 +194,6 @@ typedef struct Input_System
 
 
     Allocator input_system_arena;
-    Memory_Tracker* mem_tracker;
 
     Event_System* event_system_reference; // does now the memory
 } Input_System;

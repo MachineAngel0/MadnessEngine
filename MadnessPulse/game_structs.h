@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "game_constants.h"
+#include "game_enums.h"
 
 
 typedef struct Nonsense_Struct
@@ -35,14 +36,94 @@ typedef struct Reflection_Test_Struct
     Nonsense_Struct struct_type;
     Nonsense_Struct* struct_type_ptr;
     Nonsense_Struct struct_type_stack_ptr[10];
-
 } Reflection_Test_Struct;
 
 
+//SAVE GAME
+
+/* Save data related things*/
+
+typedef struct Game_Settings
+{
+    //game specific settings
+    bool unimplemented;
+} Game_Settings;
+
+typedef struct Save_Meta_Data
+{
+    u8 magic_number[4];
+    float version;
+    //used for the load game screen, so the player can see which save file they want
+    u8 slot_number; //255 game save is more than enough
+    u8 missions_beaten;
+    float game_time;
+} Save_Meta_Data;
+
+
+typedef struct Player_Save_Data
+{
+    Character_Name unit_id;
+
+    //TODO; replace with dynamic array at some point
+    u32 battle_list_count;
+    u32 reserve_list_count;
+
+    Ability_Name* ability_battle_list_save;
+    Ability_Name* ability_reserve_list;
+
+    //TODO: load outs for bieng able to quickly select a build
+} Player_Save_Data;
+
+typedef struct Save_Game
+{
+    Save_Meta_Data meta_data;
+
+    Player_Save_Data player_save_info[MAX_PLAYER_UNIT_COUNT];
+
+    //TODO: set the values needed to false
+    // stores whether a level is unlocked or not,
+    // they need to be the same name as the level
+    bool unlocked_levels[Level_Name_MAX];
+
+    //TODO: make fusion available during the fusion fight, and save the setting permanently from there
+    bool allowed_to_fusion;
+} Save_Game;
+
+
+typedef struct Level_Unlock_Rewards
+{
+    u32 unlock_count;
+    Ability_Name* ability_unlock_array_ids;
+} Level_Unlock_Rewards;
+
+// This is information set by a data table,
+// If a mission is unlocked, we check it by getting the map on the save data TMap<Emissionname, bool>
+//TODO: figure out how you want to display and read prebattle dialogue
+typedef struct Game_Level_Data
+{
+    Level_Name mission_name;
+    Level_Name mission_to_unlock;
+
+    String Display_Name;
+
+    //enemies to load in for the fight
+    u32 enemy_count;
+    Character_Name* enemy_units;
+
+
+    //decide who gets to go first
+    Turn_Initiative starting_turn_initiative;
+
+    bool is_debug_level;
+    bool ready_for_playtest;
+} Game_Level_Data;
+
+
+// ABILITY COMPONENTS
+
 typedef struct Heal_Component
 {
-    Ability_Component_Type type;
-
+    // Ability_Component_Type type;
     Heal_Types heal_type;
     float heal_amount;
     //should be false by default
@@ -51,7 +132,7 @@ typedef struct Heal_Component
 
 typedef struct Damage_Component
 {
-    Ability_Component_Type type;
+    // Ability_Component_Type type;
     Element_Type element;
     float damage; // TODO: remove, its here just for testing
 } Damage_Component;
@@ -103,6 +184,12 @@ typedef struct Conjure_Component
 {
     Conjure_Type conjure_type;
 } Conjure_Component;
+
+typedef struct Summoner_Component
+{
+    Summoner_Type summoner_type;
+} Summoner_Component;
+
 
 typedef struct Drain_Component
 {
@@ -197,16 +284,12 @@ typedef struct Status_Threshold_Changer
     float amount;
 } Status_Threshold_Changer;
 
-typedef struct Turn_Component_Duration
-{
-    int effect_length;
-    int turns_until_triggered;
-} Turn_Component_Duration;
 
 typedef struct Turn_Component_Base
 {
     Turn_Activation_Type turn_activation;
-    Turn_Component_Duration turn_component_duration;
+    u8 effect_length;
+    u8 turns_until_triggered;
 } Turn_Component_Base;
 
 //Battle Info
@@ -746,6 +829,7 @@ typedef struct Ability_Component
     Ability_Target_Type ability_target;
 
     Ability_Component_Type type;
+
     //ability switch lookup to find which function to execute
     union data
     {
@@ -753,6 +837,8 @@ typedef struct Ability_Component
         // NOTE: all ability components must have ability component type on them, as type if implicit based on the component
         Heal_Component heal;
         Damage_Component damage;
+        Reversal_Component reversal;
+        Turn_Component_Base turn_base;
     } data;
 } Ability_Component;
 
@@ -779,7 +865,6 @@ typedef struct Ability_Component_List
     // Dynamic_Array* get_list(type); // i guess??
     //we can make each component a 32kb data blob and just take the data from a pool
     //if we have 1000 abilties loaded in, and we use 5 component for each 64*1000*5 - 312.5kb
-
 } Ability_Component_List;
 
 typedef struct Ability
@@ -793,43 +878,31 @@ typedef struct Ability
 
 typedef struct Ability_Info
 {
-    String ability_name; // = "Ability Not Named";
-    String ability_text; // "Implement Text Please";
+    Ability_Name ability_name; // = "Ability Not Named";
+    String ability_text; // "Implement Text Please"; //TODO: i should look into auto generated ability text
     String overflow_trigger_text; // = "NA";
 
     String lore_text; //= "NA";
 
-    // Fusion_Type fusion_type; // = EFusionType::ECS_Fire;
 
-    //every ability only gets one normal attack, primary tag, primarily used to determine the icon type
-    // Ability_Type primary_ability_type; // = EAbilityType::ECS_Physical;
+    //Primary Type is either madness or insanity
+    //Secondary type is just to tell the player at a glance what an ability does
+    Ability_Primary_Type ability_primary_type;
+    Ability_Secondary_Type ability_secondary_type;
+    // this would also be the fusion type, if i do add fusion into the game
 
     Ability_Target_Type ability_target_type;
     Target_Area_Affect ability_target_area;
 
-    u32 ability_action_cost; // = 1;
+    Ability_Action_Cost_Type ability_action_cost; // = 1; //TODO: honestly i think all abilites should be 1 cost
     u32 mp_cost; // = 1.0f;
+
+    //how much an ability contributes to the overflow bar
+    Ability_Overflow_Value_Type overflow_value;
 } Ability_Info;
 
-typedef struct Ability_UI_INFO
-{
-    String ability_name; // = "Ability Not Named";
-    String ability_text; // "Implement Text Please";
-    String status_trigger_text; // = "NA";
 
-    //every ability only gets one normal attack, primary tag, primarily used to determine the icon type
-    Ability_Icon_Type Icon_Type;
-    Ability_Icon_Type Secondary_Icon_Type;
 
-    Ability_Target_Type ability_target_type;
-    Target_Area_Affect targets_can_affect;
-
-    u32 ability_action_cost; // = 1;
-    float mp_cost; // = 1.0f;
-}Ability_UI_INFO;
-
-ARRAY_GENERATE_TYPE(Ability)
-ARRAY_GENERATE_TYPE(Ability_Component)
 
 
 // UNITS //
@@ -856,8 +929,8 @@ typedef struct Action_Component
 typedef struct MP_Component
 {
     //MP Struct
-    float CurrentMP;
-    float MaxMP;
+    float current_mp;
+    float max_mp;
     float MaxAllowedMP;
 } MP_Component;
 
@@ -951,28 +1024,40 @@ typedef struct Character_Flags_Component
     bool revive_animation_flag;
 } Character_Flags_Component;
 
+
 typedef struct Inventory_Component
 {
+    //Used for the abiltity select screen
+
     //NOTE: these should not get touched but copied, as many things can
     // Ability* ability_battle_list; // list containing default abilities usable in the battle
     // Ability* ability_reserve; // list that contains all moves unlocked
     // Ability* Modifiable_AbilityBattleList; // list containing all abilities usable in the battle
 
-
     //NOTE : TEMP SORT OF
-    // list containing all abilities usable in the battle
+    // list containing all abilities the player intends to use in the battle
     Ability_Name battle_list_starting[INVENTORY_MAX_BATTLE_LIST];
     u8 battle_list_size;
     // Ability ability_battle_list_ability[INVENTORY_MAX_BATTLE_LIST];
 
     //list of ids to seperate tables
-    Ability_Name ability_reserve[Ability_Name_MAX]; // list that contains all moves unlocked
-
-    //TODO: this actually has to be a dynamic array
-    Ability_Name* battle_list_dynamic; // list containing all abilities usable in the battle
-    u8 battle_list_dynamic_size;
+    Ability_Name ability_reserve[Ability_Name_MAX]; // list that contains all unused abilties
+    u32 ability_reserve_size; // list that contains all unused abilties
+    //TODO: it would honestly be easier for me to just grey out abilties that are in the battle inventory,
+    // rather than removing them, and this lets me do validations much more easily
 } Inventory_Component;
 
+
+typedef struct Battle_Inventory_Component
+{
+    //In game, battle inventory, that is meant to manipulated
+
+
+    DYNAMIC_ARRAY_TYPE(Ability_Name)* battle_list_dynamic; // list containing all abilities usable in the battle
+
+    DYNAMIC_ARRAY_TYPE(u32)* ability_count; // how many of these abilties do we have, should correspond to the index in the battle list
+
+} Battle_Inventory_Component;
 
 typedef struct Conjure_List_Component
 {
@@ -1079,10 +1164,13 @@ typedef struct Unit
     Character_Name name;
     Character_State character_state;
 
+    Inventory_Component inventory_component;
+    Battle_Inventory_Component battle_inventory_component;
+
     Action_Component action_component;
     Health_Component health_component;
     MP_Component mp_component;
-    Inventory_Component inventory_component;
+
 
     Augment_Component augment_component;
     Resistance_Stats_Component resistance_stats_component;
@@ -1138,7 +1226,6 @@ typedef struct Unit
 */
 } Unit;
 
-ARRAY_GENERATE_TYPE(Unit)
 
 //TURN BASED GAME
 
@@ -1163,11 +1250,11 @@ typedef struct Ability_Registry
 typedef struct Turn_Trigger_Component_Info
 {
     //TODO: dont store pointers
-    Turn_Component_Duration TurnComponentDuration;
+    Turn_Component_Base turn_component_base_info;
     Ability* Ability;
     Ability_Component* TurnComponent;
-    Ability_Component_array* StatusComponents;
-    Ability_Component_array* ComponentsWithTurnTag;
+    DYNAMIC_ARRAY_TYPE(Ability_Component_array)* StatusComponents;
+    DYNAMIC_ARRAY_TYPE(Ability_Component_array)* ComponentsWithTurnTag;
     Unit* Caster;
     Unit* TurnTarget;
 } Turn_Trigger_Component_Info;
@@ -1178,11 +1265,20 @@ typedef struct Reversal_Component_Info
     //who is affected, reversal component, components with reversal tag
     Ability* Ability;
     Reversal_Component* ReversalComponent;
-    Ability_Component_array* ComponentsWithReversalTag;
+    DYNAMIC_ARRAY_TYPE(Ability_Component_array)* ComponentsWithReversalTag;
     Unit* Caster;
     Unit* ReversalTarget; // who we put the reversal on
     bool IsPermanent;
 } Reversal_Component_Info;
+
+typedef struct Unit_Handle
+{
+    u32 index; // points back to the units array
+    Character_Name name; // extra info that doesn't really need to live here
+
+    //it will be impossible for two characters with the same name to share the same index
+}Unit_Handle;
+
 
 
 // this component is only responsible for telling the abilities to process themselves
@@ -1199,9 +1295,14 @@ typedef struct Ability_Handler
 
 
     // AReversalPlayBackAction* ReversalPlayBackAction;
+
+    //ARRAYS
+    DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_start_components;
+    DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_end_components;
+    DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_start_end_components;
+    DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_first_start_components;
+    DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_final_end_components;
 } Ability_Handler;
-
-
 
 
 typedef struct Command
@@ -1239,37 +1340,27 @@ typedef struct Command_Handler
 typedef struct Targeting_Handler
 {
     //current targets available
-    DYNAMIC_ARRAY_TYPE(Character_Name)* targets_available;
-    // Character_Name_dynamic_array* targets_available;
+    DYNAMIC_ARRAY_TYPE(Unit_Handle)* targets_available_array;
+    //TODO: you can just calculate targets available size, and if its 1 or less, dont move the target lock
 
-    //target we are locked onto
-    Character_Name current_lock_on_target; // TODO: make it a u32 or Character Name
 
+    //NOTE: regardless if single or multi target, we want to let the player know the information of the unit they are hovering over
+    Unit_Handle current_lock_on_target;
     // current targets count that we are locked onto, only applicable to single target
     u8 targeting_count;
-
-
-    //TODO: you can just calculate targets available size, and if its 1 or less, dont move the target lock
-    // bool CanMoveTargeting;// = false;
 } Targeting_Handler;
 
-/// GAME MODE/STATE ///
-//NOTE: I dont have a decent name for this rn
-typedef enum Madness_Pulse_Game_State
-{
-    Game_State_Enum_Main_Menu,
-    Game_State_Enum_Ability_Select,
-    Game_State_Enum_Level_Select,
-    Game_State_Enum_Turn_Based,
-    Game_State_Enum_MAX,
-} Madness_Pulse_Game_State;
 
-typedef enum Main_Menu_State
+typedef struct Overflow_Handler
 {
-    Main_Menu_State_Load_Save,
-    Main_Menu_State_New_Save,
-    Main_Menu_State_Settings,
-} Main_Menu_State;
+    //unit -> ability and that abilties usage count
+    Unit_Handle character_name;
+    //
+    Ability_Name ability_to_consume[Ability_Name_MAX];
+    u32 usage_count[Ability_Name_MAX];
+    //
+
+} Overflow_Handler;
 
 
 typedef struct Madness_Pulse_Game
@@ -1277,6 +1368,7 @@ typedef struct Madness_Pulse_Game
     Allocator allocator;
     // Arena Current_State_Arena; //NOTE: to release data specific to the game state, but not unload literally everything
     Frame_Allocator frame_allocator;
+    Heap_Allocator heap_allocator;
 
     //refs
     Resource_System* resource_system;
@@ -1285,11 +1377,17 @@ typedef struct Madness_Pulse_Game
     Input_System* input_system;
 
 
+    // Save_Meta_Data save_meta_data;
     Madness_Pulse_Game_State game_state;
 
 
-    //MAIN MENU//
-    //TODO: Load Save File Meta Data
+    //MAIN MENU//x
+    //TODO: Load Save File Meta Data, expand into 255 slots
+    Save_Meta_Data save_meta_data[MAX_SAVE_SLOTS];
+    u8 saves_found;
+    u32 current_save_slot_number;
+
+    Save_Game* save_game;
 
     //ABILITY SELECT / LEVEL SELECT OPTIONS MENU //
 
@@ -1305,38 +1403,45 @@ typedef struct Madness_Pulse_Game
     Turn_Phase turn_phase;
     Turn_Based_UI_States ui_state;
 
+    Ability_Registry* ability_registry;
 
-    //PLAYER AND ENEMY UNTIS
-    Unit* units;
+    Targeting_Handler* targeting_handler;
+    Ability_Handler* ability_handler;
+    Command_Handler* command_handler;
+
+    //PLAYER AND ENEMY UNITS
+    //NOTE: there can only be one named character on each side of the
+    //TODO: replace with dynamic arrays
+    Unit** units;
     u8 units_count;
 
+    //this is really just a convienence
+    Unit_Handle* unit_handles;
+    u8 unit_handles_count;
 
-    Unit players[MAX_PLAYER_COUNT];
-    Character_Name player_character_names[MAX_PLAYER_COUNT];
+    //references that point back into the units array
+    //NOTE: no generation index's rn, but i might need them for minion/summons
+    Unit_Handle* players;
     u8 player_count;
-    //idk the enemy unit count at start up since its different every map
-    Unit* enemies;
-    Character_Name enemy_character_names[MAX_PLAYER_COUNT];
+
+    Unit_Handle* enemies;
     u8 enemy_count;
 
 
     //TODO: this will likely need to realloc or put a hard limit on what can be summoned into the game
     // im thinking if a unit does get added mid fight, that they will have summoners sickness,
     // meaning they cant act until the turn queue gets reset
-    ring_queue* turn_queue;
+    RING_QUEUE_TYPE(Unit_Handle)* turn_queue;
     // NOTE: right there will only be unique enemies in the game, and only a single instance allowed in play
     // FUTURE: if i need to update this in the future then do so to accomadate multiple of the same enemy
-    Character_Name current_units_turn;
+    Unit_Handle current_units_turn;
     Ability_Name currently_selected_ability;
 
     u32 picked_ability;
     Turn_Initiative starting_turn_initiative;
 
-    Ability_Registry* ability_registry;
 
-    Targeting_Handler* targeting_handler;
-    Ability_Handler* ability_handler;
-    Command_Handler* command_handler;
+    //
 } Madness_Pulse_Game;
 
 #endif //GAME_TYPES_H

@@ -16,14 +16,14 @@ byte_buffer* byte_buffer_init(uint32_t capacity)
 }
 
 
-byte_buffer* byte_buffer_init_arena(Allocator* arena, const uint32_t capacity)
+byte_buffer* byte_buffer_init_arena(const uint32_t capacity, Allocator* arena)
 {
     //the arena should be empty
     byte_buffer* buffer = (byte_buffer *) allocator_alloc(arena, sizeof(byte_buffer));
     buffer->data = allocator_alloc(arena, capacity);
     buffer->write_offset = 0;
     buffer->read_offset = 0;
-    buffer->Arena = arena;
+    buffer->allocator = arena;
     return buffer;
 }
 
@@ -37,7 +37,7 @@ byte_buffer* byte_buffer_init_arena(Allocator* arena, const uint32_t capacity)
 
 void byte_buffer_free_arena(byte_buffer* buffer)
 {
-    free(buffer->Arena);
+    free(buffer->allocator);
 }
 
 

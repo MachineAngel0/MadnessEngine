@@ -1,5 +1,4 @@
 ﻿#pragma once
-#pragma once
 
 #include "defines.h"
 
@@ -70,6 +69,33 @@ bool filesystem_file_size(const char* file_path, u64* out_file_size)
 }
 
 
+bool filesystem_create_file(const char* file_path)
+{
+    FILE* fptr = fopen(file_path, "r");
+
+    if (fptr)
+    {
+        //file exists
+        fclose(fptr);
+        return true;
+    }
+
+    fptr = fopen(file_path, "w");
+    if (fptr)
+    {
+        fclose(fptr);
+        return true;
+    }
+
+
+    return false;
+
+}
+
+
+
+//PLATFORM SPECIFIC CODE
+
 typedef struct File_Handle
 {
     u32 handle;
@@ -83,9 +109,17 @@ void filesystem_unregister_file_by_name(const char* file_path);
 bool filesystem_has_file_changed(File_Handle* file_path);
 
 
+bool filesystem_does_file_exists(const char* file_path);
+bool filesystem_does_directory_exists(const char* directory_path);
 
-// bool filesystem_exists(const char* path);
-//
+
+bool filesystem_create_directory(const char* directory_path);
+bool filesystem_create_file_platform(const char* file_path);
+
+bool filesystem_scan_directory(const char* directory_path);
+bool filesystem_is_directory_empty(const char* directory_path);
+
+
 // bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle);
 //
 // void filesystem_close(file_handle* handle);
@@ -101,3 +135,5 @@ bool filesystem_has_file_changed(File_Handle* file_path);
 // bool filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written);
 //
 //
+
+

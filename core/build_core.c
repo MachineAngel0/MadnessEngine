@@ -1,8 +1,7 @@
 ﻿//CORE - DSA
-#include "../core/dsa/_allocator_interface.c"
 #include "../core/dsa/allocator.c"
 #include "../core/dsa/allocator_stack.c"
-#include "../core/dsa/allocator_freelist.c"
+#include "../core/dsa/allocator_heap.c"
 #include "../core/dsa/allocator_pool.c"
 #include "../core/dsa/array.c"
 #include "../core/dsa/b_tree_red_black.c"
@@ -17,6 +16,7 @@
 #include "../core/dsa/str.c"
 #include "../core/dsa/str_builder.c"
 #include "../core/dsa/ring_queue.c"
+#include "../core/dsa/array_freelist.c"
 
 
 //MATHS
@@ -26,7 +26,6 @@
 
 
 //CORE - MEMORY
-#include "../core/memory/memory_tracker.c"
 #include "../core/memory/memory_system.c"
 
 
@@ -45,10 +44,12 @@
 #include "../core/platform/platform_win32.c"
 #include "../core/platform/gamepad_win32.c"
 #include "../core/platform/thread_win32.c"
+#include "../core/platform/filesystem_win32.c"
 #elif MPLATFORM_LINUX
 #include "../core/platform/platform_linux.c"
 #include "../core/platform/gamepad_linux.c"
 #include "../core/platform/thread_linux.c"
+#include "../core/platform/filesystem_linux.c"
 
 #endif
 #include "../core/platform/job_system.c"
