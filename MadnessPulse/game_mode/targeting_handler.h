@@ -31,53 +31,50 @@ void targeting_handler_create_targeting_info(Madness_Pulse_Game* game)
     case Ability_Target_Type_Allies:
         for (int i = 0; i < game->player_count; ++i)
         {
-            if (character_handle_compare(game->current_units_turn, game->players[i]))
+            if (character_handle_compare(game->current_units_turn, game->player_handles[i]))
             {
                 continue;
             }
-            dynamic_array_push(game->targeting_handler->targets_available_array, &game->players[i]);
-
+            dynamic_array_push(game->targeting_handler->targets_available_array, &game->player_handles[i]);
         }
 
         break;
     case Ability_Target_Type_Self_And_Allies:
-        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->players,
+        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->player_handles,
                                  game->player_count);
         break;
     case Ability_Target_Type_Enemies:
-        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemies,
+        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemy_handles,
                                  game->enemy_count);
         break;
     case Ability_Target_Type_Self_And_Enemies:
         dynamic_array_push(game->targeting_handler->targets_available_array, &game->current_units_turn);
-        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemies,
+        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemy_handles,
                                  game->enemy_count);
         break;
     case Ability_Target_Type_Allies_And_Enemies:
         for (int i = 0; i < game->player_count; ++i)
         {
-            if (character_handle_compare(game->current_units_turn, game->players[i]))
+            if (character_handle_compare(game->current_units_turn, game->player_handles[i]))
             {
                 continue;
             }
-            dynamic_array_push(game->targeting_handler->targets_available_array, &game->players[i]);
-
+            dynamic_array_push(game->targeting_handler->targets_available_array, &game->player_handles[i]);
         }
         for (int i = 0; i < game->player_count; ++i)
         {
-            if (character_handle_compare(game->current_units_turn, game->players[i]))
+            if (character_handle_compare(game->current_units_turn, game->player_handles[i]))
             {
                 continue;
             }
-            dynamic_array_push(game->targeting_handler->targets_available_array, &game->players[i]);
-
+            dynamic_array_push(game->targeting_handler->targets_available_array, &game->player_handles[i]);
         }
         break;
 
     case Ability_Target_Type_All:
-        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->players,
+        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->player_handles,
                                  game->player_count);
-        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemies,
+        dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemy_handles,
                                  game->enemy_count);
         break;
     default:
@@ -200,21 +197,31 @@ void target_handler_clear_all_target_locks(Targeting_Handler* targeting_handler,
 }
 
 // Character_Name_array* ReturnTargetsForActionManager(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game, Ability* AbilityChoosen)
-Array* target_handler_return_selected_targets(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game)
+ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game)
 {
     Ability_Info info = ability_registry_get_ability_info(game->ability_registry, game->currently_selected_ability);
 
     if (info.ability_target_area == Target_Area_Affect_Target_All)
     {
-        return dynamic_array_copy_fixed_size(targeting_handler->targets_available_array, &game->allocator);
+        ARRAY_TYPE(Unit*)* out_array = array_create(Unit*, targeting_handler->targets_available_array->num_items,
+                                                    &game->frame_allocator);
+        for (u32 i = 0; i < targeting_handler->targets_available_array->num_items; i++)
+        {
+            Unit* unit = madness_pulse_get_unit(
+                game, dynamic_array_get(targeting_handler->targets_available_array, Unit_Handle, i));
+            array_push(out_array, &unit);
+        }
+
+        return out_array;
+        // return dynamic_array_copy_fixed_size(targeting_handler->targets_available_array, &game->allocator);
     }
 
     //implied that this is single target if it reaches this point
     if (info.ability_target_area == Target_Area_Affect_Single_Target)
     {
-        Array* single_target_array = array_create(Unit_Handle, 1, &game->allocator);
-        array_push(single_target_array, _dynamic_array_get(targeting_handler->targets_available_array,
-                                                           targeting_handler->targeting_count));
+        Array* single_target_array = array_create(Unit*, 1, &game->allocator);
+        Unit* unit = madness_pulse_get_unit(game, dynamic_array_get(targeting_handler->targets_available_array, Unit_Handle, targeting_handler->targeting_count));
+        array_push(single_target_array, &unit);
         return single_target_array;
     }
 

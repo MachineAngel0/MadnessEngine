@@ -55,9 +55,9 @@ void damage_component_create(Ability_Component* Ability_component, const Element
 }
 
 
-void damage_ability(Unit* unit, const Damage_Component* damage_ability)
+void damage_ability(Unit* caster, Unit* target, const Damage_Component* damage_ability)
 {
-    unit->health_component.current_health -= damage_ability->damage;
+    target->health_component.current_health -= damage_ability->damage;
 }
 
 

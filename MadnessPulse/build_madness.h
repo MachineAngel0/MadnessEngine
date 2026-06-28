@@ -55,6 +55,7 @@
 
 #include "action_add.h"
 #include "action_remove.h"
+#include "action_trade.h"
 
 #include "conjure.h"
 #include "summoner.h"

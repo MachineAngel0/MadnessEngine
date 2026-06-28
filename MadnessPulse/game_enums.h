@@ -132,6 +132,7 @@ typedef enum Ability_Component_Type
 {
     Ability_Component_TYPE_INVALID,
 
+    //GENERAL
     Ability_Component_TYPE_HEAL,
     Ability_Component_TYPE_HEAL_SETTER,
     Ability_Component_TYPE_HEAL_PERCENT,
@@ -154,6 +155,7 @@ typedef enum Ability_Component_Type
 
     Ability_Component_TYPE_ACTION_ADD,
     Ability_Component_TYPE_ACTION_REMOVE,
+    Ability_Component_TYPE_ACTION_CHANGE_PERMANENT,
 
     Ability_Component_TYPE_AUGMENT_CHANGE,
 
@@ -169,6 +171,12 @@ typedef enum Ability_Component_Type
 
     Ability_Component_TYPE_STATUS_CHANGE,
     Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE,
+
+    //BOSS SPECIFIC
+
+    //Custom
+    Ability_Component_TYPE_ACTION_TRADE,
+
 
     Ability_Component_TYPE_MAX,
 } Ability_Component_Type;
@@ -250,11 +258,11 @@ typedef enum Reversal_Duration
 } Reversal_Duration;
 
 
-typedef enum Target_Area_Affect
+typedef enum Ability_Target_Area
 {
     Target_Area_Affect_Single_Target,
     Target_Area_Affect_Target_All,
-} Target_Area_Affect;
+} Ability_Target_Area;
 
 typedef enum Ability_Target_Type
 {
@@ -266,6 +274,24 @@ typedef enum Ability_Target_Type
     Ability_Target_Type_Allies_And_Enemies,
     Ability_Target_Type_All,
 } Ability_Target_Type;
+
+typedef enum Ability_Component_Target_Area
+{
+    Ability_Component_Target_Area_Affect_Single_Target,
+    Ability_Component_Target_Area_Affect_Target_All,
+} Ability_Component_Ability_Target_Area;
+
+typedef enum Ability_Component_Target_Type
+{
+    Ability_Component_Target_Type_Self,
+    Ability_Component_Target_Type_Allies,
+    Ability_Component_Target_Type_Enemies,
+    Ability_Component_Target_Type_Self_And_Allies,
+    Ability_Component_Target_Type_Self_And_Enemies,
+    Ability_Component_Target_Type_Allies_And_Enemies,
+    Ability_Component_Target_Type_All,
+} Ability_Component_Target_Type;
+
 
 typedef enum Ability_Primary_Type
 {

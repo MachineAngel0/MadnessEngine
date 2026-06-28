@@ -12,8 +12,7 @@ Health_Component health_component_create()
     health.max_health_limit = health.max_health * 2.0f;
     health.min_health_limit = -(health.max_health * 2.0f);
 
-    health.death_animation_flag = false;
-    health.revive_animation_flag = false;
+
 
     return health;
 }
@@ -25,10 +24,7 @@ void health_component_init_default(Health_Component* health)
     health->max_health_limit = health->max_health * 2.0f;
     health->min_health_limit = -(health->max_health * 2.0f);
 
-    health->death_animation_flag = false;
-    health->revive_animation_flag = false;
-
-};
+}
 
 
 bool health_component_is_dead(Health_Component* health_component)

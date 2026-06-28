@@ -76,9 +76,9 @@ void heal_component_create(Ability_Component* ac, const float heal_amount,
     };
 }
 
-void heal_ability(Unit* unit, const Heal_Component* component)
+void heal_ability(Unit* current_target, const Heal_Component* component)
 {
-    heal_by_amount(&unit->health_component, component->heal_amount);
+    heal_by_amount(&current_target->health_component, component->heal_amount);
 }
 
 void heal_component_text(const Heal_Component* component, String_Builder* string_builder)

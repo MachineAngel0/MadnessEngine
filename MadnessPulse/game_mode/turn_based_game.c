@@ -92,9 +92,12 @@ void turn_based_game_init(Madness_Pulse_Game* game)
     //TODO: replace with a proper free list allocator, also this is more than enough for testing
     u32 temp_unit_max_count = 20;
     game->units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->player_units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->enemy_units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
+
     game->unit_handles = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
-    game->players = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
-    game->enemies = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
+    game->player_handles = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
+    game->enemy_handles = allocator_alloc(&game->allocator, sizeof(Unit_Handle) * temp_unit_max_count);
     //load player
     unit_create(game, Character_Name_Madness_Progenitor);
     unit_create(game, Character_Name_Madness_ButterFly);
@@ -433,7 +436,7 @@ void turn_update(Madness_Pulse_Game* game)
             madness_ui_string(game->madness_ui, STRING("PLAYER"));
             for (u32 i = 0; i < game->player_count; i++)
             {
-                Unit* unit = madness_pulse_get_unit(game, game->players[i]);
+                Unit* unit = madness_pulse_get_unit(game, game->player_handles[i]);
                 madness_ui_c_string(game->madness_ui, Character_Name_enum_string[unit->name]);
 
                 //health
@@ -454,7 +457,7 @@ void turn_update(Madness_Pulse_Game* game)
             madness_ui_string(game->madness_ui, STRING("ENEMIES"));
             for (u32 i = 0; i < game->enemy_count; i++)
             {
-                Unit* unit = madness_pulse_get_unit(game, game->enemies[i]);
+                Unit* unit = madness_pulse_get_unit(game, game->enemy_handles[i]);
                 madness_ui_c_string(game->madness_ui, Character_Name_enum_string[unit->name]);
 
                 madness_ui_float(game->madness_ui, STRING("Health"), &unit->health_component.current_health, 0);
@@ -483,22 +486,22 @@ void turn_based_reset_turn_queue(Madness_Pulse_Game* game)
     case Turn_Initiative_Player:
         for (u32 i = 0; i < game->player_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->players[i]);
+            ring_enqueue(game->turn_queue, &game->player_handles[i]);
         }
         for (u32 i = 0; i < game->enemy_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->enemies[i]);
+            ring_enqueue(game->turn_queue, &game->enemy_handles[i]);
         }
 
         break;
     case Turn_Initiative_Enemy:
         for (u32 i = 0; i < game->enemy_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->enemies[i]);
+            ring_enqueue(game->turn_queue, &game->enemy_handles[i]);
         }
         for (u32 i = 0; i < game->player_count; i++)
         {
-            ring_enqueue(game->turn_queue, &game->players[i]);
+            ring_enqueue(game->turn_queue, &game->player_handles[i]);
         }
         break;
     }
@@ -507,7 +510,6 @@ void turn_based_reset_turn_queue(Madness_Pulse_Game* game)
 void game_resolve_unit_character_list_types(Madness_Pulse_Game* game)
 {
     //puts units into the proper player or enemy lists
-    game->unit_handles_count = game->units_count;
     game->player_count = 0;
     game->enemy_count = 0;
 
@@ -521,18 +523,18 @@ void game_resolve_unit_character_list_types(Madness_Pulse_Game* game)
         switch (current_unit->character_type)
         {
         case Character_Type_Player:
-            game->players[game->player_count++] = (Unit_Handle){i, current_unit->name};
+            game->player_units[game->player_count] = current_unit;
+            game->player_handles[game->player_count] = (Unit_Handle){i, current_unit->name};
+            game->player_count++;
             break;
         case Character_Type_Enemy:
-            game->enemies[game->enemy_count++] = (Unit_Handle){i, current_unit->name};
+            game->enemy_units[game->enemy_count] = current_unit;
+            game->enemy_handles[game->enemy_count] = (Unit_Handle){i, current_unit->name};
+            game->enemy_count++;
             break;
         }
     }
 
-
-    //idk the enemy unit count at start up since its different every map
-    Unit* enemies;
-    u8 enemy_count;
 }
 
 bool can_current_unit_act(Madness_Pulse_Game* game)

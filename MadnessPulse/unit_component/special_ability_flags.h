@@ -4,19 +4,19 @@
 #include <stdbool.h>
 #include "game_structs.h"
 
-Special_Ability_Flag_List_Component special_ability_flag_list_component_create()
+Ability_Flag_List_Component special_ability_flag_list_component_create()
 {
-    Special_Ability_Flag_List_Component special_ability_flag_list = {0};
+    Ability_Flag_List_Component special_ability_flag_list = {0};
     return special_ability_flag_list;
 }
 
-void special_ability_flag_list_component_create_default(Special_Ability_Flag_List_Component* special_ability_flag_list)
+void special_ability_flag_list_component_create_default(Ability_Flag_List_Component* special_ability_flag_list)
 {
-    memset(special_ability_flag_list, 0, sizeof(Special_Ability_Flag_List_Component));
+    memset(special_ability_flag_list, 0, sizeof(Ability_Flag_List_Component));
 }
 
 
-void SetFlags(Special_Ability_Flag_List_Component* units_list, Special_Ability_Flag_List_Component flags_to_set)
+void SetFlags(Ability_Flag_List_Component* units_list, Ability_Flag_List_Component flags_to_set)
 {
     if (flags_to_set.BlackSun)
     {
@@ -67,13 +67,13 @@ void SetFlags(Special_Ability_Flag_List_Component* units_list, Special_Ability_F
 
 }
 
-void special_ability_flag_list_reset_flags(Special_Ability_Flag_List_Component* special_ability_flag_list)
+void special_ability_flag_list_reset_flags(Ability_Flag_List_Component* special_ability_flag_list)
 {
-    memset(special_ability_flag_list, 0, sizeof(Special_Ability_Flag_List_Component));
+    memset(special_ability_flag_list, 0, sizeof(Ability_Flag_List_Component));
 }
 
 
-bool can_use_mirage(Special_Ability_Flag_List_Component* special_ability_flag_list)
+bool can_use_mirage(Ability_Flag_List_Component* special_ability_flag_list)
 {
     //check if we can use and that the count is above zero
     // we also want to decrement the count

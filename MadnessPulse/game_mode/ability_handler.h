@@ -10,16 +10,22 @@ Ability_Handler* ability_handler_init(Madness_Pulse_Game* game)
 {
     Ability_Handler* ability_handler = allocator_alloc(&game->allocator, sizeof(Ability_Handler));
 
-    ability_handler->turn_start_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_start_components =
+        dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
     ability_handler->turn_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
-    ability_handler->turn_start_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
-    ability_handler->turn_first_start_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
-    ability_handler->turn_final_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_start_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1,
+                                                                      &game->heap_allocator);
+    ability_handler->turn_first_start_components = dynamic_array_create(Turn_Trigger_Component_Info, 1,
+                                                                        &game->heap_allocator);
+    ability_handler->turn_final_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1,
+                                                                      &game->heap_allocator);
 
 
     ability_handler->reversal_once_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
-    ability_handler->reversal_units_turn_start_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
-    ability_handler->reversal_permanent_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
+    ability_handler->reversal_units_turn_start_components = dynamic_array_create(
+        Reversal_Component_Info, 1, &game->heap_allocator);
+    ability_handler->reversal_permanent_components = dynamic_array_create(
+        Reversal_Component_Info, 1, &game->heap_allocator);
 
     return ability_handler;
 }
@@ -35,8 +41,8 @@ AStatusTriggerAction* StatusTriggerAction;
 
 
 void ability_handler_process_normal_components(Madness_Pulse_Game* game,
-                                               Array* targets,
-                                               Ability_Component* normal_components, u32 normal_component_count,
+                                               Ability_Target_Execution_Info* ability_target_info,
+                                               Ability_Component* normal_components, const u32 normal_component_count,
                                                u32 overflow_count)
 {
     DEBUG("Processing Normal Components");
@@ -44,21 +50,21 @@ void ability_handler_process_normal_components(Madness_Pulse_Game* game,
     //NOTE: since the same ability will be activated multiple times in a row,
     // it would just make sense to just query the top of the replay action queue
     //  and just increment a number for how many times that thing needs to occur,
-    //  nstead of adding a bunch of redundant data to display the overflow
+    //  instead of adding a bunch of redundant data to display the overflow
 
     for (u32 component_number = 0; component_number < normal_component_count; component_number++)
     {
+        Ability_Component ability_component = normal_components[component_number];
+        //TODO: get the targets that the component is targeting
         for (int i = 0; i < overflow_count; ++i)
         {
-            for (u32 target_number = 0; target_number < targets->num_items; target_number++)
+            for (u32 target_number = 0; target_number < ability_target_info->targets->num_items; target_number++)
             {
-                Unit* unit = madness_pulse_get_unit(game, array_get(targets, Unit_Handle, target_number));
-                Ability_Component ability_component = normal_components[component_number];
-                ability_component_process_effect(unit, &ability_component);
+                Unit* current_target = array_get(ability_target_info->targets, Unit*, target_number);
+
+                ability_component_process_effect(game, ability_target_info, current_target, &ability_component);
             }
         }
-
-
     }
 }
 
@@ -82,9 +88,32 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
     Ability* ability = ability_registry_get_ability(game->ability_registry, game->currently_selected_ability);
     Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry,
                                                                   game->currently_selected_ability);
-    Unit* unit_caster = madness_pulse_get_unit(game, game->current_units_turn);
 
-    Array* targets = target_handler_return_selected_targets(game->targeting_handler, game);
+    Unit* unit_caster = madness_pulse_get_unit(game, game->current_units_turn);
+    Ability_Target_Execution_Info ability_target_info = {
+        .caster = unit_caster,
+        .targets = target_handler_return_attack_targets(game->targeting_handler, game),
+        .caster_allies = NULL,
+        .caster_enemies = NULL,
+        .ally_count = 0,
+        .enemy_count = 0,
+    };
+
+    switch (ability_target_info.caster->character_type)
+    {
+    case Character_Type_Player:
+        ability_target_info.caster_allies = game->player_units;
+        ability_target_info.caster_enemies = game->enemy_units;
+        ability_target_info.ally_count = game->player_count;
+        ability_target_info.enemy_count = game->enemy_count;
+        break;
+    case Character_Type_Enemy:
+        ability_target_info.caster_allies = game->enemy_units;
+        ability_target_info.caster_enemies = game->player_units;
+        ability_target_info.ally_count = game->enemy_count;
+        ability_target_info.enemy_count = game->player_count;
+        break;
+    }
 
 
     // use up action, if the player is dumb and uses more than they can afford, that's on them
@@ -115,7 +144,7 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
 
     //checking for mirage, which will negate the ability used
 
-    for (u32 i = 0; i < targets->num_items; i++)
+    for (u32 i = 0; i < ability_target_info.targets->num_items; i++)
     {
         if (can_use_mirage(&unit_caster->special_ability_flag_list_component))
         {
@@ -174,18 +203,18 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
     //we set it to 1 so that the ability executes at least once,
     u32 overflow_count = 1;
     overflow_count += overflow_component_get_overflow_trigger_count(&unit_caster->overflow_component,
-                                                                       &unit_caster->battle_inventory_component,
-                                                                       game->ability_registry);
+                                                                    &unit_caster->battle_inventory_component,
+                                                                    game->ability_registry);
 
     overflow_component_use_up_overflow(&unit_caster->overflow_component,
                                        &unit_caster->battle_inventory_component,
                                        game->ability_registry);
 
 
-    ability_handler_process_normal_components(game, targets, ability->normal_components,
+    ability_handler_process_normal_components(game, &ability_target_info, ability->normal_components,
                                               ability->normal_component_count, overflow_count);
 
-    //NOTE: there are no more status trigger components, if an ability happens, it happens as is, again with the overflow
+    //NOTE: there are no more status trigger components, if an ability happens, it happens as is, with the overflow
 
 
     /* TODO: reversal and turn based components, they need a redesign anyway

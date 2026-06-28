@@ -12,20 +12,20 @@
 
 void action_component_init_default(Action_Component* action)
 {
-    action->MaxActionsAvailable = MAX_ACTIONS_DEFAULT;
+    action->max_actions_available = MAX_ACTIONS_DEFAULT;
     //starts off at 0 but the will be increased on units turn start
-    action->ActionsAvailable = 0;
+    action->actions_available = 0;
 }
 
 
 void action_component_RefreshActionsAvailable(Action_Component* action)
 {
-    action->ActionsAvailable = action->MaxActionsAvailable;
+    action->actions_available = action->max_actions_available;
 }
 
 void action_component_refresh_actions_by_addition(Action_Component* action)
 {
-    action->ActionsAvailable += action->MaxActionsAvailable;
+    action->actions_available += action->max_actions_available;
 }
 
 void action_component_refresh_for_turn_start(Action_Component* action)
@@ -35,22 +35,22 @@ void action_component_refresh_for_turn_start(Action_Component* action)
 
 void action_component_decrease_actions(Action_Component* action, const int ActionsToDecrease)
 {
-    action->ActionsAvailable -= ActionsToDecrease;
+    action->actions_available -= ActionsToDecrease;
 }
 
 void action_component_increase_actions(Action_Component* action, const int ActionsToIncrease)
 {
-    action->ActionsAvailable += ActionsToIncrease;
+    action->actions_available += ActionsToIncrease;
 }
 
 int action_component_return_actions_available(Action_Component* action)
 {
-    return action->ActionsAvailable;
+    return action->actions_available;
 }
 
 bool action_component_is_action_available(Action_Component* action)
 {
-    return action->ActionsAvailable > 0;
+    return action->actions_available > 0;
 }
 
 void action_component_change_actions_by_type(Action_Component* action, Action_Changer_Type ActionType,
@@ -77,10 +77,10 @@ void action_component_change_max_actions_available_by_type(Action_Component* act
     switch (action_type)
     {
     case Action_Changer_Type_ActionAdd:
-        action->MaxActionsAvailable += actions_change_amount;
+        action->max_actions_available += actions_change_amount;
         break;
     case Action_Changer_Type_ActionRemove:
-        action->MaxActionsAvailable -= actions_change_amount;
+        action->max_actions_available -= actions_change_amount;
         break;
     default:
         FATAL("Change Actions By Type Function Given Invalid EActionChangerType");
