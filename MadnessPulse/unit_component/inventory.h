@@ -1,7 +1,6 @@
 #ifndef INVENTORY_H
 #define INVENTORY_H
 
-#include "ability.h"
 
 
 //Inventory
@@ -61,7 +60,28 @@ void battle_inventory_usage_count_zero_all(Battle_Inventory_Component* battle_in
 {
     dynamic_array_zero(battle_inventory_component->overflow_usage_count);
 
+
 }
+
+
+void battle_inventory_add_ability(Battle_Inventory_Component* battle_inventory_component, Ability_Name ability_name, u32 count)
+{
+
+}
+
+void battle_inventory_remove_ability(Battle_Inventory_Component* battle_inventory_component, Ability_Name ability_name, u32 count)
+{
+
+}
+
+void battle_inventory_remove_all_ability(Battle_Inventory_Component* battle_inventory_component, Ability_Name ability_name)
+{
+
+
+
+}
+
+
 
 void battle_inventory_add_debug_ability(Battle_Inventory_Component* battle_inventory_component, Ability_Name ability_name)
 {
@@ -82,7 +102,6 @@ void battle_inventory_add_debug_ability(Battle_Inventory_Component* battle_inven
     dynamic_array_push(battle_inventory_component->ability_count, &starting_ability_count);
     dynamic_array_push(battle_inventory_component->overflow_usage_count, &default_usage_count);
 }
-
 
 
 

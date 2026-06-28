@@ -8,6 +8,11 @@
 
 #define INSTA_KILL_DAMAGE 999999u
 
+
+#define Charge_Percent 1.5f
+#define High_Charge_Percent 2.0f
+
+
 //unit
 
 #define MAX_HEALTH_DEFAULT 1000u

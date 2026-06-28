@@ -1,6 +1,7 @@
 ﻿#include "str.h"
 
 #include "allocator_malloc.h"
+#include "c_string.h"
 
 
 //immutable string, not meant to be modified,
@@ -227,18 +228,24 @@ bool string_compare_c_string(const String* str1, const char* c_str)
     return true;
 }
 
-String* string_from_int(int value, Allocator* allocator)
+String* string_from_int(s32 value, Allocator* allocator)
 {
-    return &STRING_STRLEN(c_string_from_int(value, allocator));
+    String* out_string = allocator_alloc(allocator, sizeof(String));
+
+    out_string->length = snprintf(NULL, 0, "%d", value);
+    out_string->chars = allocator_alloc(allocator, out_string->length + 1);
+    snprintf(out_string->chars, out_string->length + 1, "%d", value);
+
+    return out_string;
 }
 
 String* string_from_float(float value, Allocator* allocator)
 {
     String* out_string = allocator_alloc(allocator, sizeof(String));
 
-    out_string->length = snprintf(NULL, 0, "%.3f", value);
+    out_string->length = snprintf(NULL, 0, "%.2f", value);
     out_string->chars = allocator_alloc(allocator, out_string->length + 1);
-    snprintf(out_string->chars, out_string->length + 1, "%.3f", value);
+    snprintf(out_string->chars, out_string->length + 1, "%.2f", value);
 
     return out_string;
 }

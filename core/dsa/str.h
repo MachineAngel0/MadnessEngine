@@ -51,7 +51,7 @@ bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator);
 
 //UTILITY
 
-String* string_from_int(int value, Allocator* allocator);
+String* string_from_int(s32 value, Allocator* allocator);
 String* string_from_float(float value, Allocator* allocator);
 
 String* string_format(Allocator* allocator, const char* format, ...);

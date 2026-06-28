@@ -84,7 +84,7 @@ void heal_ability(Unit* unit, const Heal_Component* component)
 void heal_component_text(const Heal_Component* component, String_Builder* string_builder)
 {
     string_builder_append_string(string_builder,
-                                 string_format(string_builder->allocator, "Heal target by %f",
+                                 string_format(string_builder->allocator, "Heal target by %0.2f",
                                                component->heal_amount));
 }
 
@@ -93,4 +93,4 @@ void heal_component_text(const Heal_Component* component, String_Builder* string
 
 
 
-#endif //HEAL_H
+#endif

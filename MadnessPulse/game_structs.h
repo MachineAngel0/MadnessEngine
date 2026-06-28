@@ -226,7 +226,7 @@ typedef struct Ability_Adder_Component
 
 typedef struct Ability_Remover_Component
 {
-    Ability_Name abilities_to_remove;
+    Ability_Name ability_to_remove;
     u32 count;
 } Ability_Remover_Component;
 
@@ -238,12 +238,12 @@ typedef struct Ability_Remove_All_Component
 
 typedef struct Action_Remove_Component
 {
-    u32 action_amount_to_remove;
+    u32 amount;
 } Action_Remove_Component;
 
 typedef struct Action_Add_Component
 {
-    u32 action_amount_to_add;
+    u32 amount;
 } Action_Add_Component;
 
 typedef struct Augment_Changer_Component
@@ -253,12 +253,10 @@ typedef struct Augment_Changer_Component
     int augment_change_value;
 } Augment_Changer_Component;
 
-typedef struct Charge_Attack_Component
+typedef struct Charge_Component
 {
-    // TMap<EDamageType, EChargeState> ElementsToCharge;
-    Element_Type damage_type;
     Charge_State charge_state;
-} Charge_Attack_Component;
+} Charge_Component;
 
 typedef struct Conjure_Component
 {
@@ -886,6 +884,18 @@ typedef struct Ability_Component
         MP_Remover_Component mp_remove;
         MP_Full_Component mp_full;
         MP_Zero_Component mp_zero;
+
+        Ability_Adder_Component ability_add;
+        Ability_Remover_Component ability_remove;
+        Ability_Remove_All_Component ability_remove_all;
+
+        Action_Add_Component action_add;
+        Action_Remove_Component action_remove;
+
+
+        Charge_Component charge;
+        Conjure_Component conjure;
+        Summoner_Component summoner;
     } data;
 } Ability_Component;
 
@@ -1146,31 +1156,8 @@ typedef struct Reversal_List_Component
 
 typedef struct Charge_List_Component
 {
-    Charge_State charge_list[Element_Type_MAX];
-    /*=
-{
-        {EDamageType::ECS_Physical, EChargeState::ECS_None},
-        {EDamageType::ECS_Fire, EChargeState::ECS_None},
-        {EDamageType::ECS_Ice, EChargeState::ECS_None},
-        {EDamageType::ECS_Poison, EChargeState::ECS_None},
-        {EDamageType::ECS_Blood, EChargeState::ECS_None},
-        {EDamageType::ECS_Heavenly, EChargeState::ECS_None},
-        {EDamageType::ECS_Abyss, EChargeState::ECS_None},
-        {EDamageType::ECS_Madness, EChargeState::ECS_None},
-        {EDamageType::ECS_Insanity, EChargeState::ECS_None},
-    };
-*/
-    //after a charge is used, it should be marked, so that it cant be used again
-    //or we can just reset it the moment its used
-    bool ChargeTypesMarkedForReset[Element_Type_MAX];
-
-    //percent based bonus
-    float ChargeDamagePercent;
-    float HighChargeDamagePercent;
-
-    //flat bonuses for things like augments
-    int ChargePassiveAmount;
-    int HighChargePassiveAmount;
+    bool high_charge;
+    bool charge;
 } Charge_List_Component;
 
 typedef struct Special_Ability_Flag_List_Component

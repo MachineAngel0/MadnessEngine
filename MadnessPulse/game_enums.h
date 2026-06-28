@@ -142,7 +142,6 @@ typedef enum Ability_Component_Type
     Ability_Component_TYPE_DRAIN_ALL,
 
     Ability_Component_Type_Damage,
-    Ability_Component_Type_INSTAKILL,
 
     Ability_Component_TYPE_MP_ADD,
     Ability_Component_TYPE_MP_REMOVE,
@@ -165,10 +164,7 @@ typedef enum Ability_Component_Type
     Ability_Component_TYPE_SUMMONER,
 
 
-
-
     Ability_Component_TYPE_RESISTANCE_CHANGE,
-
 
 
     Ability_Component_TYPE_STATUS_CHANGE,
@@ -189,6 +185,37 @@ typedef enum Ability_Name
     Ability_Name_DEBUG_2,
     Ability_Name_DEBUG_3,
     Ability_Name_DEBUG_4,
+
+
+    //test abilities components
+    Ability_Name_HEAL,
+    Ability_Name_HEAL_SETTER,
+    Ability_Name_HEAL_PERCENT,
+    Ability_Name_HEAL_TO_FULL,
+
+    Ability_Name_DRAIN,
+    Ability_Name_DRAIN_PERCENT,
+    Ability_Name_DRAIN_ALL,
+
+    Ability_Name_Damage,
+
+    Ability_Name_MP_ADD,
+    Ability_Name_MP_REMOVE,
+    Ability_Name_MP_FULL,
+    Ability_Name_MP_ZERO,
+
+    Ability_Name_ABILITY_ADDER,
+    Ability_Name_ABILITY_REMOVER,
+    Ability_Name_ABILITY_REMOVE_ALL,
+
+    Ability_Name_ACTION_ADD,
+    Ability_Name_ACTION_REMOVE,
+
+    Ability_Name_CHARGE,
+
+    Ability_Name_CONJURE,
+    Ability_Name_SUMMONER,
+
 
     //test abilities
     Ability_Name_DEBUG_HEAL,
@@ -310,7 +337,6 @@ typedef enum Ability_Trigger_Target
 } Ability_Trigger_Target;
 
 
-
 typedef enum Element_Type
 {
     Element_Type_Madness,
@@ -381,7 +407,6 @@ typedef enum Status_Threshold_Types
 
 typedef enum Charge_State
 {
-    Charge_State_None,
     Charge_State_Charge,
     Charge_State_HighCharge,
     Charge_State_MAX,

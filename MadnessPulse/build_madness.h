@@ -1,5 +1,4 @@
-﻿
-
+﻿#pragma once
 
 
 #include "game_constants.h"
@@ -28,8 +27,8 @@
 #include "unit_base.h"
 
 //ability stuff
-#include "ability_registry.h"
 #include "ability.h"
+#include "ability_registry.h"
 #include "ability_creation.h"
 
 //ability components
@@ -40,7 +39,6 @@
 
 #include "damage.h"
 
-#include "conjure_summoner.h"
 
 #include "drain.h"
 #include "drain_percent.h"
@@ -50,6 +48,17 @@
 #include "mp_remove.h"
 #include "mp_full.h"
 #include "mp_zero.h"
+
+#include "ability_adder.h"
+#include "ability_remove_all.h"
+#include "ability_remove.h"
+
+#include "action_add.h"
+#include "action_remove.h"
+
+#include "conjure.h"
+#include "summoner.h"
+#include "charge.h"
 
 
 
