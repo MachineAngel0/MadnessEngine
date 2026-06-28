@@ -7,6 +7,7 @@ Freelist_Array* _freelist_array_create(u64 data_stride, u64 capacity, Allocator*
     Freelist_Array* fl_array = allocator_alloc(allocator, sizeof(Freelist_Array));
 
     fl_array->array = _array_create(data_stride, capacity, allocator);
+    fl_array->array->num_items = capacity;
 
     fl_array->handle = allocator_alloc(allocator, sizeof(u32) * capacity);
     fl_array->gen = allocator_alloc(allocator, sizeof(u32) * capacity);

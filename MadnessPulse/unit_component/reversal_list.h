@@ -28,28 +28,28 @@ void AddToDamageReversal(Reversal_List_Component* reversal_list, Element_Type Da
     reversal_list->DamageReversal[DamageTypeToAdd] = true;
 }
 
-void AddToHealReversal(Reversal_List_Component* reversal_list, Heal_Types HealTypeToAdd, u32 unit_id)
+void AddToHealReversal(Reversal_List_Component* reversal_list, u32 unit_id)
 {
     // DEBUG("DamageType: %s and reversal_list->unit_who_hit_us: %s"), *UEnum::GetValueAsString(HealTypeToAdd), *unit_id->GetName());
     reversal_list->unit_who_hit_us = unit_id;
 
-    reversal_list->HealReversal[HealTypeToAdd] = true;
+    reversal_list->heal = true;
 }
 
-void AddToDrainReversal(Reversal_List_Component* reversal_list, Drain_Types DrainTypeToAdd, u32 unit_id)
+void AddToDrainReversal(Reversal_List_Component* reversal_list, u32 unit_id)
 {
     // DEBUG("DamageType: %s and reversal_list->unit_who_hit_us: %s"), *UEnum::GetValueAsString(DrainTypeToAdd), *unit_id->GetName());
     reversal_list->unit_who_hit_us = unit_id;
 
-    reversal_list->DrainReversal[DrainTypeToAdd];
+    reversal_list->drain;
 }
 
-void AddToMPReversal(Reversal_List_Component* reversal_list, MP_Types MPTypeToAdd, u32 unit_id)
+void AddToMPReversal(Reversal_List_Component* reversal_list, u32 unit_id)
 {
     // DEBUG("DamageType: %s and reversal_list->unit_who_hit_us: %s"), *UEnum::GetValueAsString(MPTypeToAdd), *unit_id->GetName());
     reversal_list->unit_who_hit_us = unit_id;
 
-    reversal_list->MPReversal[MPTypeToAdd] = true;
+    reversal_list->mp = true;
 }
 
 void AddToAugmentReversal(Reversal_List_Component* reversal_list, Element_Type AugmentTypeToAdd, u32 unit_id)

@@ -19,7 +19,7 @@ typedef enum hash_map_state
 
 
 
-#define HASH_MAP(key, value) hash_map*
+#define HASH_MAP_TYPE(key, value) hash_map*
 
 typedef struct hash_map
 {

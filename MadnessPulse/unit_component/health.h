@@ -9,53 +9,58 @@ Health_Component health_component_create();
 void health_component_init_default(Health_Component* health);
 
 
-bool health_component_is_dead(Health_Component* health_component);
 
-bool health_component_is_alive(Health_Component* health_component);
-
-void CheckForDeathOrRevive(Unit* unit, Health_Component* health_component);
-
-float GetHealthPercent(Health_Component* health_component);
-
-void LogHealth(Health_Component* health_component);
-
+//Changes State
 void health_component_clamp(Health_Component* health_component);
 
-void TakeDamage(Health_Component* health_component, float DamageAmount);
 
-void HealthToZero(Health_Component* health_component);
+//TODO: death and revive flags
+void health_component_check_for_death_or_revive(Unit* unit, Health_Component* health_component);
 
-void HealToFullHealth(Health_Component* health_component);
-
-float HealToFullValueChange(Health_Component* health_component);
-
-void HealByAmount(Health_Component* health_component, float HealAmountValue);
-
-void SetHealth(Health_Component* health_component, float HealValue);
-
-void HealByMultiplication(Health_Component* health_component, float HealMultiplyValue);
-
-void HealByPercent(Health_Component* health_component, float HealPercentValue);
-
-float HealthPercentValueChange(Health_Component* health_component, float HealPercentValue);
+float health_component_get_health_percent(Health_Component* health_component);
 
 
-void DrainToFull(Health_Component* health_component);
+void heal_by_amount(Health_Component* health_component, float HealAmountValue);
 
-void DrainByAmount(Health_Component* health_component, float DrainAmountValue);
 
-void DrainByPercent(Health_Component* health_component, float DrainPercentValue);
+void health_component_take_damage(Health_Component* health_component, float DamageAmount);
+
+void health_component_health_to_zero(Health_Component* health_component);
+
+void health_component_heal_to_full(Health_Component* health_component);
+
+float health_component_heal_to_full_value_change(Health_Component* health_component);
+
+
+void health_component_set_health(Health_Component* health_component, float HealValue);
+
+void health_component_heal_by_percent(Health_Component* health_component, float HealPercentValue);
+
+float health_component_percent_value_change(Health_Component* health_component, float HealPercentValue);
+
+
+void health_component_drain_to_full(Health_Component* health_component);
+
+void health_component_drain_by_amount(Health_Component* health_component, float DrainAmountValue);
+
+void health_component_drain_by_percent(Health_Component* health_component, float DrainPercentValue);
 
 
 /* Utility Functions */
 
-/** \param Percent Values between 0 - 1
- */
-bool IsHealthBelowPercent(Health_Component* health_component, float Percent);
+bool health_component_is_dead(Health_Component* health_component);
 
-bool IsHealthAbovePercent(Health_Component* health_component, float Percent);
+bool health_component_is_alive(Health_Component* health_component);
 
-float HealthLostFromMax(Health_Component* health_component);
+bool health_component_is_health_below_percent(Health_Component* health_component, float Percent);
+
+bool health_component_is_health_above_percent(Health_Component* health_component, float Percent);
+
+float health_component_get_health_lost_from_max(Health_Component* health_component);
+
+//
+void health_component_log_health(Health_Component* health_component);
+
 
 
 #endif

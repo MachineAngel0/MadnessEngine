@@ -9,7 +9,6 @@
 #include "allocator_stack.h"
 
 
-
 void* _darray_create(const u64 capacity, const u64 stride)
 {
     const u64 header_size = sizeof(array_header);
@@ -23,14 +22,13 @@ void* _darray_create(const u64 capacity, const u64 stride)
     memset(new_array, 0, header_size + array_size);
 
 
-
     array_header* header = new_array;
     header->num_items = 0;
     header->stride = stride;
     header->capacity = capacity;
 
     //return the array without the header in it, so that we can use it like a normal array
-    return (void *) ((u8 *) new_array + header_size);
+    return (void*)((u8*)new_array + header_size);
 }
 
 void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Stack_Allocator* arena)
@@ -47,9 +45,8 @@ void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Stack_A
     header->capacity = initial_capacity;
 
     //return the array without the header in it, so that we can use it like a normal array
-    return (void *) ((u8 *) new_array + header_size);
+    return (void*)((u8*)new_array + header_size);
 }
-
 
 
 void darray_free(void* array)
@@ -63,7 +60,7 @@ void darray_free(void* array)
 
 
     //get the array header
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
 
     free(header);
@@ -80,7 +77,7 @@ u64 darray_get_capacity(void* array)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->capacity;
 }
@@ -94,7 +91,7 @@ u64 darray_get_size(void* array)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->num_items;
 }
@@ -108,7 +105,7 @@ u64 darray_get_byte_size(void* array)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->num_items * header->stride;
 }
@@ -129,7 +126,7 @@ u64 darray_get_stride(void* array)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->stride;
 }
@@ -143,7 +140,7 @@ bool darray_is_valid_index(void* array, const u64 index)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->num_items >= index;
 }
@@ -157,7 +154,7 @@ bool darray_is_empty(void* array)
     }
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     return header->num_items == 0;
 }
@@ -172,12 +169,12 @@ void* _darray_resize(void* array)
 
     //get the old array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
 
     //allocate a new array
     void* new_out_array = _darray_create(header->capacity * DARRAY_RESIZE_VALUE, header->stride);
-    array_header* new_header = (array_header *) ((u8 *) new_out_array - header_size);
+    array_header* new_header = (array_header*)((u8*)new_out_array - header_size);
     //update the length, since that doens't get set
     new_header->num_items = header->num_items;
     //copy the data, not including the array_header
@@ -196,7 +193,7 @@ void* darray_get(void* array, const u64 index)
 {
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //make sure were not accessing invalid memory
     if (index > header->capacity)
@@ -206,14 +203,14 @@ void* darray_get(void* array, const u64 index)
     }
 
     //return the locations value
-    return (void *) ((u8) array + (header->stride * index));
+    return (void*)((u8)array + (header->stride * index));
 }
 
 void darray_set(void* array, void* new_data, const u64 index)
 {
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //make sure were not accessing invalid memory
     if (index > header->capacity)
@@ -222,7 +219,7 @@ void darray_set(void* array, void* new_data, const u64 index)
     }
 
     //return the locations value
-    memcpy(((u8 *) array + (header->stride * index)), new_data, header->stride);
+    memcpy(((u8*)array + (header->stride * index)), new_data, header->stride);
 }
 
 void* _darray_push(void* array, const void* new_data)
@@ -235,21 +232,21 @@ void* _darray_push(void* array, const void* new_data)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //check for size overflow, and resize if needed
     if (header->num_items >= header->capacity)
     {
         // INFO("RESIZING DARRAY")
         array = _darray_resize(array);
-        header = (array_header *) ((u8 *) array - header_size);
+        header = (array_header*)((u8*)array - header_size);
     }
 
     //go to the end of the array
-    u64 addr = (u64) array;
+    u64 addr = (u64)array;
     addr += header->num_items * header->stride;
     //copy data onto the end of the array that is not in use
-    memcpy((void *) addr, new_data, header->stride);
+    memcpy((void*)addr, new_data, header->stride);
     header->num_items++;
     return array;
 }
@@ -271,21 +268,21 @@ void* _darray_push_range(void* array, const void* new_data, u64 new_items_count)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //check for size overflow, and resize if needed
     if (header->num_items >= header->capacity)
     {
         // INFO("RESIZING DARRAY")
         array = _darray_resize(array);
-        header = (array_header *) ((u8 *) array - header_size);
+        header = (array_header*)((u8*)array - header_size);
     }
 
     //go to the end of the array
-    u64 end_addr = (u64) array;
+    u64 end_addr = (u64)array;
     end_addr += header->num_items * header->stride;
     //copy data onto the end of the array that is not in use
-    memcpy((void *) end_addr, new_data, header->stride * new_items_count);
+    memcpy((void*)end_addr, new_data, header->stride * new_items_count);
     header->num_items += new_items_count;
     return array;
 }
@@ -300,7 +297,7 @@ void* _darray_push_range(void* array, const void* new_data, u64 new_items_count)
 void* _darray_insert_at(void* array, const void* new_data, const u64 index)
 {
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     u64 size = header->num_items;
     u64 stride = header->stride;
@@ -314,16 +311,16 @@ void* _darray_insert_at(void* array, const void* new_data, const u64 index)
         array = _darray_resize(array);
     }
 
-    u64 addr = (u64) array;
+    u64 addr = (u64)array;
 
     // Push element(s) from index forward out by one. This should
     // even happen if inserted at the last index.
-    memcpy((void *) (addr + ((index + 1) * stride)),
-           (void *) (addr + (index * stride)),
+    memcpy((void*)(addr + ((index + 1) * stride)),
+           (void*)(addr + (index * stride)),
            stride * (size - index));
 
     // Set the value at the index
-    memcpy((void *) (addr + (index * stride)), new_data, stride);
+    memcpy((void*)(addr + (index * stride)), new_data, stride);
     header->num_items++;
 
     return array;
@@ -346,7 +343,7 @@ void darray_pop(void* array)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     if (header->num_items <= 0)
     {
@@ -356,6 +353,7 @@ void darray_pop(void* array)
     //we just decrement the value and that's it
     header->num_items--;
 }
+
 void* darray_pop_return(void* array)
 {
     if (!array)
@@ -366,7 +364,7 @@ void* darray_pop_return(void* array)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     if (header->num_items <= 0)
     {
@@ -382,8 +380,6 @@ void* darray_pop_return(void* array)
 }
 
 
-
-
 void darray_remove_shift(void* arr, const u64 index)
 {
     //shift the array left from the index spot of removal
@@ -391,11 +387,11 @@ void darray_remove_shift(void* arr, const u64 index)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) arr - header_size);
+    array_header* header = (array_header*)((u8*)arr - header_size);
     const u64 stride = header->stride;
 
-    memcpy((u8 *) arr + (index * stride),
-           (u8 *) arr + ((index + 1) * stride),
+    memcpy((u8*)arr + (index * stride),
+           (u8*)arr + ((index + 1) * stride),
            stride * header->num_items - (index + 1));
 
     header->num_items--;
@@ -408,18 +404,18 @@ void darray_remove_swap(void* array, const u64 index)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //copy the last val into the cur index
-    memcpy(((u8 *) array + (index * header->stride)),
-           ((u8 *) array + (header->stride * (header->num_items - 1))),
+    memcpy(((u8*)array + (index * header->stride)),
+           ((u8*)array + (header->stride * (header->num_items - 1))),
            header->stride
     );
 
     header->num_items--;
 }
 
-bool darray_contains(void* array,  void* key, int (*cmp_func)( void*,  void*))
+bool darray_contains(void* array, void* key, int (*cmp_func)(void*, void*))
 {
     if (!array)
     {
@@ -429,13 +425,13 @@ bool darray_contains(void* array,  void* key, int (*cmp_func)( void*,  void*))
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //check if we have the value, otherwise return false
     for (int i = 0; i < header->num_items; i++)
     {
         //0 means they are equal to each other
-        if (cmp_func(((u8 *) (array ) + (i * header->stride)), key) == 0)
+        if (cmp_func(((u8*)(array) + (i * header->stride)), key) == 0)
         {
             return true;
         }
@@ -457,7 +453,7 @@ bool darray_contains_or_add(void* array, void* key, int (*cmp_func)(const void*,
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //check if we have the value, otherwise return false
     for (int i = 0; i < header->num_items; i++)
@@ -471,9 +467,8 @@ bool darray_contains_or_add(void* array, void* key, int (*cmp_func)(const void*,
     }
 
     //if we reach this point the value is not in the array
-   darray_push(array, key);
+    darray_push(array, key);
     return true;
-
 }
 
 
@@ -490,7 +485,7 @@ bool darray_contains_or_add_other(void* array, void* key)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //check if we have the value, otherwise return false
     for (u64 i = 0; i < header->num_items; i++)
@@ -506,10 +501,12 @@ bool darray_contains_or_add_other(void* array, void* key)
     //if we reach this point the value is not in the array
     darray_push(array, key);
     return true;
-
 }
 
 #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
+
+
+
 #define darray_contains_or_add_test(array, value)    \
 {                                                     \
     temp_value = (void*) STBDS_ADDRESSOF((array, (value)) \
@@ -517,14 +514,13 @@ bool darray_contains_or_add_other(void* array, void* key)
 }
 
 
-
 void* _darray_duplicate(const void* array)
 {
     u64 header_size = sizeof(array_header);
-    array_header* source_header = (array_header *) ((u8 *) array - header_size);
+    array_header* source_header = (array_header*)((u8*)array - header_size);
 
     void* copy = _darray_create(source_header->capacity, source_header->stride);
-    array_header* new_header = (array_header *) ((u8 *) copy - header_size);
+    array_header* new_header = (array_header*)((u8*)copy - header_size);
     MASSERT_MSG(new_header->capacity == source_header->capacity, "capacity mismatch while duplicating darray.");
 
     // Copy internal header fields.
@@ -548,7 +544,7 @@ void darray_clear(void* array)
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     if (header->num_items <= 0)
     {
@@ -569,7 +565,7 @@ void darray_debug_header(void* array)
     }
 
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
     DEBUG("CAPACITY: %llu, STRIDE: %llu, ITEMS #: %llu", darray_get_capacity(array), darray_get_stride(array),
           darray_get_size(array));
     if (!header)
@@ -589,11 +585,11 @@ void darray_debug_print(void* array, void (*print_func)(void*))
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     for (u64 i = 0; i < header->num_items; i++)
     {
-        print_func((u8 *) array + (i * header->stride));
+        print_func((u8*)array + (i * header->stride));
     }
     printf("\n");
 }
@@ -609,7 +605,7 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 
     //get the array header
     u64 header_size = sizeof(array_header);
-    array_header* header = (array_header *) ((u8 *) array - header_size);
+    array_header* header = (array_header*)((u8*)array - header_size);
 
     //technically there should be a check to make sure the values are not zero but seriouly come on
     if (start > end)
@@ -631,7 +627,7 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 
     for (u64 i = start; i < end; i++)
     {
-        print_func((u8 *) array + (i * header->stride));
+        print_func((u8*)array + (i * header->stride));
     }
     printf("\n");
 }
@@ -717,3 +713,213 @@ void darray_test(void)
     TEST_REPORT(DARRAY);
 }
 
+
+//DYNAMIC ARRAY STARTS
+
+Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocator* allocator)
+{
+    Dynamic_Array* array = allocator_heap_alloc(allocator, sizeof(Dynamic_Array));
+
+    array->data = allocator_heap_alloc(allocator, data_stride * capacity);
+    array->allocator = allocator;
+    array->capacity = capacity;
+    array->stride = data_stride;
+    array->num_items = 0;
+
+    return array;
+}
+
+void dynamic_array_free(Dynamic_Array* array)
+{
+    allocator_heap_free(array->allocator, array->data);
+    allocator_heap_free(array->allocator, array);
+}
+
+void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
+{
+    if (new_capacity <= array->capacity)
+    {
+        WARN("DYNAMIC ARRAY RESIZE: INVALID RESIZE")
+        return;
+    }
+
+    void* new_data = allocator_heap_alloc(array->allocator, new_capacity * array->stride);
+
+    memcpy(new_data, array->data, array->capacity * array->stride);
+    allocator_heap_free(array->allocator, array->data);
+    array->data = new_data;
+    array->capacity = new_capacity;
+}
+
+void dynamic_array_push(Dynamic_Array* array, void* data)
+{
+    while (array->num_items >= array->capacity)
+    {
+        dynamic_array_resize(array, array->capacity * 2);
+    }
+
+    memcpy((u8*)array->data + (array->stride * array->num_items), data, array->stride);
+    array->num_items++;
+}
+
+void dynamic_array_push_multi(Dynamic_Array* array, void* data, u32 count)
+{
+    //TODO:
+    while (array->num_items + count >= array->capacity)
+    {
+        dynamic_array_resize(array, array->capacity * 2);
+    }
+
+    memcpy((u8*)array->data + (array->stride * array->num_items), data, array->stride * count);
+    array->num_items += count;
+}
+
+void dynamic_array_pop(Dynamic_Array* array)
+{
+    if (array->num_items <= 0) return;
+    array->num_items--;
+}
+
+void dynamic_array_remove_swap(Dynamic_Array* array, u32 index)
+{
+    MASSERT(array)
+    MASSERT(index < array->num_items);
+    if (array->num_items <= 0) return;
+
+    //memcpy the last item into the removal spot
+    memcpy((u8*)array->data + (array->stride * index),
+           (u8*)array->data + (array->num_items - 1),
+           array->stride);
+    //minus one cause num_items always points to a free spot/ or nothing if full
+    array->num_items--;
+}
+
+void dynamic_array_remove_shift_left(Dynamic_Array* array, u32 index)
+{
+    MASSERT(array)
+    MASSERT(index < array->num_items);
+    if (array->num_items <= 0) return;
+
+    if (index == array->num_items)
+    {
+        dynamic_array_pop(array);
+        return;
+    }
+
+
+    //take every value from the index to the last value
+    u32 copy_length = array->num_items - index;
+
+
+    //memcpy the last item into the removal spot
+    memcpy((u8*)array->data + (array->stride * index),
+           (u8*)array->data + (array->stride * index + 1), copy_length * array->stride);
+
+
+    //minus one cause num_items always points to a free spot/ or nothing if full
+    array->num_items--;
+}
+
+void* _dynamic_array_get(Dynamic_Array* array, u32 index)
+{
+    MASSERT(index < array->num_items)
+
+    return ((u8*)array->data + (index * array->stride));
+}
+
+void dynamic_array_set(Dynamic_Array* array, void* data, u32 index)
+{
+    MASSERT(array)
+    MASSERT(data)
+    MASSERT(index < array->num_items)
+
+    memcpy((u8*)array->data + (array->stride * index), data, array->stride);
+}
+
+void dynamic_array_clear(Dynamic_Array* array)
+{
+    array->num_items = 0;
+}
+
+void dynamic_array_zero(Dynamic_Array* array)
+{
+    memset(array->data, 0, array->num_items * array->stride);
+}
+
+bool dynamic_array_is_empty(Dynamic_Array* array)
+{
+    return array->num_items == 0;
+}
+
+Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy)
+{
+    Dynamic_Array* out_array = _dynamic_array_create(array_to_copy->stride, array_to_copy->capacity,
+                                                     array_to_copy->allocator);
+    memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
+    return out_array;
+}
+
+Array* dynamic_array_copy_fixed_size(Dynamic_Array* array_to_copy, Allocator* allocator)
+{
+    Array* out_array = _array_create(array_to_copy->stride, array_to_copy->num_items, allocator);
+    memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
+    return out_array;
+}
+
+void _dynamic_array_push_c_array(Dynamic_Array* dynamic_array, void* c_array, const u32 c_array_count)
+{
+    for (u32 i = 0; i < c_array_count; i++)
+    {
+        void* push_data = ((u8*)c_array + (dynamic_array->stride * i));
+        dynamic_array_push(dynamic_array, push_data);
+    }
+}
+
+bool dynamic_array_serialize(Dynamic_Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fwrite(&array->stride, sizeof(array->stride), 1, fptr);
+    fwrite(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fwrite(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fwrite(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+}
+
+
+bool dynamic_array_deserialize(Dynamic_Array* array, FILE* fptr)
+{
+    MASSERT(array);
+    MASSERT(array);
+    MASSERT(fptr);
+
+    fread(&array->stride, sizeof(array->stride), 1, fptr);
+    fread(&array->num_items, sizeof(array->num_items), 1, fptr);
+    fread(&array->capacity, sizeof(array->capacity), 1, fptr);
+    fread(array->data, array->num_items * array->stride, 1, fptr);
+
+    return true;
+}
+
+Dynamic_Array* _dynamic_array_create_debug(u64 data_stride, u64 capacity, Heap_Allocator* allocator,
+                                           const char* type_name)
+{
+    Dynamic_Array* out_array = _dynamic_array_create(data_stride, capacity, allocator);
+#ifndef NDEBUG
+    out_array->type_name = type_name;
+#endif
+    return out_array;
+}
+
+void* _dynamic_array_get_debug(Dynamic_Array* array, u64 index, const char* type_name)
+{
+#ifndef NDEBUG
+    if (strcmp(array->type_name, type_name) != 0)
+    {
+        MASSERT_MSG(false, "DYNAMIC ARRAY GET: WRONG TYPE");
+    }
+#endif
+    return _dynamic_array_get(array, index);
+}

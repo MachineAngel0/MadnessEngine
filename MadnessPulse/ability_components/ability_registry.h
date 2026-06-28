@@ -5,6 +5,9 @@
 #include "game_structs.h"
 #include "hash_set.h"
 
+//hold information about the ability, (ability_info), and what components are on the ability
+//each unit keeps a list of the ability name, and how many of those abilities they have
+
 
 Ability_Registry* ability_registry_init(Madness_Pulse_Game* game)
 {
@@ -59,6 +62,10 @@ Ability_Info ability_registry_get_ability_info(Ability_Registry* ability_registr
     return ability_registry->ability_info[name_query];
 }
 
+u32 ability_registry_get_ability_overflow_value(Ability_Registry* ability_registry, Ability_Name name_query)
+{
+    return overflow_value_type_lut[ability_registry->ability_info[name_query].overflow_value];
+}
 
 const char* ability_get_name(const Ability_Name name)
 {

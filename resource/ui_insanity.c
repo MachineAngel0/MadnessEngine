@@ -684,7 +684,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
         }
         else
         {
-            string_builder = string_builder_create(100);
+            string_builder = string_builder_create(100, insanity_ui->allocator);
             string_builder_append_string(string_builder, &insanity_ui->string_stack);
             hash_table_insert(insanity_ui->text_box_state, node->id, &string_builder);
         }

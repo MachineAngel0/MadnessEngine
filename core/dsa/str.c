@@ -95,10 +95,6 @@ bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator)
 }
 
 
-
-
-
-
 //UTILITY
 void string_print(const String* str)
 {
@@ -148,7 +144,6 @@ String* string_duplicate(const String* str)
 
 String* string_concat_malloc(const String* str1, const String* str2)
 {
-
     String* out_str = allocator_malloc(sizeof(String));
     const u64 combined_length = str1->length + str2->length;
     out_str->chars = (char*)allocator_malloc(sizeof(char) * combined_length);
@@ -175,7 +170,6 @@ String* string_concat(const String* str1, const String* str2, Allocator* allocat
 
 String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator* allocator)
 {
-
     String* out_str = allocator_heap_alloc(allocator, sizeof(String));
     const u64 combined_length = str1->length + str2->length;
     out_str->chars = allocator_heap_alloc(allocator, sizeof(char) * combined_length);
@@ -186,7 +180,6 @@ String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator*
 
     return out_str;
 }
-
 
 
 String* string_strip_whitespace(const String* str)
@@ -233,6 +226,41 @@ bool string_compare_c_string(const String* str1, const char* c_str)
 
     return true;
 }
+
+String* string_from_int(int value, Allocator* allocator)
+{
+    return &STRING_STRLEN(c_string_from_int(value, allocator));
+}
+
+String* string_from_float(float value, Allocator* allocator)
+{
+    String* out_string = allocator_alloc(allocator, sizeof(String));
+
+    out_string->length = snprintf(NULL, 0, "%.3f", value);
+    out_string->chars = allocator_alloc(allocator, out_string->length + 1);
+    snprintf(out_string->chars, out_string->length + 1, "%.3f", value);
+
+    return out_string;
+}
+
+
+String* string_format(Allocator* allocator, const char* format, ...)
+{
+
+    String* out_string = allocator_alloc(allocator, sizeof(String));
+
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    out_string->length = vsnprintf(NULL, 0, format, arg_ptr);
+    out_string->chars = allocator_alloc(allocator, out_string->length + 1);
+
+    vsnprintf(out_string->chars, out_string->length + 1, format, arg_ptr);
+    va_end(arg_ptr);
+
+
+    return out_string;
+}
+
 
 
 /*STRING SLICE*/

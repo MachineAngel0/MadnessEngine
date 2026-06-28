@@ -4,24 +4,29 @@
 
 
 //abilities
-#define MAX_ABILITY_COMPONENTS 10
+#define MAX_ABILITY_COMPONENTS 4u
 
 #define INSTA_KILL_DAMAGE 999999u
 
 //unit
 
-#define MAX_HEALTH_DEFAULT 1000
-#define CURRENT_HEALTH_DEFAULT 1000
+#define MAX_HEALTH_DEFAULT 1000u
+#define CURRENT_HEALTH_DEFAULT 1000u
 
-#define INVENTORY_MAX_BATTLE_LIST 20
+#define INVENTORY_MAX_BATTLE_LIST 20u
+#define STARTING_ABILITY_COUNT 1u
+
+
+#define OVERFLOW_MAX 100u
+#define ABILITY_COUNT_MAX 999u
 
 
 
 //game state
-#define MAX_PLAYER_UNIT_COUNT 4
+#define MAX_PLAYER_UNIT_COUNT 4u
 
-#define MAX_SAVE_SLOTS 255 //size of a u8
-#define SAVE_GAME_PATH "../save" //size of a u8
+#define MAX_SAVE_SLOTS 255u //size of a u8
+#define SAVE_GAME_PATH "../save"
 #define SAVE_GAME_MAGIC_NUMBER "mads" //u8[4]
 #define SAVE_GAME_VERSION 1.0f
 

@@ -29,15 +29,15 @@ void mp_component_create_default(MP_Component* mp_component)
 
 void mp_component_clamp(MP_Component* mp_component)
 {
-    mp_component->current_mp = clamp_float(mp_component->current_mp, -mp_component->max_mp * 2, mp_component->max_mp * 2);
+    mp_component->current_mp = clamp_int(mp_component->current_mp, -mp_component->max_mp * 2, mp_component->max_mp * 2);
 }
 
-float mp_component_GetMPPercent(MP_Component* mp_component)
+float mp_component_get_mp_percent(MP_Component* mp_component)
 {
     return mp_component->current_mp / mp_component->max_mp;
 }
 
-void mp_component_ChangeMP(Unit* unit, MP_Component* mp_component, float MPChangeValue)
+void mp_component_change_mp(Unit* unit, MP_Component* mp_component, const f32 mp_change_value)
 {
     DEBUG("Called Change MP by Amount");
 
@@ -51,38 +51,13 @@ void mp_component_ChangeMP(Unit* unit, MP_Component* mp_component, float MPChang
         return;
     }
 
-    float AdjustedMPValue = MPChangeValue;
+    f32 AdjustedMPValue = mp_change_value;
     if (RampartDestruction)
     {
-        AdjustedMPValue = MPChangeValue * 2;
+        AdjustedMPValue = mp_change_value * 2;
     }
 
     mp_component->current_mp += AdjustedMPValue;
-    mp_component_clamp(mp_component);
-}
-
-void mp_component_reduce_mp(MP_Component* mp_component, float MPChangeValue)
-{
-   DEBUG("Called Reduce MP by Amount");
-
-
-    mp_component->current_mp -= MPChangeValue;
-    mp_component_clamp(mp_component);
-}
-
-void mp_component_change_mp_by_percent(MP_Component* mp_component, float MPPercentValue)
-{
-    DEBUG("Called Change MP by Percent");
-
-    mp_component->current_mp += mp_component->current_mp * MPPercentValue;
-    mp_component_clamp(mp_component);
-}
-
-void mp_component_reduce_mp_by_percent(MP_Component* mp_component, float MPPercentValue)
-{
-    DEBUG("Called Reduce MP by Percent");
-
-    mp_component->current_mp -= mp_component->current_mp * MPPercentValue;
     mp_component_clamp(mp_component);
 }
 
@@ -93,7 +68,6 @@ void mp_component_mp_to_full(MP_Component* mp_component)
     mp_component->current_mp = mp_component->max_mp;
     mp_component_clamp(mp_component);
 }
-
 void mp_component_mp_to_zero(MP_Component* mp_component)
 {
     DEBUG("Called Set MP To Zero");
@@ -102,24 +76,25 @@ void mp_component_mp_to_zero(MP_Component* mp_component)
     mp_component_clamp(mp_component);
 }
 
-bool mp_component_can_afford_ability_cost(Unit* caster, float MPCost)
+
+bool mp_component_can_afford_ability_cost(Unit* caster, float mp_cost)
 {
     // if our mp is greater than the cost, or we have the infinite mp flag on
 
-    bool InfiniteMPFlag = caster->special_ability_flag_list_component.InfiniteMPFlag;
-    bool PermanentMPFlag = caster->special_ability_flag_list_component.PermanentInfiniteMPFlag;
-    bool RampartDestruction = caster->special_ability_flag_list_component.RampartTaunt;
+    bool infinite_mp_flag = caster->special_ability_flag_list_component.InfiniteMPFlag;
+    bool permanent_mp_flag = caster->special_ability_flag_list_component.PermanentInfiniteMPFlag;
+    bool rampart_destruction = caster->special_ability_flag_list_component.RampartTaunt;
 
 
     //make any adjustments to MP cost based on any set abilities
-    float AdjustedMPCost = MPCost;
-    if (RampartDestruction)
+    float adjusted_mp_cost = mp_cost;
+    if (rampart_destruction)
     {
         //100% increase
-        AdjustedMPCost = MPCost * 2.0f;
+        adjusted_mp_cost = mp_cost * 2.0f;
     }
 
-    if (caster->mp_component.current_mp >= AdjustedMPCost || InfiniteMPFlag || PermanentMPFlag)
+    if (caster->mp_component.current_mp >= adjusted_mp_cost || infinite_mp_flag || permanent_mp_flag)
     {
         return true;
     }

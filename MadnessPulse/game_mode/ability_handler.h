@@ -9,12 +9,24 @@
 Ability_Handler* ability_handler_init(Madness_Pulse_Game* game)
 {
     Ability_Handler* ability_handler = allocator_alloc(&game->allocator, sizeof(Ability_Handler));
+
+    ability_handler->turn_start_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_start_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_first_start_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+    ability_handler->turn_final_end_components = dynamic_array_create(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+
+
+    ability_handler->reversal_once_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
+    ability_handler->reversal_units_turn_start_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
+    ability_handler->reversal_permanent_components = dynamic_array_create(Reversal_Component_Info, 1, &game->heap_allocator);
+
     return ability_handler;
 }
 
 
 /*
-// DELEGATES ?? //NOTE: IDK WHAT I WAS ON
+// These are actions, its to show when one of thse might occur, but these dont really need to exist
 UVFXSubsystem* VFXSubsystem = nullptr;
 AClearStatusTriggersAction* ClearStatusAction;
 AClearReversalsAction* ClearReversalAction;
@@ -24,19 +36,29 @@ AStatusTriggerAction* StatusTriggerAction;
 
 void ability_handler_process_normal_components(Madness_Pulse_Game* game,
                                                Array* targets,
-                                               Dynamic_Array* normal_components)
+                                               Ability_Component* normal_components, u32 normal_component_count,
+                                               u32 overflow_count)
 {
     DEBUG("Processing Normal Components");
 
-    for (u32 component_number = 0; component_number < normal_components->num_items; component_number++)
+    //NOTE: since the same ability will be activated multiple times in a row,
+    // it would just make sense to just query the top of the replay action queue
+    //  and just increment a number for how many times that thing needs to occur,
+    //  nstead of adding a bunch of redundant data to display the overflow
+
+    for (u32 component_number = 0; component_number < normal_component_count; component_number++)
     {
-        for (u32 target_number = 0; target_number < targets->num_items; target_number++)
+        for (int i = 0; i < overflow_count; ++i)
         {
-            Unit* unit = madness_pulse_get_unit(game, array_get(targets, Unit_Handle, target_number));
-            Ability_Component ability_component = dynamic_array_get(normal_components, Ability_Component,
-                                                                     component_number);
-            ability_component_process_effect(unit, &ability_component);
+            for (u32 target_number = 0; target_number < targets->num_items; target_number++)
+            {
+                Unit* unit = madness_pulse_get_unit(game, array_get(targets, Unit_Handle, target_number));
+                Ability_Component ability_component = normal_components[component_number];
+                ability_component_process_effect(unit, &ability_component);
+            }
         }
+
+
     }
 }
 
@@ -83,10 +105,11 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
     {
         // GameState.CurrentUnitsTurn->SpawnFailedPopUp();
         // return NewActionQueue;
+        return;
     }
     {
         // use up mp
-        mp_component_ChangeMP(unit_caster, &unit_caster->mp_component, ability_info.mp_cost);
+        mp_component_change_mp(unit_caster, &unit_caster->mp_component, -(float)ability_info.mp_cost);
         // NewActionQueue.Emplace(UnitCaster->MPComponent);
     }
 
@@ -102,7 +125,7 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
             // return NewActionQueue;
         }
     }
-    //checking for mirage, which will negate the ability used
+    //checking for dance in the dark, 25% for the ability to fail
     if (unit_caster->special_ability_flag_list_component.DanceInTheDark)
     {
         float random_number = rand_range_i(0, 4);
@@ -116,75 +139,53 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
         }
     }
 
-    // using the arrays as a sort of stack to eventually activate the component, on whether it is normal or status
-    // start/end turn are exceptions
-    DYNAMIC_ARRAY_TYPE(Ability_Component)* normal_components = dynamic_array_create(
-        Ability_Component, 5, &game->heap_allocator);
-    DYNAMIC_ARRAY_TYPE(Ability_Component)* status_trigger_components = dynamic_array_create(
-        Ability_Component, 5, &game->heap_allocator);
-    DYNAMIC_ARRAY_TYPE(Ability_Component)* turn_trigger_components = dynamic_array_create(
-        Ability_Component, 5, &game->heap_allocator);
-    DYNAMIC_ARRAY_TYPE(Ability_Component)* reversal_components = dynamic_array_create(
-        Ability_Component, 5, &game->heap_allocator);
-    DYNAMIC_ARRAY_TYPE(Ability_Component)* conditional_components = dynamic_array_create(
-        Ability_Component, 5, &game->heap_allocator);
 
     //components that tell us more info about the turn/reversal component, like duration or what would cause the reversal
-    Turn_Component_Base* turn_info_component = NULL;
-    Reversal_Component* reversal_info_component = NULL;
+    Turn_Base_Component* turn_info_component = &ability->turn_info_component;
+    Reversal_Base_Component* reversal_info_component = &ability->reversal_info_components;
 
 
-    //  loop through the ability components once and have them put into a stack, where each one will trigger separately based on their trigger type,
-    for (u32 i = 0; i < ability->component_count; i++)
+    // must check our conditionals first
+    /*
+    if (ability->conditional_component.was_set)
     {
-        Ability_Component* current_component = &ability->components[i];
-
-        switch (current_component->activation_type)
+        for (int i = 0; i < conditional_components->num_items; ++i)
         {
-        case Ability_Activation_Type_Turn_Info:
-            turn_info_component = &current_component->data.turn_base;
-            break;
-        case Ability_Activation_Type_Reversal_Info:
-            reversal_info_component = &current_component->data.reversal;
-            break;
-        case Ability_Activation_Type_Normal:
-            dynamic_array_push(normal_components, current_component);
-            break;
-        case Ability_Activation_Type_Status:
-            dynamic_array_push(status_trigger_components, current_component);
-            break;
-        case Ability_Activation_Type_Turn:
-            dynamic_array_push(turn_trigger_components, current_component);
-            break;
-        case Ability_Activation_Type_Reversal:
-            dynamic_array_push(reversal_components, current_component);
-            break;
-        case Ability_Activation_Type_Conditional:
-            dynamic_array_push(conditional_components, current_component);
-            break;
+            if (!ConditionalComponent->RequestIsConditionalSuccessful_Implementation(GameState, Targets))
+            {
+                // if this ever gets reached the ability failed
+                // GameState.CurrentUnitsTurn->SpawnFailedPopUp(); // TODO: this should be a command
+                return;
+            }
         }
+    }*/
+
+    //some sanity checks
+    if (ability->reversal_info_components.was_set == false && ability->reversal_component_count > 0)
+    {
+        MASSERT_MSG_FALSE("REVERSAL COMPONENT CONDITIONS WERE NOT SET FOR ABILITY");
+    }
+    if (ability->turn_info_component.was_set == false && ability->turn_component_count > 0)
+    {
+        MASSERT_MSG_FALSE("TURN COMPONENT INFO WAS NOT SET FOR ABILITY");
     }
 
-    /*
-    // must check our conditionals first
-    for (int i = 0; i < conditional_components->num_items; ++i)
-    {
-        if (!ConditionalComponent->RequestIsConditionalSuccessful_Implementation(GameState, Targets))
-        {
-            // if this ever gets reached the ability failed
-            // GameState.CurrentUnitsTurn->SpawnFailedPopUp(); // TODO: this should be a command
-            return;
-        }
-    }*/
+    //get our overflow value. TODO: the visual for the overflow
+    //we set it to 1 so that the ability executes at least once,
+    u32 overflow_count = 1;
+    overflow_count += overflow_component_get_overflow_trigger_count(&unit_caster->overflow_component,
+                                                                       &unit_caster->battle_inventory_component,
+                                                                       game->ability_registry);
 
-    ability_handler_process_normal_components(game, targets, normal_components);
+    overflow_component_use_up_overflow(&unit_caster->overflow_component,
+                                       &unit_caster->battle_inventory_component,
+                                       game->ability_registry);
 
-    //TODO: replace with overflow
-    /*
-    if (!status_trigger_components.IsEmpty())
-    {
-        NewActionQueue.Append(ProcessStatusTrigger(GameState, Targets, status_trigger_components));
-    }*/
+
+    ability_handler_process_normal_components(game, targets, ability->normal_components,
+                                              ability->normal_component_count, overflow_count);
+
+    //NOTE: there are no more status trigger components, if an ability happens, it happens as is, again with the overflow
 
 
     /* TODO: reversal and turn based components, they need a redesign anyway
@@ -201,7 +202,6 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
                                    Targets);
 
         //ideally this shouldn't be here but on the reversal component instead, or have the reversal component return
-        //
         ReversalPlayBackAction->Init(Targets, AbilityToProcess->AbilityInfo.AbilityTargetType,
                                      GameState.CurrentUnitsTurn);
         NewActionQueue.Emplace(ReversalPlayBackAction);
@@ -222,7 +222,6 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
     GameState.CurrentUnitsTurn->ChargeListComponent->ClearActiveChargeList();
     NewActionQueue.Emplace(GameState.CurrentUnitsTurn->ChargeListComponent); // TODO: make this an action
 */
-
 }
 
 

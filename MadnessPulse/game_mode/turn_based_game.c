@@ -134,7 +134,7 @@ void turn_based_game_init(Madness_Pulse_Game* game)
     //create the abilities
     for (u32 i = 0; i < game->units_count; ++i)
     {
-        create_starting_abilties(&game->units[i]->inventory_component, game->ability_registry);
+        create_starting_abilties(&game->units[i]->battle_inventory_component, game->ability_registry);
     }
 
     game->turn_phase = Turn_Phase_Turn_Start;
@@ -235,7 +235,7 @@ void turn_end(Madness_Pulse_Game* game)
     if (!can_current_unit_act(game))
     {
         // pop from the front of the queue, there is guaranteed to be someone there
-        u32 debug_unit_pop;
+        Unit_Handle debug_unit_pop = {0};
         ring_dequeue(game->turn_queue, &debug_unit_pop);
         DEBUG("Unit Popped From the Queue: %d", debug_unit_pop);
 
@@ -285,22 +285,35 @@ void turn_update(Madness_Pulse_Game* game)
         //show the player their ui and handle any inputs
         Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
 
-
         madness_ui_set_window_pos(game->madness_ui, 100, 400);
         madness_ui_set_window_size(game->madness_ui, 500, 400);
         madness_ui_window_begin(game->madness_ui, STRING("Ability Select"));
         {
-            Unit* cur_unit = madness_pulse_get_unit(game, game->current_units_turn);
-            madness_ui_c_string(game->madness_ui, Character_Name_enum_string[cur_unit->name]);
+            madness_ui_c_string(game->madness_ui, Character_Name_enum_string[unit->name]);
+            madness_ui_string(game->madness_ui, STRING("Overflow Bar"));
+
+
+            u32 overflow_val = overflow_component_calculate_value_from_usage(
+                &unit->overflow_component,
+                &unit->battle_inventory_component,
+                game->ability_registry);
+
+            madness_ui_progress_bar(game->madness_ui, STRING("Progress bar"), overflow_val,
+                                    unit->overflow_component.overflow_threshold);
+
+
             madness_scroll_box_begin(game->madness_ui, STRING("Ability Scroll list"));
             {
-                for (int i = 0; i < cur_unit->battle_inventory_component.battle_list_dynamic->num_items; ++i)
+                for (u32 i = 0; i < unit->battle_inventory_component.battle_list->num_items; ++i)
                 {
-                    Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry,
-                        dynamic_array_get(cur_unit->battle_inventory_component.battle_list_dynamic, Ability_Name, i));
+                    Ability_Name name = dynamic_array_get(unit->battle_inventory_component.battle_list, Ability_Name, i);
+                    Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry, name );
+                    u16 ability_count = dynamic_array_get(unit->battle_inventory_component.ability_count, u16, i);
+                    u16 overflow_usage_count = dynamic_array_get(unit->battle_inventory_component.overflow_usage_count,
+                                                                 u16, i);
 
                     if (madness_ui_button(game->madness_ui,
-                                          STRING_STRLEN(Ability_Name_enum_string[ability_info.ability_name])))
+                                          STRING_STRLEN(Ability_Name_enum_string[name])))
                     {
                         FATAL("A THINGS SELECTED");
                         game->currently_selected_ability = ability_info.ability_name;
@@ -308,9 +321,30 @@ void turn_update(Madness_Pulse_Game* game)
                         game->turn_phase = Turn_Phase_Target_Select;
                     }
                     madness_ui_same_line(game->madness_ui);
-                    float temp_madness_counter = 0;
-                    madness_ui_float(game->madness_ui, STRING("Count:"), &temp_madness_counter, 0);
+                    madness_ui_u16(game->madness_ui, STRING("Count:"), &ability_count, 0);
+                    madness_ui_same_line(game->madness_ui);
+
+
+
+                    String* usage_id = string_concat(&(STRING("Usage")), &STRING_STRLEN(c_string_from_int(i,&game->allocator)), &game->frame_allocator);
+                    madness_ui_slider_arrow_u16(game->madness_ui, *usage_id, &overflow_usage_count, 0,
+                                                ability_count);
+
+
+                    //TODO: TEMP: display ability text
+                    Ability* ability =  ability_registry_get_ability(game->ability_registry, name);
+                    String_Builder* ability_text = ability_text_table(game, ability);
+                    madness_ui_string(game->madness_ui, *string_builder_to_string(ability_text));
+
+
+                    //update the usage count
+                    dynamic_array_set(unit->battle_inventory_component.overflow_usage_count, &overflow_usage_count, i);
+
+
                 }
+
+
+
             }
             madness_scroll_box_end(game->madness_ui);
         }

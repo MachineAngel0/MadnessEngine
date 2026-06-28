@@ -5,6 +5,8 @@
 
 #include "game_constants.h"
 #include "game_enums.h"
+#include "str.h"
+#include "str_builder.h"
 
 
 typedef struct Nonsense_Struct
@@ -121,14 +123,92 @@ typedef struct Game_Level_Data
 
 // ABILITY COMPONENTS
 
+typedef struct Reversal_Component
+{
+    //TODO: this might actually make sense as bitflags
+    // and there is no reason to have reversals on things like fucking heal types, just on a heal in general
+    Reversal_Duration reversal_duration;
+
+    //these should all be false
+    bool anything_not_damage; // = false;
+    bool any_damage; // = false;
+
+    bool heal;
+    bool drain;
+    bool mp;
+    bool DamageConditions[Element_Type_MAX];
+    bool AugmentCondition[Element_Type_MAX];
+    bool ActionChangeCondition[Action_Changer_Type_MAX];
+    bool AbilityChangeCondition[Ability_Changer_Type_MAX];
+    bool NegationCondition; //= false;
+    bool DamagePassiveCondition; // = false;
+
+    //sanity check
+    bool was_set;
+} Reversal_Base_Component;
+
+//Conditional
+typedef struct Conditional_Component
+{
+    bool test_condition; // = false;
+    bool caster_mp_at_zero; // = false;
+    bool caster_has_positive_damage; // = false;
+
+    //sanity check
+    bool was_set;
+} Conditional_Component;
+
+typedef struct Turn_Component_Base
+{
+    Turn_Activation_Type turn_activation;
+    u8 effect_length;
+    u8 turns_until_triggered;
+
+    //sanity check
+    bool was_set;
+} Turn_Base_Component;
+
+
 typedef struct Heal_Component
 {
     // Ability_Component_Type type;
-    Heal_Types heal_type;
     float heal_amount;
     //should be false by default
     bool heal_only_if_dead;
 } Heal_Component;
+
+
+typedef struct Health_Setter_Component
+{
+    float health_to_set;
+} Health_Setter_Component;
+
+typedef struct Heal_Percent_Component
+{
+    float heal_percent;
+} Heal_Percent_Component;
+
+typedef struct Heal_To_Full_Component
+{
+    bool nothing_to_do;
+} Heal_To_Full_Component;
+
+
+typedef struct Drain_Component
+{
+    float amount;
+} Drain_Component;
+
+typedef struct Drain_Percent_Component
+{
+    float percent;
+} Drain_Percent_Component;
+
+typedef struct Drain_All_Component
+{
+    bool amount;
+} Drain_All_Component;
+
 
 typedef struct Damage_Component
 {
@@ -150,11 +230,11 @@ typedef struct Ability_Remover_Component
     u32 count;
 } Ability_Remover_Component;
 
-typedef struct Remove_All_Ability_Component
+typedef struct Ability_Remove_All_Component
 {
     Ability_Name ability_to_remove;
     // bool RemoveAllAbilities;
-} Remove_All_Ability_Component;
+} Ability_Remove_All_Component;
 
 typedef struct Action_Remove_Component
 {
@@ -191,27 +271,25 @@ typedef struct Summoner_Component
 } Summoner_Component;
 
 
-typedef struct Drain_Component
+typedef struct MP_Adder_Component
 {
-    // TMap<EDrainTypes, float> DrainTypes;
-    Drain_Types drain_type;
-    float drain_amount;
-} Drain_Component;
+    float amount;
+} MP_Adder_Component;
 
-typedef struct UHealComponent
+typedef struct MP_Remover_Component
 {
-    // TMap<EHealTypes, float> HealTypes;
-    Heal_Types heal_type;
-    float heal_amount;
-    bool heal_only_if_dead; // = false;
-} UHealComponent;
+    float amount;
+} MP_Remover_Component;
 
-typedef struct UMPChangerComponent
+typedef struct MP_Full_Component
 {
-    // TMap<EMPTypes, float> MPMap;
-    MP_Types mp_type;
-    float mp_amount;
-} UMPChangerComponent;
+    bool amount;
+} MP_Full_Component;
+
+typedef struct MP_Zero_Component
+{
+    bool amount;
+} MP_Zero_Component;
 
 typedef struct UPermanentActionChangerComponent
 {
@@ -239,27 +317,6 @@ typedef struct Resistance_Resetter_Component
 } Resistance_Resetter_Component;
 
 
-typedef struct Reversal_Component
-{
-    //TODO: this might actually make sense as bitflags
-    // and there is no reason to have reversals on things like fucking heal types, just on a heal in general
-    Reversal_Duration reversal_duration;
-
-    bool AnythingNotDamage; // = false;
-    bool AnyDamage; // = false;
-
-    bool Heal;
-    bool Drain;
-    bool Mp;
-    bool DamageConditions[Element_Type_MAX];
-    bool AugmentCondition[Element_Type_MAX];
-    bool ActionChangeCondition[Action_Changer_Type_MAX];
-    bool AbilityChangeCondition[Ability_Changer_Type_MAX];
-    bool NegationCondition; //= false;
-    bool DamagePassiveCondition; // = false;
-} Reversal_Component;
-
-
 typedef struct Status_Changer_Component
 {
     // EStatusChangeTypes StatusChangeType = EStatusChangeTypes::ECS_StatusPercent;
@@ -284,13 +341,6 @@ typedef struct Status_Threshold_Changer
     float amount;
 } Status_Threshold_Changer;
 
-
-typedef struct Turn_Component_Base
-{
-    Turn_Activation_Type turn_activation;
-    u8 effect_length;
-    u8 turns_until_triggered;
-} Turn_Component_Base;
 
 //Battle Info
 typedef struct Damage_Bounce_Component
@@ -392,7 +442,6 @@ typedef struct MP_Damage_Component
  * Does a flat damage number based on the casters Mp with a damage multiplier like *10 on the targets
  * this does not use any mp, use mp changer to have mp go down
  */
-    MP_Types mp_type;
     float mp_value;
     float damage_multiplier; // = 2.0f;
 } MP_Damage_Component;
@@ -413,7 +462,6 @@ typedef struct MP_Stealer_Component
     */
 
     //do not choose to full
-    MP_Types mp_steal_type; // = EMPTypes::ECS_MPPercent;
     //make a positive value
     float mp_steal_amount;
 } MP_Stealer_Component;
@@ -449,17 +497,6 @@ typedef struct Primavera_Light_Component
     //every time primavera is hit, this will check what element she was hit by and change the corresponding resistances to redirect
     bool unimplemented;
 } Primavera_Light_Component;
-
-
-//Conditional
-typedef struct Conditional_Fat_Component
-{
-    bool test_condition; // = false;
-
-    bool caster_mp_at_zero; // = false;
-
-    bool caster_has_positive_damage; // = false;
-} Conditional_Fat_Component;
 
 
 //Custom
@@ -821,8 +858,6 @@ typedef struct Passive_Reverse_Component
 
 typedef struct Ability_Component
 {
-    //is it a normal, reversal etc
-    Ability_Activation_Type activation_type;
     //single or multitarget
     Target_Area_Affect target_can_affect;
     //who is this targeting, enemies, allies, self etc
@@ -835,10 +870,22 @@ typedef struct Ability_Component
     {
         // NOTE: default to this if nothing is set, and 0 is an invalid type
         // NOTE: all ability components must have ability component type on them, as type if implicit based on the component
+
         Heal_Component heal;
+        Health_Setter_Component health_setter;
+        Heal_Percent_Component heal_percent;
+        Heal_To_Full_Component heal_to_full;
+
         Damage_Component damage;
-        Reversal_Component reversal;
-        Turn_Component_Base turn_base;
+
+        Drain_Component drain;
+        Drain_Percent_Component drain_percent;
+        Drain_All_Component drain_all;
+
+        MP_Adder_Component mp_add;
+        MP_Remover_Component mp_remove;
+        MP_Full_Component mp_full;
+        MP_Zero_Component mp_zero;
     } data;
 } Ability_Component;
 
@@ -854,25 +901,27 @@ _Static_assert(sizeof(Passive_Reverse_Component) <= Component_Size);
 // -> heal (activation type/area affect/target type)
 // -> {type, index} -> heal info
 
-typedef struct Ability_Component_List
-{
-    DYNAMIC_ARRAY_TYPE(Heal_Component)* heal_component[10];
-    Damage_Component damage_component[10];
-    Passive_Reverse_Component passive_reverse_component[10];
-    //madness or insanity type
-
-    //how do you even get this back from a function call????
-    // Dynamic_Array* get_list(type); // i guess??
-    //we can make each component a 32kb data blob and just take the data from a pool
-    //if we have 1000 abilties loaded in, and we use 5 component for each 64*1000*5 - 312.5kb
-} Ability_Component_List;
 
 typedef struct Ability
 {
     Ability_Name id;
-    Ability_Component components[MAX_ABILITY_COMPONENTS];
-    u32 component_count;
-    //madness or insanity type
+
+    //the components that have an effect on the game
+    Ability_Component normal_components[MAX_ABILITY_COMPONENTS];
+    u32 normal_component_count;
+
+    Ability_Component reversal_components[MAX_ABILITY_COMPONENTS];
+    u32 reversal_component_count;
+
+    Ability_Component turn_components[MAX_ABILITY_COMPONENTS];
+    u32 turn_component_count;
+
+    /*
+     *info for special things, if nothing is set, then nothing happens
+    */
+    Conditional_Component conditional_component;
+    Reversal_Base_Component reversal_info_components;
+    Turn_Base_Component turn_info_component;
 } Ability;
 
 
@@ -880,7 +929,6 @@ typedef struct Ability_Info
 {
     Ability_Name ability_name; // = "Ability Not Named";
     String ability_text; // "Implement Text Please"; //TODO: i should look into auto generated ability text
-    String overflow_trigger_text; // = "NA";
 
     String lore_text; //= "NA";
 
@@ -901,8 +949,20 @@ typedef struct Ability_Info
     Ability_Overflow_Value_Type overflow_value;
 } Ability_Info;
 
+//TODO: idk if I want this or not
+typedef struct Ability_Component_List
+{
+    DYNAMIC_ARRAY_TYPE(Heal_Component)* heal_component[10];
+    Damage_Component damage_component[10];
+    Passive_Reverse_Component passive_reverse_component[10];
+    Conditional_Component conditional_component;
+    //madness or insanity type
 
-
+    //how do you even get this back from a function call????
+    // Dynamic_Array* get_list(type); // i guess??
+    //we can make each component a 32kb data blob and just take the data from a pool
+    //if we have 1000 abilties loaded in, and we use 5 component for each 64*1000*5 - 312.5kb
+} Ability_Component_List;
 
 
 // UNITS //
@@ -922,35 +982,21 @@ typedef struct Health_Component
 
 typedef struct Action_Component
 {
-    int MaxActionsAvailable;
-    int ActionsAvailable;
+    s32 MaxActionsAvailable;
+    s32 ActionsAvailable;
 } Action_Component;
 
 typedef struct MP_Component
 {
     //MP Struct
-    float current_mp;
-    float max_mp;
-    float MaxAllowedMP;
+    f32 current_mp;
+    f32 max_mp;
+    f32 MaxAllowedMP;
 } MP_Component;
 
 
 typedef struct Augment_Component
 {
-    Element_Type StatusPoints[Element_Type_MAX];
-    /*
- = {
-     [Damage_Type_Physical] = {0},
-     [Damage_Type_Fire] = {0},
-     [Damage_Type_Ice] = {0},
-     [Damage_Type_Poison] = {0},
-     [Damage_Type_Blood] = {0},
-     [Damage_Type_Heavenly] = {0},
-     [Damage_Type_Abyss] = {0},
-     [Damage_Type_Madness] = {0},
-     [Damage_Type_Insanity] = {0},
- };*/
-
     int damage_points;
     int negation_points;
 
@@ -1051,13 +1097,20 @@ typedef struct Inventory_Component
 typedef struct Battle_Inventory_Component
 {
     //In game, battle inventory, that is meant to manipulated
+    DYNAMIC_ARRAY_TYPE(Ability_Name)* battle_list;
+    DYNAMIC_ARRAY_TYPE(u16)* ability_count;
+    DYNAMIC_ARRAY_TYPE(u16)* overflow_usage_count; // the amount the player intends to use for overflow
 
-
-    DYNAMIC_ARRAY_TYPE(Ability_Name)* battle_list_dynamic; // list containing all abilities usable in the battle
-
-    DYNAMIC_ARRAY_TYPE(u32)* ability_count; // how many of these abilties do we have, should correspond to the index in the battle list
-
+    // HASH_MAP_TYPE(Ability_Name, count) battle_list_quick_lookup;
 } Battle_Inventory_Component;
+
+
+typedef struct Overflow_Component
+{
+    u32 current_overflow;
+    u32 overflow_threshold;
+} Overflow_Component;
+
 
 typedef struct Conjure_List_Component
 {
@@ -1078,18 +1131,16 @@ typedef struct Reversal_List_Component
     // how do we deal with things like, amount of damage done? or reversing how much someone healed by?
     // global damage list, reversal triggered. something like that
 
-    bool HealReversal[Heal_Types_MAX];
-
-    bool DrainReversal[Drain_Types_MAX];
-
-    bool MPReversal[MP_Types_MAX];
+    //TODO: does this realy make sense? like a heal is a heal, no matter how it happened
+    bool heal;
+    bool drain;
+    bool mp;
 
     bool AugmentReversal[Element_Type_MAX];
     bool NegationPassiveReversal;
     bool DamagePassiveReversal;
 
     bool ActionChangeReversal[Action_Changer_Type_MAX];
-
     bool AbilityChangeReversal[Ability_Changer_Type_MAX];
 } Reversal_List_Component;
 
@@ -1166,6 +1217,7 @@ typedef struct Unit
 
     Inventory_Component inventory_component;
     Battle_Inventory_Component battle_inventory_component;
+    Overflow_Component overflow_component;
 
     Action_Component action_component;
     Health_Component health_component;
@@ -1240,7 +1292,6 @@ typedef struct Ability_Registry
     u32 ability_info_count;
 
     Ability ability_list[Ability_Name_MAX];
-    u32 ability_count;
     // Ability_Component ability_component_list[Ability_Name_MAX * 10];
     // u32 ability_component_count;
 } Ability_Registry;
@@ -1249,8 +1300,8 @@ typedef struct Ability_Registry
 //State the Ability Handler needs to use turn and reversal effects
 typedef struct Turn_Trigger_Component_Info
 {
-    //TODO: dont store pointers
-    Turn_Component_Base turn_component_base_info;
+    //TODO: dont store pointers, take a copy of the data
+    Turn_Base_Component turn_component_base_info;
     Ability* Ability;
     Ability_Component* TurnComponent;
     DYNAMIC_ARRAY_TYPE(Ability_Component_array)* StatusComponents;
@@ -1264,7 +1315,7 @@ typedef struct Reversal_Component_Info
     //TODO: dont store pointers
     //who is affected, reversal component, components with reversal tag
     Ability* Ability;
-    Reversal_Component* ReversalComponent;
+    Reversal_Base_Component* ReversalComponent;
     DYNAMIC_ARRAY_TYPE(Ability_Component_array)* ComponentsWithReversalTag;
     Unit* Caster;
     Unit* ReversalTarget; // who we put the reversal on
@@ -1277,8 +1328,7 @@ typedef struct Unit_Handle
     Character_Name name; // extra info that doesn't really need to live here
 
     //it will be impossible for two characters with the same name to share the same index
-}Unit_Handle;
-
+} Unit_Handle;
 
 
 // this component is only responsible for telling the abilities to process themselves
@@ -1287,21 +1337,22 @@ typedef struct Unit_Handle
 // Order: Normal components, -> Status triggers -> Reversal Triggers -> Reversal Add -> turn components Add -> Turn End
 typedef struct Ability_Handler
 {
-    bool unimplememted;
     //TODO: temp values, should probably be a dynamic array
     // Active turn and reversal components
     // Turn_Trigger_Component_Info turn_trigger_component_list[100];
     // Reversal_Component_Info reversal_component_list[100];
 
 
-    // AReversalPlayBackAction* ReversalPlayBackAction;
-
-    //ARRAYS
+    //DYNAMIC ARRAYS
     DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_start_components;
     DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_end_components;
     DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_start_end_components;
     DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_first_start_components;
     DYNAMIC_ARRAY_TYPE(Turn_Trigger_Component_Info)* turn_final_end_components;
+
+    DYNAMIC_ARRAY_TYPE(Reversal_Component_Info)* reversal_once_components;
+    DYNAMIC_ARRAY_TYPE(Reversal_Component_Info)* reversal_units_turn_start_components;
+    DYNAMIC_ARRAY_TYPE(Reversal_Component_Info)* reversal_permanent_components;
 } Ability_Handler;
 
 
@@ -1349,18 +1400,6 @@ typedef struct Targeting_Handler
     // current targets count that we are locked onto, only applicable to single target
     u8 targeting_count;
 } Targeting_Handler;
-
-
-typedef struct Overflow_Handler
-{
-    //unit -> ability and that abilties usage count
-    Unit_Handle character_name;
-    //
-    Ability_Name ability_to_consume[Ability_Name_MAX];
-    u32 usage_count[Ability_Name_MAX];
-    //
-
-} Overflow_Handler;
 
 
 typedef struct Madness_Pulse_Game

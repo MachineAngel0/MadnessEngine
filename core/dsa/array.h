@@ -18,7 +18,7 @@ typedef struct Array
     // Free_List_Allocator* allocator_fl;
 
 #ifndef NDEBUG
-    char* type_name;
+    const char* type_name;
 #endif
 } Array;
 
@@ -27,8 +27,6 @@ typedef struct Array
 //TODO: use the allocator interface
 Array* _array_create(u64 data_stride, u64 capacity, Allocator* allocator);
 
-#define array_create(type, capacity, allocator)\
-    _array_create(sizeof(type), capacity, allocator)
 
 void array_free(Array* array);
 void array_clear(Array* array);
@@ -58,17 +56,44 @@ bool array_valid_index(const Array* array, const u64 index);
 u64 array_get_bytes_used(const Array* array);
 void* _array_get(Array* array, const u64 index);
 void* _array_top(Array* array);
-
-#define array_top(arr, type)\
-    (*(type*)_array_get(arr, arr->num_items-1))
-
-#define array_get(arr, type, index)\
-    (*(type*)_array_get(arr, index))
-
-#define array_top_free(arr, type)\
-    (*(type*)_array_get(arr, arr->num_items))
-
 void array_set(Array* array, const void* data, const u64 pos);
+
+
+#ifndef NDEBUG
+
+    Array* _array_create_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
+    void* _array_get_debug(Array* array, const u64 index, const char* type_name);
+    // Array* _array_set_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
+
+
+    #define array_create(type, capacity, allocator)\
+        _array_create_debug(sizeof(type), capacity, allocator, #type)
+
+    #define array_get(arr, type, index)\
+        (*(type*)_array_get_debug(arr, index, #type))
+
+    #define array_top(arr, type)\
+        (*(type*)_array_get_debug(arr, arr->num_items-1, #type))
+
+    #define array_top_free(arr, type)\
+        (*(type*)_array_get_debug(arr, arr->num_items,#type))
+
+#else
+    #define array_create(type, capacity, allocator)\
+        _array_create(sizeof(type), capacity, allocator)
+
+    #define array_top(arr, type)\
+        (*(type*)_array_get(arr, arr->num_items-1))
+
+    #define array_get(arr, type, index)\
+        (*(type*)_array_get(arr, index))
+
+    #define array_top_free(arr, type)\
+        (*(type*)_array_get(arr, arr->num_items))
+
+#endif
+
+
 
 
 //TODO: TEST

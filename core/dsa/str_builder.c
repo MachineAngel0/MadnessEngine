@@ -4,20 +4,21 @@
 
 
 //if you do not need to heap allocate, then do not heap allocate (String_Builder = {0})
-String_Builder* string_builder_create(const u64 capacity)
+String_Builder* string_builder_create(const u64 capacity, Allocator* allocator)
 {
     assert(capacity > 0);
 
-    //TODO: replace malloc
-    String_Builder* builder = malloc(sizeof(String_Builder));
-    memset(builder, 0, sizeof(String_Builder));
+    String_Builder* builder = allocator_alloc(allocator, sizeof(String_Builder));
     builder->str = malloc(capacity * sizeof(char));
-
     builder->current_length = 0;
     builder->capacity = capacity;
-    // builder->string = string_create_fr om_null_terminated(string, string_size);
+
+    builder->allocator = allocator;
+
     return builder;
 }
+
+
 
 void string_builder_free(String_Builder* builder)
 {
@@ -68,6 +69,7 @@ void string_builder_append_string(String_Builder* str_builder, String* s)
     memcpy(str_builder->str + str_builder->current_length, s->chars, s->length);
     str_builder->current_length += s->length;
 }
+
 
 void string_builder_append_c_string(String_Builder* str_builder, const char* word)
 {
@@ -194,9 +196,14 @@ void string_builder_test(void)
 {
     TEST_START(STRING BUILDER);
 
+    Allocator allocator;
+    u64 mem_size = MB(1);
+    void* backing_memory = malloc(mem_size);
+    allocator_init(&allocator, backing_memory, mem_size);
+
     const char* HI = "HI";
 
-    String_Builder* str1 = string_builder_create(100);
+    String_Builder* str1 = string_builder_create(100, &allocator);
 
     String* other_str1 = STRING_CREATE("HI");
 

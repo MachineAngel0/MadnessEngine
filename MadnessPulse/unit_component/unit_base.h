@@ -14,8 +14,10 @@ Unit* unit_create_default(Madness_Pulse_Game* game, Character_Name character_nam
     action_component_init_default(&unit->action_component);
     health_component_init_default(&unit->health_component);
     mp_component_create_default(&unit->mp_component);
+
     inventory_component_init(&unit->inventory_component);
     battle_inventory_component_init(game, &unit->battle_inventory_component);
+    overflow_component_init_default(&unit->overflow_component);
 
     augment_component_create_default(&unit->augment_component);
 

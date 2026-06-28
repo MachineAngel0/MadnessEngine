@@ -28,6 +28,29 @@ Array* _array_create(const u64 data_stride, const u64 capacity, Allocator* alloc
     return arr;
 }
 
+Array* _array_create_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name)
+{
+    Array* array = _array_create(data_stride, capacity, allocator);
+
+#ifndef NDEBUG
+    array->type_name = type_name;
+#endif
+
+    return array;
+}
+
+void* _array_get_debug(Array* array, const u64 index, const char* type_name)
+{
+#ifndef NDEBUG
+    if (strcmp(array->type_name, type_name) != 0)
+    {
+        MASSERT_MSG(false, "ARRAY GET: WRONG TYPE");
+    }
+#endif
+
+    return _array_get(array, index);
+}
+
 
 #define array_type_check(arr, type)\
     _array_type_check(arr, #type)
@@ -140,7 +163,7 @@ void* _array_get(Array* array, const u64 index)
 
 void* _array_top(Array* array)
 {
-     return _array_get(array, array->num_items);
+    return _array_get(array, array->num_items);
 }
 
 void array_set(Array* array, const void* data, const u64 pos)

@@ -29,7 +29,8 @@ MAPI s32 c_string_format_v(char* dest, const char* format, void* va_list);
 // Performs string formatting to dest given format string and parameters.
 MAPI s32 c_string_format(char* dest, const char* format, ...);
 
-
+MAPI const char* c_string_from_int(s32 i, Allocator* allocator);
+MAPI const char* c_string_from_float(const float value, Allocator* allocator);
 
 MAPI size_t c_string_to_number(const char* string, u32 string_size);
 MAPI f64  c_string_to_float(const char* string);

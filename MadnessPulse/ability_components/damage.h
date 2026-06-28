@@ -55,10 +55,18 @@ void damage_component_create(Ability_Component* Ability_component, const Element
 }
 
 
-void damage_ability(Unit* unit, Damage_Component damage_ability)
+void damage_ability(Unit* unit, const Damage_Component* damage_ability)
 {
-    unit->health_component.current_health -= damage_ability.damage;
+    unit->health_component.current_health -= damage_ability->damage;
 }
+
+
+void damage_component_text(const Damage_Component* damage_component, String_Builder* string_builder)
+{
+    string_builder_append_string(string_builder,
+        string_format(string_builder->allocator, "Deal %f %s damage to target", damage_component->damage, Element_Type_enum_string[damage_component->element]));
+}
+
 
 /*
 void ActivateComponentAbility_Implementation(Game_State* GameState, TArray<Unit*>& Targets,

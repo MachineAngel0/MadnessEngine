@@ -48,10 +48,17 @@ bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator);
 #define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 
 
+
 //UTILITY
+
+String* string_from_int(int value, Allocator* allocator);
+String* string_from_float(float value, Allocator* allocator);
+
+String* string_format(Allocator* allocator, const char* format, ...);
+
+
 void string_print(const String* str);
 void string_println(const String* str);
-
 
 bool string_compare(const String* str1, const String* str2);
 
@@ -68,10 +75,15 @@ String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator*
 
 String* string_strip_whitespace(const String* str);
 
+
+
+
 /*C-STRING*/
 
 const char* string_to_c_string(const String* s);
 bool string_compare_c_string(const String* str1, const char* c_str);
+
+
 
 
 /*STRING SLICE*/

@@ -69,8 +69,6 @@ const char* c_string_concat_fl(const char* str1, const char* str2, Heap_Allocato
     out_str[str1_length + str2_length] = '\0';
 
     return out_str;
-
-
 }
 
 
@@ -196,32 +194,40 @@ bool c_strings_equal(const char* str0, const char* str1)
 // Performs variadic string formatting to dest given format string and va_list.
 s32 c_string_format_v(char* dest, const char* format, void* va_list)
 {
-    if (dest)
-    {
-        // Big, but can fit on the stack.
-        char buffer[1024];
-        s32 written = vsnprintf(buffer, 1024, format, va_list);
-        buffer[written] = 0;
-        memcpy(dest, buffer, written + 1);
+    // Big, but can fit on the stack.
+    char buffer[1024];
+    s32 written = vsnprintf(buffer, 1024, format, va_list);
+    buffer[written] = 0;
+    memcpy(dest, buffer, written + 1);
 
-        return written;
-    }
-    return -1;
+    return written;
 }
 
 
 // Performs string formatting to dest given format string and parameters.
 s32 c_string_format(char* dest, const char* format, ...)
 {
-    if (dest)
-    {
-        va_list arg_ptr;
-        va_start(arg_ptr, format);
-        s32 written = c_string_format_v(dest, format, arg_ptr);
-        va_end(arg_ptr);
-        return written;
-    }
-    return -1;
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    s32 written = c_string_format_v(dest, format, arg_ptr);
+    va_end(arg_ptr);
+    return written;
+}
+
+const char* c_string_from_int(s32 i, Allocator* allocator)
+{
+    int len = snprintf(NULL, 0, "%d", i);
+    char* buffer = allocator_alloc(allocator, len + 1);
+    snprintf(buffer, 12, "%d", i);
+    return buffer;
+}
+
+const char* c_string_from_float(const float value, Allocator* allocator)
+{
+    int len = snprintf(NULL, 0, "%.3f", value);
+    char* result = allocator_alloc(allocator, len + 1);
+    snprintf(result, len + 1, "%.3f", value);
+    return result;
 }
 
 size_t c_string_to_number(const char* string, u32 string_size)

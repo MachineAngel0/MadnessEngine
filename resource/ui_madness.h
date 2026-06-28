@@ -344,17 +344,24 @@ MAPI UI_Node* madness_ui_string_internal(Madness_UI* madness_ui, String text, ve
                                        UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
 MAPI UI_Node* madness_ui_c_string(Madness_UI* madness_ui, const char* text);
 
+
+//
 MAPI bool madness_ui_button(Madness_UI* madness_ui, String label);
 MAPI bool madness_ui_check_box(Madness_UI* madness_ui, String label, bool* check_box_state);
 
 MAPI void madness_image(Madness_UI* madness_ui, String id, Texture_System* texture_system, const char* icon_path);
 MAPI void madness_image_handle(Madness_UI* madness_ui, String id, Texture_Handle handle);
 
-MAPI void madness_slider_scroll(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
+MAPI void madness_ui_slider_scroll(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
 //TODO: might get rid of the arrow version
-MAPI void madness_slider_arrow(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
+MAPI void madness_ui_slider_arrow(Madness_UI* madness_ui, String id, float* slider_val, float min, float max);
+MAPI void madness_ui_slider_arrow_u16(Madness_UI* madness_ui, String id, u16* slider_val, u16 min, u16 max);
+MAPI void madness_ui_slider_arrow_u32(Madness_UI* madness_ui, String id, u32* slider_val, u32 min, u32 max);
 
 MAPI bool madness_ui_u8(Madness_UI* madness_ui, String text, u8* i, u32 increment_value);
+MAPI bool madness_ui_u16(Madness_UI* madness_ui, String text, u16* i, u32 increment_value);
+MAPI bool madness_ui_u32(Madness_UI* madness_ui, String text, u32* i, u32 increment_value);
+MAPI bool madness_ui_s32(Madness_UI* madness_ui, String text, s32* i, u32 increment_value);
 
 MAPI bool madness_ui_float(Madness_UI* madness_ui, String text, float* f, float increment_value);
 MAPI bool madness_ui_float2(Madness_UI* madness_ui, String text, float* x, float* y, float increment_value);
@@ -389,6 +396,8 @@ MAPI bool madness_ui_color_picker(Madness_UI* madness_ui, String label, vec3* co
 
 
 MAPI bool madness_ui_circle(Madness_UI* madness_ui, String id, float* thickness);
+
+MAPI bool madness_ui_progress_bar(Madness_UI* madness_ui, String label, float current, float max);
 
 
 MAPI bool madness_ui_reflection_test(Madness_UI* madness_ui, Reflection_Registry* reflection_registry, const char* struct_name, const char* identifier);

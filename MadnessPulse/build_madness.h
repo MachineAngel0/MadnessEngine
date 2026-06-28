@@ -20,6 +20,7 @@
 #include "health.h"
 #include "inventory.h"
 #include "mp.h"
+#include "overflow.h"
 #include "resistant_stat.h"
 #include "reversal_list.h"
 #include "special_ability_flags.h"
@@ -31,9 +32,25 @@
 #include "ability.h"
 #include "ability_creation.h"
 
+//ability components
 #include "heal.h"
+#include "heal_percent.h"
+#include "heal_setter.h"
+#include "heal_to_full.h"
+
 #include "damage.h"
+
 #include "conjure_summoner.h"
+
+#include "drain.h"
+#include "drain_percent.h"
+#include "drain_all.h"
+
+#include "mp_adder.h"
+#include "mp_remove.h"
+#include "mp_full.h"
+#include "mp_zero.h"
+
 
 
 
@@ -41,7 +58,6 @@
 #include "ability_handler.h"
 #include "command/command.h"
 #include "targeting_handler.h"
-#include "overflow_handler.h"
 
 
 #include "madness_pulse_game.h"

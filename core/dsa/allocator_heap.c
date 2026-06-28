@@ -47,7 +47,6 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t align
     //check to see if we have enough memory
     while (current)
     {
-        //TODO: WAKEUP there is a bug here
         if (current->free && current->block_size > size + sizeof(Heap_Block))
         {
             break;

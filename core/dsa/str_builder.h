@@ -14,10 +14,13 @@ typedef struct String_Builder
     u64 current_length;
     //TODO: add an arena or pool just for strings
     u64 capacity; // here if we want to realloc the data
+
+    Allocator* allocator;
+    Heap_Allocator* heap_allocator;
 } String_Builder;
 
 //if you do not need to heap allocate, then do not heap allocate (String_Builder = {0})
-String_Builder* string_builder_create(const u64 capacity);
+String_Builder* string_builder_create(const u64 capacity, Allocator* allocator);
 
 void string_builder_free(String_Builder* builder);
 /*
@@ -30,6 +33,7 @@ void string_build(Arena* arena, String_Builder* builder, const char* string, con
 void string_builder_print(String_Builder* builder);
 
 void string_builder_append_string(String_Builder* str_builder, String* s);
+void string_builder_append_string_format(String_Builder* str_builder, const char* format, ...);
 
 void string_builder_append_c_string(String_Builder* str_builder, const char* word);
 void string_builder_append_char(String_Builder* str_builder, char character);

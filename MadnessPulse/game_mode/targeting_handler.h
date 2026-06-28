@@ -8,7 +8,7 @@ Targeting_Handler* targeting_handler_init(Madness_Pulse_Game* game)
 {
     Targeting_Handler* targeting_handler = allocator_alloc(&game->allocator, sizeof(Targeting_Handler));
     u8 max_targets_available = 10; //TODO: completely abritrary value, will either set a hard limit or dynamic allocate
-    targeting_handler->targets_available_array = dynamic_array_create(Character_Name, max_targets_available,
+    targeting_handler->targets_available_array = dynamic_array_create(Unit_Handle, max_targets_available,
                                                                       &game->heap_allocator);
     return targeting_handler;
 }
@@ -40,7 +40,7 @@ void targeting_handler_create_targeting_info(Madness_Pulse_Game* game)
         }
 
         break;
-    case Ability_Target_Type_SelfAndAllies:
+    case Ability_Target_Type_Self_And_Allies:
         dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->players,
                                  game->player_count);
         break;
@@ -48,12 +48,12 @@ void targeting_handler_create_targeting_info(Madness_Pulse_Game* game)
         dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemies,
                                  game->enemy_count);
         break;
-    case Ability_Target_Type_SelfAndEnemies:
+    case Ability_Target_Type_Self_And_Enemies:
         dynamic_array_push(game->targeting_handler->targets_available_array, &game->current_units_turn);
         dynamic_array_push_multi(game->targeting_handler->targets_available_array, game->enemies,
                                  game->enemy_count);
         break;
-    case Ability_Target_Type_AlliesAndEnemies:
+    case Ability_Target_Type_Allies_And_Enemies:
         for (int i = 0; i < game->player_count; ++i)
         {
             if (character_handle_compare(game->current_units_turn, game->players[i]))
@@ -157,7 +157,7 @@ void targeting_handler_move_unit_targeting(Madness_Pulse_Game* game, const Targe
 
     // if we are targeting our allies in anyway, then we want to flip the direction of the move targeting, due to the camera direction and player order
     if (info.ability_target_type == Ability_Target_Type_Allies || info.ability_target_type ==
-        Ability_Target_Type_SelfAndAllies)
+        Ability_Target_Type_Self_And_Allies)
     {
         switch (MoveTargetDirection)
         {
@@ -212,7 +212,7 @@ Array* target_handler_return_selected_targets(Targeting_Handler* targeting_handl
     //implied that this is single target if it reaches this point
     if (info.ability_target_area == Target_Area_Affect_Single_Target)
     {
-        Array* single_target_array = array_create(Character_Name, 1, &game->allocator);
+        Array* single_target_array = array_create(Unit_Handle, 1, &game->allocator);
         array_push(single_target_array, _dynamic_array_get(targeting_handler->targets_available_array,
                                                            targeting_handler->targeting_count));
         return single_target_array;

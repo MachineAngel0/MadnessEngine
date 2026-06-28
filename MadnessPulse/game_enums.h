@@ -131,18 +131,49 @@ typedef enum Character_State
 typedef enum Ability_Component_Type
 {
     Ability_Component_TYPE_INVALID,
+
     Ability_Component_TYPE_HEAL,
-    Ability_Component_Type_Damage,
-    Ability_Component_TYPE_MP_CHANGE,
-    Ability_Component_TYPE_AUGMENT_CHANGE,
-    Ability_Component_TYPE_CHARGE,
-    Ability_Component_TYPE_CONJURE,
+    Ability_Component_TYPE_HEAL_SETTER,
+    Ability_Component_TYPE_HEAL_PERCENT,
+    Ability_Component_TYPE_HEAL_TO_FULL,
+
     Ability_Component_TYPE_DRAIN,
-    Ability_Component_TYPE_ACTION_CHANGE,
-    Ability_Component_TYPE_ABILITY_CHANGE,
+    Ability_Component_TYPE_DRAIN_PERCENT,
+    Ability_Component_TYPE_DRAIN_ALL,
+
+    Ability_Component_Type_Damage,
+    Ability_Component_Type_INSTAKILL,
+
+    Ability_Component_TYPE_MP_ADD,
+    Ability_Component_TYPE_MP_REMOVE,
+    Ability_Component_TYPE_MP_FULL,
+    Ability_Component_TYPE_MP_ZERO,
+
+    Ability_Component_TYPE_ABILITY_ADDER,
+    Ability_Component_TYPE_ABILITY_REMOVER,
+    Ability_Component_TYPE_ABILITY_REMOVE_ALL,
+
+    Ability_Component_TYPE_ACTION_ADD,
+    Ability_Component_TYPE_ACTION_REMOVE,
+
+    Ability_Component_TYPE_AUGMENT_CHANGE,
+
+
+    Ability_Component_TYPE_CHARGE,
+
+    Ability_Component_TYPE_CONJURE,
+    Ability_Component_TYPE_SUMMONER,
+
+
+
+
     Ability_Component_TYPE_RESISTANCE_CHANGE,
+
+
+
     Ability_Component_TYPE_STATUS_CHANGE,
     Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE,
+
     Ability_Component_TYPE_MAX,
 } Ability_Component_Type;
 
@@ -203,9 +234,9 @@ typedef enum Ability_Target_Type
     Ability_Target_Type_Self,
     Ability_Target_Type_Allies,
     Ability_Target_Type_Enemies,
-    Ability_Target_Type_SelfAndAllies,
-    Ability_Target_Type_SelfAndEnemies,
-    Ability_Target_Type_AlliesAndEnemies,
+    Ability_Target_Type_Self_And_Allies,
+    Ability_Target_Type_Self_And_Enemies,
+    Ability_Target_Type_Allies_And_Enemies,
     Ability_Target_Type_All,
 } Ability_Target_Type;
 
@@ -264,19 +295,9 @@ typedef enum Ability_Action_Cost_Type
 
 typedef enum Ability_Activation_Type
 {
-    // no need to put conjure here, as it just activates normally
     Ability_Activation_Type_Normal,
-    Ability_Activation_Type_Status,
-    Ability_Activation_Type_Turn,
-    Ability_Activation_Type_Turn_Info,
-    // this is the specific component that gives us info on how the turn based components are meant to be used
-
     Ability_Activation_Type_Reversal,
-    Ability_Activation_Type_Reversal_Info,
-    // this is the specific component that gives us info on how the turn based components are meant to be used
-
-    // component type that gets checked first, to make sure the ability is allowed to activate, otherwise the ability will fail
-    Ability_Activation_Type_Conditional,
+    Ability_Activation_Type_Turn,
 } Ability_Activation_Type;
 
 typedef enum Ability_Trigger_Target
@@ -341,16 +362,6 @@ typedef enum Damage_Status_Type
 } Damage_Status_Type;
 
 
-typedef enum Heal_Types
-{
-    Heal_Types_Heal_Amount,
-    Heal_Types_Heal_Setter,
-    Heal_Types_Heal_Percent,
-    Heal_Types_Heal_To_Full,
-    Heal_Types_Heal_By_Multiplication,
-    Heal_Types_MAX,
-} Heal_Types;
-
 typedef enum Status_Change_Types
 {
     Status_Change_Types_StatusAmount,
@@ -367,23 +378,6 @@ typedef enum Status_Threshold_Types
     Status_Threshold_Types_MAX,
 } Status_Threshold_Types;
 
-typedef enum Drain_Types
-{
-    Drain_Types_DrainAmount,
-    Drain_Types_DrainPercent,
-    Drain_Types_DrainToFull,
-    Drain_Types_DrainSetter,
-    Drain_Types_MAX,
-} Drain_Types;
-
-typedef enum MP_Types
-{
-    MP_Types_MP_Amount,
-    MP_Types_MP_Percent,
-    MP_Types_MP_To_Full,
-    MP_Types_MP_To_Zero,
-    MP_Types_MAX,
-} MP_Types;
 
 typedef enum Charge_State
 {
@@ -513,7 +507,6 @@ typedef enum Action_Handler_Process_Stage
 {
     ECS_None,
     ECS_Normal,
-    ECS_Status,
     ECS_ReversalTrigger,
     ECS_Reversal,
     ECS_TurnComponent,

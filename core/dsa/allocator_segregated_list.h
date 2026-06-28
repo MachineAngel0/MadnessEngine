@@ -11,7 +11,7 @@ typedef struct Allocator_Segragated_List
 } Allocator_Segragated_List;
 
 
-void* allocator_segragated_list_init(Allocator_Segragated_List* allocator, void* memory, size_t size)
+void allocator_segragated_list_init(Allocator_Segragated_List* allocator, void* memory, size_t size)
 {
     if (size < MB(3))
     {
@@ -53,7 +53,9 @@ void* allocator_segragated_list_free(Allocator_Segragated_List* allocator, void*
     }
     return pool_allocator_free(&allocator->meduim_pool);
     */
+
+    return NULL;
 }
 
 
-#endif//ALLOCATOR_SEGREGATED_LIST_H
+#endif //ALLOCATOR_SEGREGATED_LIST_H

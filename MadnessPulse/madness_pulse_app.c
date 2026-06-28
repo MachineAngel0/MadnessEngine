@@ -33,8 +33,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     // Reflection_System* reflection_system = reflection_system_init(&app_internal->application_core.memory_system);
     // reflection_game_data(reflection_system);
 
-    //testing text format
-    // Madness_txt* txt = madness_txt_init(NULL);
+
 
     Reflection_Registry* reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
     generate_runtime_enums(reflection_registry);
@@ -44,7 +43,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     Heal_Component heal_comp_write = {
-        .heal_type = Heal_Types_Heal_To_Full,
         .heal_amount = 10.8f,
         .heal_only_if_dead = false
     };

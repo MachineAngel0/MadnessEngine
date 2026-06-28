@@ -4,25 +4,6 @@
 
 #include "game_structs.h"
 
-
-void heal_component_create(Ability_Component* ac, const Heal_Types heal_types, const float heal_amount,
-                                     const bool heal_only_if_dead)
-{
-    ac->type = Ability_Component_TYPE_HEAL;
-    ac->data.heal = (Heal_Component){
-        .heal_type = heal_types,
-        .heal_amount = heal_amount,
-        .heal_only_if_dead = heal_only_if_dead
-    };
-
-
-}
-
-void heal_ability(Unit* unit, Heal_Component heal_component)
-{
-    unit->health_component.current_health += heal_component.heal_amount;
-}
-
 /*
 void heal_ability(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
 {
@@ -81,5 +62,35 @@ void heal_ability(Unit* UnitCaster, Unit** Targets, Game_State& GameState)
     }
 }
 */
+
+
+void heal_component_create(Ability_Component* ac, const float heal_amount,
+                           const bool heal_only_if_dead)
+{
+    ac->type = Ability_Component_TYPE_HEAL;
+
+
+    ac->data.heal = (Heal_Component){
+        .heal_amount = heal_amount,
+        .heal_only_if_dead = heal_only_if_dead
+    };
+}
+
+void heal_ability(Unit* unit, const Heal_Component* component)
+{
+    heal_by_amount(&unit->health_component, component->heal_amount);
+}
+
+void heal_component_text(const Heal_Component* component, String_Builder* string_builder)
+{
+    string_builder_append_string(string_builder,
+                                 string_format(string_builder->allocator, "Heal target by %f",
+                                               component->heal_amount));
+}
+
+
+
+
+
 
 #endif //HEAL_H
