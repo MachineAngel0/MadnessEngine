@@ -67,6 +67,17 @@ Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memo
     return out_allocator;
 }
 
+Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size,
+    Memory_Subsystem_Type memory_subsystem_type)
+{
+
+    Heap_Allocator* out_allocator = memory_system_alloc(memory_system, sizeof(Heap_Allocator), memory_subsystem_type);
+    void* allocator_memory = memory_system_alloc(memory_system, memory_request_size, memory_subsystem_type);
+    allocator_heap_init(out_allocator, allocator_memory, memory_request_size);
+
+    return out_allocator;
+}
+
 void memory_system_print_subsystem_memory_usage(Memory_System* memory_system)
 {
     float total_memory_usage = 0;

@@ -3,7 +3,7 @@
 #include "resource_types.h"
 
 
-//TODO: rn textures dont free their pixel data, which can be a really big problem
+//NOTE: since the image goes from cpu to gpu, the renderer takes care of freeing the pixel data, if loaded from a file
 
 Texture_System* texture_system_init(Memory_System* memory_system);
 MAPI bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memory_system);

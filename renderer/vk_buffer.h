@@ -18,6 +18,8 @@
 Buffer_System* buffer_system_init(Renderer* renderer, u32 frames_in_flight);
 Buffer_System* buffer_system_free(Renderer* renderer);
 
+void buffer_system_frame_start(Renderer* renderer);
+
 
 uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
@@ -88,6 +90,9 @@ void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_H
 void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
                                vulkan_buffer* buffer, vulkan_buffer* staging_buffer, void* data, u64 data_size, u64 offset);
 */
+
+bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
+                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_size);
 
 
 #endif //VK_BUFFER_H

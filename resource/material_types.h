@@ -81,10 +81,50 @@ typedef struct Material_System
     u32 internal_count;
     Material_Instance material_instance[MAX_MATERIAL];
 
+    //Hardcode pipelines
     Material_PBR prb[MAX_MATERIAL]; // pretty much manditory for all meshes
     u32 pbr_count;
     Material_UV_Anim_Data uv_anim[MAX_MATERIAL];
     u32 uv_anim_count;
+
+
+    //Shaders/Pipelines should always be first, they define what the material needs are
+    //or we could have material in one spot, that get generated
+    /*struct mat_definition{
+        name* (float, u32, mat4) etc... (for the prototype, or base version)
+        type* (float, u32, mat4) etc...
+        void* data;
+     }
+
+     mat_info{
+        mat_def* mat_def_array;
+     }
+
+     //pipeline/shader info
+     {
+        pipeline*
+
+        //passes data
+        opaque/transparent
+        has_shadow
+        blend_mode
+
+        mat_def*
+        cpu_material_array_data* // void* data
+        storage_buffer*
+
+        push_constant_data* // only one needed per pipeline
+        push_constant_size*
+     }
+
+
+     */
+
+    //Generated pipelines
+
+    //each material has a u32 idx, which we assign at runtime
+    //each mateiral will have its own pipeline with its own material
+
 
 } Material_System;
 

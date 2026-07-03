@@ -1,7 +1,6 @@
 ﻿#include "mesh_render.h"
 
-
-
+#include "vk_buffer.h"
 
 
 Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system)
@@ -32,9 +31,8 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
                                                                   BUFFER_TYPE_CPU_STORAGE,
                                                                   mesh_buffer_data_size);
     out_mesh_renderer->weight_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_CPU_STORAGE,
-                                                                  mesh_buffer_data_size);
-
+                                                                   BUFFER_TYPE_CPU_STORAGE,
+                                                                   mesh_buffer_data_size);
 
 
     out_mesh_renderer->vertex_staging_buffer_handle = vulkan_buffer_create(
@@ -54,29 +52,18 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
                                                                        BUFFER_TYPE_STAGING,
                                                                        mesh_buffer_data_size);
 
-    out_mesh_renderer->weight_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING,
-                                                                       mesh_buffer_data_size);
-
-    out_mesh_renderer->joint_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING,
-                                                                       mesh_buffer_data_size);
-
 
     //DRAW DATA
     out_mesh_renderer->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE,
-                                                                   mesh_buffer_data_size);
+                                                                      BUFFER_TYPE_CPU_STORAGE,
+                                                                      mesh_buffer_data_size);
     out_mesh_renderer->draw_data_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                               BUFFER_TYPE_STAGING,
-                                                               mesh_buffer_data_size);
-
-
+                                                                              BUFFER_TYPE_STAGING,
+                                                                              mesh_buffer_data_size);
 
 
     //from other systems
     out_mesh_renderer->pc_mesh.ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle;
-
 
 
     return out_mesh_renderer;
@@ -90,9 +77,6 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
 
 
     ring_queue* mesh_render_queue = render_packet->mesh_queue;
-
-    //return if its empty
-    if (ring_queue_is_empty(mesh_render_queue)) return;
 
     Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
 
@@ -117,9 +101,22 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->uv_staging_buffer_handle,
                                             submesh_upload_data->uv,
                                             submesh_upload_data->uv_bytes);
-
-
     }
+
+    //skinned data
+    /*
+    Skinned_Mesh_Upload_Data* skinned_mesh_upload_data = allocator_alloc(
+        &renderer->frame_arena, sizeof(Skinned_Mesh_Upload_Data));
+
+    while (!ring_queue_is_empty(skinned_mesh_render_queue))
+    {
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer, mesh_renderer->joint_buffer_handle,
+                                                                      command_buffer, skinned_mesh_upload_data->joints,
+                                                                      skinned_mesh_upload_data->joint_bytes);
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer, mesh_renderer->weight_buffer_handle,
+                                                                      command_buffer, skinned_mesh_upload_data->weights,
+                                                                      skinned_mesh_upload_data->weight_bytes);
+    }*/
 
 
     vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
@@ -132,7 +129,6 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
                                     command_buffer);
     vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
                                     mesh_renderer->tangent_staging_buffer_handle, command_buffer);
-
 }
 
 
@@ -177,9 +173,8 @@ void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* me
 }
 
 void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-    Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
+                                               Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
-
     Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
 
     vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
@@ -191,8 +186,6 @@ void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer
 
     Mesh_Indirect_Draw_Data* draw_data = mesh_render_packet->draw_data;
     u32 draw_data_size = mesh_render_packet->draw_data_size;
-
-
 
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
@@ -221,8 +214,8 @@ void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer
         mesh_draw_data.material_instance_handle = current_submesh->material_handle.handle;
 
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->draw_data_staging_buffer_handle,
-                                           &mesh_draw_data,
-                                           sizeof(Mesh_Draw_Data));
+                                            &mesh_draw_data,
+                                            sizeof(Mesh_Draw_Data));
     }
 
 
@@ -230,11 +223,7 @@ void mesh_renderer_construct_indirect_draw_new(Renderer* renderer, Mesh_Renderer
                                     mesh_renderer->indirect_staging_buffer_handle, command_buffer);
 
     vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->draw_data_buffer_handle,
-                                mesh_renderer->draw_data_staging_buffer_handle, command_buffer);
-
-
-
-
+                                    mesh_renderer->draw_data_staging_buffer_handle, command_buffer);
 }
 
 

@@ -561,6 +561,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
         vkGetPhysicalDeviceProperties(physical_devices[i], &vulkan_context->device.properties);
 
         vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->device.features);
+        // vkGetPhysicalDeviceFeatures2(physical_devices[i], &vulkan_context->device.features);
 
         vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &vulkan_context->device.memory);
 

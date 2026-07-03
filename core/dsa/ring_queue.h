@@ -42,6 +42,8 @@ bool ring_enqueue(ring_queue* q, void* data);
 
 //pops(not technically a pop) from the front of the queue, also returns it
 bool ring_dequeue(ring_queue* q, void* out_data);
+//pops from the queu without return the data
+bool ring_dequeue_fast(ring_queue* q);
 
 
 bool ring_queue_peek(const ring_queue* q, void* out_data);

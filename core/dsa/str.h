@@ -35,8 +35,8 @@ String* string_create(const char* word, const u64 length);
 bool string_free(String* string);
 
 String* string_create_allocator(const char* word, u64 length, Allocator* allocator);
-String* string_create_allocator_freelist(const char* word, u64 length, Heap_Allocator* allocator);
-bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator);
+String* string_create_allocator_heap(const char* word, u64 length, Heap_Allocator* allocator);
+bool string_free_allocator_heap(String* string, Heap_Allocator* allocator);
 
 
 //this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
@@ -47,12 +47,14 @@ bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator);
 //create a string from an already existing char[]/char* that excludes the null terminated string
 #define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 #define STRING_CREATE_FROM_BUFFER_ALLOCATOR(string, allocator) string_create_allocator(string, strlen(string), allocator)
+#define STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(string, allocator) string_create_allocator_heap(string, strlen(string), allocator)
 
 
 
 //UTILITY
 
 String* string_from_int(s32 value, Allocator* allocator);
+String* string_from_int_heap_allocator(s32 value, Heap_Allocator* allocator);
 String* string_from_float(float value, Allocator* allocator);
 
 String* string_format(Allocator* allocator, const char* format, ...);
@@ -71,7 +73,7 @@ String* string_duplicate(const String* str);
 //creates a new string from the two strings
 String* string_concat_malloc(const String* str1, const String* str2);
 String* string_concat(const String* str1, const String* str2, Allocator* allocator);
-String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator* allocator);
+String* string_concat_heap(const String* str1, const String* str2, Heap_Allocator* allocator);
 
 
 String* string_strip_whitespace(const String* str);

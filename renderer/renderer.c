@@ -193,6 +193,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     vulkan_context* vk_context = &renderer->context;
 
     allocator_clear(&renderer->frame_arena);
+    buffer_system_frame_start(renderer);
 
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);

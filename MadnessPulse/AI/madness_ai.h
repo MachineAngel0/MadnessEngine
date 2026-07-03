@@ -161,6 +161,7 @@ void madness_ai_instantiate_enemy(Madness_Pulse_Game* game, Madness_AI* madness_
 ARRAY_TYPE(AI_Ability)* madness_ai_get_abilties_for_turn_index(Madness_Pulse_Game* game, Madness_AI* madness_ai,
                                                                Character_Name ai_name, u8 turn_index)
 {
+    //TODO:
 }
 
 ARRAY_TYPE(AI_Ability)* madness_ai_filter_abilities_with_cooldowns(Madness_Pulse_Game* game);

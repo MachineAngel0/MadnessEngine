@@ -94,6 +94,7 @@ typedef struct Texture
     // for the renderer
     Texture_Handle handle;
     bool is_font;
+    // bool free_after_gpu_upload;
 } Texture;
 
 
@@ -156,7 +157,6 @@ typedef struct PC_Material_Mesh
 } PC_Material_Mesh;
 
 
-
 typedef struct submesh
 {
     // Transform transform;
@@ -201,7 +201,7 @@ typedef struct static_mesh
     u32 mesh_size;
 } static_mesh;
 
-typedef struct Submesh_Upload_Data
+typedef struct Mesh_Upload_Data
 {
     //information to upload into the associated buffer
     u32 vertex_offset;
@@ -226,6 +226,20 @@ typedef struct Submesh_Upload_Data
     vec2* uv;
     u8* indices;
 } Mesh_Upload_Data;
+
+typedef struct Skinned_Mesh_Upload_Data
+{
+    vec4* joints;
+    vec4* weights;
+
+    u64 joint_bytes;
+    u64 weight_bytes;
+
+    u64 joint_offset;
+    u64 weight_offset;
+
+} Skinned_Mesh_Upload_Data;
+
 
 typedef struct Mesh_Indirect_Draw_Data
 {
@@ -461,6 +475,7 @@ typedef struct Texture_System
 typedef struct Mesh_System
 {
 #define MAX_MESH_COUNT 1000
+#define MAX_SKINNED_MESH_COUNT 1000
     //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
     // fragmentation would also be a concern, unless i pool size, or split the pool into many different pool sizes
 
@@ -505,11 +520,17 @@ typedef struct Mesh_System
     // u32 weight_buffer_size;
 
     // data*, offset, byte_size ->for all the types
-    ring_queue* mesh_ring_queue;
-
+    RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
+    RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
     skinned_mesh* test_skinned_mesh;
     skinned_mesh_instance* test_skinned_mesh_instance;
+
+    //TODO:
+    //anything that couldn't be loaded in this frame
+    RING_QUEUE_TYPE(const char*)* load_queue;
+
+
 } Mesh_System;
 
 typedef struct Scene
@@ -538,10 +559,10 @@ typedef struct Render_Packet_Mesh
     u32 draw_data_size;
 
 
-    //TODO: remove these
-    static_mesh* static_mesh_array;
-    u32 static_mesh_array_size;
-    u32 static_mesh_submesh_size;
+
+
+
+
 } Render_Packet_Mesh;
 
 typedef struct Render_Packet_Transform
@@ -588,6 +609,7 @@ typedef struct Render_Packet
     //just references
     ring_queue* texture_queue;
     ring_queue* mesh_queue;
+    ring_queue* skinned_mesh_queue;
 
 
     //FOR RENDERING
@@ -598,17 +620,18 @@ typedef struct Render_Packet
     Render_Packet_Sprite sprite_data_packet;
     Render_Packet_UI ui_data_packet;
     Render_Packet_Mesh mesh_data_packet;
-    // Render_Packet_Game game_data_packet;
 } Render_Packet;
 
 
 typedef struct Resource_System
 {
     //the resource system is just a container for all the system,
-    //each system can just access the system it need to load assets
+    //each system manages itself,
+    //this does gather the cpu-gpu resources and sends it to the renderer
 
-    //TODO: it would make sense to double buffer our frame allocators for transient resources or for cpu->gpu uploads
-
+    // TODO: might change this into a pool allocator, or even segregated list allocator
+    Heap_Allocator* heap_allocator;
+    Frame_Allocator* frame_allocator;
 
     // Shader_System* shader_system;
     // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer

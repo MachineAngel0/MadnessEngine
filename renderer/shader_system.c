@@ -134,5 +134,16 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
                                     vulkan_texture);
         update_texture_bindless_descriptor_set(renderer, descriptor_system,
                                                texture->handle);
+
+
+        //free texture data
+        if (!texture->is_font)
+        {
+            if (texture->pixels)
+            {
+                stbi_image_free(texture->pixels);
+            }
+        }
+
     }
 }

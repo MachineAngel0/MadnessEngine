@@ -13,6 +13,12 @@ Resource_System* resource_system_init(Memory_System* memory_system)
                                                          MEMORY_SUBSYSTEM_RESOURCE);
 
 
+    resource_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(64),
+                                                     MEMORY_SUBSYSTEM_RESOURCE);
+    resource_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
+                                                     MEMORY_SUBSYSTEM_RESOURCE);
+
+
     resource_system->sprite_system = sprite_system_init(memory_system);
     resource_system->texture_system = texture_system_init(memory_system);
     resource_system->mesh_system = mesh_system_init(memory_system);

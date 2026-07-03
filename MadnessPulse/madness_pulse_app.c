@@ -91,23 +91,15 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
-    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
-                       &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                       renderer_plugin->renderer->resource_system);
-    /*mesh_load_gltf_new(application_core->resource_system->mesh_system,
-                       "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
-                       &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                       renderer_plugin->renderer->resource_system);*/
+    mesh_load_gltf_new(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
+    mesh_load_gltf_new(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
 
     //TODO: test the mc after cesium man is working
     /*mesh_load_anim_gltf(application_core->resource_system->mesh_system,
                         "../z_assets/models/MC/MC4.2_6.gltf",
                         &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                         application_core->resource_system);*/
-    mesh_load_anim_gltf(application_core->resource_system->mesh_system,
-                        "../z_assets/models/CesiumMan/CesiumMan.gltf",
-                        &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
-                        application_core->resource_system);
+    mesh_load_anim_gltf(application_core->resource_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,

@@ -39,6 +39,12 @@ typedef struct Buffer_Handle
     bool is_per_frame;
 } Buffer_Handle;
 
+
+typedef struct Staging_Buffer_Handle
+{
+    u32 handle;
+} Staging_Buffer_Handle;
+
 typedef struct Descriptor_Handle
 {
     u32 handle;
@@ -227,6 +233,9 @@ typedef struct Buffer_System
     // but when we get them from the system, they are offset by the current frame
 
     Buffer_Handle global_ubo_handle;
+
+    //per frame buffer
+    Vulkan_Buffer* per_frame_staging_buffer_pool;
 
     //an array of them
     Vulkan_Buffer* buffers;
@@ -569,6 +578,8 @@ typedef struct Mesh_Renderer
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
+
+    //using these to test the global staging buffer
     Buffer_Handle joint_buffer_handle;
     Buffer_Handle weight_buffer_handle;
 
@@ -579,8 +590,7 @@ typedef struct Mesh_Renderer
     Buffer_Handle normal_staging_buffer_handle;
     Buffer_Handle tangent_staging_buffer_handle;
     Buffer_Handle uv_staging_buffer_handle;
-    Buffer_Handle joint_staging_buffer_handle;
-    Buffer_Handle weight_staging_buffer_handle;
+
 
 
     Buffer_Handle draw_data_buffer_handle;

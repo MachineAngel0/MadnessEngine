@@ -32,7 +32,7 @@ Texture_System* texture_system_init(Memory_System* memory_system)
                                      &texture_system->default_texture_handle))
     {
         MASSERT_MSG(false, "TEXTURE SYSTEM FAILED TO LOAD DEFAULT TEXTURE");
-    };
+    }
 
     return texture_system;
 }
@@ -48,7 +48,7 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
 
 
 //pass out the texture index
-bool texture_system_load_texture(Texture_System* texture_system, char const* file_path, Texture_Handle* out_handle)
+MAPI bool texture_system_load_texture(Texture_System* texture_system, char const* file_path, Texture_Handle* out_handle)
 {
     u32 texture_idx;
 

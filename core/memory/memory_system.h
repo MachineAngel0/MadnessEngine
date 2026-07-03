@@ -86,6 +86,7 @@ MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_b
 
 
 MAPI Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
+MAPI Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
 
 
 //TODO: not in use rn

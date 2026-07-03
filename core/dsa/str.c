@@ -61,7 +61,7 @@ String* string_create_allocator(const char* word, const u64 length, Allocator* a
     return str;
 }
 
-String* string_create_allocator_freelist(const char* word, const u64 length, Heap_Allocator* allocator)
+String* string_create_allocator_heap(const char* word, const u64 length, Heap_Allocator* allocator)
 {
     //creates a string without the null terminator
     String* str = allocator_heap_alloc(allocator, sizeof(String));
@@ -75,7 +75,7 @@ String* string_create_allocator_freelist(const char* word, const u64 length, Hea
     return str;
 }
 
-bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator)
+bool string_free_allocator_heap(String* string, Heap_Allocator* allocator)
 {
     MASSERT(string);
     if (!string)
@@ -169,7 +169,7 @@ String* string_concat(const String* str1, const String* str2, Allocator* allocat
     return out_str;
 }
 
-String* string_concat_fl(const String* str1, const String* str2, Heap_Allocator* allocator)
+String* string_concat_heap(const String* str1, const String* str2, Heap_Allocator* allocator)
 {
     String* out_str = allocator_heap_alloc(allocator, sizeof(String));
     const u64 combined_length = str1->length + str2->length;
@@ -234,6 +234,17 @@ String* string_from_int(s32 value, Allocator* allocator)
 
     out_string->length = snprintf(NULL, 0, "%d", value);
     out_string->chars = allocator_alloc(allocator, out_string->length + 1);
+    snprintf(out_string->chars, out_string->length + 1, "%d", value);
+
+    return out_string;
+}
+
+String* string_from_int_heap_allocator(s32 value, Heap_Allocator* allocator)
+{
+    String* out_string = allocator_heap_alloc(allocator, sizeof(String));
+
+    out_string->length = snprintf(NULL, 0, "%d", value);
+    out_string->chars = allocator_heap_alloc(allocator, out_string->length + 1);
     snprintf(out_string->chars, out_string->length + 1, "%d", value);
 
     return out_string;

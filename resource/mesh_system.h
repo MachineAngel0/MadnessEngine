@@ -18,8 +18,9 @@ void static_mesh_free(static_mesh* static_mesh);
 void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena, Resource_System*
                     resource_system);
 
-void mesh_load_anim_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* allocator, Frame_Allocator* frame_allocator, Resource_System*
-                    resource_system);
+void mesh_load_gltf_new(Resource_System* resource_system, const char* gltf_path);
+
+void mesh_load_anim_gltf(Resource_System* resource_system, const char* gltf_path);
 
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena);
 

@@ -88,6 +88,20 @@ bool ring_dequeue(ring_queue* q, void* out_data)
     return true;
 }
 
+bool ring_dequeue_fast(ring_queue* q)
+{
+    if (q->num_items == 0)
+    {
+        WARN("RING DEQUEUE: NOTHING TO DEQUEUE")
+        return false;
+    }
+
+    q->front = (q->front + 1) % q->capacity;
+    q->num_items--;
+
+    return true;
+}
+
 bool ring_queue_peek(const ring_queue* q, void* out_data)
 {
     MASSERT(q);

@@ -138,14 +138,7 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     memcpy(data, pixels, imageSize);
     vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
 
-    //free texture data
-    if (!texture_data->is_font)
-    {
-        if (pixels)
-        {
-            stbi_image_free(texture_data->pixels);
-        }
-    }
+
 
 
     //create texture image
