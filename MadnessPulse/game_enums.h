@@ -52,10 +52,12 @@ typedef enum Level_Name
 } Level_Name;
 
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UNIT//
 typedef enum Character_Name
 {
-    Character_Name_None,
+    Character_Name_Invalid,
     //DEBUG ENEMEIS
     Character_Name_Red_Jester,
     Character_Name_Clown,
@@ -126,6 +128,7 @@ typedef enum Character_State
     Character_State_Revive,
 } Character_State;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ABILITIES //
 
 typedef enum Ability_Component_Type
@@ -163,7 +166,7 @@ typedef enum Ability_Component_Type
     Ability_Component_TYPE_CHARGE,
 
     Ability_Component_TYPE_CONJURE,
-    Ability_Component_TYPE_SUMMONER,
+    // Ability_Component_TYPE_SUMMONER,
 
 
     Ability_Component_TYPE_RESISTANCE_CHANGE,
@@ -189,10 +192,10 @@ typedef enum Ability_Name
     //sort by missions
 
     //placeholder debug
-    Ability_Name_DEBUG_1,
-    Ability_Name_DEBUG_2,
-    Ability_Name_DEBUG_3,
-    Ability_Name_DEBUG_4,
+    Ability_Name_DEBUG_STARTING_1,
+    Ability_Name_DEBUG_STARTING_2,
+    Ability_Name_DEBUG_STARTING_3,
+    Ability_Name_DEBUG_STARTING_4,
 
 
     //test abilities components
@@ -207,17 +210,17 @@ typedef enum Ability_Name
 
     Ability_Name_Damage,
 
-    Ability_Name_MP_ADD,
-    Ability_Name_MP_REMOVE,
-    Ability_Name_MP_FULL,
-    Ability_Name_MP_ZERO,
+    Ability_Name_DEBUG_MP_ADD,
+    Ability_Name_DEBUG_MP_REMOVE,
+    Ability_Name_DEBUG_MP_FULL,
+    Ability_Name_DEBUG_MP_ZERO,
 
-    Ability_Name_ABILITY_ADDER,
-    Ability_Name_ABILITY_REMOVER,
-    Ability_Name_ABILITY_REMOVE_ALL,
+    Ability_Name_DEBUG_ABILITY_ADDER,
+    Ability_Name_DEBUG_ABILITY_REMOVER,
+    Ability_Name_DEBUG_ABILITY_REMOVE_ALL,
 
-    Ability_Name_ACTION_ADD,
-    Ability_Name_ACTION_REMOVE,
+    Ability_Name_DEBUG_ACTION_ADD,
+    Ability_Name_DEBUG_ACTION_REMOVE,
 
     Ability_Name_CHARGE,
 
@@ -228,16 +231,26 @@ typedef enum Ability_Name
     //test abilities
     Ability_Name_DEBUG_HEAL,
     Ability_Name_DEBUG_DAMAGE,
-    Ability_Name_Madness_Test,
-    Ability_Name_INSANITY_Test,
+    Ability_Name_DEBUG_DAMAGE_SELF_AND_ENEMY,
+
+    Ability_Name_DEBUG_INSTAKILL_SELF,
+    Ability_Name_DEBUG_INSTAKILL_TARGET,
+    Ability_Name_DEBUG_INSTAKILL_PLAYERS,
+    Ability_Name_DEBUG_INSTAKILL_ENEMYS,
+    Ability_Name_DEBUG_INSTAKILL_ALL,
+
+    Ability_Name_DEBUG_PASS_ALL_PLAYER_UNITS_TURNS,
+    Ability_Name_DEBUG_GIVE_MYSELF_ACTIONS,
+    Ability_Name_DEBUG_MADNESS,
+    Ability_Name_DEBUG_INSANITY,
     Ability_Name_REVERSAL_TEST,
     Ability_Name_DEBUG_TURN_EFFECT,
     Ability_Name_DEBUG_POISON,
-    Ability_Name_,
 
     // Starting abilties
     Ability_Name_Pass,
 
+    //Mission rewards
     //mission 1
     //mission 2
     //mission 3
@@ -275,20 +288,13 @@ typedef enum Ability_Target_Type
     Ability_Target_Type_All,
 } Ability_Target_Type;
 
-typedef enum Ability_Component_Target_Area
-{
-    Ability_Component_Target_Area_Affect_Single_Target,
-    Ability_Component_Target_Area_Affect_Target_All,
-} Ability_Component_Ability_Target_Area;
 
 typedef enum Ability_Component_Target_Type
 {
-    Ability_Component_Target_Type_Self,
+    Ability_Component_Target_Type_Target, //default, just use what the ability is using
+    Ability_Component_Target_Type_Caster,
     Ability_Component_Target_Type_Allies,
     Ability_Component_Target_Type_Enemies,
-    Ability_Component_Target_Type_Self_And_Allies,
-    Ability_Component_Target_Type_Self_And_Enemies,
-    Ability_Component_Target_Type_Allies_And_Enemies,
     Ability_Component_Target_Type_All,
 } Ability_Component_Target_Type;
 
@@ -342,6 +348,7 @@ typedef enum Ability_Action_Cost_Type
     Ability_Action_Cost_Type_1,
     Ability_Action_Cost_Type_2,
     Ability_Action_Cost_Type_3,
+    //idk if i would want more, like abilties that cost 10, its just annoying to set the number when their all the same basically
     Ability_Action_Cost_Type_Max,
 } Ability_Action_Cost_Type;
 
@@ -509,6 +516,7 @@ typedef enum Passive_Transfer_Type
     Passive_Transfer_Type_Target_To_Caster,
 } Passive_Transfer_Type;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Turn Based Game //
 
 //NOTE: I dont have a decent name for this rn
@@ -547,6 +555,8 @@ typedef enum Turn_Phase
     Turn_Phase_Queue_Process,
     Turn_Phase_Turn_End,
     Turn_Phase_Enemy_Turn,
+    Turn_Phase_Enemy_Show_Decision_To_Player,
+    Turn_Phase_Enemy_Execute_Abilties,
 
     Turn_Phase_Dialogue,
     Turn_Phase_Event, // might want to specify what type of event
@@ -554,16 +564,6 @@ typedef enum Turn_Phase
     Turn_Phase_Battle_Over,
 } Turn_Phase;
 
-typedef enum Action_Handler_Process_Stage
-{
-    ECS_None,
-    ECS_Normal,
-    ECS_ReversalTrigger,
-    ECS_Reversal,
-    ECS_TurnComponent,
-    ECS_TurnTrigger,
-    ECS_TurnEnd,
-} Action_Handler_Process_Stage;
 
 
 typedef enum Game_UI_States
@@ -590,29 +590,67 @@ typedef enum Turned_Based_Camera_Type
     Turned_Based_Camera_Type_AttackCamera,
 } Turned_Based_Camera_Type;
 
-/* Enemy AI*/
+
+
+// AI
 //can always add more later
-typedef enum Action_Consideration_Type
+
+typedef enum AI_Consideration_Type
 {
-    Action_Consideration_Type_None,
-    Action_Consideration_Type_Damage,
-    Action_Consideration_Type_StatusBuildUp,
-    Action_Consideration_Type_StatusTrigger,
-    Action_Consideration_Type_Augment,
-    Action_Consideration_Type_Heal,
-    Action_Consideration_Type_MAX,
-} Action_Consideration_Type;
+    AI_Consideration_Type_Invalid,
+    AI_Consideration_Type_Heal,
+    AI_Consideration_Type_Damage,
+    AI_Consideration_Type_Max,
+} AI_Consideration_Type;
 
 
-// probably won't use this, maybe for conjure or reversal checks
-typedef enum Battle_Info_Life_Time_Type
+//up to a child class if they want to use this
+typedef enum AI_Target_Type
 {
-    Battle_Info_Life_Time_Type_TurnEndLifeTime,
-    Battle_Info_Life_Time_Type_TurnStartLifeTime,
-    Battle_Info_Life_Time_Type_RewindLifeTime,
-    Battle_Info_Life_Time_Type_FightLifeTime,
-    Battle_Info_Life_Time_Type_MAX,
-} Battle_Info_Life_Time_Type;
+    AI_Target_Type_Ability,
+    AI_Target_Type_Self,
+    AI_Target_Type_Player,
+    AI_Target_Type_AI_Units,
+    AI_Target_Type_All,
+} AI_Target_Type;
+
+typedef enum AI_MultiTarget_Health_Bias
+{
+    AI_MultiTarget_Health_Bias_Lowest_Health,
+    AI_MultiTarget_Health_Bias_highest_health,
+    AI_MultiTarget_Health_Bias_average,
+} AI_MultiTarget_Health_Bias;
+
+typedef enum AI_Consideration_Sign
+{
+    AI_Consideration_Sign_Greater_Than,
+    AI_Consideration_Sign_Less_Than,
+} AI_Consideration_Sign;
+
+typedef enum Consideration_Choice_Type
+{
+    Consideration_Choice_Type_Best, // best overall choice
+    Consideration_Choice_Type_First, // first best choice
+} Consideration_Choice_Typ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #endif //GAME_ENUMS_H

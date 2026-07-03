@@ -163,7 +163,7 @@ u64 string_builder_to_number(const String_Builder* builder)
     return out_value;
 }
 
-void string_builder_empty(String_Builder* builder)
+void string_builder_clear(String_Builder* builder)
 {
     builder->current_length = 0;
 }

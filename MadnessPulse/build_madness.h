@@ -17,9 +17,9 @@
 #include "charge_list.h"
 #include "conjure_death_list.h"
 #include "health.h"
-#include "inventory.h"
+#include "inventory_select.h"
+#include "inventory_battle.h"
 #include "mp.h"
-#include "overflow.h"
 #include "resistant_stat.h"
 #include "reversal_list.h"
 #include "special_ability_flags.h"
@@ -29,6 +29,7 @@
 //ability stuff
 #include "ability.h"
 #include "ability_registry.h"
+#include "ability_creation_debug.h"
 #include "ability_creation.h"
 
 //ability components
@@ -58,17 +59,20 @@
 #include "action_trade.h"
 
 #include "conjure.h"
-#include "summoner.h"
 #include "charge.h"
+#include "conditional.h"
+
 
 
 
 
 //turn based game mode stuff
 #include "ability_handler.h"
-#include "command/command.h"
+#include "command.h"
 #include "targeting_handler.h"
+#include "madness_ai.h"
 
+#include "madness_ai.h"
 
 #include "madness_pulse_game.h"
 #include "turn_based_game.h"

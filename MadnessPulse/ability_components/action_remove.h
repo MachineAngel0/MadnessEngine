@@ -4,7 +4,7 @@
 
 void action_remove_component_create(Ability_Component* ac, const u32 amount)
 {
-    ac->type = Ability_Component_TYPE_ACTION_ADD;
+    ac->type = Ability_Component_TYPE_ACTION_REMOVE;
 
 
     ac->data.action_remove = (Action_Remove_Component){

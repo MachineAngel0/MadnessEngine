@@ -13,7 +13,7 @@ u32 overflow_value_type_lut[Ability_Overflow_Value_Type_Max] = {
 u8 ability_action_value_type_lut[Ability_Action_Cost_Type_Max] = {
     [Ability_Action_Cost_Type_1] = 1,
     [Ability_Action_Cost_Type_2] = 2,
-    [Ability_Action_Cost_Type_3] = 2,
+    [Ability_Action_Cost_Type_3] = 3,
 };
 
 

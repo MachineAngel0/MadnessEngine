@@ -352,6 +352,18 @@ MINLINE float vec3_distance(const vec3 a, const vec3 b)
     return vec3_length(temp);
 }
 
+MINLINE vec3 vec3_lerp(const vec3 a, const vec3 b, float t)
+{
+    vec3 result;
+
+    result.x = a.x + (b.x - a.x) * t;
+    result.y = a.y + (b.y - a.y) * t;
+    result.z = a.z + (b.z - a.z) * t;
+
+    return result;
+}
+
+
 
 //VEC4
 
@@ -446,6 +458,19 @@ MINLINE f32 vec4_dot_f32(const f32 a0, const f32 a1, const f32 a2, const f32 a3,
 {
     return (a0 * b0) + (a1 * b1) + (a2 * b2) + (a3 * b3);
 }
+
+MINLINE vec4 vec4_lerp(const vec4 a, const vec4 b, float t)
+{
+    vec4 result;
+
+    result.x = a.x + (b.x - a.x) * t;
+    result.y = a.y + (b.y - a.y) * t;
+    result.z = a.z + (b.z - a.z) * t;
+    result.w = a.w + (b.w - a.w) * t;
+
+    return result;
+}
+
 
 
 // MATRIX3*3
@@ -1185,6 +1210,10 @@ MINLINE vec3 mat4_right(const mat4 matrix)
 }
 
 
+
+
+
+
 // QUATERNIONS
 MINLINE quat quat_identity(void)
 {
@@ -1452,6 +1481,48 @@ MINLINE mat4 quat_to_mat4(quat q)
     return out_matrix;
 }
 
+MINLINE quat mat4_to_quat(const mat4 m)
+{
+    // Assumes m is a PURE rotation matrix (no scale/shear) — strip scale first.
+    const float trace = m.data[0] + m.data[5] + m.data[10];
+    quat q;
+
+    if (trace > 0.0f)
+    {
+        const float s = sqrtf(trace + 1.0f) * 2.0f; // s = 4w
+        q.w = 0.25f * s;
+        q.x = (m.data[9] - m.data[6]) / s;
+        q.y = (m.data[2] - m.data[8]) / s;
+        q.z = (m.data[4] - m.data[1]) / s;
+    }
+    else if (m.data[0] > m.data[5] && m.data[0] > m.data[10])
+    {
+        const float s = sqrtf(1.0f + m.data[0] - m.data[5] - m.data[10]) * 2.0f; // s = 4x
+        q.w = (m.data[9] - m.data[6]) / s;
+        q.x = 0.25f * s;
+        q.y = (m.data[1] + m.data[4]) / s;
+        q.z = (m.data[2] + m.data[8]) / s;
+    }
+    else if (m.data[5] > m.data[10])
+    {
+        const float s = sqrtf(1.0f + m.data[5] - m.data[0] - m.data[10]) * 2.0f; // s = 4y
+        q.w = (m.data[2] - m.data[8]) / s;
+        q.x = (m.data[1] + m.data[4]) / s;
+        q.y = 0.25f * s;
+        q.z = (m.data[6] + m.data[9]) / s;
+    }
+    else
+    {
+        const float s = sqrtf(1.0f + m.data[10] - m.data[0] - m.data[5]) * 2.0f; // s = 4z
+        q.w = (m.data[4] - m.data[1]) / s;
+        q.x = (m.data[2] + m.data[8]) / s;
+        q.y = (m.data[6] + m.data[9]) / s;
+        q.z = 0.25f * s;
+    }
+
+    return quat_normalize(q);
+}
+
 MINLINE mat4 quat_to_euler(quat q, vec3 out_v)
 {
     // Input quaternion
@@ -1481,6 +1552,49 @@ MINLINE mat4 quat_to_euler(quat q, vec3 out_v)
         h = atan2(q.x * q.z + q.w * q.y, 0.5f - q.x * q.x - q.y * q.y);
         b = atan2(q.x * q.y + q.w * q.z, 0.5f - q.x * q.x - q.z * q.z);
     }
+}
+
+MINLINE void mat4_decompose(const mat4 m, vec3* out_translation, quat* out_rotation, vec3* out_scale)
+{
+    // Translation — column 3
+    out_translation->x = m.data[12];
+    out_translation->y = m.data[13];
+    out_translation->z = m.data[14];
+
+    // Basis columns (0, 1, 2)
+    vec3 col0 = {m.data[0], m.data[1], m.data[2]};
+    vec3 col1 = {m.data[4], m.data[5], m.data[6]};
+    vec3 col2 = {m.data[8], m.data[9], m.data[10]};
+
+    float sx = vec3_length(col0);
+    float sy = vec3_length(col1);
+    float sz = vec3_length(col2);
+
+    // Detect mirrored/negative scale via determinant sign, and fold the sign
+    // back into X (arbitrary convention — matches your existing mat3_determinant).
+    mat3 upper3 = mat3_vec3_init(col0, col1, col2);
+    if (mat3_determinant(upper3) < 0.0f)
+    {
+        sx = -sx;
+        col0 = vec3_flip_sign(col0);
+    }
+
+    out_scale->x = sx;
+    out_scale->y = sy;
+    out_scale->z = sz;
+
+    // Strip scale to get a pure rotation matrix, then convert.
+    // NOTE: if any of sx/sy/sz is ~0 this divides by zero — see caveat below.
+    vec3 n0 = vec3_normalize_functional(col0);
+    vec3 n1 = vec3_normalize_functional(col1);
+    vec3 n2 = vec3_normalize_functional(col2);
+
+    mat4 rot = mat4_identity();
+    rot.data[0] = n0.x; rot.data[1] = n0.y; rot.data[2] = n0.z;
+    rot.data[4] = n1.x; rot.data[5] = n1.y; rot.data[6] = n1.z;
+    rot.data[8] = n2.x; rot.data[9] = n2.y; rot.data[10] = n2.z;
+
+    *out_rotation = mat4_to_quat(rot);
 }
 
 
@@ -1934,6 +2048,19 @@ float rand_range_f(const float min, const float max)
 /*** CLAMP ***/
 
 MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_t max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE uint32_t clamp_uint(const uint32_t cur_val, const uint32_t min, const uint32_t max)
 {
     if (cur_val > max)
     {

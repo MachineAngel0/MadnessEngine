@@ -5,17 +5,17 @@
 #include <stdbool.h>
 
 Ability_Name starting_abilities[] = {
-    Ability_Name_Madness_Test,
-    Ability_Name_DEBUG_1,
-    Ability_Name_DEBUG_2,
+    Ability_Name_DEBUG_MADNESS,
+    Ability_Name_DEBUG_STARTING_1,
+    Ability_Name_DEBUG_STARTING_2,
 
     Ability_Name_Pass,
 
 };
 Ability_Name starting_reserve_inventory[] = {
-    Ability_Name_INSANITY_Test,
-    Ability_Name_DEBUG_3,
-    Ability_Name_DEBUG_4,
+    Ability_Name_DEBUG_INSANITY,
+    Ability_Name_DEBUG_STARTING_3,
+    Ability_Name_DEBUG_STARTING_4,
 };
 
 _Static_assert(ARRAY_SIZE(starting_abilities) < INVENTORY_MAX_BATTLE_LIST);

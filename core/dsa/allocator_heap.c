@@ -74,7 +74,8 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t align
     fl->head = new_block;
     fl->used += size + sizeof(Heap_Block);
 
-
+    /*void* out_data = (void*)((u8*)current + sizeof(Heap_Block));
+    memset(out_data,0,current->block_size);*/
     return (void*)((u8*)current + sizeof(Heap_Block));
 
 }

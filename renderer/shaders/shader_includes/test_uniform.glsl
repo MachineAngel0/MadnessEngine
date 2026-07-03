@@ -88,6 +88,9 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
     uint uv_idx;
     uint transform_idx;
 
+//    uint joint__idx;
+//    uint weight_idx;
+
     uint draw_data_idx;
     uint material_instance_idx;
 

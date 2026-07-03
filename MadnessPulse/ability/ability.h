@@ -29,17 +29,12 @@
 #include "summoner.h"
 
 
-void ability_component_set_base_properties(Ability_Component* component,
-                                           const Ability_Target_Area target_can_affect,
-                                           const Ability_Target_Type ability_target)
-{
-    component->target_can_affect = target_can_affect;
-    component->ability_target = ability_target;
-}
 
 
-void ability_add_component(Ability* ability, Ability_Component* component, Ability_Activation_Type activation_type)
+void ability_add_component(Ability* ability, Ability_Component* component, Ability_Activation_Type activation_type, Ability_Component_Target_Type target_override)
 {
+    component->target_override =target_override;
+
     switch (activation_type)
     {
     case Ability_Activation_Type_Normal:
@@ -77,13 +72,13 @@ void ability_set_reversal_info_component(Ability* ability, Reversal_Duration dur
 }
 
 
-void ability_component_process_effect(Madness_Pulse_Game* game, Ability_Target_Execution_Info* ability_target_info, Unit* current_target,
+void ability_component_process_effect(Madness_Pulse_Game* game, Ability_Target_Execution_Info* ability_target_info,
+                                      Unit* current_target,
                                       Ability_Component* ability_data)
 {
     //all components have type as their first param, so if for some reason its not set it will be considered invalid
     // switch (ability_data->type)
 
-    Unit* madness_pulse_get_unit(game, caster);
 
     switch (ability_data->type)
     {
@@ -164,14 +159,12 @@ void ability_component_process_effect(Madness_Pulse_Game* game, Ability_Target_E
     case Ability_Component_TYPE_CONJURE:
         conjure_component_ability(current_target, &ability_data->data.conjure);
         break;
-    case Ability_Component_TYPE_SUMMONER:
-        summoner_component_ability(game, ability_target_info->caster,  &ability_data->data.summoner);
-        break;
 
     case Ability_Component_TYPE_ACTION_CHANGE_PERMANENT:
         break;
     case Ability_Component_TYPE_ACTION_TRADE:
-        action_trade_ability(game, ability_target_info->caster, ability_target_info->targets, &ability_data->data.action_trade);
+        action_trade_ability(game, ability_target_info->caster, ability_target_info->ability_targets,
+                             &ability_data->data.action_trade);
         break;
     case Ability_Component_TYPE_MAX:
         break;
@@ -181,6 +174,8 @@ void ability_component_process_effect(Madness_Pulse_Game* game, Ability_Target_E
 
 String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
 {
+
+    //TODO: components need to show what their targets are
     String_Builder* ability_text = string_builder_create(KB(1), &game->frame_allocator);
 
     for (int i = 0; i < ability->normal_component_count; ++i)
@@ -215,7 +210,7 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
             drain_percent_component_text(&component->data.drain_percent, ability_text);
             break;
 
-        case Ability_Component_TYPE_MP_ADD:
+            case Ability_Component_TYPE_MP_ADD:
             mp_adder_component_text(&component->data.mp_add, ability_text);
             break;
         case Ability_Component_TYPE_MP_REMOVE:
@@ -250,16 +245,13 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
         case Ability_Component_TYPE_CONJURE:
             conjure_component_text(&component->data.conjure, ability_text);
             break;
-        case Ability_Component_TYPE_SUMMONER:
-            summoner_component_text(&component->data.summoner, ability_text);
-            break;
+
         case Ability_Component_TYPE_RESISTANCE_CHANGE:
             break;
         case Ability_Component_TYPE_STATUS_CHANGE:
             break;
         case Ability_Component_TYPE_STATUS_THRESHOLD_CHANGE:
             break;
-
         case Ability_Component_TYPE_ACTION_CHANGE_PERMANENT:
             break;
         case Ability_Component_TYPE_ACTION_TRADE:
@@ -269,8 +261,9 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
             break;
         }
 
-        //seperator for the text
-        string_builder_append_c_string(ability_text, ". ");
+        madness_ui_string(game->madness_ui, *string_builder_to_string(ability_text));
+        string_builder_clear(ability_text);
+
     }
 
 

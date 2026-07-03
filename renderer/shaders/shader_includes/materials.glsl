@@ -23,10 +23,19 @@ struct mesh_draw_data{
     uint material_instance_idx;
 };
 
+struct skinned_draw_data{
+    uint joint_index;
+    uint weight_index;
+};
 
 layout(set = 2, binding = 0, scalar) readonly buffer MESH_DRAW_DATA_BUFFER{
     mesh_draw_data mesh_data[];
 }MESH_DRAW_DATA[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer SKINNED_DRAW_DATA_BUFFER{
+    skinned_draw_data skinned_data[];
+}SKINNED_DRAW_DATA[];
+
 
 struct Pbr{
     uint flags;
