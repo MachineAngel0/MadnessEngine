@@ -46,6 +46,7 @@ bool string_free_allocator_freelist(String* string, Heap_Allocator* allocator);
 #define STRING_CREATE(string) string_create(string, sizeof(string))
 //create a string from an already existing char[]/char* that excludes the null terminated string
 #define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
+#define STRING_CREATE_FROM_BUFFER_ALLOCATOR(string, allocator) string_create_allocator(string, strlen(string), allocator)
 
 
 

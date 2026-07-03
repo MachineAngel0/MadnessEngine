@@ -218,13 +218,17 @@ Dynamic_Array* _dynamic_array_create_debug(u64 data_stride, u64 capacity, Heap_A
     #define dynamic_array_get(arr, type, index)\
         (*(type*)_dynamic_array_get_debug(arr, index, #type))
 
+    #define dynamic_array_get_ptr(arr, type, index)\
+        ((type*)_dynamic_array_get_debug(arr, index, #type))
+
 #else
 
     #define dynamic_array_create(type, initial_capacity, allocator) \
         _dynamic_array_create(sizeof(type), initial_capacity, allocator);
     #define dynamic_array_get(arr, type, index)\
         (*(type*)_dynamic_array_get(arr, index))
-
+    #define dynamic_array_get_ptr(arr, type, index)\
+        ((type*)_dynamic_array_get(arr, index))
 
 #endif
 

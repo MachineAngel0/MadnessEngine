@@ -15,7 +15,7 @@ void action_trade_component_create(Ability_Component* ac)
     };
 }
 
-void action_trade_ability(Madness_Pulse_Game* game, Unit* caster, ARRAY_TYPE(Unit_Handle)* targets,
+void action_trade_ability(Madness_Pulse_Game* game, Unit* caster, ARRAY_TYPE(Character_Name)* targets,
                           const Action_Trade_Component* component)
 {
     const int amount_to_change = caster->action_component.actions_available;
@@ -25,7 +25,7 @@ void action_trade_ability(Madness_Pulse_Game* game, Unit* caster, ARRAY_TYPE(Uni
 
     for (u32 i = 0; i < targets->num_items; i++)
     {
-        Unit_Handle current_target = array_get(targets, Unit_Handle, i);
+        Character_Name current_target = array_get(targets, Character_Name, i);
         Unit* current_unit_target = madness_pulse_get_unit(game, current_target);
 
         DEBUG("Target Before Change %d", current_unit_target->action_component.actions_available);

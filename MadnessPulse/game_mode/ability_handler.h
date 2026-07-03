@@ -1,6 +1,7 @@
 ﻿#ifndef ABILITY_HANDLER_H
 #define ABILITY_HANDLER_H
 #include "actions.h"
+#include "inventory_battle.h"
 #include "mp.h"
 #include "targeting_handler.h"
 #include "turn_based_game.h"
@@ -47,7 +48,7 @@ void ability_handler_process_normal_components(Madness_Pulse_Game* game,
 {
     DEBUG("Processing Normal Components");
 
-    //NOTE: since the same ability will be activated multiple times in a row,
+    //NOTE : since the same ability will be activated multiple times in a row,
     // it would just make sense to just query the top of the replay action queue
     //  and just increment a number for how many times that thing needs to occur,
     //  instead of adding a bunch of redundant data to display the overflow
@@ -55,12 +56,19 @@ void ability_handler_process_normal_components(Madness_Pulse_Game* game,
     for (u32 component_number = 0; component_number < normal_component_count; component_number++)
     {
         Ability_Component ability_component = normal_components[component_number];
+        ability_target_info->ability_component_target = targeting_handler_create_targeting_for_component(
+            game, ability_component.target_override, ability_target_info);
+
+        //each component needs their own set of target types
         //TODO: get the targets that the component is targeting
         for (int i = 0; i < overflow_count; ++i)
         {
-            for (u32 target_number = 0; target_number < ability_target_info->targets->num_items; target_number++)
+            //NOTE: we are using the components target, not the abilties
+            for (u32 target_number = 0; target_number < ability_target_info->ability_component_target->num_items;
+                 target_number
+                 ++)
             {
-                Unit* current_target = array_get(ability_target_info->targets, Unit*, target_number);
+                Unit* current_target = array_get(ability_target_info->ability_component_target, Unit*, target_number);
 
                 ability_component_process_effect(game, ability_target_info, current_target, &ability_component);
             }
@@ -83,16 +91,16 @@ bool IsThereAReversalTrigger(Madness_Pulse_Game* game)
 
 
 /* High level Components Logic Functions */
-void ability_handler_process_ability(Madness_Pulse_Game* game)
+void ability_handler_process_ability(Madness_Pulse_Game* game, const Ability_Name ability_name, Array* attack_targets)
 {
-    Ability* ability = ability_registry_get_ability(game->ability_registry, game->currently_selected_ability);
+    Ability* ability = ability_registry_get_ability(game->ability_registry, ability_name);
     Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry,
-                                                                  game->currently_selected_ability);
+                                                                  ability_name);
 
     Unit* unit_caster = madness_pulse_get_unit(game, game->current_units_turn);
     Ability_Target_Execution_Info ability_target_info = {
         .caster = unit_caster,
-        .targets = target_handler_return_attack_targets(game->targeting_handler, game),
+        .ability_targets = attack_targets,
         .caster_allies = NULL,
         .caster_enemies = NULL,
         .ally_count = 0,
@@ -117,13 +125,10 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
 
 
     // use up action, if the player is dumb and uses more than they can afford, that's on them
-    if (ability_info.ability_action_cost == 0)
     {
-        // DEBUG("Action cost is zero for %s", *ability_get_name(ability_info.ability_name);
-    }
-    else
-    {
-        action_component_decrease_actions(&unit_caster->action_component, ability_info.ability_action_cost);
+        // action_component_decrease_actions(&unit_caster->action_component, ability_info.ability_action_cost);
+        action_component_decrease_actions_by_type(&unit_caster->action_component,  ability_info.ability_action_cost);
+
         // command_handler_add_action() ???
         // NewActionQueue.Emplace(UnitCaster->ActionComponent);
     }
@@ -144,7 +149,7 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
 
     //checking for mirage, which will negate the ability used
 
-    for (u32 i = 0; i < ability_target_info.targets->num_items; i++)
+    for (u32 i = 0; i < ability_target_info.ability_targets->num_items; i++)
     {
         if (can_use_mirage(&unit_caster->special_ability_flag_list_component))
         {
@@ -173,21 +178,13 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
     Turn_Base_Component* turn_info_component = &ability->turn_info_component;
     Reversal_Base_Component* reversal_info_component = &ability->reversal_info_components;
 
-
-    // must check our conditionals first
-    /*
-    if (ability->conditional_component.was_set)
+    // must check our conditionals first, if there is anything
+    if (conditional_component_fail_ability(&ability->conditional_component, &ability_target_info))
     {
-        for (int i = 0; i < conditional_components->num_items; ++i)
-        {
-            if (!ConditionalComponent->RequestIsConditionalSuccessful_Implementation(GameState, Targets))
-            {
-                // if this ever gets reached the ability failed
-                // GameState.CurrentUnitsTurn->SpawnFailedPopUp(); // TODO: this should be a command
-                return;
-            }
-        }
-    }*/
+        // if this ever gets reached the ability failed
+        // GameState.CurrentUnitsTurn->SpawnFailedPopUp(); // TODO: this should be a command
+        return;
+    }
 
     //some sanity checks
     if (ability->reversal_info_components.was_set == false && ability->reversal_component_count > 0)
@@ -201,14 +198,11 @@ void ability_handler_process_ability(Madness_Pulse_Game* game)
 
     //get our overflow value. TODO: the visual for the overflow
     //we set it to 1 so that the ability executes at least once,
+    //TODO: the two functions below could be merged
     u32 overflow_count = 1;
-    overflow_count += overflow_component_get_overflow_trigger_count(&unit_caster->overflow_component,
-                                                                    &unit_caster->battle_inventory_component,
-                                                                    game->ability_registry);
-
-    overflow_component_use_up_overflow(&unit_caster->overflow_component,
-                                       &unit_caster->battle_inventory_component,
-                                       game->ability_registry);
+    overflow_count += battle_inventory_get_overflow_trigger_count(&unit_caster->battle_inventory_component,
+                                                                  game->ability_registry);
+    battle_inventory_use_up_overflow_and_abilities(&unit_caster->battle_inventory_component, game->ability_registry);
 
 
     ability_handler_process_normal_components(game, &ability_target_info, ability->normal_components,

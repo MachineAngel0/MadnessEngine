@@ -15,7 +15,7 @@ void action_add_component_create(Ability_Component* ac, const u32 amount)
 
 void action_add_ability(Unit* unit, const Action_Add_Component* component)
 {
-    action_component_decrease_actions(&unit->action_component, component->amount);
+    action_component_increase_actions(&unit->action_component, component->amount);
 }
 
 void action_add_component_text(const Action_Add_Component* component, String_Builder* string_builder)

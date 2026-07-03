@@ -7,7 +7,6 @@
 #include "game_enums.h"
 #include "game_structs.h"
 
-#define MAX_ACTIONS_DEFAULT 3
 
 
 void action_component_init_default(Action_Component* action)
@@ -16,6 +15,7 @@ void action_component_init_default(Action_Component* action)
     //starts off at 0 but the will be increased on units turn start
     action->actions_available = 0;
 }
+
 
 
 void action_component_RefreshActionsAvailable(Action_Component* action)
@@ -33,12 +33,21 @@ void action_component_refresh_for_turn_start(Action_Component* action)
     action_component_refresh_actions_by_addition(action);
 }
 
-void action_component_decrease_actions(Action_Component* action, const int ActionsToDecrease)
+
+void action_component_decrease_actions_by_type(Action_Component* action, const Ability_Action_Cost_Type cost_type)
+{
+    MASSERT(cost_type != Ability_Action_Cost_Type_Max)
+
+    action->actions_available -= ability_action_value_type_lut[cost_type];
+}
+
+
+void action_component_decrease_actions(Action_Component* action, const u32 ActionsToDecrease)
 {
     action->actions_available -= ActionsToDecrease;
 }
 
-void action_component_increase_actions(Action_Component* action, const int ActionsToIncrease)
+void action_component_increase_actions(Action_Component* action, const u32 ActionsToIncrease)
 {
     action->actions_available += ActionsToIncrease;
 }
@@ -70,23 +79,7 @@ void action_component_change_actions_by_type(Action_Component* action, Action_Ch
     }
 }
 
-void action_component_change_max_actions_available_by_type(Action_Component* action,
-                                                           const Action_Changer_Type action_type,
-                                                           const int actions_change_amount)
-{
-    switch (action_type)
-    {
-    case Action_Changer_Type_ActionAdd:
-        action->max_actions_available += actions_change_amount;
-        break;
-    case Action_Changer_Type_ActionRemove:
-        action->max_actions_available -= actions_change_amount;
-        break;
-    default:
-        FATAL("Change Actions By Type Function Given Invalid EActionChangerType");
-        break;
-    }
-}
+
 
 
 #endif

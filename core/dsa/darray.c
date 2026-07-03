@@ -733,6 +733,7 @@ void dynamic_array_free(Dynamic_Array* array)
 {
     allocator_heap_free(array->allocator, array->data);
     allocator_heap_free(array->allocator, array);
+    array = NULL;
 }
 
 void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
@@ -856,6 +857,12 @@ Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy)
     Dynamic_Array* out_array = _dynamic_array_create(array_to_copy->stride, array_to_copy->capacity,
                                                      array_to_copy->allocator);
     memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
+    out_array->num_items = array_to_copy->num_items;
+
+#ifndef NDEBUG
+    out_array->type_name = array_to_copy->type_name;
+#endif
+
     return out_array;
 }
 
@@ -863,6 +870,10 @@ Array* dynamic_array_copy_fixed_size(Dynamic_Array* array_to_copy, Allocator* al
 {
     Array* out_array = _array_create(array_to_copy->stride, array_to_copy->num_items, allocator);
     memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
+    out_array->num_items = array_to_copy->num_items;
+#ifndef NDEBUG
+    out_array->type_name = array_to_copy->type_name;
+#endif
     return out_array;
 }
 

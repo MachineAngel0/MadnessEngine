@@ -54,6 +54,10 @@ bool array_is_empty(const Array* array);
 bool array_is_full(const Array* array);
 bool array_valid_index(const Array* array, const u64 index);
 u64 array_get_bytes_used(const Array* array);
+
+Array* array_copy(Array* src, Allocator* allocator);
+
+
 void* _array_get(Array* array, const u64 index);
 void* _array_top(Array* array);
 void array_set(Array* array, const void* data, const u64 pos);

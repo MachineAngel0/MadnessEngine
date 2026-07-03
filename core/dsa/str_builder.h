@@ -44,7 +44,7 @@ String* string_builder_to_string(const String_Builder* builder);
 String string_builder_to_string_non_pointer(const String_Builder* builder);
 char* string_builder_to_c_string(const String_Builder* builder);
 
-void string_builder_empty(String_Builder* builder);
+void string_builder_clear(String_Builder* builder);
 
 
 //NOTE: this assume all values are digits

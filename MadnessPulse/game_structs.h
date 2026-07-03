@@ -15,7 +15,7 @@ typedef struct Nonsense_Struct
 } Nonsense_Struct;
 
 
-/// ABILITIES ///
+/// TESTING REFLECTIONS ///
 typedef struct Reflection_Test_Struct
 {
     //type -> name
@@ -41,6 +41,12 @@ typedef struct Reflection_Test_Struct
 } Reflection_Test_Struct;
 
 
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //SAVE GAME
 
 /* Save data related things*/
@@ -121,6 +127,7 @@ typedef struct Game_Level_Data
 } Game_Level_Data;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ABILITY COMPONENTS
 
 typedef struct Reversal_Component
@@ -220,6 +227,7 @@ typedef struct Ability_Adder_Component
     Ability_Name abilities_to_add;
     u32 count;
 } Ability_Adder_Component;
+
 
 typedef struct Ability_Remover_Component
 {
@@ -821,11 +829,7 @@ typedef struct Status_Drain_Disfigured_Mass_Component
 
 typedef struct Ability_Component
 {
-    //single or multitarget
-    Ability_Target_Area target_can_affect;
-    //who is this targeting, enemies, allies, self etc
-    Ability_Target_Type ability_target;
-
+    Ability_Component_Target_Type target_override;
     Ability_Component_Type type;
 
     //ability switch lookup to find which function to execute
@@ -904,7 +908,6 @@ typedef struct Ability
 typedef struct Ability_Info
 {
     Ability_Name ability_name; // = "Ability Not Named";
-    String ability_text; // "Implement Text Please"; //TODO: i should look into auto generated ability text
 
     String lore_text; //= "NA";
 
@@ -935,12 +938,13 @@ typedef struct Ability_Component_List
     //madness or insanity type
 
     //how do you even get this back from a function call????
-    // Dynamic_Array* get_list(type); // i guess??
+    // Dynamic_Array* get_list(component_type, index); // i guess??
     //we can make each component a 32kb data blob and just take the data from a pool
     //if we have 1000 abilties loaded in, and we use 5 component for each 64*1000*5 - 312.5kb
 } Ability_Component_List;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // UNITS //
 
 
@@ -1047,6 +1051,7 @@ typedef struct Character_Flags_Component
 {
     bool death_animation_flag;
     bool revive_animation_flag;
+
 } Character_Flags_Component;
 
 
@@ -1081,14 +1086,36 @@ typedef struct Battle_Inventory_Component
     DYNAMIC_ARRAY_TYPE(u16)* overflow_usage_count; // the amount the player intends to use for overflow
 
     // HASH_MAP_TYPE(Ability_Name, count) battle_list_quick_lookup;
+
+    //Overflow stuff
+    u32 current_overflow;
+    u32 overflow_threshold;
+
 } Battle_Inventory_Component;
 
 
-typedef struct Overflow_Component
+
+typedef struct Status_Effect_List_Component
 {
-    u32 current_overflow;
-    u32 overflow_threshold;
-} Overflow_Component;
+    //TODO:
+    u32 poison_points;
+    u32 poison_threshold;
+
+    //stacks should decay in some way,
+    u8* active_poison_stacks;
+    u8* poison_duraction;
+
+    //all these below are ideas
+    u32 sleep_points;
+    u32 regeneration_points;
+    u32 reflection_points;
+    u32 spread_points;
+
+
+} Status_Effect_List_Component;
+
+
+
 
 
 typedef struct Conjure_List_Component
@@ -1134,7 +1161,6 @@ typedef struct Ability_Flag_List_Component
     //TODO: these could be bit flags
     //for now it resets at the characters first turn start
 
-
     //user dies if they do not fusion
     bool FusionMania;
     //increases damage based on damage taken by 10%
@@ -1174,7 +1200,6 @@ typedef struct Unit
 
     Inventory_Component inventory_component;
     Battle_Inventory_Component battle_inventory_component;
-    Overflow_Component overflow_component;
 
     Action_Component action_component;
     Health_Component health_component;
@@ -1211,6 +1236,7 @@ typedef struct Unit
     */
 
 
+    //Mesh_Handle mesh_handle;
     Transform_Handle unit_transform;
 
     //pop up locations
@@ -1279,14 +1305,6 @@ typedef struct Reversal_Component_Info
     bool IsPermanent;
 } Reversal_Component_Info;
 
-typedef struct Unit_Handle
-{
-    u32 index; // points back to the units array
-    Character_Name name; // extra info that doesn't really need to live here
-
-    //it will be impossible for two characters with the same name to share the same index
-} Unit_Handle;
-
 
 // this component is only responsible for telling the abilities to process themselves
 // also responsible for managing any conditional or turn based effects like status trigger, poison, or reversals
@@ -1348,12 +1366,12 @@ typedef struct Command_Handler
 typedef struct Targeting_Handler
 {
     //current targets available
-    DYNAMIC_ARRAY_TYPE(Unit_Handle)* targets_available_array;
+    DYNAMIC_ARRAY_TYPE(Character_Name)* targets_available_array;
     //TODO: you can just calculate targets available size, and if its 1 or less, dont move the target lock
 
 
     //NOTE: regardless if single or multi target, we want to let the player know the information of the unit they are hovering over
-    Unit_Handle current_lock_on_target;
+    Character_Name current_lock_on_target;
     // current targets count that we are locked onto, only applicable to single target
     u8 targeting_count;
 } Targeting_Handler;
@@ -1363,19 +1381,153 @@ typedef struct Ability_Target_Execution_Info
 {
     //everything the ability will need to know to activate
     Unit* caster;
-    ARRAY_TYPE(Unit*)* targets;
+    ARRAY_TYPE(Unit*)* ability_targets;
+    ARRAY_TYPE(Unit*)* ability_component_target;
     Unit** caster_allies;
     Unit** caster_enemies;
     u32 ally_count;
     u32 enemy_count;
-
 } Ability_Target_Execution_Info;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//AI
+
+
+typedef struct AI_Heal_Consideration
+{
+    AI_Target_Type target_type;
+    float health_percent; //0-1
+    AI_MultiTarget_Health_Bias bias;
+    AI_Consideration_Sign sign;
+} AI_Heal_Consideration;
+
+typedef struct AI_Damage_Consideration
+{
+    AI_Target_Type target_type;
+    float health_percent;
+} AI_Damage_Consideration;
+
+typedef struct AI_Ability_Cooldown
+{
+    //in first turns
+    u32 cooldown_duration;
+    //0 means its allowed to use this ability
+    u32 cooldown_current_value;
+} Ai_Ability_Cooldown;
+
+
+typedef struct AI_Consideration
+{
+    AI_Consideration_Type type;
+
+    union
+    {
+        AI_Damage_Consideration damage;
+        AI_Heal_Consideration heal;
+    } data;
+} AI_Consideration;
+
+
+
+typedef struct AI_Ability
+{
+    Ability_Name ability_name;
+    u8 turn_index;
+
+    //whether the ai will want to overflow this ability or not
+    bool ability_allowed_to_overflow;
+
+    AI_Consideration ai_consideration[4];
+    u8 ai_consideartion_count;
+} AI_Ability;
+
+
+typedef struct Madness_AI_Unit_Info
+{
+    Character_Name character_name;
+    // Unit_Handle unit_handle; // TODO: probably will want this
+    u32 overflow_points;
+
+    DYNAMIC_ARRAY_TYPE(AI_Ability)* ability_list;
+
+} Madness_AI_Unit_Info;
+
+typedef struct Madness_AI_Decision
+{
+    //returns the chosen ability and the targets that the ai wants to use
+    AI_Ability* ability_info;
+    Unit* chosen_targets[MAX_UNITS_COUNT];
+    u8 chosen_units_count;
+
+} Madness_AI_Decision;
+
+typedef struct Madness_AI
+{
+    Madness_AI_Unit_Info ai_list[MAX_ENEMY_UNIT_COUNT];
+    u32 ai_count;
+    u32 ai_max;
+
+
+    DYNAMIC_ARRAY_TYPE(Madness_AI_Decision)* ai_decision;
+
+} Madness_AI;
+
+
+//TODO: look into this so that we can create the game state copy
+typedef struct Madness_Game_State
+{
+    //Turn Based States
+    Turn_Phase turn_phase;
+    Turn_Based_UI_States ui_state;
+
+    Ability_Registry* ability_registry;
+
+    Targeting_Handler* targeting_handler;
+    Ability_Handler* ability_handler;
+    Command_Handler* command_handler;
+    Madness_AI* madness_ai;
+
+    //PLAYER AND ENEMY UNITS
+    //NOTE: there can only be one named character on each side of the
+    //TODO: replace with dynamic arrays
+    Unit** units;
+    Character_Name* unit_names;
+    u8 units_count;
+
+    //this is really just a convienence
+    Unit** player_units;
+    Character_Name* player_names;
+    u8 player_count;
+
+    //references that point back into the units array
+    //NOTE: no generation index's rn, but i might need them for minion/summons
+    Unit** enemy_units;
+    Character_Name* enemy_names;
+    u8 enemy_count;
+
+
+    //TODO: this will likely need to realloc or put a hard limit on what can be summoned into the game
+    // im thinking if a unit does get added mid fight, that they will have summoners sickness,
+    // meaning they cant act until the turn queue gets reset
+    RING_QUEUE_TYPE(Character_Name)* turn_queue;
+    // NOTE: right there will only be unique enemies in the game, and only a single instance allowed in play
+    // FUTURE: if i need to update this in the future then do so to accomadate multiple of the same enemy
+    Character_Name current_units_turn;
+    Ability_Name currently_selected_ability;
+
+    u32 picked_ability;
+    Turn_Initiative starting_turn_initiative;
+
+
+} Madness_Game_State;
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//GAME
 typedef struct Madness_Pulse_Game
 {
     Allocator allocator;
-    // Arena Current_State_Arena; //NOTE: to release data specific to the game state, but not unload literally everything
     Frame_Allocator frame_allocator;
     Heap_Allocator heap_allocator;
 
@@ -1417,34 +1569,35 @@ typedef struct Madness_Pulse_Game
     Targeting_Handler* targeting_handler;
     Ability_Handler* ability_handler;
     Command_Handler* command_handler;
+    Madness_AI* madness_ai;
 
     //PLAYER AND ENEMY UNITS
     //NOTE: there can only be one named character on each side of the
     //TODO: replace with dynamic arrays
     Unit** units;
-    Unit_Handle* unit_handles;
+    Character_Name* unit_names;
     u8 units_count;
 
     //this is really just a convienence
     Unit** player_units;
-    Unit_Handle* player_handles;
+    Character_Name* player_names;
     u8 player_count;
 
     //references that point back into the units array
     //NOTE: no generation index's rn, but i might need them for minion/summons
     Unit** enemy_units;
-    Unit_Handle* enemy_handles;
+    Character_Name* enemy_names;
     u8 enemy_count;
 
 
     //TODO: this will likely need to realloc or put a hard limit on what can be summoned into the game
     // im thinking if a unit does get added mid fight, that they will have summoners sickness,
     // meaning they cant act until the turn queue gets reset
-    RING_QUEUE_TYPE(Unit_Handle)* turn_queue;
+    RING_QUEUE_TYPE(Character_Name)* turn_queue;
     // NOTE: right there will only be unique enemies in the game, and only a single instance allowed in play
     // FUTURE: if i need to update this in the future then do so to accomadate multiple of the same enemy
-    Unit_Handle current_units_turn;
-    Ability_Name currently_selected_ability;
+    Character_Name current_units_turn;
+    Ability_Name currently_selected_ability_by_player;
 
     u32 picked_ability;
     Turn_Initiative starting_turn_initiative;

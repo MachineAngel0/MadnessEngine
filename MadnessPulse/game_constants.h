@@ -22,6 +22,11 @@
 #define STARTING_ABILITY_COUNT 1u
 
 
+//starting amount and generally the amount that gets incremented each turn
+#define MAX_ACTIONS_DEFAULT 3
+
+
+
 #define OVERFLOW_MAX 100u
 #define ABILITY_COUNT_MAX 999u
 
@@ -29,6 +34,8 @@
 
 //game state
 #define MAX_PLAYER_UNIT_COUNT 4u
+#define MAX_ENEMY_UNIT_COUNT 8u
+#define MAX_UNITS_COUNT MAX_ENEMY_UNIT_COUNT + MAX_PLAYER_UNIT_COUNT
 
 #define MAX_SAVE_SLOTS 255u //size of a u8
 #define SAVE_GAME_PATH "../save"

@@ -3,7 +3,7 @@
 
 #include "turn_based_game.h"
 
-
+/* NOTE: wont be in the game, maybe for the future
 void summoner_component_create(Ability_Component* ac, Summoner_Type type)
 {
     ac->type = Ability_Component_TYPE_SUMMONER;
@@ -53,5 +53,5 @@ void summoner_component_text(const Summoner_Component* component, String_Builder
                                                Summoner_Type_enum_string[component->summoner_type]));
 }
 
-
+*/
 #endif

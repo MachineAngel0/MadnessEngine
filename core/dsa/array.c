@@ -140,6 +140,19 @@ u64 array_get_bytes_used(const Array* array)
     return array->num_items * array->stride;
 }
 
+Array* array_copy(Array* src, Allocator* allocator)
+{
+    Array* out_array = _array_create(src->stride, src->capacity,
+                                                 allocator);
+    memcpy(out_array->data, src->data, src->num_items * src->stride);
+    out_array->num_items = src->num_items;
+#ifndef NDEBUG
+    out_array->type_name = src->type_name;
+#endif
+
+    return out_array;
+}
+
 void* _array_get(Array* array, const u64 index)
 {
     if (!array)

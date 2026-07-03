@@ -2,6 +2,8 @@
 #define RESOURCE_TYPES_H
 
 
+#include <stdalign.h>
+
 #include "material_types.h"
 #include "ring_queue.h"
 #include "sprite_type.h"
@@ -110,7 +112,6 @@ typedef struct Glyph
 } Glyph;
 
 
-
 //called Madness font cause a linux library uses the struct font
 typedef struct Madness_Font
 {
@@ -121,8 +122,6 @@ typedef struct Madness_Font
 } Madness_Font;
 
 
-
-
 /// MESH ///
 
 
@@ -131,6 +130,31 @@ typedef struct PC_Mesh
     //per instance data change
     u32 ubo_buffer_idx;
 } PC_Mesh;
+
+typedef struct PC_Skinned_Mesh
+{
+    //per instance data change
+    u32 ubo_buffer_idx;
+
+    //buffer device addresses
+    VkDeviceAddress vertex_buffer;
+    VkDeviceAddress index_buffer_idx;
+    VkDeviceAddress normal_buffer_idx;
+    VkDeviceAddress tangent_buffer_idx;
+    VkDeviceAddress uv_buffer_idx;
+    VkDeviceAddress joint_buffer_idx;
+    VkDeviceAddress weight_buffer_idx;
+    //
+    u32 _padding;
+} PC_Skinned_Mesh;
+
+typedef struct PC_Material_Mesh
+{
+    u32 ubo_buffer_idx;
+    PC_Mesh pc_mesh;
+    VkDeviceAddress material_buffer;
+} PC_Material_Mesh;
+
 
 
 typedef struct submesh
@@ -177,70 +201,6 @@ typedef struct static_mesh
     u32 mesh_size;
 } static_mesh;
 
-// TODO: skinned mesh
-
-
-typedef struct skinned_submesh
-{
-    Transform transform;
-
-    // vertex_mesh vertices;
-    vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* uv;
-    vec4* joints;
-    vec4* weights;
-
-    // size_t* indices;
-    u8* indices;
-    // u8* indices_2;
-    u32 indices_count;
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 tangent_bytes;
-    u64 uv_bytes;
-    u64 weight_bytes;
-    u64 joint_bytes;
-
-    Material_PBR material_params;
-    Texture_Handle color_texture;
-    Texture_Handle normal_texture;
-    Texture_Handle metallic_texture;
-    Texture_Handle roughness_texture;
-    Texture_Handle ambient_occlusion_texture;
-    Texture_Handle emissive_texture;
-
-    u32 offset_into_material_data_buffer;
-
-
-    u32 mesh_pipeline_mask; // determines what material features this submesh has
-} skinned_submesh;
-
-typedef struct Joint
-{
-    const char* joint_name;
-    int id;
-    struct Joint* parent;
-    struct Joint** children;
-    u8 children_count;
-    mat4 inverse_bind_matrix;
-} Joint;
-
-
-typedef struct skinned_mesh
-{
-    skinned_submesh* mesh;
-    // the number of meshes in the model
-    u32 mesh_size;
-
-    Joint* joints;
-    int joint_count;
-} skinned_mesh;
-
 typedef struct Submesh_Upload_Data
 {
     //information to upload into the associated buffer
@@ -265,8 +225,6 @@ typedef struct Submesh_Upload_Data
     vec3* normal;
     vec2* uv;
     u8* indices;
-
-
 } Mesh_Upload_Data;
 
 typedef struct Mesh_Indirect_Draw_Data
@@ -289,8 +247,6 @@ typedef struct Mesh_Indirect_Draw_Data
 
     Transform_Handle transform_handle;
     Material_Handle material_handle;
-
-
 } Mesh_Indirect_Draw_Data;
 
 typedef struct Mesh_Draw_Data
@@ -299,11 +255,15 @@ typedef struct Mesh_Draw_Data
     u32 material_instance_handle;
 } Mesh_Draw_Data;
 
+typedef struct Skinned_Draw_Data
+{
+    u32 joint_idx;
+    u32 weight_idx;
+} Skinned_Draw_Data;
 
 
 typedef struct submesh_gameplay
 {
-
     Texture_Handle color_texture;
     Texture_Handle normal_texture;
     Texture_Handle metallic_texture;
@@ -325,62 +285,127 @@ typedef struct static_mesh_gameplay
 } static_mesh_gameplay;
 
 
+typedef struct skinned_submesh
+{
+    // vertex_mesh vertices;
+    vec4* joints;
+    vec4* weights;
+
+    u64 weight_bytes;
+    u64 joint_bytes;
+} skinned_submesh;
+
+typedef struct Joint
+{
+    const char* joint_name;
+    u32 id;
+    u32 parent_idx;
+} Joint;
+
 typedef enum Animation_Path_Type
 {
     //translated directly from cgltf_animation_path_type
-    animation_path_type_invalid,
-    animation_path_type_translation,
-    animation_path_type_rotation,
-    animation_path_type_scale,
-    animation_path_type_weights,
-    animation_path_type_max_enum
+    Animation_Path_Type_Invalid,
+    Animation_Path_Type_Translation, // vec3
+    Animation_Path_Type_Rotation, // vec4
+    Animation_Path_Type_Scale, // vec3
+    Animation_Path_Type_Weights, // float
+    Animation_Path_Type_Max
 } Animation_Path_Type;
+
 
 typedef enum Animation_Interpolation_Type
 {
     //translated directly from cgltf_interpolation_type
-    interpolation_type_linear,
-    interpolation_type_step,
-    interpolation_type_cubic_spline,
-    interpolation_type_max_enum
+    Animation_Interpolation_Type_Linear,
+    Animation_Interpolation_Type_Step,
+    Animation_Interpolation_Type_Cubic_Spline,
+    Animation_Interpolation_Type_Max_enum
 } Animation_Interpolation_Type;
+
+typedef struct Animation_Channel
+{
+    u32 sampler_idx;
+    Animation_Path_Type animation_path_type;
+    u32 joint_index;
+} Animation_Channel;
 
 typedef struct Animation_Sampler
 {
     float* timestamps;
     u32 timestamps_count;
 
-    //trs = translation rotation scale
+    float sampler_start;
+    float sampler_end;
+
+    //trs = translation rotation scale, and weights
     union
     {
-        float* trs_interpolation_values_f;
-        vec3* trs_interpolation_values_v3;
-        vec4* trs_interpolation_values_v4;
-    };
+        float* trs_float;
+        vec3* trs_vec3;
+        vec4* trs_vec4;
+    } interperlation_data;
 
     u32 trs_interpolation_count;
     Animation_Interpolation_Type interpolation_type;
 } Animation_Sampler;
 
-
-typedef struct Animation_Channel
-{
-    // the index of the channel maps directly to the index of the sampler ex: channel[1].sampler = sampler[1]
-    u32 sampler_idx;
-    Animation_Path_Type animation_path_type;
-    const char* child_joint_name; //for debug
-    u32 child_joint_reference_count;
-} Animation_Channel;
-
-
 typedef struct Animation
 {
-    const char* animation_name;
+    String* animation_name;
     Animation_Channel* channels;
     u32 channel_count;
     Animation_Sampler* samplers;
     u32 sampler_count;
+
+    float anim_start;
+    float anim_end;
+
+    //TODO: current time is only here for testing
+    // float current_time;
 } Animation;
+
+typedef struct skinned_mesh
+{
+    submesh* mesh;
+    skinned_submesh* skinned_mesh;
+    // the number of meshes in the model
+    u32 mesh_size;
+
+    //SOA's
+    Joint* joints;
+    mat4* local_matrix; // resting pose
+    mat4* inverse_bind_matrix;
+
+    u32 joint_count;
+
+    //animation data associated with this mesh
+    Animation* animation_data;
+    u32 animation_count;
+} skinned_mesh;
+
+typedef struct skinned_mesh_instance
+{
+    //reference back to the
+    //TODO: replace with a handle
+    // skinned_mesh_handle* handle;
+    skinned_mesh* skinned_mesh_ref;
+
+
+    vec3* local_translation;
+    quat* local_rotation;
+    vec3* local_scale;
+
+    u32 joint_count;
+
+    //generated every frame
+    mat4* gpu_matrix;
+
+
+    u32 current_animation;
+    float current_time;
+    bool looping;
+} skinned_mesh_instance;
 
 
 //SPRITE
@@ -400,8 +425,6 @@ typedef struct Sprite_System
 
     Free_List_ARRAY_TYPE(Sprite_Data)* sprites_data;
     ARRAY_TYPE(Sprite_Data)* sprites_frame_data;
-
-
 } Sprite_System;
 
 
@@ -435,12 +458,11 @@ typedef struct Texture_System
 } Texture_System;
 
 
-
 typedef struct Mesh_System
 {
 #define MAX_MESH_COUNT 1000
     //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
-    // fragmentation would also be a concern
+    // fragmentation would also be a concern, unless i pool size, or split the pool into many different pool sizes
 
     //unneccessary upload from cpu into the gpu should be avoided
     //indirect commands will be regenerated every frame, at some point it can also be moved to the gpu
@@ -468,13 +490,11 @@ typedef struct Mesh_System
 
 
     //NOTE: NOT IN USE RN
-    skinned_mesh* skinned_meshes;
+    skinned_mesh skinned_meshes[MAX_MESH_COUNT];
     u32 skinned_mesh_size;
 
     size_t joints_byte_size;
     size_t weight_byte_size;
-
-
 
     u32 vertex_buffer_size;
     u32 index_buffer_size;
@@ -486,6 +506,10 @@ typedef struct Mesh_System
 
     // data*, offset, byte_size ->for all the types
     ring_queue* mesh_ring_queue;
+
+
+    skinned_mesh* test_skinned_mesh;
+    skinned_mesh_instance* test_skinned_mesh_instance;
 } Mesh_System;
 
 typedef struct Scene
@@ -499,10 +523,7 @@ typedef struct Scene
     // since we know static doesn't change we can cache the transforms
     // Transform* static_transform;
     // Transform* dynamic_transform;
-
 } Scene;
-
-
 
 
 //RENDER PACKET
@@ -517,19 +538,17 @@ typedef struct Render_Packet_Mesh
     u32 draw_data_size;
 
 
-
     //TODO: remove these
     static_mesh* static_mesh_array;
     u32 static_mesh_array_size;
     u32 static_mesh_submesh_size;
-
 } Render_Packet_Mesh;
 
 typedef struct Render_Packet_Transform
 {
     mat4* world_space_matrix_array;
     u32 world_space_matrix_count;
-}Render_Packet_Transform;
+} Render_Packet_Transform;
 
 
 typedef struct Render_Packet_Material
@@ -545,14 +564,13 @@ typedef struct Render_Packet_Material
     Material_UV_Anim_Data* uv_anim;
     u32 uv_anime_count;
     u32 uv_anime_bytes;
-}Render_Packet_Material;
+} Render_Packet_Material;
 
 
 typedef struct Render_Packet_UI
 {
     UI_Render_Packet madness_ui_render_packet;
     UI_Render_Packet insanity_ui_render_packet;
-
 } Render_Packet_UI;
 
 
@@ -584,8 +602,6 @@ typedef struct Render_Packet
 } Render_Packet;
 
 
-
-
 typedef struct Resource_System
 {
     //the resource system is just a container for all the system,
@@ -604,13 +620,7 @@ typedef struct Resource_System
 
 
     Render_Packet* render_packet;
-
 } Resource_System;
-
-
-
-
-
 
 
 #endif //RESOURCE_TYPES_H
