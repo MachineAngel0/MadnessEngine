@@ -91,10 +91,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
-    /*mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
+    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                        &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                        renderer_plugin->renderer->resource_system);
-    mesh_load_gltf_new(application_core->resource_system->mesh_system,
+    /*mesh_load_gltf_new(application_core->resource_system->mesh_system,
                        "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
                        &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
                        renderer_plugin->renderer->resource_system);*/

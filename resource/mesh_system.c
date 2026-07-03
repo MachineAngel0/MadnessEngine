@@ -103,6 +103,7 @@ skinned_mesh_instance* skinned_mesh_instance_init(Mesh_System* mesh_system, skin
     skinned_mesh_inst->local_translation = allocator_alloc(allocator, sizeof(vec3) * j_count);
     skinned_mesh_inst->local_rotation = allocator_alloc(allocator, sizeof(vec3) * j_count);
     skinned_mesh_inst->local_scale = allocator_alloc(allocator, sizeof(vec3) * j_count);
+    skinned_mesh_inst->gpu_matrix = allocator_alloc(allocator, sizeof(mat4) * j_count);
 
     for (u32 i = 0; i < j_count; i++)
     {

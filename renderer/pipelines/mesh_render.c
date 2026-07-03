@@ -28,6 +28,12 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
     out_mesh_renderer->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                BUFFER_TYPE_CPU_STORAGE,
                                                                mesh_buffer_data_size);
+    out_mesh_renderer->joint_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_CPU_STORAGE,
+                                                                  mesh_buffer_data_size);
+    out_mesh_renderer->weight_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                  BUFFER_TYPE_CPU_STORAGE,
+                                                                  mesh_buffer_data_size);
 
 
 
@@ -48,9 +54,14 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
                                                                        BUFFER_TYPE_STAGING,
                                                                        mesh_buffer_data_size);
 
-    out_mesh_renderer->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+    out_mesh_renderer->weight_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                        BUFFER_TYPE_STAGING,
                                                                        mesh_buffer_data_size);
+
+    out_mesh_renderer->joint_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                       BUFFER_TYPE_STAGING,
+                                                                       mesh_buffer_data_size);
+
 
     //DRAW DATA
     out_mesh_renderer->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -86,7 +97,7 @@ void mesh_renderer_upload_draw_data_new(Renderer* renderer, Mesh_Renderer* mesh_
     Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
 
     //NOTE: rn it copies from an offset, which is fine for now,
-    // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system funciton calls
+    // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system function calls
     while (!ring_queue_is_empty(mesh_render_queue))
     {
         ring_dequeue(mesh_render_queue, submesh_upload_data);

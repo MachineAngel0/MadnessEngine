@@ -569,6 +569,8 @@ typedef struct Mesh_Renderer
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
+    Buffer_Handle joint_buffer_handle;
+    Buffer_Handle weight_buffer_handle;
 
 
     Buffer_Handle vertex_staging_buffer_handle;
@@ -577,6 +579,8 @@ typedef struct Mesh_Renderer
     Buffer_Handle normal_staging_buffer_handle;
     Buffer_Handle tangent_staging_buffer_handle;
     Buffer_Handle uv_staging_buffer_handle;
+    Buffer_Handle joint_staging_buffer_handle;
+    Buffer_Handle weight_staging_buffer_handle;
 
 
     Buffer_Handle draw_data_buffer_handle;
