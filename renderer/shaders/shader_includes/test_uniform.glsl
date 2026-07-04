@@ -133,10 +133,6 @@ layout(set = 2, binding = 0, scalar) readonly buffer TANGENT_BUFFER{
 
 
 
-
-
-
-
 vec3 calculate_directional_light(directional_light_data light, vec3 normal, vec3 view_direction)
 {
     float specular_shininess = 32;

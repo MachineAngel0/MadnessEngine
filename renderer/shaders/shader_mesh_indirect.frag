@@ -6,7 +6,7 @@
 #extension GL_EXT_buffer_reference : require
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/materials.glsl"
+#include "shader_includes/pc_indirect_mesh.glsl"
 
 
 layout(location = 0) in vec3 in_normal;

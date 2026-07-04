@@ -6,7 +6,7 @@
 #extension GL_EXT_buffer_reference : require
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/materials.glsl"
+#include "shader_includes/pc_skinned_mesh.glsl"
 
 
 layout(location = 0) in vec3 in_normal;
@@ -21,7 +21,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 
-    uint ubo_index = pc_mesh.ubo_buffer_idx;
+    uint ubo_index = pc_skinned_mesh.ubo_buffer_idx;
 
 
     // properties

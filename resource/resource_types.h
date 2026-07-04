@@ -126,35 +126,6 @@ typedef struct Madness_Font
 /// MESH ///
 
 
-typedef struct PC_Mesh
-{
-    //per instance data change
-    u32 ubo_buffer_idx;
-} PC_Mesh;
-
-typedef struct PC_Skinned_Mesh
-{
-    //per instance data change
-    u32 ubo_buffer_idx;
-
-    //buffer device addresses
-    VkDeviceAddress vertex_buffer;
-    VkDeviceAddress index_buffer_idx;
-    VkDeviceAddress normal_buffer_idx;
-    VkDeviceAddress tangent_buffer_idx;
-    VkDeviceAddress uv_buffer_idx;
-    VkDeviceAddress joint_buffer_idx;
-    VkDeviceAddress weight_buffer_idx;
-    //
-    u32 _padding;
-} PC_Skinned_Mesh;
-
-typedef struct PC_Material_Mesh
-{
-    u32 ubo_buffer_idx;
-    PC_Mesh pc_mesh;
-    VkDeviceAddress material_buffer;
-} PC_Material_Mesh;
 
 
 typedef struct submesh
@@ -263,17 +234,58 @@ typedef struct Mesh_Indirect_Draw_Data
     Material_Handle material_handle;
 } Mesh_Indirect_Draw_Data;
 
+
+
 typedef struct Mesh_Draw_Data
 {
+    //used as a storage buffer
     u32 transform_idx;
     u32 material_instance_handle;
 } Mesh_Draw_Data;
 
+
+
+typedef struct Skinned_Mesh_Data
+{
+    /*typedef struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
+
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+    u32 vertex_count; //in vec3
+
+
+    //NOTE: shaders need the type size offset into the array, while the free list probably needs the bytes, we will see
+    u32 uv_offset;
+    u32 normal_offset;
+    u32 tangent_count;
+
+    u32 joint_offset;
+    u32 weight_offset;
+
+    Transform_Handle transform_handle;
+    Material_Handle material_handle;
+} Skinned_Mesh_Data;
+
 typedef struct Skinned_Draw_Data
 {
+    //offset into the array
+    u32 vertex_idx;
+    u32 uv_idx;
+    u32 normal_idx;
+    u32 tangent_idx;
     u32 joint_idx;
     u32 weight_idx;
-} Skinned_Draw_Data;
+    u32 material_instance_handle;
+    u32 transform_idx;
+} Skinned_Mesh_Draw_Data;
 
 
 typedef struct submesh_gameplay
@@ -487,11 +499,13 @@ typedef struct Mesh_System
     Mesh_Indirect_Draw_Data draw_data[MAX_MESH_COUNT];
     u32 draw_data_index;
 
+    Mesh_Indirect_Draw_Data skinned_draw_data[MAX_MESH_COUNT];
+    u32 skinned_draw_data_index;
 
-    //global count of all the data
-    static_mesh static_mesh_array[MAX_MESH_COUNT];
-    u32 static_mesh_array_size;
-    u32 static_mesh_submesh_size;
+    //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
+    // Mesh_Indirect_Draw_Data not_in_use_draw_data[MAX_MESH_COUNT];
+    // Mesh_Indirect_Draw_Data not_in_use_skinned_draw_data[MAX_MESH_COUNT];
+
 
 
     //total size of all mesh data
@@ -503,21 +517,9 @@ typedef struct Mesh_System
     size_t tangent_byte_size;
     size_t uv_byte_size;
 
-
-    //NOTE: NOT IN USE RN
-    skinned_mesh skinned_meshes[MAX_MESH_COUNT];
-    u32 skinned_mesh_size;
-
     size_t joints_byte_size;
     size_t weight_byte_size;
 
-    u32 vertex_buffer_size;
-    u32 index_buffer_size;
-    u32 normal_buffer_size;
-    u32 tangent_buffer_size;
-    u32 uv_buffer_size;
-    // u32 joint_buffer_size;
-    // u32 weight_buffer_size;
 
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
@@ -552,14 +554,13 @@ typedef struct Scene
 //these are all just references to the data, they do not own anything
 typedef struct Render_Packet_Mesh
 {
-    const char* system_name;
-
     //geometry data for indirect draws
     Mesh_Indirect_Draw_Data* draw_data;
     u32 draw_data_size;
 
 
-
+    Mesh_Indirect_Draw_Data* skinned_draw_data;
+    u32 skinned_draw_data_size;
 
 
 
@@ -607,9 +608,9 @@ typedef struct Render_Packet_Sprite
 typedef struct Render_Packet
 {
     //just references
-    ring_queue* texture_queue;
-    ring_queue* mesh_queue;
-    ring_queue* skinned_mesh_queue;
+    RING_QUEUE_TYPE(Texture)* texture_queue;
+    RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_queue;
+    RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_queue;
 
 
     //FOR RENDERING

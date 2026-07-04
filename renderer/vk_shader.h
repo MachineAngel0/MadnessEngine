@@ -1,7 +1,7 @@
 ﻿#ifndef VULKAN_SHADER_OBJECT_H
 #define VULKAN_SHADER_OBJECT_H
 
-VkShaderModule create_shader_module(const vulkan_context* context, const char* shader_bytes, u64 shader_size);
+VkShaderModule create_shader_module(const vulkan_context* context, const u8* shader_bytes, u64 shader_size);
 
 
 void vulkan_default_shader_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline,
@@ -12,6 +12,10 @@ void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, 
 
 bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
                                  pipeline_cache);
+
+bool skinned_mesh_shader_create(Renderer* renderer, vulkan_shader_pipeline* skinned_mesh_pipeline, vulkan_pipeline_cache*
+                                 pipeline_cache);
+
 
 //NOTE: Might be able to change these into more generic sprites
 bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache);

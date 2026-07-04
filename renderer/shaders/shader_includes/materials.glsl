@@ -13,28 +13,7 @@ layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_INSTANCE_BUFFER{
     Material_Instance material_instance[];
 }MATERIAL_INSTANCE[];
 
-layout(push_constant, scalar) uniform PC_MESH{
-    uint ubo_buffer_idx;
-}pc_mesh;
 
-
-struct mesh_draw_data{
-    uint transform_idx;
-    uint material_instance_idx;
-};
-
-struct skinned_draw_data{
-    uint joint_index;
-    uint weight_index;
-};
-
-layout(set = 2, binding = 0, scalar) readonly buffer MESH_DRAW_DATA_BUFFER{
-    mesh_draw_data mesh_data[];
-}MESH_DRAW_DATA[];
-
-layout(set = 2, binding = 0, scalar) readonly buffer SKINNED_DRAW_DATA_BUFFER{
-    skinned_draw_data skinned_data[];
-}SKINNED_DRAW_DATA[];
 
 
 struct Pbr{
@@ -65,5 +44,76 @@ struct Pbr{
 layout(set = 2, binding = 0, scalar) readonly buffer PBR_BUFFER{
     Pbr pbr[];
 }PBR[];
+
+
+
+
+
+layout(buffer_reference, scalar) readonly buffer PRB_Buffer{
+    Pbr pbr_data[];
+};
+
+
+struct Joint{
+    mat4 joint[4];
+};
+
+struct Weight{
+    mat4 weight[4];
+};
+
+struct skinned_draw_data{
+    uint joint_index;
+    uint weight_index;
+};
+
+layout(buffer_reference, scalar) readonly buffer Vertex_Buffer{
+    vec3 vertex_data[];
+};
+layout(buffer_reference, scalar) readonly buffer UV_Buffer{
+    vec2 uv_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Normal_Buffer{
+    vec3 normal_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Tangent_Buffer{
+    vec4 tangent_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Transform_Buffer{
+    mat4 transform_data[];
+//model transform to be specific
+};
+layout(buffer_reference, scalar) readonly buffer Joint_Buffer{
+    Joint joint_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Weight_Buffer{
+    Weight weights_data[];
+};
+
+
+
+
+
+struct mesh_draw_data{
+    uint transform_idx;
+    uint material_instance_idx;
+};
+
+
+
+layout(set = 2, binding = 0, scalar) readonly buffer MESH_DRAW_DATA_BUFFER{
+    mesh_draw_data mesh_data[];
+}MESH_DRAW_DATA[];
+
+layout(set = 2, binding = 0, scalar) readonly buffer SKINNED_DRAW_DATA_BUFFER{
+    skinned_draw_data skinned_data[];
+}SKINNED_DRAW_DATA[];
+
+
+
+
+
+
+
 
 

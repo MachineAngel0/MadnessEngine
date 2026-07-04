@@ -4,6 +4,9 @@
 #include "resource_types.h"
 
 
+
+
+
 Material_System* material_system_init(Memory_System* memory_system);
 
 bool material_system_shutdown(Material_System* material_system, Memory_System* memory_system);
@@ -23,6 +26,10 @@ Material_PBR* material_system_pbr_get(Material_System* material_system, Material
 
 
 void material_system_pbr_init(Material_PBR* out_data);
+
+
+// void* material_create(mat_sys, mat_name)
+// void* generate material(mat_sys, mat_name)
 
 
 #endif //MATERIAL_SYSTEM_H

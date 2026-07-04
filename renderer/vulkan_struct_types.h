@@ -235,7 +235,10 @@ typedef struct Buffer_System
     Buffer_Handle global_ubo_handle;
 
     //per frame buffer
-    Vulkan_Buffer* per_frame_staging_buffer_pool;
+    Vulkan_Buffer* per_frame_cpu_to_gpu_staging_buffers; // this should be for data uploads like vertex, skinned etc
+
+    // this should be for things that are neccessary to happen every frame, like the indirect, draw, and material buffers
+    // Vulkan_Buffer* per_frame_staging_buffer_pool;
 
     //an array of them
     Vulkan_Buffer* buffers;
@@ -602,6 +605,10 @@ typedef struct Mesh_Renderer
     u32 indirect_draw_count;
 
     PC_Mesh pc_mesh;
+    PC_Skinned_Mesh pc_skinned_mesh;
+
+
+
 
     //TODO:
     // Buffer_Handle bone_buffer_handle;
@@ -662,6 +669,7 @@ typedef struct renderer
     vulkan_pipeline_cache* pipeline_cache;
 
     vulkan_shader_pipeline indirect_mesh_pipeline;
+    vulkan_shader_pipeline skinned_mesh_pipeline;
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;

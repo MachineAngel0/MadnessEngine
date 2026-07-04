@@ -9,10 +9,8 @@
 #extension GL_ARB_shader_draw_parameters : enable
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/materials.glsl"
+#include "shader_includes/pc_skinned_mesh.glsl"
 
-
-layout(location = 0) in vec3 in_pos;
 
 
 layout(location = 0) out vec3 out_normal;
@@ -28,18 +26,19 @@ void main() {
     uint instance_idx = gl_DrawIDARB;
 
 
+    //i would probably need this as joint and weight data dont line up with the vertex offset
+    //localVertex = gl_VertexIndex - pc_skinned_mesh.[instance_idx].vertex_offset;
+
     //global
-    uint ubo_index = pc_mesh.ubo_buffer_idx;
+    uint ubo_index = pc_skinned_mesh.ubo_buffer_idx;
+
 
     //global mesh data
-    uint normal_buffer_index = ubo[nonuniformEXT(ubo_index)].normal_idx;
-    uint tangent_buffer_index = ubo[nonuniformEXT(ubo_index)].tangent_idx;
-    uint uv_buffer_index = ubo[nonuniformEXT(ubo_index)].uv_idx;
-    out_normal = NORMAL[nonuniformEXT(normal_buffer_index)].normal[nonuniformEXT(gl_VertexIndex)];
-    out_uv = UV[nonuniformEXT(uv_buffer_index)].uv[nonuniformEXT(gl_VertexIndex)];
+    vec3 vertex = pc_skinned_mesh.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
 
-    out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
-    //out_tangent = TANGENT[nonuniformEXT(tangent_index)].tangent[nonuniformEXT(gl_VertexIndex)];
+    out_normal = pc_skinned_mesh.normal_buffer.normal_data[nonuniformEXT(instance_idx)];
+    out_uv = pc_skinned_mesh.uv_buffer.uv_data[nonuniformEXT(instance_idx)];
+    out_tangent = pc_skinned_mesh.tangent_buffer.tangent_data[nonuniformEXT(instance_idx)];
 
 
     //get object draw data
@@ -47,12 +46,11 @@ void main() {
     mesh_draw_data cur_mesh_data = MESH_DRAW_DATA[nonuniformEXT(draw_data_buffer_idx)].mesh_data[nonuniformEXT(instance_idx)];
 
     //get transform data
-    uint transform_buffer_idx = ubo[nonuniformEXT(ubo_index)].transform_idx;
+//    uint transform_buffer_idx = ubo[nonuniformEXT(ubo_index)].transform_idx;
     uint transform_idx =  cur_mesh_data.transform_idx;
+    mat4 model = pc_skinned_mesh.transform_buffer.transform_data[nonuniformEXT(transform_idx)];
 
-
-    mat4 model = TRANSFORM[nonuniformEXT(transform_buffer_idx)].model_transforms[nonuniformEXT(transform_idx)];
-    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(in_pos, 1.0);
+    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(vertex, 1.0);
 
     //Material
     uint material_instance_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_instance_idx;
@@ -66,43 +64,9 @@ void main() {
 
 
 
-    out_world_position = vec3(model * vec4(in_pos, 1.0));
+    out_world_position = vec3(model * vec4(vertex, 1.0));
 
 
-    /*
-    //    uint color_idx = Material.material_data[0].color_id;
-
-    uint draw_idx = gl_VertexIndex;
-    uint draw_other_idx = gl_DrawIDARB;
-    out_index = gl_DrawIDARB;
-
-    uint ubo_index = pc_mesh.ubo_buffer_idx;
-    uint normal_index = pc_mesh.normal_buffer_idx;
-    uint tangent_index =  pc_mesh.tangent_buffer_idx;
-    uint uv_index =  pc_mesh.uv_buffer_idx;
-    uint transform_index =  pc_mesh.transform_buffer_idx;
-    uint material_index =  pc_mesh.material_buffer_idx;
-
-    mat4 model = TRANSFORM[nonuniformEXT(transform_index)].model_transforms[nonuniformEXT(gl_DrawIDARB)];
-
-    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(in_pos, 1.0);
-//    gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * ubo[nonuniformEXT(ubo_index)].model * vec4(in_pos, 1.0);
-    //    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
-
-    //    out_normal = NORMAL[nonuniformEXT(normal_index)].normal[nonuniformEXT(draw_idx)];
-    out_normal = NORMAL[nonuniformEXT(normal_index)].normal[nonuniformEXT(gl_VertexIndex)];
-    //out_normal = mat3(transpose(inverse(model))) * normal); // TODO: this would get you a correct normal
-
-    out_tangent = vec4(1.0, 1.0, 1.0, 1.0);
-
-    out_uv = UV[nonuniformEXT(uv_index)].uv[nonuniformEXT(gl_VertexIndex)];
-
-    out_color_idx = MATERIAL[nonuniformEXT(material_index)].material_data[nonuniformEXT(gl_DrawIDARB)].color_index;
-    //    out_color_idx = MATERIAL[nonuniformEXT(material_index)].material_data[nonuniformEXT(0)].color_index;
-
-
-    out_world_position = vec3(model * vec4(in_pos, 1.0));
-*/
 }
 
 //NOTE: for reference

@@ -6,13 +6,51 @@
 #include "math_types.h"
 
 
-typedef enum Pipeline_Type
+typedef struct PC_Mesh
 {
-    PIPELINE_TYPE_MESH_BPR_OPAQUE,
-    PIPELINE_TYPE_MESH_BPR_TRANSPARENCY,
+    //per instance data change
+    u32 ubo_buffer_idx;
+} PC_Mesh;
+
+typedef struct PC_Skinned_Mesh
+{
+    //per instance data change
+    u32 ubo_buffer_idx;
+    u32 _padding;
+
+    // buffer device addresses
+    VkDeviceAddress vertex_buffer;
+    // VkDeviceAddress index_buffer;
+    VkDeviceAddress normal_buffer;
+    VkDeviceAddress tangent_buffer;
+    VkDeviceAddress uv_buffer;
+    VkDeviceAddress joint_buffer;
+    VkDeviceAddress weight_buffer;
+
+    VkDeviceAddress transform_buffer;
+    VkDeviceAddress material_buffer;
+
+
+
+
+    //128 byte limit
+} PC_Skinned_Mesh;
+
+typedef struct PC_Material_Mesh
+{
+    u32 ubo_buffer_idx;
+    PC_Mesh pc_mesh;
+    VkDeviceAddress material_buffer;
+} PC_Material_Mesh;
+
+
+typedef enum Shader_Pass_Type
+{
+    PIPELINE_TYPE_MESH_PBR_OPAQUE,
+    PIPELINE_TYPE_MESH_PBR_TRANSPARENCY,
     PIPELINE_TYPE_SHADOW,
     // PIPELINE_TYPE_TERRAIN,
-} Pipeline_Type;
+} Shader_Pass_Type;
 
 
 typedef enum Material_Flag
@@ -87,6 +125,7 @@ typedef struct Material_System
     Material_UV_Anim_Data uv_anim[MAX_MATERIAL];
     u32 uv_anim_count;
 
+    //material data should get passed in through a push constant
 
     //Shaders/Pipelines should always be first, they define what the material needs are
     //or we could have material in one spot, that get generated
@@ -95,6 +134,10 @@ typedef struct Material_System
         type* (float, u32, mat4) etc...
         void* data;
      }
+
+     //shader_pass -> hash_map(idx or name) -> array of materials/mat instances
+     //shader_pass -> hash_map(idx or name) -> material defintion
+
 
      mat_info{
         mat_def* mat_def_array;

@@ -57,6 +57,10 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
 bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer);
 
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
+
+VkDeviceAddress vulkan_buffer_get_device_address(Renderer* renderer, Buffer_Handle buffer_handle);
+
+
 void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle);
 
 //clears the buffer when you get it
@@ -93,6 +97,7 @@ void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vu
 
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
                                                     vulkan_command_buffer* command_buffer, void* data, u64 data_size);
-
+bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer, Buffer_Handle buffer_handle,
+                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_byte_size);
 
 #endif //VK_BUFFER_H

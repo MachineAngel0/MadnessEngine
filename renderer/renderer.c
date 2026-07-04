@@ -167,6 +167,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     sprite_shader_create(renderer, &renderer->sprite_pipeline, renderer->pipeline_cache);
     mesh_indirect_shader_create(renderer, &renderer->indirect_mesh_pipeline,
                                 renderer->pipeline_cache);
+    skinned_mesh_shader_create(renderer, &renderer->skinned_mesh_pipeline,
+    renderer->pipeline_cache);
     //Pipeline Cache
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 

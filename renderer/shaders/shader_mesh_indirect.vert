@@ -9,7 +9,7 @@
 #extension GL_ARB_shader_draw_parameters : enable
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/materials.glsl"
+#include "shader_includes/pc_indirect_mesh.glsl"
 
 
 layout(location = 0) in vec3 in_pos;

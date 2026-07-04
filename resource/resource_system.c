@@ -43,11 +43,14 @@ bool resource_system_shutdown(Resource_System* resource_system, Memory_System* m
     return true;
 }
 
+
 bool resource_system_update_and_create_render_packet(Resource_System* resource_system)
 {
+    allocator_clear(resource_system->frame_allocator);
     render_packet_clear(resource_system->render_packet);
     resource_system->render_packet->texture_queue = resource_system->texture_system->textures_ring_queue;
     resource_system->render_packet->mesh_queue = resource_system->mesh_system->mesh_ring_queue;
+    resource_system->render_packet->skinned_mesh_queue = resource_system->mesh_system->skinned_mesh_ring_queue;
     return resource_system_generate_render_packet(resource_system);
 }
 

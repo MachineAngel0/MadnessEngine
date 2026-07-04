@@ -240,12 +240,12 @@ void madness_ui_end(Madness_UI* madness_ui)
     for (u32 i = 0; i < madness_ui->pop_up_ui_nodes->num_items; i++)
     {
         UI_Node* deffered_node = (UI_Node*)_array_get(madness_ui->pop_up_ui_nodes, i);
-        if (array_get(madness_ui->pop_up_ui_nodes, UI_Node*, i)->flags & UI_FLAG_SCISSOR_START)
+        if (array_get(madness_ui->pop_up_ui_nodes, UI_Node, i).flags & UI_FLAG_SCISSOR_START)
         {
             madness_ui_new_scissor_start(madness_ui, deffered_node->scissor_pos,
                                          deffered_node->scissor_size);
         }
-        else if (array_get(madness_ui->pop_up_ui_nodes, UI_Node*, i)->flags & UI_FLAG_SCISSOR_END)
+        else if (array_get(madness_ui->pop_up_ui_nodes, UI_Node, i).flags & UI_FLAG_SCISSOR_END)
         {
             madness_ui_new_scissor_end(madness_ui);
         }

@@ -20,7 +20,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
                                                  out_buffer_system->buffers_size * sizeof(Vulkan_Buffer));
 
 
-    out_buffer_system->per_frame_staging_buffer_pool = allocator_alloc(&renderer->arena,
+    out_buffer_system->per_frame_cpu_to_gpu_staging_buffers = allocator_alloc(&renderer->arena,
                                                                        out_buffer_system->frames_in_flight
                                                                        * sizeof(Vulkan_Buffer));
 
@@ -37,8 +37,9 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
             renderer, renderer->descriptor_system, temp_buffer_handle, 0);
 
         //create our global staging buffer
-         _vulkan_buffer_create_internal(renderer, &out_buffer_system->per_frame_staging_buffer_pool[i], BUFFER_TYPE_STAGING,
-                                                staging_buffer_size);
+        _vulkan_buffer_create_internal(renderer, &out_buffer_system->per_frame_cpu_to_gpu_staging_buffers[i],
+                                       BUFFER_TYPE_STAGING,
+                                       staging_buffer_size);
     }
 
     return out_buffer_system;
@@ -49,7 +50,8 @@ void buffer_system_frame_start(Renderer* renderer)
     //rn just clears the staging buffer
     u32 current_frame = renderer->context.current_frame;
 
-    Vulkan_Buffer* current_frame_staging_buffer = &renderer->buffer_system->per_frame_staging_buffer_pool[current_frame];
+    Vulkan_Buffer* current_frame_staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[
+        current_frame];
     current_frame_staging_buffer->current_offset = 0;
 }
 
@@ -497,6 +499,12 @@ Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle
     return &renderer->buffer_system->buffers[buffer_handle.handle];
 }
 
+VkDeviceAddress vulkan_buffer_get_device_address(Renderer* renderer, Buffer_Handle buffer_handle)
+{
+    return get_buffer_device_address(renderer->context.device.logical_device,
+                              vulkan_buffer_get(renderer, buffer_handle)->handle);
+}
+
 Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle)
 {
     Vulkan_Buffer* out_buffer = vulkan_buffer_get(renderer, buffer_handle);
@@ -685,7 +693,8 @@ void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_H
 
 
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_size)
+                                                                   vulkan_command_buffer* command_buffer, void* data,
+                                                                   u64 data_size)
 {
     if (data_size <= 0)
     {
@@ -695,7 +704,8 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_staging_buffer_pool[renderer->context.current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->context.
+        current_frame];
 
 
     //make sure its a staging buffer
@@ -730,6 +740,63 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
     copyRegion.srcOffset = staging_buffer->current_offset - data_size;
     copyRegion.dstOffset = 0;
     vkCmdCopyBuffer(command_buffer->handle, staging_buffer->handle, device_local_buffer->handle, 1, &copyRegion);
+
+    // memory_barrier_transfer(renderer, command_buffer);
+
+    return true;
+}
+
+bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer,
+                                                                               Buffer_Handle buffer_handle,
+                                                                               vulkan_command_buffer* command_buffer,
+                                                                               void* data, u64 data_byte_size)
+{
+    if (data_byte_size <= 0)
+    {
+        TRACE("vulkan_buffer_cpu_data_copy_from_offset_handle: 0 data size passed in")
+        return false;
+    }
+
+    //get buffer from handle
+    Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->context.
+        current_frame];
+
+
+    //make sure its a staging buffer
+    MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
+    MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);
+    if (staging_buffer->current_offset < 0)
+    {
+        WARN("vulkan_buffer_copy: 0 offset in staging buffer");
+        return false;
+    }
+
+    if (staging_buffer->current_offset + data_byte_size > staging_buffer->capacity)
+    {
+        WARN("vulkan_buffer_cpu_to_gpu_upload_batch: STAGING BUFFER OVERFLOW");
+        return false;
+    }
+
+
+    //copy data into the staging buffer
+    memcpy(staging_buffer->mapped_data + staging_buffer->current_offset, data, data_byte_size);
+
+
+    //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
+
+    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+
+
+    //Copy all the data in the staging buffer into the device local buffer
+    VkBufferCopy copyRegion = {0};
+    copyRegion.size = data_byte_size;
+    copyRegion.srcOffset = staging_buffer->current_offset;
+    copyRegion.dstOffset = device_local_buffer->current_offset;
+    vkCmdCopyBuffer(command_buffer->handle, staging_buffer->handle, device_local_buffer->handle, 1, &copyRegion);
+
+    staging_buffer->current_offset += data_byte_size;
+    device_local_buffer->current_offset += data_byte_size;
 
     // memory_barrier_transfer(renderer, command_buffer);
 

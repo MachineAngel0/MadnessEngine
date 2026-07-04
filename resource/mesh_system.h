@@ -47,7 +47,7 @@ void skinned_mesh_play_animation_id(Mesh_System* mesh_system, skeletal_mesh_hand
 void skinned_mesh_play_animation_name(Mesh_System* mesh_system, skeletal_mesh_handle handle, const char* anim_name, bool loop);
 void skinned_mesh_stop_current_animation(Mesh_System* mesh_system, skeletal_mesh_handle handle);
 
-void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Frame_Allocator* allocator);
+void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator);
 void animation_update(Mesh_System* mesh_system);
 
 
