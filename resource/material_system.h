@@ -21,11 +21,11 @@ void material_system_enable_flag(Material_System* material_system, Material_Hand
 void material_system_disable_flag(Material_System* material_system, Material_Handle material_handle,
                                   Material_Flag flags);
 
-Material_PBR* material_system_add_pbr(Material_System* material_system, Material_Handle material_handle);
-Material_PBR* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle);
+Material_Default* material_system_add_pbr(Material_System* material_system, Material_Handle material_handle);
+Material_Default* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle);
 
 
-void material_system_pbr_init(Material_PBR* out_data);
+void material_system_pbr_init(Material_Default* out_data);
 
 
 // void* material_create(mat_sys, mat_name)

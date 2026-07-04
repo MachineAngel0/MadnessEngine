@@ -93,7 +93,7 @@ typedef struct Material_PBR
     u32 _padding0;
     u32 _padding1;
     u32 _padding2;
-} Material_PBR;
+} Material_Default;
 
 
 typedef struct Material_UV_Anim_Data
@@ -120,7 +120,7 @@ typedef struct Material_System
     Material_Instance material_instance[MAX_MATERIAL];
 
     //Hardcode pipelines
-    Material_PBR prb[MAX_MATERIAL]; // pretty much manditory for all meshes
+    Material_Default prb[MAX_MATERIAL]; // pretty much manditory for all meshes
     u32 pbr_count;
     Material_UV_Anim_Data uv_anim[MAX_MATERIAL];
     u32 uv_anim_count;

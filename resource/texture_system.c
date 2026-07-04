@@ -542,8 +542,8 @@ bool texture_system_load_msdf_font(Texture_System* texture_system, const char* f
     ring_enqueue(texture_system->textures_ring_queue, texture);
 
 
-    char* file_name = c_string_ext_strip(file_path, frame_arena);
-    char* csv_path = c_string_concat(file_name, "csv", frame_arena);
+    const char* file_name = c_string_ext_strip(file_path, frame_arena);
+    const char* csv_path = c_string_concat(file_name, "csv", frame_arena);
 
     FILE* file = fopen(csv_path, "r");
     MASSERT(file)

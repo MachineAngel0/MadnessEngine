@@ -147,8 +147,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->light_system = light_system_init(renderer);
 
     //System specific draws
-    // Transform System
-    renderer->transform_renderer = transform_renderer_init(renderer, renderer->resource_system);
     // Material System
     renderer->material_renderer = material_renderer_init(renderer, renderer->resource_system);
     // Mesh System
@@ -314,7 +312,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.draw_data_idx  = renderer->mesh_renderer->draw_data_buffer_handle.handle;
 
     //transform
-    ubo.transform_idx  = renderer->transform_renderer->transform_buffer_handle.handle;
+    ubo.transform_idx  = renderer->material_renderer->transform_buffer_handle.handle;
 
     //Materials
     ubo.material_instance_idx = renderer->material_renderer->instance_buffer_handle.handle;
@@ -339,8 +337,7 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
-    transform_renderer_upload_data(renderer, renderer->transform_renderer, render_packets, graphics_command_buffer);
-    material_renderer_upload_data(renderer, renderer->material_renderer, &render_packets->material_data_packet, graphics_command_buffer);
+    material_renderer_upload_data(renderer, renderer->material_renderer, render_packets, graphics_command_buffer);
 
     ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 

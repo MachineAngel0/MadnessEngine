@@ -8,19 +8,17 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet);
 
 
-submesh* submesh_init(Allocator* arena);
-void sub_mesh_free(submesh* m);
-
-static_mesh* static_mesh_init(Allocator* arena, u32 mesh_size);
-void static_mesh_free(static_mesh* static_mesh);
-
-
-void mesh_load_gltf(Mesh_System* mesh_system, const char* gltf_path, Allocator* arena, Frame_Allocator* frame_arena, Resource_System*
-                    resource_system);
-
-void mesh_load_gltf_new(Resource_System* resource_system, const char* gltf_path);
+//when loading in a
+void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path);
 
 void mesh_load_anim_gltf(Resource_System* resource_system, const char* gltf_path);
+
+
+void _gltf_load_skin_data(Resource_System* resource_system);
+void _gltf_load_material(Resource_System* resource_system);
+void _gltf_load_mesh_data(Resource_System* resource_system);
+
+
 
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena);
 
@@ -40,7 +38,12 @@ typedef struct skeletal_mesh_handle
     u32 handle;
 } skeletal_mesh_handle;
 
-skeletal_mesh_handle skinned_mesh_create(Mesh_System* mesh_system, const char* file_name);
+
+
+Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, Animation_Handle animation_handle,
+                                                  Heap_Allocator* allocator);
+
+
 
 
 void skinned_mesh_play_animation_id(Mesh_System* mesh_system, skeletal_mesh_handle handle, u32 animation_id, bool loop);

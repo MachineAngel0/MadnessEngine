@@ -5,6 +5,7 @@
 MAPI u64 c_string_length(const char* str);
 
 MAPI char* c_string_duplicate(const char* str);
+MAPI char* c_string_duplicate_heap_alloc(const char* str, Heap_Allocator* allocator);
 
 MAPI const char* c_string_concat(const char* str1, const char* str2, Allocator* allocator);
 MAPI const char* c_string_concat_fl(const char* str1, const char* str2, Heap_Allocator* allocator);

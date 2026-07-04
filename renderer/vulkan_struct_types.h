@@ -474,14 +474,6 @@ typedef struct global_ubo
 } Global_Ubo;
 
 
-typedef struct PipelinePermutation
-{
-    //instead of storing every permutation known to man, we just store the ones we are actually going to use
-    //we could also load them from a config file later
-    darray_type(String*) debug_shader_name;
-    darray_type(uint32_t*) permutation_keys; // stores the index of all permutations that are in use
-    u32 permutations_count;
-} Mesh_Pipeline_Permutations;
 
 
 typedef struct Descriptor_System
@@ -558,11 +550,6 @@ typedef struct Sprite_Backend
 } Sprite_Renderer;
 
 
-typedef struct Transform_Renderer
-{
-    Buffer_Handle transform_buffer_handle;
-    Buffer_Handle transform_staging_buffer_handle;
-} Transform_Renderer;
 
 typedef struct Material_Renderer
 {
@@ -571,6 +558,10 @@ typedef struct Material_Renderer
 
     Buffer_Handle pbr_buffer_handle;
     Buffer_Handle pbr_staging_buffer_handle;
+
+
+    Buffer_Handle transform_buffer_handle;
+    Buffer_Handle transform_staging_buffer_handle;
 } Material_Renderer;
 
 typedef struct Mesh_Renderer
@@ -600,19 +591,15 @@ typedef struct Mesh_Renderer
     Buffer_Handle draw_data_staging_buffer_handle;
 
 
-    darray_type(Mesh_Pipeline_Permutations*) mesh_shader_permutations;
 
     u32 indirect_draw_count;
+    u32 skinned_indirect_draw_count;
 
     PC_Mesh pc_mesh;
     PC_Skinned_Mesh pc_skinned_mesh;
 
 
 
-
-    //TODO:
-    // Buffer_Handle bone_buffer_handle;
-    // Buffer_Handle weights_buffer_handle;
 } Mesh_Renderer;
 
 
@@ -634,7 +621,6 @@ typedef struct renderer
     Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
     Mesh_Renderer* mesh_renderer;
-    Transform_Renderer* transform_renderer;
     Material_Renderer* material_renderer;
 
     //renderer specific

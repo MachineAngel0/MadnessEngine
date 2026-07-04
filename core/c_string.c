@@ -17,6 +17,14 @@ char* c_string_duplicate(const char* str)
     return copy;
 }
 
+char* c_string_duplicate_heap_alloc(const char* str, Heap_Allocator* allocator)
+{
+    u64 length = c_string_length(str);
+    char* copy = allocator_heap_alloc(allocator, length + 1);
+    memcpy(copy, str, length + 1);
+    return copy;
+}
+
 
 //the arena is optional
 const char* c_string_concat(const char* str1, const char* str2, Allocator* allocator)

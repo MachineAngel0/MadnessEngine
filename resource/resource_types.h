@@ -36,12 +36,10 @@ typedef struct Material_Handle
     u32 handle;
 } Material_Handle;
 
-
 typedef struct Mesh_Handle
 {
     u32 handle;
 } Mesh_Handle;
-
 
 typedef struct Transform_Handle
 {
@@ -49,12 +47,17 @@ typedef struct Transform_Handle
     u32 gen;
 } Transform_Handle;
 
-
 typedef struct Sprite_Handle
 {
     u32 handle;
     u32 gen;
 } Sprite_Handle;
+
+typedef struct Animation_Handle
+{
+    u32 handle;
+    u32 gen;
+} Animation_Handle;
 
 
 /// RESOURCES ///
@@ -125,52 +128,39 @@ typedef struct Madness_Font
 
 /// MESH ///
 
-
-
-
-typedef struct submesh
+typedef struct Mesh_Data
 {
-    // Transform transform;
+    /*typedef struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
 
-    // vertex_mesh vertices;
-    vec3* pos;
-    vec3* normal;
-    vec4* tangent;
-    vec2* uv;
+    //info for indirect draw
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
 
-    // size_t* indices;
-    u8* indices;
-    // u8* indices_2;
-    u32 indices_count;
-    u32 indices_bytes;
-    VkIndexType index_type;
+    //TODO: another time, for when i want to do instancing
+    // uint32_t firstInstance; // 0
+    // uint32_t instanceCount; // 1
 
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 tangent_bytes;
-    u64 uv_bytes;
+    //info for vertex pulling
+    u32 normal_offset;
+    // u32 normal_bytes;
 
-    Material_PBR material_params;
-    Texture_Handle color_texture;
-    Texture_Handle normal_texture;
-    Texture_Handle metallic_texture;
-    Texture_Handle roughness_texture;
-    Texture_Handle ambient_occlusion_texture;
-    Texture_Handle emissive_texture;
+    u32 tangent_offset;
+    // u32 tangent_bytes;
 
-    u32 offset_into_material_data_buffer;
+    u32 uv_offset;
+    // u32 uv_bytes;
 
-    // mesh_pipeline_flags
-    u32 mesh_pipeline_mask; // determines what material features this submesh has
-} submesh;
-
-
-typedef struct static_mesh
-{
-    submesh* mesh;
-    // the number of meshes in the model
-    u32 mesh_size;
-} static_mesh;
+    //material info
+    Transform_Handle transform_handle;
+    Material_Handle material_handle;
+} Mesh_Data;
 
 typedef struct Mesh_Upload_Data
 {
@@ -198,41 +188,22 @@ typedef struct Mesh_Upload_Data
     u8* indices;
 } Mesh_Upload_Data;
 
+
+
 typedef struct Skinned_Mesh_Upload_Data
 {
-    vec4* joints;
-    vec4* weights;
-
     u64 joint_bytes;
     u64 weight_bytes;
 
     u64 joint_offset;
     u64 weight_offset;
 
+    vec4* joints;
+    vec4* weights;
 } Skinned_Mesh_Upload_Data;
 
 
-typedef struct Mesh_Indirect_Draw_Data
-{
-    /*typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
-
-    u32 vertex_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    //TODO: another time, for when i want to do instancing
-    // uint32_t firstInstance; // 0
-    // uint32_t instanceCount; // 1
-
-    Transform_Handle transform_handle;
-    Material_Handle material_handle;
-} Mesh_Indirect_Draw_Data;
+//mesh -> submesh
 
 
 
@@ -245,38 +216,9 @@ typedef struct Mesh_Draw_Data
 
 
 
-typedef struct Skinned_Mesh_Data
-{
-    /*typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
-
-    u32 vertex_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    u32 vertex_count; //in vec3
-
-
-    //NOTE: shaders need the type size offset into the array, while the free list probably needs the bytes, we will see
-    u32 uv_offset;
-    u32 normal_offset;
-    u32 tangent_count;
-
-    u32 joint_offset;
-    u32 weight_offset;
-
-    Transform_Handle transform_handle;
-    Material_Handle material_handle;
-} Skinned_Mesh_Data;
-
 typedef struct Skinned_Draw_Data
 {
-    //offset into the array
+    //offset into the buffer
     u32 vertex_idx;
     u32 uv_idx;
     u32 normal_idx;
@@ -288,38 +230,6 @@ typedef struct Skinned_Draw_Data
 } Skinned_Mesh_Draw_Data;
 
 
-typedef struct submesh_gameplay
-{
-    Texture_Handle color_texture;
-    Texture_Handle normal_texture;
-    Texture_Handle metallic_texture;
-    Texture_Handle roughness_texture;
-    Texture_Handle ambient_occlusion_texture;
-    Texture_Handle emissive_texture;
-} submesh_gameplay;
-
-typedef struct static_mesh_gameplay
-{
-    //each submesh shares the same transform
-    Transform_Handle transforms_handle;
-
-    //NOTE: if I wanted to change a submeshes material, i would have to index into it
-    submesh_gameplay* submeshes;
-    u32 submeshes_size;
-
-    bool visible;
-} static_mesh_gameplay;
-
-
-typedef struct skinned_submesh
-{
-    // vertex_mesh vertices;
-    vec4* joints;
-    vec4* weights;
-
-    u64 weight_bytes;
-    u64 joint_bytes;
-} skinned_submesh;
 
 typedef struct Joint
 {
@@ -391,31 +301,81 @@ typedef struct Animation
     // float current_time;
 } Animation;
 
-typedef struct skinned_mesh
+typedef struct Animation_Data
 {
-    submesh* mesh;
-    skinned_submesh* skinned_mesh;
-    // the number of meshes in the model
-    u32 mesh_size;
-
-    //SOA's
     Joint* joints;
-    mat4* local_matrix; // resting pose
+    u32 joint_count; // also the weight count
+
+    mat4* resting_pose_local_matrix;
     mat4* inverse_bind_matrix;
 
-    u32 joint_count;
+    Animation* animations;
+    u32 animations_count;
 
-    //animation data associated with this mesh
-    Animation* animation_data;
-    u32 animation_count;
-} skinned_mesh;
+} Animation_Data;
+
+typedef struct Skinned_Mesh_Data
+{
+    /*typedef struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
+
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+    u32 vertex_count; //in vec3
+
+
+    //NOTE: shaders need the type size offset into the array, while the free list probably needs the bytes, we will see
+    u32 uv_offset;
+    u32 normal_offset;
+    u32 tangent_count;
+
+    u64 joint_bytes;
+    u64 joint_offset;
+
+    u64 weight_bytes;
+    u64 weight_offset;
+
+
+    Transform_Handle transform_handle;
+    Material_Handle material_handle;
+
+} Skinned_Mesh_Data;
+
+
+
+
+typedef struct Mesh_Meta_Data
+{
+    const char* file_path;
+    u32* mesh_index;
+    u32 mesh_count;
+}Mesh_Meta_Data;
+
+typedef struct Skinned_Mesh_Meta_Data
+{
+    const char* file_path;
+    u32* submesh_index;
+    u32 submesh_count;
+
+    u32* skinned_submesh_indexs;
+    u32 skinned_mesh_count;
+
+    Animation_Handle anim_handle;
+}Skinned_Mesh_Meta_Data;
 
 typedef struct skinned_mesh_instance
 {
-    //reference back to the
+    //reference back to the animation data
     //TODO: replace with a handle
     // skinned_mesh_handle* handle;
-    skinned_mesh* skinned_mesh_ref;
+    Animation_Handle anim_handle;
 
 
     vec3* local_translation;
@@ -428,10 +388,10 @@ typedef struct skinned_mesh_instance
     mat4* gpu_matrix;
 
 
-    u32 current_animation;
+    u32 current_animation_index;
     float current_time;
     bool looping;
-} skinned_mesh_instance;
+} Skinned_Mesh_Instance;
 
 
 //SPRITE
@@ -494,18 +454,32 @@ typedef struct Mesh_System
     //unneccessary upload from cpu into the gpu should be avoided
     //indirect commands will be regenerated every frame, at some point it can also be moved to the gpu
 
+    //we want one continous stream of buffers for the data types
+    //we upload the data to the gpu then we free it
 
-    Transform transforms[MAX_MESH_COUNT];
-    Mesh_Indirect_Draw_Data draw_data[MAX_MESH_COUNT];
-    u32 draw_data_index;
+    //the mesh system needs to ideally have a list of meshes which point to submeshes, but the meshes themselves are linear in the array
+    //mesh and skinned mesh need to be treated differently
 
-    Mesh_Indirect_Draw_Data skinned_draw_data[MAX_MESH_COUNT];
-    u32 skinned_draw_data_index;
+
+    Mesh_Meta_Data mesh_meta_data[MAX_MESH_COUNT];
+    u32 mesh_meta_data_count;
+    Skinned_Mesh_Meta_Data skinned_mesh_meta_data[MAX_MESH_COUNT];
+    u32 skinned_mesh_meta_data_count;
+
+
+    Mesh_Data mesh_data[MAX_MESH_COUNT];
+    u32 mesh_data_count;
+
+    Skinned_Mesh_Data skinned_mesh_data[MAX_MESH_COUNT];
+    u32 skinned_mesh_data_count;
+
+    Animation_Data animation_data[MAX_MESH_COUNT];
+    u32 animation_data_count;
+
 
     //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
     // Mesh_Indirect_Draw_Data not_in_use_draw_data[MAX_MESH_COUNT];
     // Mesh_Indirect_Draw_Data not_in_use_skinned_draw_data[MAX_MESH_COUNT];
-
 
 
     //total size of all mesh data
@@ -525,14 +499,11 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
-    skinned_mesh* test_skinned_mesh;
-    skinned_mesh_instance* test_skinned_mesh_instance;
+    Skinned_Mesh_Instance* test_skinned_mesh_instance;
 
     //TODO:
     //anything that couldn't be loaded in this frame
     RING_QUEUE_TYPE(const char*)* load_queue;
-
-
 } Mesh_System;
 
 typedef struct Scene
@@ -542,7 +513,7 @@ typedef struct Scene
 
     mat4* world_transforms; //the count is the same as the transform_count
 
-    //i dont need rn but could be useful
+    //TODO: i dont need it rn but could be useful
     // since we know static doesn't change we can cache the transforms
     // Transform* static_transform;
     // Transform* dynamic_transform;
@@ -555,15 +526,12 @@ typedef struct Scene
 typedef struct Render_Packet_Mesh
 {
     //geometry data for indirect draws
-    Mesh_Indirect_Draw_Data* draw_data;
+    Mesh_Data* draw_data;
     u32 draw_data_size;
 
 
-    Mesh_Indirect_Draw_Data* skinned_draw_data;
+    Mesh_Data* skinned_draw_data;
     u32 skinned_draw_data_size;
-
-
-
 } Render_Packet_Mesh;
 
 typedef struct Render_Packet_Transform
@@ -579,7 +547,7 @@ typedef struct Render_Packet_Material
     u32 material_instance_count;
     u32 material_instance_bytes;
 
-    Material_PBR* prb;
+    Material_Default* prb;
     u32 prb_count;
     u32 prb_bytes;
 
