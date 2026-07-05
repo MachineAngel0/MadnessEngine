@@ -60,11 +60,10 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-
-Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, const Animation_Handle animation_handle,
-                                                  Heap_Allocator* allocator)
+bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Skinned_Mesh_Instance* skinned_mesh_inst,
+                                    const Animation_Handle animation_handle,
+                                    Heap_Allocator* allocator)
 {
-    Skinned_Mesh_Instance* skinned_mesh_inst = allocator_heap_alloc(allocator, sizeof(Skinned_Mesh_Instance));
     skinned_mesh_inst->anim_handle = animation_handle;
 
     Animation_Data* animation_data = &mesh_system->animation_data[animation_handle.handle];
@@ -88,217 +87,37 @@ Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, cons
     skinned_mesh_inst->current_time = 0;
     skinned_mesh_inst->looping = true;
 
+    return true;
+}
 
+Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, const Animation_Handle animation_handle,
+                                                  Heap_Allocator* allocator)
+{
+    Skinned_Mesh_Instance* skinned_mesh_inst = allocator_heap_alloc(allocator, sizeof(Skinned_Mesh_Instance));
+    skinned_mesh_instance_fill_out(mesh_system, skinned_mesh_inst, animation_handle, allocator);
     return skinned_mesh_inst;
 }
 
 
-void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena)
+void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
+                          u32* mesh_index_array,
+                          Mesh_Upload_Data* mesh_upload_data_array)
 {
-    UNIMPLEMENTED();
-    /*if (!c_string_path_is_extension(fbx_path, ".fbx"))
-    {
-        FATAL("DID NOT PASS IN A FBX FILE");
-        return;
-    }
-
-    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
-    // https://ufbx.github.io/ - online docs
-
-    //NOTE: uses malloc under the hood which we can override
-
-    ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
-    ufbx_error error; // Optional, pass NULL if you don't care about errors
-    ufbx_scene* scene = ufbx_load_file(fbx_path, &opts, &error);
-    if (!scene)
-    {
-        fprintf(stderr, "Failed to load: %s\n", error.description.data);
-        MASSERT(scene);
-    }
-
-
-    static_mesh* out_static_mesh = static_mesh_init(arena, scene->meshes.count);
-
-
-    // Use and inspect `scene`, it's just plain data!
-    // Let's just list all objects within the scene for example:
-    for (size_t i = 0; i < scene->nodes.count; i++)
-    {
-        ufbx_node* node = scene->nodes.data[i];
-        if (node->is_root) continue;
-
-        printf("Object: %s\n", node->name.data);
-        if (node->mesh)
-        {
-            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
-        }
-    }
-
-
-    for (size_t mesh_idx = 0; mesh_idx < scene->meshes.count; mesh_idx++)
-    {
-        ufbx_mesh* mesh = scene->meshes.data[mesh_idx];
-        for (size_t i = 0; i < mesh->faces.count; i++)
-        {
-            ufbx_face face = mesh->faces.data[i];
-
-            // Loop through the corners of the polygon.
-            for (uint32_t corner = 0; corner < face.num_indices; corner++)
-            {
-                // Faces are defined by consecutive indices, one for each corner.
-                uint32_t index = face.index_begin + corner;
-
-                // Retrieve the position, normal and uv for the vertex.
-                ufbx_vec3 position = ufbx_get_vertex_vec3(&mesh->vertex_position, index);
-                ufbx_vec3 normal = ufbx_get_vertex_vec3(&mesh->vertex_normal, index);
-                ufbx_vec2 uv = ufbx_get_vertex_vec2(&mesh->vertex_uv, index);
-            }
-        }
-    }
-
-
-    // GET BASE PATH
-    char* base_path = c_string_path_strip(fbx_path, frame_arena);
-
-
-    ufbx_free_scene(scene);*/
-}
-
-
-void mesh_load_obj(const char* obj_path, Renderer* renderer)
-{
-    UNIMPLEMENTED();
-    /*
-    //NOTE: material data is stored in a seperate .mtl file
-    //NOTE: this file format does not support indicis and technically also supports quads, just why, that's awful, so yeah abandoning it
-
-    // https://en.wikipedia.org/wiki/Wavefront_.obj_file
-    // # comments
-    // v - vertex
-    // vt - texture coordinate
-    // vn - Vertex Normal
-    // vp - parameter space vertices
-    // f - indicis/ polygonal face element
-    // l - line elements
-    // o - object name
-    // s - smooth shading
-
-    //TODO:
-    // FILE* mesh_mtl = fopen("../z_assets/models/falcon.mtl", "rb");
-
-
-    submesh* out_mesh = submesh_init(&renderer->arena);
-
-    size_t file_size;
-    FILE* mesh_obj_file = fopen("../z_assets/models/car_obj/falcon.obj", "rb");
-    if (!mesh_obj_file)
-    {
-        FATAL("Failed to open obj file");
-        return;
-    }
-
-    // go to the end of the file and get the size
-    fseek(mesh_obj_file, 0, SEEK_END);
-    file_size = ftell(mesh_obj_file);
-    rewind(mesh_obj_file); // go back to the start of the file
-
-    char buffer[512];
-
-    //this function is a godsend
-    //sscanf: This function reads formatted input from a specified character string (buffer). It allows you to parse data that is already present in a string variable.
-
-    while (fgets(buffer, sizeof(buffer), mesh_obj_file))
-    {
-        if (buffer[0] == '#') { continue; }
-        if (strncmp(buffer, "v ", 2) == 0)
-        {
-            vec3 v;
-            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
-            DEBUG("v %f %f %f", v.x, v.y, v.z);
-            darray_push(out_mesh->pos, v);
-        }
-        if (strncmp(buffer, "vt ", 3) == 0)
-        {
-            vec2 v;
-            sscanf(buffer, "v %f %f", &v.x, &v.y);
-            DEBUG("v %f %f %f", v.x, v.y);
-            darray_push(out_mesh->uv, v);
-        }
-        if (strncmp(buffer, "vn ", 3) == 0)
-        {
-            vec3 v;
-            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
-            DEBUG("v %f %f %f", v.x, v.y, v.z);
-            darray_push(out_mesh->normal, v);
-        }
-    }
-
-    fclose(mesh_obj_file);
-    */
-}
-
-
-bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
-{
-    out_mesh_packet->draw_data = mesh_system->mesh_data;
-    out_mesh_packet->draw_data_size = mesh_system->mesh_data_count;
-
-
-    return true;
-}
-
-
-void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
-{
-    Mesh_System* mesh_system = resource_system->mesh_system;
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-
-    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
-    {
-        FATAL("DID NOT PASS IN A GLTF FILE");
-        return;
-    }
-
-
-    cgltf_options options = {0};
-    cgltf_data* data = NULL;
-    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
-
-    if (result != cgltf_result_success)
-    {
-        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
-        return;
-    }
-    result = cgltf_load_buffers(&options, data, gltf_path);
-    MASSERT(result == cgltf_result_success)
-
-
-    Mesh_Meta_Data* mesh_meta_data = allocator_heap_alloc(allocator, sizeof(Mesh_Meta_Data));
-    mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
-    mesh_meta_data->mesh_index = allocator_heap_alloc(allocator, sizeof(u32) * data->meshes_count);
-    mesh_meta_data->mesh_count = data->meshes_count;
-
-
-    Mesh_Upload_Data* submesh_render_data_array = allocator_alloc(frame_allocator,
-                                                                  sizeof(Mesh_Upload_Data) * data->meshes_count);
-
-    //LOAD VERTEX/INDEX DATA
+    Mesh_System* mesh_system = resource_system->mesh_system;
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
-        mesh_meta_data->mesh_index[mesh_idx] = mesh_system->mesh_data_count;
+        mesh_index_array[mesh_idx] = mesh_system->mesh_data_count;
         Mesh_Data* mesh_draw_data = &mesh_system->mesh_data[mesh_system->mesh_data_count++];
 
 
         mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
         mesh_draw_data->material_handle = material_system_create_material(resource_system->material_system);
 
-        //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
-        Material_Default* default_material = material_system_add_pbr(resource_system->material_system,
-                                                                     mesh_draw_data->material_handle);
 
-        Mesh_Upload_Data* current_submesh_render_data = &submesh_render_data_array[mesh_idx];
+        Mesh_Upload_Data* current_submesh_render_data = &mesh_upload_data_array[mesh_idx];
 
 
         /* Find position accessor */
@@ -422,188 +241,156 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         mesh_system->tangent_byte_size += current_submesh_render_data->tangent_bytes;
         mesh_system->uv_byte_size += current_submesh_render_data->uv_bytes;
 
-
-        /*
-        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices,
-                                      out_static_mesh->mesh[mesh_idx].indices,
-                                      index_stride,
-                                      out_static_mesh->mesh[mesh_idx].indices_count);
-        */
-
         //LOAD TEXTURES/MATERIALS
         // GET BASE PATH
         char* base_path = c_string_path_strip(gltf_path, frame_allocator);
 
-        //COLOR TEXTURE
-        cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
-                                                              base_color_texture.texture;
-        if (color_texture && color_texture->image->uri)
-        {
-            default_material->flags |= MESH_PIPELINE_COLOR;
+        //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
+        Material_Default* default_material = material_system_add_default_pbr(resource_system->material_system,
+                                                                             mesh_draw_data->material_handle);
 
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 strlen(base_path) + strlen(color_texture->image->uri));
-            // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
-            TRACE("COLOR Texture Path:  %s", texture_path);
-            Texture_Handle color_handle;
-            texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
-            default_material->color_index = color_handle.handle;
-        }
-
-        //METAL-ROUGHNESS
-        cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
-                                                                        metallic_roughness_texture.texture;
-        if (metal_roughness_texture)
+        if (data->meshes[mesh_idx].primitives->material)
         {
-            if (metal_roughness_texture->image->uri)
+            //COLOR TEXTURE
+            cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                                  base_color_texture.texture;
+            if (color_texture && color_texture->image->uri)
             {
-                default_material->flags |= MESH_PIPELINE_ROUGHNESS;
-                default_material->flags |= MESH_PIPELINE_METALLIC;
-                char* texture_path = allocator_alloc(frame_allocator,
-                                                     strlen(base_path) + strlen(metal_roughness_texture->image->uri));
-                // takes a buffer, message format, then the remaining strings
-                sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
-                TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+                default_material->flags |= MESH_PIPELINE_COLOR;
 
-                Texture_Handle metallic_handle;
+                char* texture_path = allocator_alloc(frame_allocator,
+                                                     strlen(base_path) + strlen(color_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
+                TRACE("COLOR Texture Path:  %s", texture_path);
+                Texture_Handle color_handle;
+                texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
+                default_material->color_index = color_handle.handle;
+                memcpy(default_material->color.elements,
+                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+                       sizeof(vec4));
+            }
+            else
+            {
+                // default_material->flags |= MESH_PIPELINE_COLOR;
+                TRACE("No Color Texture using fall back color");
+                default_material->color_index = resource_system->texture_system->default_texture_handle.handle;
+                memcpy(default_material->color.elements,
+                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+                       sizeof(vec4));
+            }
+
+            //METAL-ROUGHNESS
+            cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].
+                                                     primitives->material->pbr_metallic_roughness.
+                                                     metallic_roughness_texture.texture;
+            if (metal_roughness_texture)
+            {
+                if (metal_roughness_texture->image->uri)
+                {
+                    default_material->flags |= MESH_PIPELINE_ROUGHNESS;
+                    default_material->flags |= MESH_PIPELINE_METALLIC;
+                    char* texture_path = allocator_alloc(frame_allocator,
+                                                         strlen(base_path) +
+                                                         strlen(metal_roughness_texture->image->uri));
+                    // takes a buffer, message format, then the remaining strings
+                    sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+                    TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+
+                    Texture_Handle metallic_handle;
+
+                    texture_system_load_texture(resource_system->texture_system, texture_path,
+                                                &metallic_handle);
+
+                    default_material->metallic_index = metallic_handle.handle;
+                    default_material->roughness_index = metallic_handle.handle;
+                }
+                if (metal_roughness_texture->image->buffer_view)
+                {
+                    //TODO: load texture data from the shader system
+                    INFO("WHOA A BUFFER VIEW ");
+                    const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
+                        metal_roughness_texture->image->buffer_view);
+                    INFO("WHOA A BUFFER VIEW ");
+                }
+            }
+
+            // AO
+            //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
+            cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
+            if (AO_texture && AO_texture->image->uri)
+            {
+                default_material->flags |= MESH_PIPELINE_AO;
+                char* texture_path = allocator_alloc(frame_allocator,
+                                                     strlen(base_path) + strlen(AO_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
+                TRACE("AO Texture Path:  %s", texture_path);
+
+                Texture_Handle ao_handle;
 
                 texture_system_load_texture(resource_system->texture_system, texture_path,
-                                            &metallic_handle);
-
-                default_material->metallic_index = metallic_handle.handle;
-                default_material->roughness_index = metallic_handle.handle;
+                                            &ao_handle);
+                default_material->ambient_occlusion_index = ao_handle.
+                    handle;
             }
-            if (metal_roughness_texture->image->buffer_view)
+
+
+            //NORMAL TEXTURE
+            // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
+            cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
+            if (normal_texture && normal_texture->image->uri)
             {
-                //TODO: load texture data from the shader system
-                INFO("WHOA A BUFFER VIEW ");
-                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
-                    metal_roughness_texture->image->buffer_view);
-                INFO("WHOA A BUFFER VIEW ");
+                default_material->flags |= MESH_PIPELINE_NORMAL;
+                char* texture_path = allocator_alloc(frame_allocator,
+                                                     strlen(base_path) + strlen(normal_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
+                TRACE("NORMAL Texture Path:  %s", texture_path);
+                Texture_Handle normal_handle;
+
+                texture_system_load_texture(resource_system->texture_system, texture_path,
+                                            &normal_handle);
+                default_material->normal_index = normal_handle.
+                    handle;
+            }
+
+            //EMISSIVE TEXTURE
+            cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
+            if (emissive_texture && emissive_texture->image->uri)
+            {
+                default_material->flags |= MESH_PIPELINE_EMISSIVE;
+                char* texture_path = allocator_alloc(frame_allocator,
+                                                     strlen(base_path) + strlen(emissive_texture->image->uri));
+                // takes a buffer, message format, then the remaining strings
+                sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
+                TRACE("EMISSIVE Texture Path:  %s", texture_path);
+
+                Texture_Handle emissive_handle;
+                texture_system_load_texture(resource_system->texture_system, texture_path,
+                                            &emissive_handle);
+                default_material->emissive_index = emissive_handle.
+                    handle;
             }
         }
-
-        // AO
-        //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
-        cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
-        if (AO_texture && AO_texture->image->uri)
-        {
-            default_material->flags |= MESH_PIPELINE_AO;
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 strlen(base_path) + strlen(AO_texture->image->uri));
-            // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
-            TRACE("AO Texture Path:  %s", texture_path);
-
-            Texture_Handle ao_handle;
-
-            texture_system_load_texture(resource_system->texture_system, texture_path,
-                                        &ao_handle);
-            default_material->ambient_occlusion_index = ao_handle.
-                handle;
-        }
-
-
-        //NORMAL TEXTURE
-        // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
-        cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
-        if (normal_texture && normal_texture->image->uri)
-        {
-            default_material->flags |= MESH_PIPELINE_NORMAL;
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 strlen(base_path) + strlen(normal_texture->image->uri));
-            // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
-            TRACE("NORMAL Texture Path:  %s", texture_path);
-            Texture_Handle normal_handle;
-
-            texture_system_load_texture(resource_system->texture_system, texture_path,
-                                        &normal_handle);
-            default_material->normal_index = normal_handle.
-                handle;
-        }
-
-        //EMISSIVE TEXTURE
-        cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
-        if (emissive_texture && emissive_texture->image->uri)
-        {
-            default_material->flags |= MESH_PIPELINE_EMISSIVE;
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 strlen(base_path) + strlen(emissive_texture->image->uri));
-            // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
-            TRACE("EMISSIVE Texture Path:  %s", texture_path);
-
-            Texture_Handle emissive_handle;
-            texture_system_load_texture(resource_system->texture_system, texture_path,
-                                        &emissive_handle);
-            default_material->emissive_index = emissive_handle.
-                handle;
-        }
-
 
         //add to mesh upload queue
         ring_enqueue(mesh_system->mesh_ring_queue, current_submesh_render_data);
     }
-
-    //load materials
-    // if (data->meshes[0].primitives->material) {
-    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
-    //     int hi = 0;
-    // }
-    // cgltf_texture_index();
-
-
-    //TODO: remove
-    // mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
-    // mesh_system->static_mesh_array_size++;
-
-
-    cgltf_free(data);
 }
 
-
-void mesh_load_anim_gltf(Resource_System* resource_system, const char* gltf_path)
+void _gltf_load_anim_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
+                          u32* skinned_mesh_indexs,
+                          Skinned_Mesh_Meta_Data* skinned_mesh_meta_data,
+                          Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array)
 {
-    Mesh_System* mesh_system = resource_system->mesh_system;
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-
-    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
-    {
-        FATAL("DID NOT PASS IN A GLTF FILE");
-        return;
-    }
-
-
-    cgltf_options options = {0};
-    cgltf_data* data = NULL;
-    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
-
-    if (result != cgltf_result_success)
-    {
-        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
-        return;
-    }
-    result = cgltf_load_buffers(&options, data, gltf_path);
-    MASSERT(result == cgltf_result_success);
-
-    Skinned_Mesh_Meta_Data* skinned_mesh_meta_data = &mesh_system->skinned_mesh_meta_data[mesh_system->
-        skinned_mesh_meta_data_count++];
-    skinned_mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
-    skinned_mesh_meta_data->skinned_submesh_indexs = allocator_heap_alloc(
-        allocator, sizeof(Skinned_Mesh_Upload_Data) * data->meshes_count);
-    skinned_mesh_meta_data->skinned_mesh_count = data->meshes_count;
-
-
-    Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
-        allocator, sizeof(Skinned_Mesh_Upload_Data) * data->meshes_count);
-
+    Mesh_System* mesh_system = resource_system->mesh_system;
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
-        skinned_mesh_meta_data->skinned_submesh_indexs[mesh_idx] = mesh_system->mesh_data_count;
+        skinned_mesh_indexs[mesh_idx] = mesh_system->mesh_data_count;
         Skinned_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->mesh_data_count++];
 
 
@@ -842,13 +629,249 @@ void mesh_load_anim_gltf(Resource_System* resource_system, const char* gltf_path
     }
 
     hash_table_destroy(joint_name_to_index);
+}
+
+void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena)
+{
+    UNIMPLEMENTED();
+    /*if (!c_string_path_is_extension(fbx_path, ".fbx"))
+    {
+        FATAL("DID NOT PASS IN A FBX FILE");
+        return;
+    }
+
+    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
+    // https://ufbx.github.io/ - online docs
+
+    //NOTE: uses malloc under the hood which we can override
+
+    ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
+    ufbx_error error; // Optional, pass NULL if you don't care about errors
+    ufbx_scene* scene = ufbx_load_file(fbx_path, &opts, &error);
+    if (!scene)
+    {
+        fprintf(stderr, "Failed to load: %s\n", error.description.data);
+        MASSERT(scene);
+    }
+
+
+    static_mesh* out_static_mesh = static_mesh_init(arena, scene->meshes.count);
+
+
+    // Use and inspect `scene`, it's just plain data!
+    // Let's just list all objects within the scene for example:
+    for (size_t i = 0; i < scene->nodes.count; i++)
+    {
+        ufbx_node* node = scene->nodes.data[i];
+        if (node->is_root) continue;
+
+        printf("Object: %s\n", node->name.data);
+        if (node->mesh)
+        {
+            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
+        }
+    }
+
+
+    for (size_t mesh_idx = 0; mesh_idx < scene->meshes.count; mesh_idx++)
+    {
+        ufbx_mesh* mesh = scene->meshes.data[mesh_idx];
+        for (size_t i = 0; i < mesh->faces.count; i++)
+        {
+            ufbx_face face = mesh->faces.data[i];
+
+            // Loop through the corners of the polygon.
+            for (uint32_t corner = 0; corner < face.num_indices; corner++)
+            {
+                // Faces are defined by consecutive indices, one for each corner.
+                uint32_t index = face.index_begin + corner;
+
+                // Retrieve the position, normal and uv for the vertex.
+                ufbx_vec3 position = ufbx_get_vertex_vec3(&mesh->vertex_position, index);
+                ufbx_vec3 normal = ufbx_get_vertex_vec3(&mesh->vertex_normal, index);
+                ufbx_vec2 uv = ufbx_get_vertex_vec2(&mesh->vertex_uv, index);
+            }
+        }
+    }
+
+
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(fbx_path, frame_arena);
+
+
+    ufbx_free_scene(scene);*/
+}
+
+
+void mesh_load_obj(const char* obj_path, Renderer* renderer)
+{
+    UNIMPLEMENTED();
+    /*
+    //NOTE: material data is stored in a seperate .mtl file
+    //NOTE: this file format does not support indicis and technically also supports quads, just why, that's awful, so yeah abandoning it
+
+    // https://en.wikipedia.org/wiki/Wavefront_.obj_file
+    // # comments
+    // v - vertex
+    // vt - texture coordinate
+    // vn - Vertex Normal
+    // vp - parameter space vertices
+    // f - indicis/ polygonal face element
+    // l - line elements
+    // o - object name
+    // s - smooth shading
+
+    //TODO:
+    // FILE* mesh_mtl = fopen("../z_assets/models/falcon.mtl", "rb");
+
+
+    submesh* out_mesh = submesh_init(&renderer->arena);
+
+    size_t file_size;
+    FILE* mesh_obj_file = fopen("../z_assets/models/car_obj/falcon.obj", "rb");
+    if (!mesh_obj_file)
+    {
+        FATAL("Failed to open obj file");
+        return;
+    }
+
+    // go to the end of the file and get the size
+    fseek(mesh_obj_file, 0, SEEK_END);
+    file_size = ftell(mesh_obj_file);
+    rewind(mesh_obj_file); // go back to the start of the file
+
+    char buffer[512];
+
+    //this function is a godsend
+    //sscanf: This function reads formatted input from a specified character string (buffer). It allows you to parse data that is already present in a string variable.
+
+    while (fgets(buffer, sizeof(buffer), mesh_obj_file))
+    {
+        if (buffer[0] == '#') { continue; }
+        if (strncmp(buffer, "v ", 2) == 0)
+        {
+            vec3 v;
+            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
+            DEBUG("v %f %f %f", v.x, v.y, v.z);
+            darray_push(out_mesh->pos, v);
+        }
+        if (strncmp(buffer, "vt ", 3) == 0)
+        {
+            vec2 v;
+            sscanf(buffer, "v %f %f", &v.x, &v.y);
+            DEBUG("v %f %f %f", v.x, v.y);
+            darray_push(out_mesh->uv, v);
+        }
+        if (strncmp(buffer, "vn ", 3) == 0)
+        {
+            vec3 v;
+            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
+            DEBUG("v %f %f %f", v.x, v.y, v.z);
+            darray_push(out_mesh->normal, v);
+        }
+    }
+
+    fclose(mesh_obj_file);
+    */
+}
+
+
+bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
+{
+    out_mesh_packet->draw_data = mesh_system->mesh_data;
+    out_mesh_packet->draw_data_size = mesh_system->mesh_data_count;
+
+
+    return true;
+}
+
+
+void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
+{
+    Mesh_System* mesh_system = resource_system->mesh_system;
+    Heap_Allocator* allocator = resource_system->heap_allocator;
+    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
+
+    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
+    {
+        FATAL("DID NOT PASS IN A GLTF FILE");
+        return;
+    }
+
+
+    cgltf_options options = {0};
+    cgltf_data* data = NULL;
+    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
+
+    if (result != cgltf_result_success)
+    {
+        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
+        return;
+    }
+    result = cgltf_load_buffers(&options, data, gltf_path);
+    MASSERT(result == cgltf_result_success)
+
+
+    if (data->skins_count > 0)
+    {
+        Skinned_Mesh_Meta_Data* skinned_mesh_meta_data = &mesh_system->skinned_mesh_meta_data[mesh_system->
+            skinned_mesh_meta_data_count++];
+        skinned_mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
+
+        skinned_mesh_meta_data->mesh_index = allocator_heap_alloc(
+            allocator, sizeof(u32) * data->meshes_count);
+        skinned_mesh_meta_data->mesh_count = data->meshes_count;
+
+        skinned_mesh_meta_data->skinned_mesh_indexs = allocator_heap_alloc(
+            allocator, sizeof(u32) * data->meshes_count);
+        skinned_mesh_meta_data->skinned_mesh_count = data->meshes_count;
+
+
+        Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
+                                                                   sizeof(Mesh_Upload_Data) * data->meshes_count);
+
+        Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
+            allocator, sizeof(Skinned_Mesh_Upload_Data) * data->meshes_count);
+
+        _gltf_load_mesh_data(resource_system, gltf_path, data, skinned_mesh_meta_data->mesh_index,
+                             mesh_upload_data_array);
+        _gltf_load_anim_data(resource_system, gltf_path, data, skinned_mesh_meta_data->mesh_index,
+                             skinned_mesh_meta_data, skinned_mesh_upload_data_array);
+
+        //create the instance
+        Skinned_Mesh_Instance* new_skinned_mesh_instance = &mesh_system->skinned_mesh_instance[mesh_system->
+            skinned_mesh_instance_count++];
+        skinned_mesh_instance_fill_out(mesh_system, new_skinned_mesh_instance, skinned_mesh_meta_data->anim_handle,
+                                       allocator);
+    }
+    else
+    {
+        Mesh_Meta_Data* mesh_meta_data = allocator_heap_alloc(allocator, sizeof(Mesh_Meta_Data));
+        mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
+        mesh_meta_data->mesh_index = allocator_heap_alloc(allocator, sizeof(u32) * data->meshes_count);
+        mesh_meta_data->mesh_count = data->meshes_count;
+
+
+        Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
+                                                                   sizeof(Mesh_Upload_Data) * data->meshes_count);
+
+        _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_meta_data->mesh_index, mesh_upload_data_array);
+    }
+
+
+    //load materials
+    // if (data->meshes[0].primitives->material) {
+    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
+    //     int hi = 0;
+    // }
+    // cgltf_texture_index();
+
+    //TODO: remove
+    // mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
+    // mesh_system->static_mesh_array_size++;
+
 
     cgltf_free(data);
-
-
-    //TODO: TEMP
-    mesh_system->test_skinned_mesh_instance = skinned_mesh_instance_init(
-        mesh_system, skinned_mesh_meta_data->anim_handle, allocator);
 }
 
 
@@ -972,11 +995,135 @@ void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Fr
     }
 }
 
-void animation_update(Mesh_System* mesh_system)
+void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
 {
     //update and interpolate the local transformations for the playing animations
     //create the local matrix
     // joint1 =  local parent * local joint
     // joint2 =  joint1 * inverse_bind_matrix
     //send to the gpu for the shader to work
+
+
+    //update and interpolate the local transformations for the playing animations
+    //create the local matrix
+    // joint1 =  local parent * local joint
+    // joint2 =  joint1 * inverse_bind_matrix
+    //send to the gpu for the shader to work
+
+
+    //assume the mesh is loaded
+
+    for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
+    {
+
+        Skinned_Mesh_Instance* cur_skinned_mesh_inst = &mesh_system->skinned_mesh_instance[i];
+
+        Animation_Data* animation_data = &mesh_system->animation_data[cur_skinned_mesh_inst->anim_handle.handle];
+        Animation* anim_data = &animation_data->animations[cur_skinned_mesh_inst->current_animation_index];
+
+
+        cur_skinned_mesh_inst->current_time += delta_time;
+
+        if (cur_skinned_mesh_inst->current_time > anim_data->anim_end)
+        {
+            cur_skinned_mesh_inst->current_time -= anim_data->anim_end;
+        }
+
+        for (u32 i = 0; i < anim_data->channel_count; i++)
+        {
+            const Animation_Channel* channel = &anim_data->channels[i];
+            const Animation_Sampler* sampler = &anim_data->samplers[channel->sampler_idx];
+
+            u32 j_idx = channel->joint_index;
+
+            for (size_t timestamp_idx = 0; timestamp_idx < sampler->timestamps_count - 1; timestamp_idx++)
+            {
+                if (sampler->interpolation_type != Animation_Interpolation_Type_Linear)
+                {
+                    DEBUG("This sample only supports linear interpolations");
+                    continue;
+                }
+
+                // Get the input keyframe values for the current time stamp
+                if ((cur_skinned_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (cur_skinned_mesh_inst->
+                    current_time <=
+                    sampler->timestamps[timestamp_idx + 1]))
+                {
+                    float interp_val = (cur_skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler
+                        ->
+                        timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
+                    switch (channel->animation_path_type)
+                    {
+                    case Animation_Path_Type_Invalid:
+                        MASSERT(false);
+                        break;
+                    case Animation_Path_Type_Translation:
+                        cur_skinned_mesh_inst->local_translation[j_idx] = vec3_lerp(
+                            sampler->interperlation_data.trs_vec3[timestamp_idx],
+                            sampler->interperlation_data.trs_vec3[timestamp_idx +
+                                1], interp_val);
+                        break;
+                    case Animation_Path_Type_Rotation:
+                        quat q1;
+                        q1.x = sampler->interperlation_data.trs_vec4[timestamp_idx].x;
+                        q1.y = sampler->interperlation_data.trs_vec4[timestamp_idx].y;
+                        q1.z = sampler->interperlation_data.trs_vec4[timestamp_idx].z;
+                        q1.w = sampler->interperlation_data.trs_vec4[timestamp_idx].w;
+
+                        quat q2;
+                        q2.x = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].x;
+                        q2.y = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].y;
+                        q2.z = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].z;
+                        q2.w = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].w;
+
+
+                        cur_skinned_mesh_inst->local_rotation[j_idx] = quat_normalize(quat_slerp(q1, q2, interp_val));;
+                        break;
+                    case Animation_Path_Type_Scale:
+                        cur_skinned_mesh_inst->local_scale[j_idx] = vec3_lerp(
+                            sampler->interperlation_data.trs_vec3[timestamp_idx],
+                            sampler->interperlation_data.trs_vec3[timestamp_idx + 1],
+                            interp_val);
+                        break;
+                    case Animation_Path_Type_Weights:
+                        M_ERROR("Animation_Path_Type_Weights: unhandled type");
+                        break;
+                    case Animation_Path_Type_Max:
+                        MASSERT(false);
+                        break;
+                    }
+                }
+            }
+        }
+
+        mat4* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * cur_skinned_mesh_inst->joint_count);
+        mat4* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * cur_skinned_mesh_inst->joint_count);
+
+        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        {
+            // Joint(N, t) = Translation(N, t) * Rotation(N, t) * Scale(N, t)
+
+            const mat4 t = mat4_translation(cur_skinned_mesh_inst->local_translation[i]);
+            const mat4 r = quat_to_mat4(cur_skinned_mesh_inst->local_rotation[i]);
+            const mat4 s = mat4_scale(cur_skinned_mesh_inst->local_scale[i]);
+
+            mat4 tr = mat4_mul(t, r);
+            local_matrix[i] = mat4_mul(tr, s);
+        }
+
+        model_matrix[0] = local_matrix[0];
+        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        {
+            //Joint(N, t) = Parent(N, t) * Joint(N, t)
+            u32 parent_index = animation_data->joints[i].parent_idx;
+            model_matrix[i] = mat4_mul(local_matrix[parent_index], local_matrix[i]);
+        }
+
+        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        {
+            //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
+            cur_skinned_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
+                                                        animation_data->inverse_bind_matrix[i]);
+        }
+    }
 }

@@ -374,7 +374,7 @@ MINLINE vec4 vec4_zero(void)
 
 MINLINE vec4 vec4_one(void)
 {
-    return (vec4){1.0f, 1.0f, 1.0f, 1.0f,};
+    return (vec4){1.0f, 1.0f, 1.0f, 1.0f};
 }
 
 MINLINE vec4 vec4_add(const vec4 a, const vec4 b)

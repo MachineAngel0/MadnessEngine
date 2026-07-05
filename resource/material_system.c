@@ -58,7 +58,7 @@ void material_system_disable_flag(Material_System* material_system, Material_Han
 
 }
 
-Material_Default* material_system_add_pbr(Material_System* material_system, Material_Handle material_handle)
+Material_Default* material_system_add_default_pbr(Material_System* material_system, Material_Handle material_handle)
 {
     Material_Instance* inst = &material_system->material_instance[material_handle.handle];
 

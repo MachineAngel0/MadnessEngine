@@ -14,6 +14,8 @@ layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_tex;
 layout(location = 3) in flat uint in_color_idx;
 layout(location = 4) in vec3 in_world_position;
+layout(location = 5) in vec4 in_color;
+layout(location = 6) in flat uint in_pbr_flags;
 
 
 //look into subpasses/renderpasses for more/different out values
@@ -40,13 +42,18 @@ void main() {
     //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);
 
     //final color
-    vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
-    vec4 final_result = vec4(result,1.0) * texture_result;
-    outColor = final_result;
+    if ((in_pbr_flags & MESH_PIPELINE_COLOR) != 0u){
+        vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
+        vec4 colored_texture_result = texture_result * in_color;
+        vec4 final_result = vec4(result, 1.0) * colored_texture_result;
+        outColor = final_result;
+    }else{
+        outColor = in_color;
+    }
 
     //LIGHTING INFO
     if (ubo[nonuniformEXT(0)].render_mode == 2){
-        final_result = vec4(result, 1.0) * (in_normal,1.0);
+        vec4 final_result = vec4(result, 1.0) * (in_normal,1.0);
         outColor = final_result;
     }
 

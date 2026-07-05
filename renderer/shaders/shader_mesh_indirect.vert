@@ -20,6 +20,8 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
 layout(location = 4) out vec3 out_world_position;
+layout(location = 5) out vec4 out_color;
+layout(location = 6) out flat uint out_pbr_flags;
 
 void main() {
 
@@ -62,7 +64,11 @@ void main() {
     uint pbr_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_pbr_idx;
     Pbr pbr_material = PBR[nonuniformEXT(pbr_buffer_idx)].pbr[material_instance.pbr_idx];
 
+    out_pbr_flags = pbr_material.flags;
+
     out_color_idx = pbr_material.color_index;
+    out_color = pbr_material.color;
+    out_color = pbr_material.color;
 
 
 

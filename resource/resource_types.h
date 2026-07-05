@@ -361,16 +361,16 @@ typedef struct Mesh_Meta_Data
 typedef struct Skinned_Mesh_Meta_Data
 {
     const char* file_path;
-    u32* submesh_index;
-    u32 submesh_count;
+    u32* mesh_index;
+    u32 mesh_count;
 
-    u32* skinned_submesh_indexs;
+    u32* skinned_mesh_indexs;
     u32 skinned_mesh_count;
 
     Animation_Handle anim_handle;
 }Skinned_Mesh_Meta_Data;
 
-typedef struct skinned_mesh_instance
+typedef struct Skinned_Mesh_Instance
 {
     //reference back to the animation data
     //TODO: replace with a handle
@@ -466,7 +466,6 @@ typedef struct Mesh_System
     Skinned_Mesh_Meta_Data skinned_mesh_meta_data[MAX_MESH_COUNT];
     u32 skinned_mesh_meta_data_count;
 
-
     Mesh_Data mesh_data[MAX_MESH_COUNT];
     u32 mesh_data_count;
 
@@ -476,6 +475,8 @@ typedef struct Mesh_System
     Animation_Data animation_data[MAX_MESH_COUNT];
     u32 animation_data_count;
 
+    Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
+    u32 skinned_mesh_instance_count;
 
     //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
     // Mesh_Indirect_Draw_Data not_in_use_draw_data[MAX_MESH_COUNT];

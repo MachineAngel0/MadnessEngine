@@ -2,9 +2,8 @@
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_buffer_reference : require
 
+#include "macros.glsl"
 
-
-#define BITFLAG(x) (1 << (x))
 #define SPRITE_FLAG_NONE BITFLAG(1)
 #define SPRITE_FLAG_TEXTURE BITFLAG(2)
 #define SPRITE_FLAG_COLOR BITFLAG(3)

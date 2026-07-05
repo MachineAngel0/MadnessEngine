@@ -31,7 +31,8 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
     insanity_ui->ui_nodes = array_create(Insanity_UI, INSANITY_MAX_UI_NODE_COUNT, insanity_ui->allocator);
-
+    Insanity_UI_Node node = {0};
+    array_fill(insanity_ui->ui_nodes, &node);
     //stacks
     insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
     insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
@@ -106,6 +107,7 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
     insanity_ui->screen_size.x = screen_size_x;
     insanity_ui->screen_size.y = screen_size_y;
+
 
 
     array_zero(insanity_ui->ui_nodes);
