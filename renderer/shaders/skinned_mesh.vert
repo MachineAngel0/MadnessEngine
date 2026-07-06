@@ -42,21 +42,20 @@ void main() {
 
 
     //get object draw data
-    uint draw_data_buffer_idx = ubo[nonuniformEXT(ubo_index)].draw_data_idx;
-    mesh_draw_data cur_mesh_data = MESH_DRAW_DATA[nonuniformEXT(draw_data_buffer_idx)].mesh_data[nonuniformEXT(instance_idx)];
+    skinned_mesh_draw_data cur_mesh_data = pc_skinned.skinned_draw_data_buffer[instance_idx];
 
     //get transform data
-//    uint transform_buffer_idx = ubo[nonuniformEXT(ubo_index)].transform_idx;
-    uint transform_idx =  cur_mesh_data.transform_idx;
-    mat4 model = pc_skinned_mesh.transform_buffer.transform_data[nonuniformEXT(transform_idx)];
+    mat4 model = pc_skinned_mesh.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
 
     gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(vertex, 1.0);
 
     //Material
+    PBR mat_data = pc_skinned_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
+
     uint material_instance_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_instance_idx;
     Material_Instance material_instance = MATERIAL_INSTANCE[nonuniformEXT(material_instance_buffer_idx)].material_instance[nonuniformEXT(cur_mesh_data.material_instance_idx)];
 
-    //if(material_instance.flags & PBR){};
+
     uint pbr_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_pbr_idx;
     Pbr pbr_material = PBR[nonuniformEXT(pbr_buffer_idx)].pbr[material_instance.pbr_idx];
 

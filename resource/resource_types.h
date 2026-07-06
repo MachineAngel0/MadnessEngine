@@ -219,10 +219,10 @@ typedef struct Mesh_Draw_Data
 typedef struct Skinned_Draw_Data
 {
     //offset into the buffer
-    u32 vertex_idx;
-    u32 uv_idx;
-    u32 normal_idx;
-    u32 tangent_idx;
+    // u32 vertex_idx;
+    // u32 uv_idx;
+    // u32 normal_idx;
+    // u32 tangent_idx;
     u32 joint_idx;
     u32 weight_idx;
     u32 material_instance_handle;
@@ -316,35 +316,21 @@ typedef struct Animation_Data
 
 typedef struct Skinned_Mesh_Data
 {
-    /*typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
 
-    u32 vertex_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    u32 vertex_count; //in vec3
-
-
-    //NOTE: shaders need the type size offset into the array, while the free list probably needs the bytes, we will see
-    u32 uv_offset;
-    u32 normal_offset;
-    u32 tangent_count;
+    // these are inside mesh data
+    // Transform_Handle transform_handle;
+    // Material_Handle material_handle;
+    Mesh_Data mesh_data;
 
     u64 joint_bytes;
-    u64 joint_offset;
+    u64 joint_offset_vec4;
+    u64 joint_offset_bytes;
 
     u64 weight_bytes;
-    u64 weight_offset;
+    u64 weight_offset_vec4;
+    u64 weight_offset_bytes;
 
 
-    Transform_Handle transform_handle;
-    Material_Handle material_handle;
 
 } Skinned_Mesh_Data;
 
@@ -463,11 +449,13 @@ typedef struct Mesh_System
 
     Mesh_Meta_Data mesh_meta_data[MAX_MESH_COUNT];
     u32 mesh_meta_data_count;
-    Skinned_Mesh_Meta_Data skinned_mesh_meta_data[MAX_MESH_COUNT];
-    u32 skinned_mesh_meta_data_count;
 
     Mesh_Data mesh_data[MAX_MESH_COUNT];
     u32 mesh_data_count;
+
+
+    Skinned_Mesh_Meta_Data skinned_mesh_meta_data[MAX_MESH_COUNT];
+    u32 skinned_mesh_meta_data_count;
 
     Skinned_Mesh_Data skinned_mesh_data[MAX_MESH_COUNT];
     u32 skinned_mesh_data_count;
@@ -530,8 +518,7 @@ typedef struct Render_Packet_Mesh
     Mesh_Data* draw_data;
     u32 draw_data_size;
 
-
-    Mesh_Data* skinned_draw_data;
+    Skinned_Mesh_Data* skinned_draw_data;
     u32 skinned_draw_data_size;
 } Render_Packet_Mesh;
 

@@ -12,8 +12,6 @@ layout(push_constant, scalar) uniform PC_SKINNED_MESH{
     uint ubo_buffer_idx;
     uint _padding;
 
-/*    uint64_t vertex_buffer;
-    uint64_t index_buffer; */
 
     Vertex_Buffer vertex_buffer;
     Normal_Buffer normal_buffer;
@@ -24,6 +22,8 @@ layout(push_constant, scalar) uniform PC_SKINNED_MESH{
 
     Transform_Buffer transform_buffer;
     PRB_Buffer material_buffer; // use a default for now
+    Skinned_Mesh_Draw_Data_Buffer skinned_draw_data_buffer;
+
 }pc_skinned_mesh;
 
 

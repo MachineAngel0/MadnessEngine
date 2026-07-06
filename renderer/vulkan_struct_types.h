@@ -591,6 +591,8 @@ typedef struct Mesh_Renderer
     Buffer_Handle draw_data_staging_buffer_handle;
 
 
+    Buffer_Handle indirect_skinned_buffer_handle;
+    Buffer_Handle skinned_draw_data_buffer_handle;
 
     u32 indirect_draw_count;
     u32 skinned_indirect_draw_count;

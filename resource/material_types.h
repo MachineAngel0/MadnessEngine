@@ -6,6 +6,13 @@
 #include "math_types.h"
 
 
+
+typedef struct Draw_Data
+{
+    u32 transform_index;
+    u32 material_index;
+} Draw_Data;
+
 typedef struct PC_Mesh
 {
     //per instance data change
@@ -29,6 +36,7 @@ typedef struct PC_Skinned_Mesh
 
     VkDeviceAddress transform_buffer;
     VkDeviceAddress material_buffer;
+    VkDeviceAddress skinned_draw_data_buffer;
 
 
 
@@ -172,6 +180,21 @@ typedef struct Material_System
 } Material_System;
 
 
+
+typedef struct Material_System2
+{
+
+
+    //Hardcode pipelines
+    Material_Default prb[MAX_MATERIAL]; // pretty much manditory for all meshes
+    u32 pbr_count;
+
+    //generated materials, that get auto managaed
+
+
+
+
+} Material_System2;
 
 
 #endif //MATERIAL_TYPES_H

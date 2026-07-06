@@ -100,356 +100,343 @@ Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, cons
 
 
 void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
-                          u32* mesh_index_array,
-                          Mesh_Upload_Data* mesh_upload_data_array)
+                          u32 gltf_data_mesh_idx, Mesh_Data* mesh_draw_data,
+                          Mesh_Upload_Data* upload_data)
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
     Mesh_System* mesh_system = resource_system->mesh_system;
 
-    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+
+    /* Find position accessor */
+    const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
+                                                             cgltf_attribute_type_position,
+                                                             0);
+    MASSERT(pos_accessor);
+    if (pos_accessor)
     {
-        mesh_index_array[mesh_idx] = mesh_system->mesh_data_count;
-        Mesh_Data* mesh_draw_data = &mesh_system->mesh_data[mesh_system->mesh_data_count++];
+        //get size information
+
+        cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
+        cgltf_size float_bytes = num_floats * sizeof(float);
+        upload_data->vertex_bytes = float_bytes;
 
 
-        mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-        mesh_draw_data->material_handle = material_system_create_material(resource_system->material_system);
+        //alloc and copy data
+        float* pos_data = allocator_alloc(frame_allocator, float_bytes);
+        upload_data->pos = allocator_heap_alloc(allocator, float_bytes);
+        cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
+        memcpy(upload_data->pos, pos_data, float_bytes);
+    }
+
+    // Find normal accessor
+    const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
+                                                              cgltf_attribute_type_normal,
+                                                              0);
+    if (norm_accessor)
+    {
+        //get size information
+        cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
+        cgltf_size norm_bytes = norm_floats * sizeof(float);
+        upload_data->normal_bytes = norm_bytes;
+
+        //alloc and copy data
+        float* normal_data = allocator_heap_alloc(allocator, norm_bytes);
+        upload_data->normal = allocator_heap_alloc(allocator, norm_bytes);
+        cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
+        memcpy(upload_data->normal, normal_data, norm_bytes);
+    }
+
+    //  Find tangent accessor
+    const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
+                                                                 cgltf_attribute_type_tangent, 0);
+
+    if (tangent_accessor)
+    {
+        //get size information
+        cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
+        cgltf_size tangent_bytes = tangent_floats * sizeof(float);
+        upload_data->tangent_bytes = tangent_bytes;
 
 
-        Mesh_Upload_Data* current_submesh_render_data = &mesh_upload_data_array[mesh_idx];
+        //alloc and copy data
+        float* tangent_data = allocator_heap_alloc(allocator, tangent_bytes);
+        upload_data->tangent = allocator_heap_alloc(allocator, tangent_bytes);
+        cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
+        memcpy(upload_data->tangent, tangent_data, tangent_bytes);
+    }
+
+    //  Find texcoord accessor
+    const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
+                                                                  cgltf_attribute_type_texcoord, 0);
+    if (texcoord_accessor)
+    {
+        //get size information
+        cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+        cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
+        upload_data->uv_bytes = uv_byte_size;
 
 
-        /* Find position accessor */
-        const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                 cgltf_attribute_type_position,
-                                                                 0);
-        MASSERT(pos_accessor);
-        if (pos_accessor)
+        //alloc and copy data
+        float* uv_data = allocator_alloc(frame_allocator, uv_byte_size);
+        cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
+
+        upload_data->uv = allocator_heap_alloc(allocator, uv_byte_size);
+        memcpy(upload_data->uv, uv_data, uv_byte_size);
+    }
+
+    // Load indices
+    // SEE componentType in the specs for more detail 3.6.2
+    u8 index_stride = data->meshes[gltf_data_mesh_idx].primitives[0].indices->stride;
+    if (index_stride == 2)
+    {
+        upload_data->index_type = VK_INDEX_TYPE_UINT16;
+    }
+    else if (index_stride == 4)
+    {
+        upload_data->index_type = VK_INDEX_TYPE_UINT32;
+    }
+    else
+    {
+        WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
+    }
+
+    //TODO: there can be multiple primitices/indices, will come back to
+    upload_data->indices_bytes = data->meshes[gltf_data_mesh_idx].primitives->indices->count *
+        index_stride;
+    upload_data->indices = allocator_heap_alloc(allocator,
+                                                upload_data->indices_bytes);
+
+    const uint8_t* index_buffer_data = cgltf_buffer_view_data(
+        data->meshes[gltf_data_mesh_idx].primitives->indices->buffer_view);
+    memcpy(upload_data->indices, index_buffer_data,
+           upload_data->indices_bytes);
+
+    //Mesh Data
+    mesh_draw_data->index_count = data->meshes[gltf_data_mesh_idx].primitives->indices->count;
+    mesh_draw_data->index_offset = mesh_system->index_count_size;
+    mesh_draw_data->vertex_offset = mesh_system->vertex_count_size;
+    mesh_draw_data->uv_offset = mesh_system->uv_byte_size;
+    mesh_draw_data->normal_offset = mesh_system->normals_byte_size;
+    mesh_draw_data->tangent_offset = mesh_system->tangent_byte_size;
+
+    //update offsets
+    mesh_system->vertex_byte_size += upload_data->vertex_bytes;
+    mesh_system->vertex_count_size += upload_data->vertex_bytes / sizeof(vec3);
+    mesh_system->index_byte_size += upload_data->indices_bytes;
+    mesh_system->index_count_size += mesh_draw_data->index_count;
+    mesh_system->normals_byte_size += upload_data->normal_bytes;
+    mesh_system->tangent_byte_size += upload_data->tangent_bytes;
+    mesh_system->uv_byte_size += upload_data->uv_bytes;
+
+    //LOAD TEXTURES/MATERIALS
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(gltf_path, frame_allocator);
+
+    //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
+    Material_Default* default_material = material_system_add_default_pbr(resource_system->material_system,
+                                                                         mesh_draw_data->material_handle);
+
+    if (!data->meshes[gltf_data_mesh_idx].primitives->material)
+    {
+        WARN("NO MATERIAL DATA FOUND FOR GLTF MESH");
+        return;
+    }
+
+    //COLOR TEXTURE
+    cgltf_texture* color_texture = data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                                    base_color_texture.texture;
+    if (color_texture && color_texture->image->uri)
+    {
+        default_material->flags |= MESH_PIPELINE_COLOR;
+
+        char* texture_path = allocator_alloc(frame_allocator,
+                                             strlen(base_path) + strlen(color_texture->image->uri));
+        // takes a buffer, message format, then the remaining strings
+        sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
+        TRACE("COLOR Texture Path:  %s", texture_path);
+        Texture_Handle color_handle;
+        texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
+        default_material->color_index = color_handle.handle;
+        memcpy(default_material->color.elements,
+               data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+               sizeof(vec4));
+    }
+    else
+    {
+        // default_material->flags |= MESH_PIPELINE_COLOR;
+        TRACE("No Color Texture using fall back color");
+        default_material->color_index = resource_system->texture_system->default_texture_handle.handle;
+        memcpy(default_material->color.elements,
+               data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+               sizeof(vec4));
+    }
+
+    //METAL-ROUGHNESS
+    cgltf_texture* metal_roughness_texture = data->meshes[gltf_data_mesh_idx].
+                                             primitives->material->pbr_metallic_roughness.
+                                             metallic_roughness_texture.texture;
+    if (metal_roughness_texture)
+    {
+        if (metal_roughness_texture->image->uri)
         {
-            //get size information
+            default_material->flags |= MESH_PIPELINE_ROUGHNESS;
+            default_material->flags |= MESH_PIPELINE_METALLIC;
+            char* texture_path = allocator_alloc(frame_allocator,
+                                                 strlen(base_path) +
+                                                 strlen(metal_roughness_texture->image->uri));
+            // takes a buffer, message format, then the remaining strings
+            sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+            TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-            cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
-            cgltf_size float_bytes = num_floats * sizeof(float);
-            current_submesh_render_data->vertex_bytes = float_bytes;
+            Texture_Handle metallic_handle;
 
+            texture_system_load_texture(resource_system->texture_system, texture_path,
+                                        &metallic_handle);
 
-            //alloc and copy data
-            float* pos_data = allocator_alloc(frame_allocator, float_bytes);
-            current_submesh_render_data->pos = allocator_heap_alloc(allocator, float_bytes);
-            cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
-            memcpy(current_submesh_render_data->pos, pos_data, float_bytes);
+            default_material->metallic_index = metallic_handle.handle;
+            default_material->roughness_index = metallic_handle.handle;
         }
-
-        // Find normal accessor
-        const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                  cgltf_attribute_type_normal,
-                                                                  0);
-        if (norm_accessor)
+        if (metal_roughness_texture->image->buffer_view)
         {
-            //get size information
-            cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
-            cgltf_size norm_bytes = norm_floats * sizeof(float);
-            current_submesh_render_data->normal_bytes = norm_bytes;
-
-            //alloc and copy data
-            float* normal_data = allocator_heap_alloc(allocator, norm_bytes);
-            current_submesh_render_data->normal = allocator_heap_alloc(allocator, norm_bytes);
-            cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
-            memcpy(current_submesh_render_data->normal, normal_data, norm_bytes);
+            //TODO: load texture data from the shader system
+            INFO("WHOA A BUFFER VIEW ");
+            const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
+                metal_roughness_texture->image->buffer_view);
+            INFO("WHOA A BUFFER VIEW ");
         }
+    }
 
-        //  Find tangent accessor
-        const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                     cgltf_attribute_type_tangent, 0);
+    // AO
+    //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
+    cgltf_texture* AO_texture = data->meshes[gltf_data_mesh_idx].primitives->material->occlusion_texture.texture;
+    if (AO_texture && AO_texture->image->uri)
+    {
+        default_material->flags |= MESH_PIPELINE_AO;
+        char* texture_path = allocator_alloc(frame_allocator,
+                                             strlen(base_path) + strlen(AO_texture->image->uri));
+        // takes a buffer, message format, then the remaining strings
+        sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
+        TRACE("AO Texture Path:  %s", texture_path);
 
-        if (tangent_accessor)
-        {
-            //get size information
-            cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
-            cgltf_size tangent_bytes = tangent_floats * sizeof(float);
-            current_submesh_render_data->tangent_bytes = tangent_bytes;
+        Texture_Handle ao_handle;
 
-
-            //alloc and copy data
-            float* tangent_data = allocator_heap_alloc(allocator, tangent_bytes);
-            current_submesh_render_data->tangent = allocator_heap_alloc(allocator, tangent_bytes);
-            cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-            memcpy(current_submesh_render_data->tangent, tangent_data, tangent_bytes);
-        }
-
-        //  Find texcoord accessor
-        const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                      cgltf_attribute_type_texcoord, 0);
-        if (texcoord_accessor)
-        {
-            //get size information
-            cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-            cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
-            current_submesh_render_data->uv_bytes = uv_byte_size;
+        texture_system_load_texture(resource_system->texture_system, texture_path,
+                                    &ao_handle);
+        default_material->ambient_occlusion_index = ao_handle.
+            handle;
+    }
 
 
-            //alloc and copy data
-            float* uv_data = allocator_alloc(frame_allocator, uv_byte_size);
-            cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
+    //NORMAL TEXTURE
+    // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
+    cgltf_texture* normal_texture = data->meshes[gltf_data_mesh_idx].primitives->material->normal_texture.texture;
+    if (normal_texture && normal_texture->image->uri)
+    {
+        default_material->flags |= MESH_PIPELINE_NORMAL;
+        char* texture_path = allocator_alloc(frame_allocator,
+                                             strlen(base_path) + strlen(normal_texture->image->uri));
+        // takes a buffer, message format, then the remaining strings
+        sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
+        TRACE("NORMAL Texture Path:  %s", texture_path);
+        Texture_Handle normal_handle;
 
-            current_submesh_render_data->uv = allocator_heap_alloc(allocator, uv_byte_size);
-            memcpy(current_submesh_render_data->uv, uv_data, uv_byte_size);
-        }
+        texture_system_load_texture(resource_system->texture_system, texture_path,
+                                    &normal_handle);
+        default_material->normal_index = normal_handle.
+            handle;
+    }
 
-        // Load indices
-        // SEE componentType in the specs for more detail 3.6.2
-        u8 index_stride = data->meshes[mesh_idx].primitives[0].indices->stride;
-        if (index_stride == 2)
-        {
-            current_submesh_render_data->index_type = VK_INDEX_TYPE_UINT16;
-        }
-        else if (index_stride == 4)
-        {
-            current_submesh_render_data->index_type = VK_INDEX_TYPE_UINT32;
-        }
-        else
-        {
-            WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
-        }
+    //EMISSIVE TEXTURE
+    cgltf_texture* emissive_texture = data->meshes[gltf_data_mesh_idx].primitives->material->emissive_texture.
+                                                                       texture;
+    if (emissive_texture && emissive_texture->image->uri)
+    {
+        default_material->flags |= MESH_PIPELINE_EMISSIVE;
+        char* texture_path = allocator_alloc(frame_allocator,
+                                             strlen(base_path) + strlen(emissive_texture->image->uri));
+        // takes a buffer, message format, then the remaining strings
+        sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
+        TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-        //TODO: there can be multiple primitices/indices, will come back to
-        current_submesh_render_data->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
-            index_stride;
-        current_submesh_render_data->indices = allocator_heap_alloc(allocator,
-                                                                    current_submesh_render_data->indices_bytes);
-
-        const uint8_t* index_buffer_data = cgltf_buffer_view_data(
-            data->meshes[mesh_idx].primitives->indices->buffer_view);
-        memcpy(current_submesh_render_data->indices, index_buffer_data,
-               current_submesh_render_data->indices_bytes);
-
-        //Mesh Data
-        mesh_draw_data->index_count = data->meshes[mesh_idx].primitives->indices->count;
-        mesh_draw_data->index_offset = mesh_system->index_count_size;
-        mesh_draw_data->vertex_offset = mesh_system->vertex_count_size;
-        mesh_draw_data->uv_offset = mesh_system->uv_byte_size;
-        mesh_draw_data->normal_offset = mesh_system->normals_byte_size;
-        mesh_draw_data->tangent_offset = mesh_system->tangent_byte_size;
-
-        //update offsets
-        mesh_system->vertex_byte_size += current_submesh_render_data->vertex_bytes;
-        mesh_system->vertex_count_size += current_submesh_render_data->vertex_bytes / sizeof(vec3);
-        mesh_system->index_byte_size += current_submesh_render_data->indices_bytes;
-        mesh_system->index_count_size += mesh_draw_data->index_count;
-        mesh_system->normals_byte_size += current_submesh_render_data->normal_bytes;
-        mesh_system->tangent_byte_size += current_submesh_render_data->tangent_bytes;
-        mesh_system->uv_byte_size += current_submesh_render_data->uv_bytes;
-
-        //LOAD TEXTURES/MATERIALS
-        // GET BASE PATH
-        char* base_path = c_string_path_strip(gltf_path, frame_allocator);
-
-        //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
-        Material_Default* default_material = material_system_add_default_pbr(resource_system->material_system,
-                                                                             mesh_draw_data->material_handle);
-
-        if (data->meshes[mesh_idx].primitives->material)
-        {
-            //COLOR TEXTURE
-            cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
-                                                                  base_color_texture.texture;
-            if (color_texture && color_texture->image->uri)
-            {
-                default_material->flags |= MESH_PIPELINE_COLOR;
-
-                char* texture_path = allocator_alloc(frame_allocator,
-                                                     strlen(base_path) + strlen(color_texture->image->uri));
-                // takes a buffer, message format, then the remaining strings
-                sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
-                TRACE("COLOR Texture Path:  %s", texture_path);
-                Texture_Handle color_handle;
-                texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
-                default_material->color_index = color_handle.handle;
-                memcpy(default_material->color.elements,
-                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                       sizeof(vec4));
-            }
-            else
-            {
-                // default_material->flags |= MESH_PIPELINE_COLOR;
-                TRACE("No Color Texture using fall back color");
-                default_material->color_index = resource_system->texture_system->default_texture_handle.handle;
-                memcpy(default_material->color.elements,
-                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                       sizeof(vec4));
-            }
-
-            //METAL-ROUGHNESS
-            cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].
-                                                     primitives->material->pbr_metallic_roughness.
-                                                     metallic_roughness_texture.texture;
-            if (metal_roughness_texture)
-            {
-                if (metal_roughness_texture->image->uri)
-                {
-                    default_material->flags |= MESH_PIPELINE_ROUGHNESS;
-                    default_material->flags |= MESH_PIPELINE_METALLIC;
-                    char* texture_path = allocator_alloc(frame_allocator,
-                                                         strlen(base_path) +
-                                                         strlen(metal_roughness_texture->image->uri));
-                    // takes a buffer, message format, then the remaining strings
-                    sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
-                    TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
-
-                    Texture_Handle metallic_handle;
-
-                    texture_system_load_texture(resource_system->texture_system, texture_path,
-                                                &metallic_handle);
-
-                    default_material->metallic_index = metallic_handle.handle;
-                    default_material->roughness_index = metallic_handle.handle;
-                }
-                if (metal_roughness_texture->image->buffer_view)
-                {
-                    //TODO: load texture data from the shader system
-                    INFO("WHOA A BUFFER VIEW ");
-                    const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
-                        metal_roughness_texture->image->buffer_view);
-                    INFO("WHOA A BUFFER VIEW ");
-                }
-            }
-
-            // AO
-            //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
-            cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
-            if (AO_texture && AO_texture->image->uri)
-            {
-                default_material->flags |= MESH_PIPELINE_AO;
-                char* texture_path = allocator_alloc(frame_allocator,
-                                                     strlen(base_path) + strlen(AO_texture->image->uri));
-                // takes a buffer, message format, then the remaining strings
-                sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
-                TRACE("AO Texture Path:  %s", texture_path);
-
-                Texture_Handle ao_handle;
-
-                texture_system_load_texture(resource_system->texture_system, texture_path,
-                                            &ao_handle);
-                default_material->ambient_occlusion_index = ao_handle.
-                    handle;
-            }
-
-
-            //NORMAL TEXTURE
-            // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
-            cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
-            if (normal_texture && normal_texture->image->uri)
-            {
-                default_material->flags |= MESH_PIPELINE_NORMAL;
-                char* texture_path = allocator_alloc(frame_allocator,
-                                                     strlen(base_path) + strlen(normal_texture->image->uri));
-                // takes a buffer, message format, then the remaining strings
-                sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
-                TRACE("NORMAL Texture Path:  %s", texture_path);
-                Texture_Handle normal_handle;
-
-                texture_system_load_texture(resource_system->texture_system, texture_path,
-                                            &normal_handle);
-                default_material->normal_index = normal_handle.
-                    handle;
-            }
-
-            //EMISSIVE TEXTURE
-            cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.texture;
-            if (emissive_texture && emissive_texture->image->uri)
-            {
-                default_material->flags |= MESH_PIPELINE_EMISSIVE;
-                char* texture_path = allocator_alloc(frame_allocator,
-                                                     strlen(base_path) + strlen(emissive_texture->image->uri));
-                // takes a buffer, message format, then the remaining strings
-                sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
-                TRACE("EMISSIVE Texture Path:  %s", texture_path);
-
-                Texture_Handle emissive_handle;
-                texture_system_load_texture(resource_system->texture_system, texture_path,
-                                            &emissive_handle);
-                default_material->emissive_index = emissive_handle.
-                    handle;
-            }
-        }
-
-        //add to mesh upload queue
-        ring_enqueue(mesh_system->mesh_ring_queue, current_submesh_render_data);
+        Texture_Handle emissive_handle;
+        texture_system_load_texture(resource_system->texture_system, texture_path,
+                                    &emissive_handle);
+        default_material->emissive_index = emissive_handle.
+            handle;
     }
 }
 
-void _gltf_load_anim_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
-                          u32* skinned_mesh_indexs,
-                          Skinned_Mesh_Meta_Data* skinned_mesh_meta_data,
-                          Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array)
+void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* data,
+                                  u32 mesh_idx,
+                                  Skinned_Mesh_Data* skinned_mesh_data,
+                                  Skinned_Mesh_Upload_Data* skinned_mesh_upload_data)
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
     Mesh_System* mesh_system = resource_system->mesh_system;
 
-    for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+
+    const cgltf_accessor* joint_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                               cgltf_attribute_type_joints,
+                                                               0);
+    if (joint_accessor)
     {
-        skinned_mesh_indexs[mesh_idx] = mesh_system->mesh_data_count;
-        Skinned_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->mesh_data_count++];
+        //get size information
+        cgltf_size num_floats = cgltf_accessor_unpack_floats(joint_accessor, NULL, 0);
+        cgltf_size float_bytes = num_floats * sizeof(float);
 
+        skinned_mesh_data->joint_bytes = float_bytes;
+        skinned_mesh_upload_data->joint_bytes = float_bytes;
 
-        Skinned_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
-
-        const cgltf_accessor* joint_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                   cgltf_attribute_type_joints,
-                                                                   0);
-        if (joint_accessor)
-        {
-            //get size information
-            cgltf_size num_floats = cgltf_accessor_unpack_floats(joint_accessor, NULL, 0);
-            cgltf_size float_bytes = num_floats * sizeof(float);
-
-            mesh_draw_data->joint_bytes = float_bytes;
-            skinned_mesh_upload_data->joint_bytes = float_bytes;
-
-            //alloc and copy data
-            float* joint_data = allocator_alloc(frame_allocator, float_bytes);
-            skinned_mesh_upload_data->joints = allocator_heap_alloc(allocator, float_bytes);
-            cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
-            memcpy(skinned_mesh_upload_data->joints, joint_data, float_bytes);
-        }
-
-
-        const cgltf_accessor* weight_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                    cgltf_attribute_type_weights,
-                                                                    0);
-
-        if (weight_accessor)
-        {
-            //get size information
-
-            cgltf_size num_floats = cgltf_accessor_unpack_floats(weight_accessor, NULL, 0);
-            cgltf_size float_bytes = num_floats * sizeof(float);
-
-            skinned_mesh_upload_data->weight_bytes = float_bytes;
-            mesh_draw_data->weight_bytes = float_bytes;
-
-
-            //alloc and copy data
-            float* weight_data = allocator_alloc(frame_allocator, float_bytes);
-            skinned_mesh_upload_data->weights = allocator_heap_alloc(allocator, float_bytes);
-            cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
-            memcpy(skinned_mesh_upload_data->weights, weight_data, float_bytes);
-        }
-
-        mesh_draw_data->joint_offset = mesh_system->joints_byte_size;
-        mesh_draw_data->weight_offset = mesh_system->weight_byte_size;
-
-        skinned_mesh_upload_data->joint_offset = mesh_system->joints_byte_size;
-        skinned_mesh_upload_data->weight_offset = mesh_system->weight_byte_size;
-
-        mesh_system->weight_byte_size += mesh_draw_data->weight_bytes;
-        mesh_system->joints_byte_size += mesh_draw_data->joint_bytes;
-
-
-        ring_enqueue(mesh_system->skinned_mesh_ring_queue, skinned_mesh_upload_data);
+        //alloc and copy data
+        float* joint_data = allocator_alloc(frame_allocator, float_bytes);
+        skinned_mesh_upload_data->joints = allocator_heap_alloc(allocator, float_bytes);
+        cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
+        memcpy(skinned_mesh_upload_data->joints, joint_data, float_bytes);
     }
+
+    const cgltf_accessor* weight_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
+                                                                cgltf_attribute_type_weights,
+                                                                0);
+    if (weight_accessor)
+    {
+        //get size information
+
+        cgltf_size num_floats = cgltf_accessor_unpack_floats(weight_accessor, NULL, 0);
+        cgltf_size float_bytes = num_floats * sizeof(float);
+
+        skinned_mesh_upload_data->weight_bytes = float_bytes;
+        skinned_mesh_data->weight_bytes = float_bytes;
+
+
+        //alloc and copy data
+        float* weight_data = allocator_alloc(frame_allocator, float_bytes);
+        skinned_mesh_upload_data->weights = allocator_heap_alloc(allocator, float_bytes);
+        cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
+        memcpy(skinned_mesh_upload_data->weights, weight_data, float_bytes);
+    }
+
+    skinned_mesh_data->joint_offset_bytes = mesh_system->joints_byte_size;
+    skinned_mesh_data->joint_offset_vec4 = mesh_system->joints_byte_size / sizeof(vec4);
+    skinned_mesh_data->weight_offset_bytes = mesh_system->weight_byte_size;
+    skinned_mesh_data->weight_offset_vec4 = mesh_system->weight_byte_size / sizeof(vec4);
+
+    skinned_mesh_upload_data->joint_offset = mesh_system->joints_byte_size;
+    skinned_mesh_upload_data->weight_offset = mesh_system->weight_byte_size;
+
+    mesh_system->weight_byte_size += skinned_mesh_data->weight_bytes;
+    mesh_system->joints_byte_size += skinned_mesh_data->joint_bytes;
+}
+
+
+void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_data* data,
+                                        Skinned_Mesh_Meta_Data* skinned_mesh_meta_data)
+{
+    Heap_Allocator* allocator = resource_system->heap_allocator;
+    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
+    Mesh_System* mesh_system = resource_system->mesh_system;
+
 
     hash_table* joint_name_to_index = HASH_TABLE_CREATE(size_t, 200);
 
@@ -523,112 +510,118 @@ void _gltf_load_anim_data(Resource_System* resource_system, const char* gltf_pat
                 cur_joint->parent_idx = parent_idx;
             }
         }
+
+        //sampler inputs - keyframes
+        //sampler output - keyframe values
+        // sampler interpolation
+
+        for (size_t animation_idx = 0; animation_idx < data->animations_count; animation_idx++)
+        {
+            Animation* cur_animation = &animation_data->animations[animation_idx];
+            cgltf_animation* anim_data = &data->animations[animation_idx];
+
+            if (anim_data->name)
+            {
+                cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(anim_data->name, allocator);
+            }
+            else
+            {
+                cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(
+                    data->meshes[0].name, frame_allocator);
+                cur_animation->animation_name = string_concat_heap(cur_animation->animation_name,
+                                                                   string_from_int_heap_allocator(
+                                                                       animation_idx, allocator),
+                                                                   allocator);
+            }
+            cgltf_size channel_count = anim_data->channels_count;
+            cgltf_size sampler_count = anim_data->samplers_count;
+            cur_animation->channel_count = channel_count;
+            cur_animation->sampler_count = sampler_count;
+
+            cur_animation->channels = allocator_heap_alloc(allocator, sizeof(Animation_Channel) * channel_count);
+            cur_animation->samplers = allocator_heap_alloc(allocator, sizeof(Animation_Sampler) * sampler_count);
+
+
+            for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
+            {
+                Animation_Channel* cur_channel = &cur_animation->channels[channel_idx];
+                cgltf_animation_channel* anim_channel = &anim_data->channels[channel_idx];
+
+                cur_channel->animation_path_type = Animation_Path_Type_gltf_to_engine[anim_channel->target_path];
+                cur_channel->sampler_idx = cgltf_animation_sampler_index(anim_data, anim_channel->sampler);
+                // TODO: TEST
+
+                //get a reference to find where the target joint is in the array
+                size_t joint_idx;
+                if (hash_table_get(joint_name_to_index, anim_channel->target_node->name, &joint_idx))
+                {
+                    cur_channel->joint_index = joint_idx;
+                }
+            }
+
+
+            for (size_t sampler_idx = 0; sampler_idx < sampler_count; sampler_idx++)
+            {
+                Animation_Sampler* cur_sampler = &cur_animation->samplers[sampler_idx];
+                cgltf_animation_sampler* anim_sampler = &anim_data->samplers[sampler_idx];
+
+
+                //read gltf input data
+                cur_sampler->timestamps_count = anim_sampler->input->count;
+                cur_sampler->timestamps =
+                    allocator_heap_alloc(allocator, sizeof(float) * cur_sampler->timestamps_count);
+                //get the timestamp data from the view_data and copy it into the timestamps
+                //it has to be memcpied, since the view_data returns the buffer pointer
+                const uint8_t* timestamp_buffer_data = cgltf_buffer_view_data(anim_sampler->input->buffer_view);
+                memcpy(cur_sampler->timestamps, timestamp_buffer_data, cur_sampler->timestamps_count * sizeof(float));
+
+                for (u32 timestamp_idx = 0; timestamp_idx < cur_sampler->timestamps_count; timestamp_idx++)
+                {
+                    cur_sampler->sampler_start = min_f(cur_sampler->sampler_start,
+                                                       cur_sampler->timestamps[timestamp_idx]);
+                    cur_sampler->sampler_end = max_f(cur_sampler->sampler_start,
+                                                     cur_sampler->timestamps[timestamp_idx]);
+                }
+
+                cur_animation->anim_start = min_f(cur_animation->anim_start, cur_sampler->sampler_start);
+                cur_animation->anim_end = max_f(cur_animation->anim_end, cur_sampler->sampler_end);
+
+                //read gltf output data
+                cur_sampler->trs_interpolation_count = anim_sampler->output->count;
+                const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
+
+                cur_sampler->interpolation_type = Animation_Interpolation_Type_gltf_to_engine[anim_sampler->
+                    interpolation];
+                switch (anim_sampler->output->type)
+                {
+                //these are the only supported formats in the gltf spec for samplers
+                case cgltf_type_scalar: // weights
+                    cur_sampler->interperlation_data.trs_float = allocator_heap_alloc(
+                        allocator, sizeof(float) * cur_sampler->trs_interpolation_count);
+                    memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data,
+                           cur_sampler->trs_interpolation_count * sizeof(float));
+                    break;
+                case cgltf_type_vec3: // translation, scale
+                    cur_sampler->interperlation_data.trs_vec3 = allocator_heap_alloc(
+                        allocator, sizeof(vec3) * cur_sampler->trs_interpolation_count);
+                    memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data,
+                           cur_sampler->trs_interpolation_count * sizeof(float));
+                    break;
+                case cgltf_type_vec4: // rotation
+                    cur_sampler->interperlation_data.trs_vec4 = allocator_heap_alloc(
+                        allocator, sizeof(vec4) * cur_sampler->trs_interpolation_count);
+                    memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data,
+                           cur_sampler->trs_interpolation_count * sizeof(float));
+                    break;
+                default:
+                    FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
+                    break;
+                }
+            }
+        }
+
+        hash_table_destroy(joint_name_to_index);
     }
-
-
-    //sampler inputs - keyframes
-    //sampler output - keyframe values
-    // sampler interpolation
-
-    for (size_t animation_idx = 0; animation_idx < data->animations_count; animation_idx++)
-    {
-        Animation* cur_animation = &animation_data->animations[animation_idx];
-        cgltf_animation* anim_data = &data->animations[animation_idx];
-
-        if (anim_data->name)
-        {
-            cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(anim_data->name, allocator);
-        }
-        else
-        {
-            cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(data->meshes[0].name, frame_allocator);
-            cur_animation->animation_name = string_concat_heap(cur_animation->animation_name,
-                                                               string_from_int_heap_allocator(animation_idx, allocator),
-                                                               allocator);
-        }
-        cgltf_size channel_count = anim_data->channels_count;
-        cgltf_size sampler_count = anim_data->samplers_count;
-        cur_animation->channel_count = channel_count;
-        cur_animation->sampler_count = sampler_count;
-
-        cur_animation->channels = allocator_heap_alloc(allocator, sizeof(Animation_Channel) * channel_count);
-        cur_animation->samplers = allocator_heap_alloc(allocator, sizeof(Animation_Sampler) * sampler_count);
-
-
-        for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
-        {
-            Animation_Channel* cur_channel = &cur_animation->channels[channel_idx];
-            cgltf_animation_channel* anim_channel = &anim_data->channels[channel_idx];
-
-            cur_channel->animation_path_type = Animation_Path_Type_gltf_to_engine[anim_channel->target_path];
-            cur_channel->sampler_idx = cgltf_animation_sampler_index(anim_data, anim_channel->sampler); // TODO: TEST
-
-            //get a reference to find where the target joint is in the array
-            size_t joint_idx;
-            if (hash_table_get(joint_name_to_index, anim_channel->target_node->name, &joint_idx))
-            {
-                cur_channel->joint_index = joint_idx;
-            }
-        }
-
-
-        for (size_t sampler_idx = 0; sampler_idx < sampler_count; sampler_idx++)
-        {
-            Animation_Sampler* cur_sampler = &cur_animation->samplers[sampler_idx];
-            cgltf_animation_sampler* anim_sampler = &anim_data->samplers[sampler_idx];
-
-
-            //read gltf input data
-            cur_sampler->timestamps_count = anim_sampler->input->count;
-            cur_sampler->timestamps = allocator_heap_alloc(allocator, sizeof(float) * cur_sampler->timestamps_count);
-            //get the timestamp data from the view_data and copy it into the timestamps
-            //it has to be memcpied, since the view_data returns the buffer pointer
-            const uint8_t* timestamp_buffer_data = cgltf_buffer_view_data(anim_sampler->input->buffer_view);
-            memcpy(cur_sampler->timestamps, timestamp_buffer_data, cur_sampler->timestamps_count * sizeof(float));
-
-            for (u32 timestamp_idx = 0; timestamp_idx < cur_sampler->timestamps_count; timestamp_idx++)
-            {
-                cur_sampler->sampler_start = min_f(cur_sampler->sampler_start, cur_sampler->timestamps[timestamp_idx]);
-                cur_sampler->sampler_end = max_f(cur_sampler->sampler_start, cur_sampler->timestamps[timestamp_idx]);
-            }
-
-            cur_animation->anim_start = min_f(cur_animation->anim_start, cur_sampler->sampler_start);
-            cur_animation->anim_end = max_f(cur_animation->anim_end, cur_sampler->sampler_end);
-
-            //read gltf output data
-            cur_sampler->trs_interpolation_count = anim_sampler->output->count;
-            const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
-
-            cur_sampler->interpolation_type = Animation_Interpolation_Type_gltf_to_engine[anim_sampler->interpolation];
-            switch (anim_sampler->output->type)
-            {
-            //these are the only supported formats in the gltf spec for samplers
-            case cgltf_type_scalar: // weights
-                cur_sampler->interperlation_data.trs_float = allocator_heap_alloc(
-                    allocator, sizeof(float) * cur_sampler->trs_interpolation_count);
-                memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data,
-                       cur_sampler->trs_interpolation_count * sizeof(float));
-                break;
-            case cgltf_type_vec3: // translation, scale
-                cur_sampler->interperlation_data.trs_vec3 = allocator_heap_alloc(
-                    allocator, sizeof(vec3) * cur_sampler->trs_interpolation_count);
-                memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data,
-                       cur_sampler->trs_interpolation_count * sizeof(float));
-                break;
-            case cgltf_type_vec4: // rotation
-                cur_sampler->interperlation_data.trs_vec4 = allocator_heap_alloc(
-                    allocator, sizeof(vec4) * cur_sampler->trs_interpolation_count);
-                memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data,
-                       cur_sampler->trs_interpolation_count * sizeof(float));
-                break;
-            default:
-                FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
-                break;
-            }
-        }
-    }
-
-    hash_table_destroy(joint_name_to_index);
 }
 
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena)
@@ -781,6 +774,9 @@ bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_
     out_mesh_packet->draw_data = mesh_system->mesh_data;
     out_mesh_packet->draw_data_size = mesh_system->mesh_data_count;
 
+    out_mesh_packet->skinned_draw_data = mesh_system->skinned_mesh_data;
+    out_mesh_packet->skinned_draw_data_size = mesh_system->skinned_mesh_data_count;
+
 
     return true;
 }
@@ -833,10 +829,33 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
             allocator, sizeof(Skinned_Mesh_Upload_Data) * data->meshes_count);
 
-        _gltf_load_mesh_data(resource_system, gltf_path, data, skinned_mesh_meta_data->mesh_index,
-                             mesh_upload_data_array);
-        _gltf_load_anim_data(resource_system, gltf_path, data, skinned_mesh_meta_data->mesh_index,
-                             skinned_mesh_meta_data, skinned_mesh_upload_data_array);
+
+        for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+        {
+            skinned_mesh_meta_data->skinned_mesh_indexs[mesh_idx] = mesh_system->skinned_mesh_data_count;
+            Skinned_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->skinned_mesh_data_count];
+            mesh_system->skinned_mesh_data_count++;
+
+            mesh_draw_data->mesh_data.transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+            mesh_draw_data->mesh_data.material_handle = material_system_create_material(
+                resource_system->material_system);
+
+            Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
+            Skinned_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
+
+            _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, &mesh_draw_data->mesh_data,
+                                 mesh_upload_data);
+
+            _gltf_load_skinned_mesh_data(resource_system, data, mesh_idx,
+                                         mesh_draw_data, skinned_mesh_upload_data);
+
+            //add to mesh upload queue
+            ring_enqueue(mesh_system->mesh_ring_queue, mesh_upload_data);
+            ring_enqueue(mesh_system->skinned_mesh_ring_queue, skinned_mesh_upload_data);
+        }
+
+
+        _gltf_load_skin_and_animation_data(resource_system, data, skinned_mesh_meta_data);
 
         //create the instance
         Skinned_Mesh_Instance* new_skinned_mesh_instance = &mesh_system->skinned_mesh_instance[mesh_system->
@@ -855,7 +874,27 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
                                                                    sizeof(Mesh_Upload_Data) * data->meshes_count);
 
-        _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_meta_data->mesh_index, mesh_upload_data_array);
+        u32* mesh_index_array = mesh_meta_data->mesh_index;
+
+        for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+        {
+            mesh_index_array[mesh_idx] = mesh_system->mesh_data_count;
+            Mesh_Data* mesh_draw_data = &mesh_system->mesh_data[mesh_system->mesh_data_count];
+            mesh_system->mesh_data_count++;
+
+            mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+            mesh_draw_data->material_handle = material_system_create_material(resource_system->material_system);
+
+
+            Mesh_Upload_Data* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
+
+            _gltf_load_mesh_data(resource_system,
+                                 gltf_path, data, mesh_idx,
+                                 mesh_draw_data, current_mesh_upload_data);
+
+            //add to mesh upload queue
+            ring_enqueue(mesh_system->mesh_ring_queue, current_mesh_upload_data);
+        }
     }
 
 
@@ -918,7 +957,8 @@ void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Fr
                 current_time <=
                 sampler->timestamps[timestamp_idx + 1]))
             {
-                float interp_val = (skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler->
+                float interp_val = (skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler
+                    ->
                     timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
                 switch (channel->animation_path_type)
                 {
@@ -1015,7 +1055,6 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
     for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
     {
-
         Skinned_Mesh_Instance* cur_skinned_mesh_inst = &mesh_system->skinned_mesh_instance[i];
 
         Animation_Data* animation_data = &mesh_system->animation_data[cur_skinned_mesh_inst->anim_handle.handle];
@@ -1045,11 +1084,14 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                 }
 
                 // Get the input keyframe values for the current time stamp
-                if ((cur_skinned_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (cur_skinned_mesh_inst->
+                if ((cur_skinned_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
+                    cur_skinned_mesh_inst->
                     current_time <=
                     sampler->timestamps[timestamp_idx + 1]))
                 {
-                    float interp_val = (cur_skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler
+                    float interp_val = (cur_skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) /
+                    (
+                        sampler
                         ->
                         timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
                     switch (channel->animation_path_type)
@@ -1077,7 +1119,8 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                         q2.w = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].w;
 
 
-                        cur_skinned_mesh_inst->local_rotation[j_idx] = quat_normalize(quat_slerp(q1, q2, interp_val));;
+                        cur_skinned_mesh_inst->local_rotation[j_idx] = quat_normalize(
+                            quat_slerp(q1, q2, interp_val));;
                         break;
                     case Animation_Path_Type_Scale:
                         cur_skinned_mesh_inst->local_scale[j_idx] = vec3_lerp(
@@ -1123,7 +1166,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
         {
             //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
             cur_skinned_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
-                                                        animation_data->inverse_bind_matrix[i]);
+                                                            animation_data->inverse_bind_matrix[i]);
         }
     }
 }

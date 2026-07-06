@@ -14,27 +14,24 @@ bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_
 void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path);
 
 
-void _gltf_load_mesh_data(Resource_System* resource_system,
-                          const char* gltf_path,
-                          cgltf_data* data,
-                          u32* mesh_index_array,
-                          Mesh_Upload_Data* mesh_upload_data_array);
+void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
+                          u32 gltf_data_mesh_idx,
+                          Mesh_Data* mesh_draw_data,
+                          Mesh_Upload_Data* upload_data);
 
-void _gltf_load_anim_data(Resource_System* resource_system,
-                          const char* gltf_path,
-                          cgltf_data* data,
-                          u32* skinned_mesh_indexs,
-                          Skinned_Mesh_Meta_Data* skinned_mesh_meta_data,
-                          Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array);
+
+void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* data,
+                                  u32 mesh_idx,
+                                  Skinned_Mesh_Data* skinned_mesh_data,
+                                  Skinned_Mesh_Upload_Data* skinned_mesh_upload_data);
+
+void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_data* data,
+                                        Skinned_Mesh_Meta_Data* skinned_mesh_meta_data);
 
 
 void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena);
 
 void mesh_load_obj(const char* obj_path, Renderer* renderer);
-
-
-//TODO: just one gltf load function, you will need to seperate the data into static and skinned meshes
-// skinned meshes shares the same base data for static meshes, just a different array probably
 
 
 //animation system
@@ -47,7 +44,8 @@ typedef struct skeletal_mesh_handle
 } skeletal_mesh_handle;
 
 
-bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Skinned_Mesh_Instance* skinned_mesh_inst,  Animation_Handle animation_handle,
+bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Skinned_Mesh_Instance* skinned_mesh_inst,
+                                    Animation_Handle animation_handle,
                                     Heap_Allocator* allocator);
 Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, Animation_Handle animation_handle,
                                                   Heap_Allocator* allocator);

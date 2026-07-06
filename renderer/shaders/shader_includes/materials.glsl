@@ -112,14 +112,23 @@ struct mesh_draw_data{
 };
 
 
+struct Skinned_Mesh_Draw_Data{
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 material_idx;
+    u32 transform_idx;
+};
+
+layout(buffer_reference, scalar) readonly buffer Skinned_Mesh_Draw_Data_Buffer{
+    Skinned_Mesh_Draw_Data skinned_draw_data[];
+};
+
+
 
 layout(set = 2, binding = 0, scalar) readonly buffer MESH_DRAW_DATA_BUFFER{
     mesh_draw_data mesh_data[];
 }MESH_DRAW_DATA[];
 
-layout(set = 2, binding = 0, scalar) readonly buffer SKINNED_DRAW_DATA_BUFFER{
-    skinned_draw_data skinned_data[];
-}SKINNED_DRAW_DATA[];
 
 
 

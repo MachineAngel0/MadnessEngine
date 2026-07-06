@@ -5,9 +5,6 @@ Material_System* material_system_init(Memory_System* memory_system)
     Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
                                                            MEMORY_SUBSYSTEM_RESOURCE);
 
-
-
-
     return material_system;
 }
 
