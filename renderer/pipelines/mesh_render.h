@@ -1,7 +1,6 @@
 ﻿#ifndef MESH_RENDER_H
 #define MESH_RENDER_H
 
-#include "../vulkan_enum_types.h"
 
 MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system);
 

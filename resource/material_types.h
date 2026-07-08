@@ -33,12 +33,11 @@ typedef struct PC_Skinned_Mesh
     VkDeviceAddress uv_buffer;
     VkDeviceAddress joint_buffer;
     VkDeviceAddress weight_buffer;
+    VkDeviceAddress skinned_matrix_buffer;
 
     VkDeviceAddress transform_buffer;
     VkDeviceAddress material_buffer;
     VkDeviceAddress skinned_draw_data_buffer;
-
-
 
 
     //128 byte limit
@@ -104,34 +103,18 @@ typedef struct Material_PBR
 } Material_Default;
 
 
-typedef struct Material_UV_Anim_Data
-{
-    vec2 offset;
-    float speed;
-} Material_UV_Anim_Data;
 
-typedef struct Material_Instance
-{
-    Material_Flag flags;
-
-    u32 pbr_idx;
-    u32 uv_anim_idx;
-    u32 blach_hole_anim_idx;
-
-} Material_Instance;
 
 #define MAX_MATERIAL 100
 
 typedef struct Material_System
 {
-    u32 internal_count;
-    Material_Instance material_instance[MAX_MATERIAL];
+
 
     //Hardcode pipelines
     Material_Default prb[MAX_MATERIAL]; // pretty much manditory for all meshes
     u32 pbr_count;
-    Material_UV_Anim_Data uv_anim[MAX_MATERIAL];
-    u32 uv_anim_count;
+
 
     //material data should get passed in through a push constant
 
@@ -184,13 +167,11 @@ typedef struct Material_System
 typedef struct Material_System2
 {
 
-
     //Hardcode pipelines
     Material_Default prb[MAX_MATERIAL]; // pretty much manditory for all meshes
     u32 pbr_count;
 
     //generated materials, that get auto managaed
-
 
 
 

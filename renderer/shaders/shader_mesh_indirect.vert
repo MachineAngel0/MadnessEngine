@@ -57,17 +57,13 @@ void main() {
     gl_Position = ubo[nonuniformEXT(ubo_index)].proj * ubo[nonuniformEXT(ubo_index)].view * model * vec4(in_pos, 1.0);
 
     //Material
-    uint material_instance_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_instance_idx;
-    Material_Instance material_instance = MATERIAL_INSTANCE[nonuniformEXT(material_instance_buffer_idx)].material_instance[nonuniformEXT(cur_mesh_data.material_instance_idx)];
-
     //if(material_instance.flags & PBR){};
     uint pbr_buffer_idx = ubo[nonuniformEXT(ubo_index)].material_pbr_idx;
-    Pbr pbr_material = PBR[nonuniformEXT(pbr_buffer_idx)].pbr[material_instance.pbr_idx];
+    Pbr pbr_material = PBR[nonuniformEXT(pbr_buffer_idx)].pbr[cur_mesh_data.material_idx];
 
     out_pbr_flags = pbr_material.flags;
 
     out_color_idx = pbr_material.color_index;
-    out_color = pbr_material.color;
     out_color = pbr_material.color;
 
 

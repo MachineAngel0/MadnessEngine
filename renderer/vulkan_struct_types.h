@@ -464,13 +464,9 @@ typedef struct global_ubo
     u32 draw_data_idx;
 
     //materials
-    u32 material_instance_idx;
     u32 material_pbr_idx;
-    u32 material_wave_idx;
-    u32 material_black_hole_idx;
-    u32 material_uv_animation_idx;
-    u32 material_blend1_idx;
-    u32 material_blend2_idx;
+    u32 _padding;
+
 } Global_Ubo;
 
 
@@ -553,9 +549,6 @@ typedef struct Sprite_Backend
 
 typedef struct Material_Renderer
 {
-    Buffer_Handle instance_buffer_handle;
-    Buffer_Handle instance_staging_buffer_handle;
-
     Buffer_Handle pbr_buffer_handle;
     Buffer_Handle pbr_staging_buffer_handle;
 
@@ -593,6 +586,7 @@ typedef struct Mesh_Renderer
 
     Buffer_Handle indirect_skinned_buffer_handle;
     Buffer_Handle skinned_draw_data_buffer_handle;
+    Buffer_Handle skinned_matrix_buffer;
 
     u32 indirect_draw_count;
     u32 skinned_indirect_draw_count;

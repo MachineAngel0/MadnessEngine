@@ -17,13 +17,10 @@ bool material_system_generate_render_packet(Material_System* material_system,
 //you have to create a material before requesting an add material type to it
 Material_Handle material_system_create_material(Material_System* material_system);
 
-void material_system_enable_flag(Material_System* material_system, Material_Handle material_handle, Material_Flag flags);
-void material_system_disable_flag(Material_System* material_system, Material_Handle material_handle,
-                                  Material_Flag flags);
 
-Material_Default* material_system_add_default_pbr(Material_System* material_system, Material_Handle material_handle);
+
+Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle);
 Material_Default* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle);
-
 
 void material_system_pbr_init(Material_Default* out_data);
 

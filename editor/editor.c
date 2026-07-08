@@ -148,7 +148,7 @@ void editor_ui_debug(Editor* editor)
             transform_translate(&editor->resource_system->scene->transforms[0], translate);
         }
 
-        if (madness_ui_button(madness_ui, STRING("material flags enable")))
+        /*if (madness_ui_button(madness_ui, STRING("material flags enable")))
         {
             material_system_enable_flag(editor->resource_system->material_system, (Material_Handle){0},
                                         MATERIAL_FLAG_PBR);
@@ -157,7 +157,7 @@ void editor_ui_debug(Editor* editor)
         {
             material_system_disable_flag(editor->resource_system->material_system, (Material_Handle){0},
                                          MATERIAL_FLAG_PBR);
-        }
+        }*/
         // editor->resource_system->scene->transforms[1].is_dirty = true;
         // transform_translate(&editor->resource_system->scene->transforms[1], translate);
         // transform_set_scale(&editor->resource_system->scene->transforms[1], translate);

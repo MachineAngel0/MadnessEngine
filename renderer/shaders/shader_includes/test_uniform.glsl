@@ -92,15 +92,14 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
 //    uint weight_idx;
 
     uint draw_data_idx;
-    uint material_instance_idx;
 
 
     uint material_pbr_idx;
-    uint material_wave_idx;
-    uint material_black_hole_idx;
-    uint material_uv_animation_idx;
-    uint material_blend1_idx;
-    uint material_blend2_idx;
+
+
+    uint _padding;
+
+
 } ubo[];
 
 

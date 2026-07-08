@@ -531,17 +531,9 @@ typedef struct Render_Packet_Transform
 
 typedef struct Render_Packet_Material
 {
-    Material_Instance* material_instance;
-    u32 material_instance_count;
-    u32 material_instance_bytes;
-
     Material_Default* prb;
     u32 prb_count;
     u32 prb_bytes;
-
-    Material_UV_Anim_Data* uv_anim;
-    u32 uv_anime_count;
-    u32 uv_anime_bytes;
 } Render_Packet_Material;
 
 

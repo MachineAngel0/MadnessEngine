@@ -86,6 +86,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
         .material_buffer = vulkan_buffer_get_device_address(renderer, renderer->material_renderer->pbr_buffer_handle),
         .skinned_draw_data_buffer = vulkan_buffer_get_device_address(
             renderer, out_mesh_renderer->skinned_draw_data_buffer_handle),
+        .skinned_matrix_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->skinned_matrix_buffer),
 
     };
 
@@ -99,7 +100,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
 
 
 void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
-                                        vulkan_command_buffer* command_buffer)
+                                    vulkan_command_buffer* command_buffer)
 {
     //update the transforms every frame
 
@@ -165,10 +166,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 }
 
 
-
-
 void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                               Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
+                                           Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
     Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
 

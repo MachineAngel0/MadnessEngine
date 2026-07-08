@@ -96,27 +96,29 @@ layout(buffer_reference, scalar) readonly buffer Transform_Buffer{
 //model transform to be specific
 };
 layout(buffer_reference, scalar) readonly buffer Joint_Buffer{
-    Joint joint_data[];
+    vec4 joint_data[];
 };
 layout(buffer_reference, scalar) readonly buffer Weight_Buffer{
-    Weight weights_data[];
+    vec4 weights_data[];
 };
-
+layout(buffer_reference, scalar) readonly buffer Skinned_Matrix_Buffer{
+    mat4 skinned_matrix_data[];
+};
 
 
 
 
 struct mesh_draw_data{
     uint transform_idx;
-    uint material_instance_idx;
+    uint material_idx;
 };
 
 
 struct Skinned_Mesh_Draw_Data{
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 material_idx;
-    u32 transform_idx;
+    uint joint_idx;
+    uint weight_idx;
+    uint material_idx;
+    uint transform_idx;
 };
 
 layout(buffer_reference, scalar) readonly buffer Skinned_Mesh_Draw_Data_Buffer{

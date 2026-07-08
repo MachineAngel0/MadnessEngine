@@ -315,7 +315,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.transform_idx  = renderer->material_renderer->transform_buffer_handle.handle;
 
     //Materials
-    ubo.material_instance_idx = renderer->material_renderer->instance_buffer_handle.handle;
     ubo.material_pbr_idx = renderer->material_renderer->pbr_buffer_handle.handle;
 
     // Copy the current matrices to the current frame's uniform buffer.

@@ -234,8 +234,8 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     char* base_path = c_string_path_strip(gltf_path, frame_allocator);
 
     //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
-    Material_Default* default_material = material_system_add_default_pbr(resource_system->material_system,
-                                                                         mesh_draw_data->material_handle);
+    Material_Default* default_material = material_system_create_default_pbr(resource_system->material_system,
+                                                                         &mesh_draw_data->material_handle);
 
     if (!data->meshes[gltf_data_mesh_idx].primitives->material)
     {

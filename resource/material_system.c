@@ -20,60 +20,31 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_Material* render_packet_material)
 {
-    render_packet_material->material_instance = material_system->material_instance;
-    render_packet_material->material_instance_count = MAX_MATERIAL;
-    render_packet_material->material_instance_bytes = sizeof(Material_Instance) * MAX_MATERIAL;
-
     render_packet_material->prb = material_system->prb;
     render_packet_material->prb_count = MAX_MATERIAL;
     render_packet_material->prb_bytes = sizeof(Material_Default) * MAX_MATERIAL;
-
-    render_packet_material->uv_anim = material_system->uv_anim;
-    render_packet_material->uv_anime_count = MAX_MATERIAL;
-    render_packet_material->uv_anime_bytes = sizeof(Material_UV_Anim_Data) * MAX_MATERIAL;
 
     return true;
 }
 
 Material_Handle material_system_create_material(Material_System* material_system)
 {
-    return (Material_Handle){material_system->internal_count++};
+    return (Material_Handle){material_system->pbr_count++};
 }
 
-void material_system_enable_flag(Material_System* material_system, Material_Handle material_handle,
-                                 Material_Flag flags)
+
+
+Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle)
 {
-    Material_Instance* inst = &material_system->material_instance[material_handle.handle];
-    inst->flags |= flags;
-}
-
-void material_system_disable_flag(Material_System* material_system, Material_Handle material_handle,
-                                  Material_Flag flags)
-{
-    Material_Instance* inst = &material_system->material_instance[material_handle.handle];
-    inst->flags &= flags;
-
-}
-
-Material_Default* material_system_add_default_pbr(Material_System* material_system, Material_Handle material_handle)
-{
-    Material_Instance* inst = &material_system->material_instance[material_handle.handle];
-
-    Material_Default* pbr = &material_system->prb[material_system->pbr_count];
-
+    material_handle->handle = material_system->pbr_count;
+    Material_Default* pbr = &material_system->prb[material_system->pbr_count++];
     material_system_pbr_init(pbr);
-
-    inst->flags |= MATERIAL_FLAG_PBR;
-    inst->pbr_idx = material_system->pbr_count;
-
-    material_system->pbr_count++;
     return pbr;
 }
 
 Material_Default* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle)
 {
-    Material_Instance* inst = &material_system->material_instance[material_handle.handle];
-    return &material_system->prb[inst->pbr_idx];
+    return &material_system->prb[material_handle.handle];
 }
 
 void material_system_pbr_init(Material_Default* out_data)

@@ -19,6 +19,7 @@ layout(push_constant, scalar) uniform PC_SKINNED_MESH{
     UV_Buffer uv_buffer;
     Joint_Buffer joint_buffer;
     Weight_Buffer weight_buffer;
+    Skinned_Matrix_Buffer skinned_matrix_buffer;
 
     Transform_Buffer transform_buffer;
     PRB_Buffer material_buffer; // use a default for now
