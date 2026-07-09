@@ -5,6 +5,22 @@ Material_System* material_system_init(Memory_System* memory_system)
     Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
                                                            MEMORY_SUBSYSTEM_RESOURCE);
 
+    material_system->reflection_system = reflection_system_init(memory_system);
+    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_CONSTANT);
+    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_ENUM);
+    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_STRUCT);
+
+
+    reflection_data_to_files(material_system->reflection_system, "material",
+                             "../resource/generated/mat_enums.h",
+                             "../resource/generated/mat_structs.h");
+
+    material_system->reflection_registry = reflection_registry_init(memory_system);
+    generate_runtime_enums_material(material_system->reflection_registry);
+    generate_runtime_structs_material(material_system->reflection_registry);
+
+
+
     return material_system;
 }
 
@@ -31,7 +47,6 @@ Material_Handle material_system_create_material(Material_System* material_system
 {
     return (Material_Handle){material_system->pbr_count++};
 }
-
 
 
 Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle)

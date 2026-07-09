@@ -25,6 +25,16 @@ Lexer* lexer_init()
     return lexer;
 }
 
+
+
+void lexer_free(Lexer* lexer)
+{
+    darray_free(lexer->tokens);
+    free(lexer);
+}
+
+
+
 void lexer_generate_tokens(Lexer* lexer, const char* file_path)
 {
     MASSERT(lexer);
@@ -434,6 +444,10 @@ void nextToken(Lexer* lexer, Token* token)
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "const"))
                 {
                     token->type = Token_const;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "BITFLAG"))
+                {
+                    token->type = Token_BITFLAG;
                 }
             } // Numbers
             else if (IsNumber(c))

@@ -55,7 +55,7 @@ MAPI bool texture_system_load_texture(Texture_System* texture_system, char const
     //check if the texture has already been loaded in
     if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
     {
-        out_handle = &texture_system->texture_handles[texture_idx];
+        memcpy(out_handle, &texture_system->texture_handles[texture_idx], sizeof(Texture_Handle));
         texture_system->texture_meta_data[texture_idx].reference_count++;
         return true;
     }

@@ -24,10 +24,9 @@ void main() {
 
     uint draw_idx = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
+//    uint instance_idx = gl_InstanceIndex; // at some point this needs to be used for the mesh data
 
 
-    //i would probably need this as joint and weight data dont line up with the vertex offset
-    //localVertex = gl_VertexIndex - pc_skinned_mesh.[instance_idx].vertex_offset;
 
     //global
     uint ubo_index = pc_skinned_mesh.ubo_buffer_idx;

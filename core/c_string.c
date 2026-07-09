@@ -17,6 +17,14 @@ char* c_string_duplicate(const char* str)
     return copy;
 }
 
+char* c_string_duplicate_allocator(const char* str, Allocator* allocator)
+{
+    u64 length = c_string_length(str);
+    char* copy = allocator_alloc(allocator, length + 1);
+    memcpy(copy, str, length + 1);
+    return copy;
+}
+
 char* c_string_duplicate_heap_alloc(const char* str, Heap_Allocator* allocator)
 {
     u64 length = c_string_length(str);

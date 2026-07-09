@@ -1,11 +1,8 @@
 ﻿#ifndef REFLECTION_H
 #define REFLECTION_H
 
-
 #include <stdbool.h>
-
 #include "compiler.h"
-#include "hash_table.h"
 
 //TODO: Move this out to defines and call it Madness_Types and name them {MADNESS_TYPE_U8}
 typedef enum Reflection_Type
@@ -123,27 +120,32 @@ typedef struct Reflection_Compact_List
     Reflection_Struct* struct_list;
     u32 struct_list_size;
 
+
+
 } Reflection_Compact_List;
 
 
 typedef struct Reflection_System
 {
     // key -> Reflection Constant
-    hash_table* reflection_registry_constants;
+    HASH_TABLE_TYPE(Reflection_Constant)* reflection_registry_constants;
     // key -> Reflection_Enum -> Reflection_Type_Enum
-    hash_table* reflection_registry_enums;
+    HASH_TABLE_TYPE(Reflection_Type_Enum)* reflection_registry_enums;
     // key -> Reflection_Struct -> Reflection_Type_Struct
-    hash_table* reflection_registry_structs;
+    HASH_TABLE_TYPE(Reflection_Struct)* reflection_registry_structs;
 
     Allocator* allocator;
     Frame_Allocator* frame_allocator;
 
-
+    String** header_file_list;
+    u32 header_file_list_count;
+#define HEADER_FILE_LIST_COUNT 10
+    u32 header_file_list_capacity;
 
 } Reflection_System;
 
 
-Reflection_System* reflection_system_init();
+Reflection_System* reflection_system_init(Memory_System* memory_system);
 
 void reflection_system_shutdown();
 
@@ -208,5 +210,10 @@ Reflection_Struct_Field* reflection_system_generate_struct_offset(Reflection_Sys
                                                                  const char* struct_name);
 
 void reflection_game_data(Reflection_System* reflection_system);
+
+
+//HELLA IMPORTANT FUNCTION CALL HERE
+void reflection_data_to_files(Reflection_System* reflection_system, const char* function_name,
+                              const char* generated_enum_file_path, const char* generated_struct_file_path);
 
 #endif //REFLECTION_H

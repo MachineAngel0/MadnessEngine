@@ -1,7 +1,7 @@
 ﻿#ifndef DATA_REGISTRY_H
 #define DATA_REGISTRY_H
-#include <stdbool.h>
 
+#include "c_string.h"
 #include "defines.h"
 #include "compiler/reflection_system.h"
 

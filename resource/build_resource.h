@@ -12,3 +12,8 @@
 #include "shader_creation_system.h"
 #include "ui_insanity.h"
 #include "ui_madness.h"
+
+#include "resource/generated/mat_enums.h"
+#include "resource/generated/mat_structs.h"
+
+

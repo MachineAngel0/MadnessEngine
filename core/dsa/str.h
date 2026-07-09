@@ -84,6 +84,8 @@ String* string_strip_whitespace(const String* str);
 /*C-STRING*/
 
 const char* string_to_c_string(const String* s);
+const char* string_to_c_string_allocator(const String* s, Allocator* allocator);
+
 bool string_compare_c_string(const String* str1, const char* c_str);
 
 

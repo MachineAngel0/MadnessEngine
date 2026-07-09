@@ -83,6 +83,7 @@ typedef enum Token_Type
     Token_size_t,
     Token_bool,
     Token_string_type,//my custom type
+    Token_BITFLAG, // macro
 
 
     Token_const,
@@ -118,6 +119,9 @@ typedef struct Parser
 } Parser;
 
 Lexer* lexer_init();
+void lexer_free(Lexer* lexer);
+
+
 void lexer_generate_tokens(Lexer* lexer, const char* file_path);
 void lexer_test();
 

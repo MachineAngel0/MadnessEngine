@@ -56,6 +56,12 @@
 //CORE - MEMORY
 #include "../core/memory/memory_system.h"
 
+//CORE - Compiler
+#include "../core/compiler/compiler_test_file.h"
+#include "../core/compiler/compiler.h"
+#include "../core/compiler/reflection_system.h"
+
+
 //CORE - SERIALIZATION
 #include "../core/serialization/network_serialization.h"
 #include "../core/serialization/file_serialization.h"
@@ -84,10 +90,6 @@
 
 
 
-//CORE - Compiler
-#include "../core/compiler/compiler_test_file.h"
-#include "../core/compiler/compiler.h"
-#include "../core/compiler/reflection_system.h"
 
 
 

@@ -9,7 +9,7 @@
 Madness_UI* madness_ui_init(Memory_System* memory_system, Input_System* input_system,
                             Resource_System* resource_system)
 {
-    Madness_UI* madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
+    madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
 
     u64 ui_arena_mem_size = MB(128);
     u64 ui_frame_arena_mem_size = MB(128);

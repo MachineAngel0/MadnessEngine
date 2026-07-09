@@ -40,7 +40,7 @@ Mesh_System* mesh_system_init(Memory_System* memory_system)
     out_mesh_system->uv_byte_size = 0;
 
     out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_Upload_Data), MAX_MESH_COUNT);
-    out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Skinned_Mesh_Upload_Data),
+    out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Sk_Mesh_Upload_Data),
                                                                  MAX_SKINNED_MESH_COUNT);
     out_mesh_system->mesh_data_count = 0;
 
@@ -60,7 +60,7 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Skinned_Mesh_Instance* skinned_mesh_inst,
+bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Sk_Mesh_Instance* skinned_mesh_inst,
                                     const Animation_Handle animation_handle,
                                     Heap_Allocator* allocator)
 {
@@ -90,10 +90,10 @@ bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Skinned_Mesh_Insta
     return true;
 }
 
-Skinned_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, const Animation_Handle animation_handle,
+Sk_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, const Animation_Handle animation_handle,
                                                   Heap_Allocator* allocator)
 {
-    Skinned_Mesh_Instance* skinned_mesh_inst = allocator_heap_alloc(allocator, sizeof(Skinned_Mesh_Instance));
+    Sk_Mesh_Instance* skinned_mesh_inst = allocator_heap_alloc(allocator, sizeof(Sk_Mesh_Instance));
     skinned_mesh_instance_fill_out(mesh_system, skinned_mesh_inst, animation_handle, allocator);
     return skinned_mesh_inst;
 }
@@ -255,7 +255,7 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
         // takes a buffer, message format, then the remaining strings
         sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
         TRACE("COLOR Texture Path:  %s", texture_path);
-        Texture_Handle color_handle;
+        Texture_Handle color_handle = {0};
         texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
         default_material->color_index = color_handle.handle;
         memcpy(default_material->color.elements,
@@ -369,8 +369,8 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
 
 void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* data,
                                   u32 mesh_idx,
-                                  Skinned_Mesh_Data* skinned_mesh_data,
-                                  Skinned_Mesh_Upload_Data* skinned_mesh_upload_data)
+                                  Sk_Mesh_Data* skinned_mesh_data,
+                                  Sk_Mesh_Upload_Data* skinned_mesh_upload_data)
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
@@ -431,7 +431,7 @@ void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* 
 
 
 void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_data* data,
-                                        Skinned_Mesh_Meta_Data* skinned_mesh_meta_data)
+                                        Sk_Mesh_Asset* skinned_mesh_meta_data)
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
@@ -810,7 +810,7 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
 
     if (data->skins_count > 0)
     {
-        Skinned_Mesh_Meta_Data* skinned_mesh_meta_data = &mesh_system->skinned_mesh_meta_data[mesh_system->
+        Sk_Mesh_Asset* skinned_mesh_meta_data = &mesh_system->skinned_mesh_meta_data[mesh_system->
             skinned_mesh_meta_data_count++];
         skinned_mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
 
@@ -826,14 +826,14 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
                                                                    sizeof(Mesh_Upload_Data) * data->meshes_count);
 
-        Skinned_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
-            allocator, sizeof(Skinned_Mesh_Upload_Data) * data->meshes_count);
+        Sk_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
+            allocator, sizeof(Sk_Mesh_Upload_Data) * data->meshes_count);
 
 
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
             skinned_mesh_meta_data->skinned_mesh_indexs[mesh_idx] = mesh_system->skinned_mesh_data_count;
-            Skinned_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->skinned_mesh_data_count];
+            Sk_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->skinned_mesh_data_count];
             mesh_system->skinned_mesh_data_count++;
 
             mesh_draw_data->mesh_data.transform_handle = scene_get_new_mesh_transform(resource_system->scene);
@@ -841,7 +841,7 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
                 resource_system->material_system);
 
             Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
-            Skinned_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
+            Sk_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
 
             _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, &mesh_draw_data->mesh_data,
                                  mesh_upload_data);
@@ -858,14 +858,14 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         _gltf_load_skin_and_animation_data(resource_system, data, skinned_mesh_meta_data);
 
         //create the instance
-        Skinned_Mesh_Instance* new_skinned_mesh_instance = &mesh_system->skinned_mesh_instance[mesh_system->
+        Sk_Mesh_Instance* new_skinned_mesh_instance = &mesh_system->skinned_mesh_instance[mesh_system->
             skinned_mesh_instance_count++];
         skinned_mesh_instance_fill_out(mesh_system, new_skinned_mesh_instance, skinned_mesh_meta_data->anim_handle,
                                        allocator);
     }
     else
     {
-        Mesh_Meta_Data* mesh_meta_data = allocator_heap_alloc(allocator, sizeof(Mesh_Meta_Data));
+        Mesh_Asset* mesh_meta_data = allocator_heap_alloc(allocator, sizeof(Mesh_Asset));
         mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
         mesh_meta_data->mesh_index = allocator_heap_alloc(allocator, sizeof(u32) * data->meshes_count);
         mesh_meta_data->mesh_count = data->meshes_count;
@@ -924,7 +924,7 @@ void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Fr
 
 
     //assume the mesh is loaded
-    Skinned_Mesh_Instance* skinned_mesh_inst = mesh_system->test_skinned_mesh_instance;
+    Sk_Mesh_Instance* skinned_mesh_inst = mesh_system->test_skinned_mesh_instance;
 
     Animation_Data* animation_data = &mesh_system->animation_data[skinned_mesh_inst->anim_handle.handle];
     Animation* anim_data = &animation_data->animations[skinned_mesh_inst->current_animation_index];
@@ -1055,7 +1055,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
     for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
     {
-        Skinned_Mesh_Instance* cur_skinned_mesh_inst = &mesh_system->skinned_mesh_instance[i];
+        Sk_Mesh_Instance* cur_skinned_mesh_inst = &mesh_system->skinned_mesh_instance[i];
 
         Animation_Data* animation_data = &mesh_system->animation_data[cur_skinned_mesh_inst->anim_handle.handle];
         Animation* anim_data = &animation_data->animations[cur_skinned_mesh_inst->current_animation_index];

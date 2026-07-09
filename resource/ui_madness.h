@@ -11,6 +11,8 @@
 //Vertex Data
 
 
+
+
 typedef struct PC_UI
 {
     u32 ubo_buffer_idx;
@@ -288,7 +290,7 @@ typedef struct Madness_UI
 } Madness_UI;
 
 
-
+Madness_UI* madness_ui;
 
 // the best way im thinking to solve it is to have a formal concept of a pop up context,
 // where when we get nodes, they are added to a pop up context, which is permanent in state,

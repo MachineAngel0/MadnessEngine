@@ -162,6 +162,25 @@ typedef struct Mesh_Data
     Material_Handle material_handle;
 } Mesh_Data;
 
+
+typedef struct Mesh_Instance
+{
+    Mesh_Data* mesh_data;
+    u32 mesh_count;
+
+    struct Per_Mesh_Data_Instance
+    {
+        Material_Handle* material_handle; // a material per submesh
+    };
+
+    Transform_Handle* transform_handle;
+    u32 instance_count;
+}Mesh_Instance;
+
+
+//
+
+
 typedef struct Mesh_Upload_Data
 {
     //information to upload into the associated buffer
@@ -200,23 +219,41 @@ typedef struct Skinned_Mesh_Upload_Data
 
     vec4* joints;
     vec4* weights;
-} Skinned_Mesh_Upload_Data;
+} Sk_Mesh_Upload_Data;
 
 
-//mesh -> submesh
+typedef struct Mesh_Asset
+{
+    const char* file_path;
+    u32* mesh_index;
+    u32 mesh_count;
 
 
+}Mesh_Asset;
 
-typedef struct Mesh_Draw_Data
+typedef struct Sk_Mesh_Asset
+{
+    const char* file_path;
+    u32* mesh_index;
+    u32 mesh_count;
+
+    u32* skinned_mesh_indexs;
+    u32 skinned_mesh_count;
+
+    Animation_Handle anim_handle;
+}Sk_Mesh_Asset;
+
+
+typedef struct Mesh_GPU_Draw
 {
     //used as a storage buffer
     u32 transform_idx;
     u32 material_instance_handle;
-} Mesh_Draw_Data;
+} Mesh_GPU_Draw;
 
 
 
-typedef struct Skinned_Draw_Data
+typedef struct SKMesh_GPU_Draw
 {
     //offset into the buffer
     // u32 vertex_idx;
@@ -227,7 +264,9 @@ typedef struct Skinned_Draw_Data
     u32 weight_idx;
     u32 material_instance_handle;
     u32 transform_idx;
-} Skinned_Mesh_Draw_Data;
+} SKMesh_GPU_Draw;
+
+
 
 
 
@@ -330,33 +369,14 @@ typedef struct Skinned_Mesh_Data
     u64 weight_offset_vec4;
     u64 weight_offset_bytes;
 
-
-
-} Skinned_Mesh_Data;
-
+} Sk_Mesh_Data;
 
 
 
-typedef struct Mesh_Meta_Data
-{
-    const char* file_path;
-    u32* mesh_index;
-    u32 mesh_count;
-}Mesh_Meta_Data;
 
-typedef struct Skinned_Mesh_Meta_Data
-{
-    const char* file_path;
-    u32* mesh_index;
-    u32 mesh_count;
 
-    u32* skinned_mesh_indexs;
-    u32 skinned_mesh_count;
 
-    Animation_Handle anim_handle;
-}Skinned_Mesh_Meta_Data;
-
-typedef struct Skinned_Mesh_Instance
+typedef struct Sk_Mesh_Instance
 {
     //reference back to the animation data
     //TODO: replace with a handle
@@ -377,7 +397,7 @@ typedef struct Skinned_Mesh_Instance
     u32 current_animation_index;
     float current_time;
     bool looping;
-} Skinned_Mesh_Instance;
+} Sk_Mesh_Instance;
 
 
 //SPRITE
@@ -447,23 +467,23 @@ typedef struct Mesh_System
     //mesh and skinned mesh need to be treated differently
 
 
-    Mesh_Meta_Data mesh_meta_data[MAX_MESH_COUNT];
+    Mesh_Asset mesh_meta_data[MAX_MESH_COUNT];
     u32 mesh_meta_data_count;
 
     Mesh_Data mesh_data[MAX_MESH_COUNT];
     u32 mesh_data_count;
 
 
-    Skinned_Mesh_Meta_Data skinned_mesh_meta_data[MAX_MESH_COUNT];
+    Sk_Mesh_Asset skinned_mesh_meta_data[MAX_MESH_COUNT];
     u32 skinned_mesh_meta_data_count;
 
-    Skinned_Mesh_Data skinned_mesh_data[MAX_MESH_COUNT];
+    Sk_Mesh_Data skinned_mesh_data[MAX_MESH_COUNT];
     u32 skinned_mesh_data_count;
 
     Animation_Data animation_data[MAX_MESH_COUNT];
     u32 animation_data_count;
 
-    Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
+    Sk_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
     //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
@@ -488,7 +508,7 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
-    Skinned_Mesh_Instance* test_skinned_mesh_instance;
+    Sk_Mesh_Instance* test_skinned_mesh_instance;
 
     //TODO:
     //anything that couldn't be loaded in this frame
@@ -518,7 +538,7 @@ typedef struct Render_Packet_Mesh
     Mesh_Data* draw_data;
     u32 draw_data_size;
 
-    Skinned_Mesh_Data* skinned_draw_data;
+    Sk_Mesh_Data* skinned_draw_data;
     u32 skinned_draw_data_size;
 } Render_Packet_Mesh;
 

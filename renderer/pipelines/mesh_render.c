@@ -66,6 +66,9 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
     out_mesh_renderer->skinned_draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                               BUFFER_TYPE_CPU_STORAGE,
                                                                               mesh_buffer_data_size);
+    out_mesh_renderer->skinned_matrix_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                                BUFFER_TYPE_CPU_STORAGE,
+                                                                                mesh_buffer_data_size);
 
 
     //from other systems
@@ -73,7 +76,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
 
     out_mesh_renderer->pc_skinned_mesh = (PC_Skinned_Mesh){
         .ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle,
-        ._padding = 0,
+        .padding = 0,
         .vertex_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->vertex_buffer_handle),
         .normal_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->normal_buffer_handle),
         .tangent_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->tangent_buffer_handle),
@@ -135,7 +138,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 
     //skinned data
 
-    Skinned_Mesh_Upload_Data skinned_mesh_upload_data = {0};
+    Sk_Mesh_Upload_Data skinned_mesh_upload_data = {0};
 
     while (!ring_queue_is_empty(skinned_mesh_render_queue))
     {
@@ -183,7 +186,7 @@ void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* me
 
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
-    Mesh_Draw_Data mesh_draw_data = {0};
+    Mesh_GPU_Draw mesh_draw_data = {0};
     for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
     {
         Mesh_Data* current_submesh = &draw_data[mesh_idx];
@@ -209,7 +212,7 @@ void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* me
 
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->draw_data_staging_buffer_handle,
                                             &mesh_draw_data,
-                                            sizeof(Mesh_Draw_Data));
+                                            sizeof(Mesh_GPU_Draw));
     }
 
 
@@ -313,20 +316,21 @@ void mesh_renderer_construct_skinned_indirect_draw_new(Renderer* renderer, Mesh_
 
     vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_skinned_buffer_handle);
     vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_draw_data_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_buffer);
 
     mesh_renderer->skinned_indirect_draw_count = 0;
     // were assuming that the data is already in the buffers,
     // we are just generating the draw calls
 
-    Skinned_Mesh_Data* draw_data = mesh_render_packet->skinned_draw_data;
+    Sk_Mesh_Data* draw_data = mesh_render_packet->skinned_draw_data;
     u32 draw_data_size = mesh_render_packet->skinned_draw_data_size;
 
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
-    Skinned_Mesh_Draw_Data skinned_mesh_draw_data = {0};
+    SKMesh_GPU_Draw skinned_mesh_draw_data = {0};
     for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
     {
-        Skinned_Mesh_Data* current_submesh = &draw_data[mesh_idx];
+        Sk_Mesh_Data* current_submesh = &draw_data[mesh_idx];
 
         indirect_draw.firstIndex = current_submesh->mesh_data.index_offset;
         indirect_draw.indexCount = current_submesh->mesh_data.index_count;
@@ -355,7 +359,7 @@ void mesh_renderer_construct_skinned_indirect_draw_new(Renderer* renderer, Mesh_
             renderer, mesh_renderer->skinned_draw_data_buffer_handle,
             command_buffer,
             &skinned_mesh_draw_data,
-            sizeof(Skinned_Mesh_Draw_Data));
+            sizeof(SKMesh_GPU_Draw));
     }
 }
 
@@ -409,7 +413,7 @@ void mesh_renderer_skinned_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer
     push_constant_info.offset = 0;
     push_constant_info.size = sizeof(PC_Skinned_Mesh);
     // push_constant_info.size = sizeof(mesh_system->pc_mesh); // make sure its not a pointer if i use this
-    push_constant_info.pValues = &mesh_renderer->pc_mesh;
+    push_constant_info.pValues = &mesh_renderer->pc_skinned_mesh;
     push_constant_info.pNext = NULL;
     vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 

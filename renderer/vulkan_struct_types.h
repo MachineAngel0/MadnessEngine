@@ -202,6 +202,27 @@ typedef struct vulkan_shader_pipeline
     VkPipeline handle;
 } vulkan_shader_pipeline;
 
+
+typedef struct Vulkan_Shader_Batch
+{
+    vulkan_shader_pipeline pipeline;
+
+
+    //should be static and never change
+    VkPushConstantsInfo push_constant_info;
+
+    VkDrawIndexedIndirectCommand* indirect_count;
+    Buffer_Handle material_buffer;
+
+
+    //transient
+    Buffer_Handle indirect_buffer;
+    Buffer_Handle transform_buffer;
+
+
+}Vulkan_Shader_Batch;
+
+
 #define AVAILABLE_TEXTURES 100
 
 typedef struct Shader_System

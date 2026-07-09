@@ -215,6 +215,17 @@ const char* string_to_c_string(const String* s)
     return c_string;
 }
 
+const char* string_to_c_string_allocator(const String* s, Allocator* allocator)
+{
+    //when you need to convert it to a valid directory, this function is nice
+    char* c_string = allocator_alloc(allocator, sizeof(char) * (s->length + 1)); // +1 for the null terminated string
+    memcpy(c_string, s->chars, s->length);
+    c_string[s->length] = '\0';
+    return c_string;
+
+
+}
+
 bool string_compare_c_string(const String* str1, const char* c_str)
 {
     MASSERT(str1 != NULL);

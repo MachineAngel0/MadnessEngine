@@ -4,60 +4,26 @@
 
 #include "defines.h"
 #include "math_types.h"
-
-
-
-typedef struct Draw_Data
-{
-    u32 transform_index;
-    u32 material_index;
-} Draw_Data;
-
-typedef struct PC_Mesh
-{
-    //per instance data change
-    u32 ubo_buffer_idx;
-} PC_Mesh;
-
-typedef struct PC_Skinned_Mesh
-{
-    //per instance data change
-    u32 ubo_buffer_idx;
-    u32 _padding;
-
-    // buffer device addresses
-    VkDeviceAddress vertex_buffer;
-    // VkDeviceAddress index_buffer;
-    VkDeviceAddress normal_buffer;
-    VkDeviceAddress tangent_buffer;
-    VkDeviceAddress uv_buffer;
-    VkDeviceAddress joint_buffer;
-    VkDeviceAddress weight_buffer;
-    VkDeviceAddress skinned_matrix_buffer;
-
-    VkDeviceAddress transform_buffer;
-    VkDeviceAddress material_buffer;
-    VkDeviceAddress skinned_draw_data_buffer;
-
-
-    //128 byte limit
-} PC_Skinned_Mesh;
-
-typedef struct PC_Material_Mesh
-{
-    u32 ubo_buffer_idx;
-    PC_Mesh pc_mesh;
-    VkDeviceAddress material_buffer;
-} PC_Material_Mesh;
+#include "runtime_registry.h"
+#include "compiler/reflection_system.h"
 
 
 typedef enum Shader_Pass_Type
 {
-    PIPELINE_TYPE_MESH_PBR_OPAQUE,
-    PIPELINE_TYPE_MESH_PBR_TRANSPARENCY,
-    PIPELINE_TYPE_SHADOW,
+    Shader_Pass_Type_MESH_PBR_OPAQUE,
+    Shader_Pass_Type_MESH_PBR_TRANSPARENCY,
+    Shader_Pass_Type_SHADOW,
     // PIPELINE_TYPE_TERRAIN,
 } Shader_Pass_Type;
+
+
+typedef enum Shader_Stage_Type
+{
+    Shader_Stage_Type_Vertex = BITFLAG(0),
+    Shader_Stage_Type_Fragment= BITFLAG(1),
+    Shader_Stage_Type_Compute = BITFLAG(2),
+} Shader_Stage_Type;
+
 
 
 typedef enum Material_Flag
@@ -78,7 +44,63 @@ typedef enum Mesh_PBR_Flags
 } Mesh_PBR_Flags;
 
 
-typedef struct Material_PBR
+typedef struct Draw_Data
+{
+    u32 transform_index;
+    u32 material_index;
+} Draw_Data;
+
+typedef struct PC_Mesh
+{
+    //per instance data change
+    u32 ubo_buffer_idx;
+} PC_Mesh;
+
+typedef struct PC_Mesh_New
+{
+    //TODO:
+    //per instance data change
+    u32 ubo_buffer_idx;
+    u32 padding;
+
+    // buffer device addresses
+    VkDeviceAddress vertex_buffer;
+    VkDeviceAddress normal_buffer;
+    VkDeviceAddress tangent_buffer;
+    VkDeviceAddress uv_buffer;
+
+    VkDeviceAddress transform_buffer;
+    VkDeviceAddress material_buffer;
+    VkDeviceAddress draw_data_buffer;
+} PC_Mesh_New;
+
+typedef struct PC_Skinned_Mesh
+{
+    //per instance data change
+    u32 ubo_buffer_idx;
+    u32 padding;
+
+    // buffer device addresses
+    VkDeviceAddress vertex_buffer;
+    // VkDeviceAddress index_buffer;
+    VkDeviceAddress normal_buffer;
+    VkDeviceAddress tangent_buffer;
+    VkDeviceAddress uv_buffer;
+    VkDeviceAddress joint_buffer;
+    VkDeviceAddress weight_buffer;
+    VkDeviceAddress skinned_matrix_buffer;
+
+    VkDeviceAddress transform_buffer;
+    VkDeviceAddress material_buffer;
+    VkDeviceAddress skinned_draw_data_buffer;
+
+    //128 byte limit
+} PC_Skinned_Mesh;
+
+
+
+
+typedef struct Material_Default
 {
     u32 flags;
 
@@ -97,11 +119,39 @@ typedef struct Material_PBR
     u32 roughness_index;
     u32 ambient_occlusion_index;
     u32 emissive_index;
-    u32 _padding0;
-    u32 _padding1;
-    u32 _padding2;
+    u32 padding0;
+    u32 padding1;
+    u32 padding2;
 } Material_Default;
 
+
+typedef struct Material_Info{
+    const char* shader_file;
+
+    Shader_Stage_Type shader_stage;
+    Shader_Pass_Type shader_pass;
+
+    void* material_data;
+
+
+}Material_Info;
+
+typedef struct Material_Batch
+{
+    //reference back to material info
+    u32 hash_idx;
+
+    // Material_Def something[8];
+    u32 definition_count;
+    u32 material_stride;
+
+    // Mesh_Instance* mesh_instance;
+    void* material_data;
+    u32 material_count;
+
+    void* push_constant_data;
+    u32 push_constant_size;
+}Material_Batch;
 
 
 
@@ -114,6 +164,10 @@ typedef struct Material_System
     //Hardcode pipelines
     Material_Default prb[MAX_MATERIAL]; // pretty much manditory for all meshes
     u32 pbr_count;
+
+    Reflection_System* reflection_system;
+    Reflection_Registry* reflection_registry;
+
 
 
     //material data should get passed in through a push constant

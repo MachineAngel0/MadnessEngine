@@ -344,7 +344,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_upload_draw_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
 
     mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    // mesh_renderer_construct_skinned_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_construct_skinned_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
@@ -437,8 +437,8 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
                      &renderer->indirect_mesh_pipeline);
-    /*mesh_renderer_skinned_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
-                 &renderer->skinned_mesh_pipeline);*/
+    mesh_renderer_skinned_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
+                 &renderer->skinned_mesh_pipeline);
 
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 

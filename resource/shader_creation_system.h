@@ -1,6 +1,5 @@
 ﻿#ifndef SHADER_CREATION_SYSTEM_H
 #define SHADER_CREATION_SYSTEM_H
-#include <stdbool.h>
 
 //NOTE: Testing a shader creation system for funs and learning
 typedef enum Shader_Type
