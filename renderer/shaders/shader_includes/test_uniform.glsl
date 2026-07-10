@@ -42,6 +42,9 @@ struct spot_light_data{
     vec3 specular;
 };
 
+
+//BDA pointers
+
 layout(buffer_reference, scalar) readonly buffer DIRECTIONAL_LIGHT_BUFFER{
     directional_light_data directional_light[];
 };
@@ -54,12 +57,42 @@ layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
     spot_light_data spot_light[];
 };
 
+
+layout(buffer_reference, scalar) readonly buffer Vertex_Buffer{
+    vec3 vertex_data[];
+};
+layout(buffer_reference, scalar) readonly buffer UV_Buffer{
+    vec2 uv_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Normal_Buffer{
+    vec3 normal_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Tangent_Buffer{
+    vec4 tangent_data[];
+};
+
+layout(buffer_reference, scalar) readonly buffer Joint_Buffer{
+    vec4 joint_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Weight_Buffer{
+    vec4 weights_data[];
+};
+layout(buffer_reference, scalar) readonly buffer Skinned_Matrix_Buffer{
+    mat4 skinned_matrix_data[];
+};
+
+layout(buffer_reference, scalar) readonly buffer Transform_Buffer{
+    mat4 transform_data[];
+//model transform to be specific
+};
+
+
 //Set 0 = global data
 //Set 1 = textures
-//Set 2 = buffers
-//Set 3 = (object material data) // should be
+//Set 2 = buffers (not in use)
+//Set 3 = (object material data) // (not in use)
 
-layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
+layout(scalar, set = 0, binding = 0) uniform Global_UBO{
     mat4 view;
     mat4 proj;
 
@@ -67,10 +100,8 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
     DIRECTIONAL_LIGHT_BUFFER directional_lights;
 //    uint directional_light_index;
 
-
     POINT_LIGHT_BUFFER point_lights;
     uint point_lights_count;
-
 
 //    SPOT_LIGHT_BUFFER spot_lights;
 //    uint spot_lights_count;
@@ -81,27 +112,23 @@ layout(scalar, set = 0, binding = 0) uniform UniformBufferObject{
     float time;
     uint render_mode;
 
-    uint vertex_idx;
-    uint index_idx;
-    uint normal_idx;
-    uint tangent_idx;
-    uint uv_idx;
-    uint transform_idx;
+//global list of buffer resources
 
-//    uint joint__idx;
-//    uint weight_idx;
+//meshes
+    Vertex_Buffer vertex_buffer;
+    Normal_Buffer normal_buffer;
+    UV_Buffer uv_buffer;
+    Tangent_Buffer tangent_buffer;
 
-    uint draw_data_idx;
+//sk meshes
+    Joint_Buffer joint_buffer;
+    Weight_Buffer weight_buffer;
+    Skinned_Matrix_Buffer weight_bufer;
 
-
-    uint material_pbr_idx;
-
-
-    uint _padding;
+    Transform_Buffer transform_buffer;
 
 
-} ubo[];
-
+}ubo;
 
 
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
@@ -110,27 +137,6 @@ layout (set = 1, binding = 0) uniform texture2DMS texturesMS[];
 layout (set = 1, binding = 0) uniform textureCube textureCubes[];
 layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
 //layout (set = 1, binding = 1) uniform sampler samplers[];
-
-layout(set = 2, binding = 0, scalar) readonly buffer UV_BUFFER{
-    vec2 uv[];
-}UV[];
-
-layout(set = 2, binding = 0, scalar) readonly buffer NORMAL_BUFFER{
-    vec3 normal[];
-}NORMAL[];
-
-layout(set = 2, binding = 0, scalar) readonly buffer TRANSFORM_BUFFER{
-    mat4 model_transforms[];
-}TRANSFORM[];
-
-layout(set = 2, binding = 0, scalar) readonly buffer TANGENT_BUFFER{
-    vec4 tangent[];
-}TANGENT[];
-
-
-
-
-
 
 vec3 calculate_directional_light(directional_light_data light, vec3 normal, vec3 view_direction)
 {

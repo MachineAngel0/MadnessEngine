@@ -1,11 +1,12 @@
 ﻿#include "mesh_render.h"
 
 #include "vk_buffer.h"
+#include "vulkan_struct_types.h"
 
 
 Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system)
 {
-    Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->arena, sizeof(Mesh_Renderer));
+    Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->allocator, sizeof(Mesh_Renderer));
 
     u64 mesh_buffer_data_size = MB(16);
 
@@ -15,12 +16,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
                                                                    mesh_buffer_data_size);
     out_mesh_renderer->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                   mesh_buffer_data_size);
-    out_mesh_renderer->indirect_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_INDIRECT, mesh_buffer_data_size);
 
-    out_mesh_renderer->indirect_skinned_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_INDIRECT,
-                                                                             mesh_buffer_data_size);
 
     out_mesh_renderer->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                    BUFFER_TYPE_CPU_STORAGE, mesh_buffer_data_size);
@@ -56,42 +52,27 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
 
 
     //DRAW DATA
-    out_mesh_renderer->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                      BUFFER_TYPE_CPU_STORAGE,
-                                                                      mesh_buffer_data_size);
-    out_mesh_renderer->draw_data_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                              BUFFER_TYPE_STAGING,
-                                                                              mesh_buffer_data_size);
-
-    out_mesh_renderer->skinned_draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                              BUFFER_TYPE_CPU_STORAGE,
-                                                                              mesh_buffer_data_size);
     out_mesh_renderer->skinned_matrix_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                                BUFFER_TYPE_CPU_STORAGE,
-                                                                                mesh_buffer_data_size);
+                                                                    BUFFER_TYPE_CPU_STORAGE,
+                                                                    mesh_buffer_data_size);
 
 
-    //from other systems
-    out_mesh_renderer->pc_mesh.ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle;
+    out_mesh_renderer->pbr_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                BUFFER_TYPE_CPU_STORAGE,
+                                                                sizeof(Material_Default) * MAX_DEFAULT_MATERIAL);
+    out_mesh_renderer->pbr_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                        BUFFER_TYPE_STAGING,
+                                                                        sizeof(Material_Default) *
+                                                                        MAX_DEFAULT_MATERIAL);
 
-    out_mesh_renderer->pc_skinned_mesh = (PC_Skinned_Mesh){
-        .ubo_buffer_idx = renderer->buffer_system->global_ubo_handle.handle,
-        .padding = 0,
-        .vertex_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->vertex_buffer_handle),
-        .normal_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->normal_buffer_handle),
-        .tangent_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->tangent_buffer_handle),
-        .uv_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->uv_buffer_handle),
-        .joint_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->joint_buffer_handle),
-        .weight_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->weight_buffer_handle),
-        //these are not ideal, most likely should be combined into one large material/pipeline system that handles everything
-        .transform_buffer = vulkan_buffer_get_device_address(
-            renderer, renderer->material_renderer->transform_buffer_handle),
-        .material_buffer = vulkan_buffer_get_device_address(renderer, renderer->material_renderer->pbr_buffer_handle),
-        .skinned_draw_data_buffer = vulkan_buffer_get_device_address(
-            renderer, out_mesh_renderer->skinned_draw_data_buffer_handle),
-        .skinned_matrix_buffer = vulkan_buffer_get_device_address(renderer, out_mesh_renderer->skinned_matrix_buffer),
+    u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4);
 
-    };
+    out_mesh_renderer->transform_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                      BUFFER_TYPE_CPU_STORAGE,
+                                                                      transform_buffer_memory_size);
+    out_mesh_renderer->transform_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                              BUFFER_TYPE_STAGING,
+                                                                              transform_buffer_memory_size);
 
 
     //?? i need to get these
@@ -111,7 +92,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
     ring_queue* mesh_render_queue = render_packet->mesh_queue;
     ring_queue* skinned_mesh_render_queue = render_packet->skinned_mesh_queue;
 
-    Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_arena, sizeof(Mesh_Upload_Data));
+    Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_allocator, sizeof(Mesh_Upload_Data));
 
     //NOTE: rn it copies from an offset, which is fine for now,
     // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system function calls
@@ -168,273 +149,164 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
                                     mesh_renderer->tangent_staging_buffer_handle, command_buffer);
 }
 
-
-void mesh_renderer_construct_indirect_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                           Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
+void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+                                         Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
-    Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
+    //transform data
+    vulkan_buffer_reset_offset(renderer, mesh_renderer->transform_staging_buffer_handle);
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->transform_buffer_handle,
+                                                   mesh_renderer->transform_staging_buffer_handle, command_buffer,
+                                                   render_packet->draw_3d_data_packet.world_space_matrix_array,
+                                                   sizeof(mat4) * render_packet->draw_3d_data_packet.
+                                                   world_space_matrix_count);
 
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->draw_data_staging_buffer_handle);
+    //upload every frame
+    render_packet->draw_3d_data_packet.oqaque_batch;
+    render_packet->draw_3d_data_packet.oqaque_batch_count;
 
-    mesh_renderer->indirect_draw_count = 0;
-    // were assuming that the data is already in the buffers,
-    // we are just generating the draw calls
-
-    Mesh_Data* draw_data = mesh_render_packet->draw_data;
-    u32 draw_data_size = mesh_render_packet->draw_data_size;
-
-
-    VkDrawIndexedIndirectCommand indirect_draw = {0};
-    Mesh_GPU_Draw mesh_draw_data = {0};
-    for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
-    {
-        Mesh_Data* current_submesh = &draw_data[mesh_idx];
-
-        indirect_draw.firstIndex = current_submesh->index_offset;
-        indirect_draw.indexCount = current_submesh->index_count;
-        indirect_draw.vertexOffset = current_submesh->vertex_offset;
-        //instance data
-        indirect_draw.instanceCount = 1;
-        indirect_draw.firstInstance = 0;
-
-        mesh_renderer->indirect_draw_count++;
-
-
-        //push the indirect draw into the draw data
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->indirect_staging_buffer_handle,
-                                            &indirect_draw,
-                                            sizeof(VkDrawIndexedIndirectCommand));
-
-        //per object draw data
-        mesh_draw_data.transform_idx = current_submesh->transform_handle.handle;
-        mesh_draw_data.material_instance_handle = current_submesh->material_handle.handle;
-
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->draw_data_staging_buffer_handle,
-                                            &mesh_draw_data,
-                                            sizeof(Mesh_GPU_Draw));
-    }
-
-
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->indirect_buffer_handle,
-                                    mesh_renderer->indirect_staging_buffer_handle, command_buffer);
-
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->draw_data_buffer_handle,
-                                    mesh_renderer->draw_data_staging_buffer_handle, command_buffer);
-
-
-    /*Skinned_Mesh_Draw_Data* draw_data = mesh_render_packet->draw_data;
-    u32 draw_data_size = mesh_render_packet->draw_data_size;
-
-    Mesh_Indirect_Draw_Data* skinned_draw_data;
-    u32 skinned_draw_data_size;*/
+    //stuff uploaded very frame
+    vulkan_buffer_reset_offset(renderer, mesh_renderer->pbr_staging_buffer_handle);
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->pbr_buffer_handle,
+                                                   mesh_renderer->pbr_staging_buffer_handle, command_buffer,
+                                                   render_packet->draw_3d_data_packet.prb,
+                                                   render_packet->draw_3d_data_packet.prb_bytes);
 }
 
 
-void mesh_renderer_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
-                        vulkan_shader_pipeline* pipeline)
+void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Shader_System* shader_system,
+                                        Render_Packet* render_packet,
+                                        vulkan_command_buffer* command_buffer)
 {
-    // INFO("MESH SYSTEM DRAW CALLS")
-
-    //only bind the vertex and index, the storage buffers are in bindless
-    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_renderer->indirect_buffer_handle);
-    Vulkan_Buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_renderer->vertex_buffer_handle);
-    Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
-
-
-    VkDeviceSize pOffsets[] = {0};
-
-
-    //UBER SHADER MESH INDIRECT DRAW
-    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer->indirect_mesh_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //texturess
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->indirect_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
-                           pOffsets);
-
-    vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16);
-
-
-    VkPushConstantsInfo push_constant_info = {0};
-    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info.layout = pipeline->pipeline_layout;
-    push_constant_info.offset = 0;
-    push_constant_info.size = sizeof(PC_Mesh);
-    // push_constant_info.size = sizeof(mesh_system->pc_mesh); // make sure its not a pointer if i use this
-    push_constant_info.pValues = &mesh_renderer->pc_mesh;
-    push_constant_info.pNext = NULL;
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
-
-
-    //no need to sort by permutation rn, it gets handled in the shader, we can always sort out this later
-    if (renderer->context.device.features.multiDrawIndirect)
+    for (u32 batch_idx = 0; batch_idx < render_packet->draw_3d_data_packet.oqaque_batch_count; batch_idx++)
     {
-        //TODO/NOTE: the offset is the offset into the indirect buffer, letting us choose where any draw starts and ends
-        vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                 indirect_buffer->handle, 0,
-                                 mesh_renderer->indirect_draw_count,
-                                 sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < mesh_renderer->indirect_draw_count; j++)
+        Material_Batch* batch_data = &render_packet->draw_3d_data_packet.oqaque_batch[batch_idx];
+
+        Vulkan_Shader_Batch* current_batch = allocator_alloc(&renderer->frame_allocator, sizeof(Vulkan_Shader_Batch));
+        if (hash_table_get(shader_system->shader_batch_hash_table, batch_data->shader_name, &current_batch))
         {
-            vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                     indirect_buffer->handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
-                                     sizeof(VkDrawIndexedIndirectCommand));
+            current_batch->draw_count = 0;
+
+            current_batch->draw_data_buffer_handle;
+            current_batch->indirect_draw_buffer_handle;
+            // current_batch->material_data_buffer_handle;
+
+            //reset the offset of our per draw data
+            vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
+            vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
+            vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
+
+            vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                renderer, current_batch->material_data_buffer_handle,
+                command_buffer,
+                batch_data->material_data->data,
+                dynamic_array_get_byte_size(batch_data->material_data));
+
+            VkDrawIndexedIndirectCommand indirect_draw = {0};
+            for (u32 mesh_idx = 0; mesh_idx < batch_data->mesh_instances->num_items; mesh_idx++)
+            {
+                Mesh_Instance* mesh_instance = dynamic_array_get_ptr(batch_data->mesh_instances, Mesh_Instance,
+                                                                     mesh_idx);
+
+                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                    renderer, current_batch->draw_data_buffer_handle,
+                    command_buffer,
+                    &mesh_instance->mesh_gpu_draw,
+                    dynamic_array_get_byte_size(batch_data->material_data));
+
+                mesh_instance->mesh_indirect_draw;
+
+                indirect_draw.firstIndex = mesh_instance->mesh_indirect_draw.index_offset;
+                indirect_draw.indexCount = mesh_instance->mesh_indirect_draw.index_count;
+                indirect_draw.vertexOffset = mesh_instance->mesh_indirect_draw.vertex_offset;
+                //instance data
+                indirect_draw.instanceCount = 1;
+                indirect_draw.firstInstance = 0;
+
+                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                    renderer, current_batch->indirect_draw_buffer_handle,
+                    command_buffer,
+                    &indirect_draw,
+                    sizeof(VkDrawIndexedIndirectCommand));
+
+                current_batch->draw_count++;
+            }
         }
     }
 }
 
 
-void mesh_renderer_construct_skinned_indirect_draw_new(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                                       Render_Packet* render_packet,
-                                                       vulkan_command_buffer* command_buffer)
+void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+                              Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
+                              vulkan_command_buffer* command_buffer)
 {
-    Render_Packet_Mesh* mesh_render_packet = &render_packet->mesh_data_packet;
-
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->indirect_skinned_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_draw_data_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_buffer);
-
-    mesh_renderer->skinned_indirect_draw_count = 0;
-    // were assuming that the data is already in the buffers,
-    // we are just generating the draw calls
-
-    Sk_Mesh_Data* draw_data = mesh_render_packet->skinned_draw_data;
-    u32 draw_data_size = mesh_render_packet->skinned_draw_data_size;
-
-
-    VkDrawIndexedIndirectCommand indirect_draw = {0};
-    SKMesh_GPU_Draw skinned_mesh_draw_data = {0};
-    for (u32 mesh_idx = 0; mesh_idx < draw_data_size; mesh_idx++)
-    {
-        Sk_Mesh_Data* current_submesh = &draw_data[mesh_idx];
-
-        indirect_draw.firstIndex = current_submesh->mesh_data.index_offset;
-        indirect_draw.indexCount = current_submesh->mesh_data.index_count;
-        indirect_draw.vertexOffset = current_submesh->mesh_data.vertex_offset;
-        //instance data
-        indirect_draw.instanceCount = 1;
-        indirect_draw.firstInstance = 0;
-
-        mesh_renderer->skinned_indirect_draw_count++;
-
-
-        //push the indirect draw into the draw data
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_renderer->indirect_skinned_buffer_handle,
-            command_buffer,
-            &indirect_draw,
-            sizeof(VkDrawIndexedIndirectCommand));
-
-        //per object draw data
-        skinned_mesh_draw_data.transform_idx = current_submesh->mesh_data.transform_handle.handle;
-        skinned_mesh_draw_data.material_instance_handle = current_submesh->mesh_data.material_handle.handle;
-        skinned_mesh_draw_data.joint_idx = current_submesh->joint_offset_vec4;
-        skinned_mesh_draw_data.weight_idx = current_submesh->weight_offset_vec4;
-
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_renderer->skinned_draw_data_buffer_handle,
-            command_buffer,
-            &skinned_mesh_draw_data,
-            sizeof(SKMesh_GPU_Draw));
-    }
-}
-
-
-void mesh_renderer_skinned_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, vulkan_command_buffer* command_buffer,
-                                vulkan_shader_pipeline* pipeline)
-{
-    // INFO("MESH SYSTEM DRAW CALLS")
-
     //only bind the vertex and index, the storage buffers are in bindless
-    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, mesh_renderer->indirect_skinned_buffer_handle);
-    // Vulkan_Buffer* vertex_buffer = vulkan_buffer_get(renderer, mesh_renderer->vertex_buffer_handle);
-    Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
-
-    VkDeviceSize pOffsets[] = {0};
-
-
-    //UBER SHADER MESH INDIRECT DRAW
-    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      renderer->skinned_mesh_pipeline.handle);
-
-    //uniform
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->skinned_mesh_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    //texturess
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->skinned_mesh_pipeline.pipeline_layout, 1, 1,
-                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
-
-    //storage buffers
-    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            renderer->skinned_mesh_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
-
-    // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
-    // pOffsets);
-
-    vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
-                         VK_INDEX_TYPE_UINT16);
-
-
-    VkPushConstantsInfo push_constant_info = {0};
-    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info.layout = pipeline->pipeline_layout;
-    push_constant_info.offset = 0;
-    push_constant_info.size = sizeof(PC_Skinned_Mesh);
-    // push_constant_info.size = sizeof(mesh_system->pc_mesh); // make sure its not a pointer if i use this
-    push_constant_info.pValues = &mesh_renderer->pc_skinned_mesh;
-    push_constant_info.pNext = NULL;
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
-
-
-    //no need to sort by permutation rn, it gets handled in the shader, we can always sort out this later
-    if (renderer->context.device.features.multiDrawIndirect)
+    for (u32 batch_idx = 0; batch_idx < batch_draw_count; ++batch_idx)
     {
-        vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                 indirect_buffer->handle, 0,
-                                 mesh_renderer->skinned_indirect_draw_count,
-                                 sizeof(VkDrawIndexedIndirectCommand));
-    }
-    else
-    {
-        // If multi draw is not available, we must issue separate draw commands
-        for (u64 j = 0; j < mesh_renderer->skinned_indirect_draw_count; j++)
+        Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
+
+        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, draw_data->indirect_draw_buffer_handle);
+        Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
+
+        VkPipeline pipeline = draw_data->pipeline.handle;
+        VkPipelineLayout layout = draw_data->pipeline.pipeline_layout;
+
+        //UBER SHADER MESH INDIRECT DRAW
+        vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          pipeline);
+
+        //uniform
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 0, 1,
+                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                                    current_frame], 0, 0);
+        //texturess
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 1, 1,
+                                &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
+
+        //storage buffers
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 2, 1,
+                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                                    current_frame], 0, 0);
+
+        // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
+        // pOffsets);
+
+        vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
+                             VK_INDEX_TYPE_UINT16);
+
+
+        VkPushConstantsInfo push_constant_info = {0};
+        push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+        push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        push_constant_info.layout = layout;
+        push_constant_info.offset = 0;
+        push_constant_info.size = sizeof(PC_General);
+        // push_constant_info.size = sizeof(draw_data->general); // make sure its not a pointer if i use this
+        push_constant_info.pValues = &draw_data->pc_data;
+        push_constant_info.pNext = NULL;
+        vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
+
+
+        if (renderer->context.device.features.multiDrawIndirect)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
-                                     indirect_buffer->handle,
-                                     j * sizeof(VkDrawIndexedIndirectCommand), 1,
+                                     indirect_buffer->handle, 0,
+                                     draw_data->draw_count,
                                      sizeof(VkDrawIndexedIndirectCommand));
+        }
+        else
+        {
+            // If multi draw is not available, we must issue separate draw commands
+            for (u64 j = 0; j < draw_data->draw_count; j++)
+            {
+                vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                         indirect_buffer->handle,
+                                         j * sizeof(VkDrawIndexedIndirectCommand), 1,
+                                         sizeof(VkDrawIndexedIndirectCommand));
+            }
         }
     }
 }

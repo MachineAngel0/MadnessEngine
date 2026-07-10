@@ -5,10 +5,15 @@ Material_System* material_system_init(Memory_System* memory_system)
     Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
                                                            MEMORY_SUBSYSTEM_RESOURCE);
 
+    material_system->heap_allocator = memory_system_heap_allocator_create(
+        memory_system, MB(1), MEMORY_SUBSYSTEM_RESOURCE);
+
     material_system->reflection_system = reflection_system_init(memory_system);
-    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_CONSTANT);
+    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
+                            REFLECTION_PARSE_CONSTANT);
     reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_ENUM);
-    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_STRUCT);
+    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
+                            REFLECTION_PARSE_STRUCT);
 
 
     reflection_data_to_files(material_system->reflection_system, "material",
@@ -20,6 +25,11 @@ Material_System* material_system_init(Memory_System* memory_system)
     generate_runtime_structs_material(material_system->reflection_registry);
 
 
+    reflection_registry_debug_print_info(material_system->reflection_registry);
+
+
+    material_system_instantiate_material(material_system, "mesh", "Material_Default", Shader_Mesh_Type_Mesh);
+    material_system_instantiate_material(material_system, "skinned_mesh", "Material_Default", Shader_Mesh_Type_Skinned);
 
     return material_system;
 }
@@ -34,11 +44,15 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 }
 
 bool material_system_generate_render_packet(Material_System* material_system,
-                                            Render_Packet_Material* render_packet_material)
+                                            Render_Packet_3D* render_packet_3d)
 {
-    render_packet_material->prb = material_system->prb;
-    render_packet_material->prb_count = MAX_MATERIAL;
-    render_packet_material->prb_bytes = sizeof(Material_Default) * MAX_MATERIAL;
+    render_packet_3d->prb = material_system->prb;
+    render_packet_3d->prb_count = MAX_DEFAULT_MATERIAL;
+    render_packet_3d->prb_bytes = sizeof(Material_Default) * MAX_DEFAULT_MATERIAL;
+
+    render_packet_3d->oqaque_batch = material_system->oqaque_batch;
+    render_packet_3d->oqaque_batch_count = material_system->oqaque_batch_count;
+
 
     return true;
 }

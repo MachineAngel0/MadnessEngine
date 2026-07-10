@@ -19,7 +19,6 @@ String_Builder* string_builder_create(const u64 capacity, Allocator* allocator)
 }
 
 
-
 void string_builder_free(String_Builder* builder)
 {
     assert(builder);
@@ -43,6 +42,8 @@ void string_builder_print(String_Builder* builder)
 {
     printf("%.*s\n", (int)builder->current_length, builder->str);
 }
+
+
 
 void string_builder_append_string(String_Builder* str_builder, String* s)
 {
@@ -118,7 +119,6 @@ void string_builder_append_char(String_Builder* str_builder, const char characte
     //copy the word into the string
     memcpy(str_builder->str + str_builder->current_length, &character, 1);
     str_builder->current_length += 1;
-
 }
 
 
@@ -135,6 +135,7 @@ String* string_builder_to_string(const String_Builder* builder)
 {
     return string_create(builder->str, builder->current_length);
 }
+
 String string_builder_to_string_non_pointer(const String_Builder* builder)
 {
     return (String){.chars = builder->str, .length = builder->current_length};
@@ -142,8 +143,7 @@ String string_builder_to_string_non_pointer(const String_Builder* builder)
 
 char* string_builder_to_c_string(const String_Builder* builder)
 {
-
-    char* out_string = malloc(builder->current_length+1);
+    char* out_string = malloc(builder->current_length + 1);
     out_string = memcpy(out_string, builder->str, builder->current_length);
     out_string[builder->current_length] = '\0';
     return out_string;
@@ -170,7 +170,6 @@ void string_builder_clear(String_Builder* builder)
 
 bool string_builder_compare_with_char(String_Builder* builder, const char* word, u64 word_size)
 {
-
     if (builder->current_length != word_size)
     {
         return false;
@@ -185,8 +184,6 @@ bool string_builder_compare_with_char(String_Builder* builder, const char* word,
     }
 
     return true;
-
-
 }
 
 #define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_c_string(builder, string, sizeof(string)-1)
@@ -215,14 +212,10 @@ void string_builder_test(void)
     }
 
 
-
     string_builder_free(str1);
 
     TEST_DEBUG(str1 == NULL);
 
 
-
     TEST_END(STRING BUILDER);
 }
-
-

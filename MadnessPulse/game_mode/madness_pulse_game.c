@@ -3,7 +3,7 @@
 #include "save_game.h"
 
 
-Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Madness_UI* madness_ui,
+Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
                                             Event_System* event_system, Input_System* input, Resource_System*
                                             resource_system)
 {
@@ -19,7 +19,6 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Madnes
     allocator_init(&game->frame_allocator, game_frame_memory, game_memory_size);
     allocator_heap_init(&game->heap_allocator, game_free_list_memory, game_memory_size);
 
-    game->madness_ui = madness_ui;
     game->event_system = event_system;
     game->resource_system = resource_system;
     game->input_system = input;
@@ -54,10 +53,9 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     {
     case Game_State_Enum_Main_Menu:
         //run the ui
-        Madness_UI* ui = game->madness_ui;
-        madness_ui_window_begin(ui, STRING("Main Menu"));
+        madness_ui_window_begin(STRING("Main Menu"));
 
-        if (madness_ui_button(ui, STRING("Load Game")))
+        if (madness_ui_button(STRING("Load Game")))
         {
             if (filesystem_is_directory_empty(SAVE_GAME_PATH))
             {
@@ -69,7 +67,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
                 game->game_state = Game_State_Load_Save;
             }
         }
-        if (madness_ui_button(ui, STRING("New Game")))
+        if (madness_ui_button(STRING("New Game")))
         {
             //create a new save file that does not already exist
 
@@ -83,24 +81,24 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
             game->game_state = Game_State_Enum_Turn_Based; // TODO: temp
         }
-        if (madness_ui_button(ui, STRING("Settings")))
+        if (madness_ui_button(STRING("Settings")))
         {
         }
-        if (madness_ui_button(ui, STRING("Quit")))
+        if (madness_ui_button(STRING("Quit")))
         {
             Event_Data data = {0};
             event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
         }
-        madness_ui_window_end(ui);
+        madness_ui_window_end();
         break;
     case Game_State_Load_Save:
         // madness_pulse_load_save(game); // TODO:
         // game->game_state = Game_State_Enum_Turn_Based;
-        madness_ui_window_begin(game->madness_ui, STRING("Load Game Save Slots"));
+        madness_ui_window_begin(STRING("Load Game Save Slots"));
         {
             for (u32 i = 0; i < game->saves_found; i++)
             {
-                if (madness_ui_button(game->madness_ui, STRING("Press To Load This Save")))
+                if (madness_ui_button(STRING("Press To Load This Save")))
                 {
                     //TODO: load up the intermediate screen
                     save_game_load(game, game->save_meta_data[i].slot_number);
@@ -108,14 +106,13 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
                     game->game_state = Game_State_Enum_Turn_Based; // TODO: temp should be intermediate ui mode
                 }
-                madness_ui_u8(game->madness_ui, STRING("Slot Number:"), &game->save_meta_data[i].slot_number, 0);
-                madness_ui_float(game->madness_ui, STRING("Game Version:"), &game->save_meta_data[i].version, 0);
-                madness_ui_u8(game->madness_ui, STRING("Missions Beaten:"), &game->save_meta_data[i].missions_beaten,
-                              0);
-                madness_ui_padding(game->madness_ui, "");
+                madness_ui_u8(STRING("Slot Number:"), &game->save_meta_data[i].slot_number, 0);
+                madness_ui_float(STRING("Game Version:"), &game->save_meta_data[i].version, 0);
+                madness_ui_u8(STRING("Missions Beaten:"), &game->save_meta_data[i].missions_beaten, 0);
+                madness_ui_padding("");
             }
         }
-        madness_ui_window_end(game->madness_ui);
+        madness_ui_window_end();
 
         break;
     case Game_State_New_Save:
@@ -147,16 +144,15 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
 void madness_pulse_load_save(Madness_Pulse_Game* game)
 {
-    Madness_UI* ui = game->madness_ui;
-    madness_ui_window_begin(ui, STRING("Load Save"));
+    madness_ui_window_begin(STRING("Load Save"));
     {
-        madness_scroll_box_begin(ui, STRING("Load Save"));
+        madness_scroll_box_begin(STRING("Load Save"));
         {
             for (int i = 0; i < MAX_SAVE_SLOTS; i++)
             {
                 char buffer[100];
                 sprintf(buffer, "Save #%d", i);
-                if (madness_ui_button(ui, STRING(buffer)))
+                if (madness_ui_button(STRING(buffer)))
                 {
                     //TODO: load the level based on the number
                     DEBUG("Save Selected: %d", i);
@@ -165,41 +161,40 @@ void madness_pulse_load_save(Madness_Pulse_Game* game)
                 }
             }
         }
-        madness_scroll_box_end(ui);
+        madness_scroll_box_end();
     }
-    madness_ui_window_end(ui);
+    madness_ui_window_end();
 }
 
 
 void madness_pulse_level_select(Madness_Pulse_Game* game)
 {
     //run the ui
-    madness_ui_window_begin(game->madness_ui, STRING("Level Select"));
+    madness_ui_window_begin(STRING("Level Select"));
     {
-        madness_scroll_box_begin(game->madness_ui, STRING("level select"));
+        madness_scroll_box_begin(STRING("level select"));
         {
             for (int i = 0; i < Level_Name_MAX; i++)
             {
                 char buffer[100];
                 sprintf(buffer, "Level %d", i);
-                if (madness_ui_button(game->madness_ui, STRING(buffer)))
+                if (madness_ui_button(STRING(buffer)))
                 {
                     //TODO: load the level based on the number
                     DEBUG("Level Seleced: %d", i);
                 }
             }
         }
-        madness_scroll_box_end(game->madness_ui);
+        madness_scroll_box_end();
     }
-    madness_ui_window_end(game->madness_ui);
+    madness_ui_window_end();
 }
 
 
 void madness_pulse_ability_select(Madness_Pulse_Game* game)
 {
-    Madness_UI* ui = game->madness_ui;
-    madness_ui_window_begin(ui, STRING("Ability Inventory Select"));
+    madness_ui_window_begin(STRING("Ability Inventory Select"));
     {
     }
-    madness_ui_window_end(ui);
+    madness_ui_window_end();
 }

@@ -24,8 +24,11 @@ typedef struct Asset_Manager
 {
     bool unimplemented;
 
-
 }Asset_Manager;
+
+
+
+
 
 #define ENGINE_RESOURCE_PATH "../z_assets_engine_format/asset_list"
 

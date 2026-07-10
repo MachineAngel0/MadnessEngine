@@ -5,17 +5,17 @@
 
 Light_System* light_system_init(Renderer* renderer)
 {
-    Light_System* out_light_system = allocator_alloc(&renderer->arena, sizeof(Light_System));
+    Light_System* out_light_system = allocator_alloc(&renderer->allocator, sizeof(Light_System));
 
     //TODO: TEMP FOR NOW
     out_light_system->directional_light_count = 1;
     out_light_system->point_light_count = 1;
 
     out_light_system->point_lights =
-        allocator_alloc(&renderer->arena, sizeof(Point_Light) * out_light_system->point_light_count);
+        allocator_alloc(&renderer->allocator, sizeof(Point_Light) * out_light_system->point_light_count);
 
     out_light_system->directional_lights =
-        allocator_alloc(&renderer->arena, sizeof(Directional_Light) * out_light_system->directional_light_count);
+        allocator_alloc(&renderer->allocator, sizeof(Directional_Light) * out_light_system->directional_light_count);
 
 
     for (u32 point_light_idx = 0; point_light_idx < out_light_system->point_light_count; point_light_idx++)

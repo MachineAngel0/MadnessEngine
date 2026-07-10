@@ -8,7 +8,7 @@
 
 Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight)
 {
-    Buffer_System* out_buffer_system = allocator_alloc(&renderer->arena, sizeof(Buffer_System));
+    Buffer_System* out_buffer_system = allocator_alloc(&renderer->allocator, sizeof(Buffer_System));
     out_buffer_system->frames_in_flight = frames_in_flight;
     renderer->buffer_system = out_buffer_system;
 
@@ -16,11 +16,11 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     //these get handed out as handles to other systems that need them
     out_buffer_system->buffers_size = max_buffers_available;
     out_buffer_system->buffer_current_count = 0;
-    out_buffer_system->buffers = allocator_alloc(&renderer->arena,
+    out_buffer_system->buffers = allocator_alloc(&renderer->allocator,
                                                  out_buffer_system->buffers_size * sizeof(Vulkan_Buffer));
 
 
-    out_buffer_system->per_frame_cpu_to_gpu_staging_buffers = allocator_alloc(&renderer->arena,
+    out_buffer_system->per_frame_cpu_to_gpu_staging_buffers = allocator_alloc(&renderer->allocator,
                                                                        out_buffer_system->frames_in_flight
                                                                        * sizeof(Vulkan_Buffer));
 

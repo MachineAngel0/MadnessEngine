@@ -6,6 +6,7 @@
 
 #include "material_types.h"
 #include "ring_queue.h"
+#include "runtime_registry.h"
 #include "sprite_type.h"
 #include "stb_image.h"
 #include "stb_truetype.h"
@@ -34,12 +35,36 @@ typedef struct Texture_Handle
 typedef struct Material_Handle
 {
     u32 handle;
+    // u32 batch_handle;
 } Material_Handle;
 
+
+
+typedef struct Mesh_Asset_Handle
+{
+    u32 handle;
+} Mesh_Asset_Handle;
+
+typedef struct Sk_Mesh_Asset_Handle
+{
+    u32 handle;
+} Sk_Mesh_Asset_Handle;
+
+
+ /*//used by the game/editor to modify meshes
 typedef struct Mesh_Handle
 {
     u32 handle;
+    u32 submesh_idx;
 } Mesh_Handle;
+
+typedef struct Sk_Mesh_Handle
+{
+    u32 handle;
+    u32 submesh_idx;
+} Sk_Mesh_Handle;*/
+
+
 
 typedef struct Transform_Handle
 {
@@ -70,6 +95,7 @@ typedef enum Resource_Type
     RESOURCE_FONT,
     RESOURCE_SPRITE,
     RESOURCE_STATIC_MESH,
+    RESOURCE_SKINNED_MESH,
     RESOURCE_AUDIO,
 
     RESOURCE_MAX,
@@ -128,146 +154,11 @@ typedef struct Madness_Font
 
 /// MESH ///
 
-typedef struct Mesh_Data
-{
-    /*typedef struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
-
-    //info for indirect draw
-    u32 vertex_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    //TODO: another time, for when i want to do instancing
-    // uint32_t firstInstance; // 0
-    // uint32_t instanceCount; // 1
-
-    //info for vertex pulling
-    u32 normal_offset;
-    // u32 normal_bytes;
-
-    u32 tangent_offset;
-    // u32 tangent_bytes;
-
-    u32 uv_offset;
-    // u32 uv_bytes;
-
-    //material info
-    Transform_Handle transform_handle;
-    Material_Handle material_handle;
-} Mesh_Data;
 
 
-typedef struct Mesh_Instance
-{
-    Mesh_Data* mesh_data;
-    u32 mesh_count;
-
-    struct Per_Mesh_Data_Instance
-    {
-        Material_Handle* material_handle; // a material per submesh
-    };
-
-    Transform_Handle* transform_handle;
-    u32 instance_count;
-}Mesh_Instance;
-
-
-//
-
-
-typedef struct Mesh_Upload_Data
-{
-    //information to upload into the associated buffer
-    u32 vertex_offset;
-    u32 vertex_bytes;
-
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u32 normal_offset;
-    u32 normal_bytes;
-
-    u32 tangent_offset;
-    u32 tangent_bytes;
-
-    u32 uv_offset;
-    u32 uv_bytes;
-
-    //TODO: these technically could just be u8's
-    vec4* tangent;
-    vec3* pos;
-    vec3* normal;
-    vec2* uv;
-    u8* indices;
-} Mesh_Upload_Data;
-
-
-
-typedef struct Skinned_Mesh_Upload_Data
-{
-    u64 joint_bytes;
-    u64 weight_bytes;
-
-    u64 joint_offset;
-    u64 weight_offset;
-
-    vec4* joints;
-    vec4* weights;
-} Sk_Mesh_Upload_Data;
-
-
-typedef struct Mesh_Asset
-{
-    const char* file_path;
-    u32* mesh_index;
-    u32 mesh_count;
-
-
-}Mesh_Asset;
-
-typedef struct Sk_Mesh_Asset
-{
-    const char* file_path;
-    u32* mesh_index;
-    u32 mesh_count;
-
-    u32* skinned_mesh_indexs;
-    u32 skinned_mesh_count;
-
-    Animation_Handle anim_handle;
-}Sk_Mesh_Asset;
-
-
-typedef struct Mesh_GPU_Draw
-{
-    //used as a storage buffer
-    u32 transform_idx;
-    u32 material_instance_handle;
-} Mesh_GPU_Draw;
-
-
-
-typedef struct SKMesh_GPU_Draw
-{
-    //offset into the buffer
-    // u32 vertex_idx;
-    // u32 uv_idx;
-    // u32 normal_idx;
-    // u32 tangent_idx;
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 material_instance_handle;
-    u32 transform_idx;
-} SKMesh_GPU_Draw;
-
-
-
+// m1|m2|m3|m4|m5
+// batcn/mat1 = m1|m2|m5
+// batcn/ = m3|m4
 
 
 typedef struct Joint
@@ -350,12 +241,114 @@ typedef struct Animation_Data
 
     Animation* animations;
     u32 animations_count;
-
 } Animation_Data;
 
-typedef struct Skinned_Mesh_Data
+
+typedef struct Mesh_Upload_Data
+{
+    //information to upload into the associated buffer
+    u32 vertex_offset;
+    u32 vertex_bytes;
+
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u32 normal_offset;
+    u32 normal_bytes;
+
+    u32 tangent_offset;
+    u32 tangent_bytes;
+
+    u32 uv_offset;
+    u32 uv_bytes;
+
+    //TODO: these technically could just be u8's
+    vec4* tangent;
+    vec3* pos;
+    vec3* normal;
+    vec2* uv;
+    u8* indices;
+} Mesh_Upload_Data;
+
+
+typedef struct Skinned_Mesh_Upload_Data
+{
+    u64 joint_bytes;
+    u64 weight_bytes;
+
+    u64 joint_offset;
+    u64 weight_offset;
+
+    vec4* joints;
+    vec4* weights;
+} Sk_Mesh_Upload_Data;
+
+
+typedef struct Mesh_Indirect_Draw
 {
 
+    /*typedef struct VkDrawIndexedIndirectCommand {
+uint32_t    indexCount;
+uint32_t    instanceCount;
+uint32_t    firstIndex;
+int32_t     vertexOffset;
+uint32_t    firstInstance;
+} VkDrawIndexedIndirectCommand;*/
+
+
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+    //TODO: another time, for when i want to do instancing, which might not be worth it
+    // uint32_t firstInstance; // 0
+    // uint32_t instanceCount; // 1
+
+    /*//used as a storage buffer
+    u32 transform_idx;
+    u32 material_instance_handle;*/
+} Mesh_Indirect_Draw;
+
+typedef struct Mesh_GPU_Draw
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+} Mesh_GPU_Draw;
+
+typedef struct SKMesh_GPU_Draw
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+    u32 joint_idx;
+    u32 weight_idx;
+} SKMesh_GPU_Draw;
+
+
+typedef struct Mesh_Data
+{
+
+    //info for indirect draw
+    u32 vertex_offset; //in vec3
+    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
+    u32 index_count; // u32 count
+
+
+    //info for vertex pulling
+    u32 normal_offset;
+    // u32 normal_bytes;
+
+    u32 tangent_offset;
+    // u32 tangent_bytes;
+
+    u32 uv_offset;
+    // u32 uv_bytes;
+
+    //material info
+    Material_Handle default_material_handle;
+} Mesh_Data;
+
+typedef struct Sk_Mesh_Data
+{
     // these are inside mesh data
     // Transform_Handle transform_handle;
     // Material_Handle material_handle;
@@ -368,21 +361,44 @@ typedef struct Skinned_Mesh_Data
     u64 weight_bytes;
     u64 weight_offset_vec4;
     u64 weight_offset_bytes;
-
 } Sk_Mesh_Data;
 
+typedef struct Mesh_Instance
+{
+    Mesh_Indirect_Draw mesh_indirect_draw;
+    Mesh_GPU_Draw mesh_gpu_draw;
+    Material_Handle material_handle;
+    Transform_Handle parent_transform_handle;
+} Mesh_Instance;
 
+typedef struct Mesh_Parent_Instance
+{
+    //this generally is only for changing materials and transforms, and not for the renderer
+    Mesh_Asset_Handle mesh_asset;
+    Transform_Handle transform_handle;
 
+    u32 mesh_count;
+    Mesh_Instance* mesh_instances_array;
 
-
+} Mesh_Parent_Instance;
 
 typedef struct Sk_Mesh_Instance
 {
-    //reference back to the animation data
-    //TODO: replace with a handle
-    // skinned_mesh_handle* handle;
-    Animation_Handle anim_handle;
+    Mesh_Indirect_Draw mesh_indirect_draw;
+    SKMesh_GPU_Draw sk_mesh_gpu_draw;
+    Material_Handle material_handle;
+    Transform_Handle parent_transform_handle;
+} Sk_Mesh_Instance;
 
+typedef struct Sk_Mesh_Parent_Instance
+{
+    Sk_Mesh_Asset_Handle sk_mesh_handle;
+    Transform_Handle transform_handle;
+    u32 mesh_count;
+    Sk_Mesh_Instance* sk_mesh_instance_array;
+
+    //generated every frame
+    mat4* gpu_matrix;
 
     vec3* local_translation;
     quat* local_rotation;
@@ -390,14 +406,134 @@ typedef struct Sk_Mesh_Instance
 
     u32 joint_count;
 
-    //generated every frame
-    mat4* gpu_matrix;
-
-
     u32 current_animation_index;
     float current_time;
     bool looping;
-} Sk_Mesh_Instance;
+} Sk_Mesh_Parent_Instance;
+
+
+typedef struct Mesh_Asset
+{
+    const char* file_path;
+    Mesh_Data* mesh_data;
+    u32 mesh_count;
+} Mesh_Asset;
+
+typedef struct Sk_Mesh_Asset
+{
+    const char* file_path;
+    Mesh_Data* mesh_data;
+    u32 mesh_count;
+
+    Sk_Mesh_Data* skinned_mesh_data;
+    u32 skinned_mesh_count;
+
+    Animation_Data* animation_data;
+} Sk_Mesh_Asset;
+
+typedef enum Shader_Mesh_Type
+{
+    Shader_Mesh_Type_Mesh,
+    Shader_Mesh_Type_Skinned,
+    // Shader_Pass_Type_Particle,
+} Shader_Mesh_Type;
+
+typedef enum Shader_Pass_Type
+{
+    Shader_Pass_Type_MESH_PBR_OPAQUE,
+    Shader_Pass_Type_MESH_PBR_TRANSPARENCY,
+    Shader_Pass_Type_SHADOW,
+    // PIPELINE_TYPE_TERRAIN,
+} Shader_Pass_Type;
+
+typedef enum Shader_Blend_Mode
+{
+    Shader_Blend_Mode_Default,
+} Shader_Blend_Mode;
+
+typedef enum Shader_Stage_Type
+{
+    Shader_Stage_Type_Graphics,
+    Shader_Stage_Type_Compute,
+} Shader_Stage_Type;
+
+
+typedef enum Material_Flag
+{
+    MATERIAL_FLAG_PBR = BITFLAG(0),
+    MATERIAL_FLAG_UV_ANIM = BITFLAG(1),
+} Material_Flag;
+
+
+typedef enum Mesh_PBR_Flags
+{
+    MESH_PIPELINE_COLOR = BITFLAG(1),
+    MESH_PIPELINE_NORMAL = BITFLAG(2),
+    MESH_PIPELINE_EMISSIVE = BITFLAG(3),
+    MESH_PIPELINE_ROUGHNESS = BITFLAG(4),
+    MESH_PIPELINE_METALLIC = BITFLAG(5),
+    MESH_PIPELINE_AO = BITFLAG(6),
+    MESH_PIPELINE_ENUM_MAX,
+} Mesh_PBR_Flags;
+
+
+
+typedef struct PC_Mesh
+{
+    VkDeviceAddress draw_data_buffer;
+    VkDeviceAddress material_buffer;
+} PC_Mesh;
+
+
+typedef struct PC_General
+{
+    VkDeviceAddress draw_data_buffer;
+    VkDeviceAddress material_buffer;
+} PC_General;
+
+typedef struct PC_Skinned_Mesh
+{
+    VkDeviceAddress draw_data_buffer;
+    VkDeviceAddress material_buffer;
+}PC_Skinned_Mesh;
+
+typedef struct Material_Batch
+{
+    const char* shader_name;
+    Reflection_Runtime_Struct* material_struct;
+
+    Dynamic_Array* material_data;
+    // PC_General* pc_general; // TODO:
+
+    Dynamic_Array* mesh_instances;
+
+    Shader_Stage_Type shader_stage;
+    Shader_Pass_Type shader_pass;
+    Shader_Mesh_Type mesh_type;
+
+} Material_Batch;
+
+
+#define MAX_DEFAULT_MATERIAL 100
+
+typedef struct Material_System
+{
+    //Hardcode pipelines
+    Material_Default prb[MAX_DEFAULT_MATERIAL]; // pretty much manditory for all meshes
+    u32 pbr_count;
+
+    Heap_Allocator* heap_allocator;
+    Reflection_System* reflection_system;
+    Reflection_Registry* reflection_registry;
+
+    //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
+
+
+    //sort material batches by their pass type
+    Material_Batch oqaque_batch[100];
+    u32 oqaque_batch_count;
+
+} Material_System;
 
 
 //SPRITE
@@ -454,37 +590,26 @@ typedef struct Mesh_System
 {
 #define MAX_MESH_COUNT 1000
 #define MAX_SKINNED_MESH_COUNT 1000
+
     //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
     // fragmentation would also be a concern, unless i pool size, or split the pool into many different pool sizes
 
-    //unneccessary upload from cpu into the gpu should be avoided
-    //indirect commands will be regenerated every frame, at some point it can also be moved to the gpu
-
-    //we want one continous stream of buffers for the data types
-    //we upload the data to the gpu then we free it
-
-    //the mesh system needs to ideally have a list of meshes which point to submeshes, but the meshes themselves are linear in the array
-    //mesh and skinned mesh need to be treated differently
+    //mesh_asset (has all the data) -> mesh_parent_instance (contains pointers to all the submeshes, is the thing we want the game to manipulate, also allows us to make material changes quickly)
+    //-> mesh_instance (inside the material batches)
 
 
-    Mesh_Asset mesh_meta_data[MAX_MESH_COUNT];
-    u32 mesh_meta_data_count;
+    Mesh_Asset mesh_asset_data[MAX_MESH_COUNT];
+    u32 mesh_asset_count;
 
-    Mesh_Data mesh_data[MAX_MESH_COUNT];
-    u32 mesh_data_count;
+    Sk_Mesh_Asset skinned_mesh_asset_data[MAX_MESH_COUNT];
+    u32 sk_mesh_asset_count;
 
+    Mesh_Parent_Instance mesh_parent_instance[MAX_MESH_COUNT];
+    u32 mesh_parent_instance_count;
 
-    Sk_Mesh_Asset skinned_mesh_meta_data[MAX_MESH_COUNT];
-    u32 skinned_mesh_meta_data_count;
-
-    Sk_Mesh_Data skinned_mesh_data[MAX_MESH_COUNT];
-    u32 skinned_mesh_data_count;
-
-    Animation_Data animation_data[MAX_MESH_COUNT];
-    u32 animation_data_count;
-
-    Sk_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
+    Sk_Mesh_Parent_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
+
 
     //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
     // Mesh_Indirect_Draw_Data not_in_use_draw_data[MAX_MESH_COUNT];
@@ -508,7 +633,6 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
-    Sk_Mesh_Instance* test_skinned_mesh_instance;
 
     //TODO:
     //anything that couldn't be loaded in this frame
@@ -532,29 +656,21 @@ typedef struct Scene
 //RENDER PACKET
 
 //these are all just references to the data, they do not own anything
-typedef struct Render_Packet_Mesh
+typedef struct Render_Packet_3D
 {
     //geometry data for indirect draws
-    Mesh_Data* draw_data;
-    u32 draw_data_size;
 
-    Sk_Mesh_Data* skinned_draw_data;
-    u32 skinned_draw_data_size;
-} Render_Packet_Mesh;
+    //TODO: we should have a dirty bit for generating any new batches
+    Material_Batch* oqaque_batch;
+    u32 oqaque_batch_count;
 
-typedef struct Render_Packet_Transform
-{
-    mat4* world_space_matrix_array;
-    u32 world_space_matrix_count;
-} Render_Packet_Transform;
-
-
-typedef struct Render_Packet_Material
-{
     Material_Default* prb;
     u32 prb_count;
     u32 prb_bytes;
-} Render_Packet_Material;
+
+    mat4* world_space_matrix_array;
+    u32 world_space_matrix_count;
+} Render_Packet_3D;
 
 
 typedef struct Render_Packet_UI
@@ -584,11 +700,9 @@ typedef struct Render_Packet
     //FOR RENDERING
 
     //rn we just have one of each,
-    Render_Packet_Transform transform_data_packet;
-    Render_Packet_Material material_data_packet;
     Render_Packet_Sprite sprite_data_packet;
     Render_Packet_UI ui_data_packet;
-    Render_Packet_Mesh mesh_data_packet;
+    Render_Packet_3D draw_3d_data_packet;
 } Render_Packet;
 
 

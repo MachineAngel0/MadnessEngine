@@ -26,8 +26,9 @@ bool renderer_on_key(const Event_Type code, String sender, String listener_inst,
 }
 
 
-Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system, Input_System* input_system,
-                   Event_System* event_system, Resource_System* resource_system)
+Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system,
+                        Input_System* input_system,
+                        Event_System* event_system, Resource_System* resource_system)
 {
     MASSERT(platform_state);
     MASSERT(memory_system);
@@ -41,7 +42,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_context* vk_context = &renderer->context;
 
 
-
     //grab the input system if its valid
     if (input_system)
     {
@@ -50,7 +50,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     renderer->resource_system = resource_system; //reference
 
-    event_register(event_system, EVENT_KEY_RELEASED,  STRING("RENDERER"), renderer_on_key);
+    event_register(event_system, EVENT_KEY_RELEASED, STRING("RENDERER"), renderer_on_key);
 
 
     //set up memory for the renderer
@@ -58,12 +58,17 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     u64 frame_arena_mem_size = GB(0.5);
 
 
+    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+                                                    MEMORY_SUBSYSTEM_RENDERER);
+    allocator_init(&renderer->allocator, renderer_system_mem, renderer_system_mem_requirement);
 
-    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->arena, renderer_system_mem, renderer_system_mem_requirement);
+    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+                                                MEMORY_SUBSYSTEM_RENDERER);
+    allocator_init(&renderer->frame_allocator, frame_arena_mem, frame_arena_mem_size);
 
-    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement, MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->frame_arena, frame_arena_mem, frame_arena_mem_size);
+
+    renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(4), MEMORY_SUBSYSTEM_RENDERER);
+
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -147,8 +152,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->light_system = light_system_init(renderer);
 
     //System specific draws
-    // Material System
-    renderer->material_renderer = material_renderer_init(renderer, renderer->resource_system);
     // Mesh System
     renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
     // Sprite Backend
@@ -163,10 +166,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     ui_shader_create(renderer, &renderer->ui_pipeline, renderer->pipeline_cache);
     text_shader_create(renderer, &renderer->text_pipeline, renderer->pipeline_cache);
     sprite_shader_create(renderer, &renderer->sprite_pipeline, renderer->pipeline_cache);
-    mesh_indirect_shader_create(renderer, &renderer->indirect_mesh_pipeline,
-                                renderer->pipeline_cache);
-    skinned_mesh_shader_create(renderer, &renderer->skinned_mesh_pipeline,
-    renderer->pipeline_cache);
+    mesh_pipeline_create(renderer, &renderer->indirect_mesh_pipeline,
+                         renderer->pipeline_cache);
+    sk_mesh_pipeline_create(renderer, &renderer->skinned_mesh_pipeline,
+                            renderer->pipeline_cache);
     //Pipeline Cache
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
@@ -192,8 +195,10 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     vulkan_context* vk_context = &renderer->context;
 
-    allocator_clear(&renderer->frame_arena);
+    allocator_clear(&renderer->frame_allocator);
     buffer_system_frame_start(renderer);
+
+    shader_system_check_for_new_shader_batches(renderer, renderer->shader_system, render_packets);
 
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);
@@ -268,9 +273,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     }
 
 
-
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
-
 
 
     Global_Ubo ubo = {0};
@@ -304,18 +307,16 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     //global indexes
     //meshes
-    ubo.vertex_idx = renderer->mesh_renderer->vertex_buffer_handle.handle;
-    ubo.index_idx  = renderer->mesh_renderer->index_buffer_handle.handle;
-    ubo.normal_idx  = renderer->mesh_renderer->normal_buffer_handle.handle;
-    ubo.tangent_idx  = renderer->mesh_renderer->tangent_buffer_handle.handle;
-    ubo.uv_index  = renderer->mesh_renderer->uv_buffer_handle.handle;
-    ubo.draw_data_idx  = renderer->mesh_renderer->draw_data_buffer_handle.handle;
+    ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->vertex_buffer_handle);
+    ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->normal_buffer_handle);
+    ubo.tangent_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->tangent_buffer_handle);
+    ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->uv_buffer_handle);
+    ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->joint_buffer_handle);
+    ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->weight_buffer_handle);
+    ubo.skinned_matrix_buffer = vulkan_buffer_get_device_address(
+        renderer, renderer->mesh_renderer->skinned_matrix_buffer);
+    ubo.transform_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->transform_buffer_handle);
 
-    //transform
-    ubo.transform_idx  = renderer->material_renderer->transform_buffer_handle.handle;
-
-    //Materials
-    ubo.material_pbr_idx = renderer->material_renderer->pbr_buffer_handle.handle;
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
@@ -323,8 +324,6 @@ void renderer_update(Renderer* renderer, float delta_time)
                                                   renderer->buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(Global_Ubo));
-
-
 
 
     // Begin recording commands.
@@ -336,20 +335,21 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
-    material_renderer_upload_data(renderer, renderer->material_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
 
     ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 
 
     mesh_renderer_upload_draw_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_construct_batch_draw(renderer, renderer->mesh_renderer, renderer->shader_system, render_packets,
+                                       graphics_command_buffer);
 
-    mesh_renderer_construct_indirect_draw(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    mesh_renderer_construct_skinned_indirect_draw_new(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
-    memory_barrier_transfer(renderer,  graphics_command_buffer);
+    memory_barrier_transfer(renderer, graphics_command_buffer);
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(graphics_command_buffer->handle,
@@ -371,8 +371,6 @@ void renderer_update(Renderer* renderer, float delta_time)
                                     VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
                                 }
     );
-
-
 
 
     // Set up the rendering attachment info
@@ -435,10 +433,9 @@ void renderer_update(Renderer* renderer, float delta_time)
     //            SET 2 : MESH SHADER DATA (push constants / ubo)
     //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
-    mesh_renderer_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
-                     &renderer->indirect_mesh_pipeline);
-    mesh_renderer_skinned_draw(renderer, renderer->mesh_renderer, graphics_command_buffer,
-                 &renderer->skinned_mesh_pipeline);
+    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+                             renderer->shader_system->shader_batches, renderer->shader_system->shader_batches_count,
+                             graphics_command_buffer);
 
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 

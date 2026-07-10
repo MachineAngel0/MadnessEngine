@@ -25,6 +25,7 @@ vec2 rotate(vec2 pos, float a)
 
 void main() {
 
+    //TODO: pass in the draw/material buffer
     uint sprite_instance_buffer_idx = PC_2D.instance_buffer_idx;
 
     Sprite_Data inst_data =

@@ -847,6 +847,11 @@ void dynamic_array_zero(Dynamic_Array* array)
     memset(array->data, 0, array->num_items * array->stride);
 }
 
+u64 dynamic_array_get_byte_size(Dynamic_Array* array)
+{
+    return array->num_items * array->stride;
+}
+
 bool dynamic_array_is_empty(Dynamic_Array* array)
 {
     return array->num_items == 0;

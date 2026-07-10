@@ -203,23 +203,28 @@ typedef struct vulkan_shader_pipeline
 } vulkan_shader_pipeline;
 
 
+
 typedef struct Vulkan_Shader_Batch
 {
+    const char* shader_name;
+    Shader_Stage_Type shader_stage_type;
+    Shader_Pass_Type shader_pass_type;
+    Shader_Mesh_Type mesh_type;
+
+
     vulkan_shader_pipeline pipeline;
 
+    Buffer_Handle indirect_draw_buffer_handle;
+    u32 draw_count;
 
-    //should be static and never change
-    VkPushConstantsInfo push_constant_info;
+    Buffer_Handle draw_data_buffer_handle;
+    Buffer_Handle material_data_buffer_handle;
+    u32 material_stride;
 
-    VkDrawIndexedIndirectCommand* indirect_count;
-    Buffer_Handle material_buffer;
+    PC_General pc_data;
 
-
-    //transient
-    Buffer_Handle indirect_buffer;
-    Buffer_Handle transform_buffer;
-
-
+    // u32 pc_size;
+    // void* pc_data;
 }Vulkan_Shader_Batch;
 
 
@@ -239,10 +244,20 @@ typedef struct Shader_System
 
     hash_table* texture_file_to_handle;
     // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
-
     u32 max_indexes;
 
+    //since textures could be read this frame, we wait a frame to delete them
     //TODO: ring_queue* texture_delete_queue
+
+    //TODO: temp value for now, should probably be a dynamic array
+    Vulkan_Shader_Batch shader_batches[100];
+    u32 shader_batches_count;
+
+    //the shader name is the lookup
+    //we want the pointer to the shader batch,
+    HASH_TABLE_TYPE(Vulkan_Shader_Batch*)* shader_batch_hash_table;
+
+
 } Shader_System;
 
 
@@ -467,26 +482,26 @@ typedef struct global_ubo
     vec4 camera_position;
     vec2 screem_dimensions;
 
-    float time;
+    f32 time;
     Render_Mode render_mode;
 
 
     //global list of buffer resources
 
     //meshes
-    u32 vertex_idx;
-    u32 index_idx;
-    u32 normal_idx;
-    u32 tangent_idx;
-    u32 uv_index;
-    u32 transform_idx;
+    VkDeviceAddress vertex_buffer;
+    VkDeviceAddress normal_buffer;
+    VkDeviceAddress uv_buffer;
+    VkDeviceAddress tangent_buffer;
 
-    //skinned : TODO:
-    u32 draw_data_idx;
+    //sk meshes
+    VkDeviceAddress joint_buffer;
+    VkDeviceAddress weight_buffer;
+    VkDeviceAddress skinned_matrix_buffer;
 
-    //materials
-    u32 material_pbr_idx;
-    u32 _padding;
+    //global transforms
+    VkDeviceAddress transform_buffer;
+
 
 } Global_Ubo;
 
@@ -510,6 +525,7 @@ typedef struct Descriptor_System
 
 typedef struct pipeline_cache_file_header
 {
+    //mpipe
     u32 magic; // an arbitrary magic header to make sure this is actually our file
     u32 data_size; // equal to *pDataSize returned by vkGetPipelineCacheData
 
@@ -567,22 +583,10 @@ typedef struct Sprite_Backend
 } Sprite_Renderer;
 
 
-
-typedef struct Material_Renderer
-{
-    Buffer_Handle pbr_buffer_handle;
-    Buffer_Handle pbr_staging_buffer_handle;
-
-
-    Buffer_Handle transform_buffer_handle;
-    Buffer_Handle transform_staging_buffer_handle;
-} Material_Renderer;
-
 typedef struct Mesh_Renderer
 {
     Buffer_Handle vertex_buffer_handle;
     Buffer_Handle index_buffer_handle;
-    Buffer_Handle indirect_buffer_handle;
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
@@ -599,23 +603,14 @@ typedef struct Mesh_Renderer
     Buffer_Handle tangent_staging_buffer_handle;
     Buffer_Handle uv_staging_buffer_handle;
 
-
-
-    Buffer_Handle draw_data_buffer_handle;
-    Buffer_Handle draw_data_staging_buffer_handle;
-
-
-    Buffer_Handle indirect_skinned_buffer_handle;
-    Buffer_Handle skinned_draw_data_buffer_handle;
     Buffer_Handle skinned_matrix_buffer;
 
-    u32 indirect_draw_count;
-    u32 skinned_indirect_draw_count;
 
-    PC_Mesh pc_mesh;
-    PC_Skinned_Mesh pc_skinned_mesh;
+    Buffer_Handle pbr_buffer_handle;
+    Buffer_Handle pbr_staging_buffer_handle;
 
-
+    Buffer_Handle transform_buffer_handle;
+    Buffer_Handle transform_staging_buffer_handle;
 
 } Mesh_Renderer;
 
@@ -626,8 +621,9 @@ typedef struct renderer
     camera main_camera;
     Render_Mode mode;
 
-    Allocator arena; // total memory for the entire renderer
-    Allocator frame_arena;
+    Allocator allocator; // total memory for the entire renderer
+    Allocator frame_allocator;
+    Heap_Allocator* heap_allocator;
 
 
     Input_System* input_system; //meant only to be used for debugging
@@ -638,7 +634,6 @@ typedef struct renderer
     Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
     Mesh_Renderer* mesh_renderer;
-    Material_Renderer* material_renderer;
 
     //renderer specific
     Buffer_System* buffer_system;
@@ -650,11 +645,12 @@ typedef struct renderer
     UI_Renderer_Backend* ui_renderer;
 
 
+
     //mesh system
     //animation system
     //ui draw info
 
-    //TODO:
+    //TODO: get it out of the context and drop it here
     vulkan_context context;
 
     //TODO: TEMP

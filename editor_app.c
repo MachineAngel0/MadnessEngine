@@ -88,7 +88,7 @@ bool editor_app_run(Editor_Application* editor_app)
     //MAIN LOOP
     //TODO: theres a bug if i try to load in the same object twiceqq
     mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
-                       &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                       &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                        renderer_plugin->renderer->resource_system);
     /*
         mesh_load_gltf_new(application_core->resource_system->mesh_system,
@@ -134,15 +134,14 @@ bool editor_app_run(Editor_Application* editor_app)
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
 
-        madness_ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
-                         renderer_plugin->renderer->context.framebuffer_height_new);
+        madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new, renderer_plugin->renderer->context.framebuffer_height_new);
         insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
                              renderer_plugin->renderer->context.framebuffer_height_new);
 
         editor_update(editor_plugin->editor);
 
 
-        madness_ui_end(renderer_plugin->madness_ui);
+        madness_ui_end();
         insanity_ui_end();
 
 
@@ -168,7 +167,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     editor_shutdown(editor_plugin->editor);
 
-    madness_ui_shutdown(renderer_plugin->madness_ui);
+    madness_ui_shutdown();
 
     renderer_shutdown(renderer_plugin->renderer);
 

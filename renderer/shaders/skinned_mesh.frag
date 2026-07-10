@@ -21,20 +21,19 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 
-    uint ubo_index = pc_skinned_mesh.ubo_buffer_idx;
 
 
     // properties
     vec3 norm = normalize(in_normal);
     // Normal = mat3(transpose(inverse(model))) * aNormal; // for generating proper normals with non-uniform scales
 
-    vec3 view_direction = normalize(ubo[nonuniformEXT(ubo_index)].camera_view_pos.xyz - in_world_position);
+    vec3 view_direction = normalize(ubo.camera_view_pos.xyz - in_world_position);
 
     // Directional lighting
-    vec3 result = calculate_directional_light(ubo[nonuniformEXT(ubo_index)].directional_lights.directional_light[0], norm, view_direction);
+    vec3 result = calculate_directional_light(ubo.directional_lights.directional_light[0], norm, view_direction);
     // Point lights
-    for(int i = 0; i < ubo[nonuniformEXT(ubo_index)].point_lights_count; i++){
-        result += calculate_point_light(ubo[nonuniformEXT(ubo_index)].point_lights.point_light[i], norm, in_world_position, view_direction);
+    for(int i = 0; i < ubo.point_lights_count; i++){
+        result += calculate_point_light(ubo.point_lights.point_light[i], norm, in_world_position, view_direction);
     }
     // phase 3: Spot light
     //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);
@@ -45,13 +44,13 @@ void main() {
     outColor = final_result;
 
     //LIGHTING INFO
-    if (ubo[nonuniformEXT(0)].render_mode == 2){
+    if (ubo.render_mode == 2){
         final_result = vec4(result, 1.0) * (in_normal,1.0);
         outColor = final_result;
     }
 
     //NORMALS INFO
-    if (ubo[nonuniformEXT(0)].render_mode == 1){
+    if (ubo.render_mode == 1){
         outColor = vec4(abs(in_normal), 1.0f);
     }
 

@@ -4,7 +4,7 @@
 
 Shader_System* shader_system_init(Renderer* renderer)
 {
-    Shader_System* out_shader_system = allocator_alloc(&renderer->arena, sizeof(Shader_System));
+    Shader_System* out_shader_system = allocator_alloc(&renderer->allocator, sizeof(Shader_System));
     renderer->shader_system = out_shader_system;
 
     out_shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
@@ -17,12 +17,14 @@ Shader_System* shader_system_init(Renderer* renderer)
 
     out_shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
 
-
-
     memset(out_shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
+
+    //we store the pointer, we dont want a copy
+    out_shader_system->shader_batch_hash_table = HASH_TABLE_CREATE(Vulkan_Shader_Batch*, 100);
 
 
     INFO("SHADER SYSTEM CREATED")
+
 
     return out_shader_system;
 }
@@ -118,7 +120,7 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
                                           Descriptor_System* descriptor_system, Render_Packet* render_packet)
 {
     ring_queue* texture_queue = render_packet->texture_queue;
-    Texture* texture = allocator_alloc(&renderer->frame_arena, sizeof(Texture));
+    Texture* texture = allocator_alloc(&renderer->frame_allocator, sizeof(Texture));
 
     while (!ring_queue_is_empty(texture_queue))
     {

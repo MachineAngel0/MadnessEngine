@@ -1533,7 +1533,6 @@ typedef struct Madness_Pulse_Game
 
     //refs
     Resource_System* resource_system;
-    Madness_UI* madness_ui;
     Event_System* event_system;
     Input_System* input_system;
 

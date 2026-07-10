@@ -37,7 +37,6 @@ typedef struct Application_Core
 typedef struct Renderer_Plugin
 {
     Renderer* renderer;
-    Madness_UI* madness_ui;
 
     DLL_HANDLE renderer_dll_handle;
     //function pointers

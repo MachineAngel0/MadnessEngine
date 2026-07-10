@@ -42,7 +42,10 @@ Mesh_System* mesh_system_init(Memory_System* memory_system)
     out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_Upload_Data), MAX_MESH_COUNT);
     out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Sk_Mesh_Upload_Data),
                                                                  MAX_SKINNED_MESH_COUNT);
-    out_mesh_system->mesh_data_count = 0;
+    out_mesh_system->mesh_asset_count = 0;
+    out_mesh_system->sk_mesh_asset_count = 0;
+    out_mesh_system->mesh_parent_instance_count = 0;
+    out_mesh_system->skinned_mesh_instance_count = 0;
 
 
     INFO("MESH SYSTEM CREATED")
@@ -58,44 +61,6 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     mesh_system = NULL;
 
     return true;
-}
-
-bool skinned_mesh_instance_fill_out(Mesh_System* mesh_system, Sk_Mesh_Instance* skinned_mesh_inst,
-                                    const Animation_Handle animation_handle,
-                                    Heap_Allocator* allocator)
-{
-    skinned_mesh_inst->anim_handle = animation_handle;
-
-    Animation_Data* animation_data = &mesh_system->animation_data[animation_handle.handle];
-
-    u32 j_count = animation_data->joint_count;
-    skinned_mesh_inst->joint_count = j_count;
-
-
-    skinned_mesh_inst->local_translation = allocator_heap_alloc(allocator, sizeof(vec3) * j_count);
-    skinned_mesh_inst->local_rotation = allocator_heap_alloc(allocator, sizeof(vec3) * j_count);
-    skinned_mesh_inst->local_scale = allocator_heap_alloc(allocator, sizeof(vec3) * j_count);
-    skinned_mesh_inst->gpu_matrix = allocator_heap_alloc(allocator, sizeof(mat4) * j_count);
-
-    for (u32 i = 0; i < j_count; i++)
-    {
-        mat4_decompose(*animation_data->resting_pose_local_matrix, &skinned_mesh_inst->local_translation[i],
-                       &skinned_mesh_inst->local_rotation[i], &skinned_mesh_inst->local_scale[i]);
-    }
-
-    skinned_mesh_inst->current_animation_index = 0;
-    skinned_mesh_inst->current_time = 0;
-    skinned_mesh_inst->looping = true;
-
-    return true;
-}
-
-Sk_Mesh_Instance* skinned_mesh_instance_init(Mesh_System* mesh_system, const Animation_Handle animation_handle,
-                                                  Heap_Allocator* allocator)
-{
-    Sk_Mesh_Instance* skinned_mesh_inst = allocator_heap_alloc(allocator, sizeof(Sk_Mesh_Instance));
-    skinned_mesh_instance_fill_out(mesh_system, skinned_mesh_inst, animation_handle, allocator);
-    return skinned_mesh_inst;
 }
 
 
@@ -235,7 +200,7 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
 
     //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
     Material_Default* default_material = material_system_create_default_pbr(resource_system->material_system,
-                                                                         &mesh_draw_data->material_handle);
+                                                                            &mesh_draw_data->default_material_handle);
 
     if (!data->meshes[gltf_data_mesh_idx].primitives->material)
     {
@@ -443,9 +408,8 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
     //TODO: this is an unhandled case, and honestly why would a mesh have more than 1 skin???
     MASSERT(data->skins_count <= 1);
 
-    skinned_mesh_meta_data->anim_handle = (Animation_Handle){.handle = mesh_system->animation_data_count, .gen = 0};
 
-    Animation_Data* animation_data = &mesh_system->animation_data[mesh_system->animation_data_count++];
+    Animation_Data* animation_data = skinned_mesh_meta_data->animation_data;
     animation_data->animations = allocator_heap_alloc(allocator, sizeof(Animation) * data->animations_count);
     animation_data->animations_count = data->animations_count;
 
@@ -624,163 +588,6 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
     }
 }
 
-void mesh_load_fbx(Mesh_System* mesh_system, const char* fbx_path, Allocator* arena, Frame_Allocator* frame_arena)
-{
-    UNIMPLEMENTED();
-    /*if (!c_string_path_is_extension(fbx_path, ".fbx"))
-    {
-        FATAL("DID NOT PASS IN A FBX FILE");
-        return;
-    }
-
-    // https://github.com/ufbx/ufbx?tab=readme-ov-file - github
-    // https://ufbx.github.io/ - online docs
-
-    //NOTE: uses malloc under the hood which we can override
-
-    ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
-    ufbx_error error; // Optional, pass NULL if you don't care about errors
-    ufbx_scene* scene = ufbx_load_file(fbx_path, &opts, &error);
-    if (!scene)
-    {
-        fprintf(stderr, "Failed to load: %s\n", error.description.data);
-        MASSERT(scene);
-    }
-
-
-    static_mesh* out_static_mesh = static_mesh_init(arena, scene->meshes.count);
-
-
-    // Use and inspect `scene`, it's just plain data!
-    // Let's just list all objects within the scene for example:
-    for (size_t i = 0; i < scene->nodes.count; i++)
-    {
-        ufbx_node* node = scene->nodes.data[i];
-        if (node->is_root) continue;
-
-        printf("Object: %s\n", node->name.data);
-        if (node->mesh)
-        {
-            printf("-> mesh with %zu faces\n", node->mesh->faces.count);
-        }
-    }
-
-
-    for (size_t mesh_idx = 0; mesh_idx < scene->meshes.count; mesh_idx++)
-    {
-        ufbx_mesh* mesh = scene->meshes.data[mesh_idx];
-        for (size_t i = 0; i < mesh->faces.count; i++)
-        {
-            ufbx_face face = mesh->faces.data[i];
-
-            // Loop through the corners of the polygon.
-            for (uint32_t corner = 0; corner < face.num_indices; corner++)
-            {
-                // Faces are defined by consecutive indices, one for each corner.
-                uint32_t index = face.index_begin + corner;
-
-                // Retrieve the position, normal and uv for the vertex.
-                ufbx_vec3 position = ufbx_get_vertex_vec3(&mesh->vertex_position, index);
-                ufbx_vec3 normal = ufbx_get_vertex_vec3(&mesh->vertex_normal, index);
-                ufbx_vec2 uv = ufbx_get_vertex_vec2(&mesh->vertex_uv, index);
-            }
-        }
-    }
-
-
-    // GET BASE PATH
-    char* base_path = c_string_path_strip(fbx_path, frame_arena);
-
-
-    ufbx_free_scene(scene);*/
-}
-
-
-void mesh_load_obj(const char* obj_path, Renderer* renderer)
-{
-    UNIMPLEMENTED();
-    /*
-    //NOTE: material data is stored in a seperate .mtl file
-    //NOTE: this file format does not support indicis and technically also supports quads, just why, that's awful, so yeah abandoning it
-
-    // https://en.wikipedia.org/wiki/Wavefront_.obj_file
-    // # comments
-    // v - vertex
-    // vt - texture coordinate
-    // vn - Vertex Normal
-    // vp - parameter space vertices
-    // f - indicis/ polygonal face element
-    // l - line elements
-    // o - object name
-    // s - smooth shading
-
-    //TODO:
-    // FILE* mesh_mtl = fopen("../z_assets/models/falcon.mtl", "rb");
-
-
-    submesh* out_mesh = submesh_init(&renderer->arena);
-
-    size_t file_size;
-    FILE* mesh_obj_file = fopen("../z_assets/models/car_obj/falcon.obj", "rb");
-    if (!mesh_obj_file)
-    {
-        FATAL("Failed to open obj file");
-        return;
-    }
-
-    // go to the end of the file and get the size
-    fseek(mesh_obj_file, 0, SEEK_END);
-    file_size = ftell(mesh_obj_file);
-    rewind(mesh_obj_file); // go back to the start of the file
-
-    char buffer[512];
-
-    //this function is a godsend
-    //sscanf: This function reads formatted input from a specified character string (buffer). It allows you to parse data that is already present in a string variable.
-
-    while (fgets(buffer, sizeof(buffer), mesh_obj_file))
-    {
-        if (buffer[0] == '#') { continue; }
-        if (strncmp(buffer, "v ", 2) == 0)
-        {
-            vec3 v;
-            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
-            DEBUG("v %f %f %f", v.x, v.y, v.z);
-            darray_push(out_mesh->pos, v);
-        }
-        if (strncmp(buffer, "vt ", 3) == 0)
-        {
-            vec2 v;
-            sscanf(buffer, "v %f %f", &v.x, &v.y);
-            DEBUG("v %f %f %f", v.x, v.y);
-            darray_push(out_mesh->uv, v);
-        }
-        if (strncmp(buffer, "vn ", 3) == 0)
-        {
-            vec3 v;
-            sscanf(buffer, "v %f %f %f", &v.x, &v.y, &v.z);
-            DEBUG("v %f %f %f", v.x, v.y, v.z);
-            darray_push(out_mesh->normal, v);
-        }
-    }
-
-    fclose(mesh_obj_file);
-    */
-}
-
-
-bool mesh_system_generate_render_packet(Mesh_System* mesh_system, Render_Packet_Mesh* out_mesh_packet)
-{
-    out_mesh_packet->draw_data = mesh_system->mesh_data;
-    out_mesh_packet->draw_data_size = mesh_system->mesh_data_count;
-
-    out_mesh_packet->skinned_draw_data = mesh_system->skinned_mesh_data;
-    out_mesh_packet->skinned_draw_data_size = mesh_system->skinned_mesh_data_count;
-
-
-    return true;
-}
-
 
 void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
 {
@@ -807,20 +614,20 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
     result = cgltf_load_buffers(&options, data, gltf_path);
     MASSERT(result == cgltf_result_success)
 
-
+    //check if we are loading a skinned or normal mesh
     if (data->skins_count > 0)
     {
-        Sk_Mesh_Asset* skinned_mesh_meta_data = &mesh_system->skinned_mesh_meta_data[mesh_system->
-            skinned_mesh_meta_data_count++];
-        skinned_mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
+        Sk_Mesh_Asset* sk_mesh_asset_data = &mesh_system->skinned_mesh_asset_data[mesh_system->
+            sk_mesh_asset_count++];
+        sk_mesh_asset_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
 
-        skinned_mesh_meta_data->mesh_index = allocator_heap_alloc(
-            allocator, sizeof(u32) * data->meshes_count);
-        skinned_mesh_meta_data->mesh_count = data->meshes_count;
+        sk_mesh_asset_data->mesh_data = allocator_heap_alloc(
+            allocator, sizeof(Mesh_Data) * data->meshes_count);
+        sk_mesh_asset_data->mesh_count = data->meshes_count;
 
-        skinned_mesh_meta_data->skinned_mesh_indexs = allocator_heap_alloc(
-            allocator, sizeof(u32) * data->meshes_count);
-        skinned_mesh_meta_data->skinned_mesh_count = data->meshes_count;
+        sk_mesh_asset_data->skinned_mesh_data = allocator_heap_alloc(
+            allocator, sizeof(Sk_Mesh_Data) * data->meshes_count);
+        sk_mesh_asset_data->skinned_mesh_count = data->meshes_count;
 
 
         Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
@@ -832,12 +639,9 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
 
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
-            skinned_mesh_meta_data->skinned_mesh_indexs[mesh_idx] = mesh_system->skinned_mesh_data_count;
-            Sk_Mesh_Data* mesh_draw_data = &mesh_system->skinned_mesh_data[mesh_system->skinned_mesh_data_count];
-            mesh_system->skinned_mesh_data_count++;
+            Sk_Mesh_Data* mesh_draw_data = &sk_mesh_asset_data->skinned_mesh_data[mesh_idx];
 
-            mesh_draw_data->mesh_data.transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-            mesh_draw_data->mesh_data.material_handle = material_system_create_material(
+            mesh_draw_data->mesh_data.default_material_handle = material_system_create_material(
                 resource_system->material_system);
 
             Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
@@ -854,186 +658,125 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
             ring_enqueue(mesh_system->skinned_mesh_ring_queue, skinned_mesh_upload_data);
         }
 
+        sk_mesh_asset_data->animation_data = allocator_heap_alloc(allocator, sizeof(Animation_Data));
+        _gltf_load_skin_and_animation_data(resource_system, data, sk_mesh_asset_data);
 
-        _gltf_load_skin_and_animation_data(resource_system, data, skinned_mesh_meta_data);
-
-        //create the instance
-        Sk_Mesh_Instance* new_skinned_mesh_instance = &mesh_system->skinned_mesh_instance[mesh_system->
+        //create the parent instance
+        Sk_Mesh_Parent_Instance* sk_mesh_parent_inst = &mesh_system->skinned_mesh_instance[mesh_system->
             skinned_mesh_instance_count++];
-        skinned_mesh_instance_fill_out(mesh_system, new_skinned_mesh_instance, skinned_mesh_meta_data->anim_handle,
-                                       allocator);
+        sk_mesh_parent_inst->sk_mesh_handle = (Sk_Mesh_Asset_Handle){.handle = mesh_system->sk_mesh_asset_count - 1};
+        sk_mesh_parent_inst->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+        sk_mesh_parent_inst->mesh_count = sk_mesh_asset_data->skinned_mesh_count;
+        sk_mesh_parent_inst->sk_mesh_instance_array = allocator_heap_alloc(
+            allocator, sizeof(Sk_Mesh_Instance) * sk_mesh_parent_inst->mesh_count);
+
+        for (int i = 0; i < sk_mesh_asset_data->mesh_count; ++i)
+        {
+            Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[i];
+            Sk_Mesh_Instance* sk_mesh_instance = &sk_mesh_parent_inst->sk_mesh_instance_array[i];
+            sk_mesh_instance->material_handle = mesh_data->default_material_handle;
+            sk_mesh_instance->parent_transform_handle = sk_mesh_parent_inst->transform_handle;
+
+            //gpu friendly format
+            sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = sk_mesh_instance->material_handle.handle;
+            sk_mesh_instance->sk_mesh_gpu_draw.transform_idx = sk_mesh_parent_inst->transform_handle.handle;
+
+            //indirect draw, gpu friendly format
+            sk_mesh_instance->mesh_indirect_draw.vertex_offset = mesh_data->vertex_offset;
+
+            sk_mesh_instance->mesh_indirect_draw.index_count = mesh_data->index_count;
+            sk_mesh_instance->mesh_indirect_draw.index_offset = mesh_data->index_offset;
+        }
+
+
+        Animation_Data* animation_data = sk_mesh_asset_data->animation_data;
+
+        sk_mesh_parent_inst->joint_count = sk_mesh_asset_data->animation_data->joint_count;
+
+        sk_mesh_parent_inst->local_translation = allocator_heap_alloc(
+            allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
+        sk_mesh_parent_inst->local_rotation =
+            allocator_heap_alloc(allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
+        sk_mesh_parent_inst->local_scale = allocator_heap_alloc(
+            allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
+        sk_mesh_parent_inst->gpu_matrix = allocator_heap_alloc(
+            allocator, sizeof(mat4) * sk_mesh_parent_inst->joint_count);
+
+        for (u32 i = 0; i < sk_mesh_parent_inst->joint_count; i++)
+        {
+            mat4_decompose(*animation_data->resting_pose_local_matrix, &sk_mesh_parent_inst->local_translation[i],
+                           &sk_mesh_parent_inst->local_rotation[i], &sk_mesh_parent_inst->local_scale[i]);
+        }
+
+        sk_mesh_parent_inst->current_animation_index = 0;
+        sk_mesh_parent_inst->current_time = 0;
+        sk_mesh_parent_inst->looping = true;
     }
     else
     {
-        Mesh_Asset* mesh_meta_data = allocator_heap_alloc(allocator, sizeof(Mesh_Asset));
-        mesh_meta_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
-        mesh_meta_data->mesh_index = allocator_heap_alloc(allocator, sizeof(u32) * data->meshes_count);
-        mesh_meta_data->mesh_count = data->meshes_count;
+        Mesh_Asset* mesh_asset_data = &mesh_system->mesh_asset_data[mesh_system->mesh_asset_count++];
+        mesh_asset_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
+        mesh_asset_data->mesh_count = data->meshes_count;
+        mesh_asset_data->mesh_data = allocator_heap_alloc(allocator, sizeof(Mesh_Data) * data->meshes_count);
 
 
         Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
                                                                    sizeof(Mesh_Upload_Data) * data->meshes_count);
 
-        u32* mesh_index_array = mesh_meta_data->mesh_index;
-
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
-            mesh_index_array[mesh_idx] = mesh_system->mesh_data_count;
-            Mesh_Data* mesh_draw_data = &mesh_system->mesh_data[mesh_system->mesh_data_count];
-            mesh_system->mesh_data_count++;
+            Mesh_Data* mesh_draw_data = &mesh_asset_data->mesh_data[mesh_idx];
 
-            mesh_draw_data->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-            mesh_draw_data->material_handle = material_system_create_material(resource_system->material_system);
+            mesh_draw_data->default_material_handle = material_system_create_material(resource_system->material_system);
 
 
             Mesh_Upload_Data* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
 
             _gltf_load_mesh_data(resource_system,
                                  gltf_path, data, mesh_idx,
-                                 mesh_draw_data, current_mesh_upload_data);
-
-            //add to mesh upload queue
+                                 mesh_draw_data, current_mesh_upload_data);; //add to mesh upload queue
             ring_enqueue(mesh_system->mesh_ring_queue, current_mesh_upload_data);
         }
+
+        //create the instance
+        Mesh_Parent_Instance* mesh_parent_instance = &mesh_system->mesh_parent_instance[mesh_system->
+            mesh_parent_instance_count++];
+        mesh_parent_instance->mesh_asset = (Mesh_Asset_Handle){.handle = mesh_system->mesh_asset_count - 1};
+        mesh_parent_instance->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+        mesh_parent_instance->mesh_count = mesh_asset_data->mesh_count;
+        mesh_parent_instance->mesh_instances_array = allocator_heap_alloc(
+            allocator, sizeof(Mesh_Instance) * data->meshes_count);
+
+        for (size_t mesh_idx = 0; mesh_idx < mesh_asset_data->mesh_count; mesh_idx++)
+        {
+            //handles
+            mesh_parent_instance->mesh_instances_array[mesh_idx].material_handle = mesh_asset_data->mesh_data[mesh_idx].
+                default_material_handle;
+            mesh_parent_instance->mesh_instances_array[mesh_idx].parent_transform_handle = mesh_parent_instance->
+                transform_handle;
+
+            //gpu friendly format
+            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_gpu_draw.material_instance_handle =
+                mesh_parent_instance->mesh_instances_array[mesh_idx].material_handle.handle;
+            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_gpu_draw.transform_idx =
+                mesh_parent_instance->mesh_instances_array[mesh_idx].parent_transform_handle.handle;
+
+            //indirect draw, gpu friendly format
+            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.vertex_offset
+                = mesh_asset_data->mesh_data[mesh_idx].vertex_offset;
+            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.index_count
+                = mesh_asset_data->mesh_data[mesh_idx].index_count;
+            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.index_offset
+                = mesh_asset_data->mesh_data[mesh_idx].index_offset;
+        }
+
+        material_system_add_mesh_instance_to_default_material_batch(resource_system, mesh_parent_instance);
     }
-
-
-    //load materials
-    // if (data->meshes[0].primitives->material) {
-    //     int mat_idx = cgltf_material_index(data, data->meshes[0].primitives->material);
-    //     int hi = 0;
-    // }
-    // cgltf_texture_index();
-
-    //TODO: remove
-    // mesh_system->static_mesh_array[mesh_system->static_mesh_array_size] = *out_static_mesh;
-    // mesh_system->static_mesh_array_size++;
 
 
     cgltf_free(data);
 }
 
-
-void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
-{
-    //update and interpolate the local transformations for the playing animations
-    //create the local matrix
-    // joint1 =  local parent * local joint
-    // joint2 =  joint1 * inverse_bind_matrix
-    //send to the gpu for the shader to work
-
-
-    //assume the mesh is loaded
-    Sk_Mesh_Instance* skinned_mesh_inst = mesh_system->test_skinned_mesh_instance;
-
-    Animation_Data* animation_data = &mesh_system->animation_data[skinned_mesh_inst->anim_handle.handle];
-    Animation* anim_data = &animation_data->animations[skinned_mesh_inst->current_animation_index];
-
-
-    skinned_mesh_inst->current_time += delta_time;
-
-    if (skinned_mesh_inst->current_time > anim_data->anim_end)
-    {
-        skinned_mesh_inst->current_time -= anim_data->anim_end;
-    }
-
-    for (u32 i = 0; i < anim_data->channel_count; i++)
-    {
-        const Animation_Channel* channel = &anim_data->channels[i];
-        const Animation_Sampler* sampler = &anim_data->samplers[channel->sampler_idx];
-
-        u32 j_idx = channel->joint_index;
-
-        for (size_t timestamp_idx = 0; timestamp_idx < sampler->timestamps_count - 1; timestamp_idx++)
-        {
-            if (sampler->interpolation_type != Animation_Interpolation_Type_Linear)
-            {
-                DEBUG("This sample only supports linear interpolations");
-                continue;
-            }
-
-            // Get the input keyframe values for the current time stamp
-            if ((skinned_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (skinned_mesh_inst->
-                current_time <=
-                sampler->timestamps[timestamp_idx + 1]))
-            {
-                float interp_val = (skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler
-                    ->
-                    timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
-                switch (channel->animation_path_type)
-                {
-                case Animation_Path_Type_Invalid:
-                    MASSERT(false);
-                    break;
-                case Animation_Path_Type_Translation:
-                    skinned_mesh_inst->local_translation[j_idx] = vec3_lerp(
-                        sampler->interperlation_data.trs_vec3[timestamp_idx],
-                        sampler->interperlation_data.trs_vec3[timestamp_idx +
-                            1], interp_val);
-                    break;
-                case Animation_Path_Type_Rotation:
-                    quat q1;
-                    q1.x = sampler->interperlation_data.trs_vec4[timestamp_idx].x;
-                    q1.y = sampler->interperlation_data.trs_vec4[timestamp_idx].y;
-                    q1.z = sampler->interperlation_data.trs_vec4[timestamp_idx].z;
-                    q1.w = sampler->interperlation_data.trs_vec4[timestamp_idx].w;
-
-                    quat q2;
-                    q2.x = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].x;
-                    q2.y = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].y;
-                    q2.z = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].z;
-                    q2.w = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].w;
-
-
-                    skinned_mesh_inst->local_rotation[j_idx] = quat_normalize(quat_slerp(q1, q2, interp_val));;
-                    break;
-                case Animation_Path_Type_Scale:
-                    skinned_mesh_inst->local_scale[j_idx] = vec3_lerp(
-                        sampler->interperlation_data.trs_vec3[timestamp_idx],
-                        sampler->interperlation_data.trs_vec3[timestamp_idx + 1],
-                        interp_val);
-                    break;
-                case Animation_Path_Type_Weights:
-                    M_ERROR("Animation_Path_Type_Weights: unhandled type");
-                    break;
-                case Animation_Path_Type_Max:
-                    MASSERT(false);
-                    break;
-                }
-            }
-        }
-    }
-
-    mat4* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * skinned_mesh_inst->joint_count);
-    mat4* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * skinned_mesh_inst->joint_count);
-
-    for (u32 i = 0; i < skinned_mesh_inst->joint_count; i++)
-    {
-        // Joint(N, t) = Translation(N, t) * Rotation(N, t) * Scale(N, t)
-
-        const mat4 t = mat4_translation(skinned_mesh_inst->local_translation[i]);
-        const mat4 r = quat_to_mat4(skinned_mesh_inst->local_rotation[i]);
-        const mat4 s = mat4_scale(skinned_mesh_inst->local_scale[i]);
-
-        mat4 tr = mat4_mul(t, r);
-        local_matrix[i] = mat4_mul(tr, s);
-    }
-
-    model_matrix[0] = local_matrix[0];
-    for (u32 i = 0; i < skinned_mesh_inst->joint_count; i++)
-    {
-        //Joint(N, t) = Parent(N, t) * Joint(N, t)
-        u32 parent_index = animation_data->joints[i].parent_idx;
-        model_matrix[i] = mat4_mul(local_matrix[parent_index], local_matrix[i]);
-    }
-
-    for (u32 i = 0; i < skinned_mesh_inst->joint_count; i++)
-    {
-        //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
-        skinned_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
-                                                    animation_data->inverse_bind_matrix[i]);
-    }
-}
 
 void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
 {
@@ -1055,17 +798,18 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
     for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
     {
-        Sk_Mesh_Instance* cur_skinned_mesh_inst = &mesh_system->skinned_mesh_instance[i];
+        Sk_Mesh_Parent_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
 
-        Animation_Data* animation_data = &mesh_system->animation_data[cur_skinned_mesh_inst->anim_handle.handle];
-        Animation* anim_data = &animation_data->animations[cur_skinned_mesh_inst->current_animation_index];
+        Animation_Data* animation_data = mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
+            animation_data;
+        Animation* anim_data = &animation_data->animations[sk_mesh_inst->current_animation_index];
 
 
-        cur_skinned_mesh_inst->current_time += delta_time;
+        sk_mesh_inst->current_time += delta_time;
 
-        if (cur_skinned_mesh_inst->current_time > anim_data->anim_end)
+        if (sk_mesh_inst->current_time > anim_data->anim_end)
         {
-            cur_skinned_mesh_inst->current_time -= anim_data->anim_end;
+            sk_mesh_inst->current_time -= anim_data->anim_end;
         }
 
         for (u32 i = 0; i < anim_data->channel_count; i++)
@@ -1084,12 +828,12 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                 }
 
                 // Get the input keyframe values for the current time stamp
-                if ((cur_skinned_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
-                    cur_skinned_mesh_inst->
+                if ((sk_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
+                    sk_mesh_inst->
                     current_time <=
                     sampler->timestamps[timestamp_idx + 1]))
                 {
-                    float interp_val = (cur_skinned_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) /
+                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) /
                     (
                         sampler
                         ->
@@ -1100,7 +844,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                         MASSERT(false);
                         break;
                     case Animation_Path_Type_Translation:
-                        cur_skinned_mesh_inst->local_translation[j_idx] = vec3_lerp(
+                        sk_mesh_inst->local_translation[j_idx] = vec3_lerp(
                             sampler->interperlation_data.trs_vec3[timestamp_idx],
                             sampler->interperlation_data.trs_vec3[timestamp_idx +
                                 1], interp_val);
@@ -1119,11 +863,11 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                         q2.w = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].w;
 
 
-                        cur_skinned_mesh_inst->local_rotation[j_idx] = quat_normalize(
+                        sk_mesh_inst->local_rotation[j_idx] = quat_normalize(
                             quat_slerp(q1, q2, interp_val));;
                         break;
                     case Animation_Path_Type_Scale:
-                        cur_skinned_mesh_inst->local_scale[j_idx] = vec3_lerp(
+                        sk_mesh_inst->local_scale[j_idx] = vec3_lerp(
                             sampler->interperlation_data.trs_vec3[timestamp_idx],
                             sampler->interperlation_data.trs_vec3[timestamp_idx + 1],
                             interp_val);
@@ -1139,34 +883,34 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
             }
         }
 
-        mat4* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * cur_skinned_mesh_inst->joint_count);
-        mat4* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * cur_skinned_mesh_inst->joint_count);
+        mat4* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * sk_mesh_inst->joint_count);
+        mat4* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * sk_mesh_inst->joint_count);
 
-        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
         {
             // Joint(N, t) = Translation(N, t) * Rotation(N, t) * Scale(N, t)
 
-            const mat4 t = mat4_translation(cur_skinned_mesh_inst->local_translation[i]);
-            const mat4 r = quat_to_mat4(cur_skinned_mesh_inst->local_rotation[i]);
-            const mat4 s = mat4_scale(cur_skinned_mesh_inst->local_scale[i]);
+            const mat4 t = mat4_translation(sk_mesh_inst->local_translation[i]);
+            const mat4 r = quat_to_mat4(sk_mesh_inst->local_rotation[i]);
+            const mat4 s = mat4_scale(sk_mesh_inst->local_scale[i]);
 
             mat4 tr = mat4_mul(t, r);
             local_matrix[i] = mat4_mul(tr, s);
         }
 
         model_matrix[0] = local_matrix[0];
-        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
         {
             //Joint(N, t) = Parent(N, t) * Joint(N, t)
             u32 parent_index = animation_data->joints[i].parent_idx;
             model_matrix[i] = mat4_mul(local_matrix[parent_index], local_matrix[i]);
         }
 
-        for (u32 i = 0; i < cur_skinned_mesh_inst->joint_count; i++)
+        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
         {
             //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
-            cur_skinned_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
-                                                            animation_data->inverse_bind_matrix[i]);
+            sk_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
+                                                   animation_data->inverse_bind_matrix[i]);
         }
     }
 }

@@ -50,7 +50,6 @@ struct camera_arrays
 void camera_init(camera* out_camera);
 
 
-
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
 void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, float deltaTime);
 
@@ -67,7 +66,7 @@ mat4 camera_get_view_matrix(camera* cam);
 mat4 camera_get_fps_view_matrix(camera* cam);
 
 
-mat4 camera_get_projection(camera* cam, const float width, const float height);
+mat4 camera_get_projection(camera* cam, float width, float height);
 
 /*
 void camera_update_view_matrix(camera* out_camera)
@@ -103,7 +102,6 @@ void camera_update_view_matrix(camera* out_camera)
 
 
 */
-
 
 
 #endif //CAMERA_H

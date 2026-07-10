@@ -79,7 +79,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //INDIRECT DRAW
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
     mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
-                   &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                   &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                    renderer_plugin->renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(application_core->resource_system->mesh_system,
@@ -88,7 +88,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // renderer_plugin->renderer->resource_system);
     mesh_load_gltf_new(application_core->resource_system->mesh_system,
                  "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
-                 &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
+                 &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                  renderer_plugin->renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/blender_test_scene/Test_Scene_For_Engine.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
@@ -139,7 +139,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
 
 
-        madness_ui_test(renderer_plugin->madness_ui);
+        madness_ui_test();
 
 
         renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->resource_system);

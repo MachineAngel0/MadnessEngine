@@ -16,11 +16,11 @@ VkShaderModule create_shader_module(const vulkan_context* context, const u8* sha
         VK_SUCCESS)
     {
         FATAL("failed to create vertex shader module!");
-    };
+    }
     return shader_module;
 }
 
-bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
+bool mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
                                  pipeline_cache)
 {
     // Pipeline layout creation
@@ -52,8 +52,8 @@ bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mes
     file_read_data vert_data = {0};
     file_read_data frag_data = {0};
 
-    filesystem_open_and_return_bytes("../renderer/shaders/shader_mesh_indirect.vert.spv", &vert_data);
-    filesystem_open_and_return_bytes("../renderer/shaders/shader_mesh_indirect.frag.spv", &frag_data);
+    filesystem_open_and_return_bytes("../renderer/shaders/mesh.vert.spv", &vert_data);
+    filesystem_open_and_return_bytes("../renderer/shaders/mesh.frag.spv", &frag_data);
     if (vert_data.size == 0)
     {
         FATAL("Vertex shader file not loaded! Size: %llu", vert_data.size);
@@ -96,6 +96,7 @@ bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mes
  */
 
 
+    /*
     VkVertexInputBindingDescription input_binding_description[1];
     input_binding_description[0].binding = 0;
     input_binding_description[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -117,7 +118,7 @@ bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mes
             attribute_descriptions[attribute_index].offset = offset_total;
         }
     /*
-    */
+    #1#*/
 
 
     // VkVertexInputAttributeDescription attribute_descriptions[1];
@@ -129,10 +130,14 @@ bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mes
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_state_create_info.pVertexBindingDescriptions = input_binding_description;
+    /*vertex_input_state_create_info.pVertexBindingDescriptions = input_binding_description;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1; // the number of binding_description
     vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_descriptions;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_info->input_count;*/
+    vertex_input_state_create_info.pVertexBindingDescriptions = NULL;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = 0; // the number of binding_description
+    vertex_input_state_create_info.pVertexAttributeDescriptions = NULL;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
 
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
@@ -281,7 +286,7 @@ bool mesh_indirect_shader_create(Renderer* renderer, vulkan_shader_pipeline* mes
     return true;
 }
 
-bool skinned_mesh_shader_create(Renderer* renderer, vulkan_shader_pipeline* skinned_mesh_pipeline,
+bool sk_mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* skinned_mesh_pipeline,
     vulkan_pipeline_cache* pipeline_cache)
 {
 

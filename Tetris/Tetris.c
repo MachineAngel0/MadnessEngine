@@ -1,7 +1,7 @@
 ﻿#include "Tetris.h"
 
 
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system, Madness_UI* madness_ui)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system)
 {
 
     Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State), TODO);
@@ -231,14 +231,14 @@ void tetris_update_ui(Tetris_Game_State* tetris)
     switch (tetris->tetris_state)
     {
     case Tetris_State_Start:
-        madness_ui_set_window_pos(tetris->madness_ui, 50,50);
-        madness_ui_set_window_size(tetris->madness_ui, 25,25);
-        madness_ui_window_begin(tetris->madness_ui, STRING("Tetris"));
-        if (madness_ui_button(tetris->madness_ui, STRING("Start Game")))
+        madness_ui_set_window_pos(50, 50);
+        madness_ui_set_window_size(25, 25);
+        madness_ui_window_begin(STRING("Tetris"));
+        if (madness_ui_button(STRING("Start Game")))
         {
             tetris->tetris_state = Tetris_State_Play;
         }
-        madness_ui_window_end(tetris->madness_ui);
+        madness_ui_window_end();
 
         break;
     case Tetris_State_Play:

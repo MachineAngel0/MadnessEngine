@@ -101,7 +101,7 @@ bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
 void create_semaphore(Renderer* renderer)
 {
     //NOTE: not likely rn that I would need to deallocate the semaphores
-    VkSemaphore* semaphore = allocator_alloc(&renderer->arena, sizeof(VkSemaphore) * 3);
+    VkSemaphore* semaphore = allocator_alloc(&renderer->allocator, sizeof(VkSemaphore) * 3);
     VkSemaphoreCreateInfo semaphoreInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     };

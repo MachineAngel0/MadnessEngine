@@ -48,7 +48,7 @@ float screenPxRange(sampler2D msdf, vec2 uv) {
 void main() {
     UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(in_material_buffer_location)];
 
-    vec2 screen_dimensions = ubo[nonuniformEXT(PC_2D.ubo_buffer_idx)].screen_dimensions;
+    vec2 screen_dimensions = ubo.screen_dimensions;
     float aspect_ratio = screen_dimensions.x / screen_dimensions.y;
 
     vec3 fill_color = in_color;

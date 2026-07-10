@@ -87,7 +87,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     insanity_ui_init(&application_core->memory_system, application_core->input_system,
                      application_core->resource_system);
 
-    renderer_plugin->madness_ui = madness_ui_init(&application_core->memory_system,
+    madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
@@ -101,13 +101,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
-                                                                     renderer_plugin->madness_ui,
                                                                      application_core->event_system,
                                                                      application_core->input_system,
                                                                      application_core->resource_system);
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
-                                 renderer_plugin->madness_ui, application_core->resource_system,
+                                  application_core->resource_system,
                                  &application_core->clock, reflection_registry);
 
     //MAIN LOOP
@@ -142,8 +141,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
 
-        madness_ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
-                         renderer_plugin->renderer->context.framebuffer_height_new);
+        madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new, renderer_plugin->renderer->context.framebuffer_height_new);
         insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
                           renderer_plugin->renderer->context.framebuffer_height_new);
 
@@ -172,14 +170,14 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                      application_core->clock.delta_time,
                                      application_core->resource_system->frame_allocator);
 
-        madness_ui_end(renderer_plugin->madness_ui);
+        madness_ui_end();
         insanity_ui_end();
 
         //render packet
         resource_system_update_and_create_render_packet(application_core->resource_system);
 
         application_core->resource_system->render_packet->ui_data_packet.madness_ui_render_packet =
-            madness_ui_get_ui_render_data(renderer_plugin->madness_ui);
+            madness_ui_get_ui_render_data();
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
         // insanity_get_render_data();
@@ -203,7 +201,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     madness_pulse_game_shutdown(madness_pulse_game, &application_core->memory_system);
 
 
-    madness_ui_shutdown(renderer_plugin->madness_ui);
+    madness_ui_shutdown();
 
     renderer_shutdown(renderer_plugin->renderer);
 

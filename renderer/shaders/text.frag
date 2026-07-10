@@ -41,7 +41,7 @@ void main() {
 
     UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(in_material_idx)];
 
-    vec2 screen_dimensions = ubo[nonuniformEXT(PC_2D.ubo_buffer_idx)].screen_dimensions;
+    vec2 screen_dimensions = ubo.screen_dimensions;
     float aspect_ratio = screen_dimensions.x / screen_dimensions.y;
 
     vec2 p = (in_local_pos - vec2(0.5)) * 2.0;

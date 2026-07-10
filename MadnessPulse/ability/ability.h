@@ -261,7 +261,7 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
             break;
         }
 
-        madness_ui_string(game->madness_ui, *string_builder_to_string(ability_text));
+        madness_ui_string(*string_builder_to_string(ability_text));
         string_builder_clear(ability_text);
 
     }

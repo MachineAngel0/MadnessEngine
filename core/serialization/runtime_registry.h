@@ -92,16 +92,15 @@ typedef struct Reflection_Registry
 
 Reflection_Registry* reflection_registry_init(Memory_System* memory_system)
 {
-    Reflection_Registry* reflection_registry = (Reflection_Registry*)malloc(sizeof(Reflection_Registry));
+    Reflection_Registry* reflection_registry = (Reflection_Registry*)
+        memory_system_alloc(memory_system, sizeof(Reflection_Registry), MEMORY_SUBSYSTEM_REFLECTION);
 
 
-    u64 mem_size = MB(16);
+    u64 mem_size = MB(1);
 
 
-    reflection_registry->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_REFLECTION);
-
-    void* alloc_memory = memory_system_alloc(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
-    allocator_heap_init(reflection_registry->allocator, alloc_memory, mem_size);
+    reflection_registry->allocator = memory_system_heap_allocator_create(
+        memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
 
 
     reflection_registry->enum_list = dynamic_array_create(Reflection_Runtime_Enum, 100,
@@ -218,8 +217,8 @@ void reflection_registry_add_struct(Reflection_Registry* reflection_registry,
 {
     //copy the data because it will go off the stack when we are done
     Reflection_Runtime_Struct_Field* fields_copy = allocator_heap_alloc(reflection_registry->allocator,
-                                                                             sizeof(Reflection_Runtime_Struct_Field) *
-                                                                             reflection_struct.field_count);
+                                                                        sizeof(Reflection_Runtime_Struct_Field) *
+                                                                        reflection_struct.field_count);
     memcpy(fields_copy, reflection_struct.fields,
            sizeof(Reflection_Runtime_Struct_Field) * reflection_struct.field_count);
     reflection_struct.fields = fields_copy; // set the heap allocated data
@@ -289,12 +288,12 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
 
     //TODO: this leaks memory from the allocator, replace with a string builder
     const char* replace_later_path = "../z_assets/abilities/";
-    const char* intermediate_file_path = c_string_concat_fl(replace_later_path, new_runtime_data.struct_name,
-                                                         reflection_registry->allocator);
-    const char* intermediate_file_path2 = c_string_concat_fl(intermediate_file_path, new_runtime_data.identifier,
-                                                          reflection_registry->allocator);
+    const char* intermediate_file_path = c_string_concat_heap(replace_later_path, new_runtime_data.struct_name,
+                                                            reflection_registry->allocator);
+    const char* intermediate_file_path2 = c_string_concat_heap(intermediate_file_path, new_runtime_data.identifier,
+                                                             reflection_registry->allocator);
 
-    const char* final_file_path = c_string_concat_fl(intermediate_file_path2, ".yaml", reflection_registry->allocator);
+    const char* final_file_path = c_string_concat_heap(intermediate_file_path2, ".yaml", reflection_registry->allocator);
     Reflection_Runtime_Meta_File meta_file = {
         .file_string = STRING_STRLEN(final_file_path),
         .struct_name = STRING_STRLEN(new_runtime_data.struct_name),
@@ -775,11 +774,12 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
 
 
         const char* replace_later_path = "../z_assets/abilities/";
-        const char* intermediate_file_path = c_string_concat_fl(replace_later_path, runtime_data.struct_name,
-                                                             reflection_registry->allocator);
-        const char* intermediate_file_path2 = c_string_concat_fl(intermediate_file_path, runtime_data.identifier,
-                                                              reflection_registry->allocator);
-        const char* final_file_path = c_string_concat_fl(intermediate_file_path2, ".yaml", reflection_registry->allocator);
+        const char* intermediate_file_path = c_string_concat_heap(replace_later_path, runtime_data.struct_name,
+                                                                reflection_registry->allocator);
+        const char* intermediate_file_path2 = c_string_concat_heap(intermediate_file_path, runtime_data.identifier,
+                                                                 reflection_registry->allocator);
+        const char* final_file_path = c_string_concat_heap(intermediate_file_path2, ".yaml",
+                                                         reflection_registry->allocator);
 
         reflection_registry_to_txt_format(reflection_registry, runtime_struct.name,
                                           runtime_data.identifier, runtime_data.data, final_file_path);
@@ -788,11 +788,32 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
         allocator_heap_free(reflection_registry->allocator, &final_file_path);
         allocator_heap_free(reflection_registry->allocator, &intermediate_file_path2);
         allocator_heap_free(reflection_registry->allocator, &intermediate_file_path);
-
     }
 
 
     reflection_registry_save_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
+}
+
+
+void reflection_registry_debug_print_info(Reflection_Registry* reflection_registry)
+{
+
+
+
+    for (u32 i = 0; i < reflection_registry->struct_list->num_items; i++)
+    {
+        const Reflection_Runtime_Struct struct_info = dynamic_array_get(reflection_registry->struct_list,
+                                                                  Reflection_Runtime_Struct, i);
+
+        printf("Struct Name: %s, Size: %d, Field Count: %d\n", struct_info.name, struct_info.struct_size, struct_info.field_count);
+
+        for (u32 struct_member = 0; struct_member < struct_info.field_count; struct_member++)
+        {
+
+            Reflection_Runtime_Struct_Field* field = &struct_info.fields[struct_member];
+            printf("Field Name: %s, Offset: %d, Type Name: %s, Type: %d\n", field->name, field->offset, field->type_name, field->type);
+        }
+    }
 }
 
 

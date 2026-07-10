@@ -79,7 +79,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
     //init the game
     Tetris_Game_State* tetris_game_state = tetris_init(&application_core->memory_system,
-                                                       application_core->resource_system, renderer_plugin->madness_ui);
+                                                       application_core->resource_system);
 
     //MAIN LOOP
     clock_start(&application_core->clock);

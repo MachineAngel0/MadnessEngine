@@ -186,6 +186,9 @@ void dynamic_array_set(Dynamic_Array* array, void* data, u32 index);
 void dynamic_array_clear(Dynamic_Array* array);
 void dynamic_array_zero(Dynamic_Array* array);
 
+u64 dynamic_array_get_byte_size(Dynamic_Array* array);
+
+
 bool dynamic_array_is_empty(Dynamic_Array* array);
 
 

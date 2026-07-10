@@ -9,7 +9,7 @@
 #extension GL_ARB_shader_draw_parameters : enable
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/pc_skinned_mesh.glsl"
+#include "shader_includes/pc_indirect_mesh.glsl"
 
 
 
@@ -18,40 +18,42 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out flat uint out_color_idx;
 layout(location = 4) out vec3 out_world_position;
+layout(location = 5) out vec4 out_color;
+layout(location = 6) out flat uint out_pbr_flags;
 
 void main() {
 
-
     uint draw_idx = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
-//    uint instance_idx = gl_InstanceIndex; // at some point this needs to be used for the mesh data
 
 
     //global mesh data
     vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
-
     out_normal = ubo.normal_buffer.normal_data[nonuniformEXT(draw_idx)];
     out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(draw_idx)];
     out_tangent = ubo.tangent_buffer.tangent_data[nonuniformEXT(draw_idx)];
 
 
     //get object draw data
-    Skinned_Mesh_Draw_Data cur_mesh_data = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
+    Mesh_Draw_Data cur_mesh_data = pc_mesh.mesh_draw_data_buffer.mesh_data[nonuniformEXT(instance_idx)];
 
     //get transform data
     mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
 
+
     gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
 
     //Material
-    Pbr mat_data = pc_skinned_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
+    //if(material_instance.flags & PBR){};
+    Pbr mat_data = pc_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
+
+    out_pbr_flags = mat_data.flags;
 
     out_color_idx = mat_data.color_index;
-
+    out_color = mat_data.color;
 
 
     out_world_position = vec3(model * vec4(vertex, 1.0));
-
 
 }
 

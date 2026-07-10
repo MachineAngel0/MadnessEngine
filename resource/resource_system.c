@@ -59,12 +59,11 @@ bool resource_system_generate_render_packet(Resource_System* resource_system)
     sprite_system_generate_render_packet(resource_system->sprite_system,
                                          &resource_system->render_packet->sprite_data_packet);
 
-    mesh_system_generate_render_packet(resource_system->mesh_system, &resource_system->render_packet->mesh_data_packet);
-
-    material_system_generate_render_packet(resource_system->material_system, &resource_system->render_packet->material_data_packet);
+    material_system_generate_render_packet(resource_system->material_system, &resource_system->render_packet->draw_3d_data_packet);
 
     scene_update(resource_system->scene, resource_system);
-
+    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->world_transforms;
+    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->transform_count;
 
     return true;
 }

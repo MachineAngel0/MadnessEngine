@@ -61,7 +61,7 @@ const char* c_string_concat(const char* str1, const char* str2, Allocator* alloc
     return out_str;
 }
 
-const char* c_string_concat_fl(const char* str1, const char* str2, Heap_Allocator* allocator)
+const char* c_string_concat_heap(const char* str1, const char* str2, Heap_Allocator* allocator)
 {
     u64 str1_length = c_string_length(str1);
     u64 str2_length = c_string_length(str2);

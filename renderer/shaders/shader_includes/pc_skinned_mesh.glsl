@@ -4,27 +4,12 @@
 #extension GL_ARB_shader_draw_parameters : enable
 
 #include "materials.glsl"
+#include "draw_data.glsl"
 
 
-
-
-layout(push_constant, scalar) uniform PC_SKINNED_MESH{
-    uint ubo_buffer_idx;
-    uint _padding;
-
-
-    Vertex_Buffer vertex_buffer;
-    Normal_Buffer normal_buffer;
-    Tangent_Buffer tangent_buffer;
-    UV_Buffer uv_buffer;
-    Joint_Buffer joint_buffer;
-    Weight_Buffer weight_buffer;
-    Skinned_Matrix_Buffer skinned_matrix_buffer;
-
-    Transform_Buffer transform_buffer;
-    PRB_Buffer material_buffer; // use a default for now
+layout(push_constant, std430) uniform PC_SKINNED_MESH{
     Skinned_Mesh_Draw_Data_Buffer skinned_draw_data_buffer;
-
+    PRB_Buffer material_buffer; // use a default for now
 }pc_skinned_mesh;
 
 

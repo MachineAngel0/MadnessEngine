@@ -55,6 +55,4 @@ void scene_update(Scene* scene, Resource_System* resource_system)
         scene->world_transforms[i] = transform_get_world(&scene->transforms[i]);
     }
 
-    resource_system->render_packet->transform_data_packet.world_space_matrix_array = scene->world_transforms;
-    resource_system->render_packet->transform_data_packet.world_space_matrix_count = scene->transform_count;
 }
