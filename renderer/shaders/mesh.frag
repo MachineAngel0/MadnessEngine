@@ -11,7 +11,7 @@
 
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec4 in_tangent;
-layout(location = 2) in vec2 in_tex;
+layout(location = 2) in vec2 in_uv;
 layout(location = 3) in flat uint in_color_idx;
 layout(location = 4) in vec3 in_world_position;
 layout(location = 5) in vec4 in_color;
@@ -41,7 +41,7 @@ void main() {
 
     //final color
     if ((in_pbr_flags & MESH_PIPELINE_COLOR) != 0u){
-        vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_tex);
+        vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_uv);
         vec4 colored_texture_result = texture_result * in_color;
         vec4 final_result = vec4(result, 1.0) * colored_texture_result;
         outColor = final_result;

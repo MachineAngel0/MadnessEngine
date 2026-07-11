@@ -25,6 +25,7 @@ void main() {
 
     uint draw_idx = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
+//    uint instance_idx = gl_InstanceIndex;
 
 
     //global mesh data

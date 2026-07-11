@@ -99,7 +99,7 @@ void gamepad_init(Memory_System* memory_system, Event_System* event_system)
 void gamepad_shutdown(Event_System* event_system)
 {
     //set memory to zero
-    memset(&gamepad, 0, sizeof(gamepad_state) * XUSER_MAX_COUNT);
+    memset(&gamepad, 0, sizeof(gamepad_system));
 
     //TODO: DEBUG WRAP
     event_unregister(event_system, EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);

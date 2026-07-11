@@ -5,6 +5,9 @@ Material_System* material_system_init(Memory_System* memory_system)
     Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
                                                            MEMORY_SUBSYSTEM_RESOURCE);
 
+    material_system->pbr_count = 0;
+
+
     material_system->heap_allocator = memory_system_heap_allocator_create(
         memory_system, MB(1), MEMORY_SUBSYSTEM_RESOURCE);
 
@@ -57,10 +60,10 @@ bool material_system_generate_render_packet(Material_System* material_system,
     return true;
 }
 
-Material_Handle material_system_create_material(Material_System* material_system)
+/*Material_Handle material_system_create_material(Material_System* material_system)
 {
     return (Material_Handle){material_system->pbr_count++};
-}
+}*/
 
 
 Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle)

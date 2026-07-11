@@ -641,8 +641,7 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         {
             Sk_Mesh_Data* mesh_draw_data = &sk_mesh_asset_data->skinned_mesh_data[mesh_idx];
 
-            mesh_draw_data->mesh_data.default_material_handle = material_system_create_material(
-                resource_system->material_system);
+
 
             Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
             Sk_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
@@ -727,7 +726,6 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         {
             Mesh_Data* mesh_draw_data = &mesh_asset_data->mesh_data[mesh_idx];
 
-            mesh_draw_data->default_material_handle = material_system_create_material(resource_system->material_system);
 
 
             Mesh_Upload_Data* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
@@ -812,9 +810,9 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
             sk_mesh_inst->current_time -= anim_data->anim_end;
         }
 
-        for (u32 i = 0; i < anim_data->channel_count; i++)
+        for (u32 channel_idx = 0; channel_idx < anim_data->channel_count; channel_idx++)
         {
-            const Animation_Channel* channel = &anim_data->channels[i];
+            const Animation_Channel* channel = &anim_data->channels[channel_idx];
             const Animation_Sampler* sampler = &anim_data->samplers[channel->sampler_idx];
 
             u32 j_idx = channel->joint_index;
@@ -823,7 +821,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
             {
                 if (sampler->interpolation_type != Animation_Interpolation_Type_Linear)
                 {
-                    DEBUG("This sample only supports linear interpolations");
+                    // DEBUG("ANIMATION UPDATE: Only using linear interpolations, which this is not");
                     continue;
                 }
 

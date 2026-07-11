@@ -109,6 +109,8 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
     vec4 camera_view_pos;
     vec2 screen_dimensions;
 
+    float padding;
+
     float time;
     uint render_mode;
 

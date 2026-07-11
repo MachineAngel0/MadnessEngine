@@ -482,6 +482,9 @@ typedef struct global_ubo
     vec4 camera_position;
     vec2 screem_dimensions;
 
+    f32 padding;
+
+
     f32 time;
     Render_Mode render_mode;
 

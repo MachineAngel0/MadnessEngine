@@ -12,7 +12,7 @@ bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d);
 
 //you have to create a material before requesting an add material type to it
-Material_Handle material_system_create_material(Material_System* material_system);
+// Material_Handle material_system_create_material(Material_System* material_system);
 
 
 Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle);

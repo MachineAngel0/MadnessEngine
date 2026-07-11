@@ -211,9 +211,9 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
                     renderer, current_batch->draw_data_buffer_handle,
                     command_buffer,
                     &mesh_instance->mesh_gpu_draw,
-                    dynamic_array_get_byte_size(batch_data->material_data));
+                   sizeof(Mesh_GPU_Draw));
 
-                mesh_instance->mesh_indirect_draw;
+                // mesh_instance->mesh_indirect_draw;
 
                 indirect_draw.firstIndex = mesh_instance->mesh_indirect_draw.index_offset;
                 indirect_draw.indexCount = mesh_instance->mesh_indirect_draw.index_count;

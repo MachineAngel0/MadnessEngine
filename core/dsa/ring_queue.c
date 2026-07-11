@@ -3,7 +3,7 @@
 ring_queue* ring_queue_create(u32 data_size, u32 capacity)
 {
     ring_queue* queue = (ring_queue*)malloc(sizeof(ring_queue));
-    queue->data = malloc(queue->data_size * capacity);
+    queue->data = malloc(data_size * capacity);
     queue->data_size = data_size;
     queue->capacity = capacity;
 
