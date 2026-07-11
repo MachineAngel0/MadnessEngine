@@ -607,6 +607,7 @@ typedef struct Mesh_Renderer
     Buffer_Handle uv_staging_buffer_handle;
 
     Buffer_Handle skinned_matrix_buffer;
+    Buffer_Handle skinned_matrix_staging_buffer_handle;
 
 
     Buffer_Handle pbr_buffer_handle;

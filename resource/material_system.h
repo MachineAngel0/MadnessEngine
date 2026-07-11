@@ -43,8 +43,6 @@ void material_system_add_mesh_instance_to_default_material_batch(Resource_System
         if (strcmp(batch->shader_name, "mesh") != 0) { continue; }
         if (strcmp(batch->material_struct->name, "Material_Default") != 0) { continue; }
 
-        batch->material_struct;
-        batch->material_data;
         for (u32 mesh_inst = 0; mesh_inst < parent_instance->mesh_count; ++mesh_inst)
         {
             Mesh_Instance* mesh_instance = &parent_instance->mesh_instances_array[mesh_inst];
@@ -55,6 +53,33 @@ void material_system_add_mesh_instance_to_default_material_batch(Resource_System
         return;
     }
 }
+
+
+void material_system_add_skmesh_instance_to_default_material_batch(Resource_System* resource_system,
+                                                                 Sk_Mesh_Parent_Instance* parent_instance)
+{
+    Material_System* material_system = resource_system->material_system;
+
+    // Mesh_Asset* mesh_asset = &mesh_system->mesh_asset_data[parent_instance->mesh_asset.handle];
+
+    for (u32 batch_idx = 0; batch_idx < material_system->oqaque_batch_count; batch_idx++)
+    {
+        Material_Batch* batch = &material_system->oqaque_batch[batch_idx];
+
+        if (strcmp(batch->shader_name, "skinned_mesh") != 0) { continue; }
+        if (strcmp(batch->material_struct->name, "Material_Default") != 0) { continue; }
+
+        for (u32 mesh_inst = 0; mesh_inst < parent_instance->mesh_count; ++mesh_inst)
+        {
+            Sk_Mesh_Instance* mesh_instance = &parent_instance->sk_mesh_instance_array[mesh_inst];
+            dynamic_array_push(batch->mesh_instances, mesh_instance);
+            dynamic_array_push(batch->material_data,
+                               &material_system->prb[mesh_instance->material_handle.handle]);
+        }
+        return;
+    }
+}
+
 
 void material_system_instantiate_material(Material_System* material_system, const char* shader_name,
                                           const char* material_name, Shader_Mesh_Type mesh_type)

@@ -21,7 +21,7 @@ Resource_System* resource_system_init(Memory_System* memory_system)
 
     resource_system->sprite_system = sprite_system_init(memory_system);
     resource_system->texture_system = texture_system_init(memory_system);
-    resource_system->mesh_system = mesh_system_init(memory_system);
+    resource_system->mesh_system = mesh_system_init(resource_system, memory_system);
     resource_system->scene = scene_init(memory_system);
     resource_system->material_system = material_system_init(memory_system);
 
@@ -64,6 +64,10 @@ bool resource_system_generate_render_packet(Resource_System* resource_system)
     scene_update(resource_system->scene, resource_system);
     resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->world_transforms;
     resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->transform_count;
+
+    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->skinned_matrix_array->data;
+    resource_system->render_packet->draw_3d_data_packet.skinned_matrix_count = resource_system->mesh_system->skinned_matrix_array->num_items;
+
 
     return true;
 }

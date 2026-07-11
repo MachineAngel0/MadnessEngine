@@ -9,8 +9,6 @@ MAPI void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh
 MAPI void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                               Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
 
-void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                         Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                         Shader_System* shader_system,

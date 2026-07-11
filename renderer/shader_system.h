@@ -65,13 +65,27 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
                                                                      BUFFER_TYPE_CPU_STORAGE,
                                                                      shader_batch->material_stride *
                                                                      ssbo_init_amount);
-    shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_CPU_STORAGE,
-                                                                 sizeof(Mesh_GPU_Draw) * ssbo_init_amount);
+    switch (shader_batch->mesh_type)
+    {
+    case Shader_Mesh_Type_Mesh:
+
+        shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     sizeof(Mesh_GPU_Draw) * ssbo_init_amount);
+        break;
+    case Shader_Mesh_Type_Skinned:
+
+        shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     sizeof(SKMesh_GPU_Draw) * ssbo_init_amount);
+        break;
+    }
+
 
     shader_batch->indirect_draw_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                              BUFFER_TYPE_INDIRECT,
-                                                              sizeof(VkDrawIndexedIndirectCommand) * ssbo_init_amount);
+                                                                     BUFFER_TYPE_INDIRECT,
+                                                                     sizeof(VkDrawIndexedIndirectCommand) *
+                                                                     ssbo_init_amount);
 
     //create the push constant, this basically will never change
     shader_batch->pc_data.draw_data_buffer = vulkan_buffer_get_device_address(

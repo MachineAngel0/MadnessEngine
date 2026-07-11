@@ -335,8 +335,6 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
-    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-
     ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 
 

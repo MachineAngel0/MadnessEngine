@@ -4,7 +4,8 @@
 #include "cgltf.h"
 
 
-Mesh_System* mesh_system_init(Memory_System* memory_system);
+Mesh_System* mesh_system_init(Resource_System* resource_system, Memory_System* memory_system);
+
 bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
 
 

@@ -125,7 +125,7 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 //sk meshes
     Joint_Buffer joint_buffer;
     Weight_Buffer weight_buffer;
-    Skinned_Matrix_Buffer weight_bufer;
+    Skinned_Matrix_Buffer skinned_matrix_buffer;
 
     Transform_Buffer transform_buffer;
 

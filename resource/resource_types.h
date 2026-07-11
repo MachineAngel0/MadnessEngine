@@ -319,8 +319,8 @@ typedef struct SKMesh_GPU_Draw
 {
     u32 transform_idx;
     u32 material_instance_handle;
-    u32 joint_idx;
-    u32 weight_idx;
+    u64 joint_idx;
+    u64 weight_idx;
 } SKMesh_GPU_Draw;
 
 
@@ -349,10 +349,6 @@ typedef struct Mesh_Data
 
 typedef struct Sk_Mesh_Data
 {
-    // these are inside mesh data
-    // Transform_Handle transform_handle;
-    // Material_Handle material_handle;
-    Mesh_Data mesh_data;
 
     u64 joint_bytes;
     u64 joint_offset_vec4;
@@ -505,6 +501,7 @@ typedef struct Material_Batch
     Dynamic_Array* material_data;
     // PC_General* pc_general; // TODO:
 
+    //TODO: you could use a union for the mesh types
     Dynamic_Array* mesh_instances;
 
     Shader_Stage_Type shader_stage;
@@ -629,6 +626,13 @@ typedef struct Mesh_System
     size_t weight_byte_size;
 
 
+    size_t skinned_matrix_offset_size; //offset by mat4's
+
+
+
+    DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix_array;
+
+
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
@@ -670,6 +674,10 @@ typedef struct Render_Packet_3D
 
     mat4* world_space_matrix_array;
     u32 world_space_matrix_count;
+
+
+    mat4* skinned_matrix;
+    u32 skinned_matrix_count;
 } Render_Packet_3D;
 
 

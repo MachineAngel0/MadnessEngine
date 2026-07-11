@@ -27,7 +27,7 @@ Animation_Interpolation_Type Animation_Interpolation_Type_gltf_to_engine[cgltf_i
 };
 
 
-Mesh_System* mesh_system_init(Memory_System* memory_system)
+Mesh_System* mesh_system_init(Resource_System* resource_system, Memory_System* memory_system)
 {
     Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System), MEMORY_SUBSYSTEM_MESH);
     memset(out_mesh_system, 0, sizeof(Mesh_System));
@@ -42,6 +42,9 @@ Mesh_System* mesh_system_init(Memory_System* memory_system)
     out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_Upload_Data), MAX_MESH_COUNT);
     out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Sk_Mesh_Upload_Data),
                                                                  MAX_SKINNED_MESH_COUNT);
+
+    out_mesh_system->skinned_matrix_array = dynamic_array_create(mat4, 100, resource_system->heap_allocator);
+
     out_mesh_system->mesh_asset_count = 0;
     out_mesh_system->sk_mesh_asset_count = 0;
     out_mesh_system->mesh_parent_instance_count = 0;
@@ -400,7 +403,6 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-    Mesh_System* mesh_system = resource_system->mesh_system;
 
 
     hash_table* joint_name_to_index = HASH_TABLE_CREATE(size_t, 200);
@@ -468,7 +470,7 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
             mat4* local_mat = &animation_data->resting_pose_local_matrix[joint_idx];
             cgltf_node_transform_local(cgltf_joint, local_mat->data); // 16 floats, column-major
 
-            size_t parent_idx;
+            size_t parent_idx = 0;
             if (hash_table_get(joint_name_to_index, cgltf_joint->parent->name, &parent_idx))
             {
                 cur_joint->parent_idx = parent_idx;
@@ -527,6 +529,8 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
             for (size_t sampler_idx = 0; sampler_idx < sampler_count; sampler_idx++)
             {
                 Animation_Sampler* cur_sampler = &cur_animation->samplers[sampler_idx];
+                cur_sampler->sampler_start = FLT_MAX;
+                cur_sampler->sampler_end = -FLT_MAX;
                 cgltf_animation_sampler* anim_sampler = &anim_data->samplers[sampler_idx];
 
 
@@ -534,10 +538,14 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                 cur_sampler->timestamps_count = anim_sampler->input->count;
                 cur_sampler->timestamps =
                     allocator_heap_alloc(allocator, sizeof(float) * cur_sampler->timestamps_count);
-                //get the timestamp data from the view_data and copy it into the timestamps
-                //it has to be memcpied, since the view_data returns the buffer pointer
-                const uint8_t* timestamp_buffer_data = cgltf_buffer_view_data(anim_sampler->input->buffer_view);
-                memcpy(cur_sampler->timestamps, timestamp_buffer_data, cur_sampler->timestamps_count * sizeof(float));
+                //get size information
+                cgltf_size num_floats = cgltf_accessor_unpack_floats(anim_sampler->input, NULL, 0);
+                cgltf_size float_bytes = num_floats * sizeof(float);
+                //alloc and copy data
+                float* timestamp_data = allocator_alloc(frame_allocator, float_bytes);
+                cgltf_accessor_unpack_floats(anim_sampler->input, timestamp_data, num_floats);
+                memcpy(cur_sampler->timestamps, timestamp_data, float_bytes);
+
 
                 for (u32 timestamp_idx = 0; timestamp_idx < cur_sampler->timestamps_count; timestamp_idx++)
                 {
@@ -569,13 +577,13 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                     cur_sampler->interperlation_data.trs_vec3 = allocator_heap_alloc(
                         allocator, sizeof(vec3) * cur_sampler->trs_interpolation_count);
                     memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data,
-                           cur_sampler->trs_interpolation_count * sizeof(float));
+                           cur_sampler->trs_interpolation_count * sizeof(vec3));
                     break;
                 case cgltf_type_vec4: // rotation
                     cur_sampler->interperlation_data.trs_vec4 = allocator_heap_alloc(
                         allocator, sizeof(vec4) * cur_sampler->trs_interpolation_count);
                     memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data,
-                           cur_sampler->trs_interpolation_count * sizeof(float));
+                           cur_sampler->trs_interpolation_count * sizeof(vec4));
                     break;
                 default:
                     FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
@@ -620,10 +628,10 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         Sk_Mesh_Asset* sk_mesh_asset_data = &mesh_system->skinned_mesh_asset_data[mesh_system->
             sk_mesh_asset_count++];
         sk_mesh_asset_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
+        sk_mesh_asset_data->mesh_count = data->meshes_count;
 
         sk_mesh_asset_data->mesh_data = allocator_heap_alloc(
             allocator, sizeof(Mesh_Data) * data->meshes_count);
-        sk_mesh_asset_data->mesh_count = data->meshes_count;
 
         sk_mesh_asset_data->skinned_mesh_data = allocator_heap_alloc(
             allocator, sizeof(Sk_Mesh_Data) * data->meshes_count);
@@ -639,18 +647,18 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
 
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
-            Sk_Mesh_Data* mesh_draw_data = &sk_mesh_asset_data->skinned_mesh_data[mesh_idx];
-
+            Sk_Mesh_Data* sk_mesh_data = &sk_mesh_asset_data->skinned_mesh_data[mesh_idx];
+            Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[mesh_idx];
 
 
             Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
             Sk_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
 
-            _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, &mesh_draw_data->mesh_data,
+            _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, mesh_data,
                                  mesh_upload_data);
 
             _gltf_load_skinned_mesh_data(resource_system, data, mesh_idx,
-                                         mesh_draw_data, skinned_mesh_upload_data);
+                                         sk_mesh_data, skinned_mesh_upload_data);
 
             //add to mesh upload queue
             ring_enqueue(mesh_system->mesh_ring_queue, mesh_upload_data);
@@ -672,6 +680,7 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         for (int i = 0; i < sk_mesh_asset_data->mesh_count; ++i)
         {
             Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[i];
+            Sk_Mesh_Data* sk_mesh_data = &sk_mesh_asset_data->skinned_mesh_data[i];
             Sk_Mesh_Instance* sk_mesh_instance = &sk_mesh_parent_inst->sk_mesh_instance_array[i];
             sk_mesh_instance->material_handle = mesh_data->default_material_handle;
             sk_mesh_instance->parent_transform_handle = sk_mesh_parent_inst->transform_handle;
@@ -679,6 +688,9 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
             //gpu friendly format
             sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = sk_mesh_instance->material_handle.handle;
             sk_mesh_instance->sk_mesh_gpu_draw.transform_idx = sk_mesh_parent_inst->transform_handle.handle;
+
+            sk_mesh_instance->sk_mesh_gpu_draw.joint_idx = sk_mesh_data->joint_offset_vec4; // <-- add this
+            sk_mesh_instance->sk_mesh_gpu_draw.weight_idx = sk_mesh_data->weight_offset_vec4; // <-- add this
 
             //indirect draw, gpu friendly format
             sk_mesh_instance->mesh_indirect_draw.vertex_offset = mesh_data->vertex_offset;
@@ -695,7 +707,7 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         sk_mesh_parent_inst->local_translation = allocator_heap_alloc(
             allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
         sk_mesh_parent_inst->local_rotation =
-            allocator_heap_alloc(allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
+            allocator_heap_alloc(allocator, sizeof(quat) * sk_mesh_parent_inst->joint_count);
         sk_mesh_parent_inst->local_scale = allocator_heap_alloc(
             allocator, sizeof(vec3) * sk_mesh_parent_inst->joint_count);
         sk_mesh_parent_inst->gpu_matrix = allocator_heap_alloc(
@@ -703,13 +715,15 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
 
         for (u32 i = 0; i < sk_mesh_parent_inst->joint_count; i++)
         {
-            mat4_decompose(*animation_data->resting_pose_local_matrix, &sk_mesh_parent_inst->local_translation[i],
+            mat4_decompose(animation_data->resting_pose_local_matrix[i], &sk_mesh_parent_inst->local_translation[i],
                            &sk_mesh_parent_inst->local_rotation[i], &sk_mesh_parent_inst->local_scale[i]);
         }
 
         sk_mesh_parent_inst->current_animation_index = 0;
         sk_mesh_parent_inst->current_time = 0;
         sk_mesh_parent_inst->looping = true;
+
+        material_system_add_skmesh_instance_to_default_material_batch(resource_system, sk_mesh_parent_inst);
     }
     else
     {
@@ -725,7 +739,6 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
             Mesh_Data* mesh_draw_data = &mesh_asset_data->mesh_data[mesh_idx];
-
 
 
             Mesh_Upload_Data* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
@@ -794,6 +807,8 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
     //assume the mesh is loaded
 
+    dynamic_array_clear(mesh_system->skinned_matrix_array);
+
     for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
     {
         Sk_Mesh_Parent_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
@@ -827,15 +842,9 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
                 // Get the input keyframe values for the current time stamp
                 if ((sk_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
-                    sk_mesh_inst->
-                    current_time <=
-                    sampler->timestamps[timestamp_idx + 1]))
+                    sk_mesh_inst->current_time <= sampler->timestamps[timestamp_idx + 1]))
                 {
-                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) /
-                    (
-                        sampler
-                        ->
-                        timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
+                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler->timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
                     switch (channel->animation_path_type)
                     {
                     case Animation_Path_Type_Invalid:
@@ -884,31 +893,41 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
         mat4* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * sk_mesh_inst->joint_count);
         mat4* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4) * sk_mesh_inst->joint_count);
 
-        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
+        for (u32 local_idx = 0; local_idx < sk_mesh_inst->joint_count; local_idx++)
         {
             // Joint(N, t) = Translation(N, t) * Rotation(N, t) * Scale(N, t)
 
-            const mat4 t = mat4_translation(sk_mesh_inst->local_translation[i]);
-            const mat4 r = quat_to_mat4(sk_mesh_inst->local_rotation[i]);
-            const mat4 s = mat4_scale(sk_mesh_inst->local_scale[i]);
+            const mat4 t = mat4_translation(sk_mesh_inst->local_translation[local_idx]);
+            const mat4 r = quat_to_mat4(sk_mesh_inst->local_rotation[local_idx]);
+            const mat4 s = mat4_scale(sk_mesh_inst->local_scale[local_idx]);
 
             mat4 tr = mat4_mul(t, r);
-            local_matrix[i] = mat4_mul(tr, s);
+            local_matrix[local_idx] = mat4_mul(tr, s);
         }
 
-        model_matrix[0] = local_matrix[0];
-        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
+        // model_matrix[0] = local_matrix[0];
+        for (u32 model_idx = 0; model_idx < sk_mesh_inst->joint_count; model_idx++)
         {
             //Joint(N, t) = Parent(N, t) * Joint(N, t)
-            u32 parent_index = animation_data->joints[i].parent_idx;
-            model_matrix[i] = mat4_mul(local_matrix[parent_index], local_matrix[i]);
+            u32 parent_index = animation_data->joints[model_idx].parent_idx;
+            if (model_idx == 0) // or however your format marks "this is the root"
+            {
+                model_matrix[model_idx] = local_matrix[model_idx];
+            }
+            else
+            {
+                model_matrix[model_idx] = mat4_mul(model_matrix[parent_index], local_matrix[model_idx]);
+            }
         }
 
-        for (u32 i = 0; i < sk_mesh_inst->joint_count; i++)
+        for (u32 final_idx = 0; final_idx < sk_mesh_inst->joint_count; final_idx++)
         {
             //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
-            sk_mesh_inst->gpu_matrix[i] = mat4_mul(local_matrix[i],
-                                                   animation_data->inverse_bind_matrix[i]);
+            //TODO: we have two copies of the data technically
+            sk_mesh_inst->gpu_matrix[final_idx] = mat4_mul(model_matrix[final_idx],
+                                                           animation_data->inverse_bind_matrix[final_idx]);
+
+            dynamic_array_push(mesh_system->skinned_matrix_array, &sk_mesh_inst->gpu_matrix[final_idx]);
         }
     }
 }
