@@ -177,8 +177,8 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
     vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_staging_buffer_handle);
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->skinned_matrix_buffer,
                                                    mesh_renderer->skinned_matrix_staging_buffer_handle, command_buffer,
-                                                   render_packet->draw_3d_data_packet.skinned_matrix,
-                                                   sizeof(mat4) * render_packet->draw_3d_data_packet.skinned_matrix_count);
+                                                   render_packet->draw_3d_data_packet.skinned_matrix->data,
+                                                   dynamic_array_get_byte_size(render_packet->draw_3d_data_packet.skinned_matrix));
 
 
 
@@ -247,6 +247,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
                                                                          mesh_idx);
                     //we are indexing into the material buffer based on the draw count
                     sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = mesh_idx;
+                    sk_mesh_instance->sk_mesh_gpu_draw.vertex_offset = sk_mesh_instance->mesh_indirect_draw.vertex_offset;
                     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
                         renderer, current_batch->draw_data_buffer_handle,
                         command_buffer,

@@ -5,7 +5,6 @@
 #include "platform.h"
 #include <math.h>
 
-
 //FUTURE: rn im not using glm/cglm, should probably switch
 //NOTE: Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
@@ -14,6 +13,8 @@
 /*** MAX/MIN FUNCTIONS ***/
 int32_t max_i(const int32_t a, const int32_t b)
 {
+
+
     if (a > b)
     {
         return a;

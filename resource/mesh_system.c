@@ -551,7 +551,7 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                 {
                     cur_sampler->sampler_start = min_f(cur_sampler->sampler_start,
                                                        cur_sampler->timestamps[timestamp_idx]);
-                    cur_sampler->sampler_end = max_f(cur_sampler->sampler_start,
+                    cur_sampler->sampler_end = max_f(cur_sampler->sampler_end,
                                                      cur_sampler->timestamps[timestamp_idx]);
                 }
 
@@ -592,6 +592,7 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                 }
             }
         }
+
 
         hash_table_destroy(joint_name_to_index);
     }
@@ -690,8 +691,8 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
             sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = sk_mesh_instance->material_handle.handle;
             sk_mesh_instance->sk_mesh_gpu_draw.transform_idx = sk_mesh_parent_inst->transform_handle.handle;
 
-            sk_mesh_instance->sk_mesh_gpu_draw.joint_idx = sk_mesh_data->joint_offset_vec4; // <-- add this
-            sk_mesh_instance->sk_mesh_gpu_draw.weight_idx = sk_mesh_data->weight_offset_vec4; // <-- add this
+            sk_mesh_instance->sk_mesh_gpu_draw.joint_idx = sk_mesh_data->joint_offset_vec4;
+            sk_mesh_instance->sk_mesh_gpu_draw.weight_idx = sk_mesh_data->weight_offset_vec4;
 
             //indirect draw, gpu friendly format
             sk_mesh_instance->mesh_indirect_draw.vertex_offset = mesh_data->vertex_offset;
@@ -799,13 +800,6 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
     //send to the gpu for the shader to work
 
 
-    //update and interpolate the local transformations for the playing animations
-    //create the local matrix
-    // joint1 =  local parent * local joint
-    // joint2 =  joint1 * inverse_bind_matrix
-    //send to the gpu for the shader to work
-
-
     //assume the mesh is loaded
 
     dynamic_array_clear(mesh_system->skinned_matrix_array);
@@ -821,9 +815,9 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
         sk_mesh_inst->current_time += delta_time;
 
-        if (sk_mesh_inst->current_time > anim_data->anim_end)
+        while (sk_mesh_inst->current_time >= anim_data->anim_end)
         {
-            sk_mesh_inst->current_time -= anim_data->anim_end;
+            sk_mesh_inst->current_time -= (anim_data->anim_end - anim_data->anim_start);
         }
 
         for (u32 channel_idx = 0; channel_idx < anim_data->channel_count; channel_idx++)
@@ -903,24 +897,42 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
             const mat4 r = quat_to_mat4(sk_mesh_inst->local_rotation[local_idx]);
             const mat4 s = mat4_scale(sk_mesh_inst->local_scale[local_idx]);
 
-            mat4 tr = mat4_mul(t, r);
-            local_matrix[local_idx] = mat4_mul(tr, s);
+            Transform* transform = transform_from_position_rotation_scale(sk_mesh_inst->local_translation[local_idx],
+                                                                          sk_mesh_inst->local_rotation[local_idx],
+                                                                          sk_mesh_inst->local_scale[local_idx],
+                                                                          frame_allocator);
+
+
+            // mat4 tr = mat4_mul(t, r);
+            // local_matrix[local_idx] = mat4_mul(tr, s);
+            // mat4 temp = mat4_mul(tr, s);
+
+            mat4 sr = mat4_mul(s, r);
+            mat4 srt = mat4_mul(sr, t);
+
+            local_matrix[local_idx] = srt;
+            // local_matrix[local_idx] = transform_get_local_internal(transform);
+
+
+            int junk = 0;
         }
 
         model_matrix[0] = local_matrix[0];
-        for (u32 model_idx = 0; model_idx < sk_mesh_inst->joint_count; model_idx++)
+        for (u32 model_idx = 1; model_idx < sk_mesh_inst->joint_count; model_idx++)
         {
             //Joint(N, t) = Parent(N, t) * Joint(N, t)
             u32 parent_index = animation_data->joints[model_idx].parent_idx;
-            model_matrix[model_idx] = mat4_mul(model_matrix[parent_index], local_matrix[model_idx]);
+            model_matrix[model_idx] = mat4_mul( local_matrix[model_idx], model_matrix[parent_index]);
+
         }
 
         for (u32 final_idx = 0; final_idx < sk_mesh_inst->joint_count; final_idx++)
         {
             //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
             //TODO: we have two copies of the data technically
-            sk_mesh_inst->gpu_matrix[final_idx] = mat4_mul(model_matrix[final_idx],
-                                                           animation_data->inverse_bind_matrix[final_idx]);
+            sk_mesh_inst->gpu_matrix[final_idx] = mat4_mul(animation_data->inverse_bind_matrix[final_idx], model_matrix[final_idx]
+                                                           );
+
 
             dynamic_array_push(mesh_system->skinned_matrix_array, &sk_mesh_inst->gpu_matrix[final_idx]);
         }

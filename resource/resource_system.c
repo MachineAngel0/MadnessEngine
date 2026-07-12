@@ -65,9 +65,7 @@ bool resource_system_generate_render_packet(Resource_System* resource_system)
     resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->world_transforms;
     resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->transform_count;
 
-    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->skinned_matrix_array->data;
-    resource_system->render_packet->draw_3d_data_packet.skinned_matrix_count = resource_system->mesh_system->skinned_matrix_array->num_items;
-
+    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->skinned_matrix_array;
 
     return true;
 }

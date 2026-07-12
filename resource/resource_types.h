@@ -319,8 +319,9 @@ typedef struct SKMesh_GPU_Draw
 {
     u32 transform_idx;
     u32 material_instance_handle;
-    u64 joint_idx;
-    u64 weight_idx;
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 vertex_offset;
 } SKMesh_GPU_Draw;
 
 
@@ -675,9 +676,7 @@ typedef struct Render_Packet_3D
     mat4* world_space_matrix_array;
     u32 world_space_matrix_count;
 
-
-    mat4* skinned_matrix;
-    u32 skinned_matrix_count;
+    DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix;
 } Render_Packet_3D;
 
 
