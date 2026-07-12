@@ -560,7 +560,11 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
 
                 //read gltf output data
                 cur_sampler->trs_interpolation_count = anim_sampler->output->count;
-                const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
+                // const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
+                cgltf_size output_num_floats = cgltf_accessor_unpack_floats(anim_sampler->output, NULL, 0);
+                cgltf_size output_float_bytes = output_num_floats * sizeof(float);
+                float* trs_buffer_data = allocator_alloc(frame_allocator, output_float_bytes);
+                cgltf_accessor_unpack_floats(anim_sampler->output, trs_buffer_data, output_num_floats);
 
                 cur_sampler->interpolation_type = Animation_Interpolation_Type_gltf_to_engine[anim_sampler->
                     interpolation];
@@ -569,21 +573,18 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                 //these are the only supported formats in the gltf spec for samplers
                 case cgltf_type_scalar: // weights
                     cur_sampler->interperlation_data.trs_float = allocator_heap_alloc(
-                        allocator, sizeof(float) * cur_sampler->trs_interpolation_count);
-                    memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data,
-                           cur_sampler->trs_interpolation_count * sizeof(float));
+                        allocator, sizeof(float) * output_num_floats);
+                    memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data, output_float_bytes);
                     break;
                 case cgltf_type_vec3: // translation, scale
                     cur_sampler->interperlation_data.trs_vec3 = allocator_heap_alloc(
-                        allocator, sizeof(vec3) * cur_sampler->trs_interpolation_count);
-                    memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data,
-                           cur_sampler->trs_interpolation_count * sizeof(vec3));
+                        allocator, sizeof(float) * output_num_floats);
+                    memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data, output_float_bytes);
                     break;
                 case cgltf_type_vec4: // rotation
                     cur_sampler->interperlation_data.trs_vec4 = allocator_heap_alloc(
-                        allocator, sizeof(vec4) * cur_sampler->trs_interpolation_count);
-                    memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data,
-                           cur_sampler->trs_interpolation_count * sizeof(vec4));
+                        allocator, sizeof(float) * output_num_floats);
+                    memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data, output_float_bytes);
                     break;
                 default:
                     FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
@@ -844,7 +845,8 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
                 if ((sk_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
                     sk_mesh_inst->current_time <= sampler->timestamps[timestamp_idx + 1]))
                 {
-                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler->timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
+                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler->
+                        timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
                     switch (channel->animation_path_type)
                     {
                     case Animation_Path_Type_Invalid:
@@ -905,19 +907,12 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
             local_matrix[local_idx] = mat4_mul(tr, s);
         }
 
-        // model_matrix[0] = local_matrix[0];
+        model_matrix[0] = local_matrix[0];
         for (u32 model_idx = 0; model_idx < sk_mesh_inst->joint_count; model_idx++)
         {
             //Joint(N, t) = Parent(N, t) * Joint(N, t)
             u32 parent_index = animation_data->joints[model_idx].parent_idx;
-            if (model_idx == 0) // or however your format marks "this is the root"
-            {
-                model_matrix[model_idx] = local_matrix[model_idx];
-            }
-            else
-            {
-                model_matrix[model_idx] = mat4_mul(model_matrix[parent_index], local_matrix[model_idx]);
-            }
+            model_matrix[model_idx] = mat4_mul(model_matrix[parent_index], local_matrix[model_idx]);
         }
 
         for (u32 final_idx = 0; final_idx < sk_mesh_inst->joint_count; final_idx++)
