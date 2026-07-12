@@ -37,26 +37,26 @@ typedef enum UI_Layout_Direction
 
 typedef struct UI_Editor_Style
 {
-    vec3 layout_color;
-    vec3 layout_accent_color;
+    mvec3 layout_color;
+    mvec3 layout_accent_color;
 
-    vec3 text_color;
-    vec3 textbox_color;
+    mvec3 text_color;
+    mvec3 textbox_color;
 
-    vec3 custom_widget_color;
+    mvec3 custom_widget_color;
 
 
     //colors for things like buttons and checkboxes
-    vec3 color;
-    vec3 hovered_color;
-    vec3 pressed_color;
+    mvec3 color;
+    mvec3 hovered_color;
+    mvec3 pressed_color;
 
-    vec3 outline_color;
+    mvec3 outline_color;
 
-    vec3 permanent_active;
+    mvec3 permanent_active;
 
-    vec3 header_color;
-    vec3 pop_up_color;
+    mvec3 header_color;
+    mvec3 pop_up_color;
 
 
 
@@ -79,15 +79,15 @@ struct UI_Circle
 typedef struct UI_Node
 {
     // screen size and pos, not normalized
-    vec2 pos;
-    vec2 size;
+    mvec2 pos;
+    mvec2 size;
     float rotation; // degrees, but gets converted to radians at draw time
 
     //for circles
     float thickness;
 
     //outline
-    vec3 outline_color;
+    mvec3 outline_color;
     float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
 
     String string_id;
@@ -99,17 +99,17 @@ typedef struct UI_Node
 
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
-    vec3 color;
+    mvec3 color;
     UI_Property_Flags flags;
 
     Texture_Handle texture_handle;
     // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
+    mvec2 uv_offset;
     // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
+    mvec2 uv_size;
 
-    vec2 scissor_pos;
-    vec2 scissor_size;
+    mvec2 scissor_pos;
+    mvec2 scissor_size;
 } UI_Node;
 
 
@@ -139,13 +139,13 @@ typedef struct Window_State
     String window_name;
     UI_Window_Type window_type;
 
-    vec2 window_region_pos;
-    vec2 window_region_size;
+    mvec2 window_region_pos;
+    mvec2 window_region_size;
 
     // only for actual windows and not scroll boxes
     // should be used as an offset to get to the proper scroll region
     //NOTE:  the header position is at the same spot where the window starts01
-    vec2 header_size;
+    mvec2 header_size;
 
     float scroll_offset; // should ideally be in a range of size, and then we increment the size by that
     float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
@@ -155,9 +155,9 @@ typedef struct Pop_Up_State
 {
     String pop_up_name;
 
-    vec2 cursor_original_pos;
-    vec2 pop_up_pos;
-    vec2 pop_up_size;
+    mvec2 cursor_original_pos;
+    mvec2 pop_up_pos;
+    mvec2 pop_up_size;
 
     UI_Node* pop_up_node;
     UI_Node* pop_up_scissor_start_node;
@@ -169,10 +169,10 @@ typedef struct Pop_Up_State
 
 typedef struct Menu_Bar_State
 {
-    vec2 menu_bar_pos;
-    vec2 menu_bar_size;
+    mvec2 menu_bar_pos;
+    mvec2 menu_bar_size;
 
-    vec2 menu_cursor_position;
+    mvec2 menu_cursor_position;
 
     String active_menu_item;
 
@@ -246,20 +246,20 @@ typedef struct Madness_UI
     String_Builder* string_builder;
     hash_table* textbox_ids; //maps textbox names to their id in the string builder array
 
-    vec2 screen_size; // this gets queried every frame
+    mvec2 screen_size; // this gets queried every frame
 
 
     //new UI
 
     UI_Editor_Style editor_style;
 
-    vec2 current_window_screen_pos; // converted pos of current layout
-    vec2 current_window_screen_size; // converted size of current layout
+    mvec2 current_window_screen_pos; // converted pos of current layout
+    mvec2 current_window_screen_size; // converted size of current layout
 
 
-    vec2 cursor_pos;
-    vec2 prev_line;
-    vec2 prev_item_size;
+    mvec2 cursor_pos;
+    mvec2 prev_line;
+    mvec2 prev_item_size;
     // bool same_line;
 
     float element_padding_x; // space between each ui element, when using same line
@@ -274,7 +274,7 @@ typedef struct Madness_UI
     //Material Node
     bool input_pressed;
     u32 input_pressed_id;
-    vec2 input_pos;
+    mvec2 input_pos;
     bool output_pressed;
     u32 output_pressed_id;
 
@@ -318,7 +318,7 @@ void madness_ui_menu_bar_end(void);
 bool madness_ui_menu_item_begin(String menu_name);
 bool madness_ui_menu_item_end(void);
 
-bool madness_ui_pop_up_open(String pop_up_name, vec2 pop_up_start_location);
+bool madness_ui_pop_up_open(String pop_up_name, mvec2 pop_up_start_location);
 bool madness_ui_pop_up_close(void);
 
 
@@ -328,8 +328,8 @@ MAPI void madness_ui_window_end(void);
 
 MAPI void madness_ui_set_window_pos(u32 x, u32 y);
 MAPI void madness_ui_set_window_size(u32 width, u32 height);
-MAPI vec2 madness_ui_get_window_pos(void);
-MAPI vec2 madness_ui_get_window_size(void);
+MAPI mvec2 madness_ui_get_window_pos(void);
+MAPI mvec2 madness_ui_get_window_size(void);
 
 
 
@@ -342,7 +342,7 @@ MAPI void madness_scroll_box_end(void);
 MAPI void madness_ui_text_box(String id);
 
 MAPI UI_Node* madness_ui_string(String text);
-MAPI UI_Node* madness_ui_string_internal(String text, vec2 parent_pos, vec2 parent_size,
+MAPI UI_Node* madness_ui_string_internal(String text, mvec2 parent_pos, mvec2 parent_size,
                                          UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
 MAPI UI_Node* madness_ui_c_string(const char* text);
 
@@ -368,8 +368,8 @@ MAPI bool madness_ui_s32(String text, s32* i, u32 increment_value);
 MAPI bool madness_ui_float(String text, float* f, float increment_value);
 MAPI bool madness_ui_float2(String text, float* x, float* y, float increment_value);
 MAPI bool madness_ui_float3(String text, float* x, float* y, float* z, float increment_value);
-MAPI bool madness_ui_vec2(String label, vec2* v, float increment_value);
-MAPI bool madness_ui_vec3(String label, vec3* v, float increment_value);
+MAPI bool madness_ui_vec2(String label, mvec2* v, float increment_value);
+MAPI bool madness_ui_vec3(String label, mvec3* v, float increment_value);
 
 
 MAPI bool madness_ui_drop_down(String label, bool* state);
@@ -394,7 +394,7 @@ MAPI bool madness_ui_grid_end(String id, String text);
 MAPI void madness_ui_padding(const char* identifier);
 
 
-MAPI bool madness_ui_color_picker(String label, vec3* color_value);
+MAPI bool madness_ui_color_picker(String label, mvec3* color_value);
 
 
 MAPI bool madness_ui_circle(String id, float* thickness);
@@ -421,12 +421,12 @@ typedef struct Material_Node
     u32 node_id;
 
     String* inputs;
-    vec2* inputs_positions;
+    mvec2* inputs_positions;
     Material_Link* inputs_links;
     int input_size;
 
     String* outputs;
-    vec2* output_positions;
+    mvec2* output_positions;
     Material_Link* output_links;
     int output_size;
 } Material_Node;
@@ -442,7 +442,7 @@ typedef struct Material_Node
 // might need some additional state, just cause, the node draw order could be random,
 // and we will have no idea, if on a release, we are hovering over another node
 
-MAPI bool madness_ui_node_simple(String id, vec2 pos, String inputs[], u8 input_size,
+MAPI bool madness_ui_node_simple(String id, mvec2 pos, String inputs[], u8 input_size,
                                  String outputs[], u8 output_size, u32 node_id);
 
 MAPI bool madness_ui_node_complex(String id, String inputs[], u8 input_size, String outputs[],
@@ -452,16 +452,16 @@ MAPI bool madness_ui_node_complex(String id, String inputs[], u8 input_size, Str
 MAPI bool madness_ui_node(String id, String inputs[], u8 input_size, String outputs[],
                           u8 output_size);
 
-MAPI bool madness_ui_drag_test(vec2* pos);
+MAPI bool madness_ui_drag_test(mvec2* pos);
 
 
-MAPI bool madness_ui_quadratic_bezier(vec2* pos1, vec2* pos2, vec2* pos3);
-MAPI bool madness_ui_cubic_bezier(vec2* pos1, vec2* pos2, vec2* pos3, vec2* pos4);
+MAPI bool madness_ui_quadratic_bezier(mvec2* pos1, mvec2* pos2, mvec2* pos3);
+MAPI bool madness_ui_cubic_bezier(mvec2* pos1, mvec2* pos2, mvec2* pos3, mvec2* pos4);
 
 
 void madness_ui_same_line(void);
-void madness_ui_advance_cursor(vec2 ui_screen_size);
-void madness_ui_advance_cursor_horizontal(vec2 ui_screen_size);
+void madness_ui_advance_cursor(mvec2 ui_screen_size);
+void madness_ui_advance_cursor_horizontal(mvec2 ui_screen_size);
 
 void madness_ui_set_button_size(float button_size);
 void madness_ui_set_font_size(float font_size);
@@ -479,9 +479,9 @@ MAPI void madness_ui_example(void);
 
 
 //these is only meant for internal use and not part of the API
-MAPI void madness_calculate_text_size(String text, vec2 screen_position, vec2* out_text_size);
+MAPI void madness_calculate_text_size(String text, mvec2 screen_position, mvec2* out_text_size);
 
-MAPI vec2 madness_ui_get_text_size(String text);
+MAPI mvec2 madness_ui_get_text_size(String text);
 MAPI float madness_ui_get_default_element_height(void);
 
 
@@ -494,11 +494,11 @@ MAPI UI_Node* madness_ui_get_new_node(void);
 UI_Node* madness_ui_get_pop_up_node(void);
 
 UI_Node* madness_ui_new_text_node(void);
-UI_Node* madness_ui_new_scissor_start(vec2 scissor_pos, vec2 scissor_size);
+UI_Node* madness_ui_new_scissor_start(mvec2 scissor_pos, mvec2 scissor_size);
 void madness_ui_new_scissor_end(void);
 
 
-MAPI void madness_ui_center_child_node(vec2 parent_pos, vec2 parent_size, vec2 child_size, vec2* out_pos);
+MAPI void madness_ui_center_child_node(mvec2 parent_pos, mvec2 parent_size, mvec2 child_size, mvec2* out_pos);
 MAPI char* madness_ui_float_to_char(float value);
 
 
@@ -510,13 +510,13 @@ MAPI bool is_ui_hot(int id);
 
 MAPI bool is_ui_active(int id);
 
-MAPI bool region_hit(vec2 pos, vec2 size);
+MAPI bool region_hit(mvec2 pos, mvec2 size);
 
 
 //UTILITY
 
 //check if we can use the button
-MAPI bool madness_ui_use_ui_element(int id, vec2 pos, vec2 size);
+MAPI bool madness_ui_use_ui_element(int id, mvec2 pos, mvec2 size);
 
 MAPI int generate_id(void);
 

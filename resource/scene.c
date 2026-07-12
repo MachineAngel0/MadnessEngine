@@ -6,7 +6,7 @@ Scene* scene_init(Memory_System* memory_system)
 
     scene->transforms = memory_system_alloc(memory_system, sizeof(Transform) * MAX_TRANSFORM_COUNT,
                                             MEMORY_SUBSYSTEM_RESOURCE);
-    scene->world_transforms = memory_system_alloc(memory_system, sizeof(mat4) * MAX_TRANSFORM_COUNT,
+    scene->world_transforms = memory_system_alloc(memory_system, sizeof(mmat4) * MAX_TRANSFORM_COUNT,
                                                   MEMORY_SUBSYSTEM_RESOURCE);
 
     scene->transform_count = 0;

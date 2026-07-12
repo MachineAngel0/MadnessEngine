@@ -120,13 +120,13 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             float y = YOFFSET
                 + i * CELL_SIZE; // Start from -0.9 for 20 rows
 
-            vec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
+            mvec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
 
             Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
             sprite_create_minimal(&tetris->frame_arena);
-            sprite_data->pos = (vec2){x, y};
-            sprite_data->size = (vec2){BLOCK_SCALE,BLOCK_SCALE};
+            sprite_data->pos = (mvec2){x, y};
+            sprite_data->size = (mvec2){BLOCK_SCALE,BLOCK_SCALE};
             sprite_data->color = sprite_color;
             sprite_data->texture_index = 0;
             sprite_data->flags |= SPRITE_FLAG_COLOR;
@@ -137,11 +137,11 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
     Tetromino cur_tetromino = tetris->current_tetromino;
     for (int i = 0; i < TETROMINO_SIZE; i++)
     {
-        vec2 pos = {
+        mvec2 pos = {
             XOFFSET + ((cur_tetromino.tetromino_default_position[i].x + cur_tetromino.grid_position.x) * CELL_SIZE),
             YOFFSET + ((cur_tetromino.tetromino_default_position[i].y + cur_tetromino.grid_position.y) * CELL_SIZE),
         };
-        vec2 size = {CELL_SIZE,CELL_SIZE};
+        mvec2 size = {CELL_SIZE,CELL_SIZE};
 
         Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
         sprite_data->pos = pos;
@@ -309,7 +309,7 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
     case Tetris_Direction_DOWN:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
                                   tetris->current_tetromino.tetromino_default_position,
-                                  (vec2){0, 1}))
+                                  (mvec2){0, 1}))
         {
             tetris->current_tetromino.grid_position.y++;
         }
@@ -320,14 +320,14 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
         break;
     case Tetris_Direction_RIGHT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, (vec2){1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (mvec2){1, 0}))
         {
             tetris->current_tetromino.grid_position.x++;
         }
         break;
     case Tetris_Direction_LEFT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, (vec2){-1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (mvec2){-1, 0}))
         {
             tetris->current_tetromino.grid_position.x--;
         }
@@ -342,7 +342,7 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
 }
 
 bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetromino_grid_position,
-                           Tetris_Grid_Position* tetromino_grid_default_position, vec2 direction_vector)
+                           Tetris_Grid_Position* tetromino_grid_default_position, mvec2 direction_vector)
 {
     int x_grid = tetromino_grid_position.x + direction_vector.x;
     int y_grid = tetromino_grid_position.y + direction_vector.y;
@@ -428,7 +428,7 @@ void tetris_rotate_block(Tetris_Game_State* tetris)
 
     //check if we can rotate at all
     if (tetris_can_move_block(tetris, cur_tetromino->grid_position, new_tetromino_grid_position,
-                              (vec2){0, 0}))
+                              (mvec2){0, 0}))
     {
         //if we can rotate we set tetromino to temp, as it contains the new positions
         memcpy(cur_tetromino->tetromino_default_position, new_tetromino_grid_position,

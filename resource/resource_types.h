@@ -208,8 +208,8 @@ typedef struct Animation_Sampler
     union
     {
         float* trs_float;
-        vec3* trs_vec3;
-        vec4* trs_vec4;
+        mvec3* trs_vec3;
+        mvec4* trs_vec4;
     } interperlation_data;
 
     u32 trs_interpolation_count;
@@ -236,8 +236,8 @@ typedef struct Animation_Data
     Joint* joints;
     u32 joint_count; // also the weight count
 
-    mat4* resting_pose_local_matrix;
-    mat4* inverse_bind_matrix;
+    mmat4* resting_pose_local_matrix;
+    mmat4* inverse_bind_matrix;
 
     Animation* animations;
     u32 animations_count;
@@ -263,10 +263,10 @@ typedef struct Mesh_Upload_Data
     u32 uv_bytes;
 
     //TODO: these technically could just be u8's
-    vec4* tangent;
-    vec3* pos;
-    vec3* normal;
-    vec2* uv;
+    mvec4* tangent;
+    mvec3* pos;
+    mvec3* normal;
+    mvec2* uv;
     u8* indices;
 } Mesh_Upload_Data;
 
@@ -279,8 +279,8 @@ typedef struct Skinned_Mesh_Upload_Data
     u64 joint_offset;
     u64 weight_offset;
 
-    vec4* joints;
-    vec4* weights;
+    mvec4* joints;
+    mvec4* weights;
 } Sk_Mesh_Upload_Data;
 
 
@@ -395,11 +395,11 @@ typedef struct Sk_Mesh_Parent_Instance
     Sk_Mesh_Instance* sk_mesh_instance_array;
 
     //generated every frame
-    mat4* gpu_matrix;
+    mmat4* gpu_matrix;
 
-    vec3* local_translation;
-    quat* local_rotation;
-    vec3* local_scale;
+    mvec3* local_translation;
+    mquat* local_rotation;
+    mvec3* local_scale;
 
     u32 joint_count;
 
@@ -542,7 +542,7 @@ typedef struct Sprite_System
 {
     Allocator* allocator;
     Frame_Allocator* frame_arena;
-    vec2 screen_size; // grab every frame on start
+    mvec2 screen_size; // grab every frame on start
 
 
     Sprite sprites[4]; // literally just need one quad for a vertex buffer
@@ -649,7 +649,7 @@ typedef struct Scene
     Transform* transforms;
     int transform_count;
 
-    mat4* world_transforms; //the count is the same as the transform_count
+    mmat4* world_transforms; //the count is the same as the transform_count
 
     //TODO: i dont need it rn but could be useful
     // since we know static doesn't change we can cache the transforms
@@ -673,7 +673,7 @@ typedef struct Render_Packet_3D
     u32 prb_count;
     u32 prb_bytes;
 
-    mat4* world_space_matrix_array;
+    mmat4* world_space_matrix_array;
     u32 world_space_matrix_count;
 
     DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix;

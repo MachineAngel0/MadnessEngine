@@ -67,7 +67,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_
                                                                         sizeof(Material_Default) *
                                                                         MAX_DEFAULT_MATERIAL);
 
-    u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4);
+    u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mmat4);
 
     out_mesh_renderer->transform_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                       BUFFER_TYPE_CPU_STORAGE,
@@ -160,7 +160,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->transform_buffer_handle,
                                                    mesh_renderer->transform_staging_buffer_handle, command_buffer,
                                                    render_packet->draw_3d_data_packet.world_space_matrix_array,
-                                                   sizeof(mat4) * render_packet->draw_3d_data_packet.
+                                                   sizeof(mmat4) * render_packet->draw_3d_data_packet.
                                                    world_space_matrix_count);
 
     //stuff uploaded very frame

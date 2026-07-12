@@ -52,29 +52,29 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    vec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+    mvec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
     forward = vec3_normalize_functional(forward);
 
-    vec3 right = vec3_normalize_functional(vec3_cross(forward, vec3_up()));
+    mvec3 right = vec3_normalize_functional(vec3_cross(forward, vec3_up()));
 
     if (movement_direction == CAMERA_MOVEMENT_FORWARD)
     {
-        vec3 t = vec3_mul_scalar(forward, velocity);
+        mvec3 t = vec3_mul_scalar(forward, velocity);
         cam->pos = vec3_sub(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_BACKWARD)
     {
-        vec3 t = vec3_mul_scalar(forward, velocity);
+        mvec3 t = vec3_mul_scalar(forward, velocity);
         cam->pos = vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_LEFT)
     {
-        vec3 t = vec3_mul_scalar(right, velocity);
+        mvec3 t = vec3_mul_scalar(right, velocity);
         cam->pos = vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_RIGHT)
     {
-        vec3 t = vec3_mul_scalar(right, velocity);
+        mvec3 t = vec3_mul_scalar(right, velocity);
         cam->pos = vec3_sub(cam->pos, t);
     }
 }
@@ -147,13 +147,13 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
     }*/
 }
 
-mat4 camera_get_view_matrix(camera* cam)
+mmat4 camera_get_view_matrix(camera* cam)
 {
-    mat4 temp_view = mat4_translation((vec3){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
+    mmat4 temp_view = mat4_translation((mvec3){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
     return mat4_inverse(temp_view);
 }
 
-mat4 camera_get_fps_view_matrix(camera* cam)
+mmat4 camera_get_fps_view_matrix(camera* cam)
 {
     float pitch = deg_to_rad(cam->pitch);
     float yaw = deg_to_rad(cam->yaw);
@@ -164,20 +164,20 @@ mat4 camera_get_fps_view_matrix(camera* cam)
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    vec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+    mvec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
     forward = vec3_normalize_functional(forward);
 
     // Compute right & up
-    vec3 worldUp = vec3_up();
-    vec3 right = vec3_normalize_functional(vec3_cross(worldUp, forward));
-    vec3 up = vec3_cross(forward, right);
+    mvec3 worldUp = vec3_up();
+    mvec3 right = vec3_normalize_functional(vec3_cross(worldUp, forward));
+    mvec3 up = vec3_cross(forward, right);
 
     // Build view matrix directly
-    mat4 view = (mat4){
-        .rows[0] = (vec4){right.x, up.x, forward.x, 0.0f},
-        .rows[1] = (vec4){right.y, up.y, forward.y, 0.0f},
-        .rows[2] = (vec4){right.z, up.z, forward.z, 0.0f},
-        .rows[3] = (vec4){
+    mmat4 view = (mmat4){
+        .rows[0] = (mvec4){right.x, up.x, forward.x, 0.0f},
+        .rows[1] = (mvec4){right.y, up.y, forward.y, 0.0f},
+        .rows[2] = (mvec4){right.z, up.z, forward.z, 0.0f},
+        .rows[3] = (mvec4){
             -vec3_dot(right, cam->pos),
             -vec3_dot(up, cam->pos),
             -vec3_dot(forward, cam->pos),
@@ -189,7 +189,7 @@ mat4 camera_get_fps_view_matrix(camera* cam)
 }
 
 
-mat4 camera_get_projection(camera* cam, const float width, const float height)
+mmat4 camera_get_projection(camera* cam, const float width, const float height)
 {
     return mat4_perspective(cam->fov, (float)(width / height), cam->znear, cam->zfar);
     // float fov = 1.5;

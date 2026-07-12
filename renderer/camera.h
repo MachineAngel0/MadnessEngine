@@ -16,9 +16,9 @@ typedef enum Camera_Movement
 
 typedef struct camera
 {
-    vec3 rotation;
-    vec3 pos;
-    vec4 viewPos;
+    mvec3 rotation;
+    mvec3 pos;
+    mvec4 viewPos;
 
     float rotation_speed;
     float move_speed;
@@ -28,8 +28,8 @@ typedef struct camera
     float znear;
     float zfar;
 
-    mat4 projection;
-    mat4 view;
+    mmat4 projection;
+    mmat4 view;
 
     //fps
     float pitch;
@@ -62,11 +62,11 @@ void process_mouse_scroll(camera* cam, float y_offset);
 
 void camera_update(Input_System* input_syste, camera* cam, float dt);
 
-mat4 camera_get_view_matrix(camera* cam);
-mat4 camera_get_fps_view_matrix(camera* cam);
+mmat4 camera_get_view_matrix(camera* cam);
+mmat4 camera_get_fps_view_matrix(camera* cam);
 
 
-mat4 camera_get_projection(camera* cam, float width, float height);
+mmat4 camera_get_projection(camera* cam, float width, float height);
 
 /*
 void camera_update_view_matrix(camera* out_camera)

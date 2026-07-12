@@ -34,7 +34,7 @@ typedef struct Tetris_Position
 } Tetris_Position;
 
 //were using this as there are no decimal values in grids
-typedef vec2 Tetris_Grid_Position;
+typedef mvec2 Tetris_Grid_Position;
 
 typedef enum Tetromino_Type
 {
@@ -73,7 +73,7 @@ typedef struct Tetris_Grid
 } Tetris_Grid;
 
 
-vec3 tetris_color_look_up_table[TETRIS_COLOR_MAX] = {
+mvec3 tetris_color_look_up_table[TETRIS_COLOR_MAX] = {
     [TETRIS_COLOR_WHITE] = {1.0f, 1.0f, 1.0f},
     [TETRIS_COLOR_BLUE_LIGHT] = {0.0f, 1.0f, 1.0f},
     [TETRIS_COLOR_YELLOW] = {1.0f, 1.0f, 0.0f},
@@ -107,7 +107,7 @@ typedef struct Tetromino
     Tetris_Grid_Position tetromino_default_position[TETROMINO_SIZE];
 
     Tetromino_Type type;
-    vec3 color;
+    mvec3 color;
     int rotation_state;
 } Tetromino;
 
@@ -163,7 +163,7 @@ MAPI bool tetris_has_clock_move_timer_elapsed(Tetris_Game_State* tetris);
 MAPI void tetris_spawn_block(Tetris_Game_State* tetris, Tetromino_Type tetromino_type);
 MAPI bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction);
 MAPI bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetromino_grid_position,
-                           Tetris_Grid_Position* tetromino_grid_default_position, vec2 direction_vector);
+                           Tetris_Grid_Position* tetromino_grid_default_position, mvec2 direction_vector);
 MAPI void tetris_rotate_block(Tetris_Game_State* tetris);
 
 

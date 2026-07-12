@@ -29,8 +29,8 @@ Light_System* light_system_init(Renderer* renderer)
     }
 
     //TODO: remove later just some test lights for now
-    out_light_system->directional_lights[0].color = (vec3){1.0f, 0.0f, 0.5f};
-    out_light_system->point_lights[0].color = (vec4){1.0f, 1.0f, 0.0f, 0.0f};
+    out_light_system->directional_lights[0].color = (mvec3){1.0f, 0.0f, 0.5f};
+    out_light_system->point_lights[0].color = (mvec4){1.0f, 1.0f, 0.0f, 0.0f};
 
 
     //TODO: allocate larger sizes for the buffers

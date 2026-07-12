@@ -6,8 +6,8 @@
 
 typedef struct Sprite
 {
-    vec2 pos;
-    vec2 tex;
+    mvec2 pos;
+    mvec2 tex;
 } Sprite;
 
 typedef enum Sprite_Flags
@@ -27,8 +27,8 @@ typedef struct Sprite_Data
 
     //will be used for text and for anything else 2d that needs a texture
     // Transform transform; //TODO: when i make this more robust
-    vec2 pos;
-    vec2 size;
+    mvec2 pos;
+    mvec2 size;
 
     float rotation; // a float since we only rotate on one dimension, we can always change it later
 
@@ -37,12 +37,12 @@ typedef struct Sprite_Data
 
 
     // offset into a texture atlas if using one, otherwise {0, 0}
-    vec2 uv_offset;
+    mvec2 uv_offset;
     // start from offset and this will give us our bottom right uv, which tells us all the other info we need
-    vec2 uv_size;
+    mvec2 uv_size;
 
     //material data here
-    vec3 color;
+    mvec3 color;
     u32 texture_index;
     u32 _padding0;
 } Sprite_Data;

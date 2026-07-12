@@ -53,15 +53,15 @@ typedef struct UI_Node_Draw_Data
     UI_Property_Flags ui_flags;
 
     // screen size and pos, not normalized
-    vec2 pos;
-    vec2 size;
+    mvec2 pos;
+    mvec2 size;
     float rotation; // degrees, but gets converted to radians at draw time
 
     //rounded
     float rounded_radius; // 0-1 range
 
     //outline
-    vec3 outline_color;
+    mvec3 outline_color;
     float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
 
 
@@ -71,12 +71,12 @@ typedef struct UI_Node_Draw_Data
     //draw data
     //consider here what actually needs to be done for something to rendered, instead of passing in the entire config
     u32 texture_handle;
-    vec2 uv_offset;
-    vec2 uv_size;
+    mvec2 uv_offset;
+    mvec2 uv_size;
 
     //colors
-    vec3 color;
-    vec3 background_color;
+    mvec3 color;
+    mvec3 background_color;
 
     // scissor data
     // vec2 scissor_pos;
@@ -95,8 +95,8 @@ typedef struct UI_Draw_Command{
     UI_Draw_Command_Type type;
     u32 offset;
     u32 count;
-    vec2 scissor_pos;
-    vec2 scissor_size;
+    mvec2 scissor_pos;
+    mvec2 scissor_size;
 }UI_Draw_Command;
 
 

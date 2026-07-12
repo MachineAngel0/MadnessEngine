@@ -2,7 +2,7 @@
 #define BEZIER_H
 
 
-vec2 quadratic_bezier(const vec2 p0, const vec2 p1, const vec2 p2, const float t)
+mvec2 quadratic_bezier(const mvec2 p0, const mvec2 p1, const mvec2 p2, const float t)
 {
     //De Casteljau's algorithm: B(t) = (1-t)² · P0  +  2(1-t)t · P1  +  t² · P2
 
@@ -21,19 +21,19 @@ vec2 quadratic_bezier(const vec2 p0, const vec2 p1, const vec2 p2, const float t
     //slight more efficient, do to reoccuring values, whihc can be cached
     //Polynomial Version Formula:  B(t) = (P0 - 2P1 + P2)t²  +  (-2P0 + 2P1)t  +  P0
 
-    vec2 a = {p0.x - 2 * p1.x + p2.x, p0.y - 2 * p1.y + p2.y};
-    vec2 b = {-2 * p0.x + 2 * p1.x, -2 * p0.y + 2 * p1.y};
+    mvec2 a = {p0.x - 2 * p1.x + p2.x, p0.y - 2 * p1.y + p2.y};
+    mvec2 b = {-2 * p0.x + 2 * p1.x, -2 * p0.y + 2 * p1.y};
 
-    vec2 result;
+    mvec2 result;
     result.x = a.x * t * t + b.x * t + p0.x;
     result.y = a.y * t * t + b.y * t + p0.y;
     return result;
 }
 
-vec2* quadratic_bezier_sample(Allocator* arena, vec2 p0, vec2 p1, vec2 p2, u32 steps)
+mvec2* quadratic_bezier_sample(Allocator* arena, mvec2 p0, mvec2 p1, mvec2 p2, u32 steps)
 {
     //the out size is the step size
-    vec2* out_bezier_points = allocator_alloc(arena, sizeof(vec2) * steps);
+    mvec2* out_bezier_points = allocator_alloc(arena, sizeof(mvec2) * steps);
     for (int i = 0; i <= steps; i++)
     {
         float t = (float)i / (float)steps;
@@ -43,35 +43,35 @@ vec2* quadratic_bezier_sample(Allocator* arena, vec2 p0, vec2 p1, vec2 p2, u32 s
 }
 
 
-vec2 cubic_bezier(const vec2 p0, const vec2 p1, const vec2 p2, const vec2 p3, const float t)
+mvec2 cubic_bezier(const mvec2 p0, const mvec2 p1, const mvec2 p2, const mvec2 p3, const float t)
 {
     //Polynomial Version =  p0 + t(-3P0 + 3P1) + t² (3P0 - 6P1 + 3P2) + t³ (-P0 + 3P1 - 3P2 + P3)
 
-    vec2 p0_negative = vec2_mul_scalar(p0, -1);
-    vec2 p0x3 = vec2_mul_scalar(p0, 3);
-    vec2 p0x3_negative = vec2_mul_scalar(p0x3, -1);
-    vec2 p1x3 = vec2_mul_scalar(p1, 3);
-    vec2 p1x6_negative = vec2_mul_scalar(vec2_mul_scalar(p1, 6), -1);
-    vec2 p2x3 = vec2_mul_scalar(p2, 3);
-    vec2 p2x3_negative = vec2_mul_scalar(p2x3, -1);
+    mvec2 p0_negative = vec2_mul_scalar(p0, -1);
+    mvec2 p0x3 = vec2_mul_scalar(p0, 3);
+    mvec2 p0x3_negative = vec2_mul_scalar(p0x3, -1);
+    mvec2 p1x3 = vec2_mul_scalar(p1, 3);
+    mvec2 p1x6_negative = vec2_mul_scalar(vec2_mul_scalar(p1, 6), -1);
+    mvec2 p2x3 = vec2_mul_scalar(p2, 3);
+    mvec2 p2x3_negative = vec2_mul_scalar(p2x3, -1);
 
     float t2 = t * t;
     float t3 = t * t * t;
 
     //t(-3P0 + 3P1)
-    vec2 part2 = vec2_mul_scalar(vec2_add(p0x3_negative, p1x3), t);
+    mvec2 part2 = vec2_mul_scalar(vec2_add(p0x3_negative, p1x3), t);
     // t² (3P0 - 6P1 + 3P2)
-    vec2 part3 = vec2_mul_scalar(vec2_add(vec2_add(p0x3, p1x6_negative), p2x3), t2);
+    mvec2 part3 = vec2_mul_scalar(vec2_add(vec2_add(p0x3, p1x6_negative), p2x3), t2);
     // t³ (-P0+3P1-3P2+P3)
-    vec2 part4 = vec2_mul_scalar(vec2_add(vec2_add(vec2_add(p0_negative, p1x3), p2x3_negative), p3), t3);
+    mvec2 part4 = vec2_mul_scalar(vec2_add(vec2_add(vec2_add(p0_negative, p1x3), p2x3_negative), p3), t3);
 
     return vec2_add(vec2_add(vec2_add(p0, part2), part3), part4);
 }
 
-vec2* cubic_bezier_sample(Allocator* arena, vec2 p0, vec2 p1, vec2 p2, vec2 p3, u32 steps)
+mvec2* cubic_bezier_sample(Allocator* arena, mvec2 p0, mvec2 p1, mvec2 p2, mvec2 p3, u32 steps)
 {
     //the out size is the step size
-    vec2* out_bezier_points = allocator_alloc(arena, sizeof(vec2) * steps);
+    mvec2* out_bezier_points = allocator_alloc(arena, sizeof(mvec2) * steps);
     for (int i = 0; i <= steps; i++)
     {
         float t = (float)i / (float)steps;

@@ -6,14 +6,21 @@
 #include <math.h>
 
 //FUTURE: rn im not using glm/cglm, should probably switch
+// #include "cglm/cglm.h"
+// #include <cglm/struct.h>"
+
+
+
 //NOTE: Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
 // Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)
 
+
+
+
 /*** MAX/MIN FUNCTIONS ***/
 int32_t max_i(const int32_t a, const int32_t b)
 {
-
 
     if (a > b)
     {
@@ -51,93 +58,93 @@ float min_f(const float a, const float b)
 
 
 // VEC2
-MINLINE vec2 vec2_zero(void)
+MINLINE mvec2 vec2_zero(void)
 {
-    return (vec2){.x = 0.0f, .y = 0.0f};
+    return (mvec2){.x = 0.0f, .y = 0.0f};
 }
 
-MINLINE vec2 vec2_one(void)
+MINLINE mvec2 vec2_one(void)
 {
-    return (vec2){.x = 1.0f, .y = 1.0f};
+    return (mvec2){.x = 1.0f, .y = 1.0f};
 }
 
-MINLINE vec2 vec2_up(void)
+MINLINE mvec2 vec2_up(void)
 {
-    return (vec2){.x = 0.0f, .y = 1.0f};
+    return (mvec2){.x = 0.0f, .y = 1.0f};
 }
 
-MINLINE vec2 vec2_down(void)
+MINLINE mvec2 vec2_down(void)
 {
-    return (vec2){.x = 0.0f, .y = -1.0f};
+    return (mvec2){.x = 0.0f, .y = -1.0f};
 }
 
-MINLINE vec2 vec2_left(void)
+MINLINE mvec2 vec2_left(void)
 {
-    return (vec2){.x = -1.0f, .y = 0.0f};
+    return (mvec2){.x = -1.0f, .y = 0.0f};
 }
 
-MINLINE vec2 vec2_right(void)
+MINLINE mvec2 vec2_right(void)
 {
-    return (vec2){.x = 1.0f, .y = 0.0f};
+    return (mvec2){.x = 1.0f, .y = 0.0f};
 }
 
 
-MINLINE vec2 vec2_add(const vec2 a, const vec2 b)
+MINLINE mvec2 vec2_add(const mvec2 a, const mvec2 b)
 {
     //its important you dont get rid of the paranthesis
-    return (vec2){a.x + b.x, a.y + b.y};
+    return (mvec2){a.x + b.x, a.y + b.y};
 }
 
-MINLINE vec2 vec2_sub(const vec2 a, const vec2 b)
+MINLINE mvec2 vec2_sub(const mvec2 a, const mvec2 b)
 {
-    return (vec2){a.x - b.x, a.y - b.y};
+    return (mvec2){a.x - b.x, a.y - b.y};
 }
 
-MINLINE vec2 vec2_mul(const vec2 a, const vec2 b)
+MINLINE mvec2 vec2_mul(const mvec2 a, const mvec2 b)
 {
-    return (vec2){a.x * b.x, a.y * b.y};
+    return (mvec2){a.x * b.x, a.y * b.y};
 }
 
-MINLINE vec2 vec2_mul_scalar(const vec2 a, const float b)
+MINLINE mvec2 vec2_mul_scalar(const mvec2 a, const float b)
 {
-    return (vec2){a.x * b, a.y * b};
+    return (mvec2){a.x * b, a.y * b};
 }
 
-MINLINE vec2 vec2_div(const vec2 a, const vec2 b)
+MINLINE mvec2 vec2_div(const mvec2 a, const mvec2 b)
 {
-    return (vec2){a.x / b.x, a.y / b.y};
+    return (mvec2){a.x / b.x, a.y / b.y};
 }
 
-MINLINE vec2 vec2_div_scalar(const vec2 a, float scalar)
+MINLINE mvec2 vec2_div_scalar(const mvec2 a, float scalar)
 {
-    return (vec2){a.x / scalar, a.y / scalar};
+    return (mvec2){a.x / scalar, a.y / scalar};
 }
 
 
-MINLINE float vec2_length_squared(const vec2 v)
+MINLINE float vec2_length_squared(const mvec2 v)
 {
     return (v.x * v.x) + (v.y * v.y);
 }
 
-MINLINE float vec2_length(const vec2 v)
+MINLINE float vec2_length(const mvec2 v)
 {
     return sqrt((v.x * v.x) + (v.y * v.y));
 }
 
-MINLINE void vec2_normalize(vec2* v)
+MINLINE void vec2_normalize(mvec2* v)
 {
     const float length = vec2_length(*v);
     v->x /= length;
     v->y /= length;
 }
 
-MINLINE vec2 vec2_normalize_functional(const vec2 v)
+MINLINE mvec2 vec2_normalize_functional(const mvec2 v)
 {
     const float length = vec2_length(v);
-    return (vec2){v.x / length, v.y / length};
+    return (mvec2){v.x / length, v.y / length};
 }
 
-MINLINE bool vec2_compare(const vec2 a, const vec2 b, const float tolerance)
+MINLINE bool vec2_compare(const mvec2 a, const mvec2 b, const float tolerance)
 {
     if (abs(a.x - b.x) > tolerance)
     {
@@ -150,89 +157,89 @@ MINLINE bool vec2_compare(const vec2 a, const vec2 b, const float tolerance)
     return true;
 }
 
-MINLINE float vec2_distance(const vec2 a, const vec2 b)
+MINLINE float vec2_distance(const mvec2 a, const mvec2 b)
 {
-    const vec2 temp = {a.x - b.x, a.y - b.y};
+    const mvec2 temp = {a.x - b.x, a.y - b.y};
     return vec2_length(temp);
 }
 
 // VEC3
-MINLINE vec3 vec3_zero(void)
+MINLINE mvec3 vec3_zero(void)
 {
-    return (vec3){0.0f, 0.0f, 0.0f};
+    return (mvec3){0.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_one(void)
+MINLINE mvec3 vec3_one(void)
 {
-    return (vec3){1.0f, 1.0f, 1.0f};
+    return (mvec3){1.0f, 1.0f, 1.0f};
 }
 
 
-MINLINE vec3 vec3_up(void)
+MINLINE mvec3 vec3_up(void)
 {
-    return (vec3){0.0f, 1.0f, 0.0f};
+    return (mvec3){0.0f, 1.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_down(void)
+MINLINE mvec3 vec3_down(void)
 {
-    return (vec3){0.0f, -1.0f, 0.0f};
+    return (mvec3){0.0f, -1.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_left(void)
+MINLINE mvec3 vec3_left(void)
 {
-    return (vec3){-1.0f, 0.0f, 0.0f};
+    return (mvec3){-1.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_right(void)
+MINLINE mvec3 vec3_right(void)
 {
-    return (vec3){1.0f, 0.0f, 0.0f};
+    return (mvec3){1.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec3 vec3_forward(void)
+MINLINE mvec3 vec3_forward(void)
 {
-    return (vec3){0.0f, 0.0f, 1.0f};
+    return (mvec3){0.0f, 0.0f, 1.0f};
 }
 
-MINLINE vec3 vec3_back(void)
+MINLINE mvec3 vec3_back(void)
 {
-    return (vec3){0.0f, 0.0f, -1.0f};
+    return (mvec3){0.0f, 0.0f, -1.0f};
 }
 
-MINLINE vec3 vec3_add(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_add(const mvec3 a, const mvec3 b)
 {
     //its important you dont get rid of the paranthesis
-    return (vec3){a.x + b.x, a.y + b.y, a.z + b.z};
+    return (mvec3){a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
-MINLINE vec3 vec3_sub(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_sub(const mvec3 a, const mvec3 b)
 {
-    return (vec3){a.x - b.x, a.y - b.y, a.z - b.z};
+    return (mvec3){a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
-MINLINE vec3 vec3_mul(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_mul(const mvec3 a, const mvec3 b)
 {
-    return (vec3){a.x * b.x, a.y * b.y, a.z * b.z};
-}
-
-
-MINLINE vec3 vec3_mul_scalar(const vec3 a, const float scalar)
-{
-    return (vec3){a.x * scalar, a.y * scalar, a.z * scalar};
+    return (mvec3){a.x * b.x, a.y * b.y, a.z * b.z};
 }
 
 
-MINLINE vec3 vec3_max(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_mul_scalar(const mvec3 a, const float scalar)
 {
-    vec3 out;
+    return (mvec3){a.x * scalar, a.y * scalar, a.z * scalar};
+}
+
+
+MINLINE mvec3 vec3_max(const mvec3 a, const mvec3 b)
+{
+    mvec3 out;
     out.x = max_f(a.x, b.x);
     out.y = max_f(a.y, b.y);
     out.z = max_f(a.z, b.z);
     return out;
 }
 
-MINLINE vec3 vec3_min(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_min(const mvec3 a, const mvec3 b)
 {
-    vec3 out;
+    mvec3 out;
     out.x = min_f(a.x, b.x);
     out.y = min_f(a.y, b.y);
     out.z = min_f(a.z, b.z);
@@ -240,24 +247,24 @@ MINLINE vec3 vec3_min(const vec3 a, const vec3 b)
 }
 
 
-MINLINE vec3 vec3_flip_sign(const vec3 a)
+MINLINE mvec3 vec3_flip_sign(const mvec3 a)
 {
     return vec3_mul_scalar(a, -1.0f);
 }
 
 
-MINLINE vec3 vec3_div(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_div(const mvec3 a, const mvec3 b)
 {
-    return (vec3){a.x / b.x, a.y / b.y, a.z / b.z};
+    return (mvec3){a.x / b.x, a.y / b.y, a.z / b.z};
 }
 
-MINLINE vec3 vec3_div_scalar(const vec3 a, const float s)
+MINLINE mvec3 vec3_div_scalar(const mvec3 a, const float s)
 {
-    return (vec3){a.x / s, a.y / s, a.z / s};
+    return (mvec3){a.x / s, a.y / s, a.z / s};
 }
 
 
-MINLINE float vec3_dot(const vec3 a, const vec3 b)
+MINLINE float vec3_dot(const mvec3 a, const mvec3 b)
 {
     float result = 0.0f;
     result += a.x * b.x;
@@ -266,53 +273,53 @@ MINLINE float vec3_dot(const vec3 a, const vec3 b)
     return result;
 }
 
-MINLINE vec3 vec3_cross(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_cross(const mvec3 a, const mvec3 b)
 {
-    return (vec3){
+    return (mvec3){
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x
     };
 }
 
-MINLINE vec3 vec3_projection(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_projection(const mvec3 a, const mvec3 b)
 {
     // b * (dot(a,b) / dot(b,b))
     const float dot_div_val = vec3_dot(a, b) / vec3_dot(b, b);
     return vec3_mul_scalar(b, dot_div_val);
 }
 
-MINLINE vec3 vec3_negation(const vec3 a, const vec3 b)
+MINLINE mvec3 vec3_negation(const mvec3 a, const mvec3 b)
 {
     // a - b * (dot(a,b) / dot(b,b))
     const float dot_div_val = vec3_dot(a, b) / vec3_dot(b, b);
-    const vec3 vec_sub_val = vec3_sub(a, b);
+    const mvec3 vec_sub_val = vec3_sub(a, b);
     return vec3_mul_scalar(vec_sub_val, dot_div_val);
 }
 
 
-MINLINE float vec3_length_squared(const vec3 v)
+MINLINE float vec3_length_squared(const mvec3 v)
 {
     return ((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
 }
 
-MINLINE float vec3_length(const vec3 v)
+MINLINE float vec3_length(const mvec3 v)
 {
     return sqrt(vec3_length_squared(v));
 }
 
-MINLINE float vec3_magnitude(const vec3 v)
+MINLINE float vec3_magnitude(const mvec3 v)
 {
     return vec3_length(v);
 }
 
-MINLINE float vec3_magnitude_squared(const vec3 v)
+MINLINE float vec3_magnitude_squared(const mvec3 v)
 {
     return vec3_length_squared(v);
 }
 
 
-MINLINE void vec3_normalize(vec3* v)
+MINLINE void vec3_normalize(mvec3* v)
 {
     const float length = vec3_length(*v);
     v->x /= length;
@@ -320,17 +327,17 @@ MINLINE void vec3_normalize(vec3* v)
     v->z /= length;
 }
 
-MINLINE vec3 vec3_normalize_functional(const vec3 v)
+MINLINE mvec3 vec3_normalize_functional(const mvec3 v)
 {
     const float length = vec3_length(v);
-    return (vec3){
+    return (mvec3){
         v.x / length,
         v.y / length,
         v.z / length
     };
 }
 
-MINLINE bool vec3_compare(const vec3 a, const vec3 b, const float tolerance)
+MINLINE bool vec3_compare(const mvec3 a, const mvec3 b, const float tolerance)
 {
     if (abs(a.x - b.x) > tolerance)
     {
@@ -347,15 +354,15 @@ MINLINE bool vec3_compare(const vec3 a, const vec3 b, const float tolerance)
     return true;
 }
 
-MINLINE float vec3_distance(const vec3 a, const vec3 b)
+MINLINE float vec3_distance(const mvec3 a, const mvec3 b)
 {
-    const vec3 temp = {a.x - b.x, a.y - b.y, a.z - b.z};
+    const mvec3 temp = {a.x - b.x, a.y - b.y, a.z - b.z};
     return vec3_length(temp);
 }
 
-MINLINE vec3 vec3_lerp(const vec3 a, const vec3 b, float t)
+MINLINE mvec3 vec3_lerp(const mvec3 a, const mvec3 b, float t)
 {
-    vec3 result;
+    mvec3 result;
 
     result.x = a.x + (b.x - a.x) * t;
     result.y = a.y + (b.y - a.y) * t;
@@ -368,19 +375,19 @@ MINLINE vec3 vec3_lerp(const vec3 a, const vec3 b, float t)
 
 //VEC4
 
-MINLINE vec4 vec4_zero(void)
+MINLINE mvec4 vec4_zero(void)
 {
-    return (vec4){0.0f, 0.0f, 0.0f, 0.0f};
+    return (mvec4){0.0f, 0.0f, 0.0f, 0.0f};
 }
 
-MINLINE vec4 vec4_one(void)
+MINLINE mvec4 vec4_one(void)
 {
-    return (vec4){1.0f, 1.0f, 1.0f, 1.0f};
+    return (mvec4){1.0f, 1.0f, 1.0f, 1.0f};
 }
 
-MINLINE vec4 vec4_add(const vec4 a, const vec4 b)
+MINLINE mvec4 vec4_add(const mvec4 a, const mvec4 b)
 {
-    vec4 result = {0};
+    mvec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] + b.elements[i];
@@ -388,9 +395,9 @@ MINLINE vec4 vec4_add(const vec4 a, const vec4 b)
     return result;
 }
 
-MINLINE vec4 vec4_sub(const vec4 a, const vec4 b)
+MINLINE mvec4 vec4_sub(const mvec4 a, const mvec4 b)
 {
-    vec4 result = {0};
+    mvec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] - b.elements[i];
@@ -398,9 +405,9 @@ MINLINE vec4 vec4_sub(const vec4 a, const vec4 b)
     return result;
 }
 
-MINLINE vec4 vec4_mul(const vec4 a, const vec4 b)
+MINLINE mvec4 vec4_mul(const mvec4 a, const mvec4 b)
 {
-    vec4 result = {0};
+    mvec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] * b.elements[i];
@@ -408,9 +415,9 @@ MINLINE vec4 vec4_mul(const vec4 a, const vec4 b)
     return result;
 }
 
-MINLINE vec4 vec4_div(const vec4 a, const vec4 b)
+MINLINE mvec4 vec4_div(const mvec4 a, const mvec4 b)
 {
-    vec4 result = {0};
+    mvec4 result = {0};
     for (u64 i = 0; i < 4; i++)
     {
         result.elements[i] = a.elements[i] / b.elements[i];
@@ -418,17 +425,17 @@ MINLINE vec4 vec4_div(const vec4 a, const vec4 b)
     return result;
 }
 
-MINLINE float vec4_length_squared(const vec4 v)
+MINLINE float vec4_length_squared(const mvec4 v)
 {
     return (v.x * v.x) + (v.y * v.y) + (v.z * v.z) + (v.w * v.w);
 }
 
-MINLINE float vec4_length(const vec4 v)
+MINLINE float vec4_length(const mvec4 v)
 {
     return sqrt(vec4_length_squared(v));
 }
 
-MINLINE void vec4_normalize(vec4* v)
+MINLINE void vec4_normalize(mvec4* v)
 {
     const float length = vec4_length(*v);
     v->x /= length;
@@ -437,10 +444,10 @@ MINLINE void vec4_normalize(vec4* v)
     v->w /= length;
 }
 
-MINLINE vec4 vec4_normalize_functional(const vec4 v)
+MINLINE mvec4 vec4_normalize_functional(const mvec4 v)
 {
     const float length = vec4_length(v);
-    return (vec4){
+    return (mvec4){
         v.x / length,
         v.y / length,
         v.z / length,
@@ -448,7 +455,7 @@ MINLINE vec4 vec4_normalize_functional(const vec4 v)
     };
 }
 
-MINLINE f32 vec4_dot(const vec4 v1, const vec4 v2)
+MINLINE f32 vec4_dot(const mvec4 v1, const mvec4 v2)
 {
     return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z) + (v1.w * v2.w);
 }
@@ -460,9 +467,9 @@ MINLINE f32 vec4_dot_f32(const f32 a0, const f32 a1, const f32 a2, const f32 a3,
     return (a0 * b0) + (a1 * b1) + (a2 * b2) + (a3 * b3);
 }
 
-MINLINE vec4 vec4_lerp(const vec4 a, const vec4 b, float t)
+MINLINE mvec4 vec4_lerp(const mvec4 a, const mvec4 b, float t)
 {
-    vec4 result;
+    mvec4 result;
 
     result.x = a.x + (b.x - a.x) * t;
     result.y = a.y + (b.y - a.y) * t;
@@ -476,9 +483,9 @@ MINLINE vec4 vec4_lerp(const vec4 a, const vec4 b, float t)
 
 // MATRIX3*3
 
-MINLINE mat3 mat3_identity(void)
+MINLINE mmat3 mat3_identity(void)
 {
-    mat3 out_mat3 = {0};
+    mmat3 out_mat3 = {0};
     // mat3 out_mat3 = {0};
     memset(&out_mat3, 0, sizeof(float) * 9);
     out_mat3.data[0] = 1.0f;
@@ -487,12 +494,12 @@ MINLINE mat3 mat3_identity(void)
     return out_mat3;
 }
 
-MINLINE mat3 mat3_init(const float n00, const float n01, const float n02,
+MINLINE mmat3 mat3_init(const float n00, const float n01, const float n02,
                        const float n10, const float n11, const float n12,
                        const float n20, const float n21, const float n22)
 {
     //col major
-    mat3 out_mat3;
+    mmat3 out_mat3;
 
     out_mat3.data[0] = n00;
     out_mat3.data[1] = n10;
@@ -524,10 +531,10 @@ MINLINE mat3 mat3_init(const float n00, const float n01, const float n02,
     return out_mat3;
 }
 
-MINLINE mat3 mat3_vec3_init(const vec3 a, const vec3 b, const vec3 c)
+MINLINE mmat3 mat3_vec3_init(const mvec3 a, const mvec3 b, const mvec3 c)
 {
     //col major
-    mat3 out_mat3;
+    mmat3 out_mat3;
 
     out_mat3.data[0] = a.x;
     out_mat3.data[1] = a.y;
@@ -559,9 +566,9 @@ MINLINE mat3 mat3_vec3_init(const vec3 a, const vec3 b, const vec3 c)
     return out_mat3;
 }
 
-MINLINE mat3 mat3_mul(const mat3 m1, const mat3 m2)
+MINLINE mmat3 mat3_mul(const mmat3 m1, const mmat3 m2)
 {
-    mat3 out_mat3 = mat3_identity();
+    mmat3 out_mat3 = mat3_identity();
     const float* m1_ptr = m1.data;
     const float* m2_ptr = m2.data;
     float* dst_ptr = out_mat3.data;
@@ -582,9 +589,9 @@ MINLINE mat3 mat3_mul(const mat3 m1, const mat3 m2)
     return out_mat3;
 }
 
-MINLINE mat3 mat3_mul_alt(const mat3 m1, const mat3 m2)
+MINLINE mmat3 mat3_mul_alt(const mmat3 m1, const mmat3 m2)
 {
-    return (mat3){
+    return (mmat3){
         .data[0] = m1.data[0] * m2.data[0] + m1.data[1] * m2.data[3] + m1.data[2] + m1.data[6],
         .data[1] = m1.data[0] * m2.data[1] + m1.data[1] * m2.data[4] + m1.data[2] + m1.data[7],
         .data[2] = m1.data[0] * m2.data[2] + m1.data[1] * m2.data[5] + m1.data[2] + m1.data[8],
@@ -599,11 +606,11 @@ MINLINE mat3 mat3_mul_alt(const mat3 m1, const mat3 m2)
     };
 }
 
-MINLINE vec3 mat3_mul_vec3(const mat3 m, const vec3 v)
+MINLINE mvec3 mat3_mul_vec3(const mmat3 m, const mvec3 v)
 {
     //this looks something like [x,y,z] [3*3] = vec3[x,y,z]
     //and not  [3*3] [x,y,z](vertical)  = mat3[3*3]
-    return (vec3)
+    return (mvec3)
     {
         .x = (m.data[0] * v.x) + (m.data[1] * v.y) + (m.data[2] * v.z),
         .y = (m.data[3] * v.x) + (m.data[4] * v.y) + (m.data[5] * v.z),
@@ -611,7 +618,7 @@ MINLINE vec3 mat3_mul_vec3(const mat3 m, const vec3 v)
     };
 }
 
-MINLINE float mat3_determinant(const mat3 m)
+MINLINE float mat3_determinant(const mmat3 m)
 {
     const float* a = m.data;
     return
@@ -620,58 +627,58 @@ MINLINE float mat3_determinant(const mat3 m)
         a[6] * (a[1] * a[5] - a[4] * a[2]);
 }
 
-MINLINE mat3 mat3_inverse(const mat3 m)
+MINLINE mmat3 mat3_inverse(const mmat3 m)
 {
-    const vec3 r0 = vec3_cross(m.rows[1], m.rows[2]);
-    const vec3 r1 = vec3_cross(m.rows[2], m.rows[0]);
-    const vec3 r2 = vec3_cross(m.rows[0], m.rows[1]);
+    const mvec3 r0 = vec3_cross(m.rows[1], m.rows[2]);
+    const mvec3 r1 = vec3_cross(m.rows[2], m.rows[0]);
+    const mvec3 r2 = vec3_cross(m.rows[0], m.rows[1]);
 
     const float invdet = 1.0f / vec3_dot(r2, m.rows[2]);
 
-    return (mat3){
+    return (mmat3){
         r0.x * invdet, r0.y * invdet, r0.z * invdet,
         r1.x * invdet, r1.y * invdet, r1.z * invdet,
         r2.x * invdet, r2.y * invdet, r2.z * invdet
     };
 }
 
-MINLINE mat3 mat3_make_rot_x(const float t)
+MINLINE mmat3 mat3_make_rot_x(const float t)
 {
     const float c = cos(t);
     const float s = sin(t);
 
-    return (mat3){
+    return (mmat3){
         1.0f, 0.0f, 0.0f,
         0.0f, c, s,
         0.0f, -s, c,
     };
 }
 
-MINLINE mat3 mat3_make_rot_y(const float t)
+MINLINE mmat3 mat3_make_rot_y(const float t)
 {
     const float c = cos(t);
     const float s = sin(t);
 
-    return (mat3){
+    return (mmat3){
         c, 0.0f, -s,
         0.0f, 1.0f, 0.0f,
         s, 0.0f, c,
     };
 }
 
-MINLINE mat3 mat3_make_rot_z(const float t)
+MINLINE mmat3 mat3_make_rot_z(const float t)
 {
     const float c = cos(t);
     const float s = sin(t);
 
-    return (mat3){
+    return (mmat3){
         c, s, 0.0f,
         -s, c, 0.0f,
         0.0f, 0.0f, 1.0f,
     };
 }
 
-MINLINE mat3 mat3_make_rot(const float t, const vec3 a)
+MINLINE mmat3 mat3_make_rot(const float t, const mvec3 a)
 {
     const float c = cos(t);
     const float s = sin(t);
@@ -686,7 +693,7 @@ MINLINE mat3 mat3_make_rot(const float t, const vec3 a)
     const float ayaz = y * a.z;
 
 
-    return (mat3){
+    return (mmat3){
         c + x * a.x, axay + s * a.z, axaz - s * a.y,
         axay - s * a.z, c + y * a.y, ayaz + s * a.x,
         axaz + s * a.y, ayaz - s * a.x, c + z * a.z
@@ -694,7 +701,7 @@ MINLINE mat3 mat3_make_rot(const float t, const vec3 a)
 }
 
 //NOTE: Careful on using this
-MINLINE mat3 mat3_make_rot_arbitrary_axis(const float theta, const vec3 axis)
+MINLINE mmat3 mat3_make_rot_arbitrary_axis(const float theta, const mvec3 axis)
 {
     //NOTE: its implied that we are rotating about the origin, that axis is a unit vector
     const float c = cos(theta);
@@ -712,7 +719,7 @@ MINLINE mat3 mat3_make_rot_arbitrary_axis(const float theta, const vec3 axis)
     float nz_square = pow(axis.z, 2);
 
 
-    return (mat3){
+    return (mmat3){
         nx_square * d + c, (nx * ny * d) + (nz * s), nx * nz * d - ny * s,
         nx * ny * d - nz * s, (ny_square * d) + (c), ny * nz * d + nz * s,
         nx * nz * d - ny * s, (ny * nz * d) - nz * s, nz_square * d + c,
@@ -720,7 +727,7 @@ MINLINE mat3 mat3_make_rot_arbitrary_axis(const float theta, const vec3 axis)
 }
 
 
-MINLINE mat3 mat3_make_reflection(const vec3 a)
+MINLINE mmat3 mat3_make_reflection(const mvec3 a)
 {
     const float x = a.x * -2.0f;
     const float y = a.y * -2.0f;
@@ -731,14 +738,14 @@ MINLINE mat3 mat3_make_reflection(const vec3 a)
     const float ayaz = y * a.z;
 
 
-    return (mat3){
+    return (mmat3){
         x * a.x + 1.0f, axay, axaz,
         axay, y * a.y + 1.0f, ayaz,
         axaz, ayaz, z * a.z + 1.0f
     };
 }
 
-MINLINE mat3 mat3_involution(const vec3 a)
+MINLINE mmat3 mat3_involution(const mvec3 a)
 {
     const float x = a.x * -2.0f;
     const float y = a.y * -2.0f;
@@ -749,7 +756,7 @@ MINLINE mat3 mat3_involution(const vec3 a)
     const float ayaz = y * a.z;
 
 
-    return (mat3){
+    return (mmat3){
         x * a.x - 1.0f, axay, axaz,
         axay, y * a.y - 1.0f, ayaz,
         axaz, ayaz, z * a.z - 1.0f
@@ -757,16 +764,16 @@ MINLINE mat3 mat3_involution(const vec3 a)
 }
 
 
-MINLINE mat3 mat3_make_scale_float3(const float sx, const float sy, const float sz)
+MINLINE mmat3 mat3_make_scale_float3(const float sx, const float sy, const float sz)
 {
-    return (mat3){
+    return (mmat3){
         sx, 0.0f, 0.0f,
         0.0f, sy, 0.0f,
         0.0f, 0.0f, sz
     };
 }
 
-MINLINE mat3 mat3_make_scale(float s, const vec3 a)
+MINLINE mmat3 mat3_make_scale(float s, const mvec3 a)
 {
     s -= 1.0f;
     const float x = a.x * s;
@@ -777,21 +784,21 @@ MINLINE mat3 mat3_make_scale(float s, const vec3 a)
     const float axaz = x * a.z;
     const float ayaz = y * a.z;
 
-    return (mat3){
+    return (mmat3){
         x * a.x + 1.0f, axay, axaz,
         axay, y * a.y + 1.0f, ayaz,
         axaz, ayaz, z * a.z + 1.0f
     };
 }
 
-MINLINE mat3 mat3_skew(float t, const vec3 a, const vec3 b)
+MINLINE mmat3 mat3_skew(float t, const mvec3 a, const mvec3 b)
 {
     t = tan(t);
     const float x = a.x * t;
     const float y = a.y * t;
     const float z = a.z * t;
 
-    return (mat3){
+    return (mmat3){
         x * b.x + 1.0f, x * b.y, x * b.z,
         y * b.x, y * b.y + 1.0f, y * b.z,
         z * b.x, z * b.y, z * b.z + 1.0f
@@ -801,22 +808,22 @@ MINLINE mat3 mat3_skew(float t, const vec3 a, const vec3 b)
 
 // MATRIX4
 
-MINLINE void mat4_set_value(mat4 matrix, const u8 row, const u8 col, const float val)
+MINLINE void mat4_set_value(mmat4 matrix, const u8 row, const u8 col, const float val)
 {
     u8 stride = 4;
     matrix.data[(row * stride) + col] = val;
 }
 
 
-MINLINE mat4 mat4_zero(void)
+MINLINE mmat4 mat4_zero(void)
 {
-    mat4 out_mat4 = {0};
+    mmat4 out_mat4 = {0};
     return out_mat4;
 }
 
-MINLINE mat4 mat4_identity(void)
+MINLINE mmat4 mat4_identity(void)
 {
-    mat4 out_mat4;
+    mmat4 out_mat4;
     memset(&out_mat4, 0, sizeof(float) * 16);
     out_mat4.data[0] = 1.0f;
     out_mat4.data[5] = 1.0f;
@@ -825,9 +832,9 @@ MINLINE mat4 mat4_identity(void)
     return out_mat4;
 }
 
-MINLINE mat4 mat4_mul(const mat4 m1, const mat4 m2)
+MINLINE mmat4 mat4_mul(const mmat4 m1, const mmat4 m2)
 {
-    mat4 out_mat = mat4_identity();
+    mmat4 out_mat = mat4_identity();
     const float* m1_ptr = m1.data;
     const float* m2_ptr = m2.data;
     float* dst_ptr = out_mat.data;
@@ -850,10 +857,10 @@ MINLINE mat4 mat4_mul(const mat4 m1, const mat4 m2)
 }
 
 
-MINLINE mat4 mat4_orthographic(const f32 left, const f32 right, const f32 bottom, const f32 top, const f32 near_clip,
+MINLINE mmat4 mat4_orthographic(const f32 left, const f32 right, const f32 bottom, const f32 top, const f32 near_clip,
                                const f32 far_clip)
 {
-    mat4 out_mat = mat4_identity();
+    mmat4 out_mat = mat4_identity();
 
     const f32 lr = 1.0f / (right - left);
     const f32 bt = 1.0f / (top - bottom);
@@ -869,11 +876,11 @@ MINLINE mat4 mat4_orthographic(const f32 left, const f32 right, const f32 bottom
     return out_mat;
 }
 
-MINLINE mat4 mat4_perspective(const f32 fov_radians, const f32 aspect_ratio, const f32 near_clip,
+MINLINE mmat4 mat4_perspective(const f32 fov_radians, const f32 aspect_ratio, const f32 near_clip,
                               const f32 far_clip)
 {
     const f32 half_tan_fov = tan(fov_radians * 0.5f);
-    mat4 out_mat4;
+    mmat4 out_mat4;
     memset(&out_mat4, 0, sizeof(float) * 16);
 
     out_mat4.data[0] = 1.0f / (aspect_ratio * half_tan_fov);
@@ -886,10 +893,10 @@ MINLINE mat4 mat4_perspective(const f32 fov_radians, const f32 aspect_ratio, con
 }
 
 
-MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
+MINLINE mmat4 mat4_look_at(const mvec3 position, const mvec3 target, const mvec3 up)
 {
-    mat4 out_mat = mat4_zero();
-    vec3 z_axis = vec3_zero();
+    mmat4 out_mat = mat4_zero();
+    mvec3 z_axis = vec3_zero();
 
     // vec3_sub(target, position)
     z_axis.x = target.x - position.x;
@@ -897,8 +904,8 @@ MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
     z_axis.z = target.z - position.z;
 
     z_axis = vec3_normalize_functional(z_axis);
-    vec3 x_axis = vec3_normalize_functional(vec3_cross(up, z_axis));
-    vec3 y_axis = vec3_cross(z_axis, up);
+    mvec3 x_axis = vec3_normalize_functional(vec3_cross(up, z_axis));
+    mvec3 y_axis = vec3_cross(z_axis, up);
 
     out_mat.data[0] = x_axis.x;
     out_mat.data[1] = y_axis.x;
@@ -921,7 +928,7 @@ MINLINE mat4 mat4_look_at(const vec3 position, const vec3 target, const vec3 up)
     return out_mat;
 }
 
-MINLINE mat4 mat4_inverse(const mat4 matrix)
+MINLINE mmat4 mat4_inverse(const mmat4 matrix)
 {
     // const vec3 a = (vec3){m->rows[0].x, m->rows[0].y, m->rows[0].z};
     // const vec3 b = (vec3){m->rows[1].x, m->rows[1].y, m->rows[1].z};
@@ -987,7 +994,7 @@ MINLINE mat4 mat4_inverse(const mat4 matrix)
     f32 t22 = m[0] * m[5];
     f32 t23 = m[4] * m[1];
 
-    mat4 out_matrix;
+    mmat4 out_matrix;
     f32* o = out_matrix.data;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) - (t1 * m[5] + t2 * m[9] + t5 * m[13]);
@@ -1018,9 +1025,9 @@ MINLINE mat4 mat4_inverse(const mat4 matrix)
     return out_matrix;
 }
 
-MINLINE mat4 mat4_transpose(const mat4 matrix)
+MINLINE mmat4 mat4_transpose(const mmat4 matrix)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     out_matrix.data[0] = matrix.data[0];
     out_matrix.data[1] = matrix.data[4];
@@ -1043,9 +1050,9 @@ MINLINE mat4 mat4_transpose(const mat4 matrix)
 }
 
 
-MINLINE mat4 mat4_translation(const vec3 position)
+MINLINE mmat4 mat4_translation(const mvec3 position)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     out_matrix.data[12] = position.x;
     out_matrix.data[13] = position.y;
@@ -1055,9 +1062,9 @@ MINLINE mat4 mat4_translation(const vec3 position)
     return out_matrix;
 }
 
-MINLINE mat4 mat4_scale(const vec3 scale)
+MINLINE mmat4 mat4_scale(const mvec3 scale)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     out_matrix.data[0] = scale.x;
     out_matrix.data[5] = scale.y;
@@ -1067,9 +1074,9 @@ MINLINE mat4 mat4_scale(const vec3 scale)
 }
 
 
-MINLINE mat4 mat4_euler_x(f32 angle_radians)
+MINLINE mmat4 mat4_euler_x(f32 angle_radians)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     f32 c = cos(angle_radians);
     f32 s = sin(angle_radians);
@@ -1083,9 +1090,9 @@ MINLINE mat4 mat4_euler_x(f32 angle_radians)
 }
 
 
-MINLINE mat4 mat4_euler_y(const f32 angle_radians)
+MINLINE mmat4 mat4_euler_y(const f32 angle_radians)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     const f32 c = cos(angle_radians);
     const f32 s = sin(angle_radians);
@@ -1099,9 +1106,9 @@ MINLINE mat4 mat4_euler_y(const f32 angle_radians)
 }
 
 
-MINLINE mat4 mat4_euler_z(const f32 angle_radians)
+MINLINE mmat4 mat4_euler_z(const f32 angle_radians)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     f32 c = cos(angle_radians);
     f32 s = sin(angle_radians);
@@ -1115,22 +1122,22 @@ MINLINE mat4 mat4_euler_z(const f32 angle_radians)
 }
 
 
-MINLINE mat4 mat4_euler_xyz(const f32 x_radians, const f32 y_radians, const f32 z_radians)
+MINLINE mmat4 mat4_euler_xyz(const f32 x_radians, const f32 y_radians, const f32 z_radians)
 {
-    const mat4 rx = mat4_euler_x(x_radians);
-    const mat4 ry = mat4_euler_y(y_radians);
-    const mat4 rz = mat4_euler_z(z_radians);
+    const mmat4 rx = mat4_euler_x(x_radians);
+    const mmat4 ry = mat4_euler_y(y_radians);
+    const mmat4 rz = mat4_euler_z(z_radians);
 
-    mat4 out_matrix = mat4_mul(rx, ry);
+    mmat4 out_matrix = mat4_mul(rx, ry);
     out_matrix = mat4_mul(out_matrix, rz);
 
     return out_matrix;
 }
 
 
-MINLINE vec3 mat4_forward(const mat4 matrix)
+MINLINE mvec3 mat4_forward(const mmat4 matrix)
 {
-    vec3 forward;
+    mvec3 forward;
 
     forward.x = -matrix.data[2];
     forward.y = -matrix.data[6];
@@ -1142,9 +1149,9 @@ MINLINE vec3 mat4_forward(const mat4 matrix)
 }
 
 
-MINLINE vec3 mat4_backward(const mat4 matrix)
+MINLINE mvec3 mat4_backward(const mmat4 matrix)
 {
-    vec3 backward;
+    mvec3 backward;
 
     backward.x = matrix.data[2];
     backward.y = matrix.data[6];
@@ -1156,9 +1163,9 @@ MINLINE vec3 mat4_backward(const mat4 matrix)
 }
 
 
-MINLINE vec3 mat4_up(const mat4 matrix)
+MINLINE mvec3 mat4_up(const mmat4 matrix)
 {
-    vec3 up;
+    mvec3 up;
 
     up.x = matrix.data[1];
     up.y = matrix.data[5];
@@ -1170,9 +1177,9 @@ MINLINE vec3 mat4_up(const mat4 matrix)
 }
 
 
-MINLINE vec3 mat4_down(const mat4 matrix)
+MINLINE mvec3 mat4_down(const mmat4 matrix)
 {
-    vec3 down;
+    mvec3 down;
 
     down.x = -matrix.data[1];
     down.y = -matrix.data[5];
@@ -1183,9 +1190,9 @@ MINLINE vec3 mat4_down(const mat4 matrix)
 }
 
 
-MINLINE vec3 mat4_left(const mat4 matrix)
+MINLINE mvec3 mat4_left(const mmat4 matrix)
 {
-    vec3 right;
+    mvec3 right;
 
     right.x = -matrix.data[0];
     right.y = -matrix.data[4];
@@ -1197,9 +1204,9 @@ MINLINE vec3 mat4_left(const mat4 matrix)
 }
 
 
-MINLINE vec3 mat4_right(const mat4 matrix)
+MINLINE mvec3 mat4_right(const mmat4 matrix)
 {
-    vec3 left;
+    mvec3 left;
 
     left.x = matrix.data[0];
     left.y = matrix.data[4];
@@ -1216,13 +1223,13 @@ MINLINE vec3 mat4_right(const mat4 matrix)
 
 
 // QUATERNIONS
-MINLINE quat quat_identity(void)
+MINLINE mquat quat_identity(void)
 {
-    return (quat){0, 0, 0, 1.0f};
+    return (mquat){0, 0, 0, 1.0f};
 }
 
 
-MINLINE f32 quat_normal(const quat q)
+MINLINE f32 quat_normal(const mquat q)
 {
     return (float)sqrt(
         q.x * q.x +
@@ -1231,11 +1238,11 @@ MINLINE f32 quat_normal(const quat q)
         q.w * q.w);
 }
 
-MINLINE quat quat_normalize(const quat q)
+MINLINE mquat quat_normalize(const mquat q)
 {
     const f32 normal = quat_normal(q);
     if (normal == 0) { return quat_identity(); }
-    return (quat){
+    return (mquat){
         q.x / normal,
         q.y / normal,
         q.z / normal,
@@ -1244,9 +1251,9 @@ MINLINE quat quat_normalize(const quat q)
 }
 
 
-MINLINE quat quat_conjugate(const quat q)
+MINLINE mquat quat_conjugate(const mquat q)
 {
-    return (quat){
+    return (mquat){
         -q.x,
         -q.y,
         -q.z,
@@ -1255,16 +1262,16 @@ MINLINE quat quat_conjugate(const quat q)
 }
 
 
-MINLINE quat quat_inverse(const quat q)
+MINLINE mquat quat_inverse(const mquat q)
 {
     return quat_normalize(quat_conjugate(q));
 }
 
-MINLINE quat quat_exponential(const quat q, const f32 exponent)
+MINLINE mquat quat_exponential(const mquat q, const f32 exponent)
 {
     // q^t operation
 
-    quat out_quat = q;
+    mquat out_quat = q;
 
     // Check for the case of an identity quaternion.
     // This will protect against divide by zero
@@ -1292,9 +1299,9 @@ MINLINE quat quat_exponential(const quat q, const f32 exponent)
 }
 
 
-MINLINE quat quat_mul(const quat q0, const quat q1)
+MINLINE mquat quat_mul(const mquat q0, const mquat q1)
 {
-    quat out_quaternion;
+    mquat out_quaternion;
 
     out_quaternion.x = q0.w * q1.x + q0.x * q1.w + q0.y * q1.z - q0.z * q1.y;
     out_quaternion.y = q0.w * q1.y - q0.x * q1.z + q0.y * q1.w + q0.z * q1.x;
@@ -1305,7 +1312,7 @@ MINLINE quat quat_mul(const quat q0, const quat q1)
 }
 
 
-MINLINE f32 quat_dot(quat q_0, quat q_1)
+MINLINE f32 quat_dot(mquat q_0, mquat q_1)
 {
     return (q_0.x * q_1.x) +
         (q_0.y * q_1.y) +
@@ -1314,9 +1321,9 @@ MINLINE f32 quat_dot(quat q_0, quat q_1)
 }
 
 // Calculates a rotation matrix based on the quaternion and the passed in center point.
-MINLINE mat4 quat_to_rotation_matrix(quat q, vec3 center)
+MINLINE mmat4 quat_to_rotation_matrix(mquat q, mvec3 center)
 {
-    mat4 out_matrix;
+    mmat4 out_matrix;
 
     f32* o = out_matrix.data;
 
@@ -1341,14 +1348,14 @@ MINLINE mat4 quat_to_rotation_matrix(quat q, vec3 center)
 }
 
 // Creates a quaternion from the given axis and angle.
-MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const bool normalize)
+MINLINE mquat quat_from_axis_angle(const mvec3 axis, const f32 angle, const bool normalize)
 {
     const f32 half_angle = 0.5f * angle;
 
     const f32 s = sin(half_angle);
     const f32 c = cos(half_angle);
 
-    const quat q = (quat){s * axis.x, s * axis.y, s * axis.z, c};
+    const mquat q = (mquat){s * axis.x, s * axis.y, s * axis.z, c};
 
     if (normalize)
     {
@@ -1358,27 +1365,27 @@ MINLINE quat quat_from_axis_angle(const vec3 axis, const f32 angle, const bool n
     return q;
 }
 
-MINLINE mat4 quat_rotate(mat4 m, float angle, vec3 axis)
+MINLINE mmat4 quat_rotate(mmat4 m, float angle, mvec3 axis)
 {
-    quat rot = quat_from_axis_angle(axis, angle, false);
+    mquat rot = quat_from_axis_angle(axis, angle, false);
     return quat_to_rotation_matrix(rot, vec3_zero());
     // glm_rotate_make(rot, angle, axis);
     // glm_mul_rot(m, rot, m);
 }
 
 //  Calculates spherical linear interpolation of a given percentage between two quaternions.
-MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
+MINLINE mquat quat_slerp(const mquat q_0, const mquat q_1, const f32 percentage)
 {
     //percentage is from 0-1
 
-    quat out_quaternion;
+    mquat out_quaternion;
 
     // Source: https://en.wikipedia.org/wiki/Slerp
     // Only unit quaternions are valid rotations.
     // Normalize to avoid undefined behavior.
 
-    quat v0 = quat_normalize(q_0);
-    quat v1 = quat_normalize(q_1);
+    mquat v0 = quat_normalize(q_0);
+    mquat v1 = quat_normalize(q_1);
 
     // Compute the cosine of the angle between the two vectors.
     f32 dot = quat_dot(v0, v1);
@@ -1402,7 +1409,7 @@ MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
     {
         // If the inputs are too close for comfort, linearly interpolate
         // and normalize the result.
-        out_quaternion = (quat){
+        out_quaternion = (mquat){
             v0.x + ((v1.x - v0.x) * percentage),
             v0.y + ((v1.y - v0.y) * percentage),
             v0.z + ((v1.z - v0.z) * percentage),
@@ -1420,7 +1427,7 @@ MINLINE quat quat_slerp(const quat q_0, const quat q_1, const f32 percentage)
     const f32 s0 = cos(theta) - dot * sin_theta / sin_theta_0; // == sin(theta_0 - theta) / sin(theta_0)
     const f32 s1 = sin_theta / sin_theta_0;
 
-    return (quat){
+    return (mquat){
         (v0.x * s0) + (v1.x * s1),
         (v0.y * s0) + (v1.y * s1),
         (v0.z * s0) + (v1.z * s1),
@@ -1440,34 +1447,34 @@ MINLINE f32 rad_to_deg(const f32 radians)
 }
 
 // CONVERSIONS
-MINLINE vec2 vec3_to_vec2(const vec3 v)
+MINLINE mvec2 vec3_to_vec2(const mvec3 v)
 {
-    return (vec2){v.x, v.y};
+    return (mvec2){v.x, v.y};
 }
 
-MINLINE vec3 vec2_to_vec3(const vec2 v, const float z)
+MINLINE mvec3 vec2_to_vec3(const mvec2 v, const float z)
 {
-    return (vec3){v.x, v.y, z};
+    return (mvec3){v.x, v.y, z};
 }
 
-MINLINE vec3 vec4_to_vec3(const vec4 v)
+MINLINE mvec3 vec4_to_vec3(const mvec4 v)
 {
-    return (vec3){v.x, v.y, v.z};
+    return (mvec3){v.x, v.y, v.z};
 }
 
-MINLINE vec4 vec3_to_vec4(const vec3 v, const float w)
+MINLINE mvec4 vec3_to_vec4(const mvec3 v, const float w)
 {
-    return (vec4){v.x, v.y, v.z, w};
+    return (mvec4){v.x, v.y, v.z, w};
 }
 
 
-MINLINE mat4 quat_to_mat4(quat q)
+MINLINE mmat4 quat_to_mat4(mquat q)
 {
-    mat4 out_matrix = mat4_identity();
+    mmat4 out_matrix = mat4_identity();
 
     // https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
 
-    const quat n = quat_normalize(q);
+    const mquat n = quat_normalize(q);
 
     out_matrix.data[0] = 1.0f - 2.0f * n.y * n.y - 2.0f * n.z * n.z;
     out_matrix.data[1] = 2.0f * n.x * n.y - 2.0f * n.z * n.w;
@@ -1482,11 +1489,11 @@ MINLINE mat4 quat_to_mat4(quat q)
     return out_matrix;
 }
 
-MINLINE quat mat4_to_quat(const mat4 m)
+MINLINE mquat mat4_to_quat(const mmat4 m)
 {
     // Assumes m is a PURE rotation matrix (no scale/shear) — strip scale first.
     const float trace = m.data[0] + m.data[5] + m.data[10];
-    quat q;
+    mquat q;
 
     if (trace > 0.0f)
     {
@@ -1524,7 +1531,7 @@ MINLINE quat mat4_to_quat(const mat4 m)
     return quat_normalize(q);
 }
 
-MINLINE mat4 quat_to_euler(quat q, vec3 out_v)
+MINLINE mmat4 quat_to_euler(mquat q, mvec3 out_v)
 {
     // Input quaternion
     float w, x, y, z;
@@ -1555,7 +1562,7 @@ MINLINE mat4 quat_to_euler(quat q, vec3 out_v)
     }
 }
 
-MINLINE void mat4_decompose(const mat4 m, vec3* out_translation, quat* out_rotation, vec3* out_scale)
+MINLINE void mat4_decompose(const mmat4 m, mvec3* out_translation, mquat* out_rotation, mvec3* out_scale)
 {
     // Translation — column 3
     out_translation->x = m.data[12];
@@ -1563,9 +1570,9 @@ MINLINE void mat4_decompose(const mat4 m, vec3* out_translation, quat* out_rotat
     out_translation->z = m.data[14];
 
     // Basis columns (0, 1, 2)
-    vec3 col0 = {m.data[0], m.data[1], m.data[2]};
-    vec3 col1 = {m.data[4], m.data[5], m.data[6]};
-    vec3 col2 = {m.data[8], m.data[9], m.data[10]};
+    mvec3 col0 = {m.data[0], m.data[1], m.data[2]};
+    mvec3 col1 = {m.data[4], m.data[5], m.data[6]};
+    mvec3 col2 = {m.data[8], m.data[9], m.data[10]};
 
     float sx = vec3_length(col0);
     float sy = vec3_length(col1);
@@ -1573,7 +1580,7 @@ MINLINE void mat4_decompose(const mat4 m, vec3* out_translation, quat* out_rotat
 
     // Detect mirrored/negative scale via determinant sign, and fold the sign
     // back into X (arbitrary convention — matches your existing mat3_determinant).
-    mat3 upper3 = mat3_vec3_init(col0, col1, col2);
+    mmat3 upper3 = mat3_vec3_init(col0, col1, col2);
     if (mat3_determinant(upper3) < 0.0f)
     {
         sx = -sx;
@@ -1586,11 +1593,11 @@ MINLINE void mat4_decompose(const mat4 m, vec3* out_translation, quat* out_rotat
 
     // Strip scale to get a pure rotation matrix, then convert.
     // NOTE: if any of sx/sy/sz is ~0 this divides by zero — see caveat below.
-    vec3 n0 = vec3_normalize_functional(col0);
-    vec3 n1 = vec3_normalize_functional(col1);
-    vec3 n2 = vec3_normalize_functional(col2);
+    mvec3 n0 = vec3_normalize_functional(col0);
+    mvec3 n1 = vec3_normalize_functional(col1);
+    mvec3 n2 = vec3_normalize_functional(col2);
 
-    mat4 rot = mat4_identity();
+    mmat4 rot = mat4_identity();
     rot.data[0] = n0.x; rot.data[1] = n0.y; rot.data[2] = n0.z;
     rot.data[4] = n1.x; rot.data[5] = n1.y; rot.data[6] = n1.z;
     rot.data[8] = n2.x; rot.data[9] = n2.y; rot.data[10] = n2.z;
@@ -1841,17 +1848,17 @@ inline void cartesian_to_spherical(const float x, const float y, const float z, 
 
 /*COLOR*/
 
-inline vec3 rgb_normalize(const vec3 rgb)
+inline mvec3 rgb_normalize(const mvec3 rgb)
 {
     return vec3_div_scalar(rgb, 255.0f);
 }
 
-inline vec3 rgb_unnormalize(const vec3 rgb)
+inline mvec3 rgb_unnormalize(const mvec3 rgb)
 {
     return vec3_mul_scalar(rgb, 255.0f);
 }
 
-inline vec3 rgb_to_hsv(const vec3 rgb)
+inline mvec3 rgb_to_hsv(const mvec3 rgb)
 {
     float h, s, v;
     float min, max, delta;
@@ -1869,7 +1876,7 @@ inline vec3 rgb_to_hsv(const vec3 rgb)
     {
         s = 0;
         h = 0; // undefined, maybe nan?
-        return (vec3){h, s, v};
+        return (mvec3){h, s, v};
     }
     if (max > 0.0)
     {
@@ -1882,7 +1889,7 @@ inline vec3 rgb_to_hsv(const vec3 rgb)
         // s = 0, h is undefined
         s = 0.0;
         h = 0.0; // its now undefined
-        return (vec3){h, s, v};
+        return (mvec3){h, s, v};
     }
     if (rgb.r >= max) // > is bogus, just keeps compilor happy
         h = (rgb.g - rgb.b) / delta; // between yellow & magenta
@@ -1896,10 +1903,10 @@ inline vec3 rgb_to_hsv(const vec3 rgb)
     if (h < 0.0)
         h += 360.0;
 
-    return (vec3){h, s, v};
+    return (mvec3){h, s, v};
 }
 
-vec3 hsv_to_rgb(const vec3 hsv)
+mvec3 hsv_to_rgb(const mvec3 hsv)
 {
     float h = hsv.r;
     float s = hsv.g;
@@ -1907,7 +1914,7 @@ vec3 hsv_to_rgb(const vec3 hsv)
 
     float hh, p, q, t, ff;
     long i;
-    vec3 out;
+    mvec3 out;
 
     if (s <= 0.0)
     {
@@ -1967,34 +1974,34 @@ vec3 hsv_to_rgb(const vec3 hsv)
 }
 
 
-static const vec3 COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
-static const vec3 COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
-static const vec3 COLOR_GREY = {0.5f, 0.5f, 0.5f};
-static const vec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
-static const vec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
-static const vec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};
-static const vec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
-static const vec3 COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
-static const vec3 COLOR_MAGENTA = {1.0f, 0.0f, 1.0f};
-static const vec3 COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
-static const vec3 COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
-static const vec3 COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
+static const mvec3 COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
+static const mvec3 COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
+static const mvec3 COLOR_GREY = {0.5f, 0.5f, 0.5f};
+static const mvec3 COLOR_WHITE = {1.0f, 1.0f, 1.0f};
+static const mvec3 COLOR_RED = {1.0f, 0.0f, 0.0f};
+static const mvec3 COLOR_GREEN = {0.0f, 1.0f, 0.0f};
+static const mvec3 COLOR_BLUE = {0.0f, 0.0f, 1.0f};
+static const mvec3 COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
+static const mvec3 COLOR_MAGENTA = {1.0f, 0.0f, 1.0f};
+static const mvec3 COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
+static const mvec3 COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
+static const mvec3 COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
 
 //Purple Color Pallette
-static const vec3 COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f / 255.f, .y = 31.f / 255.f, .z = 158.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f / 255.f, .y = 162.f / 255.f, .z = 201.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f};
-static const vec3 COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f / 255.f, .y = 31.f / 255.f, .z = 158.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f / 255.f, .y = 162.f / 255.f, .z = 201.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f};
+static const mvec3 COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
 
 
-static const vec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
-static const vec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
-static const vec4 COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
-static const vec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
-static const vec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
+static const mvec4 COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const mvec4 COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const mvec4 COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
+static const mvec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
+static const mvec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 
 
 /*** RANDOM ***/

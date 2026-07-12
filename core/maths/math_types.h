@@ -5,7 +5,7 @@
 #include "defines.h"
 
 
-typedef union vec2f
+typedef union
 {
     f32 elements[2];
 
@@ -13,7 +13,7 @@ typedef union vec2f
     {
         union
         {
-           f32 x, r, u;
+            f32 x, r, u;
         };
 
         union
@@ -21,10 +21,11 @@ typedef union vec2f
             f32 y, g, v;
         };
     };
-} vec2;
+
+} mvec2;
 
 
-typedef union vec3f
+typedef union
 {
     f32 elements[3];
 
@@ -45,10 +46,10 @@ typedef union vec3f
             f32 z, b;
         };
     };
-} vec3;
+} mvec3;
 
 
-typedef union vec4f
+typedef union
 {
     f32 elements[4];
 
@@ -74,10 +75,10 @@ typedef union vec4f
             f32 w, a;
         };
     };
-} vec4;
+} mvec4;
 
 
-typedef union vec2i
+typedef union
 {
     s32 elements[2];
 
@@ -93,9 +94,9 @@ typedef union vec2i
             s32 y, g, v;
         };
     };
-} vec2i;
+} mvec2i;
 
-typedef union vec3i
+typedef union
 {
     s32 elements[3];
 
@@ -116,13 +117,13 @@ typedef union vec3i
             s32 z, b, w;
         };
     };
-} vec3i;
+} mvec3i;
 
-typedef union vec4i
+typedef union
 {
-     s32 elements[4];
+    s32 elements[4];
 
-     struct
+    struct
     {
         union
         {
@@ -144,36 +145,36 @@ typedef union vec4i
             s32 w, a;
         };
     };
-} vec4i;
+} mvec4i;
 
 
-typedef union mat2_f
+typedef union
 {
     float data[6];
     float n[2][2];
-    vec3 rows[2];
-} mat2;
+    mvec3 rows[2];
+} mmat2;
 
 
 //col major
-typedef union mat3_f
+typedef union
 {
     float data[9];
     float n[3][3];
-    vec3 rows[3];
-} mat3;
+    mvec3 rows[3];
+} mmat3;
 
 
 // typedef union alignas(16) mat4_u // apparently this is a thing
-typedef union mat4_f
+typedef union
 {
     float data[16];
     // alignas(16) float two_d_arr[4][4];
-    vec4 rows[4];
-} mat4;
+    mvec4 rows[4];
+} mmat4;
 
 //generally avoid typedef, only really makes sense for quat
-typedef vec4 quat;
+typedef mvec4 mquat;
 
 
 typedef enum Direction
@@ -183,8 +184,6 @@ typedef enum Direction
     DIRECTION_LEFT,
     DIRECTION_RIGHT,
 } Direction;
-
-
 
 
 #define MATH_E		2.7182818284590452354

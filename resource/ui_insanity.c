@@ -34,11 +34,11 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     Insanity_UI_Node node = {0};
     array_fill(insanity_ui->ui_nodes, &node);
     //stacks
-    insanity_ui->pos_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
-    insanity_ui->size_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
+    insanity_ui->pos_stack = stack_create(sizeof(mvec2), 100, insanity_ui->allocator);
+    insanity_ui->size_stack = stack_create(sizeof(mvec2), 100, insanity_ui->allocator);
 
     insanity_ui->layout_stack = stack_create(sizeof(Insanity_UI_Layout), 100, insanity_ui->allocator);
-    insanity_ui->padding_stack = stack_create(sizeof(vec2), 100, insanity_ui->allocator);
+    insanity_ui->padding_stack = stack_create(sizeof(mvec2), 100, insanity_ui->allocator);
 
     insanity_ui->flag_stack = stack_create(sizeof(UI_Property_Flags), 100, insanity_ui->allocator);
 
@@ -47,7 +47,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
 
     //states/hash tables
-    insanity_ui->drag_state = HASH_TABLE_CREATE_DEFAULT_SIZE(vec2);
+    insanity_ui->drag_state = HASH_TABLE_CREATE_DEFAULT_SIZE(mvec2);
     insanity_ui->float_state = HASH_TABLE_CREATE_DEFAULT_SIZE(float);
     insanity_ui->text_box_state = HASH_TABLE_CREATE_DEFAULT_SIZE(String_Builder*);
 
@@ -68,7 +68,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->mouse_released_unique = 0;
 
     //TODO: replace with an in param
-    insanity_ui->screen_size = (vec2){800.0f, 600.0f};
+    insanity_ui->screen_size = (mvec2){800.0f, 600.0f};
 
 
     //
@@ -118,11 +118,11 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     stack_push(insanity_ui->flag_stack, &no_flag);
 
     //pos and size
-    vec2 default_pos = {0, 0};
+    mvec2 default_pos = {0, 0};
     stack_clear(insanity_ui->pos_stack);
     stack_push(insanity_ui->pos_stack, &default_pos);
 
-    vec2 no_size = {0, 0};
+    mvec2 no_size = {0, 0};
     stack_clear(insanity_ui->size_stack);
     stack_push(insanity_ui->size_stack, &no_size);
 
@@ -132,7 +132,7 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     stack_push(insanity_ui->layout_stack, &default_layout);
 
 
-    vec2 default_padding = {0, 0};
+    mvec2 default_padding = {0, 0};
     stack_clear(insanity_ui->padding_stack);
     stack_push(insanity_ui->padding_stack, &default_padding);
 
@@ -343,7 +343,7 @@ void insanity_ui_passes()
             {
                 if (insanity_ui->mouse_down)
                 {
-                    vec2 pos;
+                    mvec2 pos;
                     hash_table_get(insanity_ui->drag_state, node->id, &pos);
                     // node->pos.x += insanity_ui->mouse_delta_x;
                     // node->pos.y += insanity_ui->mouse_delta_y;
@@ -457,7 +457,7 @@ UI_Property_Flags insanity_ui_get_flags()
     return *(UI_Property_Flags*)stack_top_(insanity_ui->flag_stack);
 }
 
-void insanity_ui_push_pos(vec2 pos)
+void insanity_ui_push_pos(mvec2 pos)
 {
     if (pos.x < 0 || pos.x > 1 || pos.y < 0 || pos.y > 1)
     {
@@ -466,7 +466,7 @@ void insanity_ui_push_pos(vec2 pos)
     stack_push(insanity_ui->pos_stack, &pos);
 }
 
-void insanity_ui_push_size(vec2 size)
+void insanity_ui_push_size(mvec2 size)
 {
     if (size.x < 0 || size.x > 1 || size.y < 0 || size.y > 1)
     {
@@ -476,7 +476,7 @@ void insanity_ui_push_size(vec2 size)
 }
 
 
-void insanity_ui_push_padding(vec2 padding)
+void insanity_ui_push_padding(mvec2 padding)
 {
     stack_push(insanity_ui->padding_stack, &padding);
 }
@@ -567,7 +567,7 @@ Insanity_UI_Node* insanity_ui_get_top_node()
     return (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items - 1);
 }
 
-bool insanity_rect_hit(vec2 pos, vec2 size)
+bool insanity_rect_hit(mvec2 pos, mvec2 size)
 {
     //check if we are inside a ui_object
     //we are using the screen coordinates from the mouse,
@@ -602,11 +602,11 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
     node->id = id;
     node->ui_flags = insanity_ui_get_flags();
 
-    node->pos = *(vec2*)stack_top_(insanity_ui->pos_stack);
-    node->size = *(vec2*)stack_top_(insanity_ui->size_stack);
+    node->pos = *(mvec2*)stack_top_(insanity_ui->pos_stack);
+    node->size = *(mvec2*)stack_top_(insanity_ui->size_stack);
 
     node->layout = *(Insanity_UI_Layout*)stack_top_(insanity_ui->layout_stack);
-    node->padding = *(vec2*)stack_top_(insanity_ui->padding_stack);
+    node->padding = *(mvec2*)stack_top_(insanity_ui->padding_stack);
 
 
     node->color = insanity_ui->editor_style.color;
@@ -646,7 +646,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
     //handle drag state
     if (node->ui_flags & UI_FLAG_DRAGGABLE)
     {
-        vec2 pos = {0};
+        mvec2 pos = {0};
         if (hash_table_get(insanity_ui->drag_state, node->id, &pos))
         {
             node->pos = pos;
@@ -695,7 +695,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
     if (node->ui_flags & UI_FLAG_IMAGE)
     {
         node->texture_handle = insanity_ui_get_image();
-        node->uv_size = (vec2){1., 1.};
+        node->uv_size = (mvec2){1., 1.};
     }
 
     //TODO: get this from a hash table
@@ -705,7 +705,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
 void insanity_ui_text()
 {
     // proper screen pos and size
-    vec2 base_position = *(vec2*)stack_top_(insanity_ui->pos_stack);
+    mvec2 base_position = *(mvec2*)stack_top_(insanity_ui->pos_stack);
     UI_Property_Flags flags = insanity_ui_get_flags();
     String text = insanity_ui->string_stack;
 
@@ -743,12 +743,12 @@ void insanity_ui_text()
         Insanity_UI_Node* text_node = insanity_ui_get_new_node();
         text_node->ui_flags = flags;
         // text_node->character = c;
-        text_node->pos = vec2_div((vec2){x_position, y_position}, insanity_ui->screen_size);
-        text_node->size = vec2_div((vec2){x_width, y_height}, insanity_ui->screen_size);
+        text_node->pos = vec2_div((mvec2){x_position, y_position}, insanity_ui->screen_size);
+        text_node->size = vec2_div((mvec2){x_width, y_height}, insanity_ui->screen_size);
         // text_node->pos = vec2_div((vec2){x_position, y_position}, insanity_ui->screen_size);
         // text_node->size = vec2_div((vec2){x_width, y_height}, insanity_ui->screen_size);
-        text_node->uv_offset = (vec2){g->u0, g->v0};
-        text_node->uv_size = (vec2){g->u1 - g->u0, g->v1 - g->v0};
+        text_node->uv_offset = (mvec2){g->u0, g->v0};
+        text_node->uv_size = (mvec2){g->u1 - g->u0, g->v1 - g->v0};
         text_node->color = COLOR_WHITE;
         text_node->texture_handle = insanity_ui->default_font_handle;
 
@@ -833,13 +833,13 @@ void insanity_ui_test()
 
     //game ui recreation
 
-    insanity_ui_push_pos((vec2){.03, .1});
-    insanity_ui_push_size((vec2){.2, .05});
+    insanity_ui_push_pos((mvec2){.03, .1});
+    insanity_ui_push_size((mvec2){.2, .05});
     insanity_ui_draw("turn phase");
 
     insanity_ui_push_flags(UI_FLAG_SCROLL_VIEW);
-    insanity_ui_push_pos((vec2){.1, .2});
-    insanity_ui_push_size((vec2){.2, .5});
+    insanity_ui_push_pos((mvec2){.1, .2});
+    insanity_ui_push_size((mvec2){.2, .5});
     insanity_ui_draw_parent("abilities list")
     {
         for (u64 i = 0; i < 5; i++)
@@ -847,11 +847,11 @@ void insanity_ui_test()
             insanity_ui_push_flags(UI_FLAG_CLICKABLE | UI_FLAG_ROUND_CORNER);
             // insanity_ui_push_layout(Insanity_UI_LAYOUT_HORIZONTAL);
             insanity_ui_push_layout(Insanity_UI_LAYOUT_VERTICAL);
-            insanity_ui_push_size((vec2){1., .2});
+            insanity_ui_push_size((mvec2){1., .2});
             insanity_ui_draw_parent("ability")
             {
                 insanity_ui_push_flags(UI_FLAG_IMAGE);
-                insanity_ui_push_size((vec2){.2, 1.});
+                insanity_ui_push_size((mvec2){.2, 1.});
                 insanity_ui_draw("icon");
                 insanity_ui_push_flags(UI_FLAG_IMAGE | UI_FLAG_CLICKABLE);
                 insanity_ui_draw("text");
