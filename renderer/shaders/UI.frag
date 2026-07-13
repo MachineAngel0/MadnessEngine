@@ -58,6 +58,7 @@ void main() {
         //fill_color = texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv).rgb;
     }
 
+
     {
         vec2 p = (in_local_pos - vec2(0.5)) * 2.0;
 

@@ -28,6 +28,7 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
                                         Sk_Mesh_Asset* skinned_mesh_meta_data);
 
 //animation system
+Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system, Sk_Mesh_Parent_Instance* sk_mesh_inst);
 
 //load the mesh, which we have
 

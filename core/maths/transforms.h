@@ -7,6 +7,7 @@
 typedef struct Transform
 {
     vec3s position; //literally no need to create a vec2 version of this
+    vec3s euler_angles;
     versors rotation;
     vec3s scale;
     mat4s local;
@@ -45,6 +46,7 @@ MAPI void transform_set_parent(Transform* t, Transform* parent);
 //perform operation
 MAPI void transform_translate(Transform* t, vec3s position);
 MAPI void transform_rotate(Transform* t, versors rotation);
+MAPI void transform_rotate_euler(Transform* t);
 MAPI void transform_scale(Transform* t, vec3s scale);
 MAPI mat4s transform_set_local_internal(Transform* t);
 

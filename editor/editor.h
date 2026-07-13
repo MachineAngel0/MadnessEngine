@@ -8,13 +8,14 @@
 typedef enum Editor_UI_State
 {
     EDITOR_UI_STATE_DEBUG,
+    EDITOR_UI_STATE_ENGINE_STATS,
     EDITOR_UI_STATE_SCENE,
     EDITOR_UI_STATE_TEXTURE_VIEWER,
     EDITOR_UI_STATE_MATERIAL,
-    EDITOR_UI_STATE_INSANITY_UI_TEST,
+    EDITOR_UI_STATE_ANIMATION,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
-    EDITOR_UI_STATE_ENGINE_STATS,
     EDITOR_UI_STATE_REFLECTION_ABILITY,
+    EDITOR_UI_STATE_INSANITY_UI_TEST,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
@@ -52,6 +53,7 @@ void editor_ui_scene(Editor* editor);
 void editor_material_nodes(Editor* editor);
 void editor_texture_view(Editor* editor);
 void editor_ui_stats(Editor* editor);
+void editor_ui_animation(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

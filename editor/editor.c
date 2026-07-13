@@ -27,7 +27,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
+    editor->state = EDITOR_UI_STATE_ENGINE_STATS;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -74,6 +74,10 @@ void editor_ui(Editor* editor)
         editor_material_nodes(editor);
         break;
     case EDITOR_UI_STATE_TEXTURE_VIEWER:
+        editor_texture_view(editor);
+        break;
+    case EDITOR_UI_STATE_ANIMATION:
+        editor_ui_animation(editor);
         break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
         // insanity_ui_test();
@@ -218,6 +222,39 @@ void editor_ui_stats(Editor* editor)
     madness_ui_window_end();
 }
 
+void editor_ui_animation(Editor* editor)
+{
+    Mesh_System* mesh_system = editor->resource_system->mesh_system;
+    madness_ui_window_begin(STRING("Animation Data"));
+    {
+        for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; i++)
+        {
+            Sk_Mesh_Parent_Instance* sk_mesh = &mesh_system->skinned_mesh_instance[i];
+            Animation_Data* animation_data = sk_mesh_parent_instance_get_animation_data(
+                mesh_system, sk_mesh);
+            sk_mesh->current_animation_index;
+
+            char buffer[100];
+            char buffer2[100];
+            snprintf(buffer2, 100, "Animation Index %d", i);
+            snprintf(buffer, 100, "Animation Looping %d", i);
+
+            if (madness_ui_u32(STRING_STRLEN(buffer), &sk_mesh->current_animation_index, 1))
+            {
+                sk_mesh->current_animation_index = clamp_uint(
+                    mesh_system->skinned_mesh_instance[i].current_animation_index, 0,
+                    animation_data->animations_count-1);
+
+
+            }
+            madness_ui_check_box(STRING_STRLEN(buffer2) ,&sk_mesh->looping);
+
+
+        }
+    }
+    madness_ui_window_end();
+}
+
 
 void editor_ui_scene(Editor* editor)
 {
@@ -230,10 +267,25 @@ void editor_ui_scene(Editor* editor)
 
         for (int i = 0; i < editor->resource_system->scene->transform_count; i++)
         {
-            char buffer[50];
-            sprintf(buffer, "pos%d", i);
+            char buffer_transform[50];
+            char buffer_rotation[50];
+            char buffer_scale[50];
+            snprintf(buffer_transform, 50, "pos%d", i);
+            snprintf(buffer_rotation, 50, "rotation%d", i);
+            snprintf(buffer_scale, 50, "scale%d", i);
 
-            if (madness_ui_vec3(STRING(buffer), &editor->resource_system->scene->transforms[i].position, 1.0f))
+            if (madness_ui_vec3(STRING(buffer_transform), &editor->resource_system->scene->transforms[i].position,
+                                1.0f))
+            {
+                transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
+            }
+            if (madness_ui_vec3(STRING(buffer_rotation), &editor->resource_system->scene->transforms[i].euler_angles,
+                                1.0f))
+            {
+                transform_rotate_euler(&editor->resource_system->scene->transforms[i]);
+            }
+
+            if (madness_ui_vec3(STRING(buffer_scale), &editor->resource_system->scene->transforms[i].scale, 1.0f))
             {
                 transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
             }
@@ -252,8 +304,8 @@ void editor_ui_scene(Editor* editor)
             {
                 char buffer[50];
                 char buffer2[50];
-                sprintf(buffer, "dir_light direction%d", i);
-                sprintf(buffer2, "dir_light color%d", i);
+                snprintf(buffer, 50, "dir_light direction%d", i);
+                snprintf(buffer2, 50, "dir_light color%d", i);
                 Directional_Light* directional_light = &light_system->directional_lights[i];
                 madness_ui_vec3(STRING(buffer), &directional_light->direction, 1.0f);
                 madness_ui_vec3(STRING(buffer2), &directional_light->color, 0.1f);
@@ -300,5 +352,15 @@ void editor_material_nodes(Editor* editor)
 
 void editor_texture_view(Editor* editor)
 {
-    FATAL("TODO: TEXTURE VIEW");
+    Texture_System* texture_system = editor->resource_system->texture_system;
+    madness_ui_window_begin(STRING("Texture View"));
+    {
+        for (u32 i = 0; i < texture_system->in_use_textures_count; i++)
+        {
+            Resource_MetaData* meta_data = &texture_system->texture_meta_data[i];
+            madness_ui_c_string(meta_data->file_path);
+            madness_image_handle((Texture_Handle){.handle = meta_data->id});
+        }
+    }
+    madness_ui_window_end();
 }

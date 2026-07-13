@@ -14,6 +14,9 @@
 #include "ui_insanity.h"
 #include "ui_madness.h"
 
+
+#include "madness_asset_loader.h"
+
 #include "../resource/generated/mat_enums.h"
 #include "../resource/generated/mat_structs.h"
 

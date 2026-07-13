@@ -718,8 +718,8 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
         for (u32 j = 0; j < sk_mesh_parent_inst->joint_count; j++)
         {
             vec4s translation = {0};
-            mat4s rotation= {0};
-            vec3s scale= {0};
+            mat4s rotation = {0};
+            vec3s scale = {0};
 
             glms_decompose(
                 animation_data->resting_pose_local_matrix[j],
@@ -729,13 +729,11 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
             );
 
 
-
             glm_vec3_copy(translation.raw, sk_mesh_parent_inst->local_translation[j].raw);
             // glm_quat_copy(rotation, sk_mesh_inst->local_rotation[j].raw);
             sk_mesh_parent_inst->local_rotation[j] = glms_mat4_quat(rotation);
             glm_vec3_copy(scale.raw, sk_mesh_parent_inst->local_scale[j].raw);
         }
-
 
 
         sk_mesh_parent_inst->current_animation_index = 0;
@@ -807,6 +805,12 @@ void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
     cgltf_free(data);
 }
 
+Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
+                                                           Sk_Mesh_Parent_Instance* sk_mesh_inst)
+{
+    return mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
+        animation_data;
+}
 
 void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
 {
@@ -857,10 +861,18 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
         sk_mesh_inst->current_time += delta_time;
 
-        while (sk_mesh_inst->current_time >= anim_data->anim_end)
+        if (sk_mesh_inst->current_time >= anim_data->anim_end)
         {
-            sk_mesh_inst->current_time -= (anim_data->anim_end - anim_data->anim_start);
+            //TODO: at some point this should be its own array of inactive animations
+            if (sk_mesh_inst->looping)
+            {
+                while (sk_mesh_inst->current_time >= anim_data->anim_end)
+                {
+                    sk_mesh_inst->current_time -= (anim_data->anim_end - anim_data->anim_start);
+                }
+            }
         }
+
 
         for (u32 channel_idx = 0; channel_idx < anim_data->channel_count; channel_idx++)
         {

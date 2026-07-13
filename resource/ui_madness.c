@@ -854,7 +854,10 @@ void madness_ui_window_end(void)
     float scroll_region_start_pos = (state.window_region_pos.y + state.header_size.y);
     float scroll_region_size_y = (state.window_region_size.y - state.header_size.y);
 
-    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos;
+    //NOTE: we add the scroll offset here because when we begin call madness_ui_window_begin(),
+    // the content start position is offset by the scroll amount, applied to the cursor_pos.y position
+    // giving us a smaller size of what the content size should really be
+    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state.scroll_offset;
     float content_overflow = content_height - scroll_region_size_y;
 
     if (content_overflow > 0)
@@ -991,7 +994,7 @@ void madness_scroll_box_end(void)
     float scroll_region_start_pos = (state.window_region_pos.y + state.header_size.y);
     float scroll_region_size_y = (state.window_region_size.y - state.header_size.y);
 
-    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos;
+    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state.scroll_offset;
     float content_overflow = content_height - scroll_region_size_y;
 
     if (content_overflow > 0)
@@ -1418,11 +1421,26 @@ bool madness_ui_check_box(String label, bool* check_box_state)
 void madness_image(String id, Texture_System* texture_system, const char* icon_path)
 {
     //TODO:
+    FATAL("UNIMPLEMENTED")
 }
 
-void madness_image_handle(String id, Texture_Handle handle)
+void madness_image_handle(Texture_Handle handle)
 {
-    //TODO:
+    UI_Node* checkbox_node = madness_ui_get_new_node();
+    checkbox_node->string_id = STRING("image");
+    checkbox_node->hash_id = string_hash_u64(checkbox_node->string_id);
+    checkbox_node->pos = madness_ui->cursor_pos;
+    checkbox_node->size = (vec2s){
+        64, 64
+    };
+    checkbox_node->flags |= UI_FLAG_IMAGE;
+    checkbox_node->texture_handle = handle;
+    checkbox_node->color = COLOR_WHITE;
+    checkbox_node->uv_offset = (vec2s){0,0};
+    checkbox_node->uv_size = (vec2s){1.0,1.0};
+
+    madness_ui_advance_cursor((vec2s){checkbox_node->size.x, checkbox_node->size.y});
+
 }
 
 float map_range(float v, float a, float b, float x, float y)
@@ -2323,6 +2341,36 @@ bool madness_ui_vec3(String label, vec3s* v, float increment_value)
     if (has_moved1) { return true; }
     if (has_moved2) { return true; }
     if (has_moved3) { return true; }
+
+
+    return false;
+}
+
+bool madness_ui_vec4(String label, vec4s* v, float increment_value)
+{
+    //draw text on top, then below the vec values
+    madness_ui_string(label);
+    madness_ui_same_line();
+
+
+    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_arena);
+    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_arena);
+    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_arena);
+    String* w_id = string_concat(&label, &STRING("w"), madness_ui->frame_arena);
+
+
+    bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
+    madness_ui_same_line();
+    bool has_moved2 = madness_ui_float_internal(madness_ui, *y_id, &v->y, increment_value);
+    madness_ui_same_line();
+    bool has_moved3 = madness_ui_float_internal(madness_ui, *z_id, &v->z, increment_value);
+    madness_ui_same_line();
+    bool has_moved4 = madness_ui_float_internal(madness_ui, *w_id, &v->w, increment_value);
+
+    if (has_moved1) { return true; }
+    if (has_moved2) { return true; }
+    if (has_moved3) { return true; }
+    if (has_moved4) { return true; }
 
 
     return false;

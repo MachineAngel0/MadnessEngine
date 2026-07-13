@@ -23,7 +23,9 @@ Transform* transform_create(Allocator* arena)
 
 void transform_set_default(Transform* transform)
 {
-    *transform = (Transform){glms_vec3_zero(), glms_quat_identity(), glms_vec3_one()};
+    *transform = (Transform){glms_vec3_zero(), glms_vec3_zero(), glms_quat_identity(), glms_vec3_one()};
+
+
     transform_set_local_internal(transform);
 
     transform->is_dirty = true;
@@ -90,6 +92,13 @@ void transform_rotate(Transform* t, const versors rotation)
     t->is_dirty = true;
 }
 
+void transform_rotate_euler(Transform* t)
+{
+    t->rotation = glms_euler_xyz_quat(t->euler_angles);
+    t->is_dirty = true;
+
+}
+
 void transform_scale(Transform* t, const vec3s scale)
 {
     t->scale = glms_vec3_mul(t->scale, scale);
@@ -128,3 +137,4 @@ void transform_mark_dirty(Transform* t)
 {
     t->is_dirty = true;
 }
+

@@ -139,13 +139,13 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
 
 
         //free texture data
-        if (!texture->is_font)
+        /*if (!texture->is_font)
         {
             if (texture->pixels)
-            {
-                stbi_image_free(texture->pixels);
-            }
-        }
+            {*/
+                stbi_image_free(texture->pixels); //NOTE: seems to work?
+            // }
+        // }
 
     }
 }

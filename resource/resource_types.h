@@ -120,7 +120,6 @@ typedef struct Texture
 
     // for the renderer
     Texture_Handle handle;
-    bool is_font;
     // bool free_after_gpu_upload;
 } Texture;
 

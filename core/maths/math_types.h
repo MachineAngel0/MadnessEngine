@@ -13,6 +13,8 @@
 
 //extensions for glm
 
+//TODO: quat to euler conversion
+
 MINLINE mat4s glms_build_local_matrix(vec3s translation, versors rotation, vec3s scale)
 {
     /*mat4s m = glms_mat4_identity();

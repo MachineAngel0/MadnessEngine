@@ -352,7 +352,7 @@ MAPI bool madness_ui_button(String label);
 MAPI bool madness_ui_check_box(String label, bool* check_box_state);
 
 MAPI void madness_image(String id, Texture_System* texture_system, const char* icon_path);
-MAPI void madness_image_handle(String id, Texture_Handle handle);
+MAPI void madness_image_handle(Texture_Handle handle);
 
 MAPI void madness_ui_slider_scroll(String id, float* slider_val, float min, float max);
 //TODO: might get rid of the arrow version
@@ -370,6 +370,7 @@ MAPI bool madness_ui_float2(String text, float* x, float* y, float increment_val
 MAPI bool madness_ui_float3(String text, float* x, float* y, float* z, float increment_value);
 MAPI bool madness_ui_vec2(String label, vec2s* v, float increment_value);
 MAPI bool madness_ui_vec3(String label, vec3s* v, float increment_value);
+MAPI bool madness_ui_vec4(String label, vec4s* v, float increment_value);
 
 
 MAPI bool madness_ui_drop_down(String label, bool* state);
