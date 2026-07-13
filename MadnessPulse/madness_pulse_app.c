@@ -93,9 +93,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
     mesh_load_gltf(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
+    // mesh_load_gltf(application_core->resource_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
     //TODO: test the mc after cesium man is working k
-    // mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");
+    mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");
 
 
 

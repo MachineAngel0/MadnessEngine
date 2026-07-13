@@ -12,10 +12,8 @@
 layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_uv;
-layout(location = 3) in flat uint in_color_idx;
-layout(location = 4) in vec3 in_world_position;
-layout(location = 5) in vec4 in_color;
-layout(location = 6) in flat uint in_pbr_flags;
+layout(location = 3) in vec3 in_world_position;
+layout(location = 4) in flat Pbr material;
 
 
 //look into subpasses/renderpasses for more/different out values
@@ -33,26 +31,26 @@ void main() {
     // Directional lighting
     vec3 result = calculate_directional_light(ubo.directional_lights.directional_light[0], norm, view_direction);
     // Point lights
-    for(int i = 0; i < ubo.point_lights_count; i++){
+    for (int i = 0; i < ubo.point_lights_count; i++){
         result += calculate_point_light(ubo.point_lights.point_light[i], norm, in_world_position, view_direction);
     }
     // phase 3: Spot light
     //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);
 
     //final color
-    if ((in_pbr_flags & MESH_PIPELINE_COLOR) != 0u){
-        vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_color_idx))], in_uv);
-        vec4 colored_texture_result = texture_result * in_color;
-        vec4 final_result = vec4(result, 1.0) * colored_texture_result;
-        outColor = final_result;
-    }else{
-        outColor = in_color;
+    vec4 albedo = material.color;
+    if ((material.flags & MESH_PIPELINE_COLOR) != 0u){
+        vec4 texture_result = texture(texture_samples[(nonuniformEXT(material.color_index))], in_uv);
+        albedo *= texture_result;
     }
+    outColor = vec4(result, 1.0) * albedo;
+
 
     //LIGHTING INFO
     if (ubo.render_mode == 2){
-        vec4 final_result = vec4(result, 1.0) * (in_normal,1.0);
-        outColor = final_result;
+        albedo = vec4(result, 1.0);
+        // albedo = material.color * vec4(result,1.0) ; // if we want color info
+        outColor = albedo;
     }
 
     //NORMALS INFO
@@ -61,7 +59,7 @@ void main() {
     }
 
 
-//    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
+    //    outColor = vec4(1.0f, 0.5f, 0.5f,1.0f); // for testing
 
     /* PBR IMPLEMENTATION
 

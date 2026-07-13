@@ -16,10 +16,9 @@
 layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
-layout(location = 3) out flat uint out_color_idx;
-layout(location = 4) out vec3 out_world_position;
-layout(location = 5) out vec4 out_color;
-layout(location = 6) out flat uint out_pbr_flags;
+layout(location = 3) out vec3 out_world_position;
+layout(location = 4) out flat Pbr out_material;
+
 
 void main() {
 
@@ -47,11 +46,7 @@ void main() {
     //Material
     //if(material_instance.flags & PBR){};
     Pbr mat_data = pc_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
-
-    out_pbr_flags = mat_data.flags;
-
-    out_color_idx = mat_data.color_index;
-    out_color = mat_data.color;
+    out_material = mat_data;
 
 
     out_world_position = vec3(model * vec4(vertex, 1.0));
