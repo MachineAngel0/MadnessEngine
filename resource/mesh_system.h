@@ -37,14 +37,22 @@ typedef struct skeletal_mesh_handle
     u32 handle;
 } skeletal_mesh_handle;
 
-
+//TODO: look into how animations and frame time work together
+// also look into animation blending, since that will be pretty important for the turn based game
 
 void skinned_mesh_play_animation_id(Mesh_System* mesh_system, skeletal_mesh_handle handle, u32 animation_id, bool loop);
+// void skinned_mesh_play_animation_id2(Mesh_System* mesh_system, skeletal_mesh_handle handle, u32 animation_id, float start_time. bool loop);
+
+
+
 void skinned_mesh_play_animation_name(Mesh_System* mesh_system, skeletal_mesh_handle handle, const char* anim_name,
                                       bool loop);
 void skinned_mesh_stop_current_animation(Mesh_System* mesh_system, skeletal_mesh_handle handle);
 
-void animation_update_single_test(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator);
+u32 skinned_mesh_get_playing_animation_id(Mesh_System* mesh_system, skeletal_mesh_handle handle);
+float skinned_mesh_get_current_animation_time(Mesh_System* mesh_system, skeletal_mesh_handle handle);
+
+
 void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator);
 
 

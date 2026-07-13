@@ -245,7 +245,7 @@ void editor_ui_animation(Editor* editor)
                     mesh_system->skinned_mesh_instance[i].current_animation_index, 0,
                     animation_data->animations_count-1);
 
-
+                sk_mesh->current_time = 0;
             }
             madness_ui_check_box(STRING_STRLEN(buffer2) ,&sk_mesh->looping);
 
