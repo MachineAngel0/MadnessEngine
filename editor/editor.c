@@ -76,7 +76,7 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_TEXTURE_VIEWER:
         break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
-        insanity_ui_test();
+        // insanity_ui_test();
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test(editor->madness_ui);
@@ -132,10 +132,10 @@ void editor_ui(Editor* editor)
 }
 
 //testing bezier curves
-static mvec2 pos1 = {400, 400};
-static mvec2 pos2 = {500, 600};
-static mvec2 pos3 = {500, 100};
-static mvec2 pos4 = {600, 150};
+static vec2s pos1 = {400, 400};
+static vec2s pos2 = {500, 600};
+static vec2s pos3 = {500, 100};
+static vec2s pos4 = {600, 150};
 
 void editor_ui_debug(Editor* editor)
 {
@@ -160,7 +160,7 @@ void editor_ui_debug(Editor* editor)
 
         if (madness_ui_button(STRING("translate by 1")))
         {
-            mvec3 translate = {1, 1, 1};
+            vec3s translate = {1, 1, 1};
             transform_translate(&editor->resource_system->scene->transforms[0], translate);
         }
 
@@ -280,18 +280,18 @@ void editor_material_nodes(Editor* editor)
     String output_String[] = {STRING("out 1"), STRING("out 2"), STRING("out 3")};
     madness_ui_node(STRING("node"), inputs_String, ARRAY_SIZE(inputs_String), output_String, ARRAY_SIZE(output_String));
 
-    static mvec2 pos;
+    static vec2s pos;
     madness_ui_drag_test(&pos);
 
     //think of it like a param node
-    madness_ui_node_simple(STRING("node"), (mvec2){200, 200}, NULL, 0, output_String,
+    madness_ui_node_simple(STRING("node"), (vec2s){200, 200}, NULL, 0, output_String,
                            ARRAY_SIZE(output_String), 1);
 
 
     String inputs_String2[] = {STRING("other in 1"), STRING("other in 2")};
 
     //takes inputs from the param
-    madness_ui_node_simple(STRING("node"), (mvec2){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2), output_String,
+    madness_ui_node_simple(STRING("node"), (vec2s){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2), output_String,
                            ARRAY_SIZE(output_String), 2);
 
     // madness_ui_node_complex(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,

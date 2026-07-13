@@ -20,7 +20,7 @@ layout(location = 10) in flat uint out_offset;
 layout(location = 11) in flat uint out_vert_index;
 layout(location = 12) in flat uint out_base;
 layout(location = 13) in vec4 out_joints;
-layout(location = 14) in 0 vec4 out_weights;
+layout(location = 14) in vec4 out_weights;
 
 
 //look into subpasses/renderpasses for more/different out values

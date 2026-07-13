@@ -4,19 +4,13 @@
 Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system)
 {
 
-    Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State), TODO);
+    Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State), MEMORY_SUBSYSTEM_GAME);
     tetris_game_state->resource_system = resource_system;
-    tetris_game_state->madness_ui = madness_ui;
+
 
     u64 arena_sizes = MB(1);
-    void* arena_mem_block = memory_system_alloc(memory_system, arena_sizes, TODO);
-    void* frame_arena_mem_block = memory_system_alloc(memory_system, arena_sizes, TODO);
-    tetris_game_state->memory_tracker = memory_system_get_memory_tracker(
-        memory_system->memory_tracker_system, STRING("Tetris"), arena_sizes);
-
-    allocator_init(&tetris_game_state->arena, arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
-    allocator_init(&tetris_game_state->frame_arena, frame_arena_mem_block, arena_sizes, tetris_game_state->memory_tracker);
-
+    tetris_game_state->allocator = memory_system_allocator_create(memory_system, arena_sizes, MEMORY_SUBSYSTEM_GAME);
+    tetris_game_state->frame_allocator = memory_system_allocator_create(memory_system, arena_sizes, MEMORY_SUBSYSTEM_GAME);
 
     tetris_game_state->tetris_state = Tetris_State_Start;
     tetris_clock_init(tetris_game_state, 5.0f);
@@ -30,14 +24,14 @@ Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* re
 
 void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds)
 {
-    tetris->tetris_clock = allocator_alloc(&tetris->arena, sizeof(Tetris_Clock));
+    tetris->tetris_clock = allocator_alloc(tetris->allocator, sizeof(Tetris_Clock));
     tetris->tetris_clock->accumulated_time = block_move_speed_seconds;
     tetris->tetris_clock->move_block_trigger_seconds = block_move_speed_seconds;
 }
 
 void tetris_grid_init(Tetris_Game_State* tetris, int column, int row)
 {
-    tetris->tetris_grid = allocator_alloc(&tetris->arena, sizeof(Tetris_Grid));
+    tetris->tetris_grid = allocator_alloc(tetris->allocator, sizeof(Tetris_Grid));
     tetris->tetris_grid->column = column;
     tetris->tetris_grid->row = row;
 
@@ -62,7 +56,7 @@ void tetris_grid_init(Tetris_Game_State* tetris, int column, int row)
 
 void tetris_update(Tetris_Game_State* tetris, float delta_time)
 {
-    allocator_clear(&tetris->frame_arena);
+    allocator_clear(tetris->frame_allocator);
 
     tetris_update_clock(tetris, delta_time);
     if (tetris_has_clock_move_timer_elapsed(tetris))
@@ -120,13 +114,13 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             float y = YOFFSET
                 + i * CELL_SIZE; // Start from -0.9 for 20 rows
 
-            mvec3 sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
+            vec3s sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
 
             Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
-            sprite_create_minimal(&tetris->frame_arena);
-            sprite_data->pos = (mvec2){x, y};
-            sprite_data->size = (mvec2){BLOCK_SCALE,BLOCK_SCALE};
+            sprite_create_minimal(tetris->frame_allocator);
+            sprite_data->pos = (vec2s){x, y};
+            sprite_data->size = (vec2s){BLOCK_SCALE,BLOCK_SCALE};
             sprite_data->color = sprite_color;
             sprite_data->texture_index = 0;
             sprite_data->flags |= SPRITE_FLAG_COLOR;
@@ -137,11 +131,11 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
     Tetromino cur_tetromino = tetris->current_tetromino;
     for (int i = 0; i < TETROMINO_SIZE; i++)
     {
-        mvec2 pos = {
+        vec2s pos = {
             XOFFSET + ((cur_tetromino.tetromino_default_position[i].x + cur_tetromino.grid_position.x) * CELL_SIZE),
             YOFFSET + ((cur_tetromino.tetromino_default_position[i].y + cur_tetromino.grid_position.y) * CELL_SIZE),
         };
-        mvec2 size = {CELL_SIZE,CELL_SIZE};
+        vec2s size = {CELL_SIZE,CELL_SIZE};
 
         Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
         sprite_data->pos = pos;
@@ -309,7 +303,7 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
     case Tetris_Direction_DOWN:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
                                   tetris->current_tetromino.tetromino_default_position,
-                                  (mvec2){0, 1}))
+                                  (vec2s){0, 1}))
         {
             tetris->current_tetromino.grid_position.y++;
         }
@@ -320,14 +314,14 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
         break;
     case Tetris_Direction_RIGHT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, (mvec2){1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (vec2s){1, 0}))
         {
             tetris->current_tetromino.grid_position.x++;
         }
         break;
     case Tetris_Direction_LEFT:
         if (tetris_can_move_block(tetris, tetris->current_tetromino.grid_position,
-                                  tetris->current_tetromino.tetromino_default_position, (mvec2){-1, 0}))
+                                  tetris->current_tetromino.tetromino_default_position, (vec2s){-1, 0}))
         {
             tetris->current_tetromino.grid_position.x--;
         }
@@ -342,7 +336,7 @@ bool tetris_move_block(Tetris_Game_State* tetris, Tetris_Direction direction)
 }
 
 bool tetris_can_move_block(Tetris_Game_State* tetris, Tetris_Grid_Position tetromino_grid_position,
-                           Tetris_Grid_Position* tetromino_grid_default_position, mvec2 direction_vector)
+                           Tetris_Grid_Position* tetromino_grid_default_position, vec2s direction_vector)
 {
     int x_grid = tetromino_grid_position.x + direction_vector.x;
     int y_grid = tetromino_grid_position.y + direction_vector.y;
@@ -428,7 +422,7 @@ void tetris_rotate_block(Tetris_Game_State* tetris)
 
     //check if we can rotate at all
     if (tetris_can_move_block(tetris, cur_tetromino->grid_position, new_tetromino_grid_position,
-                              (mvec2){0, 0}))
+                              (vec2s){0, 0}))
     {
         //if we can rotate we set tetromino to temp, as it contains the new positions
         memcpy(cur_tetromino->tetromino_default_position, new_tetromino_grid_position,

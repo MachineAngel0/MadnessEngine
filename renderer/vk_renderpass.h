@@ -146,7 +146,7 @@ void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_com
 void vulkan_renderpass_create(
     vulkan_context* context,
     vulkan_renderpass* out_renderpass,
-    mvec4 screen_pos, mvec4 clear_color,
+    vec4s screen_pos, vec4s clear_color,
     f32 depth,
     u32 stencil);
 

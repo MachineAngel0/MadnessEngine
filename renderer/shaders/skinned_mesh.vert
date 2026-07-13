@@ -71,7 +71,7 @@ void main() {
     //get transform data
     mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
     vec4 skinned_vertex = skin_matrix *  vec4(vertex, 1.0);
-    gl_Position = ubo.proj * ubo.view * model * skinned_vertex;
+    gl_Position = ubo.proj * ubo.view * model * skin_matrix * vec4(vertex, 1.0);
 
     //Material
     Pbr mat_data = pc_skinned_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];

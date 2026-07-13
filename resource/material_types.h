@@ -11,7 +11,7 @@ typedef struct Material_Default
 {
     u32 flags;
 
-    mvec4 color; // this will be at a default of 1.0, which is white but won't affect the material
+    vec4s color; // this will be at a default of 1.0, which is white but won't affect the material
     //ALL FROM RANGES 0-1
     float ambient_strength; // optional for now we can remove it later
     float roughness_strength;

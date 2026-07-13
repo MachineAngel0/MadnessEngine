@@ -6,53 +6,53 @@
 
 typedef struct Transform
 {
-    mvec3 position; //literally no need to create a vec2 version of this
-    mquat rotation;
-    mvec3 scale;
-    mmat4 local;
+    vec3s position; //literally no need to create a vec2 version of this
+    versors rotation;
+    vec3s scale;
+    mat4s local;
     bool is_dirty;
     struct Transform* parent;
 } Transform;
 
 typedef struct Transform_SOA
 {
-    mvec3* position;
-    mquat* rotation;
-    mvec3* scale;
-    mmat4* local;
-}Transform_SOA;
+    vec3s* position;
+    versors* rotation;
+    vec3s* scale;
+    mat4s* local;
+} Transform_SOA;
 
 
 //create operations
-MAPI Transform* transform_from_position_rotation_scale(const mvec3 position, const mquat rotation, const mvec3 scale,
+MAPI Transform* transform_from_position_rotation_scale(vec3s position, versors rotation, vec3s scale,
                                                        Allocator* arena);
 MAPI Transform* transform_create(Allocator* arena);
 void transform_set_default(Transform* transform);
 
-MAPI Transform* transform_from_position(const mvec3 position, Allocator* arena);
-MAPI Transform* transform_from_rotation(const mquat rotation, Allocator* arena);
+MAPI Transform* transform_from_position(vec3s position, Allocator* arena);
+MAPI Transform* transform_from_rotation(versors rotation, Allocator* arena);
 
-MAPI Transform* transform_from_scale(const mvec3 scale, Allocator* arena);
+MAPI Transform* transform_from_scale(vec3s scale, Allocator* arena);
 
 
 //set operations
-MAPI void transform_set_position(Transform* t, const mvec3 position);
+MAPI void transform_set_position(Transform* t, vec3s position);
 
-MAPI void transform_set_rotation(Transform* t, const mquat rotation);
-MAPI void transform_set_scale(Transform* t, const mvec3 scale);
+MAPI void transform_set_rotation(Transform* t, versors rotation);
+MAPI void transform_set_scale(Transform* t, vec3s scale);
 MAPI void transform_set_parent(Transform* t, Transform* parent);
 
 //perform operation
-MAPI void transform_translate(Transform* t, const mvec3 position);
-MAPI void transform_rotate(Transform* t, const mquat rotation);
-MAPI void transform_scale(Transform* t, const mvec3 scale);
-MAPI mmat4 transform_get_local_internal(Transform* t);
+MAPI void transform_translate(Transform* t, vec3s position);
+MAPI void transform_rotate(Transform* t, versors rotation);
+MAPI void transform_scale(Transform* t, vec3s scale);
+MAPI mat4s transform_set_local_internal(Transform* t);
 
 //
 
-mmat4 transform_get_local(Transform* t);
+mat4s transform_get_local(Transform* t);
 
-mmat4 transform_get_world(Transform* t);
+mat4s transform_get_world(Transform* t);
 
 
 void transform_mark_dirty(Transform* t);

@@ -81,7 +81,7 @@ Material_Default* material_system_pbr_get(Material_System* material_system, Mate
 
 void material_system_pbr_init(Material_Default* out_data)
 {
-    out_data->color = vec4_one();
+    out_data->color = glms_vec4_one();
     out_data->ambient_strength = 1.0f;
     out_data->roughness_strength = 1.0f;
     out_data->metallic_strength = 1.0f;

@@ -166,12 +166,12 @@ Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph
     return attachment_handle;
 }
 
-void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, mvec4 screen_pos,
-                              mvec4 clear_color,
+void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, vec4s screen_pos,
+                              vec4s clear_color,
                               f32 depth, u32 stencil)
 {
-    out_renderpass->screen_pos = screen_pos;
-    out_renderpass->clear_color = clear_color;
+     glm_vec4_copy(screen_pos.raw, out_renderpass->screen_pos.raw);
+     glm_vec4_copy(clear_color.raw, out_renderpass->clear_color.raw);
     out_renderpass->depth = depth;
     out_renderpass->stencil = stencil;
 

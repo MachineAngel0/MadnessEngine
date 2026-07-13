@@ -39,7 +39,6 @@ typedef struct Material_Handle
 } Material_Handle;
 
 
-
 typedef struct Mesh_Asset_Handle
 {
     u32 handle;
@@ -51,19 +50,18 @@ typedef struct Sk_Mesh_Asset_Handle
 } Sk_Mesh_Asset_Handle;
 
 
- /*//used by the game/editor to modify meshes
+/*//used by the game/editor to modify meshes
 typedef struct Mesh_Handle
 {
-    u32 handle;
-    u32 submesh_idx;
+   u32 handle;
+   u32 submesh_idx;
 } Mesh_Handle;
 
 typedef struct Sk_Mesh_Handle
 {
-    u32 handle;
-    u32 submesh_idx;
+   u32 handle;
+   u32 submesh_idx;
 } Sk_Mesh_Handle;*/
-
 
 
 typedef struct Transform_Handle
@@ -155,7 +153,6 @@ typedef struct Madness_Font
 /// MESH ///
 
 
-
 // m1|m2|m3|m4|m5
 // batcn/mat1 = m1|m2|m5
 // batcn/ = m3|m4
@@ -208,8 +205,8 @@ typedef struct Animation_Sampler
     union
     {
         float* trs_float;
-        mvec3* trs_vec3;
-        mvec4* trs_vec4;
+        vec3s* trs_vec3;
+        vec4s* trs_vec4;
     } interperlation_data;
 
     u32 trs_interpolation_count;
@@ -231,16 +228,18 @@ typedef struct Animation
     // float current_time;
 } Animation;
 
+
 typedef struct Animation_Data
 {
     Joint* joints;
     u32 joint_count; // also the weight count
 
-    mmat4* resting_pose_local_matrix;
-    mmat4* inverse_bind_matrix;
+    mat4s* resting_pose_local_matrix;
+    mat4s* inverse_bind_matrix;
 
     Animation* animations;
     u32 animations_count;
+
 } Animation_Data;
 
 
@@ -263,10 +262,10 @@ typedef struct Mesh_Upload_Data
     u32 uv_bytes;
 
     //TODO: these technically could just be u8's
-    mvec4* tangent;
-    mvec3* pos;
-    mvec3* normal;
-    mvec2* uv;
+    vec4s* tangent;
+    vec3s* pos;
+    vec3s* normal;
+    vec2s* uv;
     u8* indices;
 } Mesh_Upload_Data;
 
@@ -279,14 +278,14 @@ typedef struct Skinned_Mesh_Upload_Data
     u64 joint_offset;
     u64 weight_offset;
 
-    mvec4* joints;
-    mvec4* weights;
+
+    vec4s* joints;
+    vec4s* weights;
 } Sk_Mesh_Upload_Data;
 
 
 typedef struct Mesh_Indirect_Draw
 {
-
     /*typedef struct VkDrawIndexedIndirectCommand {
 uint32_t    indexCount;
 uint32_t    instanceCount;
@@ -327,7 +326,6 @@ typedef struct SKMesh_GPU_Draw
 
 typedef struct Mesh_Data
 {
-
     //info for indirect draw
     u32 vertex_offset; //in vec3
     u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
@@ -350,7 +348,6 @@ typedef struct Mesh_Data
 
 typedef struct Sk_Mesh_Data
 {
-
     u64 joint_bytes;
     u64 joint_offset_vec4;
     u64 joint_offset_bytes;
@@ -376,7 +373,6 @@ typedef struct Mesh_Parent_Instance
 
     u32 mesh_count;
     Mesh_Instance* mesh_instances_array;
-
 } Mesh_Parent_Instance;
 
 typedef struct Sk_Mesh_Instance
@@ -395,11 +391,11 @@ typedef struct Sk_Mesh_Parent_Instance
     Sk_Mesh_Instance* sk_mesh_instance_array;
 
     //generated every frame
-    mmat4* gpu_matrix;
+    mat4s* gpu_matrix;
 
-    mvec3* local_translation;
-    mquat* local_rotation;
-    mvec3* local_scale;
+    vec3s* local_translation;
+    versors* local_rotation;
+    vec3s* local_scale;
 
     u32 joint_count;
 
@@ -474,7 +470,6 @@ typedef enum Mesh_PBR_Flags
 } Mesh_PBR_Flags;
 
 
-
 typedef struct PC_Mesh
 {
     VkDeviceAddress draw_data_buffer;
@@ -492,7 +487,7 @@ typedef struct PC_Skinned_Mesh
 {
     VkDeviceAddress draw_data_buffer;
     VkDeviceAddress material_buffer;
-}PC_Skinned_Mesh;
+} PC_Skinned_Mesh;
 
 typedef struct Material_Batch
 {
@@ -508,7 +503,6 @@ typedef struct Material_Batch
     Shader_Stage_Type shader_stage;
     Shader_Pass_Type shader_pass;
     Shader_Mesh_Type mesh_type;
-
 } Material_Batch;
 
 
@@ -530,7 +524,6 @@ typedef struct Material_System
     //sort material batches by their pass type
     Material_Batch oqaque_batch[100];
     u32 oqaque_batch_count;
-
 } Material_System;
 
 
@@ -542,7 +535,7 @@ typedef struct Sprite_System
 {
     Allocator* allocator;
     Frame_Allocator* frame_arena;
-    mvec2 screen_size; // grab every frame on start
+    vec2s screen_size; // grab every frame on start
 
 
     Sprite sprites[4]; // literally just need one quad for a vertex buffer
@@ -630,7 +623,6 @@ typedef struct Mesh_System
     size_t skinned_matrix_offset_size; //offset by mat4's
 
 
-
     DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix_array;
 
 
@@ -649,7 +641,7 @@ typedef struct Scene
     Transform* transforms;
     int transform_count;
 
-    mmat4* world_transforms; //the count is the same as the transform_count
+    mat4s* world_transforms; //the count is the same as the transform_count
 
     //TODO: i dont need it rn but could be useful
     // since we know static doesn't change we can cache the transforms
@@ -673,7 +665,7 @@ typedef struct Render_Packet_3D
     u32 prb_count;
     u32 prb_bytes;
 
-    mmat4* world_space_matrix_array;
+    mat4s* world_space_matrix_array;
     u32 world_space_matrix_count;
 
     DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix;

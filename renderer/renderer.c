@@ -120,8 +120,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_renderpass_create(
         vk_context,
         &vk_context->main_renderpass,
-        (mvec4){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
-        (mvec4){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
+        (vec4s){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
+        (vec4s){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
 
     vulkan_renderpass_create_new(vk_context);
 
@@ -301,7 +301,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.point_lights_address = point_light_buffer_address;
     ubo.point_lights_count = renderer->light_system->point_light_count;
     ubo.camera_position = renderer->main_camera.viewPos;
-    ubo.screem_dimensions = (mvec2){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
+    ubo.screem_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
     ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;
 

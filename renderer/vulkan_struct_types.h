@@ -71,8 +71,8 @@ typedef struct Vulkan_Texture
 typedef struct vulkan_renderpass
 {
     VkRenderPass handle;
-    mvec4 screen_pos;
-    mvec4 clear_color;
+    vec4s screen_pos;
+    vec4s clear_color;
 
     f32 depth;
     u32 stencil;
@@ -310,9 +310,9 @@ typedef struct vulkan_shader_default
 
 typedef struct vertex_3d
 {
-    mvec3 position;
-    mvec3 color;
-    mvec2 padding;
+    vec3s position;
+    vec3s color;
+    vec2s padding;
 } vertex_3d;
 
 typedef struct vertex_tex
@@ -320,9 +320,9 @@ typedef struct vertex_tex
     // alignas(16) vec3 position;
     // alignas(16) vec3 color;
     // alignas(16) vec2 texture;
-    mvec3 position;
-    mvec3 color;
-    mvec2 texture;
+    vec3s position;
+    vec3s color;
+    vec2s texture;
 } vertex_tex;
 
 
@@ -399,8 +399,8 @@ typedef struct vulkan_context
 
 typedef struct Directional_Light
 {
-    mvec3 direction;
-    mvec3 color;
+    vec3s direction;
+    vec3s color;
 
     //strength values
     float diffuse;
@@ -410,8 +410,8 @@ typedef struct Directional_Light
 typedef struct Point_Light
 {
     //point lights go out in all directions
-    mvec4 position;
-    mvec4 color;
+    vec4s position;
+    vec4s color;
 
     //light fall offs
     float constant;
@@ -428,9 +428,9 @@ typedef struct Point_Light
 typedef struct Spot_Light
 {
     //TODO:
-    mvec4 position;
-    mvec4 color;
-    mvec3 direction;
+    vec4s position;
+    vec4s color;
+    vec3s direction;
 
     float cutOff;
     float outerCutOff;
@@ -446,7 +446,7 @@ typedef struct Spot_Light
 typedef struct Area_Light
 {
     //TODO:
-    mvec3 position;
+    vec3s position;
 } Area_Light;
 
 typedef struct Light_System
@@ -468,8 +468,8 @@ typedef struct Light_System
 typedef struct global_ubo
 {
     //this can basically be as largae as a i want, the max limit is 64 kib
-    mmat4 view;
-    mmat4 proj;
+    mat4s view;
+    mat4s proj;
 
 
     VkDeviceAddress directional_lights_address;
@@ -479,8 +479,8 @@ typedef struct global_ubo
     u32 point_lights_count;
 
     //camera
-    mvec4 camera_position;
-    mvec2 screem_dimensions;
+    vec4s camera_position;
+    vec2s screem_dimensions;
 
     f32 padding;
 

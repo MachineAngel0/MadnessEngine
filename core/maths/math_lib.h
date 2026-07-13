@@ -5,9 +5,6 @@
 #include "platform.h"
 #include <math.h>
 
-//FUTURE: rn im not using glm/cglm, should probably switch
-// #include "cglm/cglm.h"
-// #include <cglm/struct.h>"
 
 
 
@@ -18,7 +15,7 @@
 
 
 
-/*** MAX/MIN FUNCTIONS ***/
+//// MAX/MIN FUNCTIONS ////
 int32_t max_i(const int32_t a, const int32_t b)
 {
 
@@ -56,8 +53,215 @@ float min_f(const float a, const float b)
     return b;
 }
 
+static const vec3s COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
+static const vec3s COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
+static const vec3s COLOR_GREY = {0.5f, 0.5f, 0.5f};
+static const vec3s COLOR_WHITE = {1.0f, 1.0f, 1.0f};
+static const vec3s COLOR_RED = {1.0f, 0.0f, 0.0f};
+static const vec3s COLOR_GREEN = {0.0f, 1.0f, 0.0f};
+static const vec3s COLOR_BLUE = {0.0f, 0.0f, 1.0f};
+static const vec3s COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
+static const vec3s COLOR_MAGENTA = {1.0f, 0.0f, 1.0f};
+static const vec3s COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
+static const vec3s COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
+static const vec3s COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
 
+//Purple Color Pallette
+static const vec3s COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_PURPLE_STRONG = {.x = 96.f / 255.f, .y = 31.f / 255.f, .z = 158.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f / 255.f, .y = 162.f / 255.f, .z = 201.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f};
+static const vec3s COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
+
+
+static const vec4s COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const vec4s COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
+static const vec4s COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
+static const vec4s COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
+static const vec4s COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
+
+
+
+/*** RANDOM ***/
+static bool rand_seeded = false;
+
+void rand_reseed()
+{
+    srand(platform_get_absolute_time());
+}
+
+uint32_t randi(void)
+{
+    if (!rand_seeded)
+    {
+        srand(platform_get_absolute_time());
+        rand_seeded = true;
+    }
+    return rand();
+}
+
+uint32_t rand_range_i(uint32_t min, uint32_t max)
+{
+    if (!rand_seeded)
+    {
+        srand(platform_get_absolute_time());
+        rand_seeded = true;
+    }
+    return (rand() % (max - min + 1)) + min;
+}
+
+static float randf()
+{
+    if (!rand_seeded)
+    {
+        srand((u32)platform_get_absolute_time());
+        rand_seeded = true;
+    }
+    return (rand() / (f32)RAND_MAX);
+}
+
+float rand_range_f(const float min, const float max)
+{
+    if (!rand_seeded)
+    {
+        srand((u32)platform_get_absolute_time());
+        rand_seeded = true;
+    }
+    return min + ((float)rand() / ((f32)RAND_MAX / (max - min)));
+}
+
+
+/*** CLAMP ***/
+
+MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_t max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE uint32_t clamp_uint(const uint32_t cur_val, const uint32_t min, const uint32_t max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE float clamp_float(const float cur_val, const float min, const float max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+/*** EQUAL ***/
+
+bool equal_f(const float a, const float b, float tolerance)
+{
+    // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+
+    //  Epsilon comparisons
+    // return fabs(a - b) <= tolerance;
+    // Relative Epsilon comparisons
+
+    // Calculate the absolute difference.
+    float diff = fabs(a - b);
+    float A = fabs(a);
+    float B = fabs(b);
+    // Find the largest
+    float largest = (B > A) ? B : A;
+
+    //TODO: debug ifdef
+    // printf("a: %f, b: %f, A; %f, B: %f, largest: %f, tolerance: %f\n", a, b, A, B, largest, tolerance);
+
+    if (diff <= largest * tolerance) { return true; }
+    return false;
+}
+
+bool equal_d(const double a, const double b, double tolerance)
+{
+    // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+
+    //  Epsilon comparisons
+    // return fabs(a - b) <= tolerance;
+    // Relative Epsilon comparisons
+
+    // Calculate the absolute difference.
+    double diff = fabs(a - b);
+    double A = fabs(a);
+    double B = fabs(b);
+    // Find the largest
+    double largest = (B > A) ? B : A;
+
+    //TODO: debug ifdef
+    // printf("a: %f, b: %f, A; %f, B: %f, largest: %f, tolerance: %f\n", a, b, A, B, largest, tolerance);
+
+    if (diff <= largest * tolerance) { return true; }
+    return false;
+}
+
+#define EQUAL_F(a, b) equal_f(a, b, FLT_EPSILON)
+#define EQUAL_D(a, b) equal_d(a, b, FLT_EPSILON)
+
+
+//CONVERSIONS
+
+// DEG AND RAD
+MINLINE f32 deg_to_rad(const f32 degrees)
+{
+    return degrees * DEG2RAD;
+}
+
+MINLINE f32 rad_to_deg(const f32 radians)
+{
+    return radians * RAD2DEG;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//NOTE: NOT IN USE ANYMORE
 // VEC2
+/*
 MINLINE mvec2 vec2_zero(void)
 {
     return (mvec2){.x = 0.0f, .y = 0.0f};
@@ -1435,16 +1639,7 @@ MINLINE mquat quat_slerp(const mquat q_0, const mquat q_1, const f32 percentage)
     };
 }
 
-// DEG AND RAD
-MINLINE f32 deg_to_rad(const f32 degrees)
-{
-    return degrees * DEG2RAD;
-}
 
-MINLINE f32 rad_to_deg(const f32 radians)
-{
-    return radians * RAD2DEG;
-}
 
 // CONVERSIONS
 MINLINE mvec2 vec3_to_vec2(const mvec3 v)
@@ -1846,7 +2041,7 @@ inline void cartesian_to_spherical(const float x, const float y, const float z, 
 }
 
 
-/*COLOR*/
+///COLOR///
 
 inline mvec3 rgb_normalize(const mvec3 rgb)
 {
@@ -2003,143 +2198,8 @@ static const mvec4 COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
 static const mvec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
 static const mvec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 
-
-/*** RANDOM ***/
-static bool rand_seeded = false;
-
-void rand_reseed()
-{
-    srand(platform_get_absolute_time());
-}
-
-uint32_t randi(void)
-{
-    if (!rand_seeded)
-    {
-        srand(platform_get_absolute_time());
-        rand_seeded = true;
-    }
-    return rand();
-}
-
-uint32_t rand_range_i(uint32_t min, uint32_t max)
-{
-    if (!rand_seeded)
-    {
-        srand(platform_get_absolute_time());
-        rand_seeded = true;
-    }
-    return (rand() % (max - min + 1)) + min;
-}
-
-static float randf()
-{
-    if (!rand_seeded)
-    {
-        srand((u32)platform_get_absolute_time());
-        rand_seeded = true;
-    }
-    return (rand() / (f32)RAND_MAX);
-}
-
-float rand_range_f(const float min, const float max)
-{
-    if (!rand_seeded)
-    {
-        srand((u32)platform_get_absolute_time());
-        rand_seeded = true;
-    }
-    return min + ((float)rand() / ((f32)RAND_MAX / (max - min)));
-}
+*/
 
 
-/*** CLAMP ***/
 
-MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_t max)
-{
-    if (cur_val > max)
-    {
-        return max;
-    }
-    if (cur_val < min)
-    {
-        return min;
-    }
-    return cur_val;
-}
-
-MINLINE uint32_t clamp_uint(const uint32_t cur_val, const uint32_t min, const uint32_t max)
-{
-    if (cur_val > max)
-    {
-        return max;
-    }
-    if (cur_val < min)
-    {
-        return min;
-    }
-    return cur_val;
-}
-
-MINLINE float clamp_float(const float cur_val, const float min, const float max)
-{
-    if (cur_val > max)
-    {
-        return max;
-    }
-    if (cur_val < min)
-    {
-        return min;
-    }
-    return cur_val;
-}
-
-/*** EQUAL ***/
-
-bool equal_f(const float a, const float b, float tolerance)
-{
-    // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-
-    //  Epsilon comparisons
-    // return fabs(a - b) <= tolerance;
-    // Relative Epsilon comparisons
-
-    // Calculate the absolute difference.
-    float diff = fabs(a - b);
-    float A = fabs(a);
-    float B = fabs(b);
-    // Find the largest
-    float largest = (B > A) ? B : A;
-
-    //TODO: debug ifdef
-    // printf("a: %f, b: %f, A; %f, B: %f, largest: %f, tolerance: %f\n", a, b, A, B, largest, tolerance);
-
-    if (diff <= largest * tolerance) { return true; }
-    return false;
-}
-
-bool equal_d(const double a, const double b, double tolerance)
-{
-    // https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-
-    //  Epsilon comparisons
-    // return fabs(a - b) <= tolerance;
-    // Relative Epsilon comparisons
-
-    // Calculate the absolute difference.
-    double diff = fabs(a - b);
-    double A = fabs(a);
-    double B = fabs(b);
-    // Find the largest
-    double largest = (B > A) ? B : A;
-
-    //TODO: debug ifdef
-    // printf("a: %f, b: %f, A; %f, B: %f, largest: %f, tolerance: %f\n", a, b, A, B, largest, tolerance);
-
-    if (diff <= largest * tolerance) { return true; }
-    return false;
-}
-
-#define EQUAL_F(a, b) equal_f(a, b, FLT_EPSILON)
-#define EQUAL_D(a, b) equal_d(a, b, FLT_EPSILON)
 #endif //MATH_LIB_H

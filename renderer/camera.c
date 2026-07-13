@@ -13,9 +13,9 @@ void camera_init(camera* out_camera)
     const float ZFAR = 100.0f;
 
 
-    out_camera->rotation = vec3_zero();
-    out_camera->pos = vec3_zero();
-    out_camera->viewPos = vec4_zero();
+    out_camera->rotation = glms_vec3_zero();
+    out_camera->pos = glms_vec3_zero();
+    glm_vec4_zero( out_camera->viewPos.raw);
 
     out_camera->rotation_speed = SENSITIVITY;
     out_camera->move_speed = MOVE_SPEED;
@@ -25,8 +25,8 @@ void camera_init(camera* out_camera)
     out_camera->znear = ZNEAR;
     out_camera->zfar = ZFAR;
 
-    out_camera->projection;
-    out_camera->view;
+    out_camera->projection = glms_mat4_identity();
+    out_camera->view= glms_mat4_identity();
 
     out_camera->pitch = 90.0f;
     out_camera->yaw = 180.0f;
@@ -52,30 +52,30 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    mvec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
-    forward = vec3_normalize_functional(forward);
+    vec3s forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+    forward = glms_vec3_normalize(forward);
 
-    mvec3 right = vec3_normalize_functional(vec3_cross(forward, vec3_up()));
+    vec3s right = glms_vec3_normalize(glms_vec3_cross(GLMS_YUP, forward ));
 
     if (movement_direction == CAMERA_MOVEMENT_FORWARD)
     {
-        mvec3 t = vec3_mul_scalar(forward, velocity);
-        cam->pos = vec3_sub(cam->pos, t);
+        vec3s t = glms_vec3_scale(forward, velocity);
+        cam->pos = glms_vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_BACKWARD)
     {
-        mvec3 t = vec3_mul_scalar(forward, velocity);
-        cam->pos = vec3_add(cam->pos, t);
+        vec3s t = glms_vec3_scale(forward, velocity);
+        cam->pos = glms_vec3_sub(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_LEFT)
     {
-        mvec3 t = vec3_mul_scalar(right, velocity);
-        cam->pos = vec3_add(cam->pos, t);
+        vec3s t = glms_vec3_scale(right, velocity);
+        cam->pos = glms_vec3_add(cam->pos, t);
     }
     if (movement_direction == CAMERA_MOVEMENT_RIGHT)
     {
-        mvec3 t = vec3_mul_scalar(right, velocity);
-        cam->pos = vec3_sub(cam->pos, t);
+        vec3s t = glms_vec3_scale(right, velocity);
+        cam->pos = glms_vec3_sub(cam->pos, t);
     }
 }
 
@@ -83,7 +83,7 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
 // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
 void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
 {
-    cam->yaw += x_offset * cam->rotation_speed * dt;
+    cam->yaw -= x_offset * cam->rotation_speed * dt;
     cam->pitch += y_offset * cam->rotation_speed * dt;
 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
@@ -111,7 +111,6 @@ void process_mouse_scroll(camera* cam, float y_offset)
 
 void camera_update(Input_System* input_system, camera* cam, float dt)
 {
-
     if (input_is_key_pressed(input_system, KEY_W))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_FORWARD, dt);
@@ -129,14 +128,21 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
         camera_process_keyboard(cam, CAMERA_MOVEMENT_RIGHT, dt);
     }
 
-    s16 x;
-    s16 y;
-    input_get_mouse_change(input_system, &x, &y);
-    camera_process_mouse_movement(cam, dt, -x, -y, true);
 
+    if (input_is_key_pressed(input_system, KEY_LSHIFT))
+    {
+        s16 x;
+        s16 y;
+        input_get_mouse_change(input_system, &x, &y);
+        camera_process_mouse_movement(cam, dt, x, y, true);
+    }
+    else
+    {
+        camera_process_mouse_movement(cam, dt, 0, 0, true);
+
+    }
 
     //TODO:this is bugged, its acting like on pressed
-    /*
     if (input_key_released_unique(input_system, KEY_Q))
     {
         process_mouse_scroll(cam, -10.0f);
@@ -144,17 +150,53 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
     if (input_key_released_unique(input_system, KEY_E))
     {
         process_mouse_scroll(cam, 10.0f);
-    }*/
+    }
 }
 
-mmat4 camera_get_view_matrix(camera* cam)
+mat4s camera_get_view_matrix(camera* cam)
 {
-    mmat4 temp_view = mat4_translation((mvec3){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
-    return mat4_inverse(temp_view);
+    // glms_look()
+    // mat4s temp_view = mat4_translation((vec3s){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
+    // return glms_mat4_inv(temp_view);
+    //TODO:
+    return glms_mat4_identity();
 }
 
-mmat4 camera_get_fps_view_matrix(camera* cam)
+mat4s camera_get_fps_view_matrix(camera* cam)
 {
+    /*float pitch = deg_to_rad(cam->pitch);
+    float yaw = deg_to_rad(cam->yaw);
+
+    float cos_pitch = cosf(pitch);
+    float sin_pitch = sinf(pitch);
+    float cos_yaw = cosf(yaw);
+    float sin_yaw = sinf(yaw);
+
+    // Standard FPS forward vector (left-handed)
+    vec3s forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+    forward = glms_vec3_normalize(forward);
+
+    // Compute right & up
+    vec3s worldUp = glms_vec3_up();
+    vec3s right = glms_vec3_normalize(glms_vec3_cross(forward, worldUp));
+    vec3s camera_up = glms_vec3_cross(forward, right);
+
+    // Build view matrix directly
+
+    mat4s view = (mat4s){
+        .raw[0] = (vec4s){.raw[0] = right.x, .raw[1] =camera_up.x, .raw[2] =forward.x, .raw[3] = 0.0f},
+        .raw[1] = (vec4s){right.y, camera_up.y, forward.y, 0.0f},
+        .raw[2] = (vec4s){right.z, camera_up.z, forward.z, 0.0f},
+        .raw[3] = (vec4s){
+            -glms_vec3_dot(right, cam->pos),
+            -glms_vec3_dot(camera_up, cam->pos),
+            -glms_vec3_dot(forward, cam->pos),
+            1.0f
+        }
+    };
+
+    return view;*/
+
     float pitch = deg_to_rad(cam->pitch);
     float yaw = deg_to_rad(cam->yaw);
 
@@ -164,34 +206,22 @@ mmat4 camera_get_fps_view_matrix(camera* cam)
     float sin_yaw = sinf(yaw);
 
     // Standard FPS forward vector (left-handed)
-    mvec3 forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
-    forward = vec3_normalize_functional(forward);
+    vec3s forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+    forward = glms_vec3_normalize(forward);
 
-    // Compute right & up
-    mvec3 worldUp = vec3_up();
-    mvec3 right = vec3_normalize_functional(vec3_cross(worldUp, forward));
-    mvec3 up = vec3_cross(forward, right);
+    vec3s world_up = (vec3s){0.0f, 1.0f, 0.0f}; // GLM_YUP cast to vec3s
 
-    // Build view matrix directly
-    mmat4 view = (mmat4){
-        .rows[0] = (mvec4){right.x, up.x, forward.x, 0.0f},
-        .rows[1] = (mvec4){right.y, up.y, forward.y, 0.0f},
-        .rows[2] = (mvec4){right.z, up.z, forward.z, 0.0f},
-        .rows[3] = (mvec4){
-            -vec3_dot(right, cam->pos),
-            -vec3_dot(up, cam->pos),
-            -vec3_dot(forward, cam->pos),
-            1.0f
-        }
-    };
+    vec3s target = glms_vec3_add(cam->pos, forward);
 
-    return view;
+    return glms_lookat(cam->pos, target, world_up);
+
+
 }
 
 
-mmat4 camera_get_projection(camera* cam, const float width, const float height)
+mat4s camera_get_projection(camera* cam, const float width, const float height)
 {
-    return mat4_perspective(cam->fov, (float)(width / height), cam->znear, cam->zfar);
+    return glms_perspective(deg_to_rad(cam->fov), (float)(width / height), cam->znear, cam->zfar);
     // float fov = 1.5;
     // return mat4_orthographic(-10 * fov, 10 * fov, -10 * fov, 10 * fov, cam->znear, cam->zfar);
 }

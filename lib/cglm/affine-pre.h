@@ -234,7 +234,7 @@ glm_rotate_z(mat4 m, float angle, mat4 dest) {
 CGLM_INLINE
 void
 glm_rotate(mat4 m, float angle, vec3 axis) {
-  mat4 rot;
+  CGLM_ALIGN_MAT mat4 rot;
   glm_rotate_make(rot, angle, axis);
   glm_mul_rot(m, rot, m);
 }

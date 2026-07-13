@@ -166,6 +166,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         // animation_update_single_test(application_core->resource_system->mesh_system,
         //                              application_core->clock.delta_time,
         //                              application_core->resource_system->frame_allocator);
+
         animation_update(application_core->resource_system->mesh_system,
                                      application_core->clock.delta_time,
                                      application_core->resource_system->frame_allocator);

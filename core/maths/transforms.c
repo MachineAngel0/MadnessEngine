@@ -4,7 +4,7 @@
 
 
 //create operations
-Transform* transform_from_position_rotation_scale(const mvec3 position, const mquat rotation, const mvec3 scale,
+Transform* transform_from_position_rotation_scale(const vec3s position, const versors rotation, const vec3s scale,
                                                   Allocator* arena)
 {
     Transform* out_transform = allocator_alloc(arena, sizeof(Transform));
@@ -17,55 +17,55 @@ Transform* transform_from_position_rotation_scale(const mvec3 position, const mq
 Transform* transform_create(Allocator* arena)
 {
     Transform* out_transform =
-        transform_from_position_rotation_scale(vec3_zero(), quat_identity(), vec3_one(), arena);
+        transform_from_position_rotation_scale(glms_vec3_zero(), glms_quat_identity(), glms_vec3_one(), arena);
     return out_transform;
 }
 
 void transform_set_default(Transform* transform)
 {
-    *transform = (Transform){vec3_zero(), quat_identity(), vec3_one()};
-    transform_get_local_internal(transform);
+    *transform = (Transform){glms_vec3_zero(), glms_quat_identity(), glms_vec3_one()};
+    transform_set_local_internal(transform);
 
     transform->is_dirty = true;
 }
 
-Transform* transform_from_position(const mvec3 position, Allocator* arena)
+Transform* transform_from_position(const vec3s position, Allocator* arena)
 {
     Transform* out_transform =
-        transform_from_position_rotation_scale(position, quat_identity(), vec3_one(), arena);
+        transform_from_position_rotation_scale(position, glms_quat_identity(), glms_vec3_one(), arena);
     return out_transform;
 }
 
-Transform* transform_from_rotation(const mquat rotation, Allocator* arena)
+Transform* transform_from_rotation(const versors rotation, Allocator* arena)
 {
     Transform* out_transform =
-        transform_from_position_rotation_scale(vec3_zero(), rotation, vec3_one(), arena);
+        transform_from_position_rotation_scale(glms_vec3_zero(), rotation, glms_vec3_one(), arena);
     return out_transform;
 }
 
 
-Transform* transform_from_scale(const mvec3 scale, Allocator* arena)
+Transform* transform_from_scale(const vec3s scale, Allocator* arena)
 {
     Transform* out_transform =
-        transform_from_position_rotation_scale(vec3_zero(), quat_identity(), scale, arena);
+        transform_from_position_rotation_scale(glms_vec3_zero(), glms_quat_identity(), scale, arena);
     return out_transform;
 }
 
 
 //set operations
-void transform_set_position(Transform* t, const mvec3 position)
+void transform_set_position(Transform* t, const vec3s position)
 {
     t->position = position;
     t->is_dirty = true;
 };
 
-void transform_set_rotation(Transform* t, const mquat rotation)
+void transform_set_rotation(Transform* t, const versors rotation)
 {
     t->rotation = rotation;
     t->is_dirty = true;
 };
 
-void transform_set_scale(Transform* t, const mvec3 scale)
+void transform_set_scale(Transform* t, const vec3s scale)
 {
     t->scale = scale;
     t->is_dirty = true;
@@ -78,40 +78,34 @@ void transform_set_parent(Transform* t, Transform* parent)
 
 
 //perform operation
-void transform_translate(Transform* t, const mvec3 position)
+void transform_translate(Transform* t, const vec3s position)
 {
-    t->position = vec3_add(t->position, position);
+    t->position = glms_vec3_add(t->position, position);
     t->is_dirty = true;
 }
 
-void transform_rotate(Transform* t, const mquat rotation)
+void transform_rotate(Transform* t, const versors rotation)
 {
-    t->rotation = quat_mul(t->rotation, rotation);
+    t->rotation = glms_quat_mul(t->rotation, rotation);
     t->is_dirty = true;
 }
 
-void transform_scale(Transform* t, const mvec3 scale)
+void transform_scale(Transform* t, const vec3s scale)
 {
-    t->scale = vec3_mul(t->scale, scale);
+    t->scale = glms_vec3_mul(t->scale, scale);
     t->is_dirty = true;
 }
 
-mmat4 transform_get_local_internal(Transform* t)
+mat4s transform_set_local_internal(Transform* t)
 {
-    mmat4 tr = mat4_mul(quat_to_mat4(t->rotation), mat4_translation(t->position));
-    tr = mat4_mul(mat4_scale(t->scale), tr);
-    t->local = tr;
-    t->is_dirty = false;
-    return t->local;
+    return glms_build_local_matrix(t->position, t->rotation, t->scale);
 }
 
-mmat4 transform_get_local(Transform* t)
+mat4s transform_get_local(Transform* t)
 {
     if (t->is_dirty)
     {
-        mmat4 tr = mat4_mul(quat_to_mat4(t->rotation), mat4_translation(t->position));
-        tr = mat4_mul(mat4_scale(t->scale), tr);
-        t->local = tr;
+        t->local =  transform_set_local_internal(t);
         t->is_dirty = false;
         return t->local;
     }
@@ -119,13 +113,13 @@ mmat4 transform_get_local(Transform* t)
 
 }
 
-mmat4 transform_get_world(Transform* t)
+mat4s transform_get_world(Transform* t)
 {
-    mmat4 l = transform_get_local(t);
+    mat4s l = transform_get_local(t);
     if (t->parent)
     {
-        mmat4 p = transform_get_world(t->parent);
-        return mat4_mul(l, p);
+        mat4s p = transform_get_world(t->parent);
+        return glms_mat4_mul(l, p);
     }
     return l;
 }

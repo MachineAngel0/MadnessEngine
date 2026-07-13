@@ -29,8 +29,8 @@ Light_System* light_system_init(Renderer* renderer)
     }
 
     //TODO: remove later just some test lights for now
-    out_light_system->directional_lights[0].color = (mvec3){1.0f, 0.0f, 0.5f};
-    out_light_system->point_lights[0].color = (mvec4){1.0f, 1.0f, 0.0f, 0.0f};
+    out_light_system->directional_lights[0].color = (vec3s){1.0f, 0.0f, 0.5f};
+    out_light_system->point_lights[0].color = (vec4s){1.0f, 1.0f, 0.0f, 0.0f};
 
 
     //TODO: allocate larger sizes for the buffers
@@ -97,8 +97,8 @@ void light_system_update(Renderer* renderer, Light_System* light_system, vulkan_
 
 void directional_light_init(Directional_Light* light)
 {
-    light->direction = vec3_zero();
-    light->color = vec3_zero();
+    light->direction = glms_vec3_zero();
+    light->color = glms_vec3_zero();
 
     light->diffuse = 0.5f;
     light->specular = 0.5f;
@@ -106,8 +106,8 @@ void directional_light_init(Directional_Light* light)
 
 void point_light_init(Point_Light* light)
 {
-    light->position = vec4_zero();
-    light->color = vec4_one();
+    light->position = glms_vec4_zero();
+    light->color = glms_vec4_one();
 
     light->diffuse = 0.5f;
     light->specular = 0.5f;
@@ -123,9 +123,9 @@ void point_light_init(Point_Light* light)
 
 void spot_light_init(Spot_Light* light)
 {
-    light->position = vec4_zero();
-    light->color = vec4_one();
-    light->direction = vec3_one();
+    light->position = glms_vec4_zero();
+    light->color = glms_vec4_one();
+    light->direction = glms_vec3_one();
 
     light->diffuse = 0.5f;
     light->specular = 0.5f;

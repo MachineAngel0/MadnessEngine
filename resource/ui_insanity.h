@@ -64,20 +64,20 @@ typedef struct Insanity_UI_Padding
 
 typedef struct Insanity_UI_Editor_Style
 {
-    mvec3 layout_color;
-    mvec3 layout_accent_color;
+    vec3s layout_color;
+    vec3s layout_accent_color;
 
-    mvec3 text_color;
-    mvec3 textbox_color;
+    vec3s text_color;
+    vec3s textbox_color;
 
-    mvec3 custom_widget_color;
+    vec3s custom_widget_color;
 
     //colors for things like buttons and checkboxes
-    mvec3 color;
-    mvec3 hovered_color;
-    mvec3 pressed_color;
+    vec3s color;
+    vec3s hovered_color;
+    vec3s pressed_color;
 
-    mvec3 outline_color;
+    vec3s outline_color;
 } Insanity_UI_Editor_Style;
 
 
@@ -89,15 +89,15 @@ typedef struct Insanity_UI_Node
     UI_Property_Flags ui_flags;
 
     // screen size and pos, not normalized
-    mvec2 pos;
-    mvec2 size;
+    vec2s pos;
+    vec2s size;
     float rotation; // degrees, but gets converted to radians at draw time
 
     //rounded
     float rounded_radius; // 0-1 range
 
     //outline
-    mvec3 outline_color;
+    vec3s outline_color;
     float outline_thickness; // 0-1 :: ideally should be something small like 0.05-0.1
 
     //for circles
@@ -107,8 +107,8 @@ typedef struct Insanity_UI_Node
     u64 hash_id;
 
     Texture_Handle texture_handle;
-    mvec2 uv_offset;
-    mvec2 uv_size;
+    vec2s uv_offset;
+    vec2s uv_size;
     //Text
     String text; // will also need the texture handle
     float text_total_width;
@@ -116,16 +116,16 @@ typedef struct Insanity_UI_Node
     Texture_Handle font_handle;
 
     //colors
-    mvec3 color;
-    mvec3 background_color;
+    vec3s color;
+    vec3s background_color;
 
     //TODO: for widgets that need some sort of child node, like a scroll box
     struct Insanity_UI_Node* parent;
     struct Insanity_UI_Node* children[INSANITY_MAX_UI_NODE_CHILD_COUNT];
     u32 child_count;
 
-    mvec2 padding;
-    mvec2 child_padding;
+    vec2s padding;
+    vec2s child_padding;
     Insanity_UI_Layout layout;
 
 
@@ -187,7 +187,7 @@ typedef struct Insanity_UI
     // for the backspace functionality of the textbox
 
 
-    mvec2 screen_size; // this gets queried every frame
+    vec2s screen_size; // this gets queried every frame
 
     Insanity_UI_Editor_Style editor_style;
 
@@ -258,8 +258,8 @@ void insanity_ui_pop_parent(void);
 //TODO: have the stack never go below 0
 
 MAPI void insanity_ui_push_flags(UI_Property_Flags flags);
-MAPI void insanity_ui_push_pos(mvec2 pos);
-MAPI void insanity_ui_push_size(mvec2 size);
+MAPI void insanity_ui_push_pos(vec2s pos);
+MAPI void insanity_ui_push_size(vec2s size);
 
 
 MAPI void insanity_ui_push_layout(Insanity_UI_Layout layout);
@@ -270,7 +270,7 @@ MAPI void insanity_ui_push_loop_count(void);
 MAPI void insanity_ui_pop_loop_count(void);
 
 
-MAPI void insanity_ui_push_padding(mvec2 padding);
+MAPI void insanity_ui_push_padding(vec2s padding);
 
 MAPI void insanity_ui_push_image(const char* texture_file);
 
@@ -295,7 +295,7 @@ MAPI Insanity_UI_Node* insanity_ui_get_parent_node();
 MAPI Insanity_UI_Node* insanity_ui_get_top_node();
 
 
-MAPI bool insanity_rect_hit(mvec2 pos, mvec2 size);
+MAPI bool insanity_rect_hit(vec2s pos, vec2s size);
 MAPI char* insanity_ui_float_to_char(float value);
 
 //Test
