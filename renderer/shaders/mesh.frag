@@ -56,6 +56,18 @@ void main() {
     //NORMALS INFO
     if (ubo.render_mode == 1){
         outColor = vec4(abs(in_normal), 1.0f);
+
+        /*
+        // float nearDist = 0.1;
+        // float farDist = 50.0;
+
+        shows depth values in a black and white range
+        float z = gl_FragCoord.z ;
+        float vDepth = (2.0 * nearDist * farDist) / (farDist + nearDist - z * (farDist - nearDist));
+
+        float t = clamp((vDepth - nearDist) / (farDist - nearDist), 0.0, 1.0);
+        outColor = vec4(vec3(t), 1.0);
+        */
     }
 
 

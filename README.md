@@ -59,6 +59,7 @@ write my own in Vulkan.
   - File Format for Abilties
   - Integrate Asset Handles for game to renderer/resource manager communication
   - Expand enemy AI functionality
+  - Game specific UI System (Current UI system is simple and only meant for the editor)
 
 ### Extra Info:
 

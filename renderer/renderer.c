@@ -376,9 +376,18 @@ void renderer_update(Renderer* renderer, float delta_time)
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = vk_context->swapchain.image_views[image_index],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the image
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //keep for presenting
         .clearValue.color = {0.0f, 0.0f, 0.2f, 0.0f},
+    };
+
+    VkRenderingAttachmentInfo depth_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the depth data
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, // dont care after rendering
+        .clearValue.depthStencil = {1.0f, 0.0f},
     };
 
     VkRenderingInfo rendering_info = {
@@ -390,6 +399,7 @@ void renderer_update(Renderer* renderer, float delta_time)
         .layerCount = 1,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment,
+        .pDepthAttachment = &depth_attachment,
     };
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 

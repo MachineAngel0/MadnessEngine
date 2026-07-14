@@ -153,6 +153,30 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
         memcpy(upload_data->uv, uv_data, uv_byte_size);
     }
 
+    const cgltf_accessor* color_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
+                                                              cgltf_attribute_type_color, 0);
+    //TODO:
+    /*if (color_accessor)
+    {
+        //get size information
+        cgltf_size color_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+        cgltf_size color_byte_size = color_floats_count * sizeof(float);
+        upload_data->uv_bytes = color_byte_size;
+
+        //alloc and copy data
+        float* uv_data = allocator_alloc(frame_allocator, color_byte_size);
+        cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, color_floats_count);
+
+        //TODO: replace with color
+        // upload_data->uv = allocator_heap_alloc(allocator, color_byte_size);
+        // memcpy(upload_data->uv, uv_data, color_byte_size);
+    }
+    else{
+        //TODO: generate white colors for everything i guess
+    }
+    */
+
+
     // Load indices
     // SEE componentType in the specs for more detail 3.6.2
     u8 index_stride = data->meshes[gltf_data_mesh_idx].primitives[0].indices->stride;

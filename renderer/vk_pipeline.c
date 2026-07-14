@@ -98,6 +98,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     VkPipelineInputAssemblyStateCreateInfo input_assembly = {0};
     input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    // input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST; // for wireframe
     // input_assembly.primitiveRestartEnable = VK_FALSE;
     //pInputAssemblyState.pNext;
     //pInputAssemblyState.flags;
