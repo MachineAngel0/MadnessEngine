@@ -129,6 +129,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vk_context->swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context->swapchain.image_count);
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
+    //SHADOW PASS TEXTURE
+    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, VK_FORMAT_D16_UNORM,
+                                    renderer->context.graphics_command_buffer, &renderer->shadowpass_texture);
 
     // Create command buffers.
     vulkan_renderer_command_buffers_create(vk_context);
@@ -343,15 +346,97 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_construct_batch_draw(renderer, renderer->mesh_renderer, renderer->shader_system, render_packets,
                                        graphics_command_buffer);
 
-
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
+
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     memory_barrier_transfer(renderer, graphics_command_buffer);
 
+
+    //Shadow Pass//
+
+    image_insert_memory_barrier(graphics_command_buffer->handle,
+                                renderer->shadowpass_texture.texture_image,
+                                0,
+                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                                //VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT maybe, this means all pipelines
+                                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // we are not waiting on anything for this write
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                (VkImageSubresourceRange){
+                                    //no stencil in this pass
+                                    VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 1
+                                }
+    );
+
+    // Set up the rendering attachment info
+    VkRenderingAttachmentInfo shadow_depth_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = renderer->shadowpass_texture.texture_image_view,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the image
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //keep for reading
+        // .clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f},
+        .clearValue.depthStencil = {1.0f, 0}
+    };
+
+
+    VkRenderingInfo shadow_pass_rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {
+            .offset = {0, 0},
+            .extent = {renderer->shadowpass_texture.width, renderer->shadowpass_texture.height},
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 0,
+        .pColorAttachments = NULL,
+        .pDepthAttachment = &shadow_depth_attachment,
+    };
+
+    vkCmdBeginRendering(graphics_command_buffer->handle, &shadow_pass_rendering_info);
+    // Dynamic state
+    VkViewport shadow_map_viewport = {
+        0.0f, 0.0f, (f32)renderer->shadowpass_texture.width, (f32)renderer->shadowpass_texture.height, 0.0f, 1.0f
+    };
+    // Scissor
+    VkRect2D shadow_map_scissor = {
+        .offset = {.x = 0, .y = 0},
+        .extent = {.width = renderer->shadowpass_texture.width, .height = renderer->shadowpass_texture.height},
+    };
+    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &shadow_map_viewport);
+    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &shadow_map_scissor);
+
+    vkCmdEndRendering(graphics_command_buffer->handle);
+    //change shadow pass texture from attachment, to read only
+    image_insert_memory_barrier(
+        graphics_command_buffer->handle,        renderer->shadowpass_texture.texture_image,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_SHADER_READ_BIT,
+
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, //want to sample in all sorts of shaders
+
+        (VkImageSubresourceRange){
+            //no stencil in this pass
+            VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 1
+
+        }
+    );
+
+
+    //Shadow Pass END //
+
+
+    //COLOR PASS//
+
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(graphics_command_buffer->handle,
-                                vk_context->swapchain.images[image_index], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                vk_context->swapchain.images[image_index], 0,
+                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -362,7 +447,7 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 vk_context->swapchain.depth_attachment.texture_image, 0,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                                 (VkImageSubresourceRange){
@@ -384,7 +469,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     VkRenderingAttachmentInfo depth_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the depth data
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, // dont care after rendering
         .clearValue.depthStencil = {1.0f, 0.0f},
@@ -454,12 +539,11 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
 
-    // vkCmdDrawIndexedIndirect()
-    //END FRAME//
 
     // Finish the current dynamic rendering section
     vkCmdEndRendering(graphics_command_buffer->handle);
 
+    //COLOR PASS END//
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(graphics_command_buffer->handle,

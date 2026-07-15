@@ -236,8 +236,8 @@ void editor_ui_animation(Editor* editor)
 
             char buffer[100];
             char buffer2[100];
-            snprintf(buffer2, 100, "Animation Index %d", i);
-            snprintf(buffer, 100, "Animation Looping %d", i);
+            snprintf(buffer, 100, "Animation Index %d", i);
+            snprintf(buffer2, 100, "Animation Looping %d", i);
 
             if (madness_ui_u32(STRING_STRLEN(buffer), &sk_mesh->current_animation_index, 1))
             {
@@ -247,7 +247,10 @@ void editor_ui_animation(Editor* editor)
 
                 sk_mesh->current_time = 0;
             }
-            madness_ui_check_box(STRING_STRLEN(buffer2) ,&sk_mesh->looping);
+            if (!madness_ui_check_box(STRING_STRLEN(buffer2) ,&sk_mesh->looping))
+            {
+                sk_mesh->current_time = 0;
+            }
 
 
         }

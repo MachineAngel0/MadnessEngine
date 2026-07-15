@@ -13,6 +13,12 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.offset = offsetof(Material_Default, flags)
 		},
 		{
+			.name = "color",
+			.type = REFLECTION_TYPE_VEC4,
+			.type_name = "vec4s",
+			.offset = offsetof(Material_Default, color)
+		},
+		{
 			.name = "ambient_strength",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "float",
@@ -108,10 +114,30 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	{
 		.name = "Material_Default",
 		.fields = Material_Default_Fields,
-		.field_count = 16,
+		.field_count = 17,
 		.struct_size = sizeof(Material_Default)
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Default_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Material_Flat_Color_Fields[] =
+	{
+		{
+			.name = "color",
+			.type = REFLECTION_TYPE_VEC4,
+			.type_name = "vec4",
+			.offset = offsetof(Material_Flat_Color, color)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Flat_Color_Runtime_Struct =
+	{
+		.name = "Material_Flat_Color",
+		.fields = Material_Flat_Color_Fields,
+		.field_count = 1,
+		.struct_size = sizeof(Material_Flat_Color)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Flat_Color_Runtime_Struct);
 
 }

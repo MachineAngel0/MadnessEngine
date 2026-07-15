@@ -9,9 +9,10 @@ void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkForma
                          b32 create_view,
                          VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture)
 {
-    // Copy params
-    // out_image->width = width;
-    // out_image->height = height;
+
+    //copy params
+    out_texture->width = width;
+    out_texture->height = height;
 
 
     // Creation info.
@@ -117,9 +118,12 @@ void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image)
     }
 }
 
-void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                 Texture* texture_data, Vulkan_Texture* out_texture)
+void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
+                                      Texture* texture_data, Vulkan_Texture* out_texture)
 {
+    out_texture->width = texture_data->width;
+    out_texture->height = texture_data->height;
+
     VkDeviceSize imageSize = texture_data->image_size;
     stbi_uc* pixels = texture_data->pixels;
     u32 texWidth = texture_data->width;
@@ -137,8 +141,6 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
     memcpy(data, pixels, imageSize);
     vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
-
-
 
 
     //create texture image
@@ -202,6 +204,7 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
 
 
+
     VkSamplerCreateInfo sampler_info = {0};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     sampler_info.magFilter = VK_FILTER_LINEAR;
@@ -221,6 +224,113 @@ void create_vulkan_texture_image(vulkan_context* context, vulkan_command_buffer*
     sampler_info.maxLod = 0.0f;
 
     VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+}
+
+void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 height, VkFormat format,
+                                            vulkan_command_buffer* command_buffer, Vulkan_Texture* out_texture)
+{
+
+    out_texture->width = width;
+    out_texture->height = width;
+
+    // We will sample directly from the depth attachment for the shadow mapping
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT // might need
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    /*
+            VK_IMAGE_TILING_LINEAR: Texels are laid out in row-major order like our pixels array
+            VK_IMAGE_TILING_OPTIMAL: Texels are laid out in an implementation defined order for optimal access
+        Unlike the layout of an image, the tiling mode cannot be changed at a later time.
+        If you want to be able to directly access texels in the memory of the image,
+        then you must use VK_IMAGE_TILING_LINEAR. We will be using a staging buffer instead of a staging image,
+        so this won't be necessary. We will be using VK_IMAGE_TILING_OPTIMAL for efficient access from the shader.
+     */
+
+    //shadows use a depth bit
+    VkImageAspectFlags view_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    /*
+    *  VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+     */
+
+    // Creation info.
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 4; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    image_create_info.format = format;
+    image_create_info.tiling = tiling;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = usage;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VK_CHECK(
+        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+            texture_image));
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VK_CHECK(
+        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->
+            texture_image_memory
+        ));
+
+    // Bind the memory
+    VK_CHECK(
+        vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory,
+            0));
+    // TODO: configurable memory offset.
+
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(context, format, view_aspect_flags, out_texture);
+
+    VkFilter shadowmap_filter = formatIsFilterable(context->device.physical_device, format, VK_IMAGE_TILING_OPTIMAL) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+
+    VkSamplerCreateInfo sampler_info = {0};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = shadowmap_filter;
+    sampler_info.minFilter = shadowmap_filter;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE; // not in use
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 1.0f; // has to be set
+
+    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+
+
+
+
 }
 
 
@@ -521,6 +631,7 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
     imageMemoryBarrier.image = image;
     imageMemoryBarrier.subresourceRange = subresourceRange;
 
+
     vkCmdPipelineBarrier(
         cmdbuffer,
         srcStageMask,
@@ -531,3 +642,65 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
         1, &imageMemoryBarrier);
 }
 
+void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buffer, Vulkan_Texture* texture,
+    const unsigned char* pixel_data, uint32_t width, uint32_t height)
+{
+
+    //text_system.glyph_textures[text_system.glyphs[glyph]] = texture;
+    printf("IMAGE SIZE: width %d height  %d \n" ,width, height);
+    VkDeviceSize imageSize = width * height * 4; // 4 stride rgba
+
+    MASSERT(pixel_data);
+
+    //create a staging buffer
+    // vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, imageSize);
+
+
+    //create a staging buffer
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    //TODO: free the buffer
+    buffer_create(&renderer->context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+                  &stagingBufferMemory);
+
+    //allocate memory
+    void* data;
+    vkMapMemory(renderer->context.device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixel_data, imageSize);
+    vkUnmapMemory(renderer->context.device.logical_device, stagingBufferMemory);
+
+    //create texture image
+    vulkan_image_create(&renderer->context, width, height, VK_FORMAT_R8G8B8A8_SRGB,
+                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                        false, VK_IMAGE_ASPECT_COLOR_BIT, texture);
+
+    transition_image_layout(&renderer->context, command_buffer, texture->texture_image,
+                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(&renderer->context, command_buffer, stagingBuffer, texture->texture_image,
+                      width, height);
+    transition_image_layout(&renderer->context, command_buffer, texture->texture_image,
+                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vulkan_image_view_create(&renderer->context,  VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, texture);
+    create_texture_sampler(renderer, texture);
+
+
+}
+
+
+// Returns if a given format support LINEAR filtering
+VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling)
+{
+    VkFormatProperties formatProps;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProps);
+
+    if (tiling == VK_IMAGE_TILING_OPTIMAL)
+        return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+
+    if (tiling == VK_IMAGE_TILING_LINEAR)
+        return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+
+    return false;
+}

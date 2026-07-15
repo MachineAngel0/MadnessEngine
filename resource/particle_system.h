@@ -140,4 +140,12 @@ void particle_system_generate_render_packet(Particle_System* ps)
 }
 
 
+void particle_system_fire_forget()
+{
+
+}
+
+
+
+
 #endif //PARTICLE_SYSTEM_H

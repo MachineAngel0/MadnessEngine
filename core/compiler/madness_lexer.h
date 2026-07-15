@@ -1,5 +1,5 @@
-﻿#ifndef COMPILER_H
-#define COMPILER_H
+﻿#ifndef MADNESS_LEXER_H
+#define MADNESS_LEXER_H
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -73,18 +73,24 @@ typedef enum Token_Type
     Token_U16,
     Token_U32,
     Token_U64,
-    Token_I8,
-    Token_I16,
-    Token_I32,
-    Token_I64,
+    Token_S8,
+    Token_S16,
+    Token_S32,
+    Token_S64,
     Token_F32,
     Token_F64,
+
     Token_char,
     Token_size_t,
     Token_bool,
-    Token_string_type,//my custom type
+    Token_string_type, //my custom type
     Token_BITFLAG, // macro
 
+    TOKEN_VEC2,
+    TOKEN_VEC3,
+    TOKEN_VEC4,
+    TOKEN_MAT3,
+    TOKEN_MAT4,
 
     Token_const,
 

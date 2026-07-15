@@ -2,7 +2,7 @@
 #define REFLECTION_H
 
 #include <stdbool.h>
-#include "compiler.h"
+#include "madness_lexer.h"
 
 //TODO: Move this out to defines and call it Madness_Types and name them {MADNESS_TYPE_U8}
 typedef enum Reflection_Type
@@ -29,7 +29,8 @@ typedef enum Reflection_Type
     REFLECTION_TYPE_VEC2,
     REFLECTION_TYPE_VEC3,
     REFLECTION_TYPE_VEC4,
-
+    REFLECTION_TYPE_MAT3,
+    REFLECTION_TYPE_MAT4,
 
     REFLECTION_TYPE_MAX,
 } Reflection_Type;
@@ -40,10 +41,10 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [Token_U16] = REFLECTION_TYPE_U16,
     [Token_U32] = REFLECTION_TYPE_U32,
     [Token_U64] = REFLECTION_TYPE_U64,
-    [Token_I8] = REFLECTION_TYPE_S8,
-    [Token_I16] = REFLECTION_TYPE_S16,
-    [Token_I32] = REFLECTION_TYPE_S32,
-    [Token_I64] = REFLECTION_TYPE_S64,
+    [Token_S8] = REFLECTION_TYPE_S8,
+    [Token_S16] = REFLECTION_TYPE_S16,
+    [Token_S32] = REFLECTION_TYPE_S32,
+    [Token_S64] = REFLECTION_TYPE_S64,
     [Token_F32] = REFLECTION_TYPE_F32,
     [Token_F64] = REFLECTION_TYPE_F64,
     [Token_char] = REFLECTION_TYPE_CHAR,
@@ -54,6 +55,12 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [Token_Enum] = REFLECTION_TYPE_ENUM,
     [Token_Struct] = REFLECTION_TYPE_STRUCT,
     [Token_Identifier] = REFLECTION_TYPE_STRUCT,
+    [TOKEN_VEC2] = REFLECTION_TYPE_VEC2,
+    [TOKEN_VEC3] = REFLECTION_TYPE_VEC3,
+    [TOKEN_VEC4] = REFLECTION_TYPE_VEC4,
+    [TOKEN_MAT3] = REFLECTION_TYPE_MAT3,
+    [TOKEN_MAT4] = REFLECTION_TYPE_MAT4,
+
 };
 
 typedef enum Reflection_Container_Type
@@ -125,9 +132,6 @@ typedef struct Reflection_Compact_List
     u32 enum_list_size;
     Reflection_Struct* struct_list;
     u32 struct_list_size;
-
-
-
 } Reflection_Compact_List;
 
 
@@ -147,7 +151,6 @@ typedef struct Reflection_System
     u32 header_file_list_count;
 #define HEADER_FILE_LIST_COUNT 10
     u32 header_file_list_capacity;
-
 } Reflection_System;
 
 
@@ -156,11 +159,11 @@ Reflection_System* reflection_system_init(Memory_System* memory_system);
 void reflection_system_shutdown();
 
 
-
 //API
 
 //builds the structures
-void reflection_system_parse(Reflection_System* reflection_system, const char* file_path, Reflection_Parse_Type parse_type);
+void reflection_system_parse(Reflection_System* reflection_system, const char* file_path,
+                             Reflection_Parse_Type parse_type);
 
 void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer);
 void reflection_system_parse_enums(Reflection_System* reflection_system, Lexer* lexer);
@@ -174,13 +177,13 @@ Reflection_Compact_List reflection_system_get_data(Reflection_System* reflection
 //for individual queries
 u64 reflection_system_constant_query(Reflection_System* reflection_system, const char* constant_name);
 Reflection_Enum_Query_Array reflection_system_enum_query_list(Reflection_System* reflection_system,
-                                                             const char* enum_name, Frame_Allocator* frame_allocator);
+                                                              const char* enum_name, Frame_Allocator* frame_allocator);
 Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
 
 //INTERNAL
 
 //Constants
-void reflection_system_add_constant(Reflection_System* reflection_system, const char* constant_name,  u64 value);
+void reflection_system_add_constant(Reflection_System* reflection_system, const char* constant_name, u64 value);
 
 
 //Enum
@@ -213,7 +216,7 @@ bool reflection_system_does_struct_exist(Reflection_System* reflection_system, c
 
 
 Reflection_Struct_Field* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
-                                                                 const char* struct_name);
+                                                                  const char* struct_name);
 
 void reflection_game_data(Reflection_System* reflection_system);
 

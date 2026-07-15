@@ -90,6 +90,10 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
 }
 
 
+// Vulkan_Texture* shader_system_new_render_pass_texture(Shader_System* system)
+// {
+//     return &system->renderpass_textures[system->renderpass_texture_indexes++];
+// }
 
 Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* system, Texture_Handle* handle,
                                             const char* filepath)
@@ -132,7 +136,7 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
         Vulkan_Texture* vulkan_texture = &shader_system->textures[texture->handle.handle];
 
         //create the texture
-        create_vulkan_texture_image(&renderer->context, renderer->context.graphics_command_buffer, texture,
+        vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture,
                                     vulkan_texture);
         update_texture_bindless_descriptor_set(renderer, descriptor_system,
                                                texture->handle);

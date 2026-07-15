@@ -57,8 +57,7 @@
 #include "../core/memory/memory_system.h"
 
 //CORE - Compiler
-#include "../core/compiler/compiler_test_file.h"
-#include "../core/compiler/compiler.h"
+#include "../core/compiler/madness_lexer.h"
 #include "../core/compiler/reflection_system.h"
 
 

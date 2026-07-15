@@ -289,11 +289,12 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
     //TODO: this leaks memory from the allocator, replace with a string builder
     const char* replace_later_path = "../z_assets/abilities/";
     const char* intermediate_file_path = c_string_concat_heap(replace_later_path, new_runtime_data.struct_name,
-                                                            reflection_registry->allocator);
+                                                              reflection_registry->allocator);
     const char* intermediate_file_path2 = c_string_concat_heap(intermediate_file_path, new_runtime_data.identifier,
-                                                             reflection_registry->allocator);
+                                                               reflection_registry->allocator);
 
-    const char* final_file_path = c_string_concat_heap(intermediate_file_path2, ".yaml", reflection_registry->allocator);
+    const char* final_file_path =
+        c_string_concat_heap(intermediate_file_path2, ".yaml", reflection_registry->allocator);
     Reflection_Runtime_Meta_File meta_file = {
         .file_string = STRING_STRLEN(final_file_path),
         .struct_name = STRING_STRLEN(new_runtime_data.struct_name),
@@ -462,6 +463,23 @@ void reflection_registry_to_txt_format(Reflection_Registry* reflection_registry,
             case REFLECTION_TYPE_CHAR_STRING:
                 fwrite("[char*]", strlen("[char*]"), 1, file);
                 break;
+            case REFLECTION_TYPE_VEC2:
+                fwrite("[vec2]", strlen("[vec2]"), 1, file);
+                break;
+            case REFLECTION_TYPE_VEC3:
+                fwrite("[vec3]", strlen("[vec3]"), 1, file);
+                break;
+            case REFLECTION_TYPE_VEC4:
+                fwrite("[vec4]", strlen("[vec4]"), 1, file);
+                break;
+            case REFLECTION_TYPE_MAT3:
+                fwrite("[mat3]", strlen("[mat3]"), 1, file);
+                break;
+            case REFLECTION_TYPE_MAT4:
+                fwrite("[mat4]", strlen("[mat4]"), 1, file);
+                break;
+
+
             case REFLECTION_TYPE_MAX:
                 break;
             }
@@ -775,11 +793,11 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
 
         const char* replace_later_path = "../z_assets/abilities/";
         const char* intermediate_file_path = c_string_concat_heap(replace_later_path, runtime_data.struct_name,
-                                                                reflection_registry->allocator);
+                                                                  reflection_registry->allocator);
         const char* intermediate_file_path2 = c_string_concat_heap(intermediate_file_path, runtime_data.identifier,
-                                                                 reflection_registry->allocator);
+                                                                   reflection_registry->allocator);
         const char* final_file_path = c_string_concat_heap(intermediate_file_path2, ".yaml",
-                                                         reflection_registry->allocator);
+                                                           reflection_registry->allocator);
 
         reflection_registry_to_txt_format(reflection_registry, runtime_struct.name,
                                           runtime_data.identifier, runtime_data.data, final_file_path);
@@ -797,21 +815,19 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
 
 void reflection_registry_debug_print_info(Reflection_Registry* reflection_registry)
 {
-
-
-
     for (u32 i = 0; i < reflection_registry->struct_list->num_items; i++)
     {
         const Reflection_Runtime_Struct struct_info = dynamic_array_get(reflection_registry->struct_list,
-                                                                  Reflection_Runtime_Struct, i);
+                                                                        Reflection_Runtime_Struct, i);
 
-        printf("Struct Name: %s, Size: %d, Field Count: %d\n", struct_info.name, struct_info.struct_size, struct_info.field_count);
+        printf("Struct Name: %s, Size: %d, Field Count: %d\n", struct_info.name, struct_info.struct_size,
+               struct_info.field_count);
 
         for (u32 struct_member = 0; struct_member < struct_info.field_count; struct_member++)
         {
-
             Reflection_Runtime_Struct_Field* field = &struct_info.fields[struct_member];
-            printf("Field Name: %s, Offset: %d, Type Name: %s, Type: %d\n", field->name, field->offset, field->type_name, field->type);
+            printf("Field Name: %s, Offset: %d, Type Name: %s, Type: %d\n", field->name, field->offset,
+                   field->type_name, field->type);
         }
     }
 }

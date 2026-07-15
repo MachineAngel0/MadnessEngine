@@ -158,6 +158,10 @@ static void reflection_system_parse_fields_for_structs(
 
 void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer* lexer)
 {
+    MASSERT(reflection_system);
+    MASSERT(lexer);
+    DEBUG("STRUCT PARSE START");
+
     Token_Type keep_list[] = {
         //single char tokens
         Token_OpenParen,
@@ -183,21 +187,24 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
         Token_U16,
         Token_U32,
         Token_U64,
-        Token_I8,
-        Token_I16,
-        Token_I32,
-        Token_I64,
+        Token_S8,
+        Token_S16,
+        Token_S32,
+        Token_S64,
         Token_F32,
         Token_F64,
         Token_char,
         Token_size_t,
         Token_bool,
 
+        TOKEN_VEC2,
+        TOKEN_VEC3,
+        TOKEN_VEC4,
+        TOKEN_MAT3,
+        TOKEN_MAT4,
     };
 
-    MASSERT(reflection_system);
-    MASSERT(lexer);
-    DEBUG("STRUCT PARSE START")
+
 
     Token* pruned_tokens = lexer_prune_tokens(lexer->tokens, keep_list, ARRAY_SIZE(keep_list));
     u64 pruned_token_list_size = darray_get_size(pruned_tokens);
@@ -301,7 +308,7 @@ void reflection_system_parse(Reflection_System* reflection_system, const char* f
                              const Reflection_Parse_Type parse_type)
 {
     Lexer* lexer = lexer_init();
-
+    //so we dont go overboard with our header counts, and that we find header we havne't used yet to include
     if (reflection_system->header_file_list_count <= reflection_system->header_file_list_capacity)
     {
         bool found = false;
@@ -572,6 +579,13 @@ static const char* reflection_type_to_str(Reflection_Type type)
     case REFLECTION_TYPE_CHAR: return "REFLECTION_TYPE_CHAR";
     case REFLECTION_TYPE_ENUM: return "REFLECTION_TYPE_ENUM";
     case REFLECTION_TYPE_STRUCT: return "REFLECTION_TYPE_STRUCT";
+    case REFLECTION_TYPE_VEC2: return "REFLECTION_TYPE_VEC2";
+    case REFLECTION_TYPE_VEC3: return "REFLECTION_TYPE_VEC3";
+    case REFLECTION_TYPE_VEC4: return "REFLECTION_TYPE_VEC4";
+    case REFLECTION_TYPE_MAT3: return "REFLECTION_TYPE_MAT3";
+    case REFLECTION_TYPE_MAT4: return "REFLECTION_TYPE_MAT4";
+
+
     default: return "REFLECTION_TYPE_INVALID";
     }
 }

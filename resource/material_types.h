@@ -33,12 +33,13 @@ typedef struct Material_Default
 
 
 //this is mostly a test material
-/* TODO: reflection system has no concept of a vec2-4, and likely the same for mat3/4
+// TODO: reflection system has no concept of a vec2-4, and likely the same for mat3/4
 typedef struct Material_Flat_Color
 {
     vec4 color;
+
 } Material_Flat_Color;
-*/
+
 
 
 #endif //MATERIAL_TYPES_H

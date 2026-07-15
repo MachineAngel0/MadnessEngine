@@ -1,4 +1,4 @@
-﻿#include "compiler.h"
+﻿#include "madness_lexer.h"
 
 void lexer_test()
 {
@@ -110,16 +110,16 @@ bool lexer_is_token_data_type(Token token)
     case Token_U64:
         return true;
         break;
-    case Token_I8:
+    case Token_S8:
         return true;
         break;
-    case Token_I16:
+    case Token_S16:
         return true;
         break;
-    case Token_I32:
+    case Token_S32:
         return true;
         break;
-    case Token_I64:
+    case Token_S64:
         return true;
         break;
     case Token_F32:
@@ -140,6 +140,23 @@ bool lexer_is_token_data_type(Token token)
     case Token_string_type:
         return true;
         break;
+    case TOKEN_VEC2:
+        return true;
+        break;
+    case TOKEN_VEC3:
+        return true;
+        break;
+    case TOKEN_VEC4:
+        return true;
+        break;
+    case TOKEN_MAT3:
+        return true;
+        break;
+    case TOKEN_MAT4:
+        return true;
+        break;
+
+
 
     default:
         return false;
@@ -394,26 +411,26 @@ void nextToken(Lexer* lexer, Token* token)
                 {
                     token->type = Token_U32;
                 }
-                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "i8")
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "s8")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int8_t"))
                 {
-                    token->type = Token_I8;
+                    token->type = Token_S8;
                 }
-                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "i16")
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "s16")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int16_t"))
                 {
-                    token->type = Token_I16;
+                    token->type = Token_S16;
                 }
-                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "32")
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "s32")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int32_t")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int"))
                 {
-                    token->type = Token_I32;
+                    token->type = Token_S32;
                 }
-                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "u64")
-                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "uint64_t"))
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "s64")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "int64_t"))
                 {
-                    token->type = Token_I64;
+                    token->type = Token_S64;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "f32")
                     || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "float"))
@@ -449,6 +466,35 @@ void nextToken(Lexer* lexer, Token* token)
                 {
                     token->type = Token_BITFLAG;
                 }
+
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec2")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec2s"))
+                {
+                    token->type = TOKEN_VEC2;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec3")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec3s"))
+                {
+                    token->type = TOKEN_VEC3;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec4")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "vec4s"))
+                {
+                    token->type = TOKEN_VEC4;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "mat3")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "mat3s"))
+                {
+                    token->type = TOKEN_MAT3;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "mat4")
+                    || STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "mat4s"))
+                {
+                    token->type = TOKEN_MAT4;
+                }
+
+
+
             } // Numbers
             else if (IsNumber(c))
             {

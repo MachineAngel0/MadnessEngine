@@ -59,8 +59,8 @@ typedef struct Vulkan_Texture
     VkSampler texture_sampler;
     // VkFormat texture_format; //TODO: should probably keep a copy of this
 
-    // u32 width;
-    // u32 height;
+    u32 width;
+    u32 height;
 
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
@@ -229,12 +229,16 @@ typedef struct Vulkan_Shader_Batch
 
 
 #define AVAILABLE_TEXTURES 100
+#define RENDERPASS_TEXTURES 20
 
 typedef struct Shader_System
 {
     Vulkan_Texture textures[MAX_TEXTURE_COUNT];
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
+
+    // Vulkan_Texture renderpass_textures[100];
+    // u32 renderpass_texture_indexes;
 
     vulkan_shader_pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
@@ -452,10 +456,15 @@ typedef struct Area_Light
 typedef struct Light_System
 {
     //each type is an array of them
-    Point_Light* point_lights;
     Directional_Light* directional_lights;
-    u32 point_light_count;
     u32 directional_light_count;
+
+    Point_Light* point_lights;
+    u32 point_light_count;
+
+    // Spot_Light* spot_lights;
+    // u32 spot_light_count;
+
 
     Buffer_Handle directional_light_storage_buffer_handle;
     Buffer_Handle point_light_storage_buffer_handle;
@@ -676,6 +685,16 @@ typedef struct renderer
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;
+
+    //lights
+    //NOTE: each light needs a texture, for now ill limit it to a pool of texture's,
+    // but i'll need a solution at some point
+    //TODO: update the material pipeline, and set piepline states
+    Vulkan_Texture shadowpass_texture;
+    vulkan_shader_pipeline directional_shadow_pipeline;
+    vulkan_shader_pipeline spot_light_shadow_pipeline;
+    vulkan_shader_pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
+
 } Renderer;
 
 

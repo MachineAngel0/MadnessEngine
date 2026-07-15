@@ -62,7 +62,7 @@
 #include "../core/serialization/madness_txt.c"
 
 //CORE - Compiler
-#include "../core/compiler/compiler.c"
+#include "../core/compiler/madness_lexer.c"
 #include "../core/compiler/reflection_system.c"
 
 
