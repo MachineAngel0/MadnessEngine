@@ -297,7 +297,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.proj = camera_get_projection(&renderer->main_camera, vk_context->framebuffer_width,
                                      vk_context->framebuffer_height);
 
-
     VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context->device.logical_device,
         vulkan_buffer_get(renderer,
                           renderer->light_system->directional_light_storage_buffer_handle)->handle);
@@ -311,7 +310,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.directional_lights_address = directional_light_buffer_address;
     ubo.point_lights_address = point_light_buffer_address;
     ubo.point_lights_count = renderer->light_system->point_light_count;
-    ubo.camera_position = renderer->main_camera.viewPos;
+    ubo.camera_position = camera_get_world_position(&renderer->main_camera);
     ubo.screem_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
     ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;

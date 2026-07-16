@@ -28,7 +28,7 @@ struct PC_Particle{
 
 layout(location = 0) in vec3 in_color;
 layout(location = 1) in vec2 in_uv;
-layout(location = 2) in flat Spherical_Billboard material_data;
+layout(location = 2) in flat uint in_texture_idx;
 
 
 
@@ -37,7 +37,7 @@ layout(location = 0) out vec4 outColor;
 
 
 void main() {
-    vec4 texture_result = texture(texture_samples[(nonuniformEXT(material_data.texture_idx))], in_uv);
+    vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv);
 
-    outColor = vec4(texture_result);
+    outColor = vec4(texture_result) * vec4(in_color, 1.0);
 }

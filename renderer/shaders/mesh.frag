@@ -26,7 +26,7 @@ void main() {
     vec3 norm = normalize(in_normal);
     // Normal = mat3(transpose(inverse(model))) * aNormal; // for generating proper normals with non-uniform scales
 
-    vec3 view_direction = normalize(ubo.camera_view_pos.xyz - in_world_position);
+    vec3 view_direction = normalize(ubo.camera_position.xyz - in_world_position);
 
     // Directional lighting
     vec3 result = calculate_directional_light(ubo.directional_lights.directional_light[0], norm, view_direction);

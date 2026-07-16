@@ -106,7 +106,7 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 //    SPOT_LIGHT_BUFFER spot_lights;
 //    uint spot_lights_count;
 
-    vec4 camera_view_pos;
+    vec4 camera_position;
     vec2 screen_dimensions;
 
     float padding;

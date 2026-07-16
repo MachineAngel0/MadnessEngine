@@ -15,7 +15,6 @@ void camera_init(camera* out_camera)
 
     out_camera->rotation = glms_vec3_zero();
     out_camera->pos = glms_vec3_zero();
-    glm_vec4_zero( out_camera->viewPos.raw);
 
     out_camera->rotation_speed = SENSITIVITY;
     out_camera->move_speed = MOVE_SPEED;
@@ -160,6 +159,14 @@ mat4s camera_get_view_matrix(camera* cam)
     // return glms_mat4_inv(temp_view);
     //TODO:
     return glms_mat4_identity();
+}
+
+vec4s camera_get_world_position(camera* cam)
+{
+    // glms_look()
+    // mat4s temp_view = mat4_translation((vec3s){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
+    // return glms_mat4_inv(temp_view);
+    return (vec4s){cam->pos.x, cam->pos.y, cam->pos.z, 1.0};
 }
 
 mat4s camera_get_fps_view_matrix(camera* cam)

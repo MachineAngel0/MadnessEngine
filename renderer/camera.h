@@ -18,7 +18,6 @@ typedef struct camera
 {
     vec3s rotation;
     vec3s pos;
-    vec4s viewPos;
 
     float rotation_speed;
     float move_speed;
@@ -65,6 +64,7 @@ void camera_update(Input_System* input_syste, camera* cam, float dt);
 mat4s camera_get_view_matrix(camera* cam);
 mat4s camera_get_fps_view_matrix(camera* cam);
 
+vec4s camera_get_world_position(camera* cam);
 
 mat4s camera_get_projection(camera* cam, float width, float height);
 

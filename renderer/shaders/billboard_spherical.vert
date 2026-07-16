@@ -32,9 +32,27 @@ layout(push_constant, scalar) uniform PC_PARTICLE{
     PC_Particle pc;
 };
 
+const vec2 corners[4] = vec2[](
+vec2(-1.0, -1.0), // top left
+vec2(1.0, -1.0), // top right
+vec2(1.0, 1.0), // bottom right
+vec2(-1.0, 1.0)// bottom left
+);
+
+const vec2 uvs[4] = vec2[](
+vec2(0.0, 1.0), // top-left
+vec2(1.0, 1.0), // top-right
+vec2(1.0, 0.0), // bottom-right
+vec2(0.0, 0.0)// bottom-left
+);
+
+//we are manually generating the index and vertex data, since its always the same just with offsets and positions
+int indices[6] = int[6](0, 1, 2, 2, 3, 0);
+
+
 layout(location = 0) out vec3 out_color;
 layout(location = 1) out vec2 out_uv;
-layout(location = 2) out flat Spherical_Billboard material_data;
+layout(location = 2) out flat uint out_texture_idx;
 
 
 
@@ -43,44 +61,14 @@ void main() {
 
     uint instance_idx = gl_InstanceIndex;
     Spherical_Billboard billboard_data = pc.material_buffer.data[instance_idx];
-    material_data = billboard_data;
+    out_texture_idx = billboard_data.texture_idx;
 
     out_color = vec3(1.0, 0, 0);
 
     float half_size_x = billboard_data.size.x * 0.5;
     float half_size_y = billboard_data.size.y * 0.5;
 
-    //    vec3 cameraRight = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
-    vec3 cameraUp    = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
 
-    //    const vec2 corners[4] = vec2[](
-    //    vec2(-1.0, -1.0),
-    //    vec2(1.0, -1.0),
-    //    vec2(-1.0, 1.0),
-    //    vec2(1.0, 1.0)
-    //    );
-    //    vec2(0.0, 0.0),  // 0 top-left
-    //    vec2(0.0, 1.0),  // 1 bottom-left
-    //    vec2(1.0, 1.0),  // 2 bottom-right
-    //    vec2(1.0, 0.0)   // 3 top-right
-
-
-    const vec2 corners[4] = vec2[](
-        vec2(-1.0, -1.0), // top left
-        vec2(1.0, -1.0), // top right
-        vec2(1.0, 1.0), // bottom right
-        vec2(-1.0, 1.0)// bottom left
-    );
-
-    const vec2 uvs[4] = vec2[](
-        vec2(0.0, 1.0), // top-left
-        vec2(1.0, 1.0), // top-right
-        vec2(1.0, 0.0), // bottom-right
-        vec2(0.0, 0.0)// bottom-left
-    );
-
-    //we are manually generating the index and vertex data, since its always the same just with offsets and positions
-    int indices[6] = int[6](0, 1, 2, 2, 3, 0);
     int idx = indices[gl_VertexIndex];
 
     vec2 corner = corners[idx];
@@ -88,22 +76,24 @@ void main() {
 
 
 
+    //    vec3 cameraRight = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
+    vec3 world_up    = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
 
-    vec3 n = normalize(ubo.camera_view_pos.xyz - billboard_data.position.xyz);
+    vec3 to_camera = normalize(ubo.camera_position.xyz - billboard_data.position.xyz);
 
-    vec3 tangent = normalize(cross(cameraUp, n));// right
-    vec3 normal = normalize(cross(n, tangent));// up
+    vec3 vector_right = normalize(cross(world_up, to_camera));// right
+    vec3 vector_up = normalize(cross(to_camera, vector_right));// up
 
     float c = cos(billboard_data.rotation.x);
     float s = sin(billboard_data.rotation.x);
 
-    vec3 tangent_rotation = tangent * c + normal * s;
-    vec3 normal_rotation = -tangent * s + normal * c;
+    vec3 rotated_right = vector_right * c + vector_up * s;
+    vec3 rotated_up = -vector_right * s + vector_up * c;
 
     vec3 world_pos =
     billboard_data.position +
-    tangent_rotation * corner.x * half_size_x +
-    normal_rotation * corner.y * half_size_y;
+    rotated_right * corner.x * half_size_x +
+    rotated_up * corner.y * half_size_y;
 
     /*    vec3 world_pos =
         billboard.point
