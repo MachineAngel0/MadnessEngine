@@ -7,7 +7,7 @@
 
 //TODO: integrate wireframe, blending modes, mutltisampling, (possibly depth, i would have to learn more about it)
 //making the assumption that the shader will have both .vert and .frag, throw an error otherwise
-bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline);
+bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline, Shader_Blend_Mode blend_mode);
 
 
 

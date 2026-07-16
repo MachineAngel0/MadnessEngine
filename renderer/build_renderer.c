@@ -24,5 +24,6 @@
 #include "pipelines/sprite_render.c"
 #include "pipelines/ui_render.c"
 #include "pipelines/mesh_render.c"
+#include "pipelines/particle_render.c"
 
 

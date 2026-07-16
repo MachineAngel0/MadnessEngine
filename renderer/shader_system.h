@@ -41,11 +41,12 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
     shader_batch->material_stride = material_batch->material_struct->struct_size;
     shader_batch->material_stride = material_batch->material_struct->struct_size;
     shader_batch->mesh_type = material_batch->mesh_type;
+    shader_batch->blend_mode = material_batch->blend_mode;
 
 
     //load pipeline from our configs
     //TODO: add more configs when neccessary
-    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, &shader_batch->pipeline);
+    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, &shader_batch->pipeline,  shader_batch->blend_mode);
 
 
     u32 ssbo_init_amount = 0;

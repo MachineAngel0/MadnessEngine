@@ -1,7 +1,8 @@
 ﻿#include "vk_pipeline.h"
 
 
-bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline)
+bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline,
+                                     Shader_Blend_Mode blend_mode)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -147,9 +148,14 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     depth_stencil.stencilTestEnable = VK_FALSE;
     depth_stencil.front = depth_stencil.back;
 
+    /* TODO: blend types for the passed in blend type
+    switch (blend_mode)
+    {
 
+    }*/
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
@@ -219,7 +225,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, renderer->pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         renderer->pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &out_pipeline->handle);
 
@@ -263,7 +270,6 @@ void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pi
     vkDestroyPipeline(context->device.logical_device, pipeline->handle, context->allocator);
     pipeline->handle = 0;
 }
-
 
 
 void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_cache* pipeline_info,

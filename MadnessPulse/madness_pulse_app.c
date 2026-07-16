@@ -61,6 +61,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                        application_core->resource_system);
 
 
+
     //register events needed for this application
     event_register(application_core->event_system, EVENT_APP_QUIT, STRING("application"), application_on_event);
     event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("application"), application_on_resized);
@@ -83,6 +84,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               application_core->event_system,
                                               application_core->resource_system);
 
+
+
     //UI
     insanity_ui_init(&application_core->memory_system, application_core->input_system,
                      application_core->resource_system);
@@ -91,13 +94,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->input_system,
                                                   application_core->resource_system);
 
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+
+
+    // mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
+    // mesh_load_gltf(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh_load_gltf(application_core->resource_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
     //TODO: test the mc after cesium man is working k
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");
-
-
+    // mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
@@ -170,6 +173,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         animation_update(application_core->resource_system->mesh_system,
                                      application_core->clock.delta_time,
                                      application_core->resource_system->frame_allocator);
+
+        particle_system_update(application_core->resource_system->particle_system,
+                                     application_core->clock.delta_time);
 
         madness_ui_end();
         insanity_ui_end();

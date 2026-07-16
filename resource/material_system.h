@@ -82,7 +82,7 @@ void material_system_add_skmesh_instance_to_default_material_batch(Resource_Syst
 
 
 void material_system_instantiate_material(Material_System* material_system, const char* shader_name,
-                                          const char* material_name, Shader_Mesh_Type mesh_type)
+                                          const char* material_name, Shader_Mesh_Type mesh_type, Shader_Blend_Mode blend_mode)
 {
     //we are assuming everything is a graphics pipeline
     //TODO: keep a hash of already loaded file paths/material combinations
@@ -90,6 +90,7 @@ void material_system_instantiate_material(Material_System* material_system, cons
     Material_Batch* batch = &material_system->oqaque_batch[material_system->oqaque_batch_count++];
     batch->shader_name = shader_name;
     batch->mesh_type = mesh_type;
+    batch->blend_mode = blend_mode;
 
     for (u32 i = 0; i < material_system->reflection_registry->struct_list->num_items; i++)
     {

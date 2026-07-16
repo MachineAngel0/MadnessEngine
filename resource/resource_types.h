@@ -14,7 +14,7 @@
 #include "ui_types.h"
 
 
-/// HANDLES ///
+///////////////// HANDLES  //////////////////////
 
 #define INVALID_HANDLE 0
 
@@ -83,7 +83,8 @@ typedef struct Animation_Handle
 } Animation_Handle;
 
 
-/// RESOURCES ///
+///////////////// RESOURCES  //////////////////////
+
 
 typedef enum Resource_Type
 {
@@ -106,6 +107,8 @@ typedef struct Resource_MetaData
     u64 id;
     u64 reference_count;
 } Resource_MetaData;
+
+///////////////// Texture  //////////////////////
 
 
 //Texture
@@ -148,8 +151,105 @@ typedef struct Madness_Font
     Texture_Handle font_texture_handle;
 } Madness_Font;
 
+///////////////// Particle  //////////////////////
 
-/// MESH ///
+
+typedef struct Particle_Animation_vec3
+{
+    float time;
+    vec3s value;
+} Particle_Animation_vec3;
+
+typedef struct Particle_Animation_vec2
+{
+    float time;
+    vec2s value;
+} Particle_Animation_vec2;
+
+typedef struct Particle_Animation_float
+{
+    float time;
+    float value;
+} Particle_Animation_float;
+
+
+// i guess we just fat struct the emitter for now
+/*typedef struct Particle_Emitter
+{
+    vec3s Spawn_area;
+    Particle_Animation_vec3 Color_over_lifetime;
+    vec3s color_variance;
+    Particle_Animation_float Scale_over_lifetime;
+    float Scale_variance;
+    Particle_Animation_float Emitter_wide_velocity_over_time;
+    vec3s Per_particle_velocity_variance;
+    vec3s Gravity;
+    Particle_Animation_vec3 Emitter_wide_rotational_velocity_over_time;
+    vec3s Per_particle_rotation_variance;
+    vec3s Per_particle_rotation_rate_variance;
+    Particle_Animation_float Emission_per_second;
+    float Emitter_lifetime;
+    float Particle_lifetime;
+    float Particle_lifetime_variance;
+    int Blend_mode;
+    //(either 3D or 2D billboard)
+    vec3s Facing_type_3D;
+    vec3s Facing_type_2D;
+    float Depth_softening;
+    // Material intensity over lifetime (AnimatedValue);
+    // Material intensity variance;
+    Particle_Animation_vec2 UV_scrolling;
+    vec2s UV_offsets;
+    vec2s uv_variance;
+    Texture_Handle Textures;
+    // Animated Textures
+    u32 Maximum_Particles;
+    u32 Minimum_Particles;
+    bool loop;
+    bool toggle_visibility;
+} Particle_Emitter;*/
+
+//start simple, then we can use the complex_version
+typedef struct Particle_Emitter
+{
+    bool nothingl;
+} Particle_Emitter;
+
+
+typedef struct Particle
+{
+    vec3s position;
+    vec2s rotation;
+    vec2s scale;
+
+    float life_left;
+
+
+    //draw data?
+    //Texture
+    Texture_Handle texture_handle;
+    vec2s tex_offset;
+    vec2s tex_size;
+} Particle;
+
+typedef struct Particle_Mesh
+{
+    vec3 position;
+    vec3s rotation;
+    vec3s scale;
+
+    float lifetime_left;
+
+
+    //draw data?
+    //Texture
+    Mesh_Asset_Handle Mesh;
+    Texture_Handle Textures;
+    vec2s tex_offset;
+} Particle_Mesh;
+
+
+///////////////// MESH  //////////////////////
 
 
 // m1|m2|m3|m4|m5
@@ -238,7 +338,6 @@ typedef struct Animation_Data
 
     Animation* animations;
     u32 animations_count;
-
 } Animation_Data;
 
 
@@ -423,6 +522,9 @@ typedef struct Sk_Mesh_Asset
     Animation_Data* animation_data;
 } Sk_Mesh_Asset;
 
+
+///////////////////////MATERIAL/SHADER/////////////////////////
+
 typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
@@ -438,9 +540,23 @@ typedef enum Shader_Pass_Type
     // PIPELINE_TYPE_TERRAIN,
 } Shader_Pass_Type;
 
-typedef enum Shader_Blend_Mode
+typedef enum Shader_Blend
 {
-    Shader_Blend_Mode_Default,
+    Shader_Blend_Mode_Default, // oqaque
+    Shader_Blend_Mode_Alpha,
+    Shader_Blend_Mode_PreMultiplied_Alpha,
+
+    Shader_Blend_Mode_additive,
+    // Shader_Blend_Mode_Soft_Additive,
+
+    //  Shader_Blend_Mode_MULTIPLY,
+    //  Shader_Blend_Mode_SCREEN,
+
+    //  Shader_Blend_Mode_SUBTRACT,
+    //  Shader_Blend_Mode_REVERSE_SUBTRACT,
+
+    //  Shader_Blend_Mode_MIN,
+    //  Shader_Blend_Mode_MAX,
 } Shader_Blend_Mode;
 
 typedef enum Shader_Stage_Type
@@ -469,12 +585,18 @@ typedef enum Mesh_PBR_Flags
 } Mesh_PBR_Flags;
 
 
+
 typedef struct PC_Mesh
 {
     VkDeviceAddress draw_data_buffer;
     VkDeviceAddress material_buffer;
 } PC_Mesh;
 
+typedef struct PC_Particle
+{
+    VkDeviceAddress draw_material_buffer;
+    VkDeviceAddress unused;
+} PC_Particle;
 
 typedef struct PC_General
 {
@@ -502,6 +624,7 @@ typedef struct Material_Batch
     Shader_Stage_Type shader_stage;
     Shader_Pass_Type shader_pass;
     Shader_Mesh_Type mesh_type;
+    Shader_Blend_Mode blend_mode;
 } Material_Batch;
 
 
@@ -575,6 +698,19 @@ typedef struct Texture_System
     Madness_Font font_array[MAX_TEXTURE_COUNT];
 } Texture_System;
 
+typedef struct Scene
+{
+    Transform* transforms;
+    int transform_count;
+
+    mat4s* world_transforms; //the count is the same as the transform_count
+
+    //TODO: i dont need it rn but could be useful
+    // since we know static doesn't change we can cache the transforms
+    // Transform* static_transform;
+    // Transform* dynamic_transform;
+} Scene;
+
 
 typedef struct Mesh_System
 {
@@ -635,18 +771,19 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(const char*)* load_queue;
 } Mesh_System;
 
-typedef struct Scene
+
+typedef struct Particle_System
 {
-    Transform* transforms;
-    int transform_count;
+    //memory, arena, frame_arena
 
-    mat4s* world_transforms; //the count is the same as the transform_count
+    //individual particles
+    //animation data
 
-    //TODO: i dont need it rn but could be useful
-    // since we know static doesn't change we can cache the transforms
-    // Transform* static_transform;
-    // Transform* dynamic_transform;
-} Scene;
+    //vertex/index buffer
+
+    Particle* particles;
+    u32 particles_count;
+} Particle_System;
 
 
 //RENDER PACKET
@@ -686,6 +823,11 @@ typedef struct Render_Packet_Sprite
     u16 sprite_indices[6];
 } Render_Packet_Sprite;
 
+typedef struct Render_Packet_Particle
+{
+    Particle* particles;
+    u32 particle_count;
+} Render_Packet_Particle;
 
 typedef struct Render_Packet
 {
@@ -701,6 +843,7 @@ typedef struct Render_Packet
     Render_Packet_Sprite sprite_data_packet;
     Render_Packet_UI ui_data_packet;
     Render_Packet_3D draw_3d_data_packet;
+    Render_Packet_Particle particle_packet;
 } Render_Packet;
 
 
@@ -722,6 +865,7 @@ typedef struct Resource_System
     Material_System* material_system;
     Scene* scene;
 
+    Particle_System* particle_system;
 
     Render_Packet* render_packet;
 } Resource_System;

@@ -120,6 +120,44 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 
 	reflection_registry_add_struct(reflection_registry, Material_Default_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Material_Billboard_Spherical_Fields[] =
+	{
+		{
+			.name = "point",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Material_Billboard_Spherical, point)
+		},
+		{
+			.name = "texture_idx",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Billboard_Spherical, texture_idx)
+		},
+		{
+			.name = "size",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Material_Billboard_Spherical, size)
+		},
+		{
+			.name = "rotation",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Material_Billboard_Spherical, rotation)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Billboard_Spherical_Runtime_Struct =
+	{
+		.name = "Material_Billboard_Spherical",
+		.fields = Material_Billboard_Spherical_Fields,
+		.field_count = 4,
+		.struct_size = sizeof(Material_Billboard_Spherical)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Billboard_Spherical_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Material_Flat_Color_Fields[] =
 	{
 		{

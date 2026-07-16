@@ -210,6 +210,7 @@ typedef struct Vulkan_Shader_Batch
     Shader_Stage_Type shader_stage_type;
     Shader_Pass_Type shader_pass_type;
     Shader_Mesh_Type mesh_type;
+    Shader_Blend_Mode blend_mode;
 
 
     vulkan_shader_pipeline pipeline;
@@ -627,6 +628,15 @@ typedef struct Mesh_Renderer
 
 } Mesh_Renderer;
 
+typedef struct Particle_Render
+{
+    Buffer_Handle spherical_billboard_material_buffer_handle;
+    u32 draw_count;
+
+    vulkan_shader_pipeline spherical_billboard_pipeline;
+
+} Particle_Render;
+
 
 
 typedef struct renderer
@@ -647,6 +657,7 @@ typedef struct renderer
     Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
     Mesh_Renderer* mesh_renderer;
+    Particle_Render* particle_render;
 
     //renderer specific
     Buffer_System* buffer_system;

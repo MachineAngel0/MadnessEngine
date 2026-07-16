@@ -29,4 +29,5 @@
 #include "pipelines/sprite_render.h"
 #include "pipelines/ui_render.h"
 #include "pipelines/mesh_render.h"
+#include "pipelines/particle_render.h"
 

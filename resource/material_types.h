@@ -37,8 +37,17 @@ typedef struct Material_Default
 typedef struct Material_Flat_Color
 {
     vec4 color;
-
 } Material_Flat_Color;
+
+typedef struct Material_Billboard_Spherical{
+    vec3s point;
+    u32 texture_idx;
+    vec2s size; //also a radius
+    vec2s rotation;
+    // vec4 color; //tint basically
+}Material_Billboard_Spherical;
+
+
 
 
 

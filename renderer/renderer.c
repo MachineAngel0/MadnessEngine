@@ -149,6 +149,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->buffer_system = buffer_system_init(renderer,
                                                  renderer->context.swapchain.max_frames_in_flight);
 
+    renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
+
+
     //Shader System
     renderer->shader_system = shader_system_init(renderer);
     // Light System
@@ -157,13 +160,16 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     //System specific draws
     // Mesh System
     renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
+
+    //Particle System
+    renderer->particle_render = particle_renderer_init(renderer, renderer->resource_system);
+
     // Sprite Backend
     renderer->sprite_renderer = sprite_render_init(renderer, renderer->resource_system);
     // UI Backend
     renderer->ui_renderer = ui_render_init(renderer, renderer->context.graphics_command_buffer);
 
 
-    renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
     //Pipelines
     ui_shader_create(renderer, &renderer->ui_pipeline, renderer->pipeline_cache);
@@ -173,6 +179,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
                          renderer->pipeline_cache);
     sk_mesh_pipeline_create(renderer, &renderer->skinned_mesh_pipeline,
                             renderer->pipeline_cache);
+
+
     //Pipeline Cache
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
@@ -345,6 +353,10 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     mesh_renderer_construct_batch_draw(renderer, renderer->mesh_renderer, renderer->shader_system, render_packets,
                                        graphics_command_buffer);
+
+
+    particle_renderer_upload_data_draw(renderer, renderer->particle_render,
+                                             render_packets, graphics_command_buffer);
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
@@ -529,6 +541,8 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
                              renderer->shader_system->shader_batches, renderer->shader_system->shader_batches_count,
                              graphics_command_buffer);
+
+    particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
