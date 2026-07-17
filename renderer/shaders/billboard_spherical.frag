@@ -10,7 +10,7 @@
 struct Spherical_Billboard{
     vec3 point;
     uint texture_idx;
-    vec2 size; //also a radius
+    vec2 size;//also a radius
     vec2 rotation;
 //    vec4 color; //tint basically
 };
@@ -37,7 +37,33 @@ layout(location = 0) out vec4 outColor;
 
 
 void main() {
+
     vec4 texture_result = texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv);
 
-    outColor = vec4(texture_result) * vec4(in_color, 1.0);
+//    texture_result.xyz *= texture_result.a;
+
+    //uses the alpha, which doens't always work
+    /*    if(texture_result.a < 0.01)
+            { discard; }*/
+
+
+//    float threshold = 0.1;
+//
+//    if (length(texture_result.rgb) < threshold)
+//    {
+//        discard;
+//    }
+
+//        float alpha = smoothstep(
+//        0.0,
+//        0.1,
+//        length(texture_result.rgb)
+//        );
+//        texture_result.a *= alpha;
+
+
+    texture_result *= vec4(in_color, 1.0);
+
+
+    outColor = texture_result;
 }

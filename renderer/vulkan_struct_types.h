@@ -214,6 +214,7 @@ typedef struct Vulkan_Shader_Batch
 
 
     vulkan_shader_pipeline pipeline;
+    vulkan_shader_pipeline wireframe_pipeline;
 
     Buffer_Handle indirect_draw_buffer_handle;
     u32 draw_count;
@@ -634,6 +635,7 @@ typedef struct Particle_Render
     u32 draw_count;
 
     vulkan_shader_pipeline spherical_billboard_pipeline;
+    vulkan_shader_pipeline wireframe_spherical_billboard_pipeline;
 
 } Particle_Render;
 
@@ -697,6 +699,7 @@ typedef struct renderer
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;
 
+
     //lights
     //NOTE: each light needs a texture, for now ill limit it to a pool of texture's,
     // but i'll need a solution at some point
@@ -705,6 +708,8 @@ typedef struct renderer
     vulkan_shader_pipeline directional_shadow_pipeline;
     vulkan_shader_pipeline spot_light_shadow_pipeline;
     vulkan_shader_pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
+
+    bool wireframe_mode;
 
 } Renderer;
 

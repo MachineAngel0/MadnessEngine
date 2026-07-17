@@ -1,8 +1,11 @@
 ﻿#include "vk_pipeline.h"
 
+#include "resource_types.h"
 
-bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline,
-                                     Shader_Blend_Mode blend_mode)
+
+bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, Shader_Blend_Mode blend_mode,
+                                     vulkan_shader_pipeline* out_pipeline,
+                                     vulkan_shader_pipeline* out_wire_frame_pipeline)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -134,7 +137,6 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     // multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
     // multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
-    //TODO: uncomment when needed
     // Depth and stencil testing.
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -148,22 +150,148 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     depth_stencil.stencilTestEnable = VK_FALSE;
     depth_stencil.front = depth_stencil.back;
 
-    /* TODO: blend types for the passed in blend type
-    switch (blend_mode)
-    {
-
-    }*/
+    //TODO: blend types for the passed in blend type
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
     color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-        VK_COLOR_COMPONENT_B_BIT
-        | VK_COLOR_COMPONENT_A_BIT;
-    color_blend_attachment.blendEnable = VK_FALSE;
-    //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    //colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    //colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-    //colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    //colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    //colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+             VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    switch (blend_mode)
+    {
+    case Shader_Blend_Mode_Default:
+
+        color_blend_attachment.blendEnable = VK_FALSE;
+        break;
+    case Shader_Blend_Mode_Alpha:
+        depth_stencil.depthWriteEnable = VK_FALSE;
+
+        // A_out = A_src + (1 - A_src) * A_dst
+        // Premultiplied alpha blending, will make the text less blurrier in motion
+        color_blend_attachment.blendEnable = VK_TRUE;
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        // color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    case Shader_Blend_Mode_PreMultiplied_Alpha:
+
+        depth_stencil.depthWriteEnable = VK_FALSE;
+
+
+        color_blend_attachment.blendEnable = VK_TRUE;
+        // out.rgb = src.rgb + dst.rgb * (1-src.a)
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        // color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; //ONE_MINUS_SRC_ALPHA;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    case Shader_Blend_Mode_Additive:
+        // out = src + dst
+
+        //we still want to test the depth but not write to it
+        depth_stencil.depthWriteEnable = VK_FALSE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    case Shader_Blend_Mode_Soft_Additive:
+        // out = src + dst(1-src)
+        depth_stencil.depthWriteEnable = VK_FALSE;
+
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    case Shader_Blend_Mode_Subtract:
+        // out = src - dst
+        depth_stencil.depthWriteEnable = VK_FALSE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_SUBTRACT;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+
+        break;
+    case Shader_Blend_Mode_Reverse_Subtract:
+        // out = dst - src * scr_a
+        depth_stencil.depthWriteEnable = VK_FALSE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        // color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_REVERSE_SUBTRACT;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        break;
+    case Shader_Blend_Mode_Multiply:
+        // out =  src * dst
+        depth_stencil.depthWriteEnable = VK_FALSE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        // color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+        break;
+    case Shader_Blend_Mode_Multiply2x:
+        // out =  2 * src * dst
+        depth_stencil.depthWriteEnable = VK_FALSE;
+        color_blend_attachment.blendEnable = VK_TRUE;
+
+        color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
+        // color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR; // line that changes from normal
+        color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // line that changes from normal
+
+        color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+
+        color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+
+        color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+        break;
+    }
+
 
     VkPipelineColorBlendStateCreateInfo color_blending = {0};
     color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -230,9 +358,37 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
                                                          &graphics_pipeline_info, NULL,
                                                          &out_pipeline->handle);
 
+
     if (graphics_result != VK_SUCCESS)
     {
         FATAL("failed to create graphics pipeline!");
+    }
+
+
+    if (out_wire_frame_pipeline)
+    {
+        VkResult wireframe_pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device,
+                                                                    &pipeline_layout_info,
+                                                                    NULL,
+                                                                    &out_wire_frame_pipeline->pipeline_layout);
+
+        VK_CHECK(wireframe_pipeline_result);
+
+
+        rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+
+        VkResult wireframe_graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                                       renderer->pipeline_cache->handle, 1,
+                                                                       &graphics_pipeline_info, NULL,
+                                                                       &out_wire_frame_pipeline->handle);
+        if (wireframe_graphics_result != VK_SUCCESS)
+        {
+            FATAL("VULKAN PIPELINE GRAPHICS CREATE: failed to create graphics pipeline for wireframe!");
+        }
+    }
+    else
+    {
+        WARN("VULKAN PIPELINE GRAPHICS CREATE: no wireframe pipeline passed in ")
     }
 
     //TODO: replace with scratch arena

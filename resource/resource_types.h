@@ -223,6 +223,7 @@ typedef struct Particle
     vec2s scale;
 
     float life_left;
+    vec3s velocity;
 
 
     //draw data?
@@ -529,7 +530,7 @@ typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
     Shader_Mesh_Type_Skinned,
-    // Shader_Pass_Type_Particle,
+    Shader_Pass_Type_Particle,
 } Shader_Mesh_Type;
 
 typedef enum Shader_Pass_Type
@@ -546,14 +547,15 @@ typedef enum Shader_Blend
     Shader_Blend_Mode_Alpha,
     Shader_Blend_Mode_PreMultiplied_Alpha,
 
-    Shader_Blend_Mode_additive,
-    // Shader_Blend_Mode_Soft_Additive,
+    Shader_Blend_Mode_Additive,
+    Shader_Blend_Mode_Soft_Additive,  // soft make it harder for white to blow out the screen
 
-    //  Shader_Blend_Mode_MULTIPLY,
+    Shader_Blend_Mode_Multiply,
+    Shader_Blend_Mode_Multiply2x,
     //  Shader_Blend_Mode_SCREEN,
 
-    //  Shader_Blend_Mode_SUBTRACT,
-    //  Shader_Blend_Mode_REVERSE_SUBTRACT,
+    Shader_Blend_Mode_Subtract,
+    Shader_Blend_Mode_Reverse_Subtract,
 
     //  Shader_Blend_Mode_MIN,
     //  Shader_Blend_Mode_MAX,

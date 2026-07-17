@@ -293,8 +293,21 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
         Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, draw_data->indirect_draw_buffer_handle);
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
+        //check if we are using wireframe_mode
         VkPipeline pipeline = draw_data->pipeline.handle;
         VkPipelineLayout layout = draw_data->pipeline.pipeline_layout;
+        if (renderer->wireframe_mode)
+        {
+            pipeline = draw_data->wireframe_pipeline.handle;
+            layout = draw_data->wireframe_pipeline.pipeline_layout;;
+        }
+        else
+        {
+            pipeline = draw_data->pipeline.handle;
+            layout = draw_data->pipeline.pipeline_layout;
+        }
+
+
 
         //UBER SHADER MESH INDIRECT DRAW
         vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,

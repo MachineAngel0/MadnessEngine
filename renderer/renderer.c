@@ -244,6 +244,10 @@ void renderer_update(Renderer* renderer, float delta_time)
             texture_flip = !texture_flip;
         }
     }
+    if (input_key_released_unique(renderer->input_system, KEY_I))
+    {
+        renderer->wireframe_mode = !renderer->wireframe_mode;
+    }
 
 
     /*

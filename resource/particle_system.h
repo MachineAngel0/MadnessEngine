@@ -2,7 +2,6 @@
 #define PARTICLE_SYSTEM_H
 
 
-
 #include "resource_types.h"
 
 
@@ -17,15 +16,19 @@ Particle_System* particle_system_init(Memory_System* memory_system, Resource_Sys
     ps->particles_count = PARTICLE_COUNT;
 
 
+
     for (u32 i = 0; i < ps->particles_count; i++)
     {
-        texture_system_load_texture(resource_system->texture_system, "../z_assets/textures/test_particle.png",  &ps->particles[i].texture_handle);
-         ps->particles[i].scale = (vec2s){10.0f,10.0f};
+        // const char* texture_path = "../z_assets/textures/test_particle.png";
+        // const char* texture_path = "../z_assets/textures/test_particle.png";
+        texture_system_load_texture(resource_system->texture_system, "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png",
+        // texture_system_load_texture(resource_system->texture_system, "../z_assets/textures/kenney_particle-pack/PNG (Black background)/circle_05.png",
+                                    &ps->particles[i].texture_handle);
+        ps->particles[i].scale = (vec2s){10.0f, 10.0f};
+        ps->particles[i].velocity.x = rand_range_f(-10, 10);
+        ps->particles[i].velocity.y = rand_range_f(-10, 10);
+        ps->particles[i].velocity.z = rand_range_f(-10, 10);
     }
-
-
-
-
 
     return ps;
 }
@@ -40,16 +43,17 @@ void particle_system_update(Particle_System* ps, float dt)
 {
     for (u32 i = 0; i < ps->particles_count; i++)
     {
-        // ps->particles[i].position.x += 1;
-        ps->particles[i].position.y += sinf(1.f) * dt;
-        // ps->particles[i].position.z += 1;
+        // ps->particles[i].position.y += sinf(1.f) * dt;
+        Particle* particle = &ps->particles[i];
+        ps->particles[i].position.x += particle->velocity.x * dt;
+        ps->particles[i].position.y += particle->velocity.y * dt;
+        ps->particles[i].position.z += particle->velocity.z * dt;
     }
-
 }
 
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps)
 {
-     return (Render_Packet_Particle){
+    return (Render_Packet_Particle){
         .particles = ps->particles,
         .particle_count = ps->particles_count,
     };
@@ -57,10 +61,7 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
 
 void particle_system_fire_forget()
 {
-
 }
-
-
 
 
 #endif //PARTICLE_SYSTEM_H

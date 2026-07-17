@@ -17,9 +17,19 @@ Particle_Render* particle_renderer_init(Renderer* renderer, Resource_System* res
         mesh_buffer_data_size);
 
     //default blend for now
-    vulkan_pipeline_graphics_create(renderer, "billboard_spherical", &particle_renderer->spherical_billboard_pipeline,
-                                    Shader_Blend_Mode_Default);
+    vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
+                                    &particle_renderer->spherical_billboard_pipeline, &particle_renderer->wireframe_spherical_billboard_pipeline);
 
+
+    // TODO: should pass in particle count from the particle system
+    /*_shader_system_shader_batch_create_internal(renderer, renderer->shader_system,
+                                                     "billboard_spherical",
+                                                     Shader_Stage_Type_Graphics,
+                                                     Shader_Pass_Type_MESH_PBR_OPAQUE,
+                                                     Shader_Pass_Type_Particle,
+                                                     Shader_Blend_Mode_Alpha,
+                                                     sizeof(Material_Spherical_Billboard),
+                                                     1000); */
 
     return particle_renderer;
 }
@@ -32,7 +42,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
 
 
     //update the particle buffer every frame
-    Material_Billboard_Spherical billboard_spherical_material;
+    Material_Spherical_Billboard billboard_spherical_material;
     particle_render->draw_count = render_packet->particle_packet.particle_count;
     for (u32 i = 0; i < render_packet->particle_packet.particle_count; i++)
     {
@@ -50,7 +60,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
             renderer, particle_render->spherical_billboard_material_buffer_handle,
             command_buffer,
             &billboard_spherical_material,
-            sizeof(Material_Billboard_Spherical));
+            sizeof(Material_Spherical_Billboard));
     }
 }
 
