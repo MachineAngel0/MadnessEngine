@@ -21,7 +21,7 @@ VkShaderModule create_shader_module(const vulkan_context* context, const u8* sha
 
 
 
-bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -274,7 +274,7 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
 }
 
 
-bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipeline,
+bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipeline,
                         vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
@@ -542,7 +542,7 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     return true;
 }
 
-bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pipeline,
+bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pipeline,
                           vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation

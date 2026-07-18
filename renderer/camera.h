@@ -56,7 +56,7 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
 // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
 void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch);
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-void process_mouse_scroll(camera* cam, float y_offset);
+void camera_change_fov(camera* cam, float y_offset);
 
 
 void camera_update(Input_System* input_syste, camera* cam, float dt);

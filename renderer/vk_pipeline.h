@@ -11,13 +11,13 @@
 //used in mesh and currently particles types (TODO: might move out the particles)
 bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name,
                                      Shader_Blend_Mode blend_mode, Renderpass_Single_Type renderpass_type,
-                                     vulkan_shader_pipeline* out_pipeline,
-                                     vulkan_shader_pipeline* out_wire_frame_pipeline);
+                                     Vulkan_Shader_Pipeline* out_pipeline,
+                                     Vulkan_Shader_Pipeline* out_wire_frame_pipeline);
 
-bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name, vulkan_shader_pipeline* out_pipeline);
+bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name, Vulkan_Shader_Pipeline* out_pipeline);
 
 
-void vulkan_pipeline_destroy(vulkan_context* context, vulkan_shader_pipeline* pipeline);
+void vulkan_pipeline_destroy(vulkan_context* context, Vulkan_Shader_Pipeline* pipeline);
 
 
 bool vulkan_pipeline_compute_create();

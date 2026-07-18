@@ -214,10 +214,10 @@ void renderer_update(Renderer* renderer, float delta_time)
     shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
                                          render_packets);
 
-    //TODO: test code, can remove later
+    //TODO: move out to the editor
     if (input_key_released_unique(renderer->input_system, KEY_U))
     {
-        //TODO: MOVE OUT LATER
+
         renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
         FATAL("RENDER_MODE: %d", renderer->mode)
         if (texture_flip)
@@ -419,9 +419,13 @@ void renderer_update(Renderer* renderer, float delta_time)
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
 
     //draw geometry into depth buffer
-    mesh_renderer_batch_draw_predepth_pass(renderer, renderer->mesh_renderer,
-                           renderer->shader_system->shader_batches, renderer->shader_system->shader_batches_count,
-                           graphics_command_buffer);
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+                           renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
+                           graphics_command_buffer, &renderer->predepth_mesh_pipeline);
+
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+                       renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
+                       graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
 
     vkCmdEndRendering(graphics_command_buffer->handle);
 
@@ -500,7 +504,16 @@ void renderer_update(Renderer* renderer, float delta_time)
 
 
     //draw mesh, draw skinned mesh
+    //TODO: just start with normal meshes, and spot lights, then expand it out
+    /*
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+                       renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
+                       graphics_command_buffer, &renderer->shadow_mesh_pipeline);
 
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+                       renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
+                       graphics_command_buffer, &renderer->shadow_skinned_mesh_pipeline);
+    */
 
     vkCmdEndRendering(graphics_command_buffer->handle);
     //change shadow pass texture from attachment, to read only
@@ -581,27 +594,17 @@ void renderer_update(Renderer* renderer, float delta_time)
     //Do Bindings and Draw
 
     //TODO: WE CAN BIND THE DESCRIPTOR SETS BEFORE EVERYTHING AS LONG AS THE SET VALUES UP TO N ARE THE SAME
-    // SET 0 GLOBAL UNIFORMS: CAMERA LIGHTS ETC
+    // SET 0 GLOBAL UNIFORMS/STORAGE BUFFER: CAMERA LIGHTS ETC, VERTEX INDEX SKINNED BUFFERS
     // SET 1 GLOBAL TEXTURES: Textures
-    // Everything after this is based on the pipeline and needs to be binded individually
-    // SET 2 GLOBAL BUFFERS: Mesh/Material values (just as an example)
-    // SET 2 GLOBAL BUFFERS: FOG/BLOOM/IDK (just as an example)
+    // SET 2 NOTHING RN:
 
-    //TODO: MESH LAYOUT
-    // SET 0: UNIFORM
-    // SET 1: TEXTURE
-    // THE ABOVE IS FOR EVERYTHING
-    // DRAW LOOP:
-    //      bind pipeline
-    //      bind vertex and index buffer
-    //      for(pipeline_mask):
-    //            bind and update ubo with pipeline mask
-    //            SET 2 : MESH SHADER DATA (push constants / ubo)
-    //            DRAW(INDIRECT) (immediate mode, that batches them by type per frame)
 
     mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
-                             renderer->shader_system->shader_batches, renderer->shader_system->shader_batches_count,
+                             renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
                              graphics_command_buffer);
+    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+                         renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
+                         graphics_command_buffer);
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 

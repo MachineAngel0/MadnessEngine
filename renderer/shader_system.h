@@ -40,7 +40,23 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
                                                  u32 material_stride,
                                                  u32 initial_material_count)
 {
-    Vulkan_Shader_Batch* shader_batch = &shader_system->shader_batches[shader_system->shader_batches_count++];
+    Vulkan_Shader_Batch* shader_batch = NULL;
+    switch (mesh_type)
+    {
+    case Shader_Mesh_Type_Mesh:
+        shader_batch = &shader_system->mesh_batch[shader_system->mesh_batch_count++];
+        break;
+    case Shader_Mesh_Type_Skinned:
+        shader_batch = &shader_system->skinned_batch[shader_system->skinned_batch_count++];
+        break;
+
+    }
+
+    if (!shader_batch)
+    {
+        MASSERT(false);
+    }
+
     shader_batch->shader_name = c_string_duplicate_heap_alloc(shader_name, renderer->heap_allocator);
     shader_batch->shader_stage_type = shader_stage;
     shader_batch->shader_pass_type = shader_pass;
@@ -86,8 +102,7 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
                                                                      BUFFER_TYPE_CPU_STORAGE,
                                                                      sizeof(SKMesh_GPU_Draw) * ssbo_init_amount);
         break;
-    case Shader_Mesh_Type_Particle:
-        break;
+
     }
 
 
@@ -197,17 +212,30 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
                                                 Render_Packet* render_packet)
 {
     //TODO: we should call this at start up once
-    for (int i = 0; i < render_packet->draw_3d_data_packet.oqaque_batch_count; ++i)
+    for (int i = 0; i < render_packet->draw_3d_data_packet.mesh_batch_count; ++i)
     {
         if (hash_table_contains(shader_system->shader_batch_hash_table,
-                                render_packet->draw_3d_data_packet.oqaque_batch[i].shader_name))
+                                render_packet->draw_3d_data_packet.mesh_batch[i].shader_name))
         {
             continue;
         }
 
-        shader_system_shader_batch_create(renderer, shader_system, &render_packet->draw_3d_data_packet.oqaque_batch[i]);
+        shader_system_shader_batch_create(renderer, shader_system, &render_packet->draw_3d_data_packet.mesh_batch[i]);
+    }
+
+    for (int i = 0; i < render_packet->draw_3d_data_packet.skinned_batch_count; ++i)
+    {
+        if (hash_table_contains(shader_system->shader_batch_hash_table,
+                                render_packet->draw_3d_data_packet.skinned_batch[i].shader_name))
+        {
+            continue;
+        }
+
+        shader_system_shader_batch_create(renderer, shader_system, &render_packet->draw_3d_data_packet.skinned_batch[i]);
     }
 }
+
+
 
 
 

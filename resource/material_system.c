@@ -59,8 +59,11 @@ bool material_system_generate_render_packet(Material_System* material_system,
     render_packet_3d->prb_count = MAX_DEFAULT_MATERIAL;
     render_packet_3d->prb_bytes = sizeof(Material_Default) * MAX_DEFAULT_MATERIAL;
 
-    render_packet_3d->oqaque_batch = material_system->oqaque_batch;
-    render_packet_3d->oqaque_batch_count = material_system->oqaque_batch_count;
+    render_packet_3d->mesh_batch = material_system->mesh_batch;
+    render_packet_3d->mesh_batch_count = material_system->mesh_batch_count;
+
+    render_packet_3d->skinned_batch = material_system->skinned_batch;
+    render_packet_3d->skinned_batch_count = material_system->skinned_batch_count;
 
 
     return true;

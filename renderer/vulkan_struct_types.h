@@ -200,7 +200,7 @@ typedef struct vulkan_shader_pipeline
 {
     VkPipelineLayout pipeline_layout;
     VkPipeline handle;
-} vulkan_shader_pipeline;
+} Vulkan_Shader_Pipeline;
 
 
 
@@ -213,9 +213,9 @@ typedef struct Vulkan_Shader_Batch
     Shader_Blend_Mode blend_mode;
 
 
-    vulkan_shader_pipeline pipeline;
-    vulkan_shader_pipeline shadow_pipeline;
-    vulkan_shader_pipeline wireframe_pipeline;
+    Vulkan_Shader_Pipeline pipeline;
+    Vulkan_Shader_Pipeline shadow_pipeline;
+    Vulkan_Shader_Pipeline wireframe_pipeline;
 
     Buffer_Handle indirect_draw_buffer_handle;
     u32 draw_count;
@@ -243,7 +243,7 @@ typedef struct Shader_System
     // Vulkan_Texture renderpass_textures[100];
     // u32 renderpass_texture_indexes;
 
-    vulkan_shader_pipeline pipeline_references[AVAILABLE_TEXTURES];
+    Vulkan_Shader_Pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
 
     //idk if i need this
@@ -256,9 +256,18 @@ typedef struct Shader_System
     //since textures could be read this frame, we wait a frame to delete them
     //TODO: ring_queue* texture_delete_queue
 
+
+    //TODO: I would look into this if sorting my draw calls starts to become an issue
+    // https://realtimecollisiondetection.net/blog/?p=86
+
     //TODO: temp value for now, should probably be a dynamic array
-    Vulkan_Shader_Batch shader_batches[100];
-    u32 shader_batches_count;
+    Vulkan_Shader_Batch mesh_batch[100];
+    u32 mesh_batch_count;
+
+
+    Vulkan_Shader_Batch skinned_batch[100];
+    u32 skinned_batch_count;
+
 
     //the shader name is the lookup
     //we want the pointer to the shader batch,
@@ -306,7 +315,7 @@ typedef struct Buffer_System
 
 typedef struct vulkan_shader_default
 {
-    vulkan_shader_pipeline default_shader_pipeline;
+    Vulkan_Shader_Pipeline default_shader_pipeline;
 
     //TODO: temporary for now
     VkDescriptorSetLayout descriptor_set_layout;
@@ -642,8 +651,8 @@ typedef struct Particle_Render
     Buffer_Handle spherical_billboard_material_buffer_handle;
     u32 draw_count;
 
-    vulkan_shader_pipeline spherical_billboard_pipeline;
-    vulkan_shader_pipeline wireframe_spherical_billboard_pipeline;
+    Vulkan_Shader_Pipeline spherical_billboard_pipeline;
+    Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
 
 } Particle_Render;
 
@@ -701,15 +710,15 @@ typedef struct renderer
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;
 
-    vulkan_shader_pipeline ui_pipeline;
-    vulkan_shader_pipeline text_pipeline;
-    vulkan_shader_pipeline sprite_pipeline;
+    Vulkan_Shader_Pipeline ui_pipeline;
+    Vulkan_Shader_Pipeline text_pipeline;
+    Vulkan_Shader_Pipeline sprite_pipeline;
 
-    vulkan_shader_pipeline predepth_mesh_pipeline;
-    vulkan_shader_pipeline predepth_skinned_mesh_pipeline;
+    Vulkan_Shader_Pipeline predepth_mesh_pipeline;
+    Vulkan_Shader_Pipeline predepth_skinned_mesh_pipeline;
 
-    vulkan_shader_pipeline shadow_mesh_pipeline;
-    vulkan_shader_pipeline shadow_skinned_mesh_pipeline;
+    Vulkan_Shader_Pipeline shadow_mesh_pipeline;
+    Vulkan_Shader_Pipeline shadow_skinned_mesh_pipeline;
 
 
     //lights
@@ -717,9 +726,9 @@ typedef struct renderer
     // but i'll need a solution at some point
     //TODO: update the material pipeline, and set piepline states
     Vulkan_Texture shadowpass_texture;
-    vulkan_shader_pipeline directional_shadow_pipeline;
-    vulkan_shader_pipeline spot_light_shadow_pipeline;
-    vulkan_shader_pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
+    Vulkan_Shader_Pipeline directional_shadow_pipeline;
+    Vulkan_Shader_Pipeline spot_light_shadow_pipeline;
+    Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
     bool wireframe_mode;
 

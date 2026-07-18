@@ -37,9 +37,9 @@ void material_system_add_mesh_instance_to_default_material_batch(Resource_System
 
     // Mesh_Asset* mesh_asset = &mesh_system->mesh_asset_data[parent_instance->mesh_asset.handle];
 
-    for (u32 batch_idx = 0; batch_idx < material_system->oqaque_batch_count; batch_idx++)
+    for (u32 batch_idx = 0; batch_idx < material_system->mesh_batch_count; batch_idx++)
     {
-        Material_Batch* batch = &material_system->oqaque_batch[batch_idx];
+        Material_Batch* batch = &material_system->mesh_batch[batch_idx];
 
         if (strcmp(batch->shader_name, "mesh") != 0) { continue; }
         if (strcmp(batch->material_struct->name, "Material_Default") != 0) { continue; }
@@ -63,9 +63,9 @@ void material_system_add_skmesh_instance_to_default_material_batch(Resource_Syst
 
     // Mesh_Asset* mesh_asset = &mesh_system->mesh_asset_data[parent_instance->mesh_asset.handle];
 
-    for (u32 batch_idx = 0; batch_idx < material_system->oqaque_batch_count; batch_idx++)
+    for (u32 batch_idx = 0; batch_idx < material_system->skinned_batch_count; batch_idx++)
     {
-        Material_Batch* batch = &material_system->oqaque_batch[batch_idx];
+        Material_Batch* batch = &material_system->skinned_batch[batch_idx];
 
         if (strcmp(batch->shader_name, "skinned_mesh") != 0) { continue; }
         if (strcmp(batch->material_struct->name, "Material_Default") != 0) { continue; }
@@ -88,8 +88,21 @@ void material_system_instantiate_material(Material_System* material_system, cons
 {
     //we are assuming everything is a graphics pipeline
     //TODO: keep a hash of already loaded file paths/material combinations
+    Material_Batch* batch = NULL;
+    switch (mesh_type)
+    {
+    case Shader_Mesh_Type_Mesh:
+        batch = &material_system->mesh_batch[material_system->mesh_batch_count++];
+        break;
+    case Shader_Mesh_Type_Skinned:
+        batch = &material_system->skinned_batch[material_system->skinned_batch_count++];
+        break;
+    }
+    if (!batch)
+    {
+        MASSERT(false);
+    }
 
-    Material_Batch* batch = &material_system->oqaque_batch[material_system->oqaque_batch_count++];
     batch->shader_name = shader_name;
     batch->mesh_type = mesh_type;
     batch->blend_mode = blend_mode;
@@ -118,8 +131,6 @@ void material_system_instantiate_material(Material_System* material_system, cons
                 break;
             case Shader_Mesh_Type_Skinned:
                 batch->mesh_instances = dynamic_array_create(Sk_Mesh_Instance, 1, material_system->heap_allocator);
-                break;
-            case Shader_Mesh_Type_Particle:
                 break;
             }
             break;

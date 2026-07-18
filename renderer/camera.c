@@ -97,7 +97,7 @@ void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float 
 }
 
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-void process_mouse_scroll(camera* cam, float y_offset)
+void camera_change_fov(camera* cam, float y_offset)
 {
     cam->fov -= y_offset;
     if (cam->fov < 1.0f)
@@ -141,14 +141,13 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
 
     }
 
-    //TODO:this is bugged, its acting like on pressed
     if (input_key_released_unique(input_system, KEY_Q))
     {
-        process_mouse_scroll(cam, -10.0f);
+        camera_change_fov(cam, -10.0f);
     }
     if (input_key_released_unique(input_system, KEY_E))
     {
-        process_mouse_scroll(cam, 10.0f);
+        camera_change_fov(cam, 10.0f);
     }
 }
 

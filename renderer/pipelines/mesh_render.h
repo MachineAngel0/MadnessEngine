@@ -19,8 +19,11 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                               vulkan_command_buffer* command_buffer);
 
-void mesh_renderer_batch_draw_predepth_pass(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+
+//TODO: should be pass in a custom push constant??? since we will likely need it
+void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                             Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                                            vulkan_command_buffer* command_buffer);
+                                            vulkan_command_buffer* command_buffer, Vulkan_Shader_Pipeline* shader_pipeline);
+
 
 #endif //MESH_RENDER_H

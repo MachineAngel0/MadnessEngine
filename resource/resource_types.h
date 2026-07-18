@@ -530,8 +530,6 @@ typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
     Shader_Mesh_Type_Skinned,
-    Shader_Mesh_Type_Particle,
-    Shader_Mesh_Type_Particle_Mesh,
 } Shader_Mesh_Type;
 
 typedef enum Shader_Pass_Type
@@ -652,8 +650,12 @@ typedef struct Material_System
 
 
     //sort material batches by their pass type
-    Material_Batch oqaque_batch[100];
-    u32 oqaque_batch_count;
+    Material_Batch mesh_batch[100];
+    u32 mesh_batch_count;
+
+    Material_Batch skinned_batch[100];
+    u32 skinned_batch_count;
+
 } Material_System;
 
 
@@ -802,8 +804,11 @@ typedef struct Render_Packet_3D
     //geometry data for indirect draws
 
     //TODO: we should have a dirty bit for generating any new batches
-    Material_Batch* oqaque_batch;
-    u32 oqaque_batch_count;
+    Material_Batch* mesh_batch;
+    u32 mesh_batch_count;
+
+    Material_Batch* skinned_batch;
+    u32 skinned_batch_count;
 
     Material_Default* prb;
     u32 prb_count;
