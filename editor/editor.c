@@ -320,9 +320,22 @@ void editor_ui_scene(Editor* editor)
                 sprintf(buffer, "point_light%d", i);
                 sprintf(buffer2, "point_light_color%d", i);
                 Point_Light* point_light = &light_system->point_lights[i];
-                madness_ui_vec3(STRING(buffer), &point_light->position, 1.0f);
-                madness_ui_vec3(STRING(buffer2), &point_light->color, 0.1f);
+                madness_ui_vec4(STRING(buffer), &point_light->position, 1.0f);
+                madness_ui_vec4(STRING(buffer2), &point_light->color, 0.1f);
             }
+
+
+            for (u32 i = 0; i < light_system->spot_light_count; ++i)
+            {
+                char buffer[50];
+                char buffer2[50];
+                sprintf(buffer, "spot_light%d", i);
+                sprintf(buffer2, "spot_light_color%d", i);
+                Spot_Light* spot_light = &light_system->spot_lights[i];
+                madness_ui_vec4(STRING(buffer), &spot_light->position, 1.0f);
+                madness_ui_vec4(STRING(buffer2), &spot_light->color, 0.1f);
+            }
+
         }
         madness_scroll_box_end();
     }

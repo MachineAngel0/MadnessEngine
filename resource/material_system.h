@@ -15,7 +15,8 @@ bool material_system_generate_render_packet(Material_System* material_system,
 // Material_Handle material_system_create_material(Material_System* material_system);
 
 
-Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle);
+Material_Default*
+material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle);
 Material_Default* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle);
 
 void material_system_pbr_init(Material_Default* out_data);
@@ -56,7 +57,7 @@ void material_system_add_mesh_instance_to_default_material_batch(Resource_System
 
 
 void material_system_add_skmesh_instance_to_default_material_batch(Resource_System* resource_system,
-                                                                 Sk_Mesh_Parent_Instance* parent_instance)
+                                                                   Sk_Mesh_Parent_Instance* parent_instance)
 {
     Material_System* material_system = resource_system->material_system;
 
@@ -82,7 +83,8 @@ void material_system_add_skmesh_instance_to_default_material_batch(Resource_Syst
 
 
 void material_system_instantiate_material(Material_System* material_system, const char* shader_name,
-                                          const char* material_name, Shader_Mesh_Type mesh_type, Shader_Blend_Mode blend_mode)
+                                          const char* material_name, Shader_Mesh_Type mesh_type,
+                                          Shader_Blend_Mode blend_mode, Shader_Pass_Type pass_type)
 {
     //we are assuming everything is a graphics pipeline
     //TODO: keep a hash of already loaded file paths/material combinations
@@ -91,6 +93,13 @@ void material_system_instantiate_material(Material_System* material_system, cons
     batch->shader_name = shader_name;
     batch->mesh_type = mesh_type;
     batch->blend_mode = blend_mode;
+    batch->shader_pass = pass_type;
+
+    if ((pass_type & Shader_Pass_Type_Opaque) && (pass_type & Shader_Pass_Type_Transparent))
+    {
+        MASSERT_MSG_FALSE("material_system_instantiate_material: PASSED IN OPAQUE AND TRANSPARENT INTO THE PASS TYPE");
+    }
+
 
     for (u32 i = 0; i < material_system->reflection_registry->struct_list->num_items; i++)
     {
@@ -100,7 +109,8 @@ void material_system_instantiate_material(Material_System* material_system, cons
         if (strcmp(struct_info->name, material_name) == 0)
         {
             batch->material_struct = struct_info;
-            batch->material_data = _dynamic_array_create(struct_info->struct_size, 1, material_system->heap_allocator);
+            batch->material_data = _dynamic_array_create(struct_info->struct_size, 1,
+                                                         material_system->heap_allocator);
             switch (mesh_type)
             {
             case Shader_Mesh_Type_Mesh:
@@ -109,14 +119,12 @@ void material_system_instantiate_material(Material_System* material_system, cons
             case Shader_Mesh_Type_Skinned:
                 batch->mesh_instances = dynamic_array_create(Sk_Mesh_Instance, 1, material_system->heap_allocator);
                 break;
+            case Shader_Mesh_Type_Particle:
+                break;
             }
             break;
         }
     }
-
-
-
-
 }
 
 void material_system_change_material_param(Material_System* material_system, const char* material_name,

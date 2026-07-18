@@ -24,5 +24,4 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
 
 
 
-
 #endif

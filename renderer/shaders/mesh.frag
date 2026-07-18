@@ -35,7 +35,9 @@ void main() {
         result += calculate_point_light(ubo.point_lights.point_light[i], norm, in_world_position, view_direction);
     }
     // phase 3: Spot light
-    //result += CalcSpotLight(spotLight, norm, in_frag_pos, view_direction);
+    for (int i = 0; i < ubo.spot_lights_count; i++){
+        result += calculate_spot_light(ubo.spot_lights.spot_light[i], norm, in_world_position, view_direction);
+    }
 
     //final color
     vec4 albedo = material.color;

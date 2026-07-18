@@ -52,7 +52,7 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
 
     //load pipeline from our configs
     //TODO: add more configs when neccessary
-    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode,
+    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode, Renderpass_Type_Opaque,
                                     &shader_batch->pipeline, &shader_batch->wireframe_pipeline);
 
 
@@ -85,6 +85,8 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
         shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                      BUFFER_TYPE_CPU_STORAGE,
                                                                      sizeof(SKMesh_GPU_Draw) * ssbo_init_amount);
+        break;
+    case Shader_Mesh_Type_Particle:
         break;
     }
 
@@ -206,6 +208,7 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
         shader_system_shader_batch_create(renderer, shader_system, &render_packet->draw_3d_data_packet.oqaque_batch[i]);
     }
 }
+
 
 
 #endif //SHADER_SYSTEM_H

@@ -130,7 +130,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
     //SHADOW PASS TEXTURE
-    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, VK_FORMAT_D16_UNORM,
+    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.device.depth_format,
                                     renderer->context.graphics_command_buffer, &renderer->shadowpass_texture);
 
     // Create command buffers.
@@ -170,15 +170,15 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->ui_renderer = ui_render_init(renderer, renderer->context.graphics_command_buffer);
 
 
-
     //Pipelines
     ui_shader_create(renderer, &renderer->ui_pipeline, renderer->pipeline_cache);
     text_shader_create(renderer, &renderer->text_pipeline, renderer->pipeline_cache);
     sprite_shader_create(renderer, &renderer->sprite_pipeline, renderer->pipeline_cache);
-    mesh_pipeline_create(renderer, &renderer->indirect_mesh_pipeline,
-                         renderer->pipeline_cache);
-    sk_mesh_pipeline_create(renderer, &renderer->skinned_mesh_pipeline,
-                            renderer->pipeline_cache);
+
+    //predepth pipeline
+    vulkan_pipeline_predepth_create(renderer, "depth_mesh", &renderer->predepth_mesh_pipeline);
+    vulkan_pipeline_predepth_create(renderer, "depth_skinned_mesh", &renderer->predepth_skinned_mesh_pipeline);
+
 
 
     //Pipeline Cache
@@ -301,19 +301,15 @@ void renderer_update(Renderer* renderer, float delta_time)
     ubo.proj = camera_get_projection(&renderer->main_camera, vk_context->framebuffer_width,
                                      vk_context->framebuffer_height);
 
-    VkDeviceAddress directional_light_buffer_address = get_buffer_device_address(vk_context->device.logical_device,
-        vulkan_buffer_get(renderer,
-                          renderer->light_system->directional_light_storage_buffer_handle)->handle);
 
-    VkDeviceAddress point_light_buffer_address = get_buffer_device_address(vk_context->device.logical_device,
-                                                                           vulkan_buffer_get(renderer,
-                                                                               renderer->light_system->
-                                                                               point_light_storage_buffer_handle)->
-                                                                           handle);
-
-    ubo.directional_lights_address = directional_light_buffer_address;
-    ubo.point_lights_address = point_light_buffer_address;
+    ubo.directional_lights_address = vulkan_buffer_get_device_address(
+        renderer, renderer->light_system->directional_light_storage_buffer_handle);;
+    ubo.point_lights_address = vulkan_buffer_get_device_address(
+        renderer, renderer->light_system->point_light_storage_buffer_handle);
     ubo.point_lights_count = renderer->light_system->point_light_count;
+    ubo.spot_lights_address = vulkan_buffer_get_device_address(
+        renderer, renderer->light_system->spot_light_storage_buffer_handle);
+    ubo.spot_lights_count = renderer->light_system->spot_light_count;
     ubo.camera_position = camera_get_world_position(&renderer->main_camera);
     ubo.screem_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
     ubo.time = platform_get_absolute_time();
@@ -359,13 +355,93 @@ void renderer_update(Renderer* renderer, float delta_time)
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
-                                             render_packets, graphics_command_buffer);
+                                       render_packets, graphics_command_buffer);
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     memory_barrier_transfer(renderer, graphics_command_buffer);
+
+
+
+    // Dynamic state
+    VkViewport default_viewport = {
+        0.0f, 0.0f, (f32)vk_context->framebuffer_width, (f32)vk_context->framebuffer_height, 0.0f, 1.0f
+    };
+
+
+    // Scissor
+    VkRect2D default_scissor = {
+        .offset = {.x = 0, .y = 0},
+        .extent = {.width = vk_context->framebuffer_width, .height = vk_context->framebuffer_height},
+    };
+
+    //Depth Prepass//
+
+    image_insert_memory_barrier(graphics_command_buffer->handle,
+                                vk_context->swapchain.depth_attachment.texture_image,
+                                VK_ACCESS_NONE,
+                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                                (VkImageSubresourceRange){
+                                    VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+                                }
+    );
+
+    // Set up the rendering attachment info
+
+    VkRenderingAttachmentInfo predepth_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the depth data
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE, // dont care after rendering
+        .clearValue.depthStencil = {1.0f, 0.0f},
+    };
+
+    VkRenderingInfo predepth_rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = {
+            .offset = {0, 0},
+            .extent = {vk_context->framebuffer_width, vk_context->framebuffer_height}
+        },
+        .layerCount = 1,
+        .colorAttachmentCount = 0,
+        .pColorAttachments = NULL,
+        .pDepthAttachment = &predepth_attachment,
+    };
+    vkCmdBeginRendering(graphics_command_buffer->handle, &predepth_rendering_info);
+    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &default_viewport);
+    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
+
+    //draw geometry into depth buffer
+    mesh_renderer_batch_draw_predepth_pass(renderer, renderer->mesh_renderer,
+                           renderer->shader_system->shader_batches, renderer->shader_system->shader_batches_count,
+                           graphics_command_buffer);
+
+    vkCmdEndRendering(graphics_command_buffer->handle);
+
+    //transition to be read by the later stages
+    image_insert_memory_barrier(
+        graphics_command_buffer->handle, renderer->context.swapchain.depth_attachment.texture_image,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_SHADER_READ_BIT,
+
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, //want to sample in all sorts of shaders
+
+        (VkImageSubresourceRange){
+            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+        }
+    );
+    //Depth Prepass END //
 
 
     //Shadow Pass//
@@ -381,7 +457,7 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                                 (VkImageSubresourceRange){
                                     //no stencil in this pass
-                                    VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 1
+                                    VK_IMAGE_ASPECT_DEPTH_BIT , 0, 1, 0, 1
                                 }
     );
 
@@ -422,10 +498,14 @@ void renderer_update(Renderer* renderer, float delta_time)
     vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &shadow_map_viewport);
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &shadow_map_scissor);
 
+
+    //draw mesh, draw skinned mesh
+
+
     vkCmdEndRendering(graphics_command_buffer->handle);
     //change shadow pass texture from attachment, to read only
     image_insert_memory_barrier(
-        graphics_command_buffer->handle,        renderer->shadowpass_texture.texture_image,
+        graphics_command_buffer->handle, renderer->shadowpass_texture.texture_image,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         VK_ACCESS_SHADER_READ_BIT,
 
@@ -446,7 +526,7 @@ void renderer_update(Renderer* renderer, float delta_time)
     //Shadow Pass END //
 
 
-    //COLOR PASS//
+    //Lighting PASS//
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(graphics_command_buffer->handle,
@@ -457,17 +537,6 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
-    );
-    image_insert_memory_barrier(graphics_command_buffer->handle,
-                                vk_context->swapchain.depth_attachment.texture_image, 0,
-                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                                (VkImageSubresourceRange){
-                                    VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
-                                }
     );
 
 
@@ -484,9 +553,9 @@ void renderer_update(Renderer* renderer, float delta_time)
     VkRenderingAttachmentInfo depth_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the depth data
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, // dont care after rendering
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, // load the depth from the predepth apss
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, //TODO: keep if we have later passes
         .clearValue.depthStencil = {1.0f, 0.0f},
     };
 
@@ -503,21 +572,10 @@ void renderer_update(Renderer* renderer, float delta_time)
     };
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
-    // Dynamic state
-    VkViewport viewport = {
-        0.0f, 0.0f, (f32)vk_context->framebuffer_width, (f32)vk_context->framebuffer_height, 0.0f, 1.0f
-    };
 
 
-    // Scissor
-    VkRect2D scissor = {
-        .offset = {.x = 0, .y = 0},
-        .extent = {.width = vk_context->framebuffer_width, .height = vk_context->framebuffer_height},
-    };
-
-
-    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &viewport);
-    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &scissor);
+    vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &default_viewport);
+    vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
 
 
     //Do Bindings and Draw
@@ -573,7 +631,9 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_2_NONE,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
-    // End renderpass
+    // Lighint Pass End //
+
+    //Rendering End and Move onto Sumbit
 
     //TODO: probably gonna need at some point
     // vulkan_renderpass_UI_begin(&renderer_internal, command_buffer_current_frame, image_index);

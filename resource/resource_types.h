@@ -530,16 +530,27 @@ typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
     Shader_Mesh_Type_Skinned,
-    Shader_Pass_Type_Particle,
+    Shader_Mesh_Type_Particle,
+    Shader_Mesh_Type_Particle_Mesh,
 } Shader_Mesh_Type;
 
 typedef enum Shader_Pass_Type
 {
-    Shader_Pass_Type_MESH_PBR_OPAQUE,
-    Shader_Pass_Type_MESH_PBR_TRANSPARENCY,
-    Shader_Pass_Type_SHADOW,
+    Shader_Pass_Type_Opaque = BITFLAG(0),
+    Shader_Pass_Type_Transparent = BITFLAG(1),
+    Shader_Pass_Type_Shadow = BITFLAG(2),
     // PIPELINE_TYPE_TERRAIN,
 } Shader_Pass_Type;
+
+typedef enum Renderpass_Single_Type
+{
+    //only to be used internally and not by the material system
+    Depth_Test_Type_Predepth,
+    Renderpass_Type_Shadow,
+    Renderpass_Type_Opaque,
+    Renderpass_Type_Transparent,
+} Renderpass_Single_Type;
+
 
 typedef enum Shader_Blend
 {
@@ -548,7 +559,7 @@ typedef enum Shader_Blend
     Shader_Blend_Mode_PreMultiplied_Alpha,
 
     Shader_Blend_Mode_Additive,
-    Shader_Blend_Mode_Soft_Additive,  // soft make it harder for white to blow out the screen
+    Shader_Blend_Mode_Soft_Additive, // soft make it harder for white to blow out the screen
 
     Shader_Blend_Mode_Multiply,
     Shader_Blend_Mode_Multiply2x,
@@ -563,8 +574,10 @@ typedef enum Shader_Blend
 
 typedef enum Shader_Stage_Type
 {
-    Shader_Stage_Type_Graphics,
+    Shader_Stage_Type_Vert,
+    Shader_Stage_Type_Graphics, // both vert and frag
     Shader_Stage_Type_Compute,
+    // Shader_Stage_Type_Tesselation,
 } Shader_Stage_Type;
 
 
@@ -585,7 +598,6 @@ typedef enum Mesh_PBR_Flags
     MESH_PIPELINE_AO = BITFLAG(6),
     MESH_PIPELINE_ENUM_MAX,
 } Mesh_PBR_Flags;
-
 
 
 typedef struct PC_Mesh

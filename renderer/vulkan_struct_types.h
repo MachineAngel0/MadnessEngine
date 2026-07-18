@@ -214,6 +214,7 @@ typedef struct Vulkan_Shader_Batch
 
 
     vulkan_shader_pipeline pipeline;
+    vulkan_shader_pipeline shadow_pipeline;
     vulkan_shader_pipeline wireframe_pipeline;
 
     Buffer_Handle indirect_draw_buffer_handle;
@@ -464,15 +465,19 @@ typedef struct Light_System
     Point_Light* point_lights;
     u32 point_light_count;
 
-    // Spot_Light* spot_lights;
-    // u32 spot_light_count;
+    Spot_Light* spot_lights;
+    u32 spot_light_count;
 
 
     Buffer_Handle directional_light_storage_buffer_handle;
-    Buffer_Handle point_light_storage_buffer_handle;
-
     Buffer_Handle directional_light_staging_buffer_handle;
+
+    Buffer_Handle point_light_storage_buffer_handle;
     Buffer_Handle point_light_staging_buffer_handle;
+
+    Buffer_Handle spot_light_storage_buffer_handle;
+    Buffer_Handle spot_light_staging_buffer_handle;
+
 } Light_System;
 
 
@@ -488,6 +493,9 @@ typedef struct global_ubo
     // u32 directional_light_index;
     VkDeviceAddress point_lights_address;
     u32 point_lights_count;
+
+    VkDeviceAddress spot_lights_address;
+    u32 spot_lights_count;
 
     //camera
     vec4s camera_position;
@@ -693,11 +701,15 @@ typedef struct renderer
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;
 
-    vulkan_shader_pipeline indirect_mesh_pipeline;
-    vulkan_shader_pipeline skinned_mesh_pipeline;
     vulkan_shader_pipeline ui_pipeline;
     vulkan_shader_pipeline text_pipeline;
     vulkan_shader_pipeline sprite_pipeline;
+
+    vulkan_shader_pipeline predepth_mesh_pipeline;
+    vulkan_shader_pipeline predepth_skinned_mesh_pipeline;
+
+    vulkan_shader_pipeline shadow_mesh_pipeline;
+    vulkan_shader_pipeline shadow_skinned_mesh_pipeline;
 
 
     //lights

@@ -28,7 +28,8 @@ struct point_light_data{
 
 struct spot_light_data{
 
-    vec3 position;
+    vec4 position;
+    vec4 color;
     vec3 direction;
     float cut_off;
     float outer_cut_off;
@@ -37,9 +38,8 @@ struct spot_light_data{
     float linear;
     float quadratic;
 
-    vec3 color;
-    vec3 diffuse;
-    vec3 specular;
+    float diffuse;
+    float specular;
 };
 
 
@@ -103,8 +103,8 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
     POINT_LIGHT_BUFFER point_lights;
     uint point_lights_count;
 
-//    SPOT_LIGHT_BUFFER spot_lights;
-//    uint spot_lights_count;
+    SPOT_LIGHT_BUFFER spot_lights;
+    uint spot_lights_count;
 
     vec4 camera_position;
     vec2 screen_dimensions;
@@ -197,19 +197,19 @@ vec3 calculate_point_light(point_light_data light, vec3 normal, vec3 frag_positi
     return (ambient + diffuse + specular);
 }
 
-vec3 CalcSpotLight(spot_light_data light, vec3 normal, vec3 frag_position, vec3 view_direction)
+vec3 calculate_spot_light(spot_light_data light, vec3 normal, vec3 frag_position, vec3 view_direction)
 {
 
     float specular_shininess = 32;
 
-    vec3 lightDir = normalize(light.position - frag_position);
+    vec3 lightDir = normalize(light.position.xyz - frag_position);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(view_direction, reflectDir), 0.0), specular_shininess);
     // attenuation
-    float distance = length(light.position - frag_position);
+    float distance = length(light.position.xyz - frag_position);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // spotlight intensity
     float theta = dot(lightDir, normalize(-light.direction));

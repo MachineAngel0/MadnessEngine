@@ -31,8 +31,14 @@ Material_System* material_system_init(Memory_System* memory_system)
     reflection_registry_debug_print_info(material_system->reflection_registry);
 
 
-    material_system_instantiate_material(material_system, "mesh", "Material_Default", Shader_Mesh_Type_Mesh, Shader_Blend_Mode_Default);
-    material_system_instantiate_material(material_system, "skinned_mesh", "Material_Default", Shader_Mesh_Type_Skinned, Shader_Blend_Mode_Default);
+    material_system_instantiate_material(material_system, "mesh", "Material_Default",
+                                         Shader_Mesh_Type_Mesh, Shader_Blend_Mode_Default,
+                                         Shader_Pass_Type_Opaque | Shader_Pass_Type_Shadow);
+    material_system_instantiate_material(material_system, "skinned_mesh", "Material_Default",
+                                         Shader_Mesh_Type_Skinned, Shader_Blend_Mode_Default,
+                                         Shader_Pass_Type_Opaque | Shader_Pass_Type_Shadow);
+
+
 
     return material_system;
 }

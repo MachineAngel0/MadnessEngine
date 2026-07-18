@@ -18,14 +18,16 @@ Particle_Render* particle_renderer_init(Renderer* renderer, Resource_System* res
 
     //default blend for now
     vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
-                                    &particle_renderer->spherical_billboard_pipeline, &particle_renderer->wireframe_spherical_billboard_pipeline);
+                                    Renderpass_Type_Opaque,
+                                    &particle_renderer->spherical_billboard_pipeline,
+                                    &particle_renderer->wireframe_spherical_billboard_pipeline);
 
 
     // TODO: should pass in particle count from the particle system
     /*_shader_system_shader_batch_create_internal(renderer, renderer->shader_system,
                                                      "billboard_spherical",
                                                      Shader_Stage_Type_Graphics,
-                                                     Shader_Pass_Type_MESH_PBR_OPAQUE,
+                                                     Shader_Pass_Type_Opaque,
                                                      Shader_Pass_Type_Particle,
                                                      Shader_Blend_Mode_Alpha,
                                                      sizeof(Material_Spherical_Billboard),
@@ -38,7 +40,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer, Resource_System* res
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
                                         Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
 {
-        vulkan_buffer_reset_offset(renderer, particle_render->spherical_billboard_material_buffer_handle);
+    vulkan_buffer_reset_offset(renderer, particle_render->spherical_billboard_material_buffer_handle);
 
 
     //update the particle buffer every frame
@@ -115,5 +117,4 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     vkCmdDraw(command_buffer->handle, 6,
               particle_render->draw_count, 0,
               0);
-
 }

@@ -19,4 +19,8 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                               vulkan_command_buffer* command_buffer);
 
+void mesh_renderer_batch_draw_predepth_pass(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+                                            Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
+                                            vulkan_command_buffer* command_buffer);
+
 #endif //MESH_RENDER_H

@@ -1,7 +1,6 @@
 ﻿#include "vk_shader.h"
 
 
-
 VkShaderModule create_shader_module(const vulkan_context* context, const u8* shader_bytes, const u64 shader_size)
 {
     VkShaderModuleCreateInfo shader_module_create_info = {0};
@@ -21,7 +20,7 @@ VkShaderModule create_shader_module(const vulkan_context* context, const u8* sha
 }
 
 bool mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
-                                 pipeline_cache)
+                          pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -197,7 +196,8 @@ bool mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indir
 
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
@@ -267,7 +267,8 @@ bool mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indir
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &mesh_indirect_pipeline->handle);
 
@@ -287,10 +288,9 @@ bool mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* mesh_indir
 }
 
 bool sk_mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* skinned_mesh_pipeline,
-    vulkan_pipeline_cache* pipeline_cache)
+                             vulkan_pipeline_cache* pipeline_cache)
 {
-
-        // Pipeline layout creation
+    // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
         renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
         renderer->descriptor_system->texture_descriptors.descriptor_set_layout,
@@ -464,7 +464,8 @@ bool sk_mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* skinned
 
 
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
     color_blend_attachment.blendEnable = VK_FALSE;
     //colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
@@ -534,7 +535,8 @@ bool sk_mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* skinned
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &skinned_mesh_pipeline->handle);
 
@@ -551,8 +553,6 @@ bool sk_mesh_pipeline_create(Renderer* renderer, vulkan_shader_pipeline* skinned
     vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
 
     return true;
-
-
 }
 
 bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
@@ -565,7 +565,7 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     };
 
     VkPushConstantRange push_constant[1] = {0};
-    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
     push_constant[0].size = sizeof(PC_UI);
 
@@ -627,14 +627,13 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
 
-
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {0};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     //vertex_input_state_create_info.pNext;
     //vertex_input_state_create_info.flags;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
     vertex_input_state_create_info.pVertexBindingDescriptions = 0;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount =0;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
     vertex_input_state_create_info.pVertexAttributeDescriptions = 0;
 
     //The VkPipelineInputAssemblyStateCreateInfo struct describes two things: what kind of geometry will be drawn from the vertices
@@ -705,7 +704,8 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     //TODO: I should look more into this later, its kinda like photoshop blend modes
     // the most important is the src and dst
     VkPipelineColorBlendAttachmentState color_blend_attachment = {0};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+        VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
     // color_blend_attachment.blendEnable = VK_FALSE;
     color_blend_attachment.blendEnable = VK_TRUE;
@@ -769,7 +769,7 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     graphics_pipeline_info.pViewportState = &viewport_state;
     graphics_pipeline_info.pRasterizationState = &rasterizer;
     graphics_pipeline_info.pMultisampleState = &multisampling;
-    graphics_pipeline_info.pDepthStencilState =  &depth_stencil; //might not need
+    graphics_pipeline_info.pDepthStencilState = &depth_stencil; //might not need
     graphics_pipeline_info.pColorBlendState = &color_blending;
     graphics_pipeline_info.pDynamicState = &dynamicState;
     graphics_pipeline_info.layout = ui_pipeline->pipeline_layout;
@@ -780,7 +780,8 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &ui_pipeline->handle);
     if (graphics_result != VK_SUCCESS)
@@ -807,7 +808,8 @@ bool ui_shader_create(Renderer* renderer, vulkan_shader_pipeline* ui_pipeline, v
 }
 
 
-bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipeline,
+                        vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -817,7 +819,7 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     };
 
     VkPushConstantRange push_constant[1] = {0};
-    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
     push_constant[0].size = sizeof(PC_UI);
 
@@ -1054,7 +1056,8 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &text_pipeline->handle);
 
@@ -1073,9 +1076,10 @@ bool text_shader_create(Renderer* renderer, vulkan_shader_pipeline* text_pipelin
     return true;
 }
 
-bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pipeline,
+                          vulkan_pipeline_cache* pipeline_cache)
 {
-  // Pipeline layout creation
+    // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
         renderer->descriptor_system->uniform_descriptors.descriptor_set_layout,
         renderer->descriptor_system->texture_descriptors.descriptor_set_layout,
@@ -1083,7 +1087,7 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     };
 
     VkPushConstantRange push_constant[1] = {0};
-    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
     push_constant[0].size = sizeof(PC_UI);
 
@@ -1304,7 +1308,7 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     graphics_pipeline_info.pViewportState = &viewport_state;
     graphics_pipeline_info.pRasterizationState = &rasterizer;
     graphics_pipeline_info.pMultisampleState = &multisampling;
-    graphics_pipeline_info.pDepthStencilState =  &depth_stencil; //might not need
+    graphics_pipeline_info.pDepthStencilState = &depth_stencil; //might not need
     graphics_pipeline_info.pColorBlendState = &color_blending;
     graphics_pipeline_info.pDynamicState = &dynamicState;
     graphics_pipeline_info.layout = sprite_pipeline->pipeline_layout;
@@ -1315,7 +1319,8 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device, pipeline_cache->handle, 1,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+                                                         pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &sprite_pipeline->handle);
     if (graphics_result != VK_SUCCESS)
@@ -1340,3 +1345,4 @@ bool sprite_shader_create(Renderer* renderer, vulkan_shader_pipeline* sprite_pip
     vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
     return true;
 }
+
