@@ -475,6 +475,12 @@ void mesh_renderer_batch_draw_shadow(Renderer* renderer, Mesh_Renderer* mesh_ren
 }
 
 
+
+
+
+
+
+
 void mesh_renderer_batch_draw_predepth_pass(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                             Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                                             vulkan_command_buffer* command_buffer)

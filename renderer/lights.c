@@ -3,6 +3,8 @@
 #include "vk_buffer.h"
 
 
+
+
 Light_System* light_system_init(Renderer* renderer)
 {
     Light_System* out_light_system = allocator_alloc(&renderer->allocator, sizeof(Light_System));
@@ -125,15 +127,29 @@ void light_system_update(Renderer* renderer, Light_System* light_system, vulkan_
                                                sizeof(Spot_Light) * light_system->spot_light_count);
 
 
-    /*
     float near_plane = 1.0f, far_plane = 7.5f;
-    mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
-    mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
-                                   (vec3s){0.0f, 0.0f, 0.0f},
-                                   (vec3s){0.0f, 1.0f, 0.0f});
+    for (u32 i = 0; i < light_system->spot_light_count; i++)
+    {
+        light_system->spot_lights[i];
+        mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
+        mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
+                               (vec3s){0.0f, 0.0f, 0.0f},
+                               (vec3s){0.0f, 1.0f, 0.0f});
+        mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
 
-    mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
+    }
+
+
+
+
+    /*
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer,
+                                               light_system->spot_light_storage_buffer_handle,
+                                               command_buffer,
+                                               light_system->spot_lights,
+                                               sizeof(Spot_Light) * light_system->spot_light_count);
     */
+
 
 
 

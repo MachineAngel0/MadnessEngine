@@ -599,12 +599,11 @@ typedef enum Mesh_PBR_Flags
     MESH_PIPELINE_ENUM_MAX,
 } Mesh_PBR_Flags;
 
-
-typedef struct PC_Mesh
+typedef struct PC_General
 {
     VkDeviceAddress draw_data_buffer;
     VkDeviceAddress material_buffer;
-} PC_Mesh;
+} PC_General;
 
 typedef struct PC_Particle
 {
@@ -612,17 +611,12 @@ typedef struct PC_Particle
     VkDeviceAddress unused;
 } PC_Particle;
 
-typedef struct PC_General
-{
-    VkDeviceAddress draw_data_buffer;
-    VkDeviceAddress material_buffer;
-} PC_General;
 
-typedef struct PC_Skinned_Mesh
+typedef struct PC_Shadow_Mapping
 {
+    mat4 light_matrix;
     VkDeviceAddress draw_data_buffer;
-    VkDeviceAddress material_buffer;
-} PC_Skinned_Mesh;
+}PC_Shadow_Mapping;
 
 typedef struct Material_Batch
 {
