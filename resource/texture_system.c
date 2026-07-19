@@ -3,7 +3,6 @@
 
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {
-
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
 
@@ -25,7 +24,8 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
 
     //create our debug texture
-    texture_system->default_texture_handle = texture_system_load_texture(asset_system, "../renderer/texture/error_texture.png");
+    texture_system->default_texture_handle = texture_system_load_texture(
+        asset_system, "../renderer/texture/error_texture.png");
 
     return texture_system;
 }
@@ -92,7 +92,7 @@ Texture_Handle texture_system_load_texture(Asset_System* asset_system, char cons
     texture->width = texWidth; // 4 stride rgba
     texture->height = texHeight; // 4 stride rgba
     texture->channels = STBI_rgb_alpha; // 4 stride rgba
-    texture->image_size = texWidth * texHeight * 4; // 4 stride rgba
+    texture->pixel_size = texWidth * texHeight * 4; // 4 stride rgba
 
     MASSERT_MSG(texture->pixels, "FAILED TO LOAD TEXTURE");
 
@@ -137,6 +137,79 @@ bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle ha
     }
 
     return true;
+}
+
+bool texture_system_loader_converter(Asset_System* asset_system, const char* file_path)
+{
+
+    Madness_Texture texture = {0};
+    //load the image data from file
+    int texWidth, texHeight, texChannels;
+    u8* pixel_data = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+    MASSERT(pixel_data);
+
+    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
+    texture.width = texWidth; // 4 stride rgba
+    texture.height = texHeight; // 4 stride rgba
+    texture.channels = STBI_rgb_alpha; // 4 stride rgba
+    texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
+
+    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+    // string_builder_append_c_string(str_builder, EDITOR_TEXTURE_PATH);
+    string_builder_append_c_string(str_builder, file_path);
+    string_builder_strip_extension(str_builder);
+    string_builder_append_c_string(str_builder, ".txt");
+
+
+    const char* output_path = string_builder_to_c_string(str_builder);
+    FILE* fptr = fopen(output_path, "wb");
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+
+
+    fwrite(&texture, sizeof(Madness_Texture), 1, fptr);
+    fwrite(pixel_data, texture.pixels_size, 1, fptr);
+
+    stbi_image_free(pixel_data);
+
+
+    fclose(fptr);
+}
+
+Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system)
+{
+    //we need to convert the editor data into a format usable by the engine/renderer
+    Madness_Texture texture = {0};
+
+    FILE* fptr = fopen("../z_assets/textures/test_particle.mtex", "rb");
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+    fread(&texture, sizeof(Madness_Texture), 1, fptr);
+    u8* pixel_data = allocator_heap_alloc(asset_system->heap_allocator, texture.pixels_size);
+    fread(pixel_data, texture.pixels_size, 1, fptr);
+
+    int error = fseek(fptr, 0L, SEEK_SET);
+    if (error != 0)
+    {
+        MASSERT(false);
+    }
+
+
+    Texture gpu_tex = {0};
+    gpu_tex.width = texture.width;
+    gpu_tex.height = texture.height;
+    gpu_tex.channels = texture.channels;
+    gpu_tex.pixel_size = texture.pixels_size;
+    gpu_tex.pixels = pixel_data;
+    gpu_tex.handle = (Texture_Handle){0,0};
+
+
+    fclose(fptr);
 }
 
 bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Texture* out_texture)
@@ -356,7 +429,7 @@ bool texture_system_load_font(Asset_System* asset_system, const char* file_path,
     texture->width = atlas_width;
     texture->height = atlas_height;
     texture->channels = 4;
-    texture->image_size = atlasRGBA_size;
+    texture->pixel_size = atlasRGBA_size;
     texture->pixels = atlas_RGBA_pixels;
     texture->handle = *out_handle;
     ring_enqueue(texture_system->textures_ring_queue, texture);
@@ -401,7 +474,6 @@ bool texture_system_get_font(Texture_System* texture_system, const Texture_Handl
 bool texture_system_load_msdf_font(Asset_System* asset_system, const char* file_path, Texture_Handle* out_handle,
                                    Frame_Allocator* frame_arena)
 {
-
     Texture_System* texture_system = asset_system->texture_system;
     u32 texture_idx;
 
@@ -451,7 +523,7 @@ bool texture_system_load_msdf_font(Asset_System* asset_system, const char* file_
     texture->width = texture_width; // 4 stride rgba
     texture->height = texture_height; // 4 stride rgba
     texture->channels = STBI_rgb_alpha; // 4 stride rgba
-    texture->image_size = texture_width * texture_height * 4; // 4 stride rgba
+    texture->pixel_size = texture_width * texture_height * 4; // 4 stride rgba
 
     MASSERT_MSG(texture->pixels, "FAILED TO LOAD FONT");
 

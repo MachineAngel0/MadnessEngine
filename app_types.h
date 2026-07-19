@@ -20,7 +20,7 @@ typedef struct Application_Core
     // rn its not an issue so im just leaving it here
     Event_System* event_system;
     Input_System* input_system;
-    Asset_System* resource_system;
+    Asset_System* asset_system;
     Madness_Audio_System* audio_system;
 
     bool is_running;

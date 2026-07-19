@@ -19,6 +19,10 @@ typedef struct String_Builder
     Heap_Allocator* heap_allocator;
 } String_Builder;
 
+
+
+
+
 //if you do not need to heap allocate, then do not heap allocate (String_Builder = {0})
 String_Builder* string_builder_create(const u64 capacity, Allocator* allocator);
 
@@ -39,6 +43,10 @@ void string_builder_append_c_string(String_Builder* str_builder, const char* wor
 void string_builder_append_char(String_Builder* str_builder, char character);
 
 void string_builder_decrement(String_Builder* str_builder);
+
+bool string_builder_strip_extension(String_Builder* builder);
+
+
 
 String* string_builder_to_string(const String_Builder* builder);
 String string_builder_to_string_non_pointer(const String_Builder* builder);

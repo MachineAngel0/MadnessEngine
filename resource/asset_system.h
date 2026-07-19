@@ -15,6 +15,14 @@
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
 
+#define EDITOR_TEXTURE_PATH "../z_assets_editor/texture"
+#define EDITOR_FONTS_PATH "../z_assets_editor/fonts"
+#define EDITOR_MESH_PATH "../z_assets_editor/mesh"
+#define EDITOR_SK_MESH_PATH "../z_assets_editor/skinned_mesh"
+#define EDITOR_AUDIO_PATH "../z_assets_editor/audio"
+#define EDITOR_RESOURCE_PATH "../z_assets_editor/asset_list"
+
+
 
 #define ENGINE_RESOURCE_PATH "../z_assets_engine/asset_list"
 #define ENGINE_TEXTURE_PATH "../z_assets_engine/texture"
@@ -31,6 +39,11 @@
 // I dont want to refer to the asset by full path name, (NO) dir/other_dir/rose.gltf -> (YES) "rose.mmsh" (rose. madness mesh)
 // i dont want a seperate build for the editor and game, just a flag to toggle them on and off, and also toggles the asset manaager, and which functions it uses
 
+//ideally we have an engine format that tells us as much about
+//the asset we want to know and is reasonably fast to load
+//we store the metadata, but just dump the binary data on load
+
+
 //downsides:
 //no way to rename assets,
 //no asset cross-referencing,
@@ -44,17 +57,6 @@
 //
 
 
-typedef struct Madness_Texture
-{
-    u32 width;
-    u32 height;
-    u8 channels;
-    //enum texture format
-    //bool free_after_use
-
-    u64 pixels_size;
-    u8* pixels_data;
-} Madness_Texture;
 
 
 typedef struct Madness_Mesh
@@ -139,6 +141,11 @@ Texture_Handle asset_load_texture(Asset_System* a, const char* path)
     return texture_system_load_texture(a, path);
 }
 
+Texture_Handle asset_loader_texture(Asset_System* a, const char* path)
+{
+    // return mesh_load_gltf(a, path);
+    return texture_system_load_texture(a, path);
+}
 
 
 
@@ -208,7 +215,6 @@ void asset_system_update_registry(Asset_System* asset_system)
 {
     //TODO:
 }
-
 
 
 void asset_system_convert_to_runtime_format()

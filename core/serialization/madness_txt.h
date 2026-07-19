@@ -90,13 +90,6 @@ typedef struct madness_txt_object_subfield
 
     Reflection_Type type;
     u32 array_count;
-    union
-    {
-        void* data;
-        String* string;
-    };
-
-
     struct madness_txt_object_subfield* next;
 } madness_txt_object_subfield;
 
@@ -108,7 +101,7 @@ typedef struct madness_txt_object
 } madness_txt_object;
 
 
-#define MADNESS_TXT_OBJECT_MAX 1000
+#define MADNESS_TXT_OBJECT_MAX 200
 
 typedef struct Madness_txt
 {
@@ -120,10 +113,10 @@ typedef struct Madness_txt
 
 
 
-typedef struct object_handle
+typedef struct Txt_Handle
 {
     u32 handle;
-} object_handle;
+} Madness_Txt_Handle;
 
 
 //API
@@ -134,37 +127,19 @@ Madness_txt* madness_txt_init(Memory_System* memory_system);
 //TODO:
 void madness_txt_shutdown(Madness_txt* txt);
 
-//object
-object_handle madness_txt_object_create(Madness_txt* txt, const char* name);
-void madness_txt_object_add_item(Madness_txt* txt, object_handle handle, const char* field_name, Reflection_Type type,
-                                 u32 array_size);
 
+Madness_Txt_Handle madness_txt_schema_create(Madness_txt* txt, const char* name);
+void madness_txt_schema_add_type(Madness_txt* txt, Madness_Txt_Handle handle, const char* field_name,
+                                 Reflection_Type type, u32 array_size);
+void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handle, void* struct_data,
+                              const char* file_path);
 
-//write
-void madness_txt_object_write_data_single(Madness_txt* txt, object_handle handle, const char* field_name,
-                                       void* data);
-
-void madness_txt_object_write_data_full(Madness_txt* txt, object_handle handle, void* struct_data);
-
-
-//struct needs to be read in proper order that it was defined when using object add type
-void madness_txt_object_write_data_arg(Madness_txt* txt, object_handle handle, ...);
-
-void madness_txt_object_write_file(Madness_txt* txt, const char* file_path, object_handle* object_handle);
-
-//read
-void madness_txt_read_file(Madness_txt* txt, const char* file_path, object_handle* handle);
-
-//NOTE ... is meant to be variable length of void* data, which if your struct fields
-//struct needs to be read in proper order that it was defined when using object add type
-void madness_txt_object_read_args(Madness_txt* txt, object_handle handle, ...);
-void madness_txt_object_read(Madness_txt* txt, object_handle handle, const char* field_name,
-                             void* write_to_data);
+void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void* out_data, const char* file_path);
 
 
 //internal
 size_t madness_txt_str_to_type(char* str);
-size_t madness_txt_type_size(Reflection_Type type);
+
 
 
 
@@ -201,6 +176,8 @@ typedef struct madness_txt_test_struct_example
 
 
 void madness_txt_object_test_example(Madness_txt* txt);
+
+void madness_txt_test_schema(Madness_txt* txt);
 
 
 #endif //MADNESS_TXT_H

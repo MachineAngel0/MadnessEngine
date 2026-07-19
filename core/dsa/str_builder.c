@@ -131,6 +131,24 @@ void string_builder_decrement(String_Builder* str_builder)
     str_builder->current_length--;
 }
 
+bool string_builder_strip_extension(String_Builder* builder)
+{
+    MASSERT(builder);
+
+
+    for (; builder->current_length > 0; builder->current_length--)
+    {
+        if (builder->str[builder->current_length] == '.')
+        {
+            return true;
+        }
+    }
+
+    //basically was not a valid path string
+    MASSERT_MSG_FALSE("string_builder_strip_extension: PATH STRING DOES NOT CONTAIN /");
+    return false;
+}
+
 String* string_builder_to_string(const String_Builder* builder)
 {
     return string_create(builder->str, builder->current_length);

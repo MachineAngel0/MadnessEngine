@@ -28,6 +28,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
 
+
+
     Platform_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Madness Engine Editor";
@@ -37,6 +39,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     memory_system_init(&app_internal->application_core.memory_system, memory_request_size);
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
     clock_init(&app_internal->application_core.clock);
+
+    Madness_txt* txt = madness_txt_init(&app_internal->application_core.memory_system);
+    madness_txt_test_schema(txt);
+
+
 
     //TODO: testing lexer/parser stuff
     //TODO: make sure the lexer free's its data
@@ -61,14 +68,17 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     reflection_registry_read_from_txt_format(reflection_registry, "Heal_Component", "1", &heal_comp_read,
                                              "../z_assets/abilities/abilities.yaml");
 
+
+
+
     app_internal->application_core.is_running = true;
 
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
-                                                       application_core->resource_system);
+                                                       application_core->asset_system);
 
 
 
@@ -92,19 +102,21 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system,
                                               application_core->event_system,
-                                              application_core->resource_system);
+                                              application_core->asset_system);
 
 
 
     //UI
     insanity_ui_init(&application_core->memory_system, application_core->input_system,
-                     application_core->resource_system);
+                     application_core->asset_system);
 
     madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
-                                                  application_core->resource_system);
+                                                  application_core->asset_system);
 
 
+    texture_system_loader_converter(application_core->asset_system, "../z_assets/textures/test_particle.png");
+    texture_system_load_texture_engine(application_core->asset_system);
 
     /*mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
     mesh_load_gltf(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
@@ -116,10 +128,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
                                                                      application_core->event_system,
                                                                      application_core->input_system,
-                                                                     application_core->resource_system);
+                                                                     application_core->asset_system);
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
-                                  application_core->resource_system,
+                                  application_core->asset_system,
                                  &application_core->clock, reflection_registry);
 
     //MAIN LOOP
@@ -149,7 +161,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         {
             continue;
         }
-        sprite_system_begin(application_core->resource_system->sprite_system,
+        sprite_system_begin(application_core->asset_system->sprite_system,
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
@@ -180,20 +192,20 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         //                              application_core->clock.delta_time,
         //                              application_core->resource_system->frame_allocator);
 
-        animation_update(application_core->resource_system->mesh_system,
+        animation_update(application_core->asset_system->mesh_system,
                                      application_core->clock.delta_time,
-                                     application_core->resource_system->frame_allocator);
+                                     application_core->asset_system->frame_allocator);
 
-        particle_system_update(application_core->resource_system->particle_system,
+        particle_system_update(application_core->asset_system->particle_system,
                                      application_core->clock.delta_time);
 
         madness_ui_end();
         insanity_ui_end();
 
         //render packet
-        asset_system_update_and_create_render_packet(application_core->resource_system);
+        asset_system_update_and_create_render_packet(application_core->asset_system);
 
-        application_core->resource_system->render_packet->ui_data_packet.madness_ui_render_packet =
+        application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
@@ -226,7 +238,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    asset_system_shutdown(application_core->resource_system, &application_core->memory_system);
+    asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system, &application_core->memory_system);

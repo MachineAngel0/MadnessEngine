@@ -130,6 +130,7 @@ char* c_string_ext_strip(const char* path, Allocator* arena)
 
     //basically was not a valid path string
     MASSERT_MSG(new_path, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+
     return "";
 }
 

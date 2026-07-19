@@ -42,9 +42,9 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
-                                                       application_core->resource_system);
+                                                       application_core->asset_system);
 
 
     //register events needed for this application
@@ -67,18 +67,18 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
                                                                      platform_config, &application_core->memory_system,
                                                                      application_core->input_system,
                                                                      application_core->event_system,
-                                                                     application_core->resource_system);
+                                                                     application_core->asset_system);
 
     renderer_plugin->madness_ui = renderer_plugin->ui_init(&application_core->memory_system,
                                                            application_core->input_system,
-                                                           application_core->resource_system);
+                                                           application_core->asset_system);
 
     //run the renderer
     //MAIN LOOP
 
     //INDIRECT DRAW
     // mesh_load_fbx(renderer, "../z_assets/models/mug_fbx/teamugfbx.fbx");
-    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
+    mesh_load_gltf_new(application_core->asset_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                    &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                    renderer_plugin->renderer->resource_system);
     // mesh_load_gltf(resource_system->mesh_system,"../z_assets/models/damaged_helmet_gltf/DamagedHelmet.gltf", &renderer->arena, &renderer->frame_arena, renderer->resource_system);
@@ -86,7 +86,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
     // &renderer_plugin->renderer->arena, &renderer_plugin->renderer->frame_arena,
     // renderer_plugin->renderer->resource_system);
-    mesh_load_gltf_new(application_core->resource_system->mesh_system,
+    mesh_load_gltf_new(application_core->asset_system->mesh_system,
                  "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
                  &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                  renderer_plugin->renderer->resource_system);
@@ -128,7 +128,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
             continue;
         }
 
-        sprite_system_begin(application_core->resource_system->sprite_system,
+        sprite_system_begin(application_core->asset_system->sprite_system,
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
@@ -142,8 +142,8 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         madness_ui_test();
 
 
-        renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->resource_system);
-        asset_system_update_and_create_render_packet(application_core->resource_system);
+        renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->asset_system);
+        asset_system_update_and_create_render_packet(application_core->asset_system);
 
 
         //render
@@ -171,7 +171,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    asset_system_shutdown(application_core->resource_system, &application_core->memory_system);
+    asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

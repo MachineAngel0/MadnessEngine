@@ -47,9 +47,9 @@ bool editor_app_run(Editor_Application* editor_app)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
-                                                       application_core->resource_system);
+                                                       application_core->asset_system);
 
 
     //register events needed for this application
@@ -72,14 +72,14 @@ bool editor_app_run(Editor_Application* editor_app)
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system,
                                               application_core->event_system,
-                                              application_core->resource_system);
+                                              application_core->asset_system);
 
     renderer_plugin->madness_ui = madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
-                                                  application_core->resource_system);
+                                                  application_core->asset_system);
 
     editor_plugin->editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
-                                        renderer_plugin->madness_ui, application_core->resource_system, &application_core->clock);
+                                        renderer_plugin->madness_ui, application_core->asset_system, &application_core->clock);
 
     Shader_Creation_System* shader_creation_system = shader_creation_system_init(&application_core->memory_system);
     shader_creation_system_test(shader_creation_system);
@@ -87,7 +87,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     //MAIN LOOP
     //TODO: theres a bug if i try to load in the same object twiceqq
-    mesh_load_gltf_new(application_core->resource_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
+    mesh_load_gltf_new(application_core->asset_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                        &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
                        renderer_plugin->renderer->resource_system);
     /*
@@ -97,7 +97,7 @@ bool editor_app_run(Editor_Application* editor_app)
                            renderer_plugin->renderer->resource_system);
     */
 
-    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->resource_system);
+    insanity_ui_init(&application_core->memory_system, application_core->input_system, application_core->asset_system);
 
 
 
@@ -129,7 +129,7 @@ bool editor_app_run(Editor_Application* editor_app)
         {
             continue;
         }
-        sprite_system_begin(application_core->resource_system->sprite_system,
+        sprite_system_begin(application_core->asset_system->sprite_system,
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);
 
@@ -146,7 +146,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
 
 
-        asset_system_update_and_create_render_packet(application_core->resource_system);
+        asset_system_update_and_create_render_packet(application_core->asset_system);
 
 
         //render
@@ -175,7 +175,7 @@ bool editor_app_run(Editor_Application* editor_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    asset_system_shutdown(application_core->resource_system, &application_core->memory_system);
+    asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

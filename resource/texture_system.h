@@ -12,6 +12,9 @@ MAPI bool texture_system_shutdown(Texture_System* texture_system, Memory_System*
 MAPI Texture_Handle texture_system_load_texture(Asset_System* asset_system, char const* file_path);
 MAPI bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle handle);
 
+
+
+
 //loads in a new texture in place of the old one
 MAPI Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
                                             const char* filepath);

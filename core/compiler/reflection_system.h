@@ -35,6 +35,40 @@ typedef enum Reflection_Type
     REFLECTION_TYPE_MAX,
 } Reflection_Type;
 
+
+u8 Reflection_Type_Size_LUT[REFLECTION_TYPE_MAX] = {
+    [REFLECTION_TYPE_INVALID] = 0,
+    [REFLECTION_TYPE_U8] = sizeof(u8),
+    [REFLECTION_TYPE_U16] = sizeof(u16),
+    [REFLECTION_TYPE_U32] = sizeof(u32),
+    [REFLECTION_TYPE_U64] = sizeof(u64),
+    [REFLECTION_TYPE_S8] = sizeof(s8),
+    [REFLECTION_TYPE_S16] = sizeof(s16),
+    [REFLECTION_TYPE_S32] = sizeof(s32),
+    [REFLECTION_TYPE_S64] = sizeof(s64),
+    [REFLECTION_TYPE_F32] = sizeof(f32),
+    [REFLECTION_TYPE_F64] = sizeof(f64),
+    [REFLECTION_TYPE_SIZE_T] = sizeof(size_t),
+    [REFLECTION_TYPE_BOOL] = sizeof(bool),
+    [REFLECTION_TYPE_CHAR] = sizeof(char),
+    [REFLECTION_TYPE_CHAR_STRING] = sizeof(char*),
+    [REFLECTION_TYPE_STRING] = sizeof(String),
+    [REFLECTION_TYPE_ENUM] = sizeof(u32),
+    [REFLECTION_TYPE_STRUCT] = 0,
+    [REFLECTION_TYPE_VEC2] = sizeof(vec2s),
+    [REFLECTION_TYPE_VEC3] = sizeof(vec3s),
+    [REFLECTION_TYPE_VEC4] = sizeof(vec4s),
+    [REFLECTION_TYPE_MAT3] = sizeof(mat3s),
+    [REFLECTION_TYPE_MAT4] = sizeof(mat4s),
+};
+
+u8 reflection_type_get_size(Reflection_Type type)
+{
+    return Reflection_Type_Size_LUT[type];
+}
+
+
+
 Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [Token_Unknown] = REFLECTION_TYPE_INVALID,
     [Token_U8] = REFLECTION_TYPE_U8,
@@ -60,8 +94,9 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [TOKEN_VEC4] = REFLECTION_TYPE_VEC4,
     [TOKEN_MAT3] = REFLECTION_TYPE_MAT3,
     [TOKEN_MAT4] = REFLECTION_TYPE_MAT4,
-
 };
+
+
 
 typedef enum Reflection_Container_Type
 {

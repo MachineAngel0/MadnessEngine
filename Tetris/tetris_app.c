@@ -46,9 +46,9 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
-                                                       application_core->resource_system);
+                                                       application_core->asset_system);
 
 
     //register events needed for this application
@@ -71,15 +71,15 @@ bool tetris_game_run(Tetris_Application* tetris_application)
                                                                      platform_config, &application_core->memory_system,
                                                                      application_core->input_system,
                                                                      application_core->event_system,
-                                                                     application_core->resource_system);
+                                                                     application_core->asset_system);
 
     renderer_plugin->madness_ui = renderer_plugin->ui_init(&application_core->memory_system,
                                                            application_core->input_system,
-                                                           application_core->resource_system);
+                                                           application_core->asset_system);
 
     //init the game
     Tetris_Game_State* tetris_game_state = tetris_init(&application_core->memory_system,
-                                                       application_core->resource_system);
+                                                       application_core->asset_system);
 
     //MAIN LOOP
     clock_start(&application_core->clock);
@@ -100,7 +100,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
             continue;
         }
 
-        sprite_system_begin(application_core->resource_system->sprite_system,
+        sprite_system_begin(application_core->asset_system->sprite_system,
                            renderer_plugin->renderer->context.framebuffer_width_new,
                            renderer_plugin->renderer->context.framebuffer_height_new);
 
@@ -111,8 +111,8 @@ bool tetris_game_run(Tetris_Application* tetris_application)
         tetris_update(tetris_game_state, application_core->clock.delta_time);
 
 
-        renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->resource_system);
-        asset_system_update_and_create_render_packet(application_core->resource_system);
+        renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->asset_system);
+        asset_system_update_and_create_render_packet(application_core->asset_system);
 
 
         //Render
@@ -131,7 +131,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    asset_system_shutdown(application_core->resource_system, TODO);
+    asset_system_shutdown(application_core->asset_system, TODO);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

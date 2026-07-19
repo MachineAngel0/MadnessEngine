@@ -118,14 +118,26 @@ typedef struct Texture
     u32 width;
     u32 height;
     u8 channels; // rgb? rgba? etc... TODO:  might be cases where you want just something like rb, enum for that
-    u64 image_size;
+    u64 pixel_size;
     //image_type
     stbi_uc* pixels;
-
     // for the renderer
     Texture_Handle handle;
-    // bool free_after_gpu_upload;
+
 } Texture;
+
+
+
+typedef struct Madness_Texture
+{
+    u32 width;
+    u32 height;
+    u8 channels;
+    //enum texture format
+    //bool free_after_use
+    u64 pixels_size;
+    // u8* pixel_data;
+} Madness_Texture;
 
 
 //FONT/TEXT

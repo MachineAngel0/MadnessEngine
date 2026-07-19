@@ -124,7 +124,7 @@ void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_bu
     out_texture->width = texture_data->width;
     out_texture->height = texture_data->height;
 
-    VkDeviceSize imageSize = texture_data->image_size;
+    VkDeviceSize imageSize = texture_data->pixel_size;
     stbi_uc* pixels = texture_data->pixels;
     u32 texWidth = texture_data->width;
     u32 texHeight = texture_data->height;
