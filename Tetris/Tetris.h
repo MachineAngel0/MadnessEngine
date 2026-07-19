@@ -137,14 +137,14 @@ typedef struct Tetris_Game_State
 
 
 
-    Resource_System* resource_system; // reference
+    Asset_System* resource_system; // reference
 } Tetris_Game_State;
 
 
 
 
 //NOTE: the sprite system handles the drawing
-MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system);
+MAPI Tetris_Game_State* tetris_init(Memory_System* memory_system, Asset_System* resource_system);
 
 MAPI void tetris_clock_init(Tetris_Game_State* tetris, float block_move_speed_seconds);
 MAPI void tetris_grid_init(Tetris_Game_State* tetris, int column, int row);

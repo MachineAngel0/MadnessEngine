@@ -1,6 +1,6 @@
 ﻿
 
-#include "resource_system.c"
+#include "asset_system.c"
 
 #include "scene.c"
 #include "texture_system.c"

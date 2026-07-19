@@ -3,7 +3,7 @@
 #include "memory/memory_system.h"
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                    Resource_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry)
+                    Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry)
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
@@ -21,7 +21,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
 
     editor->renderer = renderer;
-    editor->resource_system = resource_system;
+    editor->asset_system = resource_system;
     editor->clock = clock;
     editor->reflection_registry = reflection_registry;
 
@@ -118,7 +118,7 @@ void editor_ui(Editor* editor)
         madness_ui_set_window_pos(700, 100);
         madness_ui_window_begin(STRING("Material Menu"));
         {
-            Reflection_Registry* material_reflection_registry = editor->resource_system->material_system->
+            Reflection_Registry* material_reflection_registry = editor->asset_system->material_system->
                                                                         reflection_registry;
 
             if (madness_ui_button(STRING("Serialize Runtime Data")))
@@ -152,20 +152,20 @@ void editor_ui_debug(Editor* editor)
             FATAL("DO A BARREL ROLL");
         };
 
-        if (madness_ui_vec3(STRING("pos"), &editor->resource_system->scene->transforms[0].position, 1.0f))
+        if (madness_ui_vec3(STRING("pos"), &editor->asset_system->scene->transforms[0].position, 1.0f))
         {
-            transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
+            transform_mark_dirty(&editor->asset_system->scene->transforms[0]);
         }
-        if (madness_ui_vec3(STRING("scale"), &editor->resource_system->scene->transforms[0].scale, 1.0f))
+        if (madness_ui_vec3(STRING("scale"), &editor->asset_system->scene->transforms[0].scale, 1.0f))
         {
-            transform_mark_dirty(&editor->resource_system->scene->transforms[0]);
+            transform_mark_dirty(&editor->asset_system->scene->transforms[0]);
         }
         // madness_ui_vec3(madness_ui, "pos", STRING("translate"), &translate, 1.0f);
 
         if (madness_ui_button(STRING("translate by 1")))
         {
             vec3s translate = {1, 1, 1};
-            transform_translate(&editor->resource_system->scene->transforms[0], translate);
+            transform_translate(&editor->asset_system->scene->transforms[0], translate);
         }
 
         /*if (madness_ui_button(madness_ui, STRING("material flags enable")))
@@ -224,7 +224,7 @@ void editor_ui_stats(Editor* editor)
 
 void editor_ui_animation(Editor* editor)
 {
-    Mesh_System* mesh_system = editor->resource_system->mesh_system;
+    Mesh_System* mesh_system = editor->asset_system->mesh_system;
     madness_ui_window_begin(STRING("Animation Data"));
     {
         for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; i++)
@@ -268,7 +268,7 @@ void editor_ui_scene(Editor* editor)
     {
         madness_scroll_box_begin(STRING("Scene Scroll Box"));
 
-        for (int i = 0; i < editor->resource_system->scene->transform_count; i++)
+        for (int i = 0; i < editor->asset_system->scene->transform_count; i++)
         {
             char buffer_transform[50];
             char buffer_rotation[50];
@@ -277,20 +277,20 @@ void editor_ui_scene(Editor* editor)
             snprintf(buffer_rotation, 50, "rotation%d", i);
             snprintf(buffer_scale, 50, "scale%d", i);
 
-            if (madness_ui_vec3(STRING(buffer_transform), &editor->resource_system->scene->transforms[i].position,
+            if (madness_ui_vec3(STRING(buffer_transform), &editor->asset_system->scene->transforms[i].position,
                                 1.0f))
             {
-                transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
+                transform_mark_dirty(&editor->asset_system->scene->transforms[i]);
             }
-            if (madness_ui_vec3(STRING(buffer_rotation), &editor->resource_system->scene->transforms[i].euler_angles,
+            if (madness_ui_vec3(STRING(buffer_rotation), &editor->asset_system->scene->transforms[i].euler_angles,
                                 1.0f))
             {
-                transform_rotate_euler(&editor->resource_system->scene->transforms[i]);
+                transform_rotate_euler(&editor->asset_system->scene->transforms[i]);
             }
 
-            if (madness_ui_vec3(STRING(buffer_scale), &editor->resource_system->scene->transforms[i].scale, 1.0f))
+            if (madness_ui_vec3(STRING(buffer_scale), &editor->asset_system->scene->transforms[i].scale, 1.0f))
             {
-                transform_mark_dirty(&editor->resource_system->scene->transforms[i]);
+                transform_mark_dirty(&editor->asset_system->scene->transforms[i]);
             }
         }
 
@@ -368,14 +368,14 @@ void editor_material_nodes(Editor* editor)
 
 void editor_texture_view(Editor* editor)
 {
-    Texture_System* texture_system = editor->resource_system->texture_system;
+    Asset_System* asset_system = editor->asset_system;
     madness_ui_window_begin(STRING("Texture View"));
     {
-        for (u32 i = 0; i < texture_system->in_use_textures_count; i++)
+        for (u32 i = 0; i < asset_system->texture_system->in_use_textures_count; i++)
         {
-            Resource_MetaData* meta_data = &texture_system->texture_meta_data[i];
+            Asset_MetaData* meta_data = &asset_system->texture_meta_data[i];
             madness_ui_c_string(meta_data->file_path);
-            madness_image_handle((Texture_Handle){.handle = meta_data->id});
+            madness_image_handle((Texture_Handle){.handle = meta_data->handle_lookup});
         }
     }
     madness_ui_window_end();

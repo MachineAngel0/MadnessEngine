@@ -4,7 +4,7 @@
 #include "vulkan_struct_types.h"
 
 
-Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system)
+Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Asset_System* resource_system)
 {
     Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->allocator, sizeof(Mesh_Renderer));
 

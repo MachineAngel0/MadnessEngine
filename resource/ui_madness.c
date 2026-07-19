@@ -7,7 +7,7 @@
 
 
 void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
-                     Resource_System* resource_system)
+                     Asset_System* resource_system)
 {
     madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
 
@@ -115,7 +115,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
     // };
 
-    if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
+    if (!texture_system_load_msdf_font(resource_system, "../z_assets/msdf_fonts/arial_msdf.png",
                                        &madness_ui->default_font_handle,
                                        madness_ui->allocator))
     {

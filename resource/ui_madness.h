@@ -64,7 +64,7 @@ typedef struct UI_Editor_Style
 
 
 //TODO:  just a temporary value for now, will increase later
-#define MAX_UI_NODE_COUNT 3000
+#define MAX_UI_NODE_COUNT 10000
 #define MAX_UI_DRAW_COUNT 500
 
 #define MIN_UI_NODE_SCREEN_SIZE 250
@@ -187,7 +187,7 @@ typedef struct Madness_UI
     Frame_Allocator* frame_arena;
 
     Input_System* input_system_reference; // does not own memory
-    Resource_System* resource_system;
+    Asset_System* resource_system;
 
     //this should be an array at some point
     Texture_Handle default_font_handle;
@@ -298,7 +298,7 @@ Madness_UI* madness_ui;
 // then we need to know that as well
 
 MAPI void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
-                          Resource_System* resource_system);
+                          Asset_System* resource_system);
 MAPI bool madness_ui_shutdown(void);
 
 //pass in the size every frame, in the event the size changes

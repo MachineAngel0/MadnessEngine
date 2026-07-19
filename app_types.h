@@ -20,8 +20,8 @@ typedef struct Application_Core
     // rn its not an issue so im just leaving it here
     Event_System* event_system;
     Input_System* input_system;
-    Resource_System* resource_system;
-    Madness_Audio* audio_system;
+    Asset_System* resource_system;
+    Madness_Audio_System* audio_system;
 
     bool is_running;
     //rn used for when the window is minimized

@@ -42,7 +42,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = resource_system_init(&application_core->memory_system);
+    application_core->resource_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->resource_system);
 
@@ -143,7 +143,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
 
         renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->resource_system);
-        resource_system_update_and_create_render_packet(application_core->resource_system);
+        asset_system_update_and_create_render_packet(application_core->resource_system);
 
 
         //render
@@ -171,7 +171,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    resource_system_shutdown(application_core->resource_system, &application_core->memory_system);
+    asset_system_shutdown(application_core->resource_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system);

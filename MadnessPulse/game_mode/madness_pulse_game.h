@@ -5,7 +5,7 @@
 #include "game_structs.h"
 
 //when we first load the application
-Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Event_System* event_system, Input_System* input, Resource_System*
+Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system, Event_System* event_system, Input_System* input, Asset_System*
                                             resource_system);
 
 bool madness_pulse_game_shutdown(Madness_Pulse_Game* game, Memory_System* memory_system);

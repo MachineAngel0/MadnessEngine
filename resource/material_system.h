@@ -30,7 +30,7 @@ void material_system_pbr_init(Material_Default* out_data);
 // black hole, decals, screen space color gradient, multiple blend modes
 // wireframe version for all shaders
 
-void material_system_add_mesh_instance_to_default_material_batch(Resource_System* resource_system,
+void material_system_add_mesh_instance_to_default_material_batch(Asset_System* resource_system,
                                                                  Mesh_Parent_Instance* parent_instance)
 {
     Material_System* material_system = resource_system->material_system;
@@ -56,7 +56,7 @@ void material_system_add_mesh_instance_to_default_material_batch(Resource_System
 }
 
 
-void material_system_add_skmesh_instance_to_default_material_batch(Resource_System* resource_system,
+void material_system_add_skmesh_instance_to_default_material_batch(Asset_System* resource_system,
                                                                    Sk_Mesh_Parent_Instance* parent_instance)
 {
     Material_System* material_system = resource_system->material_system;

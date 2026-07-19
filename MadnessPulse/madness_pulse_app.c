@@ -18,6 +18,16 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     Application_Core* application_core = &madness_pulse_app->application_core;
     Renderer_Plugin* renderer_plugin = &madness_pulse_app->renderer_plugin;
 
+
+#ifdef DEBUG_BUILD
+   DEBUG("DEBUG MODE")
+#endif
+#ifdef RELEASE_BUILD
+   DEBUG("RELEASE MODE")
+#endif
+
+
+
     Platform_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Madness Engine Editor";
@@ -56,7 +66,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->resource_system = resource_system_init(&application_core->memory_system);
+    application_core->resource_system = asset_system_init(&application_core->memory_system);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->resource_system);
 
@@ -96,11 +106,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
 
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
+    /*mesh_load_gltf(application_core->resource_system, "../z_assets/models/cube_gltf/Cube.gltf");
     mesh_load_gltf(application_core->resource_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     // mesh_load_gltf(application_core->resource_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
     //TODO: test the mc after cesium man is working k
-    mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");
+    mesh_load_gltf(application_core->resource_system, "../z_assets/models/MC/MC4.2_6.gltf");*/
 
 
     Madness_Pulse_Game* madness_pulse_game = madness_pulse_game_init(&application_core->memory_system,
@@ -181,7 +191,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         insanity_ui_end();
 
         //render packet
-        resource_system_update_and_create_render_packet(application_core->resource_system);
+        asset_system_update_and_create_render_packet(application_core->resource_system);
 
         application_core->resource_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
@@ -216,7 +226,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //shutdown subsystems
     audio_system_shutdown(application_core->audio_system);
 
-    resource_system_shutdown(application_core->resource_system, &application_core->memory_system);
+    asset_system_shutdown(application_core->resource_system, &application_core->memory_system);
 
     input_shutdown(application_core->input_system);
     event_shutdown(application_core->event_system, &application_core->memory_system);

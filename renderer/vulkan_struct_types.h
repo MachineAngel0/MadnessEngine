@@ -670,7 +670,7 @@ typedef struct renderer
 
     Input_System* input_system; //meant only to be used for debugging
 
-    Resource_System* resource_system; //reference
+    Asset_System* resource_system; //reference
 
     //general resources taken from the resource system
     Shader_System* shader_system;

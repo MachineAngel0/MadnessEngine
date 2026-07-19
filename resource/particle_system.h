@@ -8,7 +8,7 @@
 #define PARTICLE_COUNT 1000
 
 
-Particle_System* particle_system_init(Memory_System* memory_system, Resource_System* resource_system)
+Particle_System* particle_system_init(Asset_System* resource_system, Memory_System* memory_system)
 {
     Particle_System* ps = memory_system_alloc(memory_system, sizeof(Particle_System), MEMORY_SUBSYSTEM_PARTICLE);
 
@@ -16,14 +16,13 @@ Particle_System* particle_system_init(Memory_System* memory_system, Resource_Sys
     ps->particles_count = PARTICLE_COUNT;
 
 
-
     for (u32 i = 0; i < ps->particles_count; i++)
     {
         // const char* texture_path = "../z_assets/textures/test_particle.png";
         // const char* texture_path = "../z_assets/textures/test_particle.png";
-        texture_system_load_texture(resource_system->texture_system, "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png",
-        // texture_system_load_texture(resource_system->texture_system, "../z_assets/textures/kenney_particle-pack/PNG (Black background)/circle_05.png",
-                                    &ps->particles[i].texture_handle);
+        ps->particles[i].texture_handle = texture_system_load_texture(resource_system,
+                                                                      "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png");
+        //  "../z_assets/textures/kenney_particle-pack/PNG (Black background)/circle_05.png");
         ps->particles[i].scale = (vec2s){10.0f, 10.0f};
         ps->particles[i].velocity.x = rand_range_f(-10, 10);
         ps->particles[i].velocity.y = rand_range_f(-10, 10);

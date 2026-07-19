@@ -28,7 +28,7 @@ bool renderer_on_key(const Event_Type code, String sender, String listener_inst,
 
 Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system,
                         Input_System* input_system,
-                        Event_System* event_system, Resource_System* resource_system)
+                        Event_System* event_system, Asset_System* resource_system)
 {
     MASSERT(platform_state);
     MASSERT(memory_system);

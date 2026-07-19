@@ -4,7 +4,7 @@
 
 
 
-Particle_Render* particle_renderer_init(Renderer* renderer, Resource_System* resource_system);
+Particle_Render* particle_renderer_init(Renderer* renderer, Asset_System* resource_system);
 
 
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,

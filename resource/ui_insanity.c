@@ -6,7 +6,7 @@ static Insanity_UI* insanity_ui;
 
 
 bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
-                      Resource_System* resource_system)
+                      Asset_System* asset_system)
 {
     insanity_ui = memory_system_alloc(memory_system, sizeof(Insanity_UI), MEMORY_SUBSYSTEM_UI);
     MASSERT(insanity_ui);
@@ -25,7 +25,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     allocator_init(insanity_ui->frame_allocator, frame_arena_memory, ui_arena_mem_size);
 
     insanity_ui->input_system_reference = input_system;
-    insanity_ui->resource_system = resource_system;
+    insanity_ui->asset_system = asset_system;
 
 
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
@@ -72,7 +72,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
 
     //
-    if (!texture_system_load_msdf_font(resource_system->texture_system, "../z_assets/msdf_fonts/arial_msdf.png",
+    if (!texture_system_load_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png",
                                        &insanity_ui->default_font_handle,
                                        insanity_ui->allocator))
     {
@@ -142,7 +142,7 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
 
     insanity_ui->string_stack = STRING("INVALID STRING");
-    insanity_ui->image_stack = texture_system_get_default_texture(insanity_ui->resource_system->texture_system);
+    insanity_ui->image_stack = texture_system_get_default_texture(insanity_ui->asset_system->texture_system);
     // insanity_ui->rounded_radius_stack = 0.2;
     // insanity_ui->outline_thickness_stack = 0.2;
 
@@ -515,7 +515,7 @@ void insanity_ui_push_text_float(float val)
 
 void insanity_ui_push_image(const char* texture_file)
 {
-    insanity_ui->image_stack = texture_system_load_texture_new(insanity_ui->resource_system->texture_system,
+    insanity_ui->image_stack = texture_system_load_texture(insanity_ui->asset_system,
                                                                texture_file);
 }
 
@@ -619,7 +619,7 @@ Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id)
         f32 font_scalar = ((insanity_ui->editor_font_size) / insanity_ui->default_font_size);
 
         Madness_Font font_data;
-        texture_system_get_font(insanity_ui->resource_system->texture_system, insanity_ui->default_font_handle,
+        texture_system_get_font(insanity_ui->asset_system->texture_system, insanity_ui->default_font_handle,
                                 &font_data);
         node->text_total_width;
         node->text_max_height;
@@ -712,7 +712,7 @@ void insanity_ui_text()
     f32 font_scalar = ((insanity_ui->editor_font_size) / insanity_ui->default_font_size);
 
     Madness_Font font_data;
-    texture_system_get_font(insanity_ui->resource_system->texture_system, insanity_ui->default_font_handle,
+    texture_system_get_font(insanity_ui->asset_system->texture_system, insanity_ui->default_font_handle,
                             &font_data);
 
     base_position = glms_vec2_mul(base_position, insanity_ui->screen_size);

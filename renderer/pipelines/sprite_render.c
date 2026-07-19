@@ -3,7 +3,7 @@
 
 
 
-Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system)
+Sprite_Renderer* sprite_render_init(Renderer* renderer, Asset_System* resource_system)
 {
     Sprite_Renderer* sprite_backend = allocator_alloc(&renderer->allocator, sizeof(Sprite_Renderer));
     //TODO: move out the memory capacity to the function params or get from sprite system/resource system

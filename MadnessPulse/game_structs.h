@@ -1532,7 +1532,7 @@ typedef struct Madness_Pulse_Game
     Heap_Allocator heap_allocator;
 
     //refs
-    Resource_System* resource_system;
+    Asset_System* resource_system;
     Event_System* event_system;
     Input_System* input_system;
 

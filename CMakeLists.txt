@@ -34,7 +34,7 @@ if (MSVC)
     set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} /fsanitize=address ")
     add_compile_options(/wd4255) # disables function prototype warnings
     add_compile_options(/wd4464) # path contains '..'
-#    add_compile_options(/w14062) # warns about missing cases in switch statements
+    #    add_compile_options(/w14062) # warns about missing cases in switch statements
 endif ()
 
 #GCC/MINGW OR CLANG
@@ -123,7 +123,6 @@ add_library(MADNESSRENDERER SHARED
 )
 
 
-
 ### EDITOR ###
 add_executable(Madness_Editor
         unity_build_editor.c
@@ -185,6 +184,7 @@ endif ()
 
 
 #equivalent of above
+
 foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
     target_compile_definitions(${tgt} PRIVATE
             $<$<CONFIG:Debug>:DEBUG_BUILD>

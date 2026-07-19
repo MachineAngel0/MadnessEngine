@@ -2,7 +2,7 @@
 #define MESH_RENDER_H
 
 
-MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Resource_System* resource_system);
+MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Asset_System* resource_system);
 
 MAPI void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
                                          vulkan_command_buffer* command_buffer);

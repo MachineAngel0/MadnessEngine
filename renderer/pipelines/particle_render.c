@@ -4,7 +4,7 @@
 
 #include "vk_buffer.h"
 
-Particle_Render* particle_renderer_init(Renderer* renderer, Resource_System* resource_system)
+Particle_Render* particle_renderer_init(Renderer* renderer, Asset_System* resource_system)
 {
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 

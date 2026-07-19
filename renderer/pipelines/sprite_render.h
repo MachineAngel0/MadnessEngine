@@ -4,7 +4,7 @@
 
 
 //Sprite Renderer
-Sprite_Renderer* sprite_render_init(Renderer* renderer, Resource_System* resource_system);
+Sprite_Renderer* sprite_render_init(Renderer* renderer, Asset_System* resource_system);
 MAPI void sprite_upload_draw_data(Renderer* renderer,
                                   Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet, vulkan_command_buffer* command_buffer);
 MAPI void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend,

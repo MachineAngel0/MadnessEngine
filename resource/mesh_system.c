@@ -27,7 +27,7 @@ Animation_Interpolation_Type Animation_Interpolation_Type_gltf_to_engine[cgltf_i
 };
 
 
-Mesh_System* mesh_system_init(Resource_System* resource_system, Memory_System* memory_system)
+Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memory_system)
 {
     Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System), MEMORY_SUBSYSTEM_MESH);
     memset(out_mesh_system, 0, sizeof(Mesh_System));
@@ -51,7 +51,7 @@ Mesh_System* mesh_system_init(Resource_System* resource_system, Memory_System* m
     out_mesh_system->skinned_mesh_instance_count = 0;
 
 
-    INFO("MESH SYSTEM CREATED")
+    INFO("MESH SYSTEM CREATED");
 
     return out_mesh_system;
 }
@@ -67,13 +67,13 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 }
 
 
-void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
+void _gltf_load_mesh_data(Asset_System* asset_system, const char* gltf_path, cgltf_data* data,
                           u32 gltf_data_mesh_idx, Mesh_Data* mesh_draw_data,
                           Mesh_Upload_Data* upload_data)
 {
-    Heap_Allocator* allocator = resource_system->heap_allocator;
-    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-    Mesh_System* mesh_system = resource_system->mesh_system;
+    Heap_Allocator* allocator = asset_system->heap_allocator;
+    Frame_Allocator* frame_allocator = asset_system->frame_allocator;
+    Mesh_System* mesh_system = asset_system->mesh_system;
 
 
     /* Find position accessor */
@@ -154,7 +154,7 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     }
 
     const cgltf_accessor* color_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                              cgltf_attribute_type_color, 0);
+                                                               cgltf_attribute_type_color, 0);
     //TODO:
     /*if (color_accessor)
     {
@@ -226,7 +226,7 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     char* base_path = c_string_path_strip(gltf_path, frame_allocator);
 
     //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
-    Material_Default* default_material = material_system_create_default_pbr(resource_system->material_system,
+    Material_Default* default_material = material_system_create_default_pbr(asset_system->material_system,
                                                                             &mesh_draw_data->default_material_handle);
 
     if (!data->meshes[gltf_data_mesh_idx].primitives->material)
@@ -241,14 +241,14 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     if (color_texture && color_texture->image->uri)
     {
         default_material->flags |= MESH_PIPELINE_COLOR;
+        size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
 
         char* texture_path = allocator_alloc(frame_allocator,
-                                             strlen(base_path) + strlen(color_texture->image->uri));
+                                             allocation_size);
         // takes a buffer, message format, then the remaining strings
-        sprintf(texture_path, "%s%s", base_path, color_texture->image->uri);
+        snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
         TRACE("COLOR Texture Path:  %s", texture_path);
-        Texture_Handle color_handle = {0};
-        texture_system_load_texture(resource_system->texture_system, texture_path, &color_handle);
+        Texture_Handle color_handle = texture_system_load_texture(asset_system, texture_path);
         default_material->color_index = color_handle.handle;
         memcpy(default_material->color.raw,
                data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
@@ -258,7 +258,7 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     {
         // default_material->flags |= MESH_PIPELINE_COLOR;
         TRACE("No Color Texture using fall back color");
-        default_material->color_index = resource_system->texture_system->default_texture_handle.handle;
+        default_material->color_index = asset_system->texture_system->default_texture_handle.handle;
         memcpy(default_material->color.raw,
                data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
                sizeof(vec4s));
@@ -274,17 +274,14 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
         {
             default_material->flags |= MESH_PIPELINE_ROUGHNESS;
             default_material->flags |= MESH_PIPELINE_METALLIC;
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 strlen(base_path) +
-                                                 strlen(metal_roughness_texture->image->uri));
+            size_t allocation_size = strlen(base_path) +
+                strlen(metal_roughness_texture->image->uri) + 1;
+            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
             // takes a buffer, message format, then the remaining strings
-            sprintf(texture_path, "%s%s", base_path, metal_roughness_texture->image->uri);
+            snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
             TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-            Texture_Handle metallic_handle;
-
-            texture_system_load_texture(resource_system->texture_system, texture_path,
-                                        &metallic_handle);
+            Texture_Handle metallic_handle = texture_system_load_texture(asset_system, texture_path);
 
             default_material->metallic_index = metallic_handle.handle;
             default_material->roughness_index = metallic_handle.handle;
@@ -305,16 +302,14 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     if (AO_texture && AO_texture->image->uri)
     {
         default_material->flags |= MESH_PIPELINE_AO;
-        char* texture_path = allocator_alloc(frame_allocator,
-                                             strlen(base_path) + strlen(AO_texture->image->uri));
+        size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
+        char* AO_texture_path = allocator_alloc(frame_allocator, allocation_size);
         // takes a buffer, message format, then the remaining strings
-        sprintf(texture_path, "%s%s", base_path, AO_texture->image->uri);
-        TRACE("AO Texture Path:  %s", texture_path);
+        snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
 
-        Texture_Handle ao_handle;
+        TRACE("AO Texture Path:  %s", AO_texture_path);
 
-        texture_system_load_texture(resource_system->texture_system, texture_path,
-                                    &ao_handle);
+        Texture_Handle ao_handle = texture_system_load_texture(asset_system, AO_texture_path);
         default_material->ambient_occlusion_index = ao_handle.
             handle;
     }
@@ -326,15 +321,12 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     if (normal_texture && normal_texture->image->uri)
     {
         default_material->flags |= MESH_PIPELINE_NORMAL;
-        char* texture_path = allocator_alloc(frame_allocator,
-                                             strlen(base_path) + strlen(normal_texture->image->uri));
+        size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
+        char* texture_path = allocator_alloc(frame_allocator, allocation_size);
         // takes a buffer, message format, then the remaining strings
-        sprintf(texture_path, "%s%s", base_path, normal_texture->image->uri);
+        snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
         TRACE("NORMAL Texture Path:  %s", texture_path);
-        Texture_Handle normal_handle;
-
-        texture_system_load_texture(resource_system->texture_system, texture_path,
-                                    &normal_handle);
+        Texture_Handle normal_handle = texture_system_load_texture(asset_system, texture_path);
         default_material->normal_index = normal_handle.
             handle;
     }
@@ -345,21 +337,20 @@ void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_pat
     if (emissive_texture && emissive_texture->image->uri)
     {
         default_material->flags |= MESH_PIPELINE_EMISSIVE;
-        char* texture_path = allocator_alloc(frame_allocator,
-                                             strlen(base_path) + strlen(emissive_texture->image->uri));
+        size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
+
+        char* texture_path = allocator_alloc(frame_allocator, allocation_size);
         // takes a buffer, message format, then the remaining strings
-        sprintf(texture_path, "%s%s", base_path, emissive_texture->image->uri);
+        snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
         TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-        Texture_Handle emissive_handle;
-        texture_system_load_texture(resource_system->texture_system, texture_path,
-                                    &emissive_handle);
+        Texture_Handle emissive_handle = texture_system_load_texture(asset_system, texture_path);
         default_material->emissive_index = emissive_handle.
             handle;
     }
 }
 
-void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* data,
+void _gltf_load_skinned_mesh_data(Asset_System* resource_system, cgltf_data* data,
                                   u32 mesh_idx,
                                   Sk_Mesh_Data* skinned_mesh_data,
                                   Sk_Mesh_Upload_Data* skinned_mesh_upload_data)
@@ -422,7 +413,7 @@ void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* 
 }
 
 
-void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_data* data,
+void _gltf_load_skin_and_animation_data(Asset_System* resource_system, cgltf_data* data,
                                         Sk_Mesh_Asset* skinned_mesh_meta_data)
 {
     Heap_Allocator* allocator = resource_system->heap_allocator;
@@ -623,7 +614,7 @@ void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_
 }
 
 
-void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path)
+void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
 {
     Mesh_System* mesh_system = resource_system->mesh_system;
     Heap_Allocator* allocator = resource_system->heap_allocator;

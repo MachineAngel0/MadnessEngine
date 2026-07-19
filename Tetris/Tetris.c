@@ -1,7 +1,7 @@
 ﻿#include "Tetris.h"
 
 
-Tetris_Game_State* tetris_init(Memory_System* memory_system, Resource_System* resource_system)
+Tetris_Game_State* tetris_init(Memory_System* memory_system, Asset_System* resource_system)
 {
 
     Tetris_Game_State* tetris_game_state = memory_system_alloc(memory_system, sizeof(Tetris_Game_State), MEMORY_SUBSYSTEM_GAME);

@@ -4,27 +4,27 @@
 #include "cgltf.h"
 
 
-Mesh_System* mesh_system_init(Resource_System* resource_system, Memory_System* memory_system);
+Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memory_system);
 
 bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
 
 
 //when loading in a
-void mesh_load_gltf(Resource_System* resource_system, const char* gltf_path);
+void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path);
 
 
-void _gltf_load_mesh_data(Resource_System* resource_system, const char* gltf_path, cgltf_data* data,
+void _gltf_load_mesh_data(Asset_System* asset_system, const char* gltf_path, cgltf_data* data,
                           u32 gltf_data_mesh_idx,
                           Mesh_Data* mesh_draw_data,
                           Mesh_Upload_Data* upload_data);
 
 
-void _gltf_load_skinned_mesh_data(Resource_System* resource_system, cgltf_data* data,
+void _gltf_load_skinned_mesh_data(Asset_System* resource_system, cgltf_data* data,
                                   u32 mesh_idx,
                                   Sk_Mesh_Data* skinned_mesh_data,
                                   Sk_Mesh_Upload_Data* skinned_mesh_upload_data);
 
-void _gltf_load_skin_and_animation_data(Resource_System* resource_system, cgltf_data* data,
+void _gltf_load_skin_and_animation_data(Asset_System* resource_system, cgltf_data* data,
                                         Sk_Mesh_Asset* skinned_mesh_meta_data);
 
 //animation system

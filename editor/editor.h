@@ -23,7 +23,7 @@ typedef enum Editor_UI_State
 typedef struct Editor
 {
     Renderer* renderer; // ref
-    Resource_System* resource_system; // ref
+    Asset_System* asset_system; // ref
     Clock* clock; // ref
     Reflection_Registry* reflection_registry; // ref
 
@@ -41,7 +41,7 @@ typedef struct Editor
 
 
 MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                         Resource_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry);
+                         Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry);
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
 

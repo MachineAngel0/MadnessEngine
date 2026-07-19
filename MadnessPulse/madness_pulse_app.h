@@ -1,7 +1,7 @@
 ﻿#ifndef MADNESS_PULSE_APP_H
 #define MADNESS_PULSE_APP_H
 
-int main()
+int main(int argc, char *argv[])
 {
     Madness_Pulse_Application madness_pulse_app = {0};
     madness_pulse_run(&madness_pulse_app);

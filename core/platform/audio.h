@@ -11,11 +11,11 @@ typedef struct Sound_Data
     // Audio_Type* audio_type; AUDIO TYPE - wav, mp3, etc..
 } Sound_Data;
 
-typedef struct Madness_Audio
+typedef struct Madness_Audio_System
 {
     // ma_engine* engine;
     bool unimplemented;
-}Madness_Audio;
+}Madness_Audio_System;
 
 typedef struct Audio_Handle
 {
@@ -23,9 +23,9 @@ typedef struct Audio_Handle
     u32 gen;
 }Audio_Handle;
 
-Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system);
+Madness_Audio_System* audio_system_init(Memory_System* memory_system, Asset_System* resource_system);
 
-bool audio_system_shutdown(Madness_Audio* madness_audio);
+bool audio_system_shutdown(Madness_Audio_System* madness_audio);
 
 
 void audio_play_sound_effects(const char* file_path);

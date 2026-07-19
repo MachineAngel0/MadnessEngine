@@ -86,7 +86,7 @@ typedef struct Animation_Handle
 ///////////////// RESOURCES  //////////////////////
 
 
-typedef enum Resource_Type
+typedef enum Asset_Type
 {
     RESOURCE_NONE,
 
@@ -96,17 +96,18 @@ typedef enum Resource_Type
     RESOURCE_STATIC_MESH,
     RESOURCE_SKINNED_MESH,
     RESOURCE_AUDIO,
+    // RESOURCE_PARTICLE,
 
     RESOURCE_MAX,
-} Resource_Type;
+} Asset_Type;
 
-typedef struct Resource_MetaData
+typedef struct Asset_MetaData
 {
-    Resource_Type type;
-    const char* file_path;
-    u64 id;
+    const char* file_path; // TODO: change to string
+    Asset_Type type;
+    u64 handle_lookup; // if we wanted to access this item within the specific system
     u64 reference_count;
-} Resource_MetaData;
+} Asset_MetaData;
 
 ///////////////// Texture  //////////////////////
 
@@ -690,7 +691,6 @@ typedef struct Texture_System
 
     Texture textures_array[MAX_TEXTURE_COUNT];
     Texture_Handle texture_handles[MAX_TEXTURE_COUNT];
-    Resource_MetaData texture_meta_data[MAX_TEXTURE_COUNT];
 
     ring_queue* available_idx_queue;
     u32 in_use_textures_count; // technically this data is in the ring queue
@@ -862,10 +862,10 @@ typedef struct Render_Packet
 
 typedef struct Resource_System
 {
-    //the resource system is just a container for all the system,
-    //each system manages itself,
-    //this does gather the cpu-gpu resources and sends it to the renderer
+    //the asset system is just a container for all the system,
+    //gather the cpu-gpu resources and send them to renderer
 
+    //Systems
     // TODO: might change this into a pool allocator, or even segregated list allocator
     Heap_Allocator* heap_allocator;
     Frame_Allocator* frame_allocator;
@@ -880,8 +880,23 @@ typedef struct Resource_System
 
     Particle_System* particle_system;
 
+    //Render Packet
     Render_Packet* render_packet;
-} Resource_System;
+
+    //TODO: This might have to be the editors problem/data
+    // MetaData
+    Asset_MetaData texture_meta_data[MAX_TEXTURE_COUNT];
+    u32 texture_meta_data_count;
+
+    Asset_MetaData mesh_meta_data[MAX_MESH_COUNT];
+    u32 mesh_meta_data_count;
+
+    Asset_MetaData skmesh_meta_data[MAX_SKINNED_MESH_COUNT];
+    u32 skmesh_meta_data_count;
+
+
+
+} Asset_System;
 
 
 #endif //RESOURCE_TYPES_H

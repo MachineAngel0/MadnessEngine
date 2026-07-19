@@ -4,7 +4,7 @@
 
 
 Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
-                                            Event_System* event_system, Input_System* input, Resource_System*
+                                            Event_System* event_system, Input_System* input, Asset_System*
                                             resource_system)
 {
     Madness_Pulse_Game* game = memory_system_alloc(memory_system, sizeof(Madness_Pulse_Game), MEMORY_SUBSYSTEM_GAME);

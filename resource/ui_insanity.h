@@ -147,7 +147,7 @@ typedef struct Insanity_UI
     Frame_Allocator* frame_allocator;
 
     Input_System* input_system_reference; // does not own memory
-    Resource_System* resource_system;
+    Asset_System* asset_system;
 
     //this should be an array at some point
     Texture_Handle default_font_handle;
@@ -221,7 +221,7 @@ typedef struct Insanity_UI
 
 
 MAPI bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
-                           Resource_System* resource_system);
+                           Asset_System* asset_system);
 
 
 MAPI bool insanity_ui_shutdown(void);

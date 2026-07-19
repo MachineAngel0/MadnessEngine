@@ -5,9 +5,9 @@
 
 static ma_engine audio_engine;
 
-Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* resource_system)
+Madness_Audio_System* audio_system_init(Memory_System* memory_system, Asset_System* resource_system)
 {
-    Madness_Audio* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio), MEMORY_SUBSYSTEM_AUDIO);
+    Madness_Audio_System* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio_System), MEMORY_SUBSYSTEM_AUDIO);
     //TODO:
     //just here as a place holder until i write my own audio platform independant system way later
 
@@ -24,7 +24,7 @@ Madness_Audio* audio_system_init(Memory_System* memory_system, Resource_System* 
     return madness_audio;
 }
 
-bool audio_system_shutdown(Madness_Audio* madness_audio)
+bool audio_system_shutdown(Madness_Audio_System* madness_audio)
 {
     ma_engine_uninit(&audio_engine);
     return true;

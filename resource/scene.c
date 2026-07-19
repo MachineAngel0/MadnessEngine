@@ -44,7 +44,7 @@ Transform_Handle scene_get_new_mesh_transform(Scene* scene)
     return out_handle;
 }
 
-void scene_update(Scene* scene, Resource_System* resource_system)
+void scene_update(Scene* scene, Asset_System* resource_system)
 {
     //generate the world space matrix, and that also takes care of all the local transforms
     //NOTE: might not be the most efficient updating transforms this way,
