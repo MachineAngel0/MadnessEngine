@@ -88,26 +88,37 @@ typedef struct Animation_Handle
 
 typedef enum Asset_Type
 {
-    RESOURCE_NONE,
-
-    RESOURCE_TEXTURE,
-    RESOURCE_FONT,
-    RESOURCE_SPRITE,
-    RESOURCE_STATIC_MESH,
-    RESOURCE_SKINNED_MESH,
-    RESOURCE_AUDIO,
+    ASSET_TEXTURE,
+    ASSET_FONT,
+    ASSET_SPRITE,
+    ASSET_STATIC_MESH,
+    ASSET_SKINNED_MESH,
+    ASSET_AUDIO,
     // RESOURCE_PARTICLE,
 
-    RESOURCE_MAX,
+    ASSET_MAX,
 } Asset_Type;
 
-typedef struct Asset_MetaData
+typedef struct Madness_Asset
 {
-    const char* file_path; // TODO: change to string
+    //runtime format for assets
+    const char* file_path; // TODO: probably wont need but well leave it here for now
+    u64 hash_id;
     Asset_Type type;
     u64 handle_lookup; // if we wanted to access this item within the specific system
     u64 reference_count;
+} Madness_Asset;
+
+
+typedef struct Asset_MetaData
+{
+    //meta data for our editor/debug builds
+    const char* source_file; // TODO: change to string
+    u64 hash_id;
+    Asset_Type type;
+    u32 extra_data; // not in use rn
 } Asset_MetaData;
+
 
 ///////////////// Texture  //////////////////////
 
@@ -125,7 +136,6 @@ typedef struct Texture
     Texture_Handle handle;
 
 } Texture;
-
 
 
 typedef struct Madness_Texture
@@ -718,6 +728,10 @@ typedef struct Texture_System
     //TODO: probably change this to a hash table, handle->font_data
     //rn this corresponds to the same indexes of the textures_array
     Madness_Font font_array[MAX_TEXTURE_COUNT];
+
+
+    Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
+    u32 texture_asset_count;
 } Texture_System;
 
 typedef struct Scene
@@ -896,7 +910,6 @@ typedef struct Resource_System
     Render_Packet* render_packet;
 
     //TODO: This might have to be the editors problem/data
-    // MetaData
     Asset_MetaData texture_meta_data[MAX_TEXTURE_COUNT];
     u32 texture_meta_data_count;
 

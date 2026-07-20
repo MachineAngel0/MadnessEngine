@@ -38,4 +38,9 @@ MAPI size_t c_string_to_number(const char* string, u32 string_size);
 MAPI f64  c_string_to_float(const char* string);
 
 
+//hashing
+
+MAPI u64 c_string_hash_u64(const char* string);
+
+
 #endif //C_STRING_H

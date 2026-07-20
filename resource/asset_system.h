@@ -15,21 +15,16 @@
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
 
-#define EDITOR_TEXTURE_PATH "../z_assets_editor/texture"
-#define EDITOR_FONTS_PATH "../z_assets_editor/fonts"
-#define EDITOR_MESH_PATH "../z_assets_editor/mesh"
-#define EDITOR_SK_MESH_PATH "../z_assets_editor/skinned_mesh"
-#define EDITOR_AUDIO_PATH "../z_assets_editor/audio"
-#define EDITOR_RESOURCE_PATH "../z_assets_editor/asset_list"
+#define ENGINE_RESOURCE_PATH "../z_assets_engine/asset_list/"
+#define ENGINE_TEXTURE_PATH "../z_assets_engine/texture/"
+#define ENGINE_FONTS_PATH "../z_assets_engine/fonts/"
+#define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
+#define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
+#define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
+
+#define ENGINE_TEXTURE_EXTENSION ".mtex"
 
 
-
-#define ENGINE_RESOURCE_PATH "../z_assets_engine/asset_list"
-#define ENGINE_TEXTURE_PATH "../z_assets_engine/texture"
-#define ENGINE_FONTS_PATH "../z_assets_engine/fonts"
-#define ENGINE_MESH_PATH "../z_assets_engine/mesh"
-#define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh"
-#define ENGINE_AUDIO_PATH "../z_assets_engine/audio"
 
 //TODO/GOALS:
 // placing or updating a file in the asset directory should (re)generate the asset,
@@ -55,9 +50,12 @@
 //or just set a flag to not render and put the new one in,
 //basically just find the old data, update the mesh data and point it to the correct vertex spot, no unloading, just restart the engine
 //
+//assets imported with different names, are treated as a different asset, even if they are the same as another asset
 
-
-
+//TODO:
+// METADATA
+// ENGINE FORMAT
+// WAY TO CREATE MULTIPLE OF A THING for modification
 
 typedef struct Madness_Mesh
 {
@@ -152,6 +150,15 @@ Texture_Handle asset_loader_texture(Asset_System* a, const char* path)
 
 
 //Data format stuff
+typedef struct Asset_MetaData_Header
+{
+    u8 magic_number[4];
+    u32 version;
+    size_t offset;
+    size_t size;
+} Asset_MetaData_Header;
+
+
 
 
 
@@ -221,6 +228,10 @@ void asset_system_convert_to_runtime_format()
 {
 
 }
+
+
+
+
 
 
 #endif //RESOURCE_SYSTEM_H

@@ -39,11 +39,16 @@ void string_builder_print(String_Builder* builder);
 void string_builder_append_string(String_Builder* str_builder, String* s);
 void string_builder_append_string_format(String_Builder* str_builder, const char* format, ...);
 
+void string_builder_append_builder(String_Builder* src, String_Builder* copy_str);
+
+
 void string_builder_append_c_string(String_Builder* str_builder, const char* word);
 void string_builder_append_char(String_Builder* str_builder, char character);
 
 void string_builder_decrement(String_Builder* str_builder);
 
+
+bool string_builder_strip_path(String_Builder* builder);
 bool string_builder_strip_extension(String_Builder* builder);
 
 

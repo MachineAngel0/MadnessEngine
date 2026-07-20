@@ -13,6 +13,9 @@ MAPI Texture_Handle texture_system_load_texture(Asset_System* asset_system, char
 MAPI bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle handle);
 
 
+Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system, const char* asset_name);
+
+
 
 
 //loads in a new texture in place of the old one
@@ -21,6 +24,8 @@ MAPI Texture_Handle texture_system_update_texture(Texture_System* texture_system
 
 MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Texture* out_texture);
 MAPI Texture_Handle texture_system_get_default_texture(Texture_System* texture_system);
+
+MAPI Texture_Handle texture_system_get_handle_by_name(Texture_System* texture_system, const char* string);
 
 
 

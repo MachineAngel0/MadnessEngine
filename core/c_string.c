@@ -269,3 +269,8 @@ f64 c_string_to_float(const char* string)
     return strtof(string, NULL);
     // return (f64)atof(string);
 }
+
+u64 c_string_hash_u64(const char* string)
+{
+    return generate_hash_key_64bit((u8*)string, strlen(string));
+}

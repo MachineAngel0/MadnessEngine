@@ -33,6 +33,13 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     asset_system->particle_system = particle_system_init(asset_system, memory_system);
 
 
+    //ifdef out for debug builds
+
+    //load the asset metadata
+
+
+
+
     return asset_system;
 }
 

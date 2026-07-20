@@ -72,6 +72,34 @@ void string_builder_append_string(String_Builder* str_builder, String* s)
 }
 
 
+void string_builder_append_builder(String_Builder* src, String_Builder* copy_str)
+{
+    //check if we have enough space
+    if (src->current_length + copy_str->current_length > src->capacity)
+    {
+        u64 length_requested = src->current_length + copy_str->current_length;
+        u64 new_capacity = src->capacity * 2;
+        //if we are still less than the requested length, then allocate to the size of the requested length
+        // otherwise just double
+        if (new_capacity < length_requested)
+        {
+            src->str = realloc(src->str, length_requested);
+            src->capacity = length_requested;
+        }
+        else
+        {
+            src->str = realloc(src->str, new_capacity);
+            src->capacity = new_capacity;
+        }
+    };
+
+    //copy the word into the string
+    memcpy(src->str + src->current_length, copy_str->str, copy_str->current_length);
+    src->current_length += copy_str->current_length;
+
+
+}
+
 void string_builder_append_c_string(String_Builder* str_builder, const char* word)
 {
     //check if we have enough space
@@ -131,6 +159,29 @@ void string_builder_decrement(String_Builder* str_builder)
     str_builder->current_length--;
 }
 
+
+bool string_builder_strip_path(String_Builder* builder)
+{
+    //assuming something like this ../path/thing/other_thing/name.ext
+    // we will make the string builder contain only name.ext
+
+    size_t starting_length = builder->current_length;
+    size_t new_length = builder->current_length;
+    for (; new_length > 0; new_length--)
+    {
+        if (builder->str[new_length] == '/')
+        {
+            memcpy(builder->str, builder->str + new_length+1, starting_length - new_length+1);
+            builder->current_length = starting_length - new_length;
+            return true;
+        }
+    }
+
+    //basically was not a valid path string
+    MASSERT_MSG(false, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+    return false;
+}
+
 bool string_builder_strip_extension(String_Builder* builder)
 {
     MASSERT(builder);
@@ -140,6 +191,8 @@ bool string_builder_strip_extension(String_Builder* builder)
     {
         if (builder->str[builder->current_length] == '.')
         {
+            //once more to move past the extension
+            builder->current_length--;
             return true;
         }
     }

@@ -50,7 +50,7 @@ Texture_Handle texture_system_load_texture(Asset_System* asset_system, char cons
     if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
     {
         out_handle = texture_system->texture_handles[texture_idx];
-        asset_system->texture_meta_data[texture_idx].reference_count++;
+        texture_system->texture_asset[texture_idx].reference_count++;
         return out_handle;
     }
 
@@ -70,8 +70,8 @@ Texture_Handle texture_system_load_texture(Asset_System* asset_system, char cons
     texture_system->in_use_textures_count++;
 
     //get an available index
-    Asset_MetaData* meta_data = &asset_system->texture_meta_data[free_index];
-    meta_data->type = RESOURCE_TEXTURE;
+    Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
+    meta_data->type = ASSET_TEXTURE;
     meta_data->handle_lookup = free_index;
     meta_data->file_path = file_path;
     meta_data->reference_count = 1;
@@ -125,7 +125,7 @@ bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle ha
     u32 texture_id = handle.handle;
 
 
-    Asset_MetaData* texture_metadata = &asset_system->texture_meta_data[texture_id];
+    Madness_Asset* texture_metadata = &texture_system->texture_asset[texture_id];
     texture_metadata->reference_count--;
     if (texture_metadata->reference_count <= 0)
     {
@@ -139,54 +139,24 @@ bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle ha
     return true;
 }
 
-bool texture_system_loader_converter(Asset_System* asset_system, const char* file_path)
-{
-
-    Madness_Texture texture = {0};
-    //load the image data from file
-    int texWidth, texHeight, texChannels;
-    u8* pixel_data = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-    MASSERT(pixel_data);
-
-    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    texture.width = texWidth; // 4 stride rgba
-    texture.height = texHeight; // 4 stride rgba
-    texture.channels = STBI_rgb_alpha; // 4 stride rgba
-    texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
-
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    // string_builder_append_c_string(str_builder, EDITOR_TEXTURE_PATH);
-    string_builder_append_c_string(str_builder, file_path);
-    string_builder_strip_extension(str_builder);
-    string_builder_append_c_string(str_builder, ".txt");
 
 
-    const char* output_path = string_builder_to_c_string(str_builder);
-    FILE* fptr = fopen(output_path, "wb");
-    if (!fptr)
-    {
-        MASSERT(false);
-    }
-
-
-    fwrite(&texture, sizeof(Madness_Texture), 1, fptr);
-    fwrite(pixel_data, texture.pixels_size, 1, fptr);
-
-    stbi_image_free(pixel_data);
-
-
-    fclose(fptr);
-}
-
-Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system)
+Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system, const char* asset_name)
 {
     //we need to convert the editor data into a format usable by the engine/renderer
     Madness_Texture texture = {0};
 
-    FILE* fptr = fopen("../z_assets/textures/test_particle.mtex", "rb");
+
+    String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
+    string_builder_append_c_string(path_builder, asset_name);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
+
+
+    FILE* fptr = fopen(string_builder_to_c_string(path_builder), "rb");
     if (!fptr)
     {
+        //TODO: might not want to crash
         MASSERT(false);
     }
     fread(&texture, sizeof(Madness_Texture), 1, fptr);
@@ -206,7 +176,7 @@ Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system)
     gpu_tex.channels = texture.channels;
     gpu_tex.pixel_size = texture.pixels_size;
     gpu_tex.pixels = pixel_data;
-    gpu_tex.handle = (Texture_Handle){0,0};
+    gpu_tex.handle = (Texture_Handle){0, 0};
 
 
     fclose(fptr);
@@ -237,6 +207,12 @@ Texture_Handle texture_system_get_default_texture(Texture_System* texture_system
     return texture_system->default_texture_handle;
 }
 
+Texture_Handle texture_system_get_handle_by_name(Texture_System* texture_system, const char* string)
+{
+    //TODO:
+
+}
+
 bool texture_system_load_font(Asset_System* asset_system, const char* file_path, Texture_Handle* out_handle,
                               Allocator* arena)
 {
@@ -246,7 +222,7 @@ bool texture_system_load_font(Asset_System* asset_system, const char* file_path,
     if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_id))
     {
         out_handle = &texture_system->texture_handles[texture_id];
-        asset_system->texture_meta_data[texture_id].reference_count++;
+        texture_system->texture_asset[texture_id].reference_count++;
         return true;
     }
 
@@ -451,7 +427,7 @@ bool texture_system_unload_font(Asset_System* asset_system, Texture_Handle handl
         return false;
     }
 
-    Asset_MetaData* texture_metadata = &asset_system->texture_meta_data[texture_id];
+    Madness_Asset* texture_metadata = &texture_system->texture_asset[texture_id];
     texture_metadata->reference_count--;
     if (texture_metadata->reference_count <= 0)
     {
@@ -481,7 +457,7 @@ bool texture_system_load_msdf_font(Asset_System* asset_system, const char* file_
     if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
     {
         *out_handle = texture_system->texture_handles[texture_idx];
-        asset_system->texture_meta_data[texture_idx].reference_count++;
+        texture_system->texture_asset[texture_idx].reference_count++;
         return true;
     }
 
@@ -501,8 +477,8 @@ bool texture_system_load_msdf_font(Asset_System* asset_system, const char* file_
     texture_system->in_use_textures_count++;
 
     //get an available index
-    Asset_MetaData* meta_data = &asset_system->texture_meta_data[free_index];
-    meta_data->type = RESOURCE_FONT;
+    Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
+    meta_data->type = ASSET_FONT;
     meta_data->handle_lookup = free_index;
     meta_data->file_path = file_path;
     meta_data->reference_count = 1;

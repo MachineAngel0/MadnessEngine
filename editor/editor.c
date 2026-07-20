@@ -374,8 +374,8 @@ void editor_texture_view(Editor* editor)
         for (u32 i = 0; i < asset_system->texture_system->in_use_textures_count; i++)
         {
             Asset_MetaData* meta_data = &asset_system->texture_meta_data[i];
-            madness_ui_c_string(meta_data->file_path);
-            madness_image_handle((Texture_Handle){.handle = meta_data->handle_lookup});
+            madness_ui_c_string(meta_data->source_file);
+            // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
     }
     madness_ui_window_end();
