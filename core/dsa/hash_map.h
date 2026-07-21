@@ -66,7 +66,7 @@ void hash_map_insert(hash_map* h, void* key, void* value);
 
 void hash_map_remove(hash_map* h, void* key);
 
-void* hash_map_get(hash_map* h, void* key);
+bool hash_map_get(hash_map* h, void* key, void* out_data);
 
 bool hash_map_contains(hash_map* h, void* key);
 

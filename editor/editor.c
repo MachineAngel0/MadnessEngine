@@ -230,7 +230,7 @@ void editor_ui_animation(Editor* editor)
         for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; i++)
         {
             Sk_Mesh_Parent_Instance* sk_mesh = &mesh_system->skinned_mesh_instance[i];
-            Animation_Data* animation_data = sk_mesh_parent_instance_get_animation_data(
+            GLTF_Animation_Data* animation_data = sk_mesh_parent_instance_get_animation_data(
                 mesh_system, sk_mesh);
             sk_mesh->current_animation_index;
 

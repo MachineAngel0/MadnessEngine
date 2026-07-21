@@ -6,25 +6,7 @@
 #include "resource_types.h"
 #include "ufbx.h"
 
-Animation_Path_Type Animation_Path_Type_gltf_to_engine[cgltf_animation_path_type_max_enum + 1] =
-{
-    [cgltf_animation_path_type_invalid] = Animation_Path_Type_Invalid,
-    [cgltf_animation_path_type_translation] = Animation_Path_Type_Translation,
-    [cgltf_animation_path_type_rotation] = Animation_Path_Type_Rotation,
-    [cgltf_animation_path_type_scale] = Animation_Path_Type_Scale,
-    [cgltf_animation_path_type_weights] = Animation_Path_Type_Weights,
-    [cgltf_animation_path_type_max_enum] = Animation_Path_Type_Max
-};
 
-
-Animation_Interpolation_Type Animation_Interpolation_Type_gltf_to_engine[cgltf_interpolation_type_max_enum + 1] =
-{
-    [cgltf_interpolation_type_linear] = Animation_Interpolation_Type_Linear,
-    [cgltf_interpolation_type_step] = Animation_Interpolation_Type_Step,
-    [cgltf_interpolation_type_cubic_spline] = Animation_Interpolation_Type_Cubic_Spline,
-    [cgltf_interpolation_type_max_enum] = Animation_Interpolation_Type_Max_enum,
-
-};
 
 
 Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memory_system)
@@ -39,7 +21,7 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
     out_mesh_system->tangent_byte_size = 0;
     out_mesh_system->uv_byte_size = 0;
 
-    out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_Upload_Data), MAX_MESH_COUNT);
+    out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_GPU_Upload), MAX_MESH_COUNT);
     out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Sk_Mesh_Upload_Data),
                                                                  MAX_SKINNED_MESH_COUNT);
 
@@ -69,7 +51,7 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 
 void _gltf_load_mesh_data(Asset_System* asset_system, const char* gltf_path, cgltf_data* data,
                           u32 gltf_data_mesh_idx, Mesh_Data* mesh_draw_data,
-                          Mesh_Upload_Data* upload_data)
+                          Mesh_GPU_Upload* upload_data)
 {
     Heap_Allocator* allocator = asset_system->heap_allocator;
     Frame_Allocator* frame_allocator = asset_system->frame_allocator;
@@ -92,9 +74,9 @@ void _gltf_load_mesh_data(Asset_System* asset_system, const char* gltf_path, cgl
 
         //alloc and copy data
         float* pos_data = allocator_alloc(frame_allocator, float_bytes);
-        upload_data->pos = allocator_heap_alloc(allocator, float_bytes);
+        upload_data->vertex = allocator_heap_alloc(allocator, float_bytes);
         cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
-        memcpy(upload_data->pos, pos_data, float_bytes);
+        memcpy(upload_data->vertex, pos_data, float_bytes);
     }
 
     // Find normal accessor
@@ -426,7 +408,7 @@ void _gltf_load_skin_and_animation_data(Asset_System* resource_system, cgltf_dat
     MASSERT(data->skins_count <= 1);
 
 
-    Animation_Data* animation_data = skinned_mesh_meta_data->animation_data;
+    GLTF_Animation_Data* animation_data = skinned_mesh_meta_data->animation_data;
     animation_data->animations = allocator_heap_alloc(allocator, sizeof(Animation) * data->animations_count);
     animation_data->animations_count = data->animations_count;
 
@@ -655,8 +637,8 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
         sk_mesh_asset_data->skinned_mesh_count = data->meshes_count;
 
 
-        Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
-                                                                   sizeof(Mesh_Upload_Data) * data->meshes_count);
+        Mesh_GPU_Upload* mesh_upload_data_array = allocator_alloc(frame_allocator,
+                                                                   sizeof(Mesh_GPU_Upload) * data->meshes_count);
 
         Sk_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
             allocator, sizeof(Sk_Mesh_Upload_Data) * data->meshes_count);
@@ -668,7 +650,7 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
             Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[mesh_idx];
 
 
-            Mesh_Upload_Data* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
+            Mesh_GPU_Upload* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
             Sk_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
 
             _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, mesh_data,
@@ -682,7 +664,7 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
             ring_enqueue(mesh_system->skinned_mesh_ring_queue, skinned_mesh_upload_data);
         }
 
-        sk_mesh_asset_data->animation_data = allocator_heap_alloc(allocator, sizeof(Animation_Data));
+        sk_mesh_asset_data->animation_data = allocator_heap_alloc(allocator, sizeof(GLTF_Animation_Data));
         _gltf_load_skin_and_animation_data(resource_system, data, sk_mesh_asset_data);
 
         //create the parent instance
@@ -717,7 +699,7 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
         }
 
 
-        Animation_Data* animation_data = sk_mesh_asset_data->animation_data;
+        GLTF_Animation_Data* animation_data = sk_mesh_asset_data->animation_data;
 
         sk_mesh_parent_inst->joint_count = sk_mesh_asset_data->animation_data->joint_count;
 
@@ -765,15 +747,15 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
         mesh_asset_data->mesh_data = allocator_heap_alloc(allocator, sizeof(Mesh_Data) * data->meshes_count);
 
 
-        Mesh_Upload_Data* mesh_upload_data_array = allocator_alloc(frame_allocator,
-                                                                   sizeof(Mesh_Upload_Data) * data->meshes_count);
+        Mesh_GPU_Upload* mesh_upload_data_array = allocator_alloc(frame_allocator,
+                                                                   sizeof(Mesh_GPU_Upload) * data->meshes_count);
 
         for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
         {
             Mesh_Data* mesh_draw_data = &mesh_asset_data->mesh_data[mesh_idx];
 
 
-            Mesh_Upload_Data* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
+            Mesh_GPU_Upload* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
 
             _gltf_load_mesh_data(resource_system,
                                  gltf_path, data, mesh_idx,
@@ -820,7 +802,7 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
     cgltf_free(data);
 }
 
-Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
+GLTF_Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
                                                            Sk_Mesh_Parent_Instance* sk_mesh_inst)
 {
     return mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
@@ -846,7 +828,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
         Sk_Mesh_Parent_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
 
 
-        Animation_Data* animation_data = mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
+        GLTF_Animation_Data* animation_data = mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
             animation_data;
         Animation* anim_data = &animation_data->animations[sk_mesh_inst->current_animation_index];
 

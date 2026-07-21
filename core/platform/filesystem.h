@@ -19,7 +19,7 @@ typedef struct file_read_data
 {
     u8* data;
     u64 size;
-}file_read_data;
+} file_read_data;
 
 void file_read_data_free(file_read_data* file_data)
 {
@@ -50,7 +50,7 @@ bool filesystem_open_and_return_bytes(const char* file_path, file_read_data* fil
     return true;
 }
 
-bool filesystem_file_size(const char* file_path, u64* out_file_size)
+bool filesystem_open_and_get_file_size(const char* file_path, u64* out_file_size)
 {
     FILE* fptr = fopen(file_path, "rb");
     if (!fptr)
@@ -66,6 +66,22 @@ bool filesystem_file_size(const char* file_path, u64* out_file_size)
     fclose(fptr);
 
     return true;
+}
+
+
+MINLINE void filesystem_go_to_start(FILE* fptr)
+{
+    fseek(fptr, 0, SEEK_SET);
+}
+
+
+size_t filesystem_file_size(FILE* fptr)
+{
+    MASSERT(fptr);
+    fseek(fptr, 0, SEEK_END);
+    const size_t size = ftell(fptr);
+    fseek(fptr, 0, SEEK_SET);
+    return size;
 }
 
 
@@ -89,9 +105,7 @@ bool filesystem_create_file(const char* file_path)
 
 
     return false;
-
 }
-
 
 
 //PLATFORM SPECIFIC CODE
@@ -99,7 +113,7 @@ bool filesystem_create_file(const char* file_path)
 typedef struct File_Handle
 {
     u32 handle;
-}File_Handle;
+} File_Handle;
 
 //returns a file handle, 0 if an invalid file, but should be safe since it won't crash anything
 File_Handle* filesystem_register_file(const char* file_path);
@@ -120,20 +134,20 @@ bool filesystem_scan_directory(const char* directory_path);
 bool filesystem_is_directory_empty(const char* directory_path);
 
 
-// bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle);
-//
-// void filesystem_close(file_handle* handle);
-//
-// bool filesystem_read_line(file_handle* handle, char** line_buf);
-//
-// bool filesystem_write_line(file_handle* handle, const char* text);
-//
-// bool filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_bytes_read);
-//
-// bool filesystem_read_all_bytes(file_handle* handle, u8** out_bytes, u64* out_bytes_read);
-//
-// bool filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written);
-//
-//
+
+//NEW API
+
+/*
+typedef struct Madness_File
+{
+    File_Mode file_mode;
+    FILE* fptr; // might need to be void* platform_specifics;
+} Madness_File;
+*/
 
 
+// bool filesystem_open(const char* path, file_modes mode, bool binary, Madness_File* out_file);
+// bool filesystem_close(Madness_File* file);
+// bool filesystem_read(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+// bool filesystem_write(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+// bool filesystem_read_all_bytes(Madness_File* handle, u8** out_bytes, u64* out_bytes_read);

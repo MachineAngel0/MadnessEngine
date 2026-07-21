@@ -115,8 +115,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                   application_core->asset_system);
 
 
+    asset_converter_msdf_font(application_core->asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
     asset_converter_texture(application_core->asset_system, "../z_assets/textures/test_particle.png");
-    texture_system_load_texture_engine(application_core->asset_system, "test_particle");
+    asset_load_texture(application_core->asset_system, "test_particle");
+
+
+
 
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");

@@ -102,8 +102,7 @@ typedef enum Asset_Type
 typedef struct Madness_Asset
 {
     //runtime format for assets
-    const char* file_path; // TODO: probably wont need but well leave it here for now
-    u64 hash_id;
+    u64 hash_id; //future: might need to add this back
     Asset_Type type;
     u64 handle_lookup; // if we wanted to access this item within the specific system
     u64 reference_count;
@@ -122,32 +121,43 @@ typedef struct Asset_MetaData
 
 ///////////////// Texture  //////////////////////
 
+typedef enum Texture_Format
+{
+    //TODO: when you figure it out properly
+    Texture_Format_Default,
+    // Texture_Format_Default,
+} Texture_Format;
+
 
 //Texture
-typedef struct Texture
-{
-    u32 width;
-    u32 height;
-    u8 channels; // rgb? rgba? etc... TODO:  might be cases where you want just something like rb, enum for that
-    u64 pixel_size;
-    //image_type
-    stbi_uc* pixels;
-    // for the renderer
-    Texture_Handle handle;
-
-} Texture;
-
-
 typedef struct Madness_Texture
 {
     u32 width;
     u32 height;
     u8 channels;
-    //enum texture format
-    //bool free_after_use
+    Texture_Format format;
     u64 pixels_size;
-    // u8* pixel_data;
 } Madness_Texture;
+
+typedef struct Texture_GPU_Upload
+{
+    Madness_Texture* madness_texture;
+    u8* pixel_data;
+    u32 bindless_location;
+}Texture_GPU_Upload;
+
+typedef struct Madness_Texture_Editor
+{
+    Madness_Texture texture;
+    u8 version;
+    u8* pixel_data;
+}Madness_Texture_Editor;
+
+typedef struct Madness_Texture_Runtime
+{
+    Madness_Texture texture;
+    u8* pixel_data;
+}Madness_Texture_Runtime;
 
 
 //FONT/TEXT
@@ -165,13 +175,13 @@ typedef struct Glyph
 } Glyph;
 
 
-//called Madness font cause a linux library uses the struct font
 typedef struct Madness_Font
 {
+    //called Madness font cause a linux library uses the struct font
     // float font_creation_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages or non standard characters
     Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
-    Texture_Handle font_texture_handle;
+    Madness_Texture texture;
 } Madness_Font;
 
 ///////////////// Particle  //////////////////////
@@ -276,134 +286,8 @@ typedef struct Particle_Mesh
 ///////////////// MESH  //////////////////////
 
 
-// m1|m2|m3|m4|m5
-// batcn/mat1 = m1|m2|m5
-// batcn/ = m3|m4
 
 
-typedef struct Joint
-{
-    const char* joint_name;
-    u32 id;
-    u32 parent_idx;
-} Joint;
-
-typedef enum Animation_Path_Type
-{
-    //translated directly from cgltf_animation_path_type
-    Animation_Path_Type_Invalid,
-    Animation_Path_Type_Translation, // vec3
-    Animation_Path_Type_Rotation, // vec4
-    Animation_Path_Type_Scale, // vec3
-    Animation_Path_Type_Weights, // float
-    Animation_Path_Type_Max
-} Animation_Path_Type;
-
-
-typedef enum Animation_Interpolation_Type
-{
-    //translated directly from cgltf_interpolation_type
-    Animation_Interpolation_Type_Linear,
-    Animation_Interpolation_Type_Step,
-    Animation_Interpolation_Type_Cubic_Spline,
-    Animation_Interpolation_Type_Max_enum
-} Animation_Interpolation_Type;
-
-typedef struct Animation_Channel
-{
-    u32 sampler_idx;
-    Animation_Path_Type animation_path_type;
-    u32 joint_index;
-} Animation_Channel;
-
-typedef struct Animation_Sampler
-{
-    float* timestamps;
-    u32 timestamps_count;
-
-    float sampler_start;
-    float sampler_end;
-
-    //trs = translation rotation scale, and weights
-    union
-    {
-        float* trs_float;
-        vec3s* trs_vec3;
-        vec4s* trs_vec4;
-    } interperlation_data;
-
-    u32 trs_interpolation_count;
-    Animation_Interpolation_Type interpolation_type;
-} Animation_Sampler;
-
-typedef struct Animation
-{
-    String* animation_name;
-    Animation_Channel* channels;
-    u32 channel_count;
-    Animation_Sampler* samplers;
-    u32 sampler_count;
-
-    float anim_start;
-    float anim_end;
-
-    //TODO: current time is only here for testing
-    // float current_time;
-} Animation;
-
-
-typedef struct Animation_Data
-{
-    Joint* joints;
-    u32 joint_count; // also the weight count
-
-    mat4s* resting_pose_local_matrix;
-    mat4s* inverse_bind_matrix;
-
-    Animation* animations;
-    u32 animations_count;
-} Animation_Data;
-
-
-typedef struct Mesh_Upload_Data
-{
-    //information to upload into the associated buffer
-    u32 vertex_offset;
-    u32 vertex_bytes;
-
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u32 normal_offset;
-    u32 normal_bytes;
-
-    u32 tangent_offset;
-    u32 tangent_bytes;
-
-    u32 uv_offset;
-    u32 uv_bytes;
-
-    //TODO: these technically could just be u8's
-    vec4s* tangent;
-    vec3s* pos;
-    vec3s* normal;
-    vec2s* uv;
-    u8* indices;
-} Mesh_Upload_Data;
-
-
-typedef struct Skinned_Mesh_Upload_Data
-{
-    u64 joint_bytes;
-    u64 weight_bytes;
-
-    u64 joint_offset;
-    u64 weight_offset;
-
-
-    vec4s* joints;
-    vec4s* weights;
-} Sk_Mesh_Upload_Data;
 
 
 typedef struct Mesh_Indirect_Draw
@@ -529,23 +413,63 @@ typedef struct Sk_Mesh_Parent_Instance
 
 typedef struct Mesh_Asset
 {
-    const char* file_path;
-    Mesh_Data* mesh_data;
     u32 mesh_count;
+    Mesh_Data* mesh_data;
 } Mesh_Asset;
 
 typedef struct Sk_Mesh_Asset
 {
-    const char* file_path;
-    Mesh_Data* mesh_data;
     u32 mesh_count;
-
-    Sk_Mesh_Data* skinned_mesh_data;
     u32 skinned_mesh_count;
 
+    Mesh_Data* mesh_data;
+    Sk_Mesh_Data* skinned_mesh_data;
     Animation_Data* animation_data;
 } Sk_Mesh_Asset;
 
+typedef struct Mesh_GPU_Upload
+{
+    //information to upload into the associated buffer
+    u32 vertex_offset;
+    u32 vertex_bytes;
+
+    u32 vertex_color_offset;
+    u32 vertex_color_bytes;
+
+    u32 indices_bytes;
+    VkIndexType index_type;
+
+    u32 normal_offset;
+    u32 normal_bytes;
+
+    u32 tangent_offset;
+    u32 tangent_bytes;
+
+    u32 uv_offset;
+    u32 uv_bytes;
+
+
+    vec4s* tangent;
+    vec4s* vertex_color;
+    vec3s* vertex;
+    vec3s* normal;
+    vec2s* uv;
+    u8* indices;
+} Mesh_GPU_Upload;
+
+
+typedef struct Skinned_Mesh_GPU_Upload
+{
+    u64 joint_bytes;
+    u64 weight_bytes;
+
+    u64 joint_offset;
+    u64 weight_offset;
+
+
+    vec4s* joints;
+    vec4s* weights;
+} Skinned_Mesh_GPU_Upload;
 
 ///////////////////////MATERIAL/SHADER/////////////////////////
 
@@ -703,7 +627,7 @@ typedef struct Sprite_System
 
 
 #define MAX_TEXTURE_COUNT 1024
-#define MAX_FONT_COUNT 10
+#define MAX_FONT_COUNT 16
 
 
 typedef struct Texture_System
@@ -711,19 +635,19 @@ typedef struct Texture_System
     //handle 0 is always the default texture, it should never be allowed to be modified
     Texture_Handle default_texture_handle;
 
-    Texture textures_array[MAX_TEXTURE_COUNT];
+    Madness_Texture* texture_array[MAX_TEXTURE_COUNT];
     Texture_Handle texture_handles[MAX_TEXTURE_COUNT];
 
-    ring_queue* available_idx_queue;
-    u32 in_use_textures_count; // technically this data is in the ring queue
+    RING_QUEUE_TYPE(u32)* available_texture_queue;
+
+    u32 in_use_textures_count;
     u32 max_textures;
 
 
-    hash_table* texture_filepath_to_idx;
-    // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
+    hash_map* texture_hash_map;
 
     //textures that the renderer needs to upload to the gpu
-    ring_queue* textures_ring_queue;
+    RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_upload_queue;
 
     //TODO: probably change this to a hash table, handle->font_data
     //rn this corresponds to the same indexes of the textures_array

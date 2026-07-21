@@ -2,6 +2,7 @@
 #define PARTICLE_SYSTEM_H
 
 
+#include "asset_system.h"
 #include "resource_types.h"
 
 
@@ -20,8 +21,8 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
     {
         // const char* texture_path = "../z_assets/textures/test_particle.png";
         // const char* texture_path = "../z_assets/textures/test_particle.png";
-        ps->particles[i].texture_handle = texture_system_load_texture(resource_system,
-                                                                      "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png");
+        ps->particles[i].texture_handle = asset_load_texture(resource_system,
+                                                                      "circle_05.png");
         //  "../z_assets/textures/kenney_particle-pack/PNG (Black background)/circle_05.png");
         ps->particles[i].scale = (vec2s){10.0f, 10.0f};
         ps->particles[i].velocity.x = rand_range_f(-10, 10);

@@ -257,6 +257,11 @@ bool string_builder_compare_with_char(String_Builder* builder, const char* word,
     return true;
 }
 
+u64 string_builder_hash_u64(const String_Builder* builder)
+{
+    return generate_hash_key_64bit((u8*)builder->str, builder->current_length);
+}
+
 #define STRING_BUILDER_APPEND_CHAR(builder, string) string_builder_append_c_string(builder, string, sizeof(string)-1)
 
 

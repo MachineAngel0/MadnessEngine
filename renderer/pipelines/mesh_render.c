@@ -94,7 +94,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
     ring_queue* mesh_render_queue = render_packet->mesh_queue;
     ring_queue* skinned_mesh_render_queue = render_packet->skinned_mesh_queue;
 
-    Mesh_Upload_Data* submesh_upload_data = allocator_alloc(&renderer->frame_allocator, sizeof(Mesh_Upload_Data));
+    Mesh_GPU_Upload* submesh_upload_data = allocator_alloc(&renderer->frame_allocator, sizeof(Mesh_GPU_Upload));
 
     //NOTE: rn it copies from an offset, which is fine for now,
     // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system function calls
@@ -104,7 +104,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 
         //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
-                                            submesh_upload_data->pos,
+                                            submesh_upload_data->vertex,
                                             submesh_upload_data->vertex_bytes);
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->index_staging_buffer_handle,
                                             submesh_upload_data->indices,

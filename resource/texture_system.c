@@ -6,26 +6,23 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
 
-    memset(texture_system->textures_array, 0, MAX_TEXTURE_COUNT * sizeof(Texture));
+    memset(texture_system->texture_array, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Texture));
     memset(texture_system->font_array, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Font));
-    memset(texture_system->texture_handles, 0, MAX_TEXTURE_COUNT * sizeof(Texture_Handle));
-
-    texture_system->available_idx_queue = ring_queue_create(sizeof(u32), MAX_TEXTURE_COUNT);
 
     for (u32 i = 0; i < MAX_TEXTURE_COUNT; i++)
     {
         texture_system->texture_handles[i].handle = i;
-        ring_enqueue(texture_system->available_idx_queue, &i);
+        ring_enqueue(texture_system->available_texture_queue, &i);
     }
 
 
-    texture_system->texture_filepath_to_idx = HASH_TABLE_CREATE(u32, MAX_TEXTURE_COUNT);
-    texture_system->textures_ring_queue = ring_queue_create(sizeof(Texture), MAX_TEXTURE_COUNT);
+    texture_system->texture_hash_map = HASH_MAP_CREATE(u64, u32, MAX_TEXTURE_COUNT*2);
+    texture_system->texture_upload_queue = ring_queue_create(sizeof(Texture_GPU_Upload), MAX_TEXTURE_COUNT);
 
 
     //create our debug texture
-    texture_system->default_texture_handle = texture_system_load_texture(
-        asset_system, "../renderer/texture/error_texture.png");
+    texture_system->default_texture_handle = asset_load_texture(
+        asset_system, "../z_assets/textures/error_texture.png");
 
     return texture_system;
 }
@@ -39,150 +36,7 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
     return true;
 }
 
-
-Texture_Handle texture_system_load_texture(Asset_System* asset_system, char const* file_path)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-    Texture_Handle out_handle = {0};
-    u32 texture_idx;
-
-    //check if the texture has already been loaded in
-    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
-    {
-        out_handle = texture_system->texture_handles[texture_idx];
-        texture_system->texture_asset[texture_idx].reference_count++;
-        return out_handle;
-    }
-
-    if (texture_system->in_use_textures_count >= texture_system->max_textures)
-    {
-        FATAL("MAX TEXTURES REACHED");
-        out_handle = texture_system_get_default_texture(texture_system);
-        return out_handle;
-    }
-
-    //get a free index
-    u32 free_index;
-    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
-    {
-        MASSERT("OUT OF TEXTURE IDX's")
-    }
-    texture_system->in_use_textures_count++;
-
-    //get an available index
-    Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->type = ASSET_TEXTURE;
-    meta_data->handle_lookup = free_index;
-    meta_data->file_path = file_path;
-    meta_data->reference_count = 1;
-
-
-    out_handle = texture_system->texture_handles[free_index];
-    Texture* texture = &texture_system->textures_array[free_index];
-    texture->handle = out_handle;
-
-
-    //add to hash table
-    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
-
-    //load the image data from file
-    int texWidth, texHeight, texChannels;
-    texture->pixels = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    texture->width = texWidth; // 4 stride rgba
-    texture->height = texHeight; // 4 stride rgba
-    texture->channels = STBI_rgb_alpha; // 4 stride rgba
-    texture->pixel_size = texWidth * texHeight * 4; // 4 stride rgba
-
-    MASSERT_MSG(texture->pixels, "FAILED TO LOAD TEXTURE");
-
-    if (!texture->pixels)
-    {
-        WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        out_handle = texture_system_get_default_texture(texture_system);
-        return out_handle;
-    }
-
-
-    //used by the renderer to upload to the gpu, then we can free the cpu data
-    ring_enqueue(texture_system->textures_ring_queue, texture);
-
-
-    return out_handle;
-}
-
-
-bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle handle)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-    if (handle.handle == 0)
-    {
-        WARN("texture_system_unload_texture: TRIED UNLOADING DEFAULT TEXTURE")
-        return false;
-    }
-
-    //get the handle for use
-    u32 texture_id = handle.handle;
-
-
-    Madness_Asset* texture_metadata = &texture_system->texture_asset[texture_id];
-    texture_metadata->reference_count--;
-    if (texture_metadata->reference_count <= 0)
-    {
-        //change the resource generation
-        texture_system->texture_handles[texture_id].generation++;
-        //put it into the available list
-        ring_enqueue(texture_system->available_idx_queue, &texture_id);
-        texture_system->in_use_textures_count--;
-    }
-
-    return true;
-}
-
-
-
-Texture_Handle texture_system_load_texture_engine(Asset_System* asset_system, const char* asset_name)
-{
-    //we need to convert the editor data into a format usable by the engine/renderer
-    Madness_Texture texture = {0};
-
-
-    String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
-    string_builder_append_c_string(path_builder, asset_name);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
-
-
-    FILE* fptr = fopen(string_builder_to_c_string(path_builder), "rb");
-    if (!fptr)
-    {
-        //TODO: might not want to crash
-        MASSERT(false);
-    }
-    fread(&texture, sizeof(Madness_Texture), 1, fptr);
-    u8* pixel_data = allocator_heap_alloc(asset_system->heap_allocator, texture.pixels_size);
-    fread(pixel_data, texture.pixels_size, 1, fptr);
-
-    int error = fseek(fptr, 0L, SEEK_SET);
-    if (error != 0)
-    {
-        MASSERT(false);
-    }
-
-
-    Texture gpu_tex = {0};
-    gpu_tex.width = texture.width;
-    gpu_tex.height = texture.height;
-    gpu_tex.channels = texture.channels;
-    gpu_tex.pixel_size = texture.pixels_size;
-    gpu_tex.pixels = pixel_data;
-    gpu_tex.handle = (Texture_Handle){0, 0};
-
-
-    fclose(fptr);
-}
-
-bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Texture* out_texture)
+bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Madness_Texture* out_texture)
 {
     if (texture_system->texture_handles->generation != handle.generation)
     {
@@ -190,7 +44,7 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
         return false;
     }
 
-    out_texture = &texture_system->textures_array[handle.handle];
+    out_texture = texture_system->texture_array[handle.handle];
     return true;
 }
 
@@ -207,239 +61,6 @@ Texture_Handle texture_system_get_default_texture(Texture_System* texture_system
     return texture_system->default_texture_handle;
 }
 
-Texture_Handle texture_system_get_handle_by_name(Texture_System* texture_system, const char* string)
-{
-    //TODO:
-
-}
-
-bool texture_system_load_font(Asset_System* asset_system, const char* file_path, Texture_Handle* out_handle,
-                              Allocator* arena)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-    u32 texture_id;
-
-    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_id))
-    {
-        out_handle = &texture_system->texture_handles[texture_id];
-        texture_system->texture_asset[texture_id].reference_count++;
-        return true;
-    }
-
-    if (texture_system->in_use_textures_count >= texture_system->max_textures)
-    {
-        FATAL("MAX TEXTURES REACHED");
-        out_handle->handle = 0;
-        return false;
-    }
-
-
-    //get a free index
-    u32 free_index;
-    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
-    {
-        MASSERT("OUT OF TEXTURE IDX's")
-        return false;
-    }
-    texture_system->in_use_textures_count++;
-
-    *out_handle = texture_system->texture_handles[free_index];
-    Madness_Font* font_structure = &texture_system->font_array[free_index];
-    Texture* texture = &texture_system->textures_array[free_index];
-    texture->handle = *out_handle;
-
-    //add to hash table
-    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
-
-    // Load font file
-    FILE* font_file = fopen(file_path, "rb");
-    if (!font_file)
-    {
-        printf("Failed to open font file: %s\n", file_path);
-        out_handle->handle = 0;
-        return false;
-    }
-
-    fseek(font_file, 0, SEEK_END);
-    size_t size = ftell(font_file);
-    rewind(font_file);
-
-    unsigned char* ttf_buffer = (unsigned char*)malloc(size);
-    fread(ttf_buffer, 1, size, font_file);
-    fclose(font_file);
-
-    // Initialize stb_truetype
-    stbtt_fontinfo font_info;
-    if (!stbtt_InitFont(&font_info, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer, 0)))
-    {
-        WARN("Failed to initialize font\n");
-        free(ttf_buffer);
-        return out_handle;
-    }
-
-    // Generate bitmap atlas
-    float scale = stbtt_ScaleForPixelHeight(&font_info, DEFAULT_FONT_CREATION_SIZE);
-    int atlas_width = 1024 * 4;
-    int atlas_height = 1024 * 4;
-    char* atlasPixels = allocator_alloc(arena, atlas_width * atlas_height);
-
-    int x = 0, y = 0, rowHeight = 0;
-
-    // Get font metrics for baseline calculation
-    int ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &lineGap);
-    float baseline = ascent * scale;
-
-
-    for (int c = 32; c < 128; c++)
-    {
-        int width, height, xoff, yoff;
-        unsigned char* bitmap = stbtt_GetCodepointBitmap(&font_info, 0, scale, c,
-                                                         &width, &height, &xoff, &yoff);
-
-        // Handle atlas overflow
-        if (x + width > atlas_width)
-        {
-            x = 0;
-            y += rowHeight;
-            rowHeight = 0;
-        }
-
-        if (y + height > atlas_height)
-        {
-            WARN("Error: Texture atlas too small!\n");
-            stbtt_FreeBitmap(bitmap, NULL);
-            free(ttf_buffer);
-            return out_handle;
-        }
-
-        // Copy glyph bitmap into atlas
-        for (int row = 0; row < height; row++)
-        {
-            memcpy(&atlasPixels[(y + row) * atlas_width + x],
-                   &bitmap[row * width], width);
-        }
-
-
-        // Store glyph metrics
-        Glyph* g = &font_structure->glyphs[c - 32];
-        g->width = width;
-        g->height = height;
-        g->xoff = xoff;
-        g->yoff = baseline + yoff; // Adjust for baseline
-
-        int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font_info, c, &advance, &lsb);
-        g->advance = advance * scale;
-
-
-        // Calculate UV coordinates
-        g->u0 = (float)x / (float)atlas_width;
-        g->v0 = (float)y / (float)atlas_height;
-        g->u1 = (float)(x + width) / (float)atlas_width;
-        g->v1 = (float)(y + height) / (float)atlas_height;
-
-        /*printf("Glyph '%c': size=(%d,%d), offset=(%d,%.1f), advance=%.1f, UV=(%.3f,%.3f)-(%.3f,%.3f)\n",
-               c, width, height, xoff, g.yoff, g.advance, g.u0, g.v0, g.u1, g.v1);
-               */
-
-        x += width + 48; // Add 1 pixel padding
-        if (height > rowHeight) rowHeight = height + 1;
-
-        stbtt_FreeBitmap(bitmap, NULL);
-    }
-
-    free(ttf_buffer);
-
-    // Convert to RGBA
-    u64 atlasRGBA_size = atlas_width * atlas_height * 4;
-    unsigned char* atlas_RGBA_pixels = allocator_alloc(arena, atlasRGBA_size);
-    for (int i = 0; i < atlas_width * atlas_height; i++)
-    {
-        unsigned char v = atlasPixels[i];
-        atlas_RGBA_pixels[i * 4 + 0] = 255; // R
-        atlas_RGBA_pixels[i * 4 + 1] = 255; // G
-        atlas_RGBA_pixels[i * 4 + 2] = 255; // B
-        atlas_RGBA_pixels[i * 4 + 3] = v; // A (alpha from glyph)
-    }
-
-    // Save atlas to file for debugging, will be under cmake-build-debug
-    const char* debug_filename = "font_atlas_debug.ppm";
-    FILE* debug_file = fopen(debug_filename, "wb");
-    if (debug_file)
-    {
-        // Write PPM header (P6 format for RGB)
-        // DEBUG(debug_file, "P6\n%d %d\n255\n", atlasWidth, atlasHeight);
-        DEBUG("P6\n%d %d\n255\n", atlas_width, atlas_height);
-
-        // Write RGB data to PPM filing using the debug data, which is basically not flipped
-        for (int i = 0; i < atlas_width * atlas_height; i++)
-        {
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // R
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // G
-            fwrite(&atlasPixels[i], 1, 1, debug_file); // B
-        }
-        fclose(debug_file);
-        DEBUG("Font atlas saved to: %s\n", debug_filename);
-    }
-    else
-    {
-        printf("Warning: Could not save font atlas debug file\n");
-    }
-
-    // Also save as raw RGBA data
-    const char* raw_filename = "font_atlas_debug.raw";
-    FILE* raw_file = fopen(raw_filename, "wb");
-    if (!raw_file)
-    {
-        WARN("FONT_INIT: COULDN'T OPEN FONT ATLAS DEBUG RAW");
-        fclose(raw_file);
-    }
-
-    fwrite(atlas_RGBA_pixels, 1, atlasRGBA_size, raw_file);
-    DEBUG("Raw RGBA atlas data saved to: %s (%dx%d RGBA)\n",
-          raw_filename, atlas_width, atlas_height);
-    fclose(raw_file);
-
-
-    texture->width = atlas_width;
-    texture->height = atlas_height;
-    texture->channels = 4;
-    texture->pixel_size = atlasRGBA_size;
-    texture->pixels = atlas_RGBA_pixels;
-    texture->handle = *out_handle;
-    ring_enqueue(texture_system->textures_ring_queue, texture);
-
-    DEBUG("Font loaded successfully: %s\n", file_path);
-
-    return out_handle;
-}
-
-bool texture_system_unload_font(Asset_System* asset_system, Texture_Handle handle)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-    //get the handle for use
-    u32 texture_id = handle.handle;
-
-    if (texture_id == 0)
-    {
-        WARN("texture_system_unload_texture: TRIED UNLOADING DEFAULT TEXTURE")
-        return false;
-    }
-
-    Madness_Asset* texture_metadata = &texture_system->texture_asset[texture_id];
-    texture_metadata->reference_count--;
-    if (texture_metadata->reference_count <= 0)
-    {
-        //change the resource generation
-        texture_system->texture_handles[texture_id].generation++;
-        //put it into the available list
-        ring_enqueue(texture_system->available_idx_queue, &texture_id);
-        texture_system->in_use_textures_count--;
-    }
-
-    return true;
-}
 
 bool texture_system_get_font(Texture_System* texture_system, const Texture_Handle handle, Madness_Font* out_font)
 {
@@ -447,123 +68,58 @@ bool texture_system_get_font(Texture_System* texture_system, const Texture_Handl
     return true;
 }
 
-bool texture_system_load_msdf_font(Asset_System* asset_system, const char* file_path, Texture_Handle* out_handle,
-                                   Frame_Allocator* frame_arena)
+
+bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handle, u64 hash)
 {
     Texture_System* texture_system = asset_system->texture_system;
-    u32 texture_idx;
-
-    //check if the texture has already been loaded in
-    if (hash_table_get(texture_system->texture_filepath_to_idx, file_path, &texture_idx))
+    u32 texture_idx = 0;
+    if (hash_map_get(texture_system->texture_hash_map, &hash, &texture_idx))
     {
         *out_handle = texture_system->texture_handles[texture_idx];
         texture_system->texture_asset[texture_idx].reference_count++;
         return true;
     }
 
-    if (texture_system->in_use_textures_count >= texture_system->max_textures)
+    return false;
+}
+
+
+bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash, Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle)
+{
+    Texture_System* texture_system = asset_system->texture_system;
+
+    //find a free texture slot
+    u32 free_index;
+    if (!ring_dequeue(texture_system->available_texture_queue, &free_index))
     {
-        FATAL("MAX TEXTURES REACHED");
-        *out_handle = texture_system_get_default_texture(texture_system);
+        // TODO: figure out what to do when we run out of textures, im think just allocate more space for them
+        MASSERT("OUT OF TEXTURE IDX's");
+        *out_handle = texture_system->default_texture_handle;
         return false;
     }
 
-    //get a free index
-    u32 free_index;
-    if (!ring_dequeue(texture_system->available_idx_queue, &free_index))
-    {
-        MASSERT("OUT OF TEXTURE IDX's")
-    }
     texture_system->in_use_textures_count++;
+    Madness_Texture* texture = texture_system->texture_array[free_index];
+    *texture = texture_data;
+    *out_handle = texture_system->texture_handles[free_index];
 
-    //get an available index
+
+    Texture_GPU_Upload upload_texture = {0};
+    upload_texture.madness_texture = texture;
+    upload_texture.bindless_location = free_index;
+    upload_texture.pixel_data = pixel_data;
+
+    ring_enqueue(texture_system->texture_upload_queue, &upload_texture);
+
+    hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
+
+    //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->type = ASSET_FONT;
+    meta_data->hash_id = hash;
+    meta_data->type = ASSET_TEXTURE;
     meta_data->handle_lookup = free_index;
-    meta_data->file_path = file_path;
     meta_data->reference_count = 1;
 
 
-    *out_handle = texture_system->texture_handles[free_index];
-    Texture* texture = &texture_system->textures_array[free_index];
-    Madness_Font* font_structure = &texture_system->font_array[free_index];
-    texture->handle = *out_handle;
-
-    //add to hash table
-    hash_table_insert(texture_system->texture_filepath_to_idx, file_path, &free_index);
-
-    //load the image data from file
-    int texture_width, texture_height, tex_channels;
-    texture->pixels = stbi_load(file_path, &texture_width, &texture_height, &tex_channels, STBI_rgb_alpha);
-    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    texture->width = texture_width; // 4 stride rgba
-    texture->height = texture_height; // 4 stride rgba
-    texture->channels = STBI_rgb_alpha; // 4 stride rgba
-    texture->pixel_size = texture_width * texture_height * 4; // 4 stride rgba
-
-    MASSERT_MSG(texture->pixels, "FAILED TO LOAD FONT");
-
-    if (!texture->pixels)
-    {
-        WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        *out_handle = texture_system_get_default_texture(texture_system);
-        return false;
-    }
-
-
-    //used by the renderer to upload to the gpu, then we can free the cpu data
-    ring_enqueue(texture_system->textures_ring_queue, texture);
-
-
-    const char* file_name = c_string_ext_strip(file_path, frame_arena);
-    const char* csv_path = c_string_concat(file_name, "csv", frame_arena);
-
-    FILE* file = fopen(csv_path, "r");
-    MASSERT(file)
-
-
-    // float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
-    // float glyph_size = 32.f; // this you would just have to know, or force it based on texture_size
-
-    float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
-    float glyph_size = 40.f; // this you would just have to know, or force it based on texture_size
-
-    char buffer[256];
-    float ascender = 0.0f;
-
-    while (fgets(buffer, sizeof(buffer), file))
-    {
-        int index;
-        float advance, bound_left, bound_top, bound_right, bound_bottom, u0, v0, u1, v1;
-
-        int parsed = sscanf(buffer, "%d,%f,%f,%f,%f,%f,%f,%f,%f,%f",
-                            &index,
-                            &advance,
-                            &bound_left, &bound_top, &bound_right, &bound_bottom,
-                            &u0, &v0, &u1, &v1
-        );
-
-        if (bound_top < ascender) { ascender = bound_top; };
-
-        Glyph* g = &font_structure->glyphs[index - GLYPH_START];
-
-        g->advance = advance * glyph_size;
-        g->xoff = bound_left * glyph_size;
-        g->yoff = bound_top * glyph_size;
-        g->width = (bound_right - bound_left) * glyph_size;
-        g->height = (bound_bottom - bound_top) * glyph_size;
-        g->u0 = u0 / texture_size;
-        g->v0 = v0 / texture_size;
-        g->u1 = u1 / texture_size;
-        g->v1 = v1 / texture_size;
-    }
-
-    // bake ascender into yoff so draw_text needs no correction
-    float ascender_px = ascender * glyph_size;
-    for (int i = 0; i < GLYPH_LENGTH; i++)
-    {
-        font_structure->glyphs[i].yoff -= ascender_px;
-    }
-
-    return true;
+    return out_handle;
 }

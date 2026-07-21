@@ -1,6 +1,5 @@
 ﻿
 
-#include "asset_system.c"
 
 #include "scene.c"
 #include "texture_system.c"
@@ -8,5 +7,9 @@
 #include "mesh_system.c"
 #include "material_system.c"
 #include "shader_creation_system.c"
+
+#include "asset_converter.c"
+#include "asset_system.c"
+
 #include "ui_insanity.c"
 #include "ui_madness.c"

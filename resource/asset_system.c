@@ -61,7 +61,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* resource_system)
 {
     allocator_clear(resource_system->frame_allocator);
     render_packet_clear(resource_system->render_packet);
-    resource_system->render_packet->texture_queue = resource_system->texture_system->textures_ring_queue;
+    resource_system->render_packet->texture_queue = resource_system->texture_system->texture_upload_queue;
     resource_system->render_packet->mesh_queue = resource_system->mesh_system->mesh_ring_queue;
     resource_system->render_packet->skinned_mesh_queue = resource_system->mesh_system->skinned_mesh_ring_queue;
     return asset_system_generate_render_packet(resource_system);

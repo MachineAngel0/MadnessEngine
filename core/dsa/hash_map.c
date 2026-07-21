@@ -129,7 +129,7 @@ void hash_map_remove(hash_map* h, void* key)
     }
 }
 
-void* hash_map_get(hash_map* h, void* key)
+bool hash_map_get(hash_map* h, void* key, void* out_data)
 {
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
     uint64_t hash_key = hash_index % h->capacity;
@@ -141,15 +141,16 @@ void* hash_map_get(hash_map* h, void* key)
         //the first empty we hit means the value was never in the hash set
         if (h->state[cur_index] == HASH_MAP_EMPTY)
         {
-            return NULL;
+            return false;
         }
         //find our key and just mark as deleted
         if (h->state[cur_index] == HASH_MAP_USING && memcmp(h->key_data[cur_index], key, h->key_data_size) == 0)
         {
-            return h->value_data[cur_index];
+            out_data = h->value_data[cur_index];
+            return true;
         }
     }
-    return NULL;
+    return false;
 }
 
 bool hash_map_contains(hash_map* h, void* key)

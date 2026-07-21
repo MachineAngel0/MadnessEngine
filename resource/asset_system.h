@@ -3,8 +3,10 @@
 
 #include <stdbool.h>
 
+#include "asset_converter.h"
 #include "resource_types.h"
 #include "ring_queue.h"
+#include "texture_system.h"
 
 
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
@@ -23,7 +25,7 @@
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 
 #define ENGINE_TEXTURE_EXTENSION ".mtex"
-
+#define ENGINE_FONTS_EXTENSION ".mfnt"
 
 
 //TODO/GOALS:
@@ -57,26 +59,6 @@
 // ENGINE FORMAT
 // WAY TO CREATE MULTIPLE OF A THING for modification
 
-typedef struct Madness_Mesh
-{
-    u64 tangent_byte_size;
-    u64 vertex_byte_size;
-    u64 normal_byte_size;
-    u64 uv_byte_size;
-    u64 indices_byte_size;
-
-    vec4s* tangent;
-    vec3s* vertex;
-    vec3s* normal;
-    vec2s* uv;
-    u8* indices;
-
-    String* material_name;
-
-
-    Madness_Texture* texture;
-    u8 texture_count;
-} Madness_Mesh;
 
 typedef struct Madness_SkMesh
 {
@@ -114,8 +96,6 @@ typedef struct Madness_Audio
 */
 
 
-
-
 Asset_System* asset_system_init(Memory_System* memory_system);
 
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
@@ -130,23 +110,77 @@ MAPI void render_packet_clear(Render_Packet* renderer_packets);
 //NEW
 
 
-void asset_system_reload_asset();
+void asset_system_reload_texture(Asset_System* a);
 
 //should we have the asset system be responsible for basically everything, kinda, it should probably be able to touch everything
-Texture_Handle asset_load_texture(Asset_System* a, const char* path)
+Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_name)
 {
-    // return mesh_load_gltf(a, path);
-    return texture_system_load_texture(a, path);
+    //either load from metadata -> binary or binary blob
+    //then send into the texture system
+    //in general we just want to deserialize the data quickly,
+    //the deserialization is the same, it just depends which file data we end up giving it
+
+
+    //NOTE: if this becomes a performance issue, we can use a hash_table look up, asset_name -> hash_idx
+    String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
+    string_builder_append_c_string(path_builder, asset_name);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
+
+    const u64 hash_id = string_builder_hash_u64(path_builder);
+
+    //has asset already been loaded
+    Texture_Handle texture_handle = {0};
+    if (!texture_system_exists(asset_system, &texture_handle, hash_id))
+    {
+        return texture_handle;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        fptr = fopen(string_builder_to_c_string(path_builder), "rb");
+        if (!fptr)
+        {
+            MASSERT(false);
+            return asset_system->texture_system->default_texture_handle;
+        }
+
+        Madness_Texture_Editor editor_texture = {0};
+
+        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
+        fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
+        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator, editor_texture.texture.pixels_size);
+        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+
+        texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+
+    }
+    else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+
+    }
+    fclose(fptr);
+
+    return texture_handle;
 }
 
-Texture_Handle asset_loader_texture(Asset_System* a, const char* path)
+bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
 {
-    // return mesh_load_gltf(a, path);
-    return texture_system_load_texture(a, path);
+    MASSERT(false);
+    texture_system_texture_free(asset_system, texture_handle);
+    return false;
 }
-
-
-
 
 
 //Data format stuff
@@ -157,9 +191,6 @@ typedef struct Asset_MetaData_Header
     size_t offset;
     size_t size;
 } Asset_MetaData_Header;
-
-
-
 
 
 typedef struct Asset_File_Header
@@ -207,11 +238,12 @@ typedef struct Madness_Runtime_Level_Table
     size_t size;
     size_t asset_count; // how many assets do we have
 
+    //NOTE: you can technically sort this since its by id and then just binary search through the array
     //list of assets names and their info
-    u64* asset_id; // we will want to hash the source file name, and somehow handle id collisions (or pray we dont have any)
+    u64* asset_id;
+    // we will want to hash the source file name, and somehow handle id collisions (or pray we dont have any)
     Madness_Runtime_Asset* asset_info;
 } Madness_Runtime_Level_Table;
-
 
 
 void asset_system_read_registry(Asset_System* asset_system)
@@ -226,12 +258,7 @@ void asset_system_update_registry(Asset_System* asset_system)
 
 void asset_system_convert_to_runtime_format()
 {
-
 }
-
-
-
-
 
 
 #endif //RESOURCE_SYSTEM_H
