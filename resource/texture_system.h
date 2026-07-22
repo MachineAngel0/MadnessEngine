@@ -17,15 +17,15 @@ MAPI Texture_Handle texture_system_get_default_texture(Texture_System* texture_s
 
 
 MAPI bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handle, u64 hash);
-bool texture_system_font_exists(Asset_System* asset_system, Texture_Handle* out_handle, u64 hash);
 
 MAPI bool texture_system_texture_free(Asset_System* asset_system, Texture_Handle handle);
 
 
 MAPI bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash, Madness_Texture texture_data,
                                             u8* pixel_data, Texture_Handle* out_handle);
-bool texture_system_upload_new_font(Asset_System* asset_system, u64 hash, Madness_Font texture_data, u8* pixel_data,
-                                    Texture_Handle* out_handle);
+
+MAPI bool texture_system_upload_new_font(Asset_System* asset_system, u64 hash, Madness_Texture texture_data,
+                                         Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle);
 
 
 MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle,

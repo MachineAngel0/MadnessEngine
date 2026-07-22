@@ -177,6 +177,8 @@ typedef struct Madness_Texture
     u8 channels;
     Texture_Format format;
     u64 pixels_size;
+    Asset_Type type; // used to identify if we have are a font
+    u32 font_index; // runtime only data
 } Madness_Texture;
 
 typedef struct Texture_GPU_Upload
@@ -221,12 +223,12 @@ typedef struct Madness_Font
     // float font_creation_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages or non standard characters
     Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
-    Madness_Texture texture;
 } Madness_Font;
 
 typedef struct Madness_Font_Editor
 {
     Madness_Font font_texture;
+    Madness_Texture texture;
     u8 version;
     u8* pixel_data;
 }Madness_Font_Editor;
@@ -743,32 +745,22 @@ typedef struct Texture_System
 
     //Textures
     Madness_Texture texture_array[MAX_TEXTURE_COUNT];
+    Madness_Font font_array[MAX_FONT_COUNT];
+
     Texture_Handle texture_handles[MAX_TEXTURE_COUNT];
+
     u32 in_use_textures_count;
     u32 max_textures;
     RING_QUEUE_TYPE(u32)* available_texture_queue;
-    hash_map* texture_hash_map;
-
-
-    //Fonts
-    Madness_Font font_array[MAX_FONT_COUNT];
-    Texture_Handle font_handles[MAX_TEXTURE_COUNT];
-    u32 in_use_fonts_count;
-    u32 max_fonts;
     RING_QUEUE_TYPE(u32)* available_font_queue;
-    hash_map* font_hash_map;
 
+    hash_map* texture_hash_map;
 
     //textures that the renderer needs to upload to the gpu
     RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_upload_queue;
 
-
-    //
     Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
     u32 texture_asset_count;
-
-    Madness_Asset font_asset[MAX_FONT_COUNT];
-    u32 font_asset_count;
 
 } Texture_System;
 

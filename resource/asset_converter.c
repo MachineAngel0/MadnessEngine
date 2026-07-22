@@ -51,6 +51,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path)
     editor_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
     editor_texture.texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
     editor_texture.texture.format = Texture_Format_Default;
+    editor_texture.texture.type = ASSET_FONT;
 
     String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
     string_builder_append_c_string(file_path_strip, file_path);
@@ -94,6 +95,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path)
 bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 {
     Madness_Font font_structure = {0};
+    Madness_Texture texture = {0};
 
     // Load font file
     FILE* font_file = fopen(file_path, "rb");
@@ -247,11 +249,11 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     fclose(raw_file);
 
 
-    font_structure.texture.width = atlas_width;
-    font_structure.texture.height = atlas_height;
-    font_structure.texture.channels = 4;
-    font_structure.texture.pixels_size = atlasRGBA_size;
-    // font_structure.texture.pixels = atlas_RGBA_pixels;
+    texture.width = atlas_width;
+    texture.height = atlas_height;
+    texture.channels = 4;
+    texture.pixels_size = atlasRGBA_size;
+    texture.type = ASSET_FONT;
 
 
     DEBUG("Font loaded successfully: %s\n", file_path);
@@ -275,8 +277,12 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
         MASSERT(false);
     }
 
-    fwrite(&font_structure, sizeof(font_structure), 1, fptr);
-    fwrite(atlas_RGBA_pixels, font_structure.texture.pixels_size, 1, fptr);
+    u8 version = 1.0;
+    fwrite(&font_structure, sizeof(Madness_Font), 1, fptr);
+    fwrite(&texture, sizeof(Madness_Texture), 1, fptr);
+    fwrite(&version, sizeof(version), 1, fptr);
+    fwrite(atlas_RGBA_pixels, texture.pixels_size, 1, fptr);
+
 
     fclose(fptr);
 
@@ -293,7 +299,8 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
-    Madness_Font font_structure = {0};
+    Madness_Font_Editor editor_texture = {0};
+    editor_texture.version = 1.0;
 
     //load the image data from file
     //load the image data from file
@@ -308,11 +315,11 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     }
 
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    font_structure.texture.width = texture_width; // 4 stride rgba
-    font_structure.texture.height = texture_height; // 4 stride rgba
-    font_structure.texture.channels = STBI_rgb_alpha; // 4 stride rgba
-    font_structure.texture.pixels_size = texture_width * texture_height * 4; // 4 stride rgba
-
+    editor_texture.texture.width = texture_width; // 4 stride rgba
+    editor_texture.texture.height = texture_height; // 4 stride rgba
+    editor_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
+    editor_texture.texture.pixels_size = texture_width * texture_height * 4; // 4 stride rgba
+    editor_texture.texture.type = ASSET_FONT;
 
     const char* file_name = c_string_ext_strip(file_path, asset_system->frame_allocator);
     const char* csv_path = c_string_concat(file_name, "csv", asset_system->frame_allocator);
@@ -344,7 +351,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
         if (bound_top < ascender) { ascender = bound_top; };
 
-        Glyph* g = &font_structure.glyphs[index - GLYPH_START];
+        Glyph* g = &editor_texture.font_texture.glyphs[index - GLYPH_START];
 
         g->advance = advance * glyph_size;
         g->xoff = bound_left * glyph_size;
@@ -361,7 +368,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     float ascender_px = ascender * glyph_size;
     for (int i = 0; i < GLYPH_LENGTH; i++)
     {
-        font_structure.glyphs[i].yoff -= ascender_px;
+        editor_texture.font_texture.glyphs[i].yoff -= ascender_px;
     }
 
 
@@ -383,8 +390,11 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
         MASSERT(false);
     }
 
-    fwrite(&font_structure, sizeof(font_structure), 1, fptr);
-    fwrite(pixel_data, font_structure.texture.pixels_size, 1, fptr);
+
+    fwrite(&editor_texture.font_texture, sizeof(Madness_Font), 1, fptr);
+    fwrite(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
+    fwrite(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
+    fwrite(pixel_data, editor_texture.texture.pixels_size, 1, fptr);
 
     stbi_image_free(pixel_data);
 

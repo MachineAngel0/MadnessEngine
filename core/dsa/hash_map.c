@@ -146,7 +146,7 @@ bool hash_map_get(hash_map* h, void* key, void* out_data)
         //find our key and just mark as deleted
         if (h->state[cur_index] == HASH_MAP_USING && memcmp(h->key_data[cur_index], key, h->key_data_size) == 0)
         {
-            out_data = h->value_data[cur_index];
+            memcpy(out_data, h->value_data[cur_index], h->value_data_size);
             return true;
         }
     }

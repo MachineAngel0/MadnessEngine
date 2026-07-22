@@ -108,7 +108,7 @@ bool asset_load_font(Asset_System* asset_system, const char* asset_name, Texture
     const u64 hash_id = string_builder_hash_u64(path_builder);
 
     //has asset already been loaded
-    if (texture_system_font_exists(asset_system, out_handle, hash_id))
+    if (texture_system_exists(asset_system, out_handle, hash_id))
     {
         return true;
     }
@@ -142,17 +142,17 @@ bool asset_load_font(Asset_System* asset_system, const char* asset_name, Texture
         }
 
 
-
         Madness_Font_Editor editor_texture = {0};
 
         fread(&editor_texture.font_texture, sizeof(Madness_Font), 1, fptr);
+        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
         fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
         editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
-                                                         editor_texture.font_texture.texture.pixels_size);
-        fread(editor_texture.pixel_data, editor_texture.font_texture.texture.pixels_size, 1, fptr);
+                                                         editor_texture.texture.pixels_size);
+        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
 
-        texture_system_upload_new_font(asset_system, hash_id, editor_texture.font_texture, editor_texture.pixel_data,
-                                          out_handle);
+        texture_system_upload_new_font(asset_system, hash_id, editor_texture.texture, editor_texture.font_texture,
+                                       editor_texture.pixel_data, out_handle);
     }
     else
     {
