@@ -33,6 +33,7 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry)
                                                       asset_idx);
 
         fwrite(&asset->uuid, sizeof(asset->uuid), 1, fptr);
+        fwrite(&asset->hash, sizeof(asset->hash), 1, fptr);
         fwrite(&asset->type, sizeof(asset->type), 1, fptr);
         string_serialize(asset->source_file, fptr);
         string_serialize(asset->binary_file, fptr);
@@ -100,6 +101,7 @@ bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocat
             asset->binary_file = allocator_heap_alloc(allocator, sizeof(String));
 
             fread(&asset->uuid, sizeof(asset->uuid), 1, fptr);
+            fread(&asset->hash, sizeof(asset->hash), 1, fptr);
             fread(&asset->type, sizeof(asset->type), 1, fptr);
             string_deserialize_heap(asset->source_file, fptr, allocator);
             string_deserialize_heap(asset->binary_file, fptr, allocator);
@@ -123,6 +125,7 @@ void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaDat
     FILE* fptr = fopen(ASSET_REGISTRY_BIN_PATH, "ab");
     fseek(fptr, -(sizeof(Asset_Registry_Header)), SEEK_END);
     fwrite(&asset_meta_data->uuid, sizeof(asset_meta_data->uuid), 1, fptr);
+    fwrite(&asset_meta_data->hash, sizeof(asset_meta_data->hash), 1, fptr);
     fwrite(&asset_meta_data->type, sizeof(asset_meta_data->type), 1, fptr);
     string_serialize(asset_meta_data->source_file, fptr);
     string_serialize(asset_meta_data->binary_file, fptr);

@@ -17,11 +17,6 @@ bool asset_convert_file(Asset_System* asset_system, const char* file_path)
         asset_converter_texture(asset_system, file_path);
         return true;
     }
-    if (strcmp(extension_name, ".png") == 0)
-    {
-        asset_converter_texture(asset_system, file_path);
-        return true;
-    }
     //TODO: system fonts like .ttf into msdf fonts
     if (strcmp(extension_name, ".gltf") == 0)
     {
@@ -30,7 +25,7 @@ bool asset_convert_file(Asset_System* asset_system, const char* file_path)
     }
 
 
-    WARN("ASSET CONVERT FILE: NO VALID FILE TYPE FOUND");
+    WARN("ASSET CONVERT FILE: NO VALID FILE EXT FOUND");
     return false;
 
 }
@@ -84,6 +79,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path)
     meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
     meta_data.binary_file = string_builder_to_string(str_builder);
     meta_data.uuid = madness_uuid_generate_return();
+    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
     meta_data.type = ASSET_TEXTURE;
     asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 
@@ -291,6 +287,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
     meta_data.binary_file = string_builder_to_string(str_builder);
     meta_data.uuid = madness_uuid_generate_return();
+    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
     meta_data.type = ASSET_FONT;
     asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 
@@ -404,6 +401,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
     meta_data.binary_file = string_builder_to_string(str_builder);
     meta_data.uuid = madness_uuid_generate_return();
+    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
     meta_data.type = ASSET_FONT;
     asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 

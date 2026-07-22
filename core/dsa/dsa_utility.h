@@ -164,12 +164,12 @@ uint64_t generate_hash_key_64bit(uint8_t* key, size_t data_size)
 
     // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
     const uint8_t* bytes = (const uint8_t*)key;
-    uint32_t hash = FNV_OFFSET_BASIS_64;
+    uint64_t hash = FNV_OFFSET_BASIS_64;
 
     for(size_t i = 0; i < data_size; i++)
     {
         hash ^= bytes[i];
-        hash *= FNV_PRIME_32;
+        hash *= FNV_PRIME_64;
     }
 
     return hash;

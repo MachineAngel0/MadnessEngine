@@ -8,27 +8,26 @@
 Asset_System* asset_system_init(Memory_System* memory_system)
 {
     Asset_System* asset_system = memory_system_alloc(memory_system, sizeof(Asset_System),
-                                                           MEMORY_SUBSYSTEM_RESOURCE);
+                                                     MEMORY_SUBSYSTEM_RESOURCE);
     asset_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet),
-                                                         MEMORY_SUBSYSTEM_RESOURCE);
+                                                      MEMORY_SUBSYSTEM_RESOURCE);
 
 
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(64),
-                                                     MEMORY_SUBSYSTEM_RESOURCE);
+                                                                       MEMORY_SUBSYSTEM_RESOURCE);
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
-                                                     MEMORY_SUBSYSTEM_RESOURCE);
+                                                                   MEMORY_SUBSYSTEM_RESOURCE);
 
     //Asset Registry
     asset_system->asset_registry = memory_system_alloc(memory_system, sizeof(Asset_Registry),
-                                                         MEMORY_SUBSYSTEM_RESOURCE);
+                                                       MEMORY_SUBSYSTEM_RESOURCE);
     asset_registry_init(asset_system->asset_registry, asset_system->heap_allocator);
 
 
     //Texture
     asset_system->texture_system = memory_system_alloc(memory_system, sizeof(Texture_System),
-                                                     MEMORY_SUBSYSTEM_TEXTURE);
+                                                       MEMORY_SUBSYSTEM_TEXTURE);
     texture_system_init(asset_system, asset_system->texture_system, memory_system);
-
 
 
     asset_system->scene = scene_init(memory_system);
@@ -42,8 +41,6 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     //ifdef out for debug builds
 
     //load the asset metadata
-
-
 
 
     return asset_system;
@@ -78,15 +75,20 @@ bool asset_system_generate_render_packet(Asset_System* resource_system)
     sprite_system_generate_render_packet(resource_system->sprite_system,
                                          &resource_system->render_packet->sprite_data_packet);
 
-    material_system_generate_render_packet(resource_system->material_system, &resource_system->render_packet->draw_3d_data_packet);
+    material_system_generate_render_packet(resource_system->material_system,
+                                           &resource_system->render_packet->draw_3d_data_packet);
 
     scene_update(resource_system->scene, resource_system);
-    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->world_transforms;
-    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->transform_count;
+    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->
+        world_transforms;
+    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->
+        transform_count;
 
-    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->skinned_matrix_array;
+    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->
+        skinned_matrix_array;
 
-    resource_system->render_packet->particle_packet = particle_system_generate_render_packet(resource_system->particle_system);
+    resource_system->render_packet->particle_packet = particle_system_generate_render_packet(
+        resource_system->particle_system);
 
     return true;
 }
@@ -96,25 +98,37 @@ void render_packet_clear(Render_Packet* renderer_packets)
     memset(renderer_packets, 0, sizeof(Render_Packet));
 }
 
-Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_name)
+Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine_asset_path)
 {
     //either load from metadata -> binary or binary blob
     //then send into the texture system
     //in general we just want to deserialize the data quickly,
     //the deserialization is the same, it just depends which file data we end up giving it
 
+    String* asset_path = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
 
-    //NOTE: if this becomes a performance issue, we can use a hash_table look up, asset_name -> hash_idx
-    String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
-    string_builder_append_c_string(path_builder, asset_name);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
-
-    const u64 hash_id = string_builder_hash_u64(path_builder);
+    MADNESS_UUID uuid = {0, 0};
+    u64 hash = 0;
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (string_compare(meta_data->binary_file, asset_path))
+        {
+            //found
+            uuid = meta_data->uuid;
+            hash = meta_data->hash;
+            break;
+        }
+    }
+    if (hash == 0)
+    {
+        MASSERT("PLZ CONVERT ASSET")
+        return (Texture_Handle){0};
+    }
 
     //has asset already been loaded
     Texture_Handle texture_handle = {0};
-    if (texture_system_exists(asset_system, &texture_handle, hash_id))
+    if (texture_system_exists(asset_system, &texture_handle, hash))
     {
         return texture_handle;
     }
@@ -126,7 +140,7 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_
     bool debug = true;
     if (debug)
     {
-        fptr = fopen(string_builder_to_c_string(path_builder), "rb");
+        fptr = fopen(engine_asset_path, "rb");
         if (!fptr)
         {
             //TODO: since were in the editor, we should at least try to find the asset in our asset folder
@@ -137,11 +151,78 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_
 
         fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
         fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
-        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator, editor_texture.texture.pixels_size);
+        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
+                                                         editor_texture.texture.pixels_size);
         fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
 
-        texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+        texture_system_upload_new_texture(asset_system, uuid, hash, editor_texture.texture, editor_texture.pixel_data,
+                                          &texture_handle);
+    }
+    /*else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+    }*/
+    fclose(fptr);
 
+    return texture_handle;
+}
+
+bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle)
+{
+    MADNESS_UUID uuid = {0, 0};
+    u64 hash = 0;
+
+    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (string_compare(meta_data->binary_file, asset_path_string))
+        {
+            //found
+            uuid = meta_data->uuid;
+            hash = meta_data->hash;
+            break;
+        }
+    }
+    if (hash == 0)
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Texture_Handle){0};
+        return out_handle;
+    }
+
+    //has asset already been loaded
+    if (texture_system_exists(asset_system, out_handle, hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        Madness_Font_Editor editor_texture = {0};
+
+        fptr = fopen(engine_asset_path, "rb");
+
+        fread(&editor_texture.font_texture, sizeof(Madness_Font), 1, fptr);
+        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
+        fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
+        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
+                                                         editor_texture.texture.pixels_size);
+        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+
+        texture_system_upload_new_font(asset_system, uuid, hash, editor_texture.texture, editor_texture.font_texture,
+                                       editor_texture.pixel_data, out_handle);
     }
     else
     {
@@ -151,12 +232,12 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_
         // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
         // Madness_Texture_Runtime runtime_texture = {0};
         // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-
     }
     fclose(fptr);
 
-    return texture_handle;
+    return true;
 }
+
 
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
 {
@@ -169,5 +250,4 @@ bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle text
 Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name)
 {
     MASSERT(false);
-
 }

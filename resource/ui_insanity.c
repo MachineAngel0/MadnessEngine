@@ -72,7 +72,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
 
     //
-    bool result = asset_load_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png", &insanity_ui->default_font_handle);
+    bool result = asset_load_font(asset_system, "../z_assets_engine/fonts/arial_msdf.mfont", &insanity_ui->default_font_handle);
     if (!result)
     {
         MASSERT_MSG(false, "INSANITY UI SYSTEM Failed to load default msdf font");

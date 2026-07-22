@@ -21,11 +21,11 @@ MAPI bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_
 MAPI bool texture_system_texture_free(Asset_System* asset_system, Texture_Handle handle);
 
 
-MAPI bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash, Madness_Texture texture_data,
+MAPI bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash, Madness_Texture texture_data,
                                             u8* pixel_data, Texture_Handle* out_handle);
 
-MAPI bool texture_system_upload_new_font(Asset_System* asset_system, u64 hash, Madness_Texture texture_data,
-                                         Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle);
+MAPI bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
+                                         Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle);
 
 
 MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle,

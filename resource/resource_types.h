@@ -43,7 +43,15 @@
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 
 
-///////////////// RESOURCES  //////////////////////
+///////////////// RESOURCES AND HANDLES //////////////////////
+
+#define INVALID_HANDLE 0
+
+typedef struct Handle
+{
+    u32 id;
+    u32 generation;
+} Handle;
 
 typedef enum Asset_Type
 {
@@ -55,43 +63,28 @@ typedef enum Asset_Type
     ASSET_AUDIO,
     // RESOURCE_PARTICLE,
 
-    ASSET_MAX,
+    ASSET_TYPE_MAX,
 } Asset_Type;
 
-typedef struct Madness_Asset
-{
-    //runtime format for assets
-    u64 hash_id; //future: might need to add this back
-    Asset_Type type;
-    u64 handle_lookup; // if we wanted to access this item within the specific system
-    u64 reference_count;
-} Madness_Asset;
+const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
+    [ASSET_TEXTURE] = "ASSET_TEXTURE",
+    [ASSET_FONT] = "ASSET_FONT",
+    [ASSET_SPRITE] = "ASSET_SPRITE",
+    [ASSET_STATIC_MESH] = "ASSET_STATIC_MESH",
+    [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
+    [ASSET_AUDIO] = "ASSET_AUDIO",
+};
 
 
 typedef struct Asset_MetaData
 {
     //meta data for our editor/debug builds
     MADNESS_UUID uuid;
+    u64 hash;
     Asset_Type type;
     String* source_file; // TODO: change to string
     String* binary_file; // TODO: change to string
 } Asset_MetaData;
-
-
-
-
-
-///////////////// HANDLES  //////////////////////
-
-#define INVALID_HANDLE 0
-
-typedef struct Handle
-{
-    u32 id;
-    u32 generation;
-} Handle;
-
-typedef Handle T_Handle;
 
 typedef struct Texture_Handle
 {
@@ -100,6 +93,18 @@ typedef struct Texture_Handle
     u32 generation;
 } Texture_Handle;
 
+
+typedef struct Madness_Asset
+{
+    //runtime format for assets
+    MADNESS_UUID uuid;
+    u64 hash;
+    u64 reference_count;
+    Asset_Type type;
+} Madness_Asset;
+
+
+typedef Handle T_Handle;
 
 
 typedef struct Material_Handle
@@ -153,12 +158,6 @@ typedef struct Animation_Handle
 } Animation_Handle;
 
 
-
-
-
-
-
-
 ///////////////// Texture  //////////////////////
 
 typedef enum Texture_Format
@@ -186,20 +185,20 @@ typedef struct Texture_GPU_Upload
     Madness_Texture* madness_texture;
     u8* pixel_data;
     u32 bindless_location;
-}Texture_GPU_Upload;
+} Texture_GPU_Upload;
 
 typedef struct Madness_Texture_Editor
 {
     Madness_Texture texture;
     u8 version;
     u8* pixel_data;
-}Madness_Texture_Editor;
+} Madness_Texture_Editor;
 
 typedef struct Madness_Texture_Runtime
 {
     Madness_Texture texture;
     u8* pixel_data;
-}Madness_Texture_Runtime;
+} Madness_Texture_Runtime;
 
 
 //FONT/TEXT
@@ -231,7 +230,7 @@ typedef struct Madness_Font_Editor
     Madness_Texture texture;
     u8 version;
     u8* pixel_data;
-}Madness_Font_Editor;
+} Madness_Font_Editor;
 
 ///////////////// Particle  //////////////////////
 
@@ -359,7 +358,6 @@ uint32_t    firstInstance;
     //TODO: another time, for when i want to do instancing, which might not be worth it
     // uint32_t firstInstance; // 0
     // uint32_t instanceCount; // 1
-
 } Mesh_Indirect_Draw;
 
 typedef struct SKMesh_GPU_Draw
@@ -376,7 +374,6 @@ typedef struct Mesh_GPU_Draw
     u32 transform_idx;
     u32 material_instance_handle;
 } Mesh_GPU_Draw;
-
 
 
 typedef struct Skinned_Mesh_GPU_Upload
@@ -457,7 +454,6 @@ typedef struct Madness_Skinned_Mesh_Instance
 } Madness_SkMesh_Instance;
 
 
-
 typedef struct Madness_SubMesh_Instance
 {
     //for the renderer
@@ -477,8 +473,6 @@ typedef struct Madness_Mesh_Instance
 } Madness_Mesh_Instance;
 
 
-
-
 typedef struct Madness_Skinned_SubMesh
 {
     u64 joint_bytes;
@@ -496,7 +490,8 @@ typedef struct Madness_Skinned_SubMesh
     u64 skinned_matrix_offset;
 } Madness_Skinned_SubMesh;
 
-typedef struct Madness_SubMesh{
+typedef struct Madness_SubMesh
+{
     u64 tangent_bytes;
     u64 vertex_color_bytes;
     u64 vertex_bytes;
@@ -517,8 +512,7 @@ typedef struct Madness_SubMesh{
     u32 vertex_color_offset;
     u32 normal_offset;
     u32 uv_offset;
-}Madness_SubMesh;
-
+} Madness_SubMesh;
 
 
 typedef struct Madness_Mesh
@@ -528,7 +522,6 @@ typedef struct Madness_Mesh
     Madness_SubMesh* mesh_data;
     //material data probably
 } Madness_Mesh;
-
 
 
 typedef struct Madness_Skinned_Mesh
@@ -550,8 +543,7 @@ typedef struct Madness_Mesh_GPU_Data
     vec3s* normal;
     vec2s* uv;
     u8* indices;
-}Madness_Mesh_GPU_Data;
-
+} Madness_Mesh_GPU_Data;
 
 
 typedef struct Madness_Mesh_Editor
@@ -560,7 +552,7 @@ typedef struct Madness_Mesh_Editor
     u32 mesh_count;
     Madness_SubMesh* sub_mesh;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-}Madness_Mesh_Editor;
+} Madness_Mesh_Editor;
 
 
 typedef struct Madness_SkMesh_Editor
@@ -569,13 +561,7 @@ typedef struct Madness_SkMesh_Editor
     u32 mesh_count;
     Madness_SubMesh* sub_mesh;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-
-}Madness_SkMesh_Editor;
-
-
-
-
-
+} Madness_SkMesh_Editor;
 
 
 ///////////////////////MATERIAL/SHADER/////////////////////////
@@ -667,7 +653,7 @@ typedef struct PC_Shadow_Mapping
 {
     mat4 light_matrix;
     VkDeviceAddress draw_data_buffer;
-}PC_Shadow_Mapping;
+} PC_Shadow_Mapping;
 
 typedef struct Material_Batch
 {
@@ -685,8 +671,6 @@ typedef struct Material_Batch
     Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
 } Material_Batch;
-
-
 
 
 #define MAX_DEFAULT_MATERIAL 100
@@ -710,7 +694,6 @@ typedef struct Material_System
 
     Material_Batch skinned_batch[100];
     u32 skinned_batch_count;
-
 } Material_System;
 
 
@@ -761,7 +744,6 @@ typedef struct Texture_System
 
     Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
     u32 texture_asset_count;
-
 } Texture_System;
 
 typedef struct Scene
@@ -920,7 +902,8 @@ typedef struct Asset_Registry
 {
     DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
 
-}Asset_Registry;
+    //ideally we have another data format which points to the data?? just for easy lookup and display
+} Asset_Registry;
 
 
 typedef struct Resource_System
@@ -947,7 +930,6 @@ typedef struct Resource_System
     Render_Packet* render_packet;
 
     Asset_Registry* asset_registry;
-
 } Asset_System;
 
 

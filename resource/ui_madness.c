@@ -115,7 +115,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
     // };
 
-    bool result = asset_load_font(resource_system, "../z_assets/msdf_fonts/arial_msdf.png",
+    bool result = asset_load_font(resource_system, "../z_assets_engine/fonts/arial_msdf.mfont",
                                   &madness_ui->default_font_handle);
     if (!result)
     {

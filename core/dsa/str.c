@@ -118,7 +118,11 @@ bool string_compare(const String* str1, const String* str2)
 
     for (uint32_t i = 0; i < str1->length; i++)
     {
-        if (str1->chars[i] != str2->chars[i]) return false;
+        if (str1->chars[i] != str2->chars[i])
+        {
+            printf("%c, %c", str1->chars[i], str2->chars[i]);
+            return false;
+        }
     }
 
     return true;

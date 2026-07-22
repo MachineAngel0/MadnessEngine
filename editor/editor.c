@@ -132,6 +132,10 @@ void editor_ui(Editor* editor)
 
 
         break;
+    case EDITOR_UI_STATE_ASSET_METADATA:
+        editor_meta_data_view(editor);
+
+        break;
     }
 }
 
@@ -243,16 +247,14 @@ void editor_ui_animation(Editor* editor)
             {
                 sk_mesh->current_animation_index = clamp_uint(
                     mesh_system->skinned_mesh_instance[i].current_animation_index, 0,
-                    animation_data->animations_count-1);
+                    animation_data->animations_count - 1);
 
                 sk_mesh->current_time = 0;
             }
-            if (!madness_ui_check_box(STRING_STRLEN(buffer2) ,&sk_mesh->looping))
+            if (!madness_ui_check_box(STRING_STRLEN(buffer2), &sk_mesh->looping))
             {
                 sk_mesh->current_time = 0;
             }
-
-
         }
     }
     madness_ui_window_end();
@@ -335,7 +337,6 @@ void editor_ui_scene(Editor* editor)
                 madness_ui_vec4(STRING(buffer), &spot_light->position, 1.0f);
                 madness_ui_vec4(STRING(buffer2), &spot_light->color, 0.1f);
             }
-
         }
         madness_scroll_box_end();
     }
@@ -371,14 +372,51 @@ void editor_texture_view(Editor* editor)
     Asset_System* asset_system = editor->asset_system;
     madness_ui_window_begin(STRING("Texture View"));
     {
-        for (u32 i = 0; i < asset_system->texture_system->in_use_textures_count; i++)
+        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {
             //TODO: keep another format, of just pointer references for the editors sake
             Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
-            if (meta_data->type == ASSET_TEXTURE)
+            if (meta_data->type != ASSET_TEXTURE && meta_data->type != ASSET_FONT)
+            {
+                continue;
+            }
+
+
+            Texture_Handle texture_handle;
+            if (texture_system_exists(asset_system, &texture_handle, meta_data->hash))
             {
                 madness_ui_string(*meta_data->source_file);
+                madness_ui_string(*meta_data->binary_file);
+                madness_image_handle(texture_handle);
             }
+
+
+            // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
+        }
+    }
+    madness_ui_window_end();
+}
+
+void editor_meta_data_view(Editor* editor)
+{
+    Asset_System* asset_system = editor->asset_system;
+    madness_ui_window_begin(STRING("MetaData View"));
+    {
+        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+        {
+            //TODO: keep another format, of just pointer references for the editors sake
+            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+            madness_ui_string(STRING("UUID:"));
+            // madness_ui_u32(STRING("id1"), &meta_data->uuid.high, 0);
+            // madness_ui_u32(STRING("id2"), &meta_data->uuid.low, 0);
+            // madness_ui_same_line();
+
+            // madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
+
+            madness_ui_string(*meta_data->source_file);
+            madness_ui_string(*meta_data->binary_file);
+
+
             // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
     }
