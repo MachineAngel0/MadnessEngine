@@ -18,6 +18,8 @@
 #include <unistd.h>  // usleep
 #endif
 
+#include <sys/random.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -92,7 +94,7 @@ bool platform_startup(
     // Loop through screens using iterator
     xcb_screen_iterator_t it = xcb_setup_roots_iterator(setup);
     int screen_p = 0;
-    for (i32 s = screen_p; s > 0; s--)
+    for (s32 s = screen_p; s > 0; s--)
     {
         xcb_screen_next(&it);
     }
@@ -190,7 +192,7 @@ bool platform_startup(
     xcb_map_window(state->connection, state->window);
 
     // Flush the stream
-    i32 stream_result = xcb_flush(state->connection);
+    s32 stream_result = xcb_flush(state->connection);
     if (stream_result <= 0)
     {
         FATAL("An error occurred when flusing the stream: %d", stream_result);
@@ -271,7 +273,7 @@ bool platform_pump_messages(Platform_State* plat_state)
             break;
         case XCB_MOTION_NOTIFY:
             xcb_motion_notify_event_t* move_event = (xcb_motion_notify_event_t*)event;
-            input_process_mouse_move(plat_state->input_system,move_event->event_x, move_event->event_y);
+            input_process_mouse_move(plat_state->input_system, move_event->event_x, move_event->event_y);
             break;
 
         case XCB_CONFIGURE_NOTIFY:
@@ -328,7 +330,7 @@ void* platform_copy_memory(void* dest, const void* source, u64 size)
     return memcpy(dest, source, size);
 }
 
-void* platform_set_memory(void* dest, i32 value, u64 size)
+void* platform_set_memory(void* dest, s32 value, u64 size)
 {
     return memset(dest, value, size);
 }
@@ -360,6 +362,7 @@ char* platform_get_dynamic_library_extension(void)
 {
     return ".so";
 }
+
 char* platform_get_static_library_extension(void)
 {
     return ".a";
@@ -369,7 +372,7 @@ typedef struct linux_file_handle
 {
     void* file_handle;
     const char* file_name; //doesnt seem super needed
-}linux_file_handle;
+} linux_file_handle;
 
 linux_file_handle file_handles[100];
 static u32 file_handle_count = 1;
@@ -377,7 +380,6 @@ static u32 file_handle_count = 1;
 
 DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 {
-
     DLL_HANDLE out_handle = {file_handle_count, file_name};
 
     //probably gonna have to have some sort of internal index for this
@@ -390,7 +392,8 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 
     // Load the library
     file_info->file_handle = dlopen(final_file_name, RTLD_NOW);
-    if (!file_info->file_handle ) {
+    if (!file_info->file_handle)
+    {
         const char* err = dlerror();
         fprintf(stderr, "dlopen failed: %s\n", err);
     }
@@ -411,7 +414,6 @@ bool platform_unload_dynamic_library(DLL_HANDLE handle)
 
     WARN("LINUX: UNLOAD DYNAMIC LIBRARY, not a valid file handle")
     return false;
-
 }
 
 bool platform_reload_dynamic_library(DLL_HANDLE handle)
@@ -425,7 +427,8 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
     linux_file_handle* file = &file_handles[handle.handle];
     void* out_data = dlsym(file->file_handle, function_name);
     const char* err = dlerror();
-    if (err) {
+    if (err)
+    {
         fprintf(stderr, "dlsym failed: %s\n", err);
     }
 
@@ -456,9 +459,7 @@ bool platform_file_copy(const char* source_file, char* new_file)
     // if(errno == ????)
 
     */
-
 }
-
 
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
@@ -489,6 +490,24 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
     vulkan_context->surface = state->surface;
     return true;
+}
+
+void platform_generate_uuid(u64* high, u64* low)
+{
+    u8 bytes[16];
+
+    ssize_t result = getrandom(bytes, sizeof(bytes), 0);
+
+    if (result != sizeof(bytes))
+    {
+        high = 0;
+        low = 0;
+        MASSERT(false);
+        return;
+    }
+
+    memcpy(high, bytes, sizeof(u64));
+    memcpy(low, bytes + 8, sizeof(u64));
 }
 
 // Key translation
