@@ -14,7 +14,7 @@
 #include "../core/unit_test.h"
 #include "../core/color_asci.h"
 #include "../core/logger.h"
-#include "../core/serialization/UUID.h"
+#include "../core/asserts.h"
 
 
 
@@ -66,7 +66,7 @@
 #include "../core/serialization/file_serialization.h"
 #include "../core/serialization/madness_txt.h"
 #include "../core/serialization/runtime_registry.h"
-#include "../core/asserts.h"
+#include "../core/serialization/UUID.h"
 
 
 

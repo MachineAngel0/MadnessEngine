@@ -6,7 +6,7 @@
 hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity)
 {
     hash_map* h = malloc(sizeof(hash_map));
-
+    h->num_entries = 0;
     h->capacity = capacity;
     h->key_data_size = key_data_size;
     h->value_data_size = value_data_size;

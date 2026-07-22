@@ -60,6 +60,7 @@
 #include "../core/serialization/network_serialization.c"
 #include "../core/serialization/file_serialization.c"
 #include "../core/serialization/madness_txt.c"
+#include "../core/serialization/UUID.c"
 
 //CORE - Compiler
 #include "../core/compiler/madness_lexer.c"

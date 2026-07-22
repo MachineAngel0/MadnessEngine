@@ -2,6 +2,7 @@
 
 #include "sprite_type.h"
 
+#include "resource_import_types.h"
 #include "resource_types.h"
 #include "texture_system.h"
 #include "sprite_system.h"
@@ -18,6 +19,7 @@
 
 #include "asset_converter.h"
 #include "asset_system.h"
+#include "asset_registry.h"
 
 
 

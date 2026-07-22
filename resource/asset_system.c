@@ -18,6 +18,12 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                      MEMORY_SUBSYSTEM_RESOURCE);
 
+    //Asset Registry
+    asset_system->asset_registry = memory_system_alloc(memory_system, sizeof(Asset_Registry),
+                                                         MEMORY_SUBSYSTEM_RESOURCE);
+    asset_registry_init(asset_system->asset_registry, asset_system->heap_allocator);
+
+
     //Texture
     asset_system->texture_system = memory_system_alloc(memory_system, sizeof(Texture_System),
                                                      MEMORY_SUBSYSTEM_TEXTURE);
@@ -88,4 +94,80 @@ bool asset_system_generate_render_packet(Asset_System* resource_system)
 void render_packet_clear(Render_Packet* renderer_packets)
 {
     memset(renderer_packets, 0, sizeof(Render_Packet));
+}
+
+Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_name)
+{
+    //either load from metadata -> binary or binary blob
+    //then send into the texture system
+    //in general we just want to deserialize the data quickly,
+    //the deserialization is the same, it just depends which file data we end up giving it
+
+
+    //NOTE: if this becomes a performance issue, we can use a hash_table look up, asset_name -> hash_idx
+    String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
+    string_builder_append_c_string(path_builder, asset_name);
+    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
+
+    const u64 hash_id = string_builder_hash_u64(path_builder);
+
+    //has asset already been loaded
+    Texture_Handle texture_handle = {0};
+    if (texture_system_exists(asset_system, &texture_handle, hash_id))
+    {
+        return texture_handle;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        fptr = fopen(string_builder_to_c_string(path_builder), "rb");
+        if (!fptr)
+        {
+            //TODO: since were in the editor, we should at least try to find the asset in our asset folder
+            return asset_system->texture_system->default_texture_handle;
+        }
+
+        Madness_Texture_Editor editor_texture = {0};
+
+        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
+        fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
+        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator, editor_texture.texture.pixels_size);
+        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+
+        texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+
+    }
+    else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+
+    }
+    fclose(fptr);
+
+    return texture_handle;
+}
+
+bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
+{
+    MASSERT(false);
+    //TODO:
+    // texture_system_texture_free(asset_system, texture_handle);
+    return false;
+}
+
+Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name)
+{
+    MASSERT(false);
+
 }

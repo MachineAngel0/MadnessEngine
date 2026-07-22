@@ -115,16 +115,14 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
     // };
 
-    if (!texture_system_load_msdf_font(resource_system, "../z_assets/msdf_fonts/arial_msdf.png",
-                                       &madness_ui->default_font_handle,
-                                       madness_ui->allocator))
+    bool result = asset_load_font(resource_system, "../z_assets/msdf_fonts/arial_msdf.png",
+                                  &madness_ui->default_font_handle);
+    if (!result)
     {
-        MASSERT_MSG(false, "UI SYSTEM Failed to load default msdf font");
-    };
-
+        MASSERT_MSG(false, "MADNESS UI SYSTEM Failed to load default msdf font");
+    }
 
     INFO("MADNESS UI SYSTEM CREATED");
-
 }
 
 bool madness_ui_shutdown(void)
@@ -1180,7 +1178,8 @@ bool madness_ui_drop_down(String label, bool* state)
         modified_label = string_concat(&STRING("(><) "), &label, madness_ui->frame_arena);
     }
 
-    madness_ui_string_internal(*modified_label, drop_down_header_node->pos, drop_down_header_node->size, UI_ALIGNMENT_LEFT,
+    madness_ui_string_internal(*modified_label, drop_down_header_node->pos, drop_down_header_node->size,
+                               UI_ALIGNMENT_LEFT,
                                UI_ALIGNMENT_CENTER);
 
     madness_ui_set_interaction_state(drop_down_header_node);
@@ -1305,7 +1304,8 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 
 UI_Node* madness_ui_c_string(const char* text)
 {
-    UI_Node* ui_node = madness_ui_string_internal(STRING_STRLEN(text), madness_ui->cursor_pos, (vec2s){0, 0}, UI_ALIGNMENT_LEFT,
+    UI_Node* ui_node = madness_ui_string_internal(STRING_STRLEN(text), madness_ui->cursor_pos, (vec2s){0, 0},
+                                                  UI_ALIGNMENT_LEFT,
                                                   UI_ALIGNMENT_LEFT);
     madness_ui_advance_cursor(ui_node->size);
     return ui_node;
@@ -1391,7 +1391,8 @@ bool madness_ui_check_box(String label, bool* check_box_state)
     madness_ui_advance_cursor(checkbox_node->size);
 
     madness_ui_same_line();
-    UI_Node* text_node = madness_ui_string_internal(label, madness_ui->cursor_pos, checkbox_node->size, UI_ALIGNMENT_LEFT,
+    UI_Node* text_node = madness_ui_string_internal(label, madness_ui->cursor_pos, checkbox_node->size,
+                                                    UI_ALIGNMENT_LEFT,
                                                     UI_ALIGNMENT_CENTER);
 
     madness_ui_advance_cursor((vec2s){text_node->size.x, checkbox_node->size.y});
@@ -1436,11 +1437,10 @@ void madness_image_handle(Texture_Handle handle)
     checkbox_node->flags |= UI_FLAG_IMAGE;
     checkbox_node->texture_handle = handle;
     checkbox_node->color = COLOR_WHITE;
-    checkbox_node->uv_offset = (vec2s){0,0};
-    checkbox_node->uv_size = (vec2s){1.0,1.0};
+    checkbox_node->uv_offset = (vec2s){0, 0};
+    checkbox_node->uv_size = (vec2s){1.0, 1.0};
 
     madness_ui_advance_cursor((vec2s){checkbox_node->size.x, checkbox_node->size.y});
-
 }
 
 float map_range(float v, float a, float b, float x, float y)

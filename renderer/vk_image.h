@@ -15,7 +15,7 @@ void vulkan_image_create(vulkan_context* context,
                          Vulkan_Texture* out_texture);
 
 void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                          Texture* texture_data, Vulkan_Texture* out_texture);
+                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture);
 
 void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 height, VkFormat format,
     vulkan_command_buffer* command_buffer, Vulkan_Texture* out_texture);

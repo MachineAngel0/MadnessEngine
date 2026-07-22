@@ -143,9 +143,9 @@ void reflection_registry_load_meta_data(Reflection_Registry* reflection_registry
     {
         Reflection_Runtime_Meta_File meta_data = {0};
 
-        string_deserialize_fl(&meta_data.file_string, fptr, reflection_registry->allocator);
-        string_deserialize_fl(&meta_data.struct_name, fptr, reflection_registry->allocator);
-        string_deserialize_fl(&meta_data.identifier, fptr, reflection_registry->allocator);
+        string_deserialize_heap(&meta_data.file_string, fptr, reflection_registry->allocator);
+        string_deserialize_heap(&meta_data.struct_name, fptr, reflection_registry->allocator);
+        string_deserialize_heap(&meta_data.identifier, fptr, reflection_registry->allocator);
 
         dynamic_array_push(reflection_registry->meta_file_data, &meta_data);
     }

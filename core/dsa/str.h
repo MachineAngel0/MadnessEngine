@@ -113,7 +113,7 @@ void string_tokenizer_print(const String_Tokenizer* str_tokens);
 
 bool string_serialize(String* string, FILE* fptr);
 bool string_deserialize(String* string, FILE* fptr, Allocator* allocator);
-bool string_deserialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator);
+bool string_deserialize_heap(String* string, FILE* fptr, Heap_Allocator* allocator);
 
 
 u32 string_hash_u32(String string);

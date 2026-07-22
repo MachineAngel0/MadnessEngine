@@ -229,7 +229,7 @@ void editor_ui_animation(Editor* editor)
     {
         for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; i++)
         {
-            Sk_Mesh_Parent_Instance* sk_mesh = &mesh_system->skinned_mesh_instance[i];
+            Madness_SkMesh_Instance* sk_mesh = &mesh_system->skinned_mesh_instance[i];
             GLTF_Animation_Data* animation_data = sk_mesh_parent_instance_get_animation_data(
                 mesh_system, sk_mesh);
             sk_mesh->current_animation_index;
@@ -373,8 +373,12 @@ void editor_texture_view(Editor* editor)
     {
         for (u32 i = 0; i < asset_system->texture_system->in_use_textures_count; i++)
         {
-            Asset_MetaData* meta_data = &asset_system->texture_meta_data[i];
-            madness_ui_c_string(meta_data->source_file);
+            //TODO: keep another format, of just pointer references for the editors sake
+            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+            if (meta_data->type == ASSET_TEXTURE)
+            {
+                madness_ui_string(*meta_data->source_file);
+            }
             // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
     }

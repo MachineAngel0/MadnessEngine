@@ -499,8 +499,9 @@ bool string_serialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator)
     return true;
 }
 
-bool string_deserialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator)
+bool string_deserialize_heap(String* string, FILE* fptr, Heap_Allocator* allocator)
 {
+    MASSERT(string);
     MASSERT(fptr);
     MASSERT(allocator);
 

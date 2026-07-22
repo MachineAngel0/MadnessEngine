@@ -535,11 +535,11 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
 
 void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
-                                            Texture_Handle texture_handle)
+                                            u32 bindless_location)
 {
     //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
 
-    Vulkan_Texture* texture = shader_system_get_vulkan_texture(renderer->shader_system, texture_handle);
+    Vulkan_Texture* texture = shader_system_get_vulkan_texture(renderer->shader_system, bindless_location);
     MASSERT(texture);
 
 
@@ -558,7 +558,7 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
         // write_descriptor_set.descriptorCount = max_bindless_resources;
         write_descriptor_set.descriptorCount = 1;
         // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
-        write_descriptor_set.dstArrayElement = texture_handle.handle; // starting element of the array
+        write_descriptor_set.dstArrayElement = bindless_location; // starting element of the array
         write_descriptor_set.pImageInfo = &image_info;
         //
         vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,

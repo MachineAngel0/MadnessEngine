@@ -119,15 +119,15 @@ void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image)
 }
 
 void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                      Texture* texture_data, Vulkan_Texture* out_texture)
+                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture)
 {
-    out_texture->width = texture_data->width;
-    out_texture->height = texture_data->height;
+    out_texture->width = texture_data->madness_texture->width;
+    out_texture->height = texture_data->madness_texture->height;
 
-    VkDeviceSize imageSize = texture_data->pixel_size;
-    stbi_uc* pixels = texture_data->pixels;
-    u32 texWidth = texture_data->width;
-    u32 texHeight = texture_data->height;
+    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
+    stbi_uc* pixels = texture_data->pixel_data;
+    u32 texWidth = texture_data->madness_texture->width;
+    u32 texHeight = texture_data->madness_texture->height;
 
     //create a staging buffer
     VkBuffer stagingBuffer;

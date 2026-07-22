@@ -72,12 +72,11 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
 
     //
-    if (!texture_system_load_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png",
-                                       &insanity_ui->default_font_handle,
-                                       insanity_ui->allocator))
+    bool result = asset_load_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png", &insanity_ui->default_font_handle);
+    if (!result)
     {
-        MASSERT_MSG(false, "UI SYSTEM Failed to load default msdf font");
-    };
+        MASSERT_MSG(false, "INSANITY UI SYSTEM Failed to load default msdf font");
+    }
 
 
     INFO("INSANITY UI CREATED");
@@ -515,7 +514,7 @@ void insanity_ui_push_text_float(float val)
 
 void insanity_ui_push_image(const char* texture_file)
 {
-    insanity_ui->image_stack = texture_system_load_texture(insanity_ui->asset_system,
+    insanity_ui->image_stack = asset_load_texture(insanity_ui->asset_system,
                                                                texture_file);
 }
 

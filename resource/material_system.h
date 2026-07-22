@@ -31,7 +31,7 @@ void material_system_pbr_init(Material_Default* out_data);
 // wireframe version for all shaders
 
 void material_system_add_mesh_instance_to_default_material_batch(Asset_System* resource_system,
-                                                                 Mesh_Parent_Instance* parent_instance)
+                                                                 Madness_Mesh_Instance* parent_instance)
 {
     Material_System* material_system = resource_system->material_system;
 
@@ -46,7 +46,7 @@ void material_system_add_mesh_instance_to_default_material_batch(Asset_System* r
 
         for (u32 mesh_inst = 0; mesh_inst < parent_instance->mesh_count; ++mesh_inst)
         {
-            Mesh_Instance* mesh_instance = &parent_instance->mesh_instances_array[mesh_inst];
+            Madness_SubMesh_Instance* mesh_instance = &parent_instance->submesh_instances[mesh_inst];
             dynamic_array_push(batch->mesh_instances, mesh_instance);
             dynamic_array_push(batch->material_data,
                                &material_system->prb[mesh_instance->material_handle.handle]);
@@ -57,7 +57,7 @@ void material_system_add_mesh_instance_to_default_material_batch(Asset_System* r
 
 
 void material_system_add_skmesh_instance_to_default_material_batch(Asset_System* resource_system,
-                                                                   Sk_Mesh_Parent_Instance* parent_instance)
+                                                                   Madness_SkMesh_Instance* parent_instance)
 {
     Material_System* material_system = resource_system->material_system;
 
@@ -72,7 +72,7 @@ void material_system_add_skmesh_instance_to_default_material_batch(Asset_System*
 
         for (u32 mesh_inst = 0; mesh_inst < parent_instance->mesh_count; ++mesh_inst)
         {
-            Sk_Mesh_Instance* mesh_instance = &parent_instance->sk_mesh_instance_array[mesh_inst];
+            Madness_Skinned_SubMesh_Instance* mesh_instance = &parent_instance->sk_mesh_instance_array[mesh_inst];
             dynamic_array_push(batch->mesh_instances, mesh_instance);
             dynamic_array_push(batch->material_data,
                                &material_system->prb[mesh_instance->material_handle.handle]);
@@ -127,10 +127,10 @@ void material_system_instantiate_material(Material_System* material_system, cons
             switch (mesh_type)
             {
             case Shader_Mesh_Type_Mesh:
-                batch->mesh_instances = dynamic_array_create(Mesh_Instance, 1, material_system->heap_allocator);
+                batch->mesh_instances = dynamic_array_create(Madness_SubMesh_Instance, 1, material_system->heap_allocator);
                 break;
             case Shader_Mesh_Type_Skinned:
-                batch->mesh_instances = dynamic_array_create(Sk_Mesh_Instance, 1, material_system->heap_allocator);
+                batch->mesh_instances = dynamic_array_create(Madness_Skinned_SubMesh_Instance, 1, material_system->heap_allocator);
                 break;
             }
             break;

@@ -1,7 +1,7 @@
 ﻿#ifndef DARRAY_H
 #define DARRAY_H
 
-#include "allocator_stack.h"
+#include "allocator_heap.h"
 #include "array.h"
 
 
@@ -31,8 +31,8 @@ typedef struct array_header
     //TODO: allocator
 } array_header;
 
-void* _darray_create(const u64 capacity, const u64 stride);
-void* _darray_create_arena(const u64 initial_capacity, const u64 stride, Stack_Allocator* arena);
+void* _darray_create( u64 capacity,  u64 stride);
+void* _darray_create_arena( u64 initial_capacity,  u64 stride, Stack_Allocator* arena);
 
 #define darray_create(type) \
     (type*) _darray_create(DARRAY_DEFAULT_CAPACITY, sizeof(type))

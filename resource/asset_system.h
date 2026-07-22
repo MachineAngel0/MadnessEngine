@@ -9,25 +9,6 @@
 #include "texture_system.h"
 
 
-#define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
-#define IMPORT_TEXTURE_PATH "../z_assets/texture"
-#define IMPORT_FONTS_PATH "../z_assets/fonts"
-#define IMPORT_MESH_PATH "../z_assets/mesh"
-#define IMPORT_SK_MESH_PATH "../z_assets/skinned_mesh"
-#define IMPORT_AUDIO_PATH "../z_assets/audio"
-#define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
-
-#define ENGINE_RESOURCE_PATH "../z_assets_engine/asset_list/"
-#define ENGINE_TEXTURE_PATH "../z_assets_engine/texture/"
-#define ENGINE_FONTS_PATH "../z_assets_engine/fonts/"
-#define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
-#define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
-#define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
-
-#define ENGINE_TEXTURE_EXTENSION ".mtex"
-#define ENGINE_FONTS_EXTENSION ".mfnt"
-
-
 //TODO/GOALS:
 // placing or updating a file in the asset directory should (re)generate the asset,
 // I should be able to edit the text format and have it automatically change within the engine
@@ -113,27 +94,23 @@ MAPI void render_packet_clear(Render_Packet* renderer_packets);
 void asset_system_reload_texture(Asset_System* a);
 
 //should we have the asset system be responsible for basically everything, kinda, it should probably be able to touch everything
-Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_name)
+Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_name);
+bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
+
+bool asset_load_font(Asset_System* asset_system, const char* asset_name, Texture_Handle* out_handle)
 {
-    //either load from metadata -> binary or binary blob
-    //then send into the texture system
-    //in general we just want to deserialize the data quickly,
-    //the deserialization is the same, it just depends which file data we end up giving it
-
-
     //NOTE: if this becomes a performance issue, we can use a hash_table look up, asset_name -> hash_idx
     String_Builder* path_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_PATH);
+    string_builder_append_c_string(path_builder, ENGINE_FONTS_PATH);
     string_builder_append_c_string(path_builder, asset_name);
-    string_builder_append_c_string(path_builder, ENGINE_TEXTURE_EXTENSION);
+    string_builder_append_c_string(path_builder, ENGINE_FONTS_EXTENSION);
 
     const u64 hash_id = string_builder_hash_u64(path_builder);
 
     //has asset already been loaded
-    Texture_Handle texture_handle = {0};
-    if (!texture_system_exists(asset_system, &texture_handle, hash_id))
+    if (texture_system_font_exists(asset_system, out_handle, hash_id))
     {
-        return texture_handle;
+        return true;
     }
 
 
@@ -146,19 +123,36 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_
         fptr = fopen(string_builder_to_c_string(path_builder), "rb");
         if (!fptr)
         {
+            //check to see if the normal path will load then convert the asset
+            if (asset_converter_msdf_font(asset_system, asset_name))
+            {
+                //we need to strip away the asset name
+                String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
+                string_builder_append_c_string(file_path_strip, asset_name);
+                string_builder_strip_extension(file_path_strip);
+                string_builder_strip_path(file_path_strip);
+
+                if (asset_load_font(asset_system, string_builder_to_c_string(file_path_strip), out_handle))
+                {
+                    return true;
+                }
+            }
             MASSERT(false);
-            return asset_system->texture_system->default_texture_handle;
+            return false;
         }
 
-        Madness_Texture_Editor editor_texture = {0};
 
-        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
+
+        Madness_Font_Editor editor_texture = {0};
+
+        fread(&editor_texture.font_texture, sizeof(Madness_Font), 1, fptr);
         fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
-        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator, editor_texture.texture.pixels_size);
-        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
+                                                         editor_texture.font_texture.texture.pixels_size);
+        fread(editor_texture.pixel_data, editor_texture.font_texture.texture.pixels_size, 1, fptr);
 
-        texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-
+        texture_system_upload_new_font(asset_system, hash_id, editor_texture.font_texture, editor_texture.pixel_data,
+                                          out_handle);
     }
     else
     {
@@ -168,19 +162,13 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_
         // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
         // Madness_Texture_Runtime runtime_texture = {0};
         // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-
     }
     fclose(fptr);
 
-    return texture_handle;
+    return true;
 }
 
-bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
-{
-    MASSERT(false);
-    texture_system_texture_free(asset_system, texture_handle);
-    return false;
-}
+Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name);
 
 
 //Data format stuff

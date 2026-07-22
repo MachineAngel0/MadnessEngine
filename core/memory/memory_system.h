@@ -2,6 +2,7 @@
 #define MEMORY_SYSTEM_H
 
 #include "allocator_heap.h"
+#include "allocator_pool.h"
 
 typedef enum memory_subsystem_type
 {

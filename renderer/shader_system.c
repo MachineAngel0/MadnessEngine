@@ -35,11 +35,12 @@ void shader_system_shutdown(Shader_System* system)
     //TODO: create and hookup to the renderer shutdown
 }
 
-
-Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, const Texture_Handle handle)
+Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, u32 bindless_location)
 {
-    return &system->textures[handle.handle];
+    return &system->textures[bindless_location];
 }
+
+
 
 void shader_system_update(Renderer* renderer, Shader_System* system)
 {
@@ -84,7 +85,7 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
     system->available_texture_indexes++;
 
     //TODO: batch this upload once a frame
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle);
+    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle.handle);
 
     return out_texture_handle;
 }
@@ -124,32 +125,22 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
                                           Descriptor_System* descriptor_system, Render_Packet* render_packet)
 {
     ring_queue* texture_queue = render_packet->texture_queue;
-    Texture* texture = allocator_alloc(&renderer->frame_allocator, sizeof(Texture));
+    Texture_GPU_Upload* texture_upload = allocator_alloc(&renderer->frame_allocator, sizeof(Texture_GPU_Upload));
 
     while (!ring_queue_is_empty(texture_queue))
     {
-        // Texture texture;
-        // ring_dequeue(texture_queue, &texture);
 
-        ring_dequeue(texture_queue, texture);
+        ring_dequeue(texture_queue, texture_upload);
 
-        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture->handle.handle];
+        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture_upload->bindless_location];
 
         //create the texture
-        vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture,
-                                    vulkan_texture);
+        vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture_upload,
+                                         vulkan_texture);
         update_texture_bindless_descriptor_set(renderer, descriptor_system,
-                                               texture->handle);
+                                               texture_upload->bindless_location);
 
-
-        //free texture data
-        /*if (!texture->is_font)
-        {
-            if (texture->pixels)
-            {*/
-                stbi_image_free(texture->pixels); //NOTE: seems to work?
-            // }
-        // }
-
+        //TODO: pass in the allocator, that allocated this
+        // stbi_image_free(texture_upload->pixel_data); //NOTE: seems to work?
     }
 }

@@ -1,7 +1,13 @@
 ﻿#ifndef ASSET_CONVERTER_H
 #define ASSET_CONVERTER_H
 
+#include "asset_registry.h"
 #include "resource_types.h"
+#include "resource_import_types.h"
+
+
+//takes in any file and checks its extension type, and calls the appropriate function
+MAPI bool asset_convert_file(Asset_System* asset_system, const char* file_path);
 
 
 MAPI bool asset_converter_texture(Asset_System* asset_system, const char* file_path);
@@ -18,183 +24,9 @@ MAPI bool asset_converter_msdf_font(Asset_System* asset_system, const char* file
 //the source asset
 
 
-typedef enum Animation_Path_Type
-{
-    //translated directly from cgltf_animation_path_type
-    Animation_Path_Type_Invalid,
-    Animation_Path_Type_Translation, // vec3
-    Animation_Path_Type_Rotation, // vec4
-    Animation_Path_Type_Scale, // vec3
-    Animation_Path_Type_Weights, // float
-    Animation_Path_Type_Max
-} Animation_Path_Type;
 
 
-typedef enum Animation_Interpolation_Type
-{
-    //translated directly from cgltf_interpolation_type
-    Animation_Interpolation_Type_Linear,
-    Animation_Interpolation_Type_Step,
-    Animation_Interpolation_Type_Cubic_Spline,
-    Animation_Interpolation_Type_Max_enum
-} Animation_Interpolation_Type;
-
-Animation_Path_Type Animation_Path_Type_gltf_to_engine[cgltf_animation_path_type_max_enum + 1] =
-{
-    [cgltf_animation_path_type_invalid] = Animation_Path_Type_Invalid,
-    [cgltf_animation_path_type_translation] = Animation_Path_Type_Translation,
-    [cgltf_animation_path_type_rotation] = Animation_Path_Type_Rotation,
-    [cgltf_animation_path_type_scale] = Animation_Path_Type_Scale,
-    [cgltf_animation_path_type_weights] = Animation_Path_Type_Weights,
-    [cgltf_animation_path_type_max_enum] = Animation_Path_Type_Max
-};
-
-
-Animation_Interpolation_Type Animation_Interpolation_Type_gltf_to_engine[cgltf_interpolation_type_max_enum + 1] =
-{
-    [cgltf_interpolation_type_linear] = Animation_Interpolation_Type_Linear,
-    [cgltf_interpolation_type_step] = Animation_Interpolation_Type_Step,
-    [cgltf_interpolation_type_cubic_spline] = Animation_Interpolation_Type_Cubic_Spline,
-    [cgltf_interpolation_type_max_enum] = Animation_Interpolation_Type_Max_enum,
-
-};
-
-
-typedef struct Animation_Channel
-{
-    u32 sampler_idx;
-    Animation_Path_Type animation_path_type;
-    u32 joint_index;
-} Animation_Channel;
-
-typedef struct Animation_Sampler
-{
-    float* timestamps;
-    u32 timestamps_count;
-
-    float sampler_start;
-    float sampler_end;
-
-    //trs = translation rotation scale, and weights
-    union
-    {
-        float* trs_float;
-        vec3s* trs_vec3;
-        vec4s* trs_vec4;
-    } interperlation_data;
-
-    u32 trs_interpolation_count;
-    Animation_Interpolation_Type interpolation_type;
-} Animation_Sampler;
-
-typedef struct Animation
-{
-    String* animation_name;
-    Animation_Channel* channels;
-    u32 channel_count;
-    Animation_Sampler* samplers;
-    u32 sampler_count;
-
-    float anim_start;
-    float anim_end;
-
-    //TODO: current time is only here for testing
-    // float current_time;
-} Animation;
-
-typedef struct Joint
-{
-    const char* joint_name;
-    u32 id;
-    u32 parent_idx;
-} Joint;
-
-typedef struct Animation_Data
-{
-    Joint* joints;
-    u32 joint_count; // also the weight count
-
-    mat4s* resting_pose_local_matrix;
-    mat4s* inverse_bind_matrix;
-
-    Animation* animations;
-    u32 animations_count;
-} GLTF_Animation_Data;
-
-
-typedef struct GLTF_Material
-{
-    Mesh_PBR_Flags flags;
-    vec4s color; // this will be at a default of 1.0, which is white but won't affect the material
-    //ALL FROM RANGES 0-1
-    float ambient_strength; // optional for now we can remove it later
-    float roughness_strength;
-    float metallic_strength;
-    float normal_strength;
-    float ambient_occlusion_strength;
-    float emissive_strength;
-
-
-    String* color_texture;
-    String* normal_texture;
-    String* metallic_texture;
-    String* roughness_texture;
-    String* ambient_occlusion_texture;
-    String* emissive_texture;
-} GLTF_Material;
-
-typedef enum Index_Type
-{
-    INDEX_TYPE_U16,
-    INDEX_TYPE_U32,
-} Index_Type;
-
-typedef struct GLTF_SubMesh
-{
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
-
-    u32 vertex_count; // this is also the count for basically every field except the index
-    u32 index_count;
-    Index_Type index_type;
-
-    vec4s* tangent;
-    vec4s* vertex_color;
-    vec3s* vertex;
-    vec3s* normal;
-    vec2s* uv;
-    u8* indices;
-
-    //the material specifics what to load out of the file ideally
-    GLTF_Material material_default;
-} GLTF_SubMesh;
-
-typedef struct GLTF_Skinned_SubMesh
-{
-    u32 joint_bytes;
-    u32 weight_bytes;
-    vec4s* joints;
-    vec4s* weights;
-} GLTF_Skinned_SubMesh;
-
-typedef struct GLTF_Mesh
-{
-    u32 mesh_count;
-    GLTF_SubMesh* submesh;
-
-
-    //might not exist, just depends on the file
-    bool has_skeleton;
-    GLTF_Skinned_SubMesh* skinned_submesh;
-    GLTF_Animation_Data* animation_data;
-} GLTF_Mesh;
-
-
-MAPI bool asset_load_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
+MAPI bool asset_converter_load_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
     Frame_Allocator* frame_allocator = asset_system->frame_allocator;
@@ -715,36 +547,143 @@ MAPI bool asset_load_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     }
 
 
-    /*
-    Madness_Mesh_Editor editor_format = {0};
+    //build our engine format
+    Madness_Mesh_Editor engine_format = {0};
+    engine_format.version = 1.0;
+    engine_format.mesh_count = gltf_mesh->mesh_count;
 
-    FILE* fptr = NULL;
+    engine_format.sub_mesh = allocator_alloc(frame_allocator, sizeof(Madness_Mesh) * engine_format.mesh_count);
+    engine_format.mesh_gpu_upload = allocator_alloc(frame_allocator, sizeof(Madness_Mesh_GPU_Data) * engine_format.mesh_count);
+    // engine_format.material_info = allocator_alloc(frame_allocator, sizeof(Mesh_Material_Info) * engine_format.mesh_count);
 
-    fwrite(&editor_format.version, sizeof(editor_format.version), 1, fptr);
-    fwrite(&editor_format.hash, sizeof(editor_format.hash), 1, fptr);
-    fwrite(&editor_format.mesh_count, sizeof(editor_format.mesh_count), 1, fptr);
-    fwrite(editor_format.submeshes, sizeof(GLTF_SubMesh) * editor_format.mesh_count, 1, fptr);
-
-    for (int i = 0; i < editor_format.mesh_count; ++i)
+    for (u32 i = 0; i < gltf_mesh->mesh_count; ++i)
     {
-        fwrite(editor_format.submesh_data[i].tangent, editor_format.submeshes[i].tangent_byte_size, 1, fptr);
-        fwrite(editor_format.submesh_data[i].vertex_color, editor_format.submeshes[i].vertex_color_byte_size, 1,
-               fptr);
-        fwrite(editor_format.submesh_data[i].vertex, editor_format.submeshes[i].vertex_byte_size, 1, fptr);
-        fwrite(editor_format.submesh_data[i].normal, editor_format.submeshes[i].normal_byte_size, 1, fptr);
-        fwrite(editor_format.submesh_data[i].uv, editor_format.submeshes[i].uv_byte_size, 1, fptr);
-        fwrite(editor_format.submesh_data[i].indices, editor_format.submeshes[i].indices_byte_size, 1, fptr);
+        GLTF_SubMesh* gltf_submesh = &gltf_mesh->submesh[i];
+        Madness_Mesh_GPU_Data* mesh_gpu_data = &engine_format.mesh_gpu_upload[i];
+        Madness_SubMesh* engine_submesh = &engine_format.sub_mesh[i];
+
+
+        engine_submesh->index_count = gltf_submesh->index_count;
+        engine_submesh->index_type = gltf_submesh->index_type;
+        engine_submesh->indices_bytes = gltf_submesh->indices_bytes;
+        engine_submesh->normal_bytes = gltf_submesh->normal_bytes;
+        engine_submesh->tangent_bytes = gltf_submesh->tangent_bytes;
+        engine_submesh->uv_bytes = gltf_submesh->uv_bytes;
+        engine_submesh->vertex_bytes = gltf_submesh->vertex_bytes;
+        engine_submesh->vertex_color_bytes = gltf_submesh->vertex_color_bytes;
+        engine_submesh->vertex_count = gltf_submesh->vertex_count;
+
+        mesh_gpu_data->vertex = gltf_submesh->vertex;
+        mesh_gpu_data->vertex_color = gltf_submesh->vertex_color;
+        mesh_gpu_data->indices = gltf_submesh->indices;
+        mesh_gpu_data->normal = gltf_submesh->normal;
+        mesh_gpu_data->tangent = gltf_submesh->tangent;
+        mesh_gpu_data->uv = gltf_submesh->uv;
+
+        if (gltf_mesh->has_skeleton)
+        {
+            //TODO:
+        }
     }
 
 
-    Asset_MetaData meta_data = asset_system->texture_meta_data[asset_system->texture_meta_data_count++];
-    meta_data.source_file = c_string_duplicate(gltf_path);
-    meta_data.hash_id = c_string_hash_u64(output_path);
-    // meta_data.type = ASSET_STATIC_MESH;
-    // meta_data.type = ASSET_SKINNED_MESH;
-    meta_data.extra_data = 0;
-*/
+    //write it out to the file
+    Asset_MetaData meta_data = {0};
+
+    if (gltf_mesh->has_skeleton)
+    {
+        String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
+        string_builder_append_c_string(file_path_strip, gltf_path);
+        string_builder_strip_extension(file_path_strip);
+        string_builder_strip_path(file_path_strip);
+
+        String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+        string_builder_append_c_string(str_builder, ENGINE_SK_MESH_PATH);
+        string_builder_append_builder(str_builder, file_path_strip);
+        string_builder_append_c_string(str_builder, ENGINE_SK_MESH_PATH);
+
+        const char* output_path = string_builder_to_c_string(str_builder);
+
+        //write out the engine format data
+        FILE* fptr = fopen(output_path, "wb");
+
+        if (!fptr)
+        {
+            MASSERT(false);
+        }
+
+        fwrite(&engine_format.version, sizeof(engine_format.version), 1, fptr);
+        fwrite(&engine_format.mesh_count, sizeof(engine_format.mesh_count), 1, fptr);
+        fwrite(engine_format.sub_mesh, sizeof(Madness_SubMesh) * engine_format.mesh_count, 1, fptr);
+
+        //mesh data
+        for (u32 i = 0; i < engine_format.mesh_count; ++i)
+        {
+            Madness_SubMesh* sub_mesh = &engine_format.sub_mesh[i];
+            fwrite(engine_format.mesh_gpu_upload[i].tangent, sub_mesh->tangent_bytes, 1, fptr);
+            fwrite(engine_format.mesh_gpu_upload[i].vertex_color, sub_mesh->vertex_color_bytes, 1, fptr);
+            fwrite(engine_format.mesh_gpu_upload[i].vertex, sub_mesh->vertex_bytes, 1, fptr);
+            fwrite(engine_format.mesh_gpu_upload[i].normal, sub_mesh->normal_bytes, 1, fptr);
+            fwrite(engine_format.mesh_gpu_upload[i].uv, sub_mesh->uv_bytes, 1, fptr);
+            fwrite(engine_format.mesh_gpu_upload[i].indices, sub_mesh->indices_bytes, 1, fptr);
+        }
+        //material data
+        for (u32 i = 0; i < engine_format.mesh_count; ++i)
+        {
+            //TODO: figure it out tomorrow
+            // Madness_SubMesh* sub_mesh = &engine_format.sub_mesh[i];
+            // string_serialize();
+            // string_serialize();
+            // fwrite(engine_format.mesh_gpu_upload[i].tangent, sub_mesh->tangent_bytes, 1, fptr);
+
+        }
+
+
+        // write out metadata
+        meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
+        meta_data.binary_file = string_builder_to_string(str_builder);
+        meta_data.type = ASSET_STATIC_MESH;
+        meta_data.uuid = madness_uuid_generate_return();
+
+
+
+    }
+    else
+    {
+        String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
+        string_builder_append_c_string(file_path_strip, gltf_path);
+        string_builder_strip_extension(file_path_strip);
+        string_builder_strip_path(file_path_strip);
+
+        String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+        string_builder_append_c_string(str_builder, ENGINE_MESH_PATH);
+        string_builder_append_builder(str_builder, file_path_strip);
+        string_builder_append_c_string(str_builder, ENGINE_MESH_EXTENSION);
+
+        const char* output_path = string_builder_to_c_string(str_builder);
+
+        //write out the engine format data
+        //write out the engine format data
+        FILE* fptr = fopen(output_path, "wb");
+
+        if (!fptr)
+        {
+            MASSERT(false);
+        }
+
+
+        // write out metadata
+
+        meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
+        meta_data.binary_file = string_builder_to_string(str_builder);
+        meta_data.type = ASSET_SKINNED_MESH;
+        meta_data.uuid = madness_uuid_generate_return();
+    }
+    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+
+
     cgltf_free(data);
+    return true;
 }
 
 

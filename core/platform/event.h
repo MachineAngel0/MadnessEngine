@@ -5,6 +5,7 @@
 #include "darray.h"
 #include "memory_system.h"
 #include "ring_queue.h"
+#include "str.h"
 
 
 typedef enum Event_Type

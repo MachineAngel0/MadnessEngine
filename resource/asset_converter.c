@@ -1,8 +1,39 @@
 ﻿#include "asset_converter.h"
 #include "asserts.h"
-#include "asset_system.h"
 #include "resource_types.h"
+#include "stb_image.h"
+#include "stb_truetype.h"
 
+bool asset_convert_file(Asset_System* asset_system, const char* file_path)
+{
+    const char* extension_name =c_string_path_get_extension(file_path, asset_system->frame_allocator);
+    if (strcmp(extension_name, ".png") == 0)
+    {
+        asset_converter_texture(asset_system, file_path);
+        return true;
+    }
+    if (strcmp(extension_name, ".jpg") == 0)
+    {
+        asset_converter_texture(asset_system, file_path);
+        return true;
+    }
+    if (strcmp(extension_name, ".png") == 0)
+    {
+        asset_converter_texture(asset_system, file_path);
+        return true;
+    }
+    //TODO: system fonts like .ttf into msdf fonts
+    if (strcmp(extension_name, ".gltf") == 0)
+    {
+        asset_converter_load_gltf_mesh(asset_system, file_path);
+        return true;
+    }
+
+
+    WARN("ASSET CONVERT FILE: NO VALID FILE TYPE FOUND");
+    return false;
+
+}
 
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path)
 {
@@ -48,11 +79,13 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path)
     fclose(fptr);
 
 
-    Asset_MetaData meta_data = asset_system->texture_meta_data[asset_system->texture_meta_data_count++];
-    meta_data.source_file = c_string_duplicate(file_path);
-    meta_data.hash_id = c_string_hash_u64(output_path);
+    Asset_MetaData meta_data = {0};
+    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
+    meta_data.binary_file = string_builder_to_string(str_builder);
+    meta_data.uuid = madness_uuid_generate_return();
     meta_data.type = ASSET_TEXTURE;
-    meta_data.extra_data = 0;
+    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+
 
     return true;
 }
@@ -248,22 +281,18 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     fclose(fptr);
 
 
-    Asset_MetaData meta_data = asset_system->texture_meta_data[asset_system->texture_meta_data_count++];
-    meta_data.source_file = c_string_duplicate(file_path);
-    meta_data.hash_id = c_string_hash_u64(output_path);
+    Asset_MetaData meta_data = {0};
+    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
+    meta_data.binary_file = string_builder_to_string(str_builder);
+    meta_data.uuid = madness_uuid_generate_return();
     meta_data.type = ASSET_FONT;
-    meta_data.extra_data = 0;
-
+    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 
     return true;
 }
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
-    Texture_System* texture_system = asset_system->texture_system;
-    u32 texture_idx;
-
-
     Madness_Font font_structure = {0};
 
     //load the image data from file
@@ -271,7 +300,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     int texture_width, texture_height, texChannels;
     u8* pixel_data = stbi_load(file_path, &texture_width, &texture_height, &texChannels, STBI_rgb_alpha);
 
-    if (pixel_data)
+    if (!pixel_data)
     {
         WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
         MASSERT_MSG(pixel_data, "FAILED TO LOAD MSDF FONT");
@@ -361,13 +390,12 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     fclose(fptr);
 
-
-    Asset_MetaData meta_data = asset_system->texture_meta_data[asset_system->texture_meta_data_count++];
-    meta_data.source_file = c_string_duplicate(file_path);
-    meta_data.hash_id = c_string_hash_u64(output_path);
+    Asset_MetaData meta_data = {0};
+    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
+    meta_data.binary_file = string_builder_to_string(str_builder);
+    meta_data.uuid = madness_uuid_generate_return();
     meta_data.type = ASSET_FONT;
-    meta_data.extra_data = 0;
-
+    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 
     return true;
 }

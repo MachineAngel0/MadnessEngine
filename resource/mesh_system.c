@@ -7,8 +7,6 @@
 #include "ufbx.h"
 
 
-
-
 Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memory_system)
 {
     Mesh_System* out_mesh_system = memory_system_alloc(memory_system, sizeof(Mesh_System), MEMORY_SUBSYSTEM_MESH);
@@ -22,7 +20,7 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
     out_mesh_system->uv_byte_size = 0;
 
     out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_GPU_Upload), MAX_MESH_COUNT);
-    out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Sk_Mesh_Upload_Data),
+    out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Skinned_Mesh_GPU_Upload),
                                                                  MAX_SKINNED_MESH_COUNT);
 
     out_mesh_system->skinned_matrix_array = dynamic_array_create(mat4s, 100, resource_system->heap_allocator);
@@ -49,624 +47,19 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 }
 
 
-void _gltf_load_mesh_data(Asset_System* asset_system, const char* gltf_path, cgltf_data* data,
-                          u32 gltf_data_mesh_idx, Mesh_Data* mesh_draw_data,
-                          Mesh_GPU_Upload* upload_data)
-{
-    Heap_Allocator* allocator = asset_system->heap_allocator;
-    Frame_Allocator* frame_allocator = asset_system->frame_allocator;
-    Mesh_System* mesh_system = asset_system->mesh_system;
-
-
-    /* Find position accessor */
-    const cgltf_accessor* pos_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                             cgltf_attribute_type_position,
-                                                             0);
-    MASSERT(pos_accessor);
-    if (pos_accessor)
-    {
-        //get size information
-
-        cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
-        cgltf_size float_bytes = num_floats * sizeof(float);
-        upload_data->vertex_bytes = float_bytes;
-
-
-        //alloc and copy data
-        float* pos_data = allocator_alloc(frame_allocator, float_bytes);
-        upload_data->vertex = allocator_heap_alloc(allocator, float_bytes);
-        cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
-        memcpy(upload_data->vertex, pos_data, float_bytes);
-    }
-
-    // Find normal accessor
-    const cgltf_accessor* norm_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                              cgltf_attribute_type_normal,
-                                                              0);
-    if (norm_accessor)
-    {
-        //get size information
-        cgltf_size norm_floats = cgltf_accessor_unpack_floats(norm_accessor, NULL, 0);
-        cgltf_size norm_bytes = norm_floats * sizeof(float);
-        upload_data->normal_bytes = norm_bytes;
-
-        //alloc and copy data
-        float* normal_data = allocator_heap_alloc(allocator, norm_bytes);
-        upload_data->normal = allocator_heap_alloc(allocator, norm_bytes);
-        cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
-        memcpy(upload_data->normal, normal_data, norm_bytes);
-    }
-
-    //  Find tangent accessor
-    const cgltf_accessor* tangent_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                                 cgltf_attribute_type_tangent, 0);
-
-    if (tangent_accessor)
-    {
-        //get size information
-        cgltf_size tangent_floats = cgltf_accessor_unpack_floats(tangent_accessor, NULL, 0);
-        cgltf_size tangent_bytes = tangent_floats * sizeof(float);
-        upload_data->tangent_bytes = tangent_bytes;
-
-
-        //alloc and copy data
-        float* tangent_data = allocator_heap_alloc(allocator, tangent_bytes);
-        upload_data->tangent = allocator_heap_alloc(allocator, tangent_bytes);
-        cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
-        memcpy(upload_data->tangent, tangent_data, tangent_bytes);
-    }
-
-    //  Find texcoord accessor
-    const cgltf_accessor* texcoord_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                                  cgltf_attribute_type_texcoord, 0);
-    if (texcoord_accessor)
-    {
-        //get size information
-        cgltf_size uv_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-        cgltf_size uv_byte_size = uv_floats_count * sizeof(float);
-        upload_data->uv_bytes = uv_byte_size;
-
-
-        //alloc and copy data
-        float* uv_data = allocator_alloc(frame_allocator, uv_byte_size);
-        cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
-
-        upload_data->uv = allocator_heap_alloc(allocator, uv_byte_size);
-        memcpy(upload_data->uv, uv_data, uv_byte_size);
-    }
-
-    const cgltf_accessor* color_accessor = cgltf_find_accessor(data->meshes[gltf_data_mesh_idx].primitives,
-                                                               cgltf_attribute_type_color, 0);
-    //TODO:
-    /*if (color_accessor)
-    {
-        //get size information
-        cgltf_size color_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
-        cgltf_size color_byte_size = color_floats_count * sizeof(float);
-        upload_data->uv_bytes = color_byte_size;
-
-        //alloc and copy data
-        float* uv_data = allocator_alloc(frame_allocator, color_byte_size);
-        cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, color_floats_count);
-
-        //TODO: replace with color
-        // upload_data->uv = allocator_heap_alloc(allocator, color_byte_size);
-        // memcpy(upload_data->uv, uv_data, color_byte_size);
-    }
-    else{
-        //TODO: generate white colors for everything i guess
-    }
-    */
-
-
-    // Load indices
-    // SEE componentType in the specs for more detail 3.6.2
-    u8 index_stride = data->meshes[gltf_data_mesh_idx].primitives[0].indices->stride;
-    if (index_stride == 2)
-    {
-        upload_data->index_type = VK_INDEX_TYPE_UINT16;
-    }
-    else if (index_stride == 4)
-    {
-        upload_data->index_type = VK_INDEX_TYPE_UINT32;
-    }
-    else
-    {
-        WARN("GLTF MESH LOADING: UNKNOWN INDEX TYPE STRIDE");
-    }
-
-    //TODO: there can be multiple primitices/indices, will come back to
-    upload_data->indices_bytes = data->meshes[gltf_data_mesh_idx].primitives->indices->count *
-        index_stride;
-    upload_data->indices = allocator_heap_alloc(allocator,
-                                                upload_data->indices_bytes);
-
-    const uint8_t* index_buffer_data = cgltf_buffer_view_data(
-        data->meshes[gltf_data_mesh_idx].primitives->indices->buffer_view);
-    memcpy(upload_data->indices, index_buffer_data,
-           upload_data->indices_bytes);
-
-    //Mesh Data
-    mesh_draw_data->index_count = data->meshes[gltf_data_mesh_idx].primitives->indices->count;
-    mesh_draw_data->index_offset = mesh_system->index_count_size;
-    mesh_draw_data->vertex_offset = mesh_system->vertex_count_size;
-    mesh_draw_data->uv_offset = mesh_system->uv_byte_size;
-    mesh_draw_data->normal_offset = mesh_system->normals_byte_size;
-    mesh_draw_data->tangent_offset = mesh_system->tangent_byte_size;
-
-    //update offsets
-    mesh_system->vertex_byte_size += upload_data->vertex_bytes;
-    mesh_system->vertex_count_size += upload_data->vertex_bytes / sizeof(vec3s);
-    mesh_system->index_byte_size += upload_data->indices_bytes;
-    mesh_system->index_count_size += mesh_draw_data->index_count;
-    mesh_system->normals_byte_size += upload_data->normal_bytes;
-    mesh_system->tangent_byte_size += upload_data->tangent_bytes;
-    mesh_system->uv_byte_size += upload_data->uv_bytes;
-
-    //LOAD TEXTURES/MATERIALS
-    // GET BASE PATH
-    char* base_path = c_string_path_strip(gltf_path, frame_allocator);
-
-    //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
-    Material_Default* default_material = material_system_create_default_pbr(asset_system->material_system,
-                                                                            &mesh_draw_data->default_material_handle);
-
-    if (!data->meshes[gltf_data_mesh_idx].primitives->material)
-    {
-        WARN("NO MATERIAL DATA FOUND FOR GLTF MESH");
-        return;
-    }
-
-    //COLOR TEXTURE
-    cgltf_texture* color_texture = data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.
-                                                                    base_color_texture.texture;
-    if (color_texture && color_texture->image->uri)
-    {
-        default_material->flags |= MESH_PIPELINE_COLOR;
-        size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
-
-        char* texture_path = allocator_alloc(frame_allocator,
-                                             allocation_size);
-        // takes a buffer, message format, then the remaining strings
-        snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
-        TRACE("COLOR Texture Path:  %s", texture_path);
-        Texture_Handle color_handle = texture_system_load_texture(asset_system, texture_path);
-        default_material->color_index = color_handle.handle;
-        memcpy(default_material->color.raw,
-               data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-               sizeof(vec4s));
-    }
-    else
-    {
-        // default_material->flags |= MESH_PIPELINE_COLOR;
-        TRACE("No Color Texture using fall back color");
-        default_material->color_index = asset_system->texture_system->default_texture_handle.handle;
-        memcpy(default_material->color.raw,
-               data->meshes[gltf_data_mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-               sizeof(vec4s));
-    }
-
-    //METAL-ROUGHNESS
-    cgltf_texture* metal_roughness_texture = data->meshes[gltf_data_mesh_idx].
-                                             primitives->material->pbr_metallic_roughness.
-                                             metallic_roughness_texture.texture;
-    if (metal_roughness_texture)
-    {
-        if (metal_roughness_texture->image->uri)
-        {
-            default_material->flags |= MESH_PIPELINE_ROUGHNESS;
-            default_material->flags |= MESH_PIPELINE_METALLIC;
-            size_t allocation_size = strlen(base_path) +
-                strlen(metal_roughness_texture->image->uri) + 1;
-            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
-            TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
-
-            Texture_Handle metallic_handle = texture_system_load_texture(asset_system, texture_path);
-
-            default_material->metallic_index = metallic_handle.handle;
-            default_material->roughness_index = metallic_handle.handle;
-        }
-        if (metal_roughness_texture->image->buffer_view)
-        {
-            //TODO: load texture data from the shader system
-            INFO("WHOA A BUFFER VIEW ");
-            const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
-                metal_roughness_texture->image->buffer_view);
-            INFO("WHOA A BUFFER VIEW ");
-        }
-    }
-
-    // AO
-    //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
-    cgltf_texture* AO_texture = data->meshes[gltf_data_mesh_idx].primitives->material->occlusion_texture.texture;
-    if (AO_texture && AO_texture->image->uri)
-    {
-        default_material->flags |= MESH_PIPELINE_AO;
-        size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
-        char* AO_texture_path = allocator_alloc(frame_allocator, allocation_size);
-        // takes a buffer, message format, then the remaining strings
-        snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
-
-        TRACE("AO Texture Path:  %s", AO_texture_path);
-
-        Texture_Handle ao_handle = texture_system_load_texture(asset_system, AO_texture_path);
-        default_material->ambient_occlusion_index = ao_handle.
-            handle;
-    }
-
-
-    //NORMAL TEXTURE
-    // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
-    cgltf_texture* normal_texture = data->meshes[gltf_data_mesh_idx].primitives->material->normal_texture.texture;
-    if (normal_texture && normal_texture->image->uri)
-    {
-        default_material->flags |= MESH_PIPELINE_NORMAL;
-        size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
-        char* texture_path = allocator_alloc(frame_allocator, allocation_size);
-        // takes a buffer, message format, then the remaining strings
-        snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
-        TRACE("NORMAL Texture Path:  %s", texture_path);
-        Texture_Handle normal_handle = texture_system_load_texture(asset_system, texture_path);
-        default_material->normal_index = normal_handle.
-            handle;
-    }
-
-    //EMISSIVE TEXTURE
-    cgltf_texture* emissive_texture = data->meshes[gltf_data_mesh_idx].primitives->material->emissive_texture.
-                                                                       texture;
-    if (emissive_texture && emissive_texture->image->uri)
-    {
-        default_material->flags |= MESH_PIPELINE_EMISSIVE;
-        size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
-
-        char* texture_path = allocator_alloc(frame_allocator, allocation_size);
-        // takes a buffer, message format, then the remaining strings
-        snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
-        TRACE("EMISSIVE Texture Path:  %s", texture_path);
-
-        Texture_Handle emissive_handle = texture_system_load_texture(asset_system, texture_path);
-        default_material->emissive_index = emissive_handle.
-            handle;
-    }
-}
-
-void _gltf_load_skinned_mesh_data(Asset_System* resource_system, cgltf_data* data,
-                                  u32 mesh_idx,
-                                  Sk_Mesh_Data* skinned_mesh_data,
-                                  Sk_Mesh_Upload_Data* skinned_mesh_upload_data)
-{
-    Heap_Allocator* allocator = resource_system->heap_allocator;
-    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-    Mesh_System* mesh_system = resource_system->mesh_system;
-
-
-    const cgltf_accessor* joint_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                               cgltf_attribute_type_joints,
-                                                               0);
-    if (joint_accessor)
-    {
-        //get size information
-        cgltf_size num_floats = cgltf_accessor_unpack_floats(joint_accessor, NULL, 0);
-        cgltf_size float_bytes = num_floats * sizeof(float);
-
-        skinned_mesh_data->joint_bytes = float_bytes;
-        skinned_mesh_upload_data->joint_bytes = float_bytes;
-
-        //alloc and copy data
-        float* joint_data = allocator_alloc(frame_allocator, float_bytes);
-        skinned_mesh_upload_data->joints = allocator_heap_alloc(allocator, float_bytes);
-        cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
-        memcpy(skinned_mesh_upload_data->joints, joint_data, float_bytes);
-    }
-
-    const cgltf_accessor* weight_accessor = cgltf_find_accessor(data->meshes[mesh_idx].primitives,
-                                                                cgltf_attribute_type_weights,
-                                                                0);
-    if (weight_accessor)
-    {
-        //get size information
-
-        cgltf_size num_floats = cgltf_accessor_unpack_floats(weight_accessor, NULL, 0);
-        cgltf_size float_bytes = num_floats * sizeof(float);
-
-        skinned_mesh_upload_data->weight_bytes = float_bytes;
-        skinned_mesh_data->weight_bytes = float_bytes;
-
-
-        //alloc and copy data
-        float* weight_data = allocator_alloc(frame_allocator, float_bytes);
-        skinned_mesh_upload_data->weights = allocator_heap_alloc(allocator, float_bytes);
-        cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
-        memcpy(skinned_mesh_upload_data->weights, weight_data, float_bytes);
-    }
-
-    skinned_mesh_data->joint_offset_bytes = mesh_system->joints_byte_size;
-    skinned_mesh_data->joint_offset_vec4 = mesh_system->joints_byte_size / sizeof(vec4s);
-    skinned_mesh_data->weight_offset_bytes = mesh_system->weight_byte_size;
-    skinned_mesh_data->weight_offset_vec4 = mesh_system->weight_byte_size / sizeof(vec4s);
-
-    skinned_mesh_upload_data->joint_offset = mesh_system->joints_byte_size;
-    skinned_mesh_upload_data->weight_offset = mesh_system->weight_byte_size;
-
-    mesh_system->weight_byte_size += skinned_mesh_data->weight_bytes;
-    mesh_system->joints_byte_size += skinned_mesh_data->joint_bytes;
-}
-
-
-void _gltf_load_skin_and_animation_data(Asset_System* resource_system, cgltf_data* data,
-                                        Sk_Mesh_Asset* skinned_mesh_meta_data)
-{
-    Heap_Allocator* allocator = resource_system->heap_allocator;
-    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
-
-
-    hash_table* joint_name_to_index = HASH_TABLE_CREATE(size_t, 200);
-
-    //TODO: this is an unhandled case, and honestly why would a mesh have more than 1 skin???
-    MASSERT(data->skins_count <= 1);
-
-
-    GLTF_Animation_Data* animation_data = skinned_mesh_meta_data->animation_data;
-    animation_data->animations = allocator_heap_alloc(allocator, sizeof(Animation) * data->animations_count);
-    animation_data->animations_count = data->animations_count;
-
-
-    for (size_t skin_idx = 0; skin_idx < data->skins_count; skin_idx++)
-    {
-        cgltf_skin* skin_data = &data->skins[skin_idx];
-        animation_data->joint_count = skin_data->joints_count;
-        animation_data->joints = allocator_heap_alloc(allocator, skin_data->joints_count * sizeof(Joint));
-        animation_data->resting_pose_local_matrix = allocator_heap_alloc(
-            allocator, skin_data->joints_count * sizeof(mat4s));
-
-        // Inverse bind matrices — one 4x4 float matrix per joint
-        if (skin_data->inverse_bind_matrices)
-        {
-            //get size information
-            cgltf_size ibm_floats = cgltf_accessor_unpack_floats(skin_data->inverse_bind_matrices, NULL, 0);
-            cgltf_size ibm_bytes = ibm_floats * sizeof(float);
-
-            //alloc and copy data
-            float* ibm_date = allocator_alloc(frame_allocator, ibm_bytes);
-            animation_data->inverse_bind_matrix = allocator_heap_alloc(allocator, ibm_bytes);
-
-            cgltf_accessor_unpack_floats(skin_data->inverse_bind_matrices, ibm_date, ibm_floats);
-            memcpy(animation_data->inverse_bind_matrix, ibm_date, ibm_bytes);
-        }
-        else
-        {
-            // glTF spec: absent inverse_bind_matrices means identity per joint
-            animation_data->inverse_bind_matrix = allocator_heap_alloc(
-                allocator, sizeof(mat4s) * skin_data->joints_count);
-
-            for (cgltf_size j = 0; j < skin_data->joints_count; j++)
-            {
-                animation_data->inverse_bind_matrix[j] = glms_mat4_identity();
-            }
-        }
-
-        // cur_joint->inverse_bind_matrix = data->skins[skin_idx].inverse_bind_matrices[joint_idx].;
-        for (size_t joint_idx = 0; joint_idx < skin_data->joints_count; joint_idx++)
-        {
-            Joint* cur_joint = &animation_data->joints[joint_idx];
-            cgltf_node* cgltf_joint = skin_data->joints[joint_idx];
-
-            cur_joint->joint_name = c_string_duplicate_heap_alloc(cgltf_joint->name, allocator);
-            cur_joint->id = joint_idx;
-
-            hash_table_insert(joint_name_to_index, cur_joint->joint_name, &joint_idx);
-        }
-        //this pass is to get the parent id's and parent nodes
-        for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
-        {
-            Joint* cur_joint = &animation_data->joints[joint_idx];
-            cgltf_node* cgltf_joint = data->skins[skin_idx].joints[joint_idx];
-
-            mat4s* local_mat = &animation_data->resting_pose_local_matrix[joint_idx];
-            cgltf_node_transform_local(cgltf_joint, local_mat->raw); // 16 floats, column-major
-
-            size_t parent_idx = 0;
-            if (hash_table_get(joint_name_to_index, cgltf_joint->parent->name, &parent_idx))
-            {
-                cur_joint->parent_idx = parent_idx;
-            }
-        }
-
-        //sampler inputs - keyframes
-        //sampler output - keyframe values
-        // sampler interpolation
-
-        for (size_t animation_idx = 0; animation_idx < data->animations_count; animation_idx++)
-        {
-            Animation* cur_animation = &animation_data->animations[animation_idx];
-            cgltf_animation* anim_data = &data->animations[animation_idx];
-
-            if (anim_data->name)
-            {
-                cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(anim_data->name, allocator);
-            }
-            else
-            {
-                cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(
-                    data->meshes[0].name, frame_allocator);
-                cur_animation->animation_name = string_concat_heap(cur_animation->animation_name,
-                                                                   string_from_int_heap_allocator(
-                                                                       animation_idx, allocator),
-                                                                   allocator);
-            }
-            cgltf_size channel_count = anim_data->channels_count;
-            cgltf_size sampler_count = anim_data->samplers_count;
-            cur_animation->channel_count = channel_count;
-            cur_animation->sampler_count = sampler_count;
-
-            cur_animation->channels = allocator_heap_alloc(allocator, sizeof(Animation_Channel) * channel_count);
-            cur_animation->samplers = allocator_heap_alloc(allocator, sizeof(Animation_Sampler) * sampler_count);
-
-
-            for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
-            {
-                Animation_Channel* cur_channel = &cur_animation->channels[channel_idx];
-                cgltf_animation_channel* anim_channel = &anim_data->channels[channel_idx];
-
-                cur_channel->animation_path_type = Animation_Path_Type_gltf_to_engine[anim_channel->target_path];
-                cur_channel->sampler_idx = cgltf_animation_sampler_index(anim_data, anim_channel->sampler);
-                // TODO: TEST
-
-                //get a reference to find where the target joint is in the array
-                size_t joint_idx;
-                if (hash_table_get(joint_name_to_index, anim_channel->target_node->name, &joint_idx))
-                {
-                    cur_channel->joint_index = joint_idx;
-                }
-            }
-
-
-            for (size_t sampler_idx = 0; sampler_idx < sampler_count; sampler_idx++)
-            {
-                Animation_Sampler* cur_sampler = &cur_animation->samplers[sampler_idx];
-                cur_sampler->sampler_start = FLT_MAX;
-                cur_sampler->sampler_end = -FLT_MAX;
-                cgltf_animation_sampler* anim_sampler = &anim_data->samplers[sampler_idx];
-
-
-                //read gltf input data
-                cur_sampler->timestamps_count = anim_sampler->input->count;
-                cur_sampler->timestamps =
-                    allocator_heap_alloc(allocator, sizeof(float) * cur_sampler->timestamps_count);
-                //get size information
-                cgltf_size num_floats = cgltf_accessor_unpack_floats(anim_sampler->input, NULL, 0);
-                cgltf_size float_bytes = num_floats * sizeof(float);
-                //alloc and copy data
-                float* timestamp_data = allocator_alloc(frame_allocator, float_bytes);
-                cgltf_accessor_unpack_floats(anim_sampler->input, timestamp_data, num_floats);
-                memcpy(cur_sampler->timestamps, timestamp_data, float_bytes);
-
-
-                for (u32 timestamp_idx = 0; timestamp_idx < cur_sampler->timestamps_count; timestamp_idx++)
-                {
-                    cur_sampler->sampler_start = min_f(cur_sampler->sampler_start,
-                                                       cur_sampler->timestamps[timestamp_idx]);
-                    cur_sampler->sampler_end = max_f(cur_sampler->sampler_end,
-                                                     cur_sampler->timestamps[timestamp_idx]);
-                }
-
-                cur_animation->anim_start = min_f(cur_animation->anim_start, cur_sampler->sampler_start);
-                cur_animation->anim_end = max_f(cur_animation->anim_end, cur_sampler->sampler_end);
-
-                //read gltf output data
-                cur_sampler->trs_interpolation_count = anim_sampler->output->count;
-                // const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
-                cgltf_size output_num_floats = cgltf_accessor_unpack_floats(anim_sampler->output, NULL, 0);
-                cgltf_size output_float_bytes = output_num_floats * sizeof(float);
-                float* trs_buffer_data = allocator_alloc(frame_allocator, output_float_bytes);
-                cgltf_accessor_unpack_floats(anim_sampler->output, trs_buffer_data, output_num_floats);
-
-                cur_sampler->interpolation_type = Animation_Interpolation_Type_gltf_to_engine[anim_sampler->
-                    interpolation];
-                switch (anim_sampler->output->type)
-                {
-                //these are the only supported formats in the gltf spec for samplers
-                case cgltf_type_scalar: // weights
-                    cur_sampler->interperlation_data.trs_float = allocator_heap_alloc(
-                        allocator, sizeof(float) * output_num_floats);
-                    memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data, output_float_bytes);
-                    break;
-                case cgltf_type_vec3: // translation, scale
-                    cur_sampler->interperlation_data.trs_vec3 = allocator_heap_alloc(
-                        allocator, sizeof(float) * output_num_floats);
-                    memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data, output_float_bytes);
-                    break;
-                case cgltf_type_vec4: // rotation
-                    cur_sampler->interperlation_data.trs_vec4 = allocator_heap_alloc(
-                        allocator, sizeof(float) * output_num_floats);
-                    memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data, output_float_bytes);
-                    break;
-                default:
-                    FATAL("UNSUPPORTED CGLTF SAMPLER TYPE");
-                    break;
-                }
-            }
-        }
-
-
-        hash_table_destroy(joint_name_to_index);
-    }
-}
-
-
-void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
+void mesh_load(Asset_System* resource_system, const char* asset_path)
 {
     Mesh_System* mesh_system = resource_system->mesh_system;
     Heap_Allocator* allocator = resource_system->heap_allocator;
     Frame_Allocator* frame_allocator = resource_system->frame_allocator;
 
-    if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
+    if (!c_string_path_is_extension(asset_path, ".gltf") && !c_string_path_is_extension(asset_path, ".glb"))
     {
         FATAL("DID NOT PASS IN A GLTF FILE");
         return;
     }
 
-
-    cgltf_options options = {0};
-    cgltf_data* data = NULL;
-    cgltf_result result = cgltf_parse_file(&options, gltf_path, &data);
-
-    if (result != cgltf_result_success)
-    {
-        fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
-        return;
-    }
-    result = cgltf_load_buffers(&options, data, gltf_path);
-    MASSERT(result == cgltf_result_success)
-
-    //check if we are loading a skinned or normal mesh
-    if (data->skins_count > 0)
-    {
-        Sk_Mesh_Asset* sk_mesh_asset_data = &mesh_system->skinned_mesh_asset_data[mesh_system->
-            sk_mesh_asset_count++];
-        sk_mesh_asset_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
-        sk_mesh_asset_data->mesh_count = data->meshes_count;
-
-        sk_mesh_asset_data->mesh_data = allocator_heap_alloc(
-            allocator, sizeof(Mesh_Data) * data->meshes_count);
-
-        sk_mesh_asset_data->skinned_mesh_data = allocator_heap_alloc(
-            allocator, sizeof(Sk_Mesh_Data) * data->meshes_count);
-        sk_mesh_asset_data->skinned_mesh_count = data->meshes_count;
-
-
-        Mesh_GPU_Upload* mesh_upload_data_array = allocator_alloc(frame_allocator,
-                                                                   sizeof(Mesh_GPU_Upload) * data->meshes_count);
-
-        Sk_Mesh_Upload_Data* skinned_mesh_upload_data_array = allocator_heap_alloc(
-            allocator, sizeof(Sk_Mesh_Upload_Data) * data->meshes_count);
-
-
-        for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
-        {
-            Sk_Mesh_Data* sk_mesh_data = &sk_mesh_asset_data->skinned_mesh_data[mesh_idx];
-            Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[mesh_idx];
-
-
-            Mesh_GPU_Upload* mesh_upload_data = &mesh_upload_data_array[mesh_idx];
-            Sk_Mesh_Upload_Data* skinned_mesh_upload_data = &skinned_mesh_upload_data_array[mesh_idx];
-
-            _gltf_load_mesh_data(resource_system, gltf_path, data, mesh_idx, mesh_data,
-                                 mesh_upload_data);
-
-            _gltf_load_skinned_mesh_data(resource_system, data, mesh_idx,
-                                         sk_mesh_data, skinned_mesh_upload_data);
-
-            //add to mesh upload queue
-            ring_enqueue(mesh_system->mesh_ring_queue, mesh_upload_data);
-            ring_enqueue(mesh_system->skinned_mesh_ring_queue, skinned_mesh_upload_data);
-        }
-
-        sk_mesh_asset_data->animation_data = allocator_heap_alloc(allocator, sizeof(GLTF_Animation_Data));
-        _gltf_load_skin_and_animation_data(resource_system, data, sk_mesh_asset_data);
-
+    /*{
         //create the parent instance
         Sk_Mesh_Parent_Instance* sk_mesh_parent_inst = &mesh_system->skinned_mesh_instance[mesh_system->
             skinned_mesh_instance_count++];
@@ -738,75 +131,58 @@ void mesh_load_gltf(Asset_System* resource_system, const char* gltf_path)
         sk_mesh_parent_inst->looping = true;
 
         material_system_add_skmesh_instance_to_default_material_batch(resource_system, sk_mesh_parent_inst);
-    }
-    else
+    }*/
     {
-        Mesh_Asset* mesh_asset_data = &mesh_system->mesh_asset_data[mesh_system->mesh_asset_count++];
-        mesh_asset_data->file_path = c_string_duplicate_heap_alloc(gltf_path, allocator);
-        mesh_asset_data->mesh_count = data->meshes_count;
-        mesh_asset_data->mesh_data = allocator_heap_alloc(allocator, sizeof(Mesh_Data) * data->meshes_count);
+        //TODO: load it in and convert to our format
+        // rn assume we just have the data
+        Madness_Mesh* madness_mesh = {0};
+        Mesh_GPU_Upload* mesh_upload_data = {0};
 
-
-        Mesh_GPU_Upload* mesh_upload_data_array = allocator_alloc(frame_allocator,
-                                                                   sizeof(Mesh_GPU_Upload) * data->meshes_count);
-
-        for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
+        for (size_t mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
         {
-            Mesh_Data* mesh_draw_data = &mesh_asset_data->mesh_data[mesh_idx];
-
-
-            Mesh_GPU_Upload* current_mesh_upload_data = &mesh_upload_data_array[mesh_idx];
-
-            _gltf_load_mesh_data(resource_system,
-                                 gltf_path, data, mesh_idx,
-                                 mesh_draw_data, current_mesh_upload_data);; //add to mesh upload queue
-            ring_enqueue(mesh_system->mesh_ring_queue, current_mesh_upload_data);
+            ring_enqueue(mesh_system->mesh_ring_queue, &mesh_upload_data[mesh_idx]);
         }
 
         //create the instance
-        Mesh_Parent_Instance* mesh_parent_instance = &mesh_system->mesh_parent_instance[mesh_system->
+        Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_parent_instance[mesh_system->
             mesh_parent_instance_count++];
-        mesh_parent_instance->mesh_asset = (Mesh_Asset_Handle){.handle = mesh_system->mesh_asset_count - 1};
-        mesh_parent_instance->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-        mesh_parent_instance->mesh_count = mesh_asset_data->mesh_count;
-        mesh_parent_instance->mesh_instances_array = allocator_heap_alloc(
-            allocator, sizeof(Mesh_Instance) * data->meshes_count);
+        mesh_inst->mesh_asset = (Mesh_Asset_Handle){.handle = mesh_system->mesh_asset_count - 1};
+        mesh_inst->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
+        mesh_inst->mesh_count = madness_mesh->mesh_count;
+        mesh_inst->submesh_instances = allocator_heap_alloc(
+            allocator, sizeof(Madness_SubMesh_Instance) * madness_mesh->mesh_count);
 
-        for (size_t mesh_idx = 0; mesh_idx < mesh_asset_data->mesh_count; mesh_idx++)
+        for (size_t mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
         {
+            Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
+
             //handles
-            mesh_parent_instance->mesh_instances_array[mesh_idx].material_handle = mesh_asset_data->mesh_data[mesh_idx].
-                default_material_handle;
-            mesh_parent_instance->mesh_instances_array[mesh_idx].parent_transform_handle = mesh_parent_instance->
-                transform_handle;
+            submesh_inst->material_handle = (Material_Handle){0};
+            submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
 
             //gpu friendly format
-            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_gpu_draw.material_instance_handle =
-                mesh_parent_instance->mesh_instances_array[mesh_idx].material_handle.handle;
-            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_gpu_draw.transform_idx =
-                mesh_parent_instance->mesh_instances_array[mesh_idx].parent_transform_handle.handle;
+            submesh_inst->mesh_gpu_draw.material_instance_handle = 0; // TODO/TEMP:
+            submesh_inst->mesh_gpu_draw.transform_idx = mesh_inst->transform_handle.handle;
 
             //indirect draw, gpu friendly format
-            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.vertex_offset
-                = mesh_asset_data->mesh_data[mesh_idx].vertex_offset;
-            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.index_count
-                = mesh_asset_data->mesh_data[mesh_idx].index_count;
-            mesh_parent_instance->mesh_instances_array[mesh_idx].mesh_indirect_draw.index_offset
-                = mesh_asset_data->mesh_data[mesh_idx].index_offset;
+            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.vertex_offset
+                = madness_mesh->mesh_data[mesh_idx].vertex_offset;
+            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_count
+                = madness_mesh->mesh_data[mesh_idx].index_count;
+            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_offset
+                = madness_mesh->mesh_data[mesh_idx].index_offset;
         }
 
-        material_system_add_mesh_instance_to_default_material_batch(resource_system, mesh_parent_instance);
+        material_system_add_mesh_instance_to_default_material_batch(resource_system, mesh_inst);
     }
-
-
-    cgltf_free(data);
 }
 
+
+
 GLTF_Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
-                                                           Sk_Mesh_Parent_Instance* sk_mesh_inst)
+                                                                Madness_SkMesh_Instance* sk_mesh_inst)
 {
-    return mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
-        animation_data;
+    return mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].animation_data;
 }
 
 void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
@@ -825,7 +201,7 @@ void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocato
 
     for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
     {
-        Sk_Mesh_Parent_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
+        Madness_SkMesh_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
 
 
         GLTF_Animation_Data* animation_data = mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].

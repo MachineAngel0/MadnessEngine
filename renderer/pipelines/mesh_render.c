@@ -121,7 +121,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 
     //skinned data
 
-    Sk_Mesh_Upload_Data skinned_mesh_upload_data = {0};
+    Skinned_Mesh_GPU_Upload skinned_mesh_upload_data = {0};
 
     while (!ring_queue_is_empty(skinned_mesh_render_queue))
     {
@@ -215,7 +215,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
 
             for (u32 mesh_idx = 0; mesh_idx < batch_data->mesh_instances->num_items; mesh_idx++)
             {
-                Mesh_Instance* mesh_instance = dynamic_array_get_ptr(batch_data->mesh_instances, Mesh_Instance,
+                Madness_SubMesh_Instance* mesh_instance = dynamic_array_get_ptr(batch_data->mesh_instances, Madness_SubMesh_Instance,
                                                                      mesh_idx);
                 mesh_instance->mesh_gpu_draw.material_instance_handle = mesh_idx;
                 vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
@@ -268,8 +268,8 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
 
             for (u32 mesh_idx = 0; mesh_idx < batch_data->mesh_instances->num_items; mesh_idx++)
             {
-                Sk_Mesh_Instance* sk_mesh_instance = dynamic_array_get_ptr(
-                    batch_data->mesh_instances, Sk_Mesh_Instance,
+                Madness_Skinned_SubMesh_Instance* sk_mesh_instance = dynamic_array_get_ptr(
+                    batch_data->mesh_instances, Madness_Skinned_SubMesh_Instance,
                     mesh_idx);
                 //we are indexing into the material buffer based on the draw count
                 sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = mesh_idx;

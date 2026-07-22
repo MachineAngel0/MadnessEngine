@@ -1,8 +1,6 @@
 ﻿#ifndef MADNESSENGINE_UUID_H
 #define MADNESSENGINE_UUID_H
 
-
-#include "defines.h"
 #include "platform.h"
 
 
@@ -13,10 +11,10 @@ typedef struct MADNESS_UUID
 } MADNESS_UUID;
 
 
-void madness_uuid_generate(MADNESS_UUID* uuid)
-{
-    platform_generate_uuid(&uuid->high, &uuid->low);
-}
+void madness_uuid_generate(MADNESS_UUID* uuid);
+MADNESS_UUID madness_uuid_generate_return();
 
 
+//TODO:
+//u64 madness_uuid_hash(MADNESS_UUID uuid);
 #endif //MADNESSENGINE_UUID_H
