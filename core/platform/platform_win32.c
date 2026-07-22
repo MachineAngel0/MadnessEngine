@@ -14,6 +14,7 @@
 //renderer
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
+
 #include "vk_device.h"
 
 
@@ -161,7 +162,7 @@ bool platform_pump_messages(Platform_State* plat_state)
 
 void* platform_allocate(u64 size, bool aligned)
 {
-    return VirtualAlloc(0, size, MEM_COMMIT| MEM_RESERVE, PAGE_READWRITE);
+    return VirtualAlloc(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     // return malloc(size);
 }
 
@@ -453,7 +454,6 @@ bool platform_file_copy(const char* source_file, char* new_file)
 }
 
 
-
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
@@ -507,11 +507,10 @@ void platform_get_cursor_pos(int* out_x, int* out_y)
 
 void platform_windows_resize(Platform_State* platform_state, int width, int height)
 {
-    internal_state* state =  platform_state->internal_state;
+    internal_state* state = platform_state->internal_state;
 
     //change the size but does not move due to no move flag
     SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE);
-
 }
 
 void platform_copy_to_clipboard(const char* c_string)
@@ -524,6 +523,30 @@ void platform_copy_to_clipboard(const char* c_string)
     EmptyClipboard();
     SetClipboardData(CF_TEXT, hMem);
     CloseClipboard();
+}
+
+void platform_generate_uuid(u64* high, u64* low)
+{
+    u8 bytes[16]; //16 bytes, 128 bits
+
+    NTSTATUS result = BCryptGenRandom(
+        NULL,
+        bytes,
+        sizeof(bytes),
+        BCRYPT_USE_SYSTEM_PREFERRED_RNG
+    );
+
+    if (result != 0)
+    {
+        // handle error
+        high = 0;
+        low = 0;
+        return;
+    }
+
+
+    memcpy(high, bytes, 8);
+    memcpy(low, bytes + 8, 8);
 }
 
 

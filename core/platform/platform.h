@@ -129,5 +129,10 @@ void platform_windows_resize(Platform_State* platform_state, int width, int heig
 
 void platform_copy_to_clipboard(const char* c_string);
 
+// UUID
+void platform_generate_uuid();
+
+
+
 
 #endif //PLATFORM_H
