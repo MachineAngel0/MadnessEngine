@@ -37,8 +37,8 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
 
     //create our debug texture
-    asset_converter_texture(asset_system, "../z_assets/textures/error_texture.png");
-    asset_converter_texture(asset_system, "../z_assets/textures/test_particle.png");
+    asset_converter_texture(asset_system, "../z_assets/textures/error_texture.png", NULL);
+    asset_converter_texture(asset_system, "../z_assets/textures/test_particle.png", NULL);
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
 
 

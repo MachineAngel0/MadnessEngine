@@ -64,7 +64,7 @@ typedef struct UI_Editor_Style
 
 
 //TODO:  just a temporary value for now, will increase later
-#define MAX_UI_NODE_COUNT 10000
+#define MAX_UI_NODE_COUNT 100000
 #define MAX_UI_DRAW_COUNT 500
 
 #define MIN_UI_NODE_SCREEN_SIZE 250

@@ -39,7 +39,7 @@
 #define ENGINE_FONTS_EXTENSION ".mfont"
 #define ENGINE_MESH_EXTENSION ".mmesh"
 #define ENGINE_SKMESH_EXTENSION ".mskin"
-#define ENGINE_Material_EXTENSION ".mmat"
+#define ENGINE_MATERIAL_EXTENSION ".mmat"
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 
 
@@ -61,6 +61,7 @@ typedef enum Asset_Type
     ASSET_STATIC_MESH,
     ASSET_SKINNED_MESH,
     ASSET_AUDIO,
+    ASSET_MATERIAL,
     // RESOURCE_PARTICLE,
 
     ASSET_TYPE_MAX,
@@ -73,6 +74,7 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_STATIC_MESH] = "ASSET_STATIC_MESH",
     [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
     [ASSET_AUDIO] = "ASSET_AUDIO",
+    [ASSET_MATERIAL] = "ASSET_MATERIAL",
 };
 
 
@@ -117,12 +119,12 @@ typedef struct Material_Handle
 typedef struct Mesh_Asset_Handle
 {
     u32 handle;
-} Mesh_Asset_Handle;
+} Madness_Mesh_Handle;
 
 typedef struct Sk_Mesh_Asset_Handle
 {
     u32 handle;
-} Sk_Mesh_Asset_Handle;
+} Madness_SkMesh_Handle;
 
 
 /*//used by the game/editor to modify meshes
@@ -187,18 +189,13 @@ typedef struct Texture_GPU_Upload
     u32 bindless_location;
 } Texture_GPU_Upload;
 
-typedef struct Madness_Texture_Editor
-{
-    Madness_Texture texture;
-    u8 version;
-    u8* pixel_data;
-} Madness_Texture_Editor;
-
 typedef struct Madness_Texture_Runtime
 {
+    u8 version;
     Madness_Texture texture;
     u8* pixel_data;
 } Madness_Texture_Runtime;
+
 
 
 //FONT/TEXT
@@ -224,13 +221,160 @@ typedef struct Madness_Font
     Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
 } Madness_Font;
 
-typedef struct Madness_Font_Editor
+typedef struct Madness_Font_Runtime
 {
+    u8 version;
     Madness_Font font_texture;
     Madness_Texture texture;
-    u8 version;
     u8* pixel_data;
-} Madness_Font_Editor;
+} Madness_Font_Runtime;
+
+
+//////////////////////MATERIAL/SHADER/////////////////////////
+
+typedef enum Shader_Mesh_Type
+{
+    Shader_Mesh_Type_Mesh,
+    Shader_Mesh_Type_Skinned,
+} Shader_Mesh_Type;
+
+typedef enum Shader_Pass_Type
+{
+    Shader_Pass_Type_Opaque = BITFLAG(0),
+    Shader_Pass_Type_Transparent = BITFLAG(1),
+    Shader_Pass_Type_Shadow = BITFLAG(2),
+} Shader_Pass_Type;
+
+typedef enum Renderpass_Single_Type
+{
+    //only to be used internally and not by the material system
+    Depth_Test_Type_Predepth,
+    Renderpass_Type_Shadow,
+    Renderpass_Type_Opaque,
+    Renderpass_Type_Transparent,
+} Renderpass_Single_Type;
+
+
+typedef enum Shader_Blend
+{
+    Shader_Blend_Mode_Default, // oqaque
+    Shader_Blend_Mode_Alpha,
+    Shader_Blend_Mode_PreMultiplied_Alpha,
+
+    Shader_Blend_Mode_Additive,
+    Shader_Blend_Mode_Soft_Additive, // soft make it harder for white to blow out the screen
+
+    Shader_Blend_Mode_Multiply,
+    Shader_Blend_Mode_Multiply2x,
+    //  Shader_Blend_Mode_SCREEN,
+
+    Shader_Blend_Mode_Subtract,
+    Shader_Blend_Mode_Reverse_Subtract,
+
+    //  Shader_Blend_Mode_MIN,
+    //  Shader_Blend_Mode_MAX,
+} Shader_Blend_Mode;
+
+typedef enum Shader_Stage_Type
+{
+    Shader_Stage_Type_Vert,
+    Shader_Stage_Type_Graphics, // both vert and frag
+    Shader_Stage_Type_Compute,
+    // Shader_Stage_Type_Tesselation,
+} Shader_Stage_Type;
+
+
+typedef enum Material_Flag
+{
+    MATERIAL_FLAG_PBR = BITFLAG(0),
+    MATERIAL_FLAG_UV_ANIM = BITFLAG(1),
+} Material_Flag;
+
+
+typedef enum Mesh_PBR_Flags
+{
+    MESH_PIPELINE_COLOR = BITFLAG(1),
+    MESH_PIPELINE_NORMAL = BITFLAG(2),
+    MESH_PIPELINE_EMISSIVE = BITFLAG(3),
+    MESH_PIPELINE_ROUGHNESS = BITFLAG(4),
+    MESH_PIPELINE_METALLIC = BITFLAG(5),
+    MESH_PIPELINE_AO = BITFLAG(6),
+    MESH_PIPELINE_ENUM_MAX,
+} Mesh_PBR_Flags;
+
+typedef struct PC_General
+{
+    VkDeviceAddress draw_data_buffer;
+    VkDeviceAddress material_buffer;
+} PC_General;
+
+typedef struct PC_Particle
+{
+    VkDeviceAddress draw_material_buffer;
+    VkDeviceAddress unused;
+} PC_Particle;
+
+
+typedef struct PC_Shadow_Mapping
+{
+    mat4 light_matrix;
+    VkDeviceAddress draw_data_buffer;
+} PC_Shadow_Mapping;
+
+
+typedef struct Material_Info{
+    String* shader_name;
+    String* material_name;
+
+    Shader_Stage_Type shader_stage;
+    Shader_Pass_Type shader_pass;
+    Shader_Mesh_Type mesh_type;
+    Shader_Blend_Mode blend_mode;
+}Material_Info;
+
+typedef struct Material_GPU_Definition{
+    u32 field_count;
+    u32 struct_size;
+    //arrays
+    u64* name_hashes;
+    u32* field_offsets;
+    Reflection_Type* types;
+}Material_GPU_Definition;
+
+typedef struct Material_Asset
+{
+    Material_Info material_info;
+
+    Reflection_Runtime_Struct* reflection_material_data;
+    void* material_definition_data; // runtime data
+
+    Material_GPU_Definition* material_gpu_definition;
+
+
+} Material_Asset;
+
+typedef struct Material_Asset_Runtime
+{
+    u32 version;
+    Material_Asset* asset;
+}Material_Asset_Runtime;
+
+
+typedef struct Material_Batch
+{
+    Material_Info material_info;
+    Reflection_Runtime_Struct* material_struct;
+    Material_GPU_Definition* material_gpu_definition;
+
+    Dynamic_Array* material_data;
+    // PC_General* pc_general; // TODO:
+
+    //TODO: you could use a union for the mesh types
+    Dynamic_Array* mesh_instances;
+
+} Material_Batch;
+
+
 
 ///////////////// Particle  //////////////////////
 
@@ -325,7 +469,7 @@ typedef struct Particle_Mesh
 
     //draw data?
     //Texture
-    Mesh_Asset_Handle Mesh;
+    Madness_Mesh_Handle Mesh;
     Texture_Handle Textures;
     vec2s tex_offset;
 } Particle_Mesh;
@@ -433,7 +577,7 @@ typedef struct Madness_Skinned_Mesh_Instance
     u32 mesh_count;
     Madness_Skinned_SubMesh_Instance* sk_mesh_instance_array;
 
-    Sk_Mesh_Asset_Handle sk_mesh_handle;
+    Madness_SkMesh_Handle sk_mesh_handle;
     Transform_Handle transform_handle;
 
     //OPTIMIZE: we would want a handle to the data, and access if needed, so that the updates are more cache friendly
@@ -466,7 +610,7 @@ typedef struct Madness_SubMesh_Instance
 typedef struct Madness_Mesh_Instance
 {
     //this generally is only for changing materials and transforms, and not for the renderer
-    Mesh_Asset_Handle mesh_asset;
+    Madness_Mesh_Handle mesh_asset;
     Transform_Handle transform_handle;
     u32 mesh_count;
     Madness_SubMesh_Instance* submesh_instances;
@@ -512,6 +656,9 @@ typedef struct Madness_SubMesh
     u32 vertex_color_offset;
     u32 normal_offset;
     u32 uv_offset;
+
+    MADNESS_UUID material_uuid;
+
 } Madness_SubMesh;
 
 
@@ -546,149 +693,38 @@ typedef struct Madness_Mesh_GPU_Data
 } Madness_Mesh_GPU_Data;
 
 
-typedef struct Madness_Mesh_Editor
+typedef struct Madness_Mesh_Runtime
+{
+    u32 version;
+    u32 mesh_count;
+    Madness_SubMesh* submeshes;
+    Madness_Mesh_GPU_Data* mesh_gpu_upload;
+} Madness_Mesh_Runtime;
+
+
+typedef struct Madness_SkMesh_Runtime
 {
     u32 version;
     u32 mesh_count;
     Madness_SubMesh* sub_mesh;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-} Madness_Mesh_Editor;
+} Madness_SkMesh_Runtime;
 
 
-typedef struct Madness_SkMesh_Editor
-{
-    u32 version;
-    u32 mesh_count;
-    Madness_SubMesh* sub_mesh;
-    Madness_Mesh_GPU_Data* mesh_gpu_upload;
-} Madness_SkMesh_Editor;
-
-
-///////////////////////MATERIAL/SHADER/////////////////////////
-
-typedef enum Shader_Mesh_Type
-{
-    Shader_Mesh_Type_Mesh,
-    Shader_Mesh_Type_Skinned,
-} Shader_Mesh_Type;
-
-typedef enum Shader_Pass_Type
-{
-    Shader_Pass_Type_Opaque = BITFLAG(0),
-    Shader_Pass_Type_Transparent = BITFLAG(1),
-    Shader_Pass_Type_Shadow = BITFLAG(2),
-} Shader_Pass_Type;
-
-typedef enum Renderpass_Single_Type
-{
-    //only to be used internally and not by the material system
-    Depth_Test_Type_Predepth,
-    Renderpass_Type_Shadow,
-    Renderpass_Type_Opaque,
-    Renderpass_Type_Transparent,
-} Renderpass_Single_Type;
-
-
-typedef enum Shader_Blend
-{
-    Shader_Blend_Mode_Default, // oqaque
-    Shader_Blend_Mode_Alpha,
-    Shader_Blend_Mode_PreMultiplied_Alpha,
-
-    Shader_Blend_Mode_Additive,
-    Shader_Blend_Mode_Soft_Additive, // soft make it harder for white to blow out the screen
-
-    Shader_Blend_Mode_Multiply,
-    Shader_Blend_Mode_Multiply2x,
-    //  Shader_Blend_Mode_SCREEN,
-
-    Shader_Blend_Mode_Subtract,
-    Shader_Blend_Mode_Reverse_Subtract,
-
-    //  Shader_Blend_Mode_MIN,
-    //  Shader_Blend_Mode_MAX,
-} Shader_Blend_Mode;
-
-typedef enum Shader_Stage_Type
-{
-    Shader_Stage_Type_Vert,
-    Shader_Stage_Type_Graphics, // both vert and frag
-    Shader_Stage_Type_Compute,
-    // Shader_Stage_Type_Tesselation,
-} Shader_Stage_Type;
-
-
-typedef enum Material_Flag
-{
-    MATERIAL_FLAG_PBR = BITFLAG(0),
-    MATERIAL_FLAG_UV_ANIM = BITFLAG(1),
-} Material_Flag;
-
-
-typedef enum Mesh_PBR_Flags
-{
-    MESH_PIPELINE_COLOR = BITFLAG(1),
-    MESH_PIPELINE_NORMAL = BITFLAG(2),
-    MESH_PIPELINE_EMISSIVE = BITFLAG(3),
-    MESH_PIPELINE_ROUGHNESS = BITFLAG(4),
-    MESH_PIPELINE_METALLIC = BITFLAG(5),
-    MESH_PIPELINE_AO = BITFLAG(6),
-    MESH_PIPELINE_ENUM_MAX,
-} Mesh_PBR_Flags;
-
-typedef struct PC_General
-{
-    VkDeviceAddress draw_data_buffer;
-    VkDeviceAddress material_buffer;
-} PC_General;
-
-typedef struct PC_Particle
-{
-    VkDeviceAddress draw_material_buffer;
-    VkDeviceAddress unused;
-} PC_Particle;
-
-
-typedef struct PC_Shadow_Mapping
-{
-    mat4 light_matrix;
-    VkDeviceAddress draw_data_buffer;
-} PC_Shadow_Mapping;
-
-typedef struct Material_Batch
-{
-    const char* shader_name;
-    Reflection_Runtime_Struct* material_struct;
-
-    Dynamic_Array* material_data;
-    // PC_General* pc_general; // TODO:
-
-    //TODO: you could use a union for the mesh types
-    Dynamic_Array* mesh_instances;
-
-    Shader_Stage_Type shader_stage;
-    Shader_Pass_Type shader_pass;
-    Shader_Mesh_Type mesh_type;
-    Shader_Blend_Mode blend_mode;
-} Material_Batch;
+///////////////// Systems  //////////////////////
 
 
 #define MAX_DEFAULT_MATERIAL 100
 
 typedef struct Material_System
 {
-    //Hardcode pipelines
-    Material_Default prb[MAX_DEFAULT_MATERIAL]; // pretty much manditory for all meshes
-    u32 pbr_count;
-
     Heap_Allocator* heap_allocator;
     Reflection_System* reflection_system;
     Reflection_Registry* reflection_registry;
 
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
-
-    //sort material batches by their pass type
+    //sort material batches by their mesh type, possibly fine grain it later
     Material_Batch mesh_batch[100];
     u32 mesh_batch_count;
 
@@ -848,9 +884,6 @@ typedef struct Render_Packet_3D
     Material_Batch* skinned_batch;
     u32 skinned_batch_count;
 
-    Material_Default* prb;
-    u32 prb_count;
-    u32 prb_bytes;
 
     mat4s* world_space_matrix_array;
     u32 world_space_matrix_count;
@@ -930,6 +963,7 @@ typedef struct Resource_System
     Render_Packet* render_packet;
 
     Asset_Registry* asset_registry;
+
 } Asset_System;
 
 

@@ -5,19 +5,17 @@ Material_System* material_system_init(Memory_System* memory_system)
     Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
                                                            MEMORY_SUBSYSTEM_RESOURCE);
 
-    material_system->pbr_count = 0;
-
 
     material_system->heap_allocator = memory_system_heap_allocator_create(
         memory_system, MB(1), MEMORY_SUBSYSTEM_RESOURCE);
 
+    //reflection/registry system
     material_system->reflection_system = reflection_system_init(memory_system);
     reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
                             REFLECTION_PARSE_CONSTANT);
     reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_ENUM);
     reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
                             REFLECTION_PARSE_STRUCT);
-
 
     reflection_data_to_files(material_system->reflection_system, "material",
                              "../resource/generated/mat_enums.h",
@@ -27,10 +25,10 @@ Material_System* material_system_init(Memory_System* memory_system)
     generate_runtime_enums_material(material_system->reflection_registry);
     generate_runtime_structs_material(material_system->reflection_registry);
 
-
     reflection_registry_debug_print_info(material_system->reflection_registry);
 
 
+    //material creation
     material_system_instantiate_material(material_system, "mesh", "Material_Default",
                                          Shader_Mesh_Type_Mesh, Shader_Blend_Mode_Default,
                                          Shader_Pass_Type_Opaque | Shader_Pass_Type_Shadow);
@@ -55,10 +53,6 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d)
 {
-    render_packet_3d->prb = material_system->prb;
-    render_packet_3d->prb_count = MAX_DEFAULT_MATERIAL;
-    render_packet_3d->prb_bytes = sizeof(Material_Default) * MAX_DEFAULT_MATERIAL;
-
     render_packet_3d->mesh_batch = material_system->mesh_batch;
     render_packet_3d->mesh_batch_count = material_system->mesh_batch_count;
 
@@ -75,18 +69,6 @@ bool material_system_generate_render_packet(Material_System* material_system,
 }*/
 
 
-Material_Default* material_system_create_default_pbr(Material_System* material_system, Material_Handle* material_handle)
-{
-    material_handle->handle = material_system->pbr_count;
-    Material_Default* pbr = &material_system->prb[material_system->pbr_count++];
-    material_system_pbr_init(pbr);
-    return pbr;
-}
-
-Material_Default* material_system_pbr_get(Material_System* material_system, Material_Handle material_handle)
-{
-    return &material_system->prb[material_handle.handle];
-}
 
 void material_system_pbr_init(Material_Default* out_data)
 {
@@ -98,10 +80,5 @@ void material_system_pbr_init(Material_Default* out_data)
     out_data->ambient_occlusion_strength = 1.0f;
     out_data->emissive_strength = 1.0f;
 
-    out_data->color_index = 0;
-    out_data->normal_index = 0;
-    out_data->metallic_index = 0;
-    out_data->roughness_index = 0;
-    out_data->ambient_occlusion_index = 0;
-    out_data->emissive_index = 0;
+
 }

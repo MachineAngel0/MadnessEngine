@@ -16,14 +16,12 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
     ps->particles = memory_system_alloc(memory_system, sizeof(Particle) * PARTICLE_COUNT, MEMORY_SUBSYSTEM_PARTICLE);
     ps->particles_count = PARTICLE_COUNT;
 
-
+    asset_converter_texture(resource_system, "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png", NULL);
+    Texture_Handle handle = asset_load_texture(resource_system, "../z_assets_engine/texture/circle_05.mtex");
     for (u32 i = 0; i < ps->particles_count; i++)
     {
-        // const char* texture_path = "../z_assets/textures/test_particle.png";
-        // const char* texture_path = "../z_assets/textures/test_particle.png";
-        ps->particles[i].texture_handle = asset_load_texture(resource_system,
-                                                                      "circle_05.png");
-        //  "../z_assets/textures/kenney_particle-pack/PNG (Black background)/circle_05.png");
+
+        ps->particles[i].texture_handle = handle;
         ps->particles[i].scale = (vec2s){10.0f, 10.0f};
         ps->particles[i].velocity.x = rand_range_f(-10, 10);
         ps->particles[i].velocity.y = rand_range_f(-10, 10);

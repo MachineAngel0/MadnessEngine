@@ -124,11 +124,11 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
 void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system, Material_Batch* material_batch)
 {
     _shader_system_shader_batch_create_internal(renderer, renderer->shader_system,
-                                                material_batch->shader_name,
-                                                material_batch->shader_stage,
-                                                material_batch->shader_pass,
-                                                material_batch->mesh_type,
-                                                material_batch->blend_mode,
+                                                string_to_c_string(material_batch->material_info.shader_name),
+                                                material_batch->material_info.shader_stage,
+                                                material_batch->material_info.shader_pass,
+                                                material_batch->material_info.mesh_type,
+                                                material_batch->material_info.blend_mode,
                                                 material_batch->material_struct->struct_size,
                                                 material_batch->material_data->num_items);
 
@@ -215,7 +215,7 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
     for (int i = 0; i < render_packet->draw_3d_data_packet.mesh_batch_count; ++i)
     {
         if (hash_table_contains(shader_system->shader_batch_hash_table,
-                                render_packet->draw_3d_data_packet.mesh_batch[i].shader_name))
+                                string_to_c_string(render_packet->draw_3d_data_packet.mesh_batch[i].material_info.shader_name)))
         {
             continue;
         }
@@ -226,7 +226,7 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
     for (int i = 0; i < render_packet->draw_3d_data_packet.skinned_batch_count; ++i)
     {
         if (hash_table_contains(shader_system->shader_batch_hash_table,
-                                render_packet->draw_3d_data_packet.skinned_batch[i].shader_name))
+                                string_to_c_string(render_packet->draw_3d_data_packet.skinned_batch[i].material_info.shader_name)))
         {
             continue;
         }

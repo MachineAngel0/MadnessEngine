@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 #include "asset_converter.h"
+#include "asset_registry.h"
+#include "asset_serialization.h"
 #include "resource_types.h"
 #include "ring_queue.h"
 #include "texture_system.h"
@@ -41,7 +43,6 @@
 // WAY TO CREATE MULTIPLE OF A THING for modification
 
 
-
 Asset_System* asset_system_init(Memory_System* memory_system);
 
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
@@ -63,8 +64,73 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
 
 bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle);
-Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name);//TODO:
+Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name); //TODO:
 
+bool asset_load_mesh(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle)
+{
+    MADNESS_UUID uuid = {0, 0};
+    u64 hash = 0;
+
+    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+
+    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, &uuid, &hash))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Madness_Mesh_Handle){0};
+        return out_handle;
+    }
+
+    //has asset already been loaded
+    if (mesh_system_exists_mesh(asset_system, out_handle, hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        Madness_Mesh_Runtime runtime_mesh = {0};
+
+        fptr = fopen(engine_asset_path, "rb");
+
+        asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
+
+        mesh_system_load_mesh(asset_system, &runtime_mesh);
+    }
+    else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+    }
+    fclose(fptr);
+
+    return true;
+}
+
+bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material_Handle* out_handle)
+{
+    String* out_path = NULL;
+    if (!asset_registry_get_path_from_uuid(asset_system, uuid, out_path, asset_system->frame_allocator))
+    {
+
+    }
+
+    //material system does exists function
+
+    material_system_load_material(Material_System* material_system, Material_Asset* material_asset)
+
+    // material_system_register_batch();
+
+
+}
 
 //Data format stuff
 typedef struct Asset_MetaData_Header

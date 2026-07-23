@@ -59,13 +59,6 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Asset_System* resource_sys
         BUFFER_TYPE_STAGING,
         mesh_buffer_data_size);
 
-    out_mesh_renderer->pbr_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_CPU_STORAGE,
-                                                                sizeof(Material_Default) * MAX_DEFAULT_MATERIAL);
-    out_mesh_renderer->pbr_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        sizeof(Material_Default) *
-                                                                        MAX_DEFAULT_MATERIAL);
 
     u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4s);
 
@@ -164,12 +157,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
                                                    world_space_matrix_count);
 
     //stuff uploaded very frame
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->pbr_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->pbr_staging_buffer_handle);
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->pbr_buffer_handle,
-                                                   mesh_renderer->pbr_staging_buffer_handle, command_buffer,
-                                                   render_packet->draw_3d_data_packet.prb,
-                                                   render_packet->draw_3d_data_packet.prb_bytes);
+
 
 
     //skinned matrix
@@ -196,7 +184,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
         Material_Batch* batch_data = &render_packet->draw_3d_data_packet.mesh_batch[batch_idx];
 
         Vulkan_Shader_Batch* current_batch = allocator_alloc(&renderer->frame_allocator, sizeof(Vulkan_Shader_Batch));
-        if (hash_table_get(shader_system->shader_batch_hash_table, batch_data->shader_name, &current_batch))
+        if (hash_table_get(shader_system->shader_batch_hash_table, string_to_c_string(batch_data->material_info.shader_name), &current_batch))
         {
             current_batch->draw_count = 0;
 
@@ -249,7 +237,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_
         Material_Batch* batch_data = &render_packet->draw_3d_data_packet.skinned_batch[batch_idx];
 
         Vulkan_Shader_Batch* current_batch = allocator_alloc(&renderer->frame_allocator, sizeof(Vulkan_Shader_Batch));
-        if (hash_table_get(shader_system->shader_batch_hash_table, batch_data->shader_name, &current_batch))
+        if (hash_table_get(shader_system->shader_batch_hash_table, string_to_c_string(batch_data->material_info.shader_name), &current_batch))
         {
             current_batch->draw_count = 0;
 

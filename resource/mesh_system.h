@@ -9,9 +9,11 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
 bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
 
 
-//when loading in a
-void mesh_load(Asset_System* resource_system, const char* asset_path);
+void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset);
+void mesh_system_load_skinned_mesh(Asset_System* resource_system, Madness_SkMesh_Runtime* skmesh_asset);
 
+bool mesh_system_exists_mesh(Asset_System* resource_system, Madness_Mesh_Handle* out_handle, u64 hash);
+bool mesh_system_exists_skmesh(Asset_System* resource_system, Madness_SkMesh_Handle* out_handle, u64 hash);
 
 
 //animation system

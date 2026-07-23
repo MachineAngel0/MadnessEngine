@@ -4,8 +4,13 @@
 
 #include "defines.h"
 #include "math_types.h"
+#include "UUID.h"
 
+#define MATERIAL_DEFAULT_NAME "Material_Default"
+#define MESH_DEFAULT_SHADER "mesh"
+#define SKINNED_MESH_DEFAULT_SHADER "skinned_mesh"
 
+// MADNESS_UUID these are texture id's which get converted into u32 for bindless at runtime
 
 typedef struct Material_Default
 {
@@ -20,35 +25,33 @@ typedef struct Material_Default
     float ambient_occlusion_strength;
     float emissive_strength;
 
-    u32 color_index;
-    u32 normal_index;
-    u32 metallic_index;
-    u32 roughness_index;
-    u32 ambient_occlusion_index;
-    u32 emissive_index;
     u32 padding0;
-    u32 padding1;
-    u32 padding2;
+
+    MADNESS_UUID color_texture;
+    MADNESS_UUID normal_texture;
+    MADNESS_UUID metallic_texture;
+    MADNESS_UUID roughness_texture;
+    MADNESS_UUID ambient_occlusion_texture;
+    MADNESS_UUID emissive_texture;
 } Material_Default;
 
 
+
+
 //this is mostly a test material
-// TODO: reflection system has no concept of a vec2-4, and likely the same for mat3/4
 typedef struct Material_Flat_Color
 {
     vec4 color;
 } Material_Flat_Color;
 
-typedef struct Material_Spherical_Billboard{
+typedef struct Material_Spherical_Billboard
+{
     vec3s point;
     u32 texture_idx;
     vec2s size; //also a radius
     vec2s rotation;
     // vec4 color; //tint basically
-}Material_Spherical_Billboard;
-
-
-
+} Material_Spherical_Billboard;
 
 
 #endif //MATERIAL_TYPES_H

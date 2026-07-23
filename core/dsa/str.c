@@ -147,6 +147,30 @@ String* string_duplicate(const String* str)
     return out_str;
 }
 
+String* string_duplicate_alloc(const String* str, Allocator* allocator)
+{
+    //plus one cause we don't have a null string terminator
+    const String* s = str;
+    String* out_str = allocator_alloc(allocator, sizeof(String));
+    //important to note that we use -1 to not include the null terminated string
+    out_str->chars = (char*)allocator_alloc(allocator,sizeof(char) * s->length);
+    memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
+    out_str->length = s->length;
+    return out_str;
+}
+String* string_duplicate_heap(const String* str, Heap_Allocator* allocator)
+{
+    //plus one cause we don't have a null string terminator
+    const String* s = str;
+    String* out_str = allocator_heap_alloc(allocator, sizeof(String));
+    //important to note that we use -1 to not include the null terminated string
+    out_str->chars = (char*)allocator_heap_alloc(allocator, sizeof(char) * s->length);
+    memcpy(out_str->chars, s->chars, sizeof(char) * s->length);
+    out_str->length = s->length;
+    return out_str;
+}
+
+
 String* string_concat_malloc(const String* str1, const String* str2)
 {
     String* out_str = allocator_malloc(sizeof(String));

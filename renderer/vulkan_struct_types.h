@@ -192,7 +192,7 @@ typedef struct Vulkan_Buffer
     u64 current_offset;
     u64 capacity;
     Vulkan_Buffer_Type type;
-    uint8_t* mapped_data;
+    u8* mapped_data;
 } Vulkan_Buffer;
 
 
@@ -638,8 +638,6 @@ typedef struct Mesh_Renderer
     Buffer_Handle skinned_matrix_staging_buffer_handle;
 
 
-    Buffer_Handle pbr_buffer_handle;
-    Buffer_Handle pbr_staging_buffer_handle;
 
     Buffer_Handle transform_buffer_handle;
     Buffer_Handle transform_staging_buffer_handle;

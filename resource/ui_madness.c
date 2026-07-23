@@ -47,7 +47,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
 
 
     madness_ui->window_state_hash = hash_table_string_create(sizeof(Window_State),
-                                                             10,
+                                                             100,
                                                              madness_ui->allocator,
                                                              false);
 

@@ -93,58 +93,46 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.offset = offsetof(Material_Default, emissive_strength)
 		},
 		{
-			.name = "color_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, color_index)
-		},
-		{
-			.name = "normal_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, normal_index)
-		},
-		{
-			.name = "metallic_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, metallic_index)
-		},
-		{
-			.name = "roughness_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, roughness_index)
-		},
-		{
-			.name = "ambient_occlusion_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, ambient_occlusion_index)
-		},
-		{
-			.name = "emissive_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, emissive_index)
-		},
-		{
 			.name = "padding0",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Material_Default, padding0)
 		},
 		{
-			.name = "padding1",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, padding1)
+			.name = "color_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, color_texture)
 		},
 		{
-			.name = "padding2",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, padding2)
+			.name = "normal_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, normal_texture)
+		},
+		{
+			.name = "metallic_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, metallic_texture)
+		},
+		{
+			.name = "roughness_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, roughness_texture)
+		},
+		{
+			.name = "ambient_occlusion_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, ambient_occlusion_texture)
+		},
+		{
+			.name = "emissive_texture",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Default, emissive_texture)
 		},
 	};
 
@@ -152,7 +140,7 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	{
 		.name = "Material_Default",
 		.fields = Material_Default_Fields,
-		.field_count = 17,
+		.field_count = 15,
 		.struct_size = sizeof(Material_Default)
 	};
 

@@ -32,10 +32,10 @@ typedef struct Reflection_Runtime_Struct_Field
 
 typedef struct Reflection_Runtime_Struct
 {
-    const char* name;
-    Reflection_Runtime_Struct_Field* fields;
     u32 field_count;
     u32 struct_size;
+    const char* name;
+    Reflection_Runtime_Struct_Field* fields;
 } Reflection_Runtime_Struct;
 
 // meant to be used for the ui rn
@@ -829,6 +829,47 @@ void reflection_registry_debug_print_info(Reflection_Registry* reflection_regist
             printf("Field Name: %s, Offset: %d, Type Name: %s, Type: %d\n", field->name, field->offset,
                    field->type_name, field->type);
         }
+    }
+}
+
+
+void reflection_registry_serialize_runtime_struct(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr)
+{
+    fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
+    fwrite(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
+    string_serialize(&STRING_STRLEN(reflection_runtime_struct->name), fptr);
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        string_serialize(&STRING_STRLEN(field->name), fptr);
+        string_serialize(&STRING_STRLEN(field->type_name), fptr);
+        fwrite(&field->type, sizeof(field->type), 1, fptr);
+        fwrite(&field->offset, sizeof(field->offset), 1, fptr);
+    }
+}
+
+void reflection_registry_deserialize_runtime_struct(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr,
+                                                    Allocator* allocator)
+{
+    fread(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
+    fread(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
+    String* reflection_struct_name = allocator_alloc(allocator, sizeof(String));
+    string_deserialize(reflection_struct_name, fptr, allocator);
+    reflection_runtime_struct->name = string_to_c_string_allocator(reflection_struct_name, allocator);
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        String* string_name = allocator_alloc(allocator, sizeof(String));
+        String* string_type_name = allocator_alloc(allocator, sizeof(String));
+
+        string_deserialize(string_name, fptr, allocator);
+        string_deserialize(string_type_name, fptr, allocator);
+        field->name = string_to_c_string_allocator(string_name, allocator);
+        field->type_name = string_to_c_string_allocator(string_type_name, allocator);
+        fread(&field->type, sizeof(field->type), 1, fptr);
+        fread(&field->offset, sizeof(field->offset), 1, fptr);
     }
 }
 

@@ -127,6 +127,14 @@ typedef struct GLTF_Material
     String* roughness_texture;
     String* ambient_occlusion_texture;
     String* emissive_texture;
+
+    MADNESS_UUID color_uuid;
+    MADNESS_UUID normal_uuid;
+    MADNESS_UUID metallic_uuid;
+    MADNESS_UUID roughness_uuid;
+    MADNESS_UUID ambient_occlusion_uuid;
+    MADNESS_UUID emissive_uuid;
+
 } GLTF_Material;
 
 
@@ -145,6 +153,7 @@ typedef struct GLTF_SubMesh
 
     //the material specifics what to load out of the file ideally
     GLTF_Material material_default;
+    MADNESS_UUID material_uuid;
 
     vec4s* tangent;
     vec4s* vertex_color;

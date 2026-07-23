@@ -374,7 +374,6 @@ void editor_texture_view(Editor* editor)
     {
         for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {
-            //TODO: keep another format, of just pointer references for the editors sake
             Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
             if (meta_data->type != ASSET_TEXTURE && meta_data->type != ASSET_FONT)
             {
@@ -404,20 +403,16 @@ void editor_meta_data_view(Editor* editor)
     {
         for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {
-            //TODO: keep another format, of just pointer references for the editors sake
             Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
             madness_ui_string(STRING("UUID:"));
-            // madness_ui_u32(STRING("id1"), &meta_data->uuid.high, 0);
-            // madness_ui_u32(STRING("id2"), &meta_data->uuid.low, 0);
-            // madness_ui_same_line();
+            madness_ui_u32(STRING("id1"), &meta_data->uuid.high, 0);
+            madness_ui_u32(STRING("id2"), &meta_data->uuid.low, 0);
+            madness_ui_same_line();
 
-            // madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
+            madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
 
             madness_ui_string(*meta_data->source_file);
             madness_ui_string(*meta_data->binary_file);
-
-
-            // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
     }
     madness_ui_window_end();

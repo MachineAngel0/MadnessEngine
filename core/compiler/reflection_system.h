@@ -32,6 +32,8 @@ typedef enum Reflection_Type
     REFLECTION_TYPE_MAT3,
     REFLECTION_TYPE_MAT4,
 
+    REFLECTION_TYPE_UUID,
+
     REFLECTION_TYPE_MAX,
 } Reflection_Type;
 
@@ -60,13 +62,13 @@ u8 Reflection_Type_Size_LUT[REFLECTION_TYPE_MAX] = {
     [REFLECTION_TYPE_VEC4] = sizeof(vec4s),
     [REFLECTION_TYPE_MAT3] = sizeof(mat3s),
     [REFLECTION_TYPE_MAT4] = sizeof(mat4s),
+    [ REFLECTION_TYPE_UUID] = sizeof(MADNESS_UUID),
 };
 
 u8 reflection_type_get_size(Reflection_Type type)
 {
     return Reflection_Type_Size_LUT[type];
 }
-
 
 
 Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
@@ -94,8 +96,8 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [TOKEN_VEC4] = REFLECTION_TYPE_VEC4,
     [TOKEN_MAT3] = REFLECTION_TYPE_MAT3,
     [TOKEN_MAT4] = REFLECTION_TYPE_MAT4,
+    [TOKEN_UUID] = REFLECTION_TYPE_UUID,
 };
-
 
 
 typedef enum Reflection_Container_Type
@@ -245,6 +247,8 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
 bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_system, const char* struct_name,
                                                   Reflection_Type reflection_type, const char* type_name,
                                                   const char* struct_member_name, u64 array_size);
+
+bool reflection_system_set_default_values(Reflection_System* reflection_system, Reflection_Type reflection_type, void* data);
 
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name);

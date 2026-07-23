@@ -92,6 +92,8 @@ typedef enum Token_Type
     TOKEN_MAT3,
     TOKEN_MAT4,
 
+    TOKEN_UUID,
+
     Token_const,
 
     Token_EndOfStream,

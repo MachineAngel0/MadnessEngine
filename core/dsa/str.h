@@ -69,6 +69,8 @@ bool string_compare(const String* str1, const String* str2);
 bool str_is_empty(const String* str);
 
 String* string_duplicate(const String* str);
+String* string_duplicate_alloc(const String* str, Allocator* allocator);
+String* string_duplicate_heap(const String* str, Heap_Allocator* allocator);
 
 //creates a new string from the two strings
 String* string_concat_malloc(const String* str1, const String* str2);

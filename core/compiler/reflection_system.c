@@ -202,6 +202,7 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
         TOKEN_VEC4,
         TOKEN_MAT3,
         TOKEN_MAT4,
+        TOKEN_UUID,
     };
 
 
@@ -531,6 +532,68 @@ bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_
     return false;
 }
 
+bool reflection_system_set_default_values(Reflection_System* reflection_system, Reflection_Type reflection_type,
+    void* data)
+{
+    MASSERT(false);
+    //TODO:
+    switch (reflection_type)
+    {
+    case REFLECTION_TYPE_INVALID:
+        break;
+    case REFLECTION_TYPE_U8:
+        break;
+    case REFLECTION_TYPE_U16:
+        break;
+    case REFLECTION_TYPE_U32:
+        break;
+    case REFLECTION_TYPE_U64:
+        break;
+    case REFLECTION_TYPE_S8:
+        break;
+    case REFLECTION_TYPE_S16:
+        break;
+    case REFLECTION_TYPE_S32:
+        break;
+    case REFLECTION_TYPE_S64:
+        break;
+    case REFLECTION_TYPE_F32:
+        break;
+    case REFLECTION_TYPE_F64:
+        break;
+    case REFLECTION_TYPE_SIZE_T:
+        break;
+    case REFLECTION_TYPE_BOOL:
+        break;
+    case REFLECTION_TYPE_CHAR:
+        break;
+    case REFLECTION_TYPE_CHAR_STRING:
+        break;
+    case REFLECTION_TYPE_STRING:
+        break;
+    case REFLECTION_TYPE_ENUM:
+        break;
+    case REFLECTION_TYPE_STRUCT:
+        break;
+    case REFLECTION_TYPE_VEC2:
+        break;
+    case REFLECTION_TYPE_VEC3:
+        break;
+    case REFLECTION_TYPE_VEC4:
+        break;
+    case REFLECTION_TYPE_MAT3:
+        break;
+    case REFLECTION_TYPE_MAT4:
+        break;
+    case REFLECTION_TYPE_UUID:
+        break;
+    case REFLECTION_TYPE_MAX:
+        break;
+    }
+
+
+}
+
 Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name)
 {
     Reflection_Struct reflection_struct = {0};
@@ -584,6 +647,7 @@ static const char* reflection_type_to_str(Reflection_Type type)
     case REFLECTION_TYPE_VEC4: return "REFLECTION_TYPE_VEC4";
     case REFLECTION_TYPE_MAT3: return "REFLECTION_TYPE_MAT3";
     case REFLECTION_TYPE_MAT4: return "REFLECTION_TYPE_MAT4";
+    case REFLECTION_TYPE_UUID: return "REFLECTION_TYPE_UUID";
 
 
     default: return "REFLECTION_TYPE_INVALID";

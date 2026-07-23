@@ -155,7 +155,9 @@ bool lexer_is_token_data_type(Token token)
     case TOKEN_MAT4:
         return true;
         break;
-
+    case TOKEN_UUID:
+        return true;
+        break;
 
 
     default:
@@ -492,7 +494,10 @@ void nextToken(Lexer* lexer, Token* token)
                 {
                     token->type = TOKEN_MAT4;
                 }
-
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "MADNESS_UUID"))
+                {
+                    token->type = TOKEN_UUID;
+                }
 
 
             } // Numbers

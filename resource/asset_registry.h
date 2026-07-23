@@ -152,4 +152,54 @@ void asset_registry_remove(Asset_Registry* asset_registry)
 }
 
 
+bool asset_registry_exists_by_source_path(Asset_System* asset_system, String* source_path, MADNESS_UUID* out_uuid)
+{
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (string_compare(meta_data->source_file, source_path))
+        {
+            //found
+            *out_uuid = meta_data->uuid;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool asset_registry_exists_by_engine_path(Asset_System* asset_system, String* engine_path, MADNESS_UUID* out_uuid,
+                                          u64* out_hash)
+{
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (string_compare(meta_data->binary_file, engine_path))
+        {
+            //found
+            *out_uuid = meta_data->uuid;
+            *out_hash = meta_data->hash;
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool asset_registry_get_path_from_uuid(Asset_System* asset_system, MADNESS_UUID uuid, String* out_string,
+                                       Allocator* allocator)
+{
+    //pass in a frame allocator
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (madness_uuid_compare(meta_data->uuid, uuid))
+        {
+            out_string = string_duplicate_alloc(meta_data->binary_file, allocator);
+            return true;
+        }
+    }
+    return false;
+}
+
+
 #endif

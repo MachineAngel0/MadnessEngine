@@ -46,19 +46,57 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-
-void mesh_load(Asset_System* resource_system, const char* asset_path)
+void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset)
 {
-    Mesh_System* mesh_system = resource_system->mesh_system;
-    Heap_Allocator* allocator = resource_system->heap_allocator;
-    Frame_Allocator* frame_allocator = resource_system->frame_allocator;
+    Mesh_System* mesh_system = asset_system->mesh_system;
+    Heap_Allocator* allocator = asset_system->heap_allocator;
+    Frame_Allocator* frame_allocator = asset_system->frame_allocator;
 
-    if (!c_string_path_is_extension(asset_path, ".gltf") && !c_string_path_is_extension(asset_path, ".glb"))
+    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
     {
-        FATAL("DID NOT PASS IN A GLTF FILE");
-        return;
+        ring_enqueue(mesh_system->mesh_ring_queue, &mesh_asset->mesh_gpu_upload[mesh_idx]);
     }
 
+    //take a reference to the og asset
+    Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->mesh_asset_count++];
+    madness_mesh->mesh_count = mesh_asset->mesh_count;
+    madness_mesh->mesh_data = mesh_asset->submeshes;
+
+
+    //create the instance
+    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_parent_instance[mesh_system->
+        mesh_parent_instance_count++];
+    mesh_inst->mesh_asset = (Madness_Mesh_Handle){.handle = mesh_system->mesh_asset_count - 1};
+    mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
+    mesh_inst->mesh_count = mesh_asset->mesh_count;
+    mesh_inst->submesh_instances = allocator_heap_alloc(
+        allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
+
+    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
+    {
+        Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
+
+        //handles
+        submesh_inst->material_handle = (Material_Handle){0};
+        submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
+
+        //gpu friendly format
+        submesh_inst->mesh_gpu_draw.material_instance_handle = 0; // TODO/TEMP:
+        submesh_inst->mesh_gpu_draw.transform_idx = mesh_inst->transform_handle.handle;
+
+        //indirect draw, gpu friendly format
+        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.vertex_offset
+            = madness_mesh->mesh_data[mesh_idx].vertex_offset;
+        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_count
+            = madness_mesh->mesh_data[mesh_idx].index_count;
+        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_offset
+            = madness_mesh->mesh_data[mesh_idx].index_offset;
+    }
+    material_system_add_mesh_instance_and_material(asset_system, mesh_inst);
+}
+
+void mesh_system_load_skinned_mesh(Asset_System* resource_system, Madness_SkMesh_Runtime* skmesh_asset)
+{
     /*{
         //create the parent instance
         Sk_Mesh_Parent_Instance* sk_mesh_parent_inst = &mesh_system->skinned_mesh_instance[mesh_system->
@@ -132,52 +170,19 @@ void mesh_load(Asset_System* resource_system, const char* asset_path)
 
         material_system_add_skmesh_instance_to_default_material_batch(resource_system, sk_mesh_parent_inst);
     }*/
-    {
-        //TODO: load it in and convert to our format
-        // rn assume we just have the data
-        Madness_Mesh* madness_mesh = {0};
-        Mesh_GPU_Upload* mesh_upload_data = {0};
-
-        for (size_t mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
-        {
-            ring_enqueue(mesh_system->mesh_ring_queue, &mesh_upload_data[mesh_idx]);
-        }
-
-        //create the instance
-        Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_parent_instance[mesh_system->
-            mesh_parent_instance_count++];
-        mesh_inst->mesh_asset = (Mesh_Asset_Handle){.handle = mesh_system->mesh_asset_count - 1};
-        mesh_inst->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-        mesh_inst->mesh_count = madness_mesh->mesh_count;
-        mesh_inst->submesh_instances = allocator_heap_alloc(
-            allocator, sizeof(Madness_SubMesh_Instance) * madness_mesh->mesh_count);
-
-        for (size_t mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
-        {
-            Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
-
-            //handles
-            submesh_inst->material_handle = (Material_Handle){0};
-            submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-
-            //gpu friendly format
-            submesh_inst->mesh_gpu_draw.material_instance_handle = 0; // TODO/TEMP:
-            submesh_inst->mesh_gpu_draw.transform_idx = mesh_inst->transform_handle.handle;
-
-            //indirect draw, gpu friendly format
-            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.vertex_offset
-                = madness_mesh->mesh_data[mesh_idx].vertex_offset;
-            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_count
-                = madness_mesh->mesh_data[mesh_idx].index_count;
-            mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_offset
-                = madness_mesh->mesh_data[mesh_idx].index_offset;
-        }
-
-        material_system_add_mesh_instance_to_default_material_batch(resource_system, mesh_inst);
-    }
 }
 
+bool mesh_system_exists_mesh(Asset_System* resource_system, Madness_Mesh_Handle* out_handle, u64 hash)
+{
+    DEBUG("TODO: mesh_system_exists_mesh")
+    return false;
+}
 
+bool mesh_system_exists_skmesh(Asset_System* resource_system, Madness_SkMesh_Handle* out_handle, u64 hash)
+{
+    DEBUG("TODO: mesh_system_exists_mesh")
+    return false;
+}
 
 GLTF_Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
                                                                 Madness_SkMesh_Instance* sk_mesh_inst)

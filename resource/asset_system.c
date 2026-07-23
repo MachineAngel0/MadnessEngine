@@ -1,5 +1,6 @@
 ﻿#include "asset_system.h"
 
+#include "asset_serialization.h"
 #include "material_system.h"
 #include "mesh_system.h"
 #include "sprite_system.h"
@@ -147,15 +148,11 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine
             return asset_system->texture_system->default_texture_handle;
         }
 
-        Madness_Texture_Editor editor_texture = {0};
+        Madness_Texture_Runtime engine_texture = {0};
 
-        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
-        fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
-        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
-                                                         editor_texture.texture.pixels_size);
-        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+        asset_texture_deserialize_heap(&engine_texture, fptr, asset_system->heap_allocator);
 
-        texture_system_upload_new_texture(asset_system, uuid, hash, editor_texture.texture, editor_texture.pixel_data,
+        texture_system_upload_new_texture(asset_system, uuid, hash, engine_texture.texture, engine_texture.pixel_data,
                                           &texture_handle);
     }
     /*else
@@ -210,16 +207,11 @@ bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, 
     bool debug = true;
     if (debug)
     {
-        Madness_Font_Editor editor_texture = {0};
+        Madness_Font_Runtime editor_texture = {0};
 
         fptr = fopen(engine_asset_path, "rb");
 
-        fread(&editor_texture.font_texture, sizeof(Madness_Font), 1, fptr);
-        fread(&editor_texture.texture, sizeof(Madness_Texture), 1, fptr);
-        fread(&editor_texture.version, sizeof(editor_texture.version), 1, fptr);
-        editor_texture.pixel_data = allocator_heap_alloc(asset_system->heap_allocator,
-                                                         editor_texture.texture.pixels_size);
-        fread(editor_texture.pixel_data, editor_texture.texture.pixels_size, 1, fptr);
+        asset_font_deserialize_heap(&editor_texture, fptr, asset_system->heap_allocator);
 
         texture_system_upload_new_font(asset_system, uuid, hash, editor_texture.texture, editor_texture.font_texture,
                                        editor_texture.pixel_data, out_handle);
@@ -232,6 +224,9 @@ bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, 
         // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
         // Madness_Texture_Runtime runtime_texture = {0};
         // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+
+
+
     }
     fclose(fptr);
 
