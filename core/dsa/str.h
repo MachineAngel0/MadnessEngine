@@ -87,6 +87,7 @@ String* string_strip_whitespace(const String* str);
 
 const char* string_to_c_string(const String* s);
 const char* string_to_c_string_allocator(const String* s, Allocator* allocator);
+const char* string_to_c_string_alloc_heap(const String* s, Heap_Allocator* allocator);
 
 bool string_compare_c_string(const String* str1, const char* c_str);
 

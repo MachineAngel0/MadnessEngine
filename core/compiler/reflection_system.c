@@ -590,7 +590,7 @@ bool reflection_system_set_default_values(Reflection_System* reflection_system, 
     case REFLECTION_TYPE_MAX:
         break;
     }
-
+    return true;
 
 }
 
@@ -603,6 +603,7 @@ Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_s
     }
     MASSERT(false);
     return (Reflection_Struct){0};
+
 }
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name)

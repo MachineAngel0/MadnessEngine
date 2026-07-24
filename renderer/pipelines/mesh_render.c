@@ -97,19 +97,19 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 
         //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
-                                            submesh_upload_data->vertex,
-                                            submesh_upload_data->vertex_bytes);
+                                            submesh_upload_data->gpu_data->vertex,
+                                            submesh_upload_data->submesh->vertex_bytes);
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->index_staging_buffer_handle,
-                                            submesh_upload_data->indices,
-                                            submesh_upload_data->indices_bytes);
+                                            submesh_upload_data->gpu_data->indices,
+                                            submesh_upload_data->submesh->indices_bytes);
 
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->normal_staging_buffer_handle,
-                                            submesh_upload_data->normal,
-                                            submesh_upload_data->normal_bytes);
+                                            submesh_upload_data->gpu_data->normal,
+                                            submesh_upload_data->submesh->normal_bytes);
 
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->uv_staging_buffer_handle,
-                                            submesh_upload_data->uv,
-                                            submesh_upload_data->uv_bytes);
+                                            submesh_upload_data->gpu_data->uv,
+                                            submesh_upload_data->submesh->uv_bytes);
     }
 
     //skinned data
@@ -155,9 +155,6 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
                                                    render_packet->draw_3d_data_packet.world_space_matrix_array,
                                                    sizeof(mat4s) * render_packet->draw_3d_data_packet.
                                                    world_space_matrix_count);
-
-    //stuff uploaded very frame
-
 
 
     //skinned matrix

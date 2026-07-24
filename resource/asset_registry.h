@@ -201,5 +201,20 @@ bool asset_registry_get_path_from_uuid(Asset_System* asset_system, MADNESS_UUID 
     return false;
 }
 
+bool asset_registry_get_metadata_from_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Asset_MetaData* out_meta_data)
+{
+    //pass in a frame allocator
+    for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+        if (madness_uuid_compare(meta_data->uuid, uuid))
+        {
+            *out_meta_data = *meta_data;
+            return true;
+        }
+    }
+    return false;
+}
+
 
 #endif

@@ -25,9 +25,9 @@ MAPI bool asset_converter_msdf_font(Asset_System* asset_system, const char* file
 MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path);
 
 
-MAPI bool asset_converter_material(Asset_System* asset_system, const char* material_name, const char* asset_name,
-                                           GLTF_Material* gltf_material, Reflection_Registry* reflection_registry_material,
-                                           Asset_Type asset_type, MADNESS_UUID* out_uuid);
+MAPI bool asset_converter_material_asset(Asset_System* asset_system, const char* material_name, const char* asset_name,
+                                   Reflection_Registry* reflection_registry_material,
+                                   Asset_Type asset_type, MADNESS_UUID* out_uuid);
 
 
 

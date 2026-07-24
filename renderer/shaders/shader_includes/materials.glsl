@@ -38,6 +38,8 @@ struct Pbr{
     float ambient_occlusion_strength;
     float emissive_strength;
 
+    uint padding0;
+
     uint color_index;
     uint normal_index;
     uint metallic_index;
@@ -46,7 +48,6 @@ struct Pbr{
     uint emissive_index;
     uint _padding0;
     uint _padding1;
-    uint _padding2;
 };
 
 

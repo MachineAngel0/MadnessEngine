@@ -514,7 +514,7 @@ void insanity_ui_push_text_float(float val)
 
 void insanity_ui_push_image(const char* texture_file)
 {
-    insanity_ui->image_stack = asset_load_texture(insanity_ui->asset_system,
+    insanity_ui->image_stack = asset_load_texture_path(insanity_ui->asset_system,
                                                                texture_file);
 }
 

@@ -106,15 +106,16 @@ typedef struct Madness_Asset
 } Madness_Asset;
 
 
-typedef Handle T_Handle;
-
+typedef struct Material_Asset_Handle{
+    u32 handle;
+}Material_Asset_Handle;
 
 typedef struct Material_Handle
 {
-    u32 handle;
-    // u32 batch_handle;
+    u32 batch_type;
+    u32 batch_handle;
+    u32 index_handle;
 } Material_Handle;
-
 
 typedef struct Mesh_Asset_Handle
 {
@@ -343,15 +344,20 @@ typedef struct Material_GPU_Definition{
 
 typedef struct Material_Asset
 {
+    //information about the material structure
     Material_Info material_info;
-
     Reflection_Runtime_Struct* reflection_material_data;
-    void* material_definition_data; // runtime data
-
     Material_GPU_Definition* material_gpu_definition;
-
-
 } Material_Asset;
+
+typedef struct Material_Instance{
+    // NOTE: the material data is the serialized data containing the UUID for textures
+    MADNESS_UUID uuid_material_asset;
+    u32 data_size;
+    void* material_data;
+}Material_Instance;
+
+
 
 typedef struct Material_Asset_Runtime
 {
@@ -363,13 +369,12 @@ typedef struct Material_Asset_Runtime
 typedef struct Material_Batch
 {
     Material_Info material_info;
-    Reflection_Runtime_Struct* material_struct;
+    Reflection_Runtime_Struct* material_cpu_definition;
     Material_GPU_Definition* material_gpu_definition;
 
     Dynamic_Array* material_data;
     // PC_General* pc_general; // TODO:
 
-    //TODO: you could use a union for the mesh types
     Dynamic_Array* mesh_instances;
 
 } Material_Batch;
@@ -533,35 +538,6 @@ typedef struct Skinned_Mesh_GPU_Upload
     vec4s* weights;
 } Skinned_Mesh_GPU_Upload;
 
-typedef struct Mesh_GPU_Upload
-{
-    //information to upload into the associated buffer
-    u32 vertex_offset;
-    u32 vertex_bytes;
-
-    u32 vertex_color_offset;
-    u32 vertex_color_bytes;
-
-    u32 indices_bytes;
-    VkIndexType index_type;
-
-    u32 normal_offset;
-    u32 normal_bytes;
-
-    u32 tangent_offset;
-    u32 tangent_bytes;
-
-    u32 uv_offset;
-    u32 uv_bytes;
-
-
-    vec4s* tangent;
-    vec4s* vertex_color;
-    vec3s* vertex;
-    vec3s* normal;
-    vec2s* uv;
-    u8* indices;
-} Mesh_GPU_Upload;
 
 typedef struct Madness_Skinned_SubMesh_Instance
 {
@@ -656,9 +632,6 @@ typedef struct Madness_SubMesh
     u32 vertex_color_offset;
     u32 normal_offset;
     u32 uv_offset;
-
-    MADNESS_UUID material_uuid;
-
 } Madness_SubMesh;
 
 
@@ -667,7 +640,8 @@ typedef struct Madness_Mesh
     //asset file data
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
-    //material data probably
+    Material_Instance* material_instance;
+    Material_Handle* material_handles;
 } Madness_Mesh;
 
 
@@ -675,8 +649,9 @@ typedef struct Madness_Skinned_Mesh
 {
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
+    Material_Instance* material_instance;
+    //
     Madness_Skinned_SubMesh* skinned_mesh_data;
-
     GLTF_Animation_Data* animation_data;
 } Madness_Skinned_Mesh;
 
@@ -692,6 +667,20 @@ typedef struct Madness_Mesh_GPU_Data
     u8* indices;
 } Madness_Mesh_GPU_Data;
 
+typedef struct Mesh_GPU_Upload
+{
+    Madness_SubMesh* submesh;
+    Madness_Mesh_GPU_Data* gpu_data;
+} Mesh_GPU_Upload;
+
+
+
+typedef struct Madness_SkMesh_GPU_Data
+{
+    vec4s* joints;
+    vec4s* weights;
+} Madness_SkMesh_GPU_Data;
+
 
 typedef struct Madness_Mesh_Runtime
 {
@@ -699,6 +688,7 @@ typedef struct Madness_Mesh_Runtime
     u32 mesh_count;
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
+    Material_Instance* material_instance;
 } Madness_Mesh_Runtime;
 
 
@@ -708,6 +698,13 @@ typedef struct Madness_SkMesh_Runtime
     u32 mesh_count;
     Madness_SubMesh* sub_mesh;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
+    Material_Instance* material_instance;
+
+
+    Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
+    Madness_Skinned_SubMesh* skinned_mesh_data;
+    GLTF_Animation_Data* animation_data;
+
 } Madness_SkMesh_Runtime;
 
 
@@ -718,9 +715,10 @@ typedef struct Madness_SkMesh_Runtime
 
 typedef struct Material_System
 {
-    Heap_Allocator* heap_allocator;
     Reflection_System* reflection_system;
     Reflection_Registry* reflection_registry;
+
+    //TODO: some static version of a material registry, that gets loaded on startup
 
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
@@ -730,6 +728,15 @@ typedef struct Material_System
 
     Material_Batch skinned_batch[100];
     u32 skinned_batch_count;
+
+    //material batch handle
+    // -> for the submesh instance
+    //material asset handle -> for the parent mesh
+    Material_Asset material_assets[MAX_DEFAULT_MATERIAL];
+    u32 material_asset_count;
+
+    // HASH_MAP_TYPE(u64, Material_Asset)* hash_to_mat_asset;
+
 } Material_System;
 
 
@@ -773,7 +780,8 @@ typedef struct Texture_System
     RING_QUEUE_TYPE(u32)* available_texture_queue;
     RING_QUEUE_TYPE(u32)* available_font_queue;
 
-    hash_map* texture_hash_map;
+    HASH_MAP_TYPE(u64,u32)* texture_hash_map;
+
 
     //textures that the renderer needs to upload to the gpu
     RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_upload_queue;
@@ -846,7 +854,7 @@ typedef struct Mesh_System
 
 
     // data*, offset, byte_size ->for all the types
-    RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_ring_queue;
+    RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
 

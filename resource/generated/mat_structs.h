@@ -4,6 +4,122 @@
 
 void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 {
+	Reflection_Runtime_Struct_Field Material_Default_CPU_Fields[] =
+	{
+		{
+			.name = "flags",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, flags)
+		},
+		{
+			.name = "color",
+			.type = REFLECTION_TYPE_VEC4,
+			.type_name = "vec4s",
+			.offset = offsetof(Material_Default_CPU, color)
+		},
+		{
+			.name = "ambient_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, ambient_strength)
+		},
+		{
+			.name = "roughness_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, roughness_strength)
+		},
+		{
+			.name = "metallic_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, metallic_strength)
+		},
+		{
+			.name = "normal_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, normal_strength)
+		},
+		{
+			.name = "ambient_occlusion_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, ambient_occlusion_strength)
+		},
+		{
+			.name = "emissive_strength",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Default_CPU, emissive_strength)
+		},
+		{
+			.name = "padding0",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, padding0)
+		},
+		{
+			.name = "color_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, color_texture)
+		},
+		{
+			.name = "normal_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, normal_texture)
+		},
+		{
+			.name = "metallic_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, metallic_texture)
+		},
+		{
+			.name = "roughness_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, roughness_texture)
+		},
+		{
+			.name = "ambient_occlusion_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, ambient_occlusion_texture)
+		},
+		{
+			.name = "emissive_texture",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, emissive_texture)
+		},
+		{
+			.name = "padding1",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, padding1)
+		},
+		{
+			.name = "padding2",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default_CPU, padding2)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Default_CPU_Runtime_Struct =
+	{
+		.name = "Material_Default_CPU",
+		.fields = Material_Default_CPU_Fields,
+		.field_count = 17,
+		.struct_size = sizeof(Material_Default_CPU)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Default_CPU_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Material_Spherical_Billboard_Fields[] =
 	{
 		{
@@ -134,13 +250,25 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, emissive_texture)
 		},
+		{
+			.name = "padding1",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default, padding1)
+		},
+		{
+			.name = "padding2",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Default, padding2)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_Default_Runtime_Struct =
 	{
 		.name = "Material_Default",
 		.fields = Material_Default_Fields,
-		.field_count = 15,
+		.field_count = 17,
 		.struct_size = sizeof(Material_Default)
 	};
 

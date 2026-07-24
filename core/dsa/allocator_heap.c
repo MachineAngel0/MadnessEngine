@@ -5,7 +5,6 @@
 
 void allocator_heap_free_all(Heap_Allocator* fl)
 {
-
     fl->head = fl->data;
     fl->head->free = true;
     fl->head->block_size = fl->capacity - sizeof(Heap_Block);
@@ -32,15 +31,16 @@ void allocator_heap_init(Heap_Allocator* fl, void* backing_memory, const size_t 
     fl->head->block_size = memory_size - sizeof(Heap_Block);
     fl->head->next = NULL;
     fl->head->prev = NULL;
-
-
-
 }
 
 void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t alignment)
 {
     MASSERT(fl);
-    MASSERT(size > 0);
+    if (size <= 0)
+    {
+        WARN("allocator_heap_alloc_aligned: size is 0 or less");
+        return NULL;
+    }
 
 
     Heap_Block* current = fl->head;
@@ -77,7 +77,6 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t align
     /*void* out_data = (void*)((u8*)current + sizeof(Heap_Block));
     memset(out_data,0,current->block_size);*/
     return (void*)((u8*)current + sizeof(Heap_Block));
-
 }
 
 void* allocator_heap_alloc(Heap_Allocator* fl, const size_t size)
@@ -90,8 +89,6 @@ void allocator_heap_free(Heap_Allocator* fl, void* ptr)
     Heap_Block* free_block = (Heap_Block*)((u8*)ptr - sizeof(Heap_Block));
     free_block->free = true;
     fl->used -= free_block->block_size + sizeof(Heap_Block);
-
-
 
 
     if (free_block->prev && free_block->prev->free)
@@ -117,8 +114,6 @@ void allocator_heap_free(Heap_Allocator* fl, void* ptr)
         next_block->next = NULL;
         next_block->prev = NULL;
     }
-
-
 }
 
 void allocator_heap_debug_print(Heap_Allocator* fl)
@@ -139,7 +134,6 @@ void allocator_heap_debug_print(Heap_Allocator* fl)
         printf("Recently Free blocks : size: %llu\n", current->block_size);
        current = current->next;
     }*/
-
 }
 
 void allocator_heap_test(void)
@@ -170,15 +164,11 @@ void allocator_heap_test(void)
     s32 array_s[100];
 
 
-
     s32* array_boi = allocator_heap_alloc(fl, sizeof(s32) * 100);
     array_boi[99] = 1;
     allocator_heap_debug_print(fl);
-    allocator_heap_free(fl, array_boi );
+    allocator_heap_free(fl, array_boi);
     allocator_heap_debug_print(fl);
-
-
-
 
 
     allocator_heap_free_all(fl);
@@ -188,6 +178,4 @@ void allocator_heap_test(void)
     free(fl);
 
     TEST_END("FREE LIST ALLOCATOR");
-
-
 }

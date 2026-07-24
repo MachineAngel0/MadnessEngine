@@ -7,8 +7,7 @@
 #include "asset_registry.h"
 #include "asset_serialization.h"
 #include "resource_types.h"
-#include "ring_queue.h"
-#include "texture_system.h"
+
 
 
 //TODO/GOALS:
@@ -60,13 +59,70 @@ MAPI void render_packet_clear(Render_Packet* renderer_packets);
 void asset_system_reload_texture(Asset_System* a);
 
 //should we have the asset system be responsible for basically everything, kinda, it should probably be able to touch everything
-Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine_asset_path);
+Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path);
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
+
+bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Texture_Handle* out_handle)
+{
+    Asset_MetaData meta_data = {0};
+
+    if (uuid.high == 0 && uuid.low == 0)
+    {
+        WARN("UUID OF 0,0 passed in ")
+        *out_handle = (Texture_Handle){0};
+        return true;
+    }
+
+    if (!asset_registry_get_metadata_from_uuid(asset_system, uuid, &meta_data))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Texture_Handle){0};
+        return out_handle;
+    }
+
+
+    //has asset already been loaded
+    if (texture_system_exists(asset_system, out_handle, meta_data.hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
+    if (!fptr)
+    {
+        MASSERT(false);
+        *out_handle = (Texture_Handle){0};
+        return false;
+    }
+
+    bool editor = true;
+    if (editor)
+    {
+        Madness_Texture_Runtime runtime = {0};
+        asset_texture_deserialize_heap(&runtime, fptr, asset_system->heap_allocator);
+        texture_system_upload_new_texture(asset_system, meta_data.uuid, meta_data.hash, runtime.texture, runtime.pixel_data, out_handle);
+        return true;
+    }else
+    {
+        MASSERT(false);
+
+    }
+
+
+    return true;
+}
+
+
 
 bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle);
 Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name); //TODO:
 
-bool asset_load_mesh(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle)
+bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle)
+{
+    MASSERT(false); // TOOD:
+}
+bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle)
 {
     MADNESS_UUID uuid = {0, 0};
     u64 hash = 0;
@@ -115,20 +171,43 @@ bool asset_load_mesh(Asset_System* asset_system, const char* engine_asset_path, 
     return true;
 }
 
-bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material_Handle* out_handle)
+bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material_Asset_Handle* out_handle)
 {
-    String* out_path = NULL;
-    if (!asset_registry_get_path_from_uuid(asset_system, uuid, out_path, asset_system->frame_allocator))
+    Asset_MetaData meta_data = {0};
+    if (!asset_registry_get_metadata_from_uuid(asset_system,uuid, &meta_data))
     {
-
+        MASSERT(false);
+        return false;
     }
 
+
     //material system does exists function
+    //has asset already been loaded
+    // if (material_system_exists(asset_system, out_handle, hash))
+    // {
+    // return true;
+    // }
 
-    material_system_load_material(Material_System* material_system, Material_Asset* material_asset)
+    FILE* fptr = NULL;
+    bool debug = true;
+    if (debug)
+    {
+        fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
 
-    // material_system_register_batch();
+        Material_Asset_Runtime runtime_material = {0};
+        runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
+        asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
+        material_system_load_material(asset_system, meta_data.uuid, meta_data.hash, &runtime_material, out_handle);
+    }
+    else
+    {
+        MASSERT(false);
+        //TODO:
+    }
 
+
+
+    return true;
 
 }
 

@@ -250,9 +250,17 @@ const char* string_to_c_string_allocator(const String* s, Allocator* allocator)
     memcpy(c_string, s->chars, s->length);
     c_string[s->length] = '\0';
     return c_string;
-
-
 }
+
+const char* string_to_c_string_alloc_heap(const String* s, Heap_Allocator* allocator)
+{
+    //when you need to convert it to a valid directory, this function is nice
+    char* c_string = allocator_heap_alloc(allocator, sizeof(char) * (s->length + 1)); // +1 for the null terminated string
+    memcpy(c_string, s->chars, s->length);
+    c_string[s->length] = '\0';
+    return c_string;
+}
+
 
 bool string_compare_c_string(const String* str1, const char* c_str)
 {

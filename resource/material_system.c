@@ -1,14 +1,8 @@
 ﻿#include "material_system.h"
+#include "asset_system.h"
 
-Material_System* material_system_init(Memory_System* memory_system)
+bool material_system_init(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system)
 {
-    Material_System* material_system = memory_system_alloc(memory_system, sizeof(Material_System),
-                                                           MEMORY_SUBSYSTEM_RESOURCE);
-
-
-    material_system->heap_allocator = memory_system_heap_allocator_create(
-        memory_system, MB(1), MEMORY_SUBSYSTEM_RESOURCE);
-
     //reflection/registry system
     material_system->reflection_system = reflection_system_init(memory_system);
     reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
@@ -26,16 +20,6 @@ Material_System* material_system_init(Memory_System* memory_system)
     generate_runtime_structs_material(material_system->reflection_registry);
 
     reflection_registry_debug_print_info(material_system->reflection_registry);
-
-
-    //material creation
-    material_system_instantiate_material(material_system, "mesh", "Material_Default",
-                                         Shader_Mesh_Type_Mesh, Shader_Blend_Mode_Default,
-                                         Shader_Pass_Type_Opaque | Shader_Pass_Type_Shadow);
-    material_system_instantiate_material(material_system, "skinned_mesh", "Material_Default",
-                                         Shader_Mesh_Type_Skinned, Shader_Blend_Mode_Default,
-                                         Shader_Pass_Type_Opaque | Shader_Pass_Type_Shadow);
-
 
 
     return material_system;
@@ -63,22 +47,124 @@ bool material_system_generate_render_packet(Material_System* material_system,
     return true;
 }
 
-/*Material_Handle material_system_create_material(Material_System* material_system)
+void* material_system_resolve_and_load_material_data(Asset_System* asset_system, Material_Asset_Handle asset_handle,
+                                                     Material_Instance* material_instance)
 {
-    return (Material_Handle){material_system->pbr_count++};
-}*/
+    //convert from our serialized material format to our runtime format
+
+    // TODO: properly find the asset based on uuid
+    Material_Asset* material_asset = &asset_system->material_system->material_assets[asset_handle.handle];
+
+    void* material_data = allocator_alloc(asset_system->frame_allocator,
+                                          material_asset->material_gpu_definition->struct_size);
 
 
+    for (u32 i = 0; i < material_asset->reflection_material_data->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &material_asset->reflection_material_data->fields[i];
 
-void material_system_pbr_init(Material_Default* out_data)
+        if (field->type == REFLECTION_TYPE_UUID)
+        {
+            MASSERT(material_asset->material_gpu_definition->types[i] == REFLECTION_TYPE_U32);
+
+            //load in texture and set the bindless id to the proper spot in the material data
+
+            MADNESS_UUID* uuid_data = (MADNESS_UUID*)((u8*)material_instance->material_data + field->offset);
+            Texture_Handle texture_handle = {0};
+            asset_load_texture_uuid(asset_system, *uuid_data, &texture_handle);
+
+
+            memcpy(((u8*)material_data + material_asset->material_gpu_definition->field_offsets[i]), &texture_handle.handle,
+                   sizeof(u32));
+        }
+        else if (material_asset->material_gpu_definition->types[i] == field->type)
+        {
+            //copy from the location of the
+            memcpy((u8*)material_data + material_asset->material_gpu_definition->field_offsets[i],
+                   (u8*)material_instance->material_data + field->offset,
+                   reflection_type_get_size(field->type));
+        }
+        else
+        {
+            MASSERT(false); //this should never happen
+        }
+    }
+
+    return material_data;
+}
+
+
+void material_system_add_mesh_instance_and_material(Asset_System* asset_system, Madness_Mesh* madness_mesh,
+                                                    Madness_Mesh_Instance* parent_instance)
 {
-    out_data->color = glms_vec4_one();
-    out_data->ambient_strength = 1.0f;
-    out_data->roughness_strength = 1.0f;
-    out_data->metallic_strength = 1.0f;
-    out_data->normal_strength = 1.0f;
-    out_data->ambient_occlusion_strength = 1.0f;
-    out_data->emissive_strength = 1.0f;
+    //were assuming the submeshes already have their material handles
+
+    Material_System* material_system = asset_system->material_system;
+
+    for (u32 mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; ++mesh_idx)
+    {
+        Madness_SubMesh_Instance* submesh_instance = &parent_instance->submesh_instances[mesh_idx];
+        Material_Instance* mat_inst = &madness_mesh->material_instance[mesh_idx];
+
+        Material_Asset_Handle handle;
+        asset_load_material(asset_system, mat_inst->uuid_material_asset, &handle);
+        //resolve texture bindless id's
+        void* mat_data = material_system_resolve_and_load_material_data(asset_system, handle, mat_inst);
+
+        //batch wants the render version of the data, not the serialized version
+        Material_Batch* batch = &material_system->mesh_batch[submesh_instance->material_handle.batch_handle];
+
+        dynamic_array_push(batch->mesh_instances, submesh_instance);
+        dynamic_array_push(batch->material_data, mat_data);
+    }
+}
 
 
+bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
+                                           const char* param_name, const void* new_data)
+{
+    Material_System* material_system = asset_system->material_system;
+
+    u64 hash_name = c_string_hash_u64(param_name);
+    if (material_handle.batch_type == 0)
+    {
+        Material_Batch* batch = &material_system->mesh_batch[material_handle.batch_handle];
+        batch->material_gpu_definition;
+        batch->material_cpu_definition;
+
+        for (int i = 0; i < batch->material_gpu_definition->field_count; ++i)
+        {
+            if (batch->material_gpu_definition->name_hashes[i] == hash_name)
+            {
+                void* mat_data = _dynamic_array_get(batch->material_data, material_handle.index_handle);
+                memcpy((u8*)mat_data + batch->material_gpu_definition->field_offsets[i], new_data,
+                       reflection_type_get_size(*batch->material_gpu_definition->types));
+                return true;
+            }
+        }
+    }
+    if (material_handle.batch_type == 1)
+    {
+        Material_Batch* batch = &material_system->skinned_batch[material_handle.batch_handle];
+    }
+
+    MASSERT(false);
+    return false;
+}
+
+void material_system_change_material_data(Asset_System* asset_system, Material_Handle material_handle, void* new_data)
+{
+    MASSERT(false);
+}
+
+void material_system_change_material_texture(Asset_System* asset_system, Material_Handle material_handle,
+                                             const char* param_name, const char* texture_name)
+{
+    MASSERT(false);
+}
+
+void material_system_swap_material(Asset_System* asset_system, Material_Handle material_handle,
+                                   const char* material_name)
+{
+    MASSERT(false);
 }

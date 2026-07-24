@@ -49,18 +49,20 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
-    Heap_Allocator* allocator = asset_system->heap_allocator;
-    Frame_Allocator* frame_allocator = asset_system->frame_allocator;
 
     for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
     {
-        ring_enqueue(mesh_system->mesh_ring_queue, &mesh_asset->mesh_gpu_upload[mesh_idx]);
+        Mesh_GPU_Upload upload = {
+            .submesh = &mesh_asset->submeshes[mesh_idx], .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx]
+        };
+        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
     }
 
     //take a reference to the og asset
     Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->mesh_asset_count++];
     madness_mesh->mesh_count = mesh_asset->mesh_count;
     madness_mesh->mesh_data = mesh_asset->submeshes;
+    madness_mesh->material_instance = mesh_asset->material_instance;
 
 
     //create the instance
@@ -70,7 +72,7 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
     mesh_inst->mesh_count = mesh_asset->mesh_count;
     mesh_inst->submesh_instances = allocator_heap_alloc(
-        allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
+        asset_system->heap_allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
 
     for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
     {
@@ -91,8 +93,11 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
             = madness_mesh->mesh_data[mesh_idx].index_count;
         mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_offset
             = madness_mesh->mesh_data[mesh_idx].index_offset;
+
+        //just loads the definition of the material
+
+        material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
     }
-    material_system_add_mesh_instance_and_material(asset_system, mesh_inst);
 }
 
 void mesh_system_load_skinned_mesh(Asset_System* resource_system, Madness_SkMesh_Runtime* skmesh_asset)

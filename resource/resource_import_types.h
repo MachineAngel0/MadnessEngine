@@ -109,79 +109,14 @@ typedef struct GLTF_Animation_Data
 } GLTF_Animation_Data;
 
 
-typedef struct GLTF_Material
-{
-    u32 flags; // Mesh_PBR_Flags
-    vec4s color; // this will be at a default of 1.0, which is white but won't affect the material
-    //ALL FROM RANGES 0-1
-    float ambient_strength; // optional for now we can remove it later
-    float roughness_strength;
-    float metallic_strength;
-    float normal_strength;
-    float ambient_occlusion_strength;
-    float emissive_strength;
-
-    String* color_texture;
-    String* normal_texture;
-    String* metallic_texture;
-    String* roughness_texture;
-    String* ambient_occlusion_texture;
-    String* emissive_texture;
-
-    MADNESS_UUID color_uuid;
-    MADNESS_UUID normal_uuid;
-    MADNESS_UUID metallic_uuid;
-    MADNESS_UUID roughness_uuid;
-    MADNESS_UUID ambient_occlusion_uuid;
-    MADNESS_UUID emissive_uuid;
-
-} GLTF_Material;
 
 
-typedef struct GLTF_SubMesh
-{
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
-
-    u32 vertex_count; // this is also the count for basically every field except the index
-    u32 index_count;
-    u8 index_type; // enum
-
-    //the material specifics what to load out of the file ideally
-    GLTF_Material material_default;
-    MADNESS_UUID material_uuid;
-
-    vec4s* tangent;
-    vec4s* vertex_color;
-    vec3s* vertex;
-    vec3s* normal;
-    vec2s* uv;
-    u8* indices;
-} GLTF_SubMesh;
 
 
-typedef struct GLTF_Skinned_SubMesh
-{
-    u32 joint_bytes;
-    u32 weight_bytes;
 
-    vec4s* joints;
-    vec4s* weights;
-} GLTF_Skinned_SubMesh;
 
-typedef struct GLTF_Mesh
-{
-    u32 mesh_count;
-    GLTF_SubMesh* submesh;
-    //might not exist, just depends on the file
-    bool has_skeleton;
-    GLTF_Skinned_SubMesh* skinned_submesh;
-    GLTF_Animation_Data* animation_data;
-} GLTF_Mesh;
+
+
 
 
 

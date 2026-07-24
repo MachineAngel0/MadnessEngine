@@ -42,7 +42,7 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
 
 
-    texture_system->default_texture_handle = asset_load_texture(
+    texture_system->default_texture_handle = asset_load_texture_path(
         asset_system, "../z_assets_engine/texture/error_texture.mtex");
 
     return texture_system;

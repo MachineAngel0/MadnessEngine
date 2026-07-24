@@ -32,16 +32,12 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
 //Shader Batch system
 
 void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_System* shader_system,
-                                                 const char* shader_name,
-                                                 Shader_Stage_Type shader_stage,
-                                                 Shader_Pass_Type shader_pass,
-                                                 Shader_Mesh_Type mesh_type,
-                                                 Shader_Blend_Mode blend_mode,
+                                                 Material_Info* material_info,
                                                  u32 material_stride,
                                                  u32 initial_material_count)
 {
     Vulkan_Shader_Batch* shader_batch = NULL;
-    switch (mesh_type)
+    switch (material_info->mesh_type)
     {
     case Shader_Mesh_Type_Mesh:
         shader_batch = &shader_system->mesh_batch[shader_system->mesh_batch_count++];
@@ -49,7 +45,6 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
     case Shader_Mesh_Type_Skinned:
         shader_batch = &shader_system->skinned_batch[shader_system->skinned_batch_count++];
         break;
-
     }
 
     if (!shader_batch)
@@ -57,18 +52,19 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
         MASSERT(false);
     }
 
-    shader_batch->shader_name = c_string_duplicate_heap_alloc(shader_name, renderer->heap_allocator);
-    shader_batch->shader_stage_type = shader_stage;
-    shader_batch->shader_pass_type = shader_pass;
+    shader_batch->shader_name = string_to_c_string_alloc_heap(material_info->shader_name, renderer->heap_allocator);
+    shader_batch->shader_stage_type = material_info->shader_stage;
+    shader_batch->shader_pass_type = material_info->shader_pass;
     shader_batch->draw_count = 0;
     shader_batch->material_stride = material_stride;
-    shader_batch->mesh_type = mesh_type;
-    shader_batch->blend_mode = blend_mode;
+    shader_batch->mesh_type = material_info->mesh_type;
+    shader_batch->blend_mode = material_info->blend_mode;
 
 
     //load pipeline from our configs
     //TODO: add more configs when neccessary
-    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode, Renderpass_Type_Opaque,
+    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode,
+                                    Renderpass_Type_Opaque,
                                     &shader_batch->pipeline, &shader_batch->wireframe_pipeline);
 
 
@@ -102,7 +98,6 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
                                                                      BUFFER_TYPE_CPU_STORAGE,
                                                                      sizeof(SKMesh_GPU_Draw) * ssbo_init_amount);
         break;
-
     }
 
 
@@ -124,12 +119,8 @@ void _shader_system_shader_batch_create_internal(Renderer* renderer, Shader_Syst
 void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system, Material_Batch* material_batch)
 {
     _shader_system_shader_batch_create_internal(renderer, renderer->shader_system,
-                                                string_to_c_string(material_batch->material_info.shader_name),
-                                                material_batch->material_info.shader_stage,
-                                                material_batch->material_info.shader_pass,
-                                                material_batch->material_info.mesh_type,
-                                                material_batch->material_info.blend_mode,
-                                                material_batch->material_struct->struct_size,
+                                                &material_batch->material_info,
+                                                material_batch->material_gpu_definition->struct_size,
                                                 material_batch->material_data->num_items);
 
     /*
@@ -215,7 +206,8 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
     for (int i = 0; i < render_packet->draw_3d_data_packet.mesh_batch_count; ++i)
     {
         if (hash_table_contains(shader_system->shader_batch_hash_table,
-                                string_to_c_string(render_packet->draw_3d_data_packet.mesh_batch[i].material_info.shader_name)))
+                                string_to_c_string(
+                                    render_packet->draw_3d_data_packet.mesh_batch[i].material_info.shader_name)))
         {
             continue;
         }
@@ -226,17 +218,16 @@ void shader_system_check_for_new_shader_batches(Renderer* renderer, Shader_Syste
     for (int i = 0; i < render_packet->draw_3d_data_packet.skinned_batch_count; ++i)
     {
         if (hash_table_contains(shader_system->shader_batch_hash_table,
-                                string_to_c_string(render_packet->draw_3d_data_packet.skinned_batch[i].material_info.shader_name)))
+                                string_to_c_string(
+                                    render_packet->draw_3d_data_packet.skinned_batch[i].material_info.shader_name)))
         {
             continue;
         }
 
-        shader_system_shader_batch_create(renderer, shader_system, &render_packet->draw_3d_data_packet.skinned_batch[i]);
+        shader_system_shader_batch_create(renderer, shader_system,
+                                          &render_packet->draw_3d_data_packet.skinned_batch[i]);
     }
 }
-
-
-
 
 
 #endif //SHADER_SYSTEM_H

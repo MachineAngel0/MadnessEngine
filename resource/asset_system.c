@@ -32,7 +32,10 @@ Asset_System* asset_system_init(Memory_System* memory_system)
 
 
     asset_system->scene = scene_init(memory_system);
-    asset_system->material_system = material_system_init(memory_system);
+
+    asset_system->material_system = memory_system_alloc(memory_system, sizeof(Material_System),
+                                                       MEMORY_SUBSYSTEM_RESOURCE);
+    material_system_init(asset_system->material_system, asset_system, memory_system);
 
     asset_system->sprite_system = sprite_system_init(memory_system);
     asset_system->mesh_system = mesh_system_init(asset_system, memory_system);
@@ -99,21 +102,23 @@ void render_packet_clear(Render_Packet* renderer_packets)
     memset(renderer_packets, 0, sizeof(Render_Packet));
 }
 
-Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine_asset_path)
+Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path)
 {
+    //TODO: this should load honestly from either engine or import path
+
     //either load from metadata -> binary or binary blob
     //then send into the texture system
     //in general we just want to deserialize the data quickly,
     //the deserialization is the same, it just depends which file data we end up giving it
 
-    String* asset_path = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+    String* load_asset_path = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, asset_system->frame_allocator);
 
     MADNESS_UUID uuid = {0, 0};
     u64 hash = 0;
     for (u64 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
     {
         Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
-        if (string_compare(meta_data->binary_file, asset_path))
+        if (string_compare(meta_data->binary_file, load_asset_path))
         {
             //found
             uuid = meta_data->uuid;
@@ -141,7 +146,7 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine
     bool debug = true;
     if (debug)
     {
-        fptr = fopen(engine_asset_path, "rb");
+        fptr = fopen(asset_path, "rb");
         if (!fptr)
         {
             //TODO: since were in the editor, we should at least try to find the asset in our asset folder
@@ -168,6 +173,8 @@ Texture_Handle asset_load_texture(Asset_System* asset_system, const char* engine
 
     return texture_handle;
 }
+
+
 
 bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle)
 {
