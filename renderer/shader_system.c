@@ -20,7 +20,7 @@ Shader_System* shader_system_init(Renderer* renderer)
     memset(out_shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
 
     //we store the pointer, we dont want a copy
-    out_shader_system->shader_batch_hash_table = HASH_TABLE_CREATE(Vulkan_Shader_Batch*, 100);
+    out_shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_ID), 100);
 
 
     INFO("SHADER SYSTEM CREATED")
@@ -141,6 +141,6 @@ void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* sha
                                                texture_upload->bindless_location);
 
         //TODO: pass in the allocator, that allocated this
-        // stbi_image_free(texture_upload->pixel_data); //NOTE: seems to work?
+        allocator_heap_free(renderer->resource_system->heap_allocator, texture_upload->pixel_data);
     }
 }

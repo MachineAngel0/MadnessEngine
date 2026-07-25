@@ -3,7 +3,7 @@
 
 //NOTE: idk why these are flags, a renderpass can only be one type
 // unless its specifically to sort where draw objects go
-typedef enum Renderpass_Type
+typedef enum Vulkan_Renderpass_Type
 {
     RENDERPASS_SHADOW_MAP = BITFLAG(0),
     RENDERPASS_FORWARD_LIGHT_CULL = BITFLAG(1), //this would not be a renderpass but a calcuation/compute shader
@@ -12,37 +12,37 @@ typedef enum Renderpass_Type
     RENDERPASS_POST_PROCESSING = BITFLAG(3),
     RENDERPASS_UI = BITFLAG(4),
     RENDERPASS_REFLECTION = BITFLAG(5),
-} Renderpass_Type;
+} Vulkan_Renderpass_Type;
 
-typedef enum Attachment_Type
+typedef enum Vulkan_Attachment_Type
 {
     //there are only 3 types of attachments
     Attachment_Type_Color,
     Attachment_Type_Depth_Stencil,
     // //NOTE: this kinda has to get resolved manually at some point
     // Attachment_Type_Resolve, //aka multisampling, usually on the color channel
-} Attachment_Type;
+} Vulkan_Attachment_Type;
 
-typedef enum Attachment_Load_Operation
+typedef enum Vulkan_Attachment_Load_Op
 {
     LOAD_OP_LOAD = 0, //load attachment
     LOAD_OP_CLEAR = 1, // clear, used during the first time it is accessed
     LOAD_OP_DONT_CARE = 2, // discard or dont use load previous values
     LOAD_OP_NONE = 1000400000,
-} Attachment_Load_Operation;
+} Vulkan_Attachment_Load_Op;
 
-typedef enum Attachment_Store_Operation
+typedef enum Vulkan_Attachment_Store_Op
 {
     STORE_OP_STORE = 0, //stores attachment for later use
     STORE_OP_DONT_CARE = 1, // discards attachment info
     STORE_OP_NONE = 1000400000,
-} Attachment_Store_Operation;
+} Vulkan_Attachment_Store_Op;
 
 typedef struct Attachment
 {
     //NOTE: as some point this is going to need to be conveyed to the graphics pipeline at creation, to be used
     const char* name;
-    Attachment_Type type;
+    Vulkan_Attachment_Type type;
     u32 image_width;
     u32 image_height;
 
@@ -74,9 +74,9 @@ typedef struct Attachment_Handle
 typedef struct RenderPass_Resources
 {
     Attachment_Handle attachment_handle;
-    Attachment_Type type;
-    Attachment_Load_Operation load_op;
-    Attachment_Store_Operation store_op;
+    Vulkan_Attachment_Type type;
+    Vulkan_Attachment_Load_Op load_op;
+    Vulkan_Attachment_Store_Op store_op;
     bool resolve_msaa;
 } RenderPass_Resources;
 
@@ -103,7 +103,7 @@ typedef struct RenderPass
      *
      */
     const char* name; // TODO: should probably replace with String type
-    Renderpass_Type type;
+    Vulkan_Renderpass_Type type;
     RenderPass_Resources* inputs;
     RenderPass_Resources* outputs;
 
@@ -135,7 +135,7 @@ typedef struct Render_Graph
 void vulkan_renderpass_create_new(vulkan_context* context);
 
 
-Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Attachment_Type type,
+Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
                                            VkFormat format, u32 width, u32 height);
 
 //TODO: implement this function properly when needed

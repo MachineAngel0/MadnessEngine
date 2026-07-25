@@ -274,3 +274,8 @@ u64 c_string_hash_u64(const char* string)
 {
     return generate_hash_key_64bit((u8*)string, strlen(string));
 }
+
+u32 c_string_hash_u32(const char* string)
+{
+    return generate_hash_key_32bit((u8*)string, strlen(string));
+}

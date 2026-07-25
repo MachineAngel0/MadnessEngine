@@ -46,8 +46,7 @@ struct Pbr{
     uint roughness_index;
     uint ambient_occlusion_index;
     uint emissive_index;
-    uint _padding0;
-    uint _padding1;
+
 };
 
 

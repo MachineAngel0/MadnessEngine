@@ -112,9 +112,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     Madness_Mesh_Handle handle;
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh", &handle);
+
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
 
 
 

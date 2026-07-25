@@ -1,7 +1,6 @@
 ﻿#include "mesh_system.h"
 
 #include "cgltf.h"
-#include "c_string.h"
 #include "material_system.h"
 #include "resource_types.h"
 #include "ufbx.h"
@@ -64,8 +63,32 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     madness_mesh->mesh_data = mesh_asset->submeshes;
     madness_mesh->material_instance = mesh_asset->material_instance;
 
+    //TODO: out into its own function
+    //find free space for the loaded in data
+    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
+    {
+        Madness_SubMesh* submesh = &madness_mesh->mesh_data[mesh_idx];
+        submesh->vertex_count_offset = mesh_system->vertex_count_size;
+        submesh->vertex_offset = mesh_system->vertex_byte_size;
+        submesh->uv_offset = mesh_system->uv_byte_size;
+        submesh->vertex_color_offset = mesh_system->vertex_color_byte_size;
+        submesh->tangent_offset = mesh_system->tangent_byte_size;
+        submesh->normal_offset = mesh_system->normals_byte_size;
+        submesh->index_offset = mesh_system->index_count_size;
+
+        mesh_system->vertex_count_size += submesh->vertex_bytes / sizeof(vec3s);
+        mesh_system->vertex_byte_size += submesh->vertex_bytes;
+        mesh_system->uv_byte_size += submesh->uv_bytes;
+        mesh_system->vertex_color_byte_size += submesh->vertex_color_bytes;
+        mesh_system->tangent_byte_size += submesh->tangent_bytes;
+        mesh_system->normals_byte_size += submesh->normal_bytes;
+        mesh_system->index_byte_size += submesh->indices_bytes;
+        mesh_system->index_count_size += submesh->index_count;
+    }
+
 
     //create the instance
+    //OPTIMIZE: submehses should really be a flat list so that the render can quickly extract data from it
     Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_parent_instance[mesh_system->
         mesh_parent_instance_count++];
     mesh_inst->mesh_asset = (Madness_Mesh_Handle){.handle = mesh_system->mesh_asset_count - 1};
@@ -82,22 +105,17 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
 
-        //gpu friendly format
-        submesh_inst->mesh_gpu_draw.material_instance_handle = 0; // TODO/TEMP:
-        submesh_inst->mesh_gpu_draw.transform_idx = mesh_inst->transform_handle.handle;
-
         //indirect draw, gpu friendly format
-        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.vertex_offset
-            = madness_mesh->mesh_data[mesh_idx].vertex_offset;
-        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_count
+        submesh_inst->mesh_indirect_draw.vertex_count_offset
+            = madness_mesh->mesh_data[mesh_idx].vertex_count_offset;
+        submesh_inst->mesh_indirect_draw.index_count
             = madness_mesh->mesh_data[mesh_idx].index_count;
-        mesh_inst->submesh_instances[mesh_idx].mesh_indirect_draw.index_offset
+        submesh_inst->mesh_indirect_draw.index_offset
             = madness_mesh->mesh_data[mesh_idx].index_offset;
-
-        //just loads the definition of the material
-
-        material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
     }
+
+    //loads in the material asset if needed, and adds material instance data to the material batch
+    material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
 }
 
 void mesh_system_load_skinned_mesh(Asset_System* resource_system, Madness_SkMesh_Runtime* skmesh_asset)

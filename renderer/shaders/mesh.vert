@@ -18,6 +18,7 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out vec3 out_world_position;
 layout(location = 4) out flat Pbr out_material;
+layout(location = 19) out mat4 out_model;
 
 
 void main() {
@@ -25,7 +26,6 @@ void main() {
     uint draw_idx = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
 //    uint instance_idx = gl_InstanceIndex;
-
 
     //global mesh data
     vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
@@ -36,10 +36,9 @@ void main() {
 
     //get object draw data
     Mesh_Draw_Data cur_mesh_data = pc_mesh.mesh_draw_data_buffer.mesh_data[nonuniformEXT(instance_idx)];
-
     //get transform data
     mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
-
+    out_model = model;
 
     gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
 

@@ -4,7 +4,7 @@
 
 
 bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, Shader_Blend_Mode blend_mode,
-                                     Renderpass_Single_Type renderpass_type,
+                                     Shader_Transluency_Type transluency_type,
                                      Vulkan_Shader_Pipeline* out_pipeline,
                                      Vulkan_Shader_Pipeline* out_wire_frame_pipeline)
 {
@@ -142,24 +142,14 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     // Depth and stencil testing.
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    switch (renderpass_type)
+    switch (transluency_type)
     {
-    case Depth_Test_Type_Predepth:
-        depth_stencil.depthTestEnable = VK_TRUE;
-        depth_stencil.depthWriteEnable = VK_TRUE;
-        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-        break;
-    case Renderpass_Type_Shadow:
-        depth_stencil.depthTestEnable = VK_TRUE;
-        depth_stencil.depthWriteEnable = VK_TRUE;
-        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-        break;
-    case Renderpass_Type_Opaque:
+    case Shader_Transluency_Type_Opaque:
         depth_stencil.depthTestEnable = VK_TRUE;
         depth_stencil.depthWriteEnable = VK_FALSE;
         depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         break;
-    case Renderpass_Type_Transparent:
+    case Shader_Transluency_Type_Transparent:
         depth_stencil.depthTestEnable = VK_TRUE;
         depth_stencil.depthWriteEnable = VK_FALSE;
         depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
@@ -563,7 +553,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     color_blending.logicOpEnable = VK_FALSE;
     color_blending.logicOp = VK_LOGIC_OP_COPY;
     color_blending.attachmentCount = 0;
-    color_blending.pAttachments = NULL;//&color_blend_attachment; // this thing can be a darray
+    color_blending.pAttachments = NULL; //&color_blend_attachment; // this thing can be a darray
     color_blending.blendConstants[0] = 0.0f; // Optional
     color_blending.blendConstants[1] = 0.0f; // Optional
     color_blending.blendConstants[2] = 0.0f; // Optional

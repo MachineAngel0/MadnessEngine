@@ -33,7 +33,8 @@ typedef struct hash_set
 
 hash_set* hash_set_init(uint64_t data_size, uint64_t capacity);
 
-#define HASH_SET_CREATE(type, capacity) hash_set_init(sizeof(type), capacity));
+#define HASH_SET_CREATE(type, capacity) hash_set_init(sizeof(type), capacity))
+
 
 
 void hash_set_free(hash_set* h);
@@ -53,7 +54,6 @@ s32 hash_set_contains_index(const hash_set* h, void* key);
 u64 hash_set_get_hash_key(const hash_set* h, void* key);
 
 
-
 void hash_set_print(hash_set* h, void (*print_func)(void*));
 
 
@@ -68,7 +68,6 @@ hash_set* hash_set_merge(hash_set* h1, hash_set* h2);
 
 
 void hash_set_test(void);
-
 
 
 #endif //HASH_SET_H

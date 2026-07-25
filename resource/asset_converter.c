@@ -447,36 +447,37 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
     Madness_Mesh* madness_mesh = allocator_alloc(asset_system->frame_allocator,
-                                           sizeof(Madness_Mesh));
+                                                 sizeof(Madness_Mesh));
 
     madness_mesh->mesh_count = data->meshes_count;
     madness_mesh->mesh_data = allocator_alloc(asset_system->frame_allocator,
-                                         sizeof(Madness_SubMesh) * data->meshes_count);
+                                              sizeof(Madness_SubMesh) * data->meshes_count);
 
     Madness_Mesh_GPU_Data* gpu_data = allocator_alloc(asset_system->frame_allocator,
-                                       sizeof(Madness_Mesh_GPU_Data) * data->meshes_count);
+                                                      sizeof(Madness_Mesh_GPU_Data) * data->meshes_count);
     Material_Instance* material_instances = allocator_alloc(asset_system->frame_allocator,
-                                   sizeof(Material_Instance) * data->meshes_count);
+                                                            sizeof(Material_Instance) * data->meshes_count);
 
     //check if we are loading a skinned or normal mesh
     Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(asset_system->frame_allocator,
-                                           sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
+                                                            sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
     Madness_SkMesh_GPU_Data* skinned_gpu_data = allocator_alloc(asset_system->frame_allocator,
-                                       sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
+                                                                sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
     GLTF_Animation_Data* animation_data = allocator_alloc(asset_system->frame_allocator,
-                                       sizeof(GLTF_Animation_Data));
+                                                          sizeof(GLTF_Animation_Data));
     if (data->skins_count > 0)
     {
         skinned_mesh = allocator_alloc(asset_system->frame_allocator,
-                                               sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
+                                       sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
         skinned_gpu_data = allocator_alloc(asset_system->frame_allocator,
                                            sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
         animation_data = allocator_alloc(asset_system->frame_allocator,
-                                           sizeof(GLTF_Animation_Data));
+                                         sizeof(GLTF_Animation_Data));
     }
 
 
-     Material_Default* default_mats = allocator_alloc(asset_system->frame_allocator, sizeof(Material_Default) * data->meshes_count);
+    Material_Default* default_mats = allocator_alloc(asset_system->frame_allocator,
+                                                     sizeof(Material_Default) * data->meshes_count);
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
@@ -496,7 +497,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cgltf_size num_floats = cgltf_accessor_unpack_floats(pos_accessor, NULL, 0);
             cgltf_size float_bytes = num_floats * sizeof(float);
             submesh->vertex_bytes = float_bytes;
-            submesh->vertex_count = submesh->vertex_bytes/sizeof(vec3s);
+            submesh->vertex_count = submesh->vertex_bytes / sizeof(vec3s);
 
             //alloc and copy data
             float* pos_data = allocator_alloc(frame_allocator, float_bytes);
@@ -577,7 +578,10 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         }
         else
         {
-            //TODO: generate white/black colors for everything i guess
+            //get size information
+            submesh->vertex_color_bytes = submesh->vertex_count * sizeof(vec4s);
+            submesh_gpu->vertex_color = allocator_alloc(frame_allocator, submesh->vertex_color_bytes);
+            memset(submesh_gpu->vertex_color, 1, submesh->vertex_color_bytes);
         }
         // Load indices
         // SEE componentType in the specs for more detail 3.6.2
@@ -599,8 +603,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         submesh->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
         submesh_gpu->indices = allocator_alloc(frame_allocator,
-                                           submesh->indices_bytes);
-        submesh->index_count = submesh->indices_bytes/index_stride;
+                                               submesh->indices_bytes);
+        submesh->index_count = submesh->indices_bytes / index_stride;
 
 
         const uint8_t* index_buffer_data = cgltf_buffer_view_data(
@@ -646,7 +650,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             memcpy(cur_mat->color.raw,
                    data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
                    sizeof(vec4s));
-
         }
         else
         {
@@ -734,24 +737,44 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             asset_converter_texture(asset_system, texture_path, &cur_mat->emissive_texture);
         }
 
-        Asset_Type material_mesh_type;
+        Material_Info default_info = {0};
         if (data->skins_count > 0)
         {
-            material_mesh_type = ASSET_SKINNED_MESH;
+            default_info = (Material_Info){
+                .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
+                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                .transluency = Shader_Transluency_Type_Opaque,
+                .mesh_type = Shader_Mesh_Type_Skinned,
+                .blend_mode = Shader_Blend_Mode_Default,
+            };
         }
         else
         {
-            material_mesh_type = ASSET_STATIC_MESH;
+            default_info = (Material_Info){
+                .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
+                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                .transluency = Shader_Transluency_Type_Opaque,
+                .mesh_type = Shader_Mesh_Type_Mesh,
+                .blend_mode = Shader_Blend_Mode_Default,
+            };
         }
 
+
         Material_Instance* mat_inst = &material_instances[mesh_idx];
-        asset_converter_material_asset(asset_system, "Material_Default",
-                                 data->meshes[mesh_idx].primitives->material->name, asset_system->material_system->reflection_registry,
-                                 material_mesh_type, &mat_inst->uuid_material_asset);
+        asset_converter_material_asset(asset_system, &default_info,
+                                       asset_system->material_system->reflection_registry,
+                                       &mat_inst->uuid_material_asset);
         material_instances[mesh_idx].material_data = cur_mat;
         material_instances[mesh_idx].data_size = sizeof(Material_Default);
+        MADNESS_UUID madness_uuid = {0};
+        asset_converter_material_instance(asset_system, "Material_Default",
+                                          data->meshes[mesh_idx].primitives->material->name,
+                                          &mat_inst->uuid_material_asset,
+                                          mat_inst->material_data, mat_inst->data_size,
+                                          &madness_uuid);
     }
-
 
 
     if (data->skins_count > 0)
@@ -1085,7 +1108,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         asset_mesh_serialize(&engine_format, fptr);
 
 
-
         // write out metadata
         Asset_MetaData meta_data = {0};
         meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
@@ -1103,27 +1125,47 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     return true;
 }
 
-bool asset_converter_material_asset(Asset_System* asset_system, const char* material_name, const char* asset_name,
-                              Reflection_Registry* reflection_registry_material,
-                              Asset_Type asset_type, MADNESS_UUID* out_uuid)
+bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
+                                    Reflection_Registry* reflection_registry_material,
+                                    MADNESS_UUID* out_uuid)
 {
     //We are always going to assume that our reflection registry is up to date and that it is the source of truth
 
+    MASSERT(material_info)
+    MASSERT(material_info->shader_name)
+    MASSERT(material_info->material_name)
+
+    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
+    string_builder_append_string(str_builder, material_info->material_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_string(str_builder, material_info->shader_name);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
+
+
+    String* compare_string = string_builder_to_string_allocator(str_builder, asset_system->frame_allocator);
+
+    //check if the material already exists
+    for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* meta_data = (Asset_MetaData*)_dynamic_array_get(asset_system->asset_registry->asset_meta_data,
+                                                                        i);
+        if (meta_data->type == ASSET_MATERIAL)
+        {
+            if (string_compare(meta_data->source_file, compare_string))
+            {
+                *out_uuid = meta_data->uuid;
+                return true;
+            }
+        }
+    }
+
+
     Material_Asset asset = {0};
-    if (asset_type == ASSET_STATIC_MESH)
-    {
-        asset.material_info.shader_name = &(STRING_STRLEN(MESH_DEFAULT_SHADER));
-        asset.material_info.mesh_type = Shader_Mesh_Type_Mesh;
-    }
-    else if (ASSET_SKINNED_MESH)
-    {
-        asset.material_info.shader_name = &(STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER));
-        asset.material_info.mesh_type = Shader_Mesh_Type_Skinned;
-    }
-    else { MASSERT(false); }
+    asset.material_info = *material_info;
     asset.material_info.material_name = &(STRING_STRLEN(MATERIAL_DEFAULT_NAME));
-    asset.material_info.shader_stage = Shader_Stage_Type_Graphics;
-    asset.material_info.shader_pass = Shader_Pass_Type_Opaque;
+    asset.material_info.transluency = Shader_Transluency_Type_Opaque;
+    asset.material_info.renderpass = Renderpass_Type_Predepth | Renderpass_Type_Color | Renderpass_Type_Shadow;
     asset.material_info.blend_mode = Shader_Blend_Mode_Default;
 
     Reflection_Runtime_Struct reflection_material = reflection_registry_get_struct(
@@ -1168,15 +1210,6 @@ bool asset_converter_material_asset(Asset_System* asset_system, const char* mate
 
 
     //write out the file
-
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_c_string(str_builder, "/");
-    string_builder_append_c_string(str_builder, material_name);
-    string_builder_append_c_string(str_builder, "/");
-    string_builder_append_c_string(str_builder, asset_name);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
-
     const char* output_path = string_builder_to_c_string(str_builder);
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
@@ -1190,14 +1223,67 @@ bool asset_converter_material_asset(Asset_System* asset_system, const char* mate
     asset_material_serialize(&asset_editor, fptr);
 
 
-
     Asset_MetaData meta_data = {0};
-    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(asset_name, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string(str_builder);
+    meta_data.source_file = string_builder_to_string_heap(str_builder, asset_system->heap_allocator);
+    meta_data.binary_file = string_builder_to_string_heap(str_builder, asset_system->heap_allocator);
     meta_data.uuid = madness_uuid_generate_return();
     meta_data.hash = madness_uuid_hash(&meta_data.uuid);
     meta_data.type = ASSET_MATERIAL;
     asset_registry_add_asset(asset_system->asset_registry, &meta_data);
 
     *out_uuid = meta_data.uuid;
+
+    fclose(fptr);
+    return true;
+}
+
+bool asset_converter_material_instance(Asset_System* asset_system, const char* material_name, const char* asset_name,
+                                       MADNESS_UUID* material_asset_uuid, void* material_data, u32 material_size,
+                                       MADNESS_UUID* out_uuid)
+{
+    MADNESS_UUID resolve_material_asset_uuid = {0};
+    Reflection_Runtime_Struct runtime_material_data = {0};
+    if (material_asset_uuid)
+    {
+        resolve_material_asset_uuid = *material_asset_uuid;
+    }
+    else
+    {
+        //search for the asset
+        runtime_material_data = reflection_registry_get_struct(
+            asset_system->material_system->reflection_registry, material_name);
+    }
+
+    //write out the file
+    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
+    string_builder_append_c_string(str_builder, material_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_c_string(str_builder, asset_name);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
+
+    const char* output_path = string_builder_to_c_string(str_builder);
+    FILE* fptr = fopen(output_path, "wb");
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+
+    Material_Instance material_instance = {
+        .uuid_material_asset = resolve_material_asset_uuid, .data_size = material_size, .material_data = material_data
+    };
+    asset_material_instance_serialize(&material_instance, fptr);
+
+
+    Asset_MetaData meta_data = {0};
+    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(asset_name, asset_system->heap_allocator);
+    meta_data.binary_file = string_builder_to_string(str_builder);
+    meta_data.uuid = madness_uuid_generate_return();
+    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
+    meta_data.type = ASSET_MATERIAL_INSTANCE;
+    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+
+    *out_uuid = meta_data.uuid;
+    fclose(fptr);
+    return true;
 }

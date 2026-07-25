@@ -33,6 +33,7 @@
 #define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
 #define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
 #define ENGINE_MATERIAL_PATH "../z_assets_engine/material/"
+#define ENGINE_MATERIAL_INSTANCE_PATH "../z_assets_engine/material_instance/"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 
 #define ENGINE_TEXTURE_EXTENSION ".mtex"
@@ -40,12 +41,15 @@
 #define ENGINE_MESH_EXTENSION ".mmesh"
 #define ENGINE_SKMESH_EXTENSION ".mskin"
 #define ENGINE_MATERIAL_EXTENSION ".mmat"
+#define ENGINE_MATERIAL_INSTANCE_EXTENSION ".mmi"
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 
 
 ///////////////// RESOURCES AND HANDLES //////////////////////
 
 #define INVALID_HANDLE 0
+
+
 
 typedef struct Handle
 {
@@ -62,6 +66,7 @@ typedef enum Asset_Type
     ASSET_SKINNED_MESH,
     ASSET_AUDIO,
     ASSET_MATERIAL,
+    ASSET_MATERIAL_INSTANCE,
     // RESOURCE_PARTICLE,
 
     ASSET_TYPE_MAX,
@@ -75,6 +80,7 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
     [ASSET_AUDIO] = "ASSET_AUDIO",
     [ASSET_MATERIAL] = "ASSET_MATERIAL",
+    [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
 };
 
 
@@ -105,16 +111,12 @@ typedef struct Madness_Asset
     Asset_Type type;
 } Madness_Asset;
 
-
-typedef struct Material_Asset_Handle{
-    u32 handle;
-}Material_Asset_Handle;
-
+//Renderpass || translucency || Blend || Mesh Type
+typedef u32 Material_ID;
 typedef struct Material_Handle
 {
-    u32 batch_type;
-    u32 batch_handle;
-    u32 index_handle;
+    Material_ID material_id;
+    u32 buffer_handle;
 } Material_Handle;
 
 typedef struct Mesh_Asset_Handle
@@ -161,6 +163,20 @@ typedef struct Animation_Handle
 } Animation_Handle;
 
 
+typedef struct Mesh_Render_Item
+{
+    u64 material_key;
+    u32 mesh_handle;
+    u32 submesh_handle;
+    u32 material_handle;
+    u32 transform_handle;
+    // u32 cull_bounds_handle;
+    u32 index_count;
+    u32 index_offset;
+    u32 vertex_offset;
+} Mesh_Render_Item;
+
+
 ///////////////// Texture  //////////////////////
 
 typedef enum Texture_Format
@@ -196,7 +212,6 @@ typedef struct Madness_Texture_Runtime
     Madness_Texture texture;
     u8* pixel_data;
 } Madness_Texture_Runtime;
-
 
 
 //FONT/TEXT
@@ -237,23 +252,24 @@ typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
     Shader_Mesh_Type_Skinned,
+    // Shader_Mesh_Type_Particle,
+    // Shader_Mesh_Type_Foilage,
 } Shader_Mesh_Type;
 
-typedef enum Shader_Pass_Type
+typedef enum Shader_Transluency_Type
 {
-    Shader_Pass_Type_Opaque = BITFLAG(0),
-    Shader_Pass_Type_Transparent = BITFLAG(1),
-    Shader_Pass_Type_Shadow = BITFLAG(2),
-} Shader_Pass_Type;
+    Shader_Transluency_Type_Opaque,
+    Shader_Transluency_Type_Transparent,
+} Shader_Transluency_Type;
 
-typedef enum Renderpass_Single_Type
+
+typedef enum Shader_Renderpass_Type
 {
     //only to be used internally and not by the material system
-    Depth_Test_Type_Predepth,
-    Renderpass_Type_Shadow,
-    Renderpass_Type_Opaque,
-    Renderpass_Type_Transparent,
-} Renderpass_Single_Type;
+    Renderpass_Type_Predepth = BITFLAG(0),
+    Renderpass_Type_Shadow = BITFLAG(1),
+    Renderpass_Type_Color = BITFLAG(2), // this is for both opaque and transparent
+} Shader_Renderpass_Type;
 
 
 typedef enum Shader_Blend
@@ -276,20 +292,10 @@ typedef enum Shader_Blend
     //  Shader_Blend_Mode_MAX,
 } Shader_Blend_Mode;
 
-typedef enum Shader_Stage_Type
-{
-    Shader_Stage_Type_Vert,
-    Shader_Stage_Type_Graphics, // both vert and frag
-    Shader_Stage_Type_Compute,
-    // Shader_Stage_Type_Tesselation,
-} Shader_Stage_Type;
 
 
-typedef enum Material_Flag
-{
-    MATERIAL_FLAG_PBR = BITFLAG(0),
-    MATERIAL_FLAG_UV_ANIM = BITFLAG(1),
-} Material_Flag;
+
+
 
 
 typedef enum Mesh_PBR_Flags
@@ -323,62 +329,63 @@ typedef struct PC_Shadow_Mapping
 } PC_Shadow_Mapping;
 
 
-typedef struct Material_Info{
+typedef struct Material_Info
+{
     String* shader_name;
     String* material_name;
 
-    Shader_Stage_Type shader_stage;
-    Shader_Pass_Type shader_pass;
+    Shader_Renderpass_Type renderpass;
+    Shader_Transluency_Type transluency;
     Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
-}Material_Info;
+} Material_Info;
 
-typedef struct Material_GPU_Definition{
+typedef struct Material_GPU_Definition
+{
     u32 field_count;
     u32 struct_size;
     //arrays
     u64* name_hashes;
     u32* field_offsets;
     Reflection_Type* types;
-}Material_GPU_Definition;
+} Material_GPU_Definition;
 
 typedef struct Material_Asset
 {
-    //information about the material structure
+    //information about the material structure, think of it like the definition of a material/shader
     Material_Info material_info;
     Reflection_Runtime_Struct* reflection_material_data;
     Material_GPU_Definition* material_gpu_definition;
 } Material_Asset;
 
-typedef struct Material_Instance{
+typedef struct Material_Instance
+{
+    //Contains customized data for a specific material asset
     // NOTE: the material data is the serialized data containing the UUID for textures
-    MADNESS_UUID uuid_material_asset;
+    MADNESS_UUID uuid_material_asset; // points to the material asset
     u32 data_size;
     void* material_data;
-}Material_Instance;
-
+} Material_Instance;
 
 
 typedef struct Material_Asset_Runtime
 {
     u32 version;
     Material_Asset* asset;
-}Material_Asset_Runtime;
+} Material_Asset_Runtime;
+
 
 
 typedef struct Material_Batch
 {
-    Material_Info material_info;
-    Reflection_Runtime_Struct* material_cpu_definition;
-    Material_GPU_Definition* material_gpu_definition;
+    //to solve the problem of having different batches for the material types, it would make sense to have a sort key
+    // https://realtimecollisiondetection.net/blog/?p=86
 
+    Material_ID material_key;
+    MADNESS_UUID material_asset_uuid;
+    Material_Asset* material_asset;
     Dynamic_Array* material_data;
-    // PC_General* pc_general; // TODO:
-
-    Dynamic_Array* mesh_instances;
-
 } Material_Batch;
-
 
 
 ///////////////// Particle  //////////////////////
@@ -500,7 +507,7 @@ uint32_t    firstInstance;
 } VkDrawIndexedIndirectCommand;*/
 
 
-    u32 vertex_offset; //in vec3
+    u32 vertex_count_offset; //in vec3
     u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
     u32 index_count; // u32 count
 
@@ -508,21 +515,6 @@ uint32_t    firstInstance;
     // uint32_t firstInstance; // 0
     // uint32_t instanceCount; // 1
 } Mesh_Indirect_Draw;
-
-typedef struct SKMesh_GPU_Draw
-{
-    u32 transform_idx;
-    u32 material_instance_handle;
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 vertex_offset;
-} SKMesh_GPU_Draw;
-
-typedef struct Mesh_GPU_Draw
-{
-    u32 transform_idx;
-    u32 material_instance_handle;
-} Mesh_GPU_Draw;
 
 
 typedef struct Skinned_Mesh_GPU_Upload
@@ -543,7 +535,6 @@ typedef struct Madness_Skinned_SubMesh_Instance
 {
     //for the renderer
     Mesh_Indirect_Draw mesh_indirect_draw;
-    SKMesh_GPU_Draw sk_mesh_gpu_draw;
     Material_Handle material_handle;
     Transform_Handle parent_transform_handle;
 } Madness_Skinned_SubMesh_Instance;
@@ -578,7 +569,6 @@ typedef struct Madness_SubMesh_Instance
 {
     //for the renderer
     Mesh_Indirect_Draw mesh_indirect_draw;
-    Mesh_GPU_Draw mesh_gpu_draw;
     Material_Handle material_handle;
     Transform_Handle parent_transform_handle;
 } Madness_SubMesh_Instance;
@@ -625,9 +615,10 @@ typedef struct Madness_SubMesh
 
     //Runtime Data and for Unloading the Mesh
     //info for indirect draw
-    u32 vertex_offset; //in vec3
+    u32 vertex_count_offset; //in vec3
     u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
 
+    u32 vertex_offset;
     u32 tangent_offset;
     u32 vertex_color_offset;
     u32 normal_offset;
@@ -674,7 +665,6 @@ typedef struct Mesh_GPU_Upload
 } Mesh_GPU_Upload;
 
 
-
 typedef struct Madness_SkMesh_GPU_Data
 {
     vec4s* joints;
@@ -704,39 +694,28 @@ typedef struct Madness_SkMesh_Runtime
     Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
     Madness_Skinned_SubMesh* skinned_mesh_data;
     GLTF_Animation_Data* animation_data;
-
 } Madness_SkMesh_Runtime;
 
 
 ///////////////// Systems  //////////////////////
 
 
-#define MAX_DEFAULT_MATERIAL 100
+#define MAX_MATERIAL_COUNT 100
 
 typedef struct Material_System
 {
     Reflection_System* reflection_system;
     Reflection_Registry* reflection_registry;
 
-    //TODO: some static version of a material registry, that gets loaded on startup
-
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
     //sort material batches by their mesh type, possibly fine grain it later
-    Material_Batch mesh_batch[100];
-    u32 mesh_batch_count;
+    Material_Batch material_batches[100];
+    u32 material_batch_count;
 
-    Material_Batch skinned_batch[100];
-    u32 skinned_batch_count;
 
-    //material batch handle
-    // -> for the submesh instance
-    //material asset handle -> for the parent mesh
-    Material_Asset material_assets[MAX_DEFAULT_MATERIAL];
-    u32 material_asset_count;
-
-    // HASH_MAP_TYPE(u64, Material_Asset)* hash_to_mat_asset;
-
+    Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
+    u32 material_madness_asset_count;
 } Material_System;
 
 
@@ -780,7 +759,7 @@ typedef struct Texture_System
     RING_QUEUE_TYPE(u32)* available_texture_queue;
     RING_QUEUE_TYPE(u32)* available_font_queue;
 
-    HASH_MAP_TYPE(u64,u32)* texture_hash_map;
+    HASH_MAP_TYPE(u64, u32)* texture_hash_map;
 
 
     //textures that the renderer needs to upload to the gpu
@@ -829,11 +808,6 @@ typedef struct Mesh_System
     u32 skinned_mesh_instance_count;
 
 
-    //FUTURE: seperate list of meshes we wish to not draw, when we do we add it back to our original list
-    // Mesh_Indirect_Draw_Data not_in_use_draw_data[MAX_MESH_COUNT];
-    // Mesh_Indirect_Draw_Data not_in_use_skinned_draw_data[MAX_MESH_COUNT];
-
-
     //total size of all mesh data
     size_t vertex_byte_size;
     size_t vertex_count_size;
@@ -842,6 +816,7 @@ typedef struct Mesh_System
     size_t normals_byte_size;
     size_t tangent_byte_size;
     size_t uv_byte_size;
+    size_t vertex_color_byte_size;
 
     size_t joints_byte_size;
     size_t weight_byte_size;
@@ -886,11 +861,15 @@ typedef struct Render_Packet_3D
     //geometry data for indirect draws
 
     //TODO: we should have a dirty bit for generating any new batches
-    Material_Batch* mesh_batch;
-    u32 mesh_batch_count;
+    Material_Batch* material_batch;
+    u32 material_batch_count;
 
-    Material_Batch* skinned_batch;
-    u32 skinned_batch_count;
+    Madness_Mesh_Instance* mesh_instances;
+    u32 mesh_instances_count;
+
+    //TODO:
+    // Madness_SkMesh_Instance* skinned_instances;
+    // u32 skinned_instances_count;
 
 
     mat4s* world_space_matrix_array;
@@ -971,7 +950,6 @@ typedef struct Resource_System
     Render_Packet* render_packet;
 
     Asset_Registry* asset_registry;
-
 } Asset_System;
 
 

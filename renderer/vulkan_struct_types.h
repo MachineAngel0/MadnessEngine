@@ -202,15 +202,34 @@ typedef struct vulkan_shader_pipeline
     VkPipeline handle;
 } Vulkan_Shader_Pipeline;
 
+typedef struct Vulkan_SKMesh_Draw
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 vertex_offset;
+} Vulkan_Skinned_Draw;
 
+typedef struct Vulkan_Mesh_Draw
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+} Vulkan_Mesh_Draw;
 
 typedef struct Vulkan_Shader_Batch
 {
     const char* shader_name;
-    Shader_Stage_Type shader_stage_type;
-    Shader_Pass_Type shader_pass_type;
+    const char* material_name;
+
     Shader_Mesh_Type mesh_type;
+    Shader_Transluency_Type transluency;
     Shader_Blend_Mode blend_mode;
+    Shader_Renderpass_Type renderpass_types;
+
+
+
+    Material_ID material_id;
 
 
     Vulkan_Shader_Pipeline pipeline;
@@ -225,6 +244,8 @@ typedef struct Vulkan_Shader_Batch
     u32 material_stride;
 
     PC_General pc_data;
+
+    Material_Batch* material_batch_reference;
 
     // u32 pc_size;
     // void* pc_data;
@@ -271,7 +292,7 @@ typedef struct Shader_System
 
     //the shader name is the lookup
     //we want the pointer to the shader batch,
-    HASH_TABLE_TYPE(Vulkan_Shader_Batch*)* shader_batch_hash_table;
+    HASH_SET(Material_ID)* shader_batch_hash_set;
 
 
 } Shader_System;

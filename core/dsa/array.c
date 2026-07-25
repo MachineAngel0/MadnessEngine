@@ -332,6 +332,26 @@ void array_remove_swap(Array* array, u64 index)
     array->num_items--;
 }
 
+void array_counting_sort(Array* array, int(* cmp_func)(void*, void*))
+{
+    MASSERT(false);
+}
+
+void array_merge_sort(Array* array, int(* cmp_func)(void*, void*))
+{
+    MASSERT(false);
+}
+
+void array_radix_sort(Array* array, int(* cmp_func)(void*, void*))
+{
+    MASSERT(false);
+}
+
+void array_qsort(Array* array, int(* cmp_func)(void*, void*))
+{
+    qsort(array->data, array->num_items, array->stride, cmp_func);
+}
+
 //TODO: all the sorting functions
 void array_counting_sort(Array* array, int (*cmp_func)(void*, void*));
 

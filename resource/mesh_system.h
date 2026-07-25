@@ -1,7 +1,6 @@
 ﻿#ifndef MESH_H
 #define MESH_H
 
-#include "cgltf.h"
 
 
 Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memory_system);

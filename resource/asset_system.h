@@ -49,7 +49,6 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 
 bool asset_system_update_and_create_render_packet(Asset_System* resource_system);
 
-bool asset_system_generate_render_packet(Asset_System* resource_system);
 MAPI void render_packet_clear(Render_Packet* renderer_packets);
 
 
@@ -109,6 +108,7 @@ bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Text
 
     }
 
+    fclose( fptr);
 
     return true;
 }
@@ -171,7 +171,7 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     return true;
 }
 
-bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material_Asset_Handle* out_handle)
+bool asset_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid)
 {
     Asset_MetaData meta_data = {0};
     if (!asset_registry_get_metadata_from_uuid(asset_system,uuid, &meta_data))
@@ -183,10 +183,10 @@ bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material
 
     //material system does exists function
     //has asset already been loaded
-    // if (material_system_exists(asset_system, out_handle, hash))
-    // {
-    // return true;
-    // }
+    if (material_system_exists(asset_system, meta_data.uuid))
+    {
+        return true;
+    }
 
     FILE* fptr = NULL;
     bool debug = true;
@@ -197,7 +197,7 @@ bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
         asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
-        material_system_load_material(asset_system, meta_data.uuid, meta_data.hash, &runtime_material, out_handle);
+        material_system_load_material_asset(asset_system, meta_data.uuid, meta_data.hash, &runtime_material);
     }
     else
     {
@@ -205,6 +205,7 @@ bool asset_load_material(Asset_System* asset_system, MADNESS_UUID uuid, Material
         //TODO:
     }
 
+    fclose( fptr);
 
 
     return true;

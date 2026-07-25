@@ -46,7 +46,7 @@ void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_com
 }
 
 
-Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Attachment_Type type,
+Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
                                            VkFormat format, u32 width, u32 height)
 {
     Attachment* attachment = &render_graph->attachments[render_graph->attachments_count++];

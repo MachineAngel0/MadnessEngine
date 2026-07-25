@@ -8,6 +8,7 @@
 #include "material_system.c"
 #include "shader_creation_system.c"
 
+#include "asset_serialization.c"
 #include "asset_converter.c"
 #include "asset_system.c"
 

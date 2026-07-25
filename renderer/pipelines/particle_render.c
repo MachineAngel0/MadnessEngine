@@ -18,7 +18,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer, Asset_System* resour
 
     //default blend for now
     vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
-                                    Renderpass_Type_Opaque,
+                                    Shader_Transluency_Type_Opaque,
                                     &particle_renderer->spherical_billboard_pipeline,
                                     &particle_renderer->wireframe_spherical_billboard_pipeline);
 

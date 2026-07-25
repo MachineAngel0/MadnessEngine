@@ -96,25 +96,13 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "u32",
 			.offset = offsetof(Material_Default_CPU, emissive_texture)
 		},
-		{
-			.name = "padding1",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default_CPU, padding1)
-		},
-		{
-			.name = "padding2",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default_CPU, padding2)
-		},
 	};
 
 	 Reflection_Runtime_Struct Material_Default_CPU_Runtime_Struct =
 	{
 		.name = "Material_Default_CPU",
 		.fields = Material_Default_CPU_Fields,
-		.field_count = 17,
+		.field_count = 15,
 		.struct_size = sizeof(Material_Default_CPU)
 	};
 
@@ -250,25 +238,13 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, emissive_texture)
 		},
-		{
-			.name = "padding1",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, padding1)
-		},
-		{
-			.name = "padding2",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Default, padding2)
-		},
 	};
 
 	 Reflection_Runtime_Struct Material_Default_Runtime_Struct =
 	{
 		.name = "Material_Default",
 		.fields = Material_Default_Fields,
-		.field_count = 17,
+		.field_count = 15,
 		.struct_size = sizeof(Material_Default)
 	};
 

@@ -19,11 +19,6 @@ bool material_system_generate_render_packet(Material_System* material_system,
 // wireframe version for all shaders
 
 
-void material_system_add_mesh_instance_and_material(Asset_System* asset_system, Madness_Mesh* madness_mesh,
-                                                    Madness_Mesh_Instance* parent_instance);
-void* material_system_resolve_and_load_material_data(Asset_System* asset_system, Material_Asset_Handle asset_handle,
-                                                     Material_Instance* material_instance);
-
 /*
 
 void material_system_add_skmesh_instance_to_default_material_batch(Asset_System* resource_system,
@@ -52,75 +47,33 @@ void material_system_add_skmesh_instance_to_default_material_batch(Asset_System*
 }
 */
 
+bool material_system_exists(Asset_System* asset_system, MADNESS_UUID uuid);
+bool material_system_load_material_instance(Asset_System* asset_system, Material_Instance* material_instance,
+                                            Material_Handle* out_handle);
 
 
+bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
+                                         Material_Asset_Runtime* material_asset);
 
-void material_system_load_material(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
-                                   Material_Asset_Runtime* material_asset,
-                                   Material_Asset_Handle* material_asset_handle)
-{
-    //checks if a material has a batch associated with it, if not create it, if so we can do nothing
-    Material_System* material_system = asset_system->material_system;
-
-    if ((material_asset->asset->material_info.shader_pass & Shader_Pass_Type_Opaque) && (material_asset->asset->
-        material_info.shader_pass & Shader_Pass_Type_Transparent))
-    {
-        MASSERT_MSG_FALSE("material_system_instantiate_material: PASSED IN OPAQUE AND TRANSPARENT INTO THE PASS TYPE");
-    }
-
-    //we are assuming everything is a graphics pipeline
-    //TODO: check a hash to not duplicate material info
-
-    material_asset_handle->handle = material_system->material_asset_count;
-    material_system->material_assets[material_system->material_asset_count++] = *material_asset->asset;
-
-
-    //find out the mesh type
-    Material_Batch* batch = NULL;
-    switch (material_asset->asset->material_info.mesh_type)
-    {
-    case Shader_Mesh_Type_Mesh:
-        batch = &material_system->mesh_batch[material_system->mesh_batch_count++];
-        break;
-    case Shader_Mesh_Type_Skinned:
-        batch = &material_system->skinned_batch[material_system->skinned_batch_count++];
-        break;
-    }
-    if (!batch)
-    {
-        MASSERT(false);
-    }
-
-    batch->material_info = material_asset->asset->material_info;
-    batch->material_cpu_definition = material_asset->asset->reflection_material_data;
-    batch->material_gpu_definition = material_asset->asset->material_gpu_definition;
-
-    //create the material array and the mesh instance array
-    batch->material_data = _dynamic_array_create(batch->material_gpu_definition->struct_size, 1,
-                                                 asset_system->heap_allocator);
-    switch (material_asset->asset->material_info.mesh_type)
-    {
-    case Shader_Mesh_Type_Mesh:
-        batch->mesh_instances = dynamic_array_create(Madness_SubMesh_Instance, 1,
-                                                     asset_system->heap_allocator);
-        break;
-    case Shader_Mesh_Type_Skinned:
-        batch->mesh_instances = dynamic_array_create(Madness_Skinned_SubMesh_Instance, 1,
-                                                     asset_system->heap_allocator);
-        break;
-    }
-
-}
 
 //NOTE: changing textures requires more elaborate steps
 bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
                                            const char* param_name, const void* new_data);
-void material_system_change_material_data(Asset_System* asset_system, Material_Handle material_handle, void* new_data);
 void material_system_change_material_texture(Asset_System* asset_system, Material_Handle material_handle,
                                              const char* param_name, const char* texture_name);
+
+void material_system_get_material_data(Asset_System* asset_system, Material_Handle handle);
 
 
 void material_system_swap_material(Asset_System* asset_system, Material_Handle material_handle,
                                    const char* material_name);
+
+
+void material_system_add_mesh_instance_and_material(Asset_System* asset_system, Madness_Mesh* madness_mesh,
+                                                    Madness_Mesh_Instance* parent_instance);
+
+
+Material_ID material_system_generate_id(Material_Info* material_info);
+
 
 #endif //MATERIAL_SYSTEM_H

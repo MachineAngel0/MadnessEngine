@@ -34,8 +34,7 @@ typedef struct Material_Default
     MADNESS_UUID roughness_texture;
     MADNESS_UUID ambient_occlusion_texture;
     MADNESS_UUID emissive_texture;
-    u32 padding1;
-    u32 padding2;
+
 
 } Material_Default;
 typedef struct Material_Default_CPU
@@ -53,6 +52,7 @@ typedef struct Material_Default_CPU
 
     u32 padding0;
 
+
     u32 color_texture;
     u32 normal_texture;
     u32 metallic_texture;
@@ -60,8 +60,7 @@ typedef struct Material_Default_CPU
     u32 ambient_occlusion_texture;
     u32 emissive_texture;
 
-    u32 padding1;
-    u32 padding2;
+
 } Material_Default_CPU;
 
 

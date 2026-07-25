@@ -119,7 +119,7 @@ typedef struct Reflection_Constant
 typedef struct Reflection_Type_Enum
 {
     const char* name;
-    u32 enum_position; // get the size of the num
+    u32 enum_position; // get the size of the enum
 } Reflection_Type_Enum;
 
 typedef struct Reflection_Enum

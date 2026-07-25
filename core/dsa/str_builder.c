@@ -207,6 +207,17 @@ String* string_builder_to_string(const String_Builder* builder)
     return string_create(builder->str, builder->current_length);
 }
 
+String* string_builder_to_string_allocator(const String_Builder* builder, Allocator* allocator)
+{
+    return string_create_allocator(builder->str, builder->current_length, allocator);
+
+}
+
+String* string_builder_to_string_heap(const String_Builder* builder, Heap_Allocator* allocator)
+{
+    return string_create_allocator_heap(builder->str, builder->current_length, allocator);
+}
+
 String string_builder_to_string_non_pointer(const String_Builder* builder)
 {
     return (String){.chars = builder->str, .length = builder->current_length};

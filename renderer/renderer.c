@@ -180,7 +180,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_pipeline_predepth_create(renderer, "depth_skinned_mesh", &renderer->predepth_skinned_mesh_pipeline);
 
 
-
     //Pipeline Cache
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
@@ -217,7 +216,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     //TODO: move out to the editor
     if (input_key_released_unique(renderer->input_system, KEY_U))
     {
-
         renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
         FATAL("RENDER_MODE: %d", renderer->mode)
         if (texture_flip)
@@ -350,8 +348,7 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     mesh_renderer_upload_draw_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
     mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    mesh_renderer_construct_batch_draw(renderer, renderer->mesh_renderer, renderer->shader_system, render_packets,
-                                       graphics_command_buffer);
+    mesh_renderer_construct_batch_draw(renderer, render_packets, graphics_command_buffer);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
@@ -362,7 +359,6 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     memory_barrier_transfer(renderer, graphics_command_buffer);
-
 
 
     // Dynamic state
@@ -420,12 +416,14 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     //draw geometry into depth buffer
     mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
-                           renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
-                           graphics_command_buffer, &renderer->predepth_mesh_pipeline);
+                                             renderer->shader_system->mesh_batch,
+                                             renderer->shader_system->mesh_batch_count,
+                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline);
 
-    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
-                       renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
-                       graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
+    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+                                             renderer->shader_system->skinned_batch,
+                                             renderer->shader_system->skinned_batch_count,
+                                             graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);*/
 
     vkCmdEndRendering(graphics_command_buffer->handle);
 
@@ -461,7 +459,7 @@ void renderer_update(Renderer* renderer, float delta_time)
                                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                                 (VkImageSubresourceRange){
                                     //no stencil in this pass
-                                    VK_IMAGE_ASPECT_DEPTH_BIT , 0, 1, 0, 1
+                                    VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1
                                 }
     );
 
@@ -586,7 +584,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
 
-
     vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &default_viewport);
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
 
@@ -602,9 +599,9 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
                              renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
                              graphics_command_buffer);
-    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
-                         renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
-                         graphics_command_buffer);
+    /*mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+                             renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
+                             graphics_command_buffer);*/
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 

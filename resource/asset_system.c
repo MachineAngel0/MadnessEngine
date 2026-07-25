@@ -14,7 +14,7 @@ Asset_System* asset_system_init(Memory_System* memory_system)
                                                       MEMORY_SUBSYSTEM_RESOURCE);
 
 
-    asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(64),
+    asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
                                                                        MEMORY_SUBSYSTEM_RESOURCE);
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
@@ -71,13 +71,10 @@ bool asset_system_update_and_create_render_packet(Asset_System* resource_system)
     resource_system->render_packet->texture_queue = resource_system->texture_system->texture_upload_queue;
     resource_system->render_packet->mesh_queue = resource_system->mesh_system->mesh_ring_queue;
     resource_system->render_packet->skinned_mesh_queue = resource_system->mesh_system->skinned_mesh_ring_queue;
-    return asset_system_generate_render_packet(resource_system);
-}
+    //
 
-bool asset_system_generate_render_packet(Asset_System* resource_system)
-{
     sprite_system_generate_render_packet(resource_system->sprite_system,
-                                         &resource_system->render_packet->sprite_data_packet);
+                                     &resource_system->render_packet->sprite_data_packet);
 
     material_system_generate_render_packet(resource_system->material_system,
                                            &resource_system->render_packet->draw_3d_data_packet);
@@ -94,8 +91,13 @@ bool asset_system_generate_render_packet(Asset_System* resource_system)
     resource_system->render_packet->particle_packet = particle_system_generate_render_packet(
         resource_system->particle_system);
 
+    resource_system->render_packet->draw_3d_data_packet.mesh_instances = resource_system->mesh_system->mesh_parent_instance;
+    resource_system->render_packet->draw_3d_data_packet.mesh_instances_count = resource_system->mesh_system->mesh_parent_instance_count;
+
     return true;
 }
+
+
 
 void render_packet_clear(Render_Packet* renderer_packets)
 {

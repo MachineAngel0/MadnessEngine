@@ -2,7 +2,7 @@
 #define ASSET_CONVERTER_H
 
 #include "resource_types.h"
-#include "resource_import_types.h"
+
 
 
 //takes in any file and checks its extension type, and calls the appropriate function
@@ -25,10 +25,11 @@ MAPI bool asset_converter_msdf_font(Asset_System* asset_system, const char* file
 MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path);
 
 
-MAPI bool asset_converter_material_asset(Asset_System* asset_system, const char* material_name, const char* asset_name,
-                                   Reflection_Registry* reflection_registry_material,
-                                   Asset_Type asset_type, MADNESS_UUID* out_uuid);
+bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
+                                    Reflection_Registry* reflection_registry_material,
+                                    MADNESS_UUID* out_uuid);
 
-
-
+MAPI bool asset_converter_material_instance(Asset_System* asset_system, const char* material_name, const char* asset_name,
+                                       MADNESS_UUID* material_asset_uuid, void* material_data, u32 material_size,
+                                       MADNESS_UUID* out_uuid);
 #endif

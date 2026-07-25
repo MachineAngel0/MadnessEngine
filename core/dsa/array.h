@@ -122,6 +122,8 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
+void array_qsort(Array* array, int (*cmp_func)(void*, void*));
+
 
 void array_test();
 

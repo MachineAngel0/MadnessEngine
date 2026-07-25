@@ -9,8 +9,8 @@
 //making the assumption that the shader will have both .vert and .frag, throw an error otherwise
 
 //used in mesh and currently particles types (TODO: might move out the particles)
-bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name,
-                                     Shader_Blend_Mode blend_mode, Renderpass_Single_Type renderpass_type,
+bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, Shader_Blend_Mode blend_mode,
+                                     Shader_Transluency_Type transluency_type,
                                      Vulkan_Shader_Pipeline* out_pipeline,
                                      Vulkan_Shader_Pipeline* out_wire_frame_pipeline);
 

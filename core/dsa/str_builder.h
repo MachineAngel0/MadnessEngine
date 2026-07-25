@@ -54,6 +54,11 @@ bool string_builder_strip_extension(String_Builder* builder);
 
 
 String* string_builder_to_string(const String_Builder* builder);
+String* string_builder_to_string_allocator(const String_Builder* builder, Allocator* allocator);
+String* string_builder_to_string_heap(const String_Builder* builder, Heap_Allocator* allocator);
+
+
+
 String string_builder_to_string_non_pointer(const String_Builder* builder);
 char* string_builder_to_c_string(const String_Builder* builder);
 

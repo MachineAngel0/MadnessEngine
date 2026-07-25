@@ -110,6 +110,13 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->uv_staging_buffer_handle,
                                             submesh_upload_data->gpu_data->uv,
                                             submesh_upload_data->submesh->uv_bytes);
+
+        vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->tangent_staging_buffer_handle,
+                                    submesh_upload_data->gpu_data->tangent,
+                                    submesh_upload_data->submesh->tangent_bytes);
+
+        //TODO: free the data on the cpu
+
     }
 
     //skinned data
@@ -156,7 +163,6 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
                                                    sizeof(mat4s) * render_packet->draw_3d_data_packet.
                                                    world_space_matrix_count);
 
-
     //skinned matrix
     vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_buffer);
     vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_staging_buffer_handle);
@@ -167,117 +173,102 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
                                                        render_packet->draw_3d_data_packet.skinned_matrix));
 }
 
-
-void mesh_renderer_construct_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer, Shader_System* shader_system,
+void mesh_renderer_construct_batch_draw(Renderer* renderer,
                                         Render_Packet* render_packet,
                                         vulkan_command_buffer* command_buffer)
 {
-    //TODO: techincally duplicate code, we can abstract it out, pass in the material batch array and count
-    // and switch on the mesh type
-    // not using this anywhere so its fine for now, just be careful on modifying this code
+    //TODO: were going to assume we have already done culling,
+    // but we would need to pass in another structure for actually culled data
 
-    for (u32 batch_idx = 0; batch_idx < render_packet->draw_3d_data_packet.mesh_batch_count; batch_idx++)
+    // loop through our meshes and create render items for each
+
+    //TODO: TEMP
+    Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator, 100 * sizeof(Mesh_Render_Item));
+    u32 render_item_count = 0;
+
+    // Vulkan_Mesh_Draw draw_data = {
+    // .transform_idx = sub_mesh_instance->parent_transform_handle.handle,
+    // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
+    // };
+
+    for (u32 i = 0; i < render_packet->draw_3d_data_packet.mesh_instances_count; i++)
     {
-        Material_Batch* batch_data = &render_packet->draw_3d_data_packet.mesh_batch[batch_idx];
-
-        Vulkan_Shader_Batch* current_batch = allocator_alloc(&renderer->frame_allocator, sizeof(Vulkan_Shader_Batch));
-        if (hash_table_get(shader_system->shader_batch_hash_table, string_to_c_string(batch_data->material_info.shader_name), &current_batch))
+        Madness_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.mesh_instances[i];
+        for (u32 submesh_idx = 0; submesh_idx < mesh_instance->mesh_count; submesh_idx++)
         {
-            current_batch->draw_count = 0;
+            Madness_SubMesh_Instance* sub_mesh_instance = &mesh_instance->submesh_instances[submesh_idx];
 
-            //reset the offset of our per draw data
-            vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
-            vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
-            vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
-
-            vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-                renderer, current_batch->material_data_buffer_handle,
-                command_buffer,
-                batch_data->material_data->data,
-                dynamic_array_get_byte_size(batch_data->material_data));
-
-            VkDrawIndexedIndirectCommand indirect_draw = {0};
-
-            for (u32 mesh_idx = 0; mesh_idx < batch_data->mesh_instances->num_items; mesh_idx++)
-            {
-                Madness_SubMesh_Instance* mesh_instance = dynamic_array_get_ptr(batch_data->mesh_instances, Madness_SubMesh_Instance,
-                                                                     mesh_idx);
-                mesh_instance->mesh_gpu_draw.material_instance_handle = mesh_idx;
-                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-                    renderer, current_batch->draw_data_buffer_handle,
-                    command_buffer,
-                    &mesh_instance->mesh_gpu_draw,
-                    sizeof(Mesh_GPU_Draw));
-
-                indirect_draw.firstIndex = mesh_instance->mesh_indirect_draw.index_offset;
-                indirect_draw.indexCount = mesh_instance->mesh_indirect_draw.index_count;
-                indirect_draw.vertexOffset = mesh_instance->mesh_indirect_draw.vertex_offset;
-                //instance data
-                indirect_draw.instanceCount = 1;
-                indirect_draw.firstInstance = 0;
-
-                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-                    renderer, current_batch->indirect_draw_buffer_handle,
-                    command_buffer,
-                    &indirect_draw,
-                    sizeof(VkDrawIndexedIndirectCommand));
-
-
-                current_batch->draw_count++;
-            }
+            Mesh_Render_Item* render_inst = &render_items[render_item_count++];
+            *render_inst = (Mesh_Render_Item){
+                .material_key = sub_mesh_instance->material_handle.material_id,
+                .mesh_handle = mesh_instance->mesh_asset.handle,
+                .submesh_handle = submesh_idx,
+                .material_handle = sub_mesh_instance->material_handle.buffer_handle,
+                .transform_handle = mesh_instance->transform_handle.handle,
+                .index_count = sub_mesh_instance->mesh_indirect_draw.index_count,
+                .index_offset = sub_mesh_instance->mesh_indirect_draw.index_offset,
+                .vertex_offset = sub_mesh_instance->mesh_indirect_draw.vertex_count_offset,
+            };
         }
     }
 
+    //TODO/ OPTIMIZE : sort render items by material id,
+    // when a render item doesn't match, that means we move onto the next batch
 
-    for (u32 batch_idx = 0; batch_idx < render_packet->draw_3d_data_packet.skinned_batch_count; batch_idx++)
+
+    VkDrawIndexedIndirectCommand indirect_draw = {0};
+    Vulkan_Mesh_Draw mesh_draw = {0};
+    for (u32 batch_idx = 0; batch_idx < renderer->shader_system->mesh_batch_count; batch_idx++)
     {
-        Material_Batch* batch_data = &render_packet->draw_3d_data_packet.skinned_batch[batch_idx];
+        Vulkan_Shader_Batch* current_batch = &renderer->shader_system->mesh_batch[batch_idx];
+        current_batch->draw_count = 0;
 
-        Vulkan_Shader_Batch* current_batch = allocator_alloc(&renderer->frame_allocator, sizeof(Vulkan_Shader_Batch));
-        if (hash_table_get(shader_system->shader_batch_hash_table, string_to_c_string(batch_data->material_info.shader_name), &current_batch))
+        vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
+        vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
+        vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
+
+
+        //TODO/ OPTIMIZE: we can upload only whats needed per frame, instead of the whole thing,
+        // but who knows if individual uploads would be slower?
+        // honestly, just depends on the performance, should profile
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, current_batch->material_data_buffer_handle,
+            command_buffer,
+            current_batch->material_batch_reference->material_data->data,
+            dynamic_array_get_byte_size(current_batch->material_batch_reference->material_data));
+
+        for (u32 item_idx = 0; item_idx < render_item_count; item_idx++)
         {
-            current_batch->draw_count = 0;
+            Mesh_Render_Item* cur_render_item = &render_items[item_idx];
 
-            //reset the offset of our per draw data
-            vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
-            vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
-            vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
-
-            vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-                renderer, current_batch->material_data_buffer_handle,
-                command_buffer,
-                batch_data->material_data->data,
-                dynamic_array_get_byte_size(batch_data->material_data));
-
-            VkDrawIndexedIndirectCommand indirect_draw = {0};
-
-            for (u32 mesh_idx = 0; mesh_idx < batch_data->mesh_instances->num_items; mesh_idx++)
+            if (cur_render_item->material_key == current_batch->material_id)
             {
-                Madness_Skinned_SubMesh_Instance* sk_mesh_instance = dynamic_array_get_ptr(
-                    batch_data->mesh_instances, Madness_Skinned_SubMesh_Instance,
-                    mesh_idx);
-                //we are indexing into the material buffer based on the draw count
-                sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = mesh_idx;
-                sk_mesh_instance->sk_mesh_gpu_draw.vertex_offset = sk_mesh_instance->mesh_indirect_draw.
-                    vertex_offset;
+                mesh_draw = (Vulkan_Mesh_Draw){
+                    .transform_idx = cur_render_item->transform_handle,
+                    .material_instance_handle = cur_render_item->material_handle,
+                };
+                indirect_draw = (VkDrawIndexedIndirectCommand){
+                    .indexCount = cur_render_item->index_count,
+                    .firstIndex = cur_render_item->index_offset,
+                    .vertexOffset = cur_render_item->vertex_offset,
+                    .instanceCount = 1,
+                    .firstInstance = 0
+                };
+
+
                 vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
                     renderer, current_batch->draw_data_buffer_handle,
                     command_buffer,
-                    &sk_mesh_instance->sk_mesh_gpu_draw,
-                    sizeof(SKMesh_GPU_Draw));
+                    &mesh_draw,
+                    sizeof(Vulkan_Mesh_Draw));
 
-                indirect_draw.firstIndex = sk_mesh_instance->mesh_indirect_draw.index_offset;
-                indirect_draw.indexCount = sk_mesh_instance->mesh_indirect_draw.index_count;
-                indirect_draw.vertexOffset = sk_mesh_instance->mesh_indirect_draw.vertex_offset;
-                //instance data
-                indirect_draw.instanceCount = 1;
-                indirect_draw.firstInstance = 0;
 
                 vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
                     renderer, current_batch->indirect_draw_buffer_handle,
                     command_buffer,
                     &indirect_draw,
                     sizeof(VkDrawIndexedIndirectCommand));
+
 
                 current_batch->draw_count++;
             }
@@ -375,8 +366,6 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
 }
 
 
-
-
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                                               vulkan_command_buffer* command_buffer,
@@ -390,12 +379,6 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer*
     for (u32 batch_idx = 0; batch_idx < batch_draw_count; ++batch_idx)
     {
         Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
-
-        //check if we have a shadow pass
-        if ((draw_data->shader_pass_type & Shader_Pass_Type_Shadow) == 0)
-        {
-            continue;
-        }
 
 
         Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, draw_data->indirect_draw_buffer_handle);
