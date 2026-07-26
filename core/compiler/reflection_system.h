@@ -195,10 +195,9 @@ typedef struct Reflection_System
 
 Reflection_System* reflection_system_init(Memory_System* memory_system);
 
-void reflection_system_shutdown();
+void reflection_system_shutdown(Reflection_System* reflection_system, Memory_System* memory_system);
 
-void reflection_system_reset();
-
+void reflection_system_reset(Reflection_System* reflection_system);
 
 //API
 

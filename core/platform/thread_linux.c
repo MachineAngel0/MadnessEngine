@@ -10,7 +10,7 @@
 #include <sys/sysinfo.h>
 
 //TODO: https://www.youtube.com/watch?v=NxtqrN6Jw-4&list=PLv8Ddw9K0JPg1BEO-RS-0MYs423cvLVtj&index=70
-s32 get_threads_available()
+s32 get_threads_available(void)
 {
     s32 processor_count = get_nprocs_conf();
     s32 processor_available = get_nprocs();
@@ -45,7 +45,7 @@ void thread_sleep(Madness_Thread* madness_thread, u32 milliseconds)
 {
 }
 
-u64 thread_get_id()
+u64 thread_get_id(void)
 {
 }
 

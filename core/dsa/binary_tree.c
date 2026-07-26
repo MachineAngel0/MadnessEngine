@@ -222,7 +222,7 @@ void btree_postorder_traversal_recursive(BT_Node* node, void (*print_func)(void*
 // int btree_serialize(BT_Node* node); //idk anything about this but would be interesting to implement, something ill need to learn how to do anyway
 
 
-void binary_tree_test()
+void binary_tree_test(void)
 {
 
     int num15 = 15;

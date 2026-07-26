@@ -74,17 +74,6 @@ void allocator_debug_print(Allocator* a)
     INFO("ALLOCATOR MEMORY LEFT: %llu", a->capacity - a->current_offset);
 }
 
-void* allocator_interface_alloc(void* allocator, const u64 memory_byte_request, u8 alignment)
-{
-    Allocator* a = (Allocator*)allocator;
-    return allocator_alloc(a, memory_byte_request);
-}
-
-void allocator_interface_free(void* allocator, void* memory_block)
-{
-    //should be handled manually and not by the interface
-    return;
-}
 
 
 //typically this will be used in local scope, and freed off the stack when done,

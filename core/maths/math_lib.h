@@ -87,7 +87,7 @@ static const vec4s COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 /*** RANDOM ***/
 static bool rand_seeded = false;
 
-void rand_reseed()
+void rand_reseed(void)
 {
     srand(platform_get_absolute_time());
 }
@@ -112,7 +112,7 @@ uint32_t rand_range_i(uint32_t min, uint32_t max)
     return (rand() % (max - min + 1)) + min;
 }
 
-static float randf()
+static float randf(void)
 {
     if (!rand_seeded)
     {

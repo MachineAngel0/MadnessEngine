@@ -61,15 +61,22 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     swapchain_extent.width = clamp_int(swapchain_extent.width, min.width, max.width);
     swapchain_extent.height = clamp_int(swapchain_extent.height, min.height, max.height);
 
-    u32 image_count = context->device.swapchain_capabilities.capabilities.minImageCount + 1;
-    // in the event our image count is for some reason greater than the max allowed
-    if (context->device.swapchain_capabilities.capabilities.minImageCount > 0 && image_count >
-        context->device.swapchain_capabilities.capabilities.maxImageCount)
+    //TODO: we should have a clamp here to choose the smallest frame counts possible
+    u32 image_count = context->device.swapchain_capabilities.capabilities.minImageCount;
+    //NOTE: specs says if max image count is = 0, that means unlimited amount of images
+    // we cant do the sceond check or we will get get 0-1 which wraps around to 255
+    if (context->device.swapchain_capabilities.capabilities.maxImageCount > 0)
     {
-        image_count = context->device.swapchain_capabilities.capabilities.maxImageCount;
+        // in the event our image count is for some reason greater than the max allowed
+        if (context->device.swapchain_capabilities.capabilities.minImageCount > 0 && image_count >
+            context->device.swapchain_capabilities.capabilities.maxImageCount)
+        {
+            image_count = context->device.swapchain_capabilities.capabilities.maxImageCount;
+        }
     }
 
-    swapchain_out->max_frames_in_flight = image_count - 1;
+
+    swapchain_out->max_frames_in_flight = image_count;
 
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {0};
@@ -88,8 +95,8 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     {
         // want images to be accessible by both queue families
         u32 queueFamilyIndices[] = {
-            (u32) context->device.graphics_queue_index,
-            (u32) context->device.present_queue_index
+            (u32)context->device.graphics_queue_index,
+            (u32)context->device.present_queue_index
         };
         swapchain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_create_info.queueFamilyIndexCount = 2;
@@ -111,8 +118,9 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     swapchain_create_info.clipped = VK_TRUE; // dont render anything off the screen
     swapchain_create_info.oldSwapchain = 0; // TODO: pass in the old swapchin
 
-    VkResult swapchain_create_result = vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info, context->allocator,
-        &swapchain_out->swapchain_handle);
+    VkResult swapchain_create_result = vkCreateSwapchainKHR(context->device.logical_device, &swapchain_create_info,
+                                                            context->allocator,
+                                                            &swapchain_out->swapchain_handle);
     VK_CHECK(swapchain_create_result)
 
     //create the swapchain image and image view
@@ -120,17 +128,17 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     // swapchain_out->image_count = 0;
     VkResult get_result =
         vkGetSwapchainImagesKHR(context->device.logical_device, swapchain_out->swapchain_handle, &swapchain_out->
-            image_count,
-            0);
+                                image_count,
+                                0);
     VK_CHECK(get_result);
     //NOTE: these might fail, idk why
     if (!swapchain_out->images)
     {
-        swapchain_out->images = (VkImage *) malloc(sizeof(VkImage) * swapchain_out->image_count);
+        swapchain_out->images = (VkImage*)malloc(sizeof(VkImage) * swapchain_out->image_count);
     }
     if (!swapchain_out->image_views)
     {
-        swapchain_out->image_views = (VkImageView *) malloc(sizeof(VkImageView) * swapchain_out->image_count);
+        swapchain_out->image_views = (VkImageView*)malloc(sizeof(VkImageView) * swapchain_out->image_count);
     }
     VK_CHECK(
         vkGetSwapchainImagesKHR(context->device.logical_device, swapchain_out->swapchain_handle, &swapchain_out->
@@ -225,7 +233,8 @@ bool vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_s
 }
 
 void vulkan_swapchain_present_image(vulkan_context* context, vulkan_swapchain* swapchain,
-                                    VkQueue present_queue, VkSemaphore render_complete_semaphore, u32 present_image_index)
+                                    VkQueue present_queue, VkSemaphore render_complete_semaphore,
+                                    u32 present_image_index)
 {
     VkPresentInfoKHR present_info = {0};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -246,8 +255,6 @@ void vulkan_swapchain_present_image(vulkan_context* context, vulkan_swapchain* s
     {
         FATAL("FAILED TO PRESENT SWAPCHAIN IMAGE!")
     }
-
-
 }
 
 bool recreate_swapchain(vulkan_context* context)
@@ -266,7 +273,6 @@ bool recreate_swapchain(vulkan_context* context)
     vkDeviceWaitIdle(context->device.logical_device);
 
 
-
     // Requery support
     vulkan_device_query_swapchain_support(
         context->device.physical_device,
@@ -275,8 +281,8 @@ bool recreate_swapchain(vulkan_context* context)
     vulkan_device_detect_depth_stencil_format(&context->device);
 
     vulkan_swapchain_recreate(context,
-        context->framebuffer_width_new, context->framebuffer_height_new,
-        &context->swapchain);
+                              context->framebuffer_width_new, context->framebuffer_height_new,
+                              &context->swapchain);
 
     // Sync the framebuffer size with the new sizes.
     context->framebuffer_width = context->framebuffer_width_new;

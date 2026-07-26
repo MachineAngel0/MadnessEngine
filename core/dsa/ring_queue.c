@@ -137,7 +137,7 @@ void ring_queue_print(ring_queue* queue, void (*print_func)(void*))
     //TODO:
 }
 
-void ring_queue_test()
+void ring_queue_test(void)
 {
     TEST_START("RING QUEUE");
 

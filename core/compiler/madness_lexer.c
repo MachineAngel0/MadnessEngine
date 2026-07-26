@@ -1,6 +1,8 @@
 ﻿#include "madness_lexer.h"
 
-void lexer_test()
+#include "asserts.h"
+
+void lexer_test(void)
 {
     Lexer* lexer = lexer_init();
     lexer_generate_tokens(lexer, "../core/compiler/compiler_test_file.h");
@@ -10,7 +12,7 @@ void lexer_test()
     u64 token_size = darray_get_size(lexer2->tokens);
 }
 
-Lexer* lexer_init()
+Lexer* lexer_init(void)
 {
     Lexer* lexer = malloc(sizeof(Lexer));
 

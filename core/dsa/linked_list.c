@@ -319,7 +319,7 @@ void ll_reverse(Linked_List* linked_list)
 }
 
 
-void linked_list_test()
+void linked_list_test(void)
 {
     //TODO: add in asserts after i make my logger library
 

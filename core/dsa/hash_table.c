@@ -199,7 +199,7 @@ u64 hash_table_get_hash_id(hash_table* h, const char* key_str)
 }
 
 
-void hash_table_test()
+void hash_table_test(void)
 {
     TEST_START("HASH TABLE");
     hash_table* hm_test = HASH_TABLE_CREATE(s32, HASH_TABLE_DEFAULT_CAPACITY);

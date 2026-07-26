@@ -31,11 +31,11 @@ bool thread_join_timeout(Madness_Thread* madness_thread, u64 wait_ms);
 void thread_cancel(Madness_Thread* madness_thread);
 bool thread_is_active(Madness_Thread* madness_thread);
 void thread_sleep(Madness_Thread* madness_thread, u32 milliseconds);
-u64 thread_get_id();
+u64 thread_get_id(void);
 
 
 //get logical processor cores
-s32 get_threads_available();
+s32 get_threads_available(void);
 
 // Mutex
 bool mutex_create(Madness_Mutex* out_mutex);

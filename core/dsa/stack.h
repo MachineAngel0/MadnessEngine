@@ -58,6 +58,6 @@ void stack_empty(stack* s);
 
 void stack_print(const stack* s, void (*print_func)(void*));
 
-void stack_test();
+void stack_test(void);
 
 #endif //STACK_H

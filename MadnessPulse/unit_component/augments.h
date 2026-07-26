@@ -12,7 +12,7 @@
 #define STATUS_UPPER_LIMITS 100
 #define STATUS_LOWER_LIMITS 0
 
-Augment_Component augment_component_create()
+Augment_Component augment_component_create(void)
 {
     Augment_Component augment_component;
 
@@ -61,8 +61,8 @@ float ReturnStatusModifierForStatus(Element_Type AugmentDamageType);
 
 float ReturnStatusModifier(Element_Type AugmentDamageType);
 
-int ReturnAllAugmentSum();
-int ReturnAllAugmentAverage();
+int ReturnAllAugmentSum(void);
+int ReturnAllAugmentAverage(void);
 
 void SwapStatusValues(Element_Type DamageType1, Element_Type DamageType2);
 
@@ -74,31 +74,31 @@ bool IsStatusMax(Element_Type AugmentType);
 bool IsStatusMin(Element_Type AugmentType);
 
 void ReturnHighestStatusMap(Element_Type HighestType, int HighestValue);
-Element_Type ReturnHighestStatusType();
+Element_Type ReturnHighestStatusType(void);
 void ReturnLowestStatusMap(Element_Type LowestType, int LowestValue);
-Element_Type ReturnLowestStatusType();
-float ReturnAverageForStatusMap();
+Element_Type ReturnLowestStatusType(void);
+float ReturnAverageForStatusMap(void);
 
 
 /*DAMAGE POINTS*/
 void ChangeDamage(int ChangeAmount);
 void SetDamage(int PercentAmount);
-void ResetDamage();
-float ReturnDamage();
-int ReturnDamagePoints();
+void ResetDamage(void);
+float ReturnDamage(void);
+int ReturnDamagePoints(void);
 
-void MaxDamage();
+void MaxDamage(void);
 
 /*NEGATION POINTS*/
 void ChangeNegation(int ChangeAmount);
 void SetNegation(int NewNegationAmount);
-void ResetNegation();
+void ResetNegation(void);
 
-float ReturnDamageNegation();
-int ReturnNegationPoints();
+float ReturnDamageNegation(void);
+int ReturnNegationPoints(void);
 
 
-void MaxNegation();
+void MaxNegation(void);
 
 
 #endif //AUGMENT_COMPONENT_H

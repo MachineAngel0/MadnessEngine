@@ -23,6 +23,8 @@ void buffer_system_frame_start(Renderer* renderer);
 
 uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
+// Get device address of a buffer
+VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 
 //TODO: used in texture image, replace with a storage buffer call or retrieve
 bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,

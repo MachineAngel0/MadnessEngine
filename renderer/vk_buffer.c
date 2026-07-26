@@ -1,7 +1,8 @@
 ﻿#include "vk_buffer.h"
 
 #include "vk_sync.h"
-
+#include "vk_descriptors.h"
+#include "vk_descriptors.h"
 
 //NOTE: this should change so that its consistent with the amount given out in by the descriptor pools
 #define max_buffers_available 1024u
@@ -801,4 +802,14 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(R
     // memory_barrier_transfer(renderer, command_buffer);
 
     return true;
+}
+
+
+VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer)
+{
+    VkBufferDeviceAddressInfo info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = buffer
+    };
+    return vkGetBufferDeviceAddress(device, &info);
 }

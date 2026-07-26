@@ -134,7 +134,7 @@ void darray_debug_print_range(void* array, size_t start, size_t end, void (*prin
 void darray_test(void);
 
 
-void darray_macro_test();
+void darray_macro_test(void);
 
 
 //THE OTHER DYNAMIC ARRAY

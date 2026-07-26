@@ -1,9 +1,9 @@
 ﻿#include "camera.h"
-
+#include "math_lib.h"
 
 void camera_init(camera* out_camera)
 {
-    memset(out_camera, 0, sizeof(camera));
+    // memset(out_camera, 0, sizeof(camera));
 
     // Default camera values
     const float MOVE_SPEED = 3.5f;

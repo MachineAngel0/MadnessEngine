@@ -63,7 +63,7 @@ void ll_bubble_sort(Linked_List* linked_list, int (*cmp_func)(void*, void*));
 
 void ll_reverse(Linked_List* linked_list);
 
-void linked_list_test();
+void linked_list_test(void);
 
 
 #endif //LINKED_LIST_GENERIC_H

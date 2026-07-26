@@ -20,7 +20,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
 void vulkan_pipeline_destroy(vulkan_context* context, Vulkan_Shader_Pipeline* pipeline);
 
 
-bool vulkan_pipeline_compute_create();
+bool vulkan_pipeline_compute_create(void);
 
 const char* pipeline_cache_file_path = "../renderer/pipeline_cache.bin";
 

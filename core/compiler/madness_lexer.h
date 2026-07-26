@@ -126,12 +126,12 @@ typedef struct Parser
     bool unimplemented;
 } Parser;
 
-Lexer* lexer_init();
+Lexer* lexer_init(void);
 void lexer_free(Lexer* lexer);
 
 
 void lexer_generate_tokens(Lexer* lexer, const char* file_path);
-void lexer_test();
+void lexer_test(void);
 
 Token* lexer_prune_tokens(Token* token_array, Token_Type* tokens_to_remove, u32 list_size);
 

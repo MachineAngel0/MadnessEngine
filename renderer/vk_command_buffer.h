@@ -49,8 +49,7 @@ void vulkan_command_buffer_end_single_use(
     VkQueue queue);
 
 
-// Get device address of a buffer
-VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
+
 
 void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer* command_buffer, VkQueue queue);
 

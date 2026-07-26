@@ -60,7 +60,7 @@ bool fl_array_deserialize(Freelist_Array* array, FILE* fptr);
 
 
 
-void free_list_array_test();
+void free_list_array_test(void);
 
 
 #endif //FREELIST_ARRAY_H

@@ -402,7 +402,7 @@ void red_black_tree_remove(Red_Black_Tree* rbt, void* data)
     }
 }
 
-void red_black_tree_test()
+void red_black_tree_test(void)
 {
     TEST_START("RED BLACK TREE START");
 

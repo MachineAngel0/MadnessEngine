@@ -25,6 +25,8 @@
 
 
 #include "vk_descriptors.h"
+#include "vk_buffer.h"
+#include "shader_system.h"
 
 
 Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
@@ -515,7 +517,7 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
     // bufferInfo.range = VK_WHOLE_SIZE; // this does functionally the same thing
     bufferInfo.offset = 0;
 
-    for (int j = 0; j < descriptor_system->uniform_descriptors.descriptor_set_count; j++)
+    for (u32 j = 0; j < descriptor_system->uniform_descriptors.descriptor_set_count; j++)
     {
         VkWriteDescriptorSet write_descriptor_set = {0};
         write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

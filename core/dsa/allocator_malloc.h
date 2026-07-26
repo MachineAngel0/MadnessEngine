@@ -48,7 +48,7 @@ typedef struct Allocator_Malloc
 
 static Allocator_Malloc* _allocator_malloc;
 
-void allocator_malloc_init()
+void allocator_malloc_init(void)
 {
     _allocator_malloc = malloc(sizeof(Allocator_Malloc));
     _allocator_malloc->max_block_count = 100;
@@ -109,7 +109,7 @@ void allocator_malloc_free(void* ptr)
     }
 }
 
-void allocator_malloc_free_all()
+void allocator_malloc_free_all(void)
 {
     for (u64 i = 0; i < _allocator_malloc->block_count; i++)
     {
@@ -135,7 +135,7 @@ Malloc_Block_Query allocator_malloc_query_info(void* ptr)
     return ( Malloc_Block_Query){.context = Malloc_Cxt_Invalid, .alloc_size = 0};
 }
 
-void allocator_malloc_debug_print()
+void allocator_malloc_debug_print(void)
 {
     if (!_allocator_malloc)
     {
@@ -166,7 +166,7 @@ void allocator_malloc_test()
     allocator_malloc_free(byte);
 
     allocator_malloc_debug_print();
-    allocator_malloc_free_all(byte);
+    allocator_malloc_free_all();
     allocator_malloc_debug_print();
 
     TEST_END("ALLOCATOR MALLOC");

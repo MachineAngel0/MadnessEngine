@@ -47,10 +47,14 @@ typedef struct internal_state
     xcb_atom_t wm_protocols;
     xcb_atom_t wm_delete_win;
     VkSurfaceKHR surface;
-} internal_state;
+} Linux_Internal_State;
+
+
 
 // Key translation
 keys translate_keycode(u32 x_keycode);
+
+static Platform_State* linux_plat_state;
 
 bool platform_startup(
     Platform_State* plat_state,
@@ -64,9 +68,9 @@ bool platform_startup(
     plat_state->event_system = event_system;
     plat_state->input_system = input_system;
     // Create the internal state.
-    plat_state->internal_state = malloc(sizeof(internal_state));
-    memset(plat_state->internal_state, 0, (sizeof(internal_state)));
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    plat_state->internal_state = malloc(sizeof(Linux_Internal_State));
+    memset(plat_state->internal_state, 0, (sizeof(Linux_Internal_State)));
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
 
     // Connect to X
     state->display = XOpenDisplay(NULL);
@@ -199,13 +203,15 @@ bool platform_startup(
         return false;
     }
 
+    linux_plat_state = plat_state;
+
     return true;
 }
 
 void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
 
     // Turn key repeats back on since this is global for the OS... just... wow.
     XAutoRepeatOn(state->display);
@@ -217,7 +223,7 @@ bool platform_pump_messages(Platform_State* plat_state)
 {
     //comment
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
 
     xcb_generic_event_t* event;
     xcb_client_message_event_t* cm;
@@ -471,7 +477,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context)
 {
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
 
     VkXcbSurfaceCreateInfoKHR create_info = {VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
     create_info.connection = state->connection;
@@ -490,6 +496,21 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
     vulkan_context->surface = state->surface;
     return true;
+}
+
+void platform_set_cursor_pos(int x, int y)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)linux_plat_state->internal_state;
+
+    XWarpPointer(
+        state->display,     // Display*
+        None,        // source window
+        state->window,      // destination window
+        0, 0, 0, 0,  // source rectangle (ignored)
+        x, y         // destination coordinates
+    );
+
+    XFlush(state->display);
 }
 
 void platform_generate_uuid(u64* high, u64* low)

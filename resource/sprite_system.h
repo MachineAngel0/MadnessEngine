@@ -2,7 +2,7 @@
 #define SPRITE_H
 
 
-#include "../renderer/vulkan_enum_types.h"
+#include "resource_types.h"
 
 
 typedef struct Sprite_System_Config

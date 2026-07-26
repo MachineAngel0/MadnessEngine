@@ -590,7 +590,7 @@ uint32_t get_size(char* format)
 }
 
 
-void pack_unpack_test()
+void pack_unpack_test(void)
 {
 
     bool serilization_passing = true;

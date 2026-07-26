@@ -150,7 +150,7 @@ void asset_system_update_registry(Asset_System* asset_system)
 }
 
 
-void asset_system_convert_to_runtime_format()
+void asset_system_convert_to_runtime_format(void)
 {
 }
 

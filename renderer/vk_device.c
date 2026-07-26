@@ -245,6 +245,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     //query physical device
     if (!select_physical_device(vulkan_context))
     {
+        FATAL("FAILED TO CREATE PHYSICAL DEVICE")
         return false;
     }
 
@@ -568,18 +569,26 @@ bool select_physical_device(vulkan_context* vulkan_context)
 
         // TODO: These requirements should probably be driven by engine
         // configuration.
-        vulkan_physical_device_requirements requirements = {};
+        vulkan_physical_device_requirements requirements = {0};
         requirements.graphics = true;
         requirements.present = true;
         requirements.transfer = true;
         requirements.compute = true;
 
         requirements.sampler_anisotropy = true;
-        requirements.discrete_gpu = true;
+
+        //TODO: temp code, clean this up later, when doing configs for the engine
+        // my linux laptop doesnt have a discrete, it has a integrated gpu, look into, for performance
+        #if MPLATFORM_LINUX
+            requirements.discrete_gpu = false;
+        #else
+            requirements.discrete_gpu = true;
+        #endif
+
         requirements.device_extension_names = darray_create(const char*);
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-        vulkan_physical_device_queue_family_info queue_info = {};
+        vulkan_physical_device_queue_family_info queue_info = {0};
         bool result = physical_device_meets_requirements(
             physical_devices[i],
             vulkan_context->surface,

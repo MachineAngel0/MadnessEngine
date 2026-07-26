@@ -55,10 +55,13 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
         #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
         #        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
     endif ()
+    find_package(X11 REQUIRED)
+
 endif ()
 
 
 find_package(Vulkan REQUIRED)
+
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/)
@@ -184,7 +187,7 @@ if (UNIX)
             m #linux math library
     )
     foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
-        target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})
+        target_link_libraries(${tgt} PRIVATE ${MADNESS_UNIX_LIBS})
     endforeach ()
 endif ()
 

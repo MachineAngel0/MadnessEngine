@@ -66,7 +66,7 @@ void fl_array_release(Freelist_Array* array, const Freelist_Array_Handle handle)
     array->gen[handle.handle]++;
 }
 
-void free_list_array_test()
+void free_list_array_test(void)
 {
 
     typedef struct testing_freelist_array_thing

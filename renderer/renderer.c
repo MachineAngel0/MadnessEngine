@@ -12,6 +12,10 @@
 #include "vk_sync.h"
 #include "maths/math_lib.h"
 #include "pipelines/sprite_render.h"
+#include "../renderer/pipelines/ui_render.h"
+#include "../renderer/pipelines/mesh_render.h"
+#include "../renderer/pipelines/sprite_render.h"
+#include "../renderer/pipelines/particle_render.h"
 
 //finally works, TODO: whatever the fuck the renderer needs from other applications
 bool renderer_on_key(const Event_Type code, String sender, String listener_inst, Event_Data context)

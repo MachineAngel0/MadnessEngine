@@ -3,6 +3,7 @@
 #include "allocator.h"
 #include "logger.h"
 #include "event.h"
+#include "platform.h"
 
 Input_System* input_init(Event_System* event_system, Memory_System* memory_system)
 {

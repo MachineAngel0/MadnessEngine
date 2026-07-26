@@ -233,18 +233,18 @@ MAPI void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y);
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
 MAPI void insanity_ui_end(void);
 
-MAPI UI_Render_Packet insanity_get_render_data();
+MAPI UI_Render_Packet insanity_get_render_data(void);
 
 
 //part of the ui end function
-MAPI void insanity_ui_passes();
+MAPI void insanity_ui_passes(void);
 MAPI void insanity_ui_generate_draw(void);
 
 
 //API
 
 MAPI Insanity_UI_Interaction_Result insanity_ui_draw_rect(const char* id);
-MAPI void insanity_ui_text();
+MAPI void insanity_ui_text(void);
 
 
 // void insanity_ui_layout_push(Insanity_UI_Layout layout);
@@ -285,21 +285,21 @@ MAPI void insanity_ui_push_text_float(float val);
 
 
 
-MAPI UI_Property_Flags insanity_ui_get_flags();
+MAPI UI_Property_Flags insanity_ui_get_flags(void);
 MAPI Texture_Handle insanity_ui_get_image(void);
 
 
 //Utility
-MAPI Insanity_UI_Node* insanity_ui_get_new_node();
-MAPI Insanity_UI_Node* insanity_ui_get_parent_node();
-MAPI Insanity_UI_Node* insanity_ui_get_top_node();
+MAPI Insanity_UI_Node* insanity_ui_get_new_node(void);
+MAPI Insanity_UI_Node* insanity_ui_get_parent_node(void);
+MAPI Insanity_UI_Node* insanity_ui_get_top_node(void);
 
 
 MAPI bool insanity_rect_hit(vec2s pos, vec2s size);
 MAPI char* insanity_ui_float_to_char(float value);
 
 //Test
-MAPI void insanity_ui_test();
+MAPI void insanity_ui_test(void);
 
 
 #endif //INSANITY_UI_H

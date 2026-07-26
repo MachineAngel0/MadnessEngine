@@ -1,8 +1,11 @@
 ﻿#include "asset_converter.h"
+#include "asset_serialization.h"
 #include "asserts.h"
 #include "resource_types.h"
 #include "stb_image.h"
 #include "stb_truetype.h"
+#include "asset_registry.h"
+#include "math_lib.h"
 
 bool asset_convert_file(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {

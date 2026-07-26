@@ -2,6 +2,7 @@
 
 #include "misc_util.h"
 #include "unit_test.h"
+#include "allocator.h"
 
 
 Array* _array_create(const u64 data_stride, const u64 capacity, Allocator* allocator)
@@ -360,7 +361,7 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
 
-void array_test()
+void array_test(void)
 {
     TEST_START("ARRAY");
 

@@ -4,6 +4,15 @@
 #include "madness_pulse_game.h"
 #include "madness_txt.h"
 #include "ui_madness.h"
+#include "ui_insanity.h"
+#include "sprite_system.h"
+#include "../app_types.h"
+#include "clock.h"
+#include "../resource/asset_system.h"
+#include "../platform/audio.h"
+#include "../resource/mesh_system.h"
+#include "../resource/particle_system.h"
+
 
 
 bool application_on_resized(const Event_Type code, String sender, String listener_inst, Event_Data context);
@@ -169,9 +178,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         {
             continue;
         }
+        /*
         sprite_system_begin(application_core->asset_system->sprite_system,
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);
+                            */
 
 
         madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,

@@ -164,7 +164,7 @@ void vulkan_renderpass_UI_begin(Renderer* renderer, vulkan_command_buffer* comma
 void vulkan_renderpass_UI_end(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
 
 
-void fake_renderpass_begin()
+void fake_renderpass_begin(void)
 {
     //insert memory barriers needed
     //cmd beging rendering -> but we need rendering attachment info and rendering info struct
