@@ -4,17 +4,6 @@
 bool material_system_init(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system)
 {
     //reflection/registry system
-    material_system->reflection_system = reflection_system_init(memory_system);
-    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
-                            REFLECTION_PARSE_CONSTANT);
-    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h", REFLECTION_PARSE_ENUM);
-    reflection_system_parse(material_system->reflection_system, "../resource/material_types.h",
-                            REFLECTION_PARSE_STRUCT);
-
-    reflection_data_to_files(material_system->reflection_system, "material",
-                             "../resource/generated/mat_enums.h",
-                             "../resource/generated/mat_structs.h");
-
     material_system->reflection_registry = reflection_registry_init(memory_system);
     generate_runtime_enums_material(material_system->reflection_registry);
     generate_runtime_structs_material(material_system->reflection_registry);

@@ -25,9 +25,20 @@ Reflection_System* reflection_system_init(Memory_System* memory_system)
     return reflection_system;
 }
 
-void reflection_system_shutdown()
+void reflection_system_shutdown(Reflection_System* reflection_system, Memory_System* memory_system)
 {
-    //TODO: use an arena
+    //TODO: free the allocators
+    memory_system_memory_free(memory_system, reflection_system, MEMORY_SUBSYSTEM_REFLECTION);
+
+
+}
+
+void reflection_system_reset(Reflection_System* reflection_system)
+{
+    allocator_clear_and_zero(reflection_system->allocator);
+    allocator_clear_and_zero(reflection_system->frame_allocator);
+    reflection_system->header_file_list_count = 0;
+
 }
 
 void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer)

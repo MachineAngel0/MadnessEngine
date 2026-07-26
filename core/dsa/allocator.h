@@ -23,6 +23,7 @@ typedef Allocator Frame_Allocator;
 MAPI void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size);
 
 MAPI void allocator_clear(Allocator* a);
+MAPI void allocator_clear_and_zero(Allocator* a);
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8
 MAPI void* allocator_alloc_align(Allocator* a, const u64 mem_request, const u64 align);

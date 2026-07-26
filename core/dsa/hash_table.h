@@ -38,6 +38,7 @@ bool hash_table_remove(hash_table* h, const char* key_str);
 bool hash_table_get(hash_table* h, const char* key_str, void* out_data);
 void hash_table_set(hash_table* h, const char* key_str, void* value);
 
+void hash_table_clear(hash_table* h);
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*));
 u64 hash_table_get_hash_id(hash_table* h, const char* key_str);

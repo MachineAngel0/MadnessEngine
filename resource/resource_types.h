@@ -704,7 +704,6 @@ typedef struct Madness_SkMesh_Runtime
 
 typedef struct Material_System
 {
-    Reflection_System* reflection_system;
     Reflection_Registry* reflection_registry;
 
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely

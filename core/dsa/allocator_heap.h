@@ -4,6 +4,8 @@
 
 #include <stdbool.h>
 
+#include "defines.h"
+
 
 //TODO: rn I dont track have a concept of tracking individual memory allocations
 // TODO: turn into a red black tree if performance ever becomes a problem

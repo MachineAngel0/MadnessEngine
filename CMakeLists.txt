@@ -12,7 +12,7 @@ set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
-        MADNESS_REFLECTION
+        Madness_Reflection
         MadnessEngine
 
         MadnessEngine_renderer
@@ -92,10 +92,11 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
 
 
 
-add_library(MADNESS_REFLECTION SHARED
+add_executable(Madness_Reflection
         core/build_core.h
         core/build_core.c
         lib/build_lib.c
+        core/compiler/reflection_main.c
 )
 
 
@@ -223,3 +224,11 @@ endif ()
 
 
 
+#i have this tied to left-ctrl+1, which runs the reflection build
+#[[
+add_custom_target(generate_reflection
+        COMMAND $<TARGET_FILE:Madness_Reflection>
+        DEPENDS Madness_Reflection
+)
+
+add_dependencies(MadnessPulse generate_reflection)]]

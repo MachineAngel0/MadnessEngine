@@ -250,6 +250,38 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 
 	reflection_registry_add_struct(reflection_registry, Material_Default_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Material_Black_Hole_Fields[] =
+	{
+		{
+			.name = "distortion",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Black_Hole, distortion)
+		},
+		{
+			.name = "speed",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Black_Hole, speed)
+		},
+		{
+			.name = "size",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "float",
+			.offset = offsetof(Material_Black_Hole, size)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Black_Hole_Runtime_Struct =
+	{
+		.name = "Material_Black_Hole",
+		.fields = Material_Black_Hole_Fields,
+		.field_count = 3,
+		.struct_size = sizeof(Material_Black_Hole)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Black_Hole_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Material_Flat_Color_Fields[] =
 	{
 		{

@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include "madness_lexer.h"
+#include "math_types.h"
+#include "UUID.h"
 
 //TODO: Move this out to defines and call it Madness_Types and name them {MADNESS_TYPE_U8}
 typedef enum Reflection_Type
@@ -194,6 +196,8 @@ typedef struct Reflection_System
 Reflection_System* reflection_system_init(Memory_System* memory_system);
 
 void reflection_system_shutdown();
+
+void reflection_system_reset();
 
 
 //API

@@ -64,7 +64,13 @@ typedef struct Material_Default_CPU
 } Material_Default_CPU;
 
 
+typedef struct Material_Black_Hole
+{
+    float distortion;
+    float speed;
+    float size;
 
+} Material_Black_Hole;
 
 //this is mostly a test material
 typedef struct Material_Flat_Color

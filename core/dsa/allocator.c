@@ -22,7 +22,12 @@ void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer
 void allocator_clear(Allocator* a)
 {
     a->current_offset = 0;
-    // memset(a->memory, 0, a->capacity); //NOTE: this is apparently super fucking slow
+}
+
+void allocator_clear_and_zero(Allocator* a)
+{
+    a->current_offset = 0;
+    memset(a->memory, 0, a->capacity); //NOTE: this is really fucking slow, dont call it every frame
 }
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8

@@ -175,6 +175,7 @@ void hash_table_set(hash_table* h, const char* key_str, void* value)
 }
 
 
+
 void hash_table_print(hash_table* h, void (*print_func_value)(void*))
 {
     //NOTE: will not work if we are using pointer types
