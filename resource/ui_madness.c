@@ -139,7 +139,7 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
 
         //do a state update on the window positions
-        for (u32 i = 0; i < windows_file_count; i++)
+        for (u32 i = 0; i < madness_ui->window_state_array_count; i++)
         {
             Window_State window_state = madness_ui->window_state_array[i];
 
