@@ -10,15 +10,16 @@
 #include <sys/sysinfo.h>
 
 //TODO: https://www.youtube.com/watch?v=NxtqrN6Jw-4&list=PLv8Ddw9K0JPg1BEO-RS-0MYs423cvLVtj&index=70
-i32 get_threads_available()
+s32 get_threads_available()
 {
-    i32 processor_count = get_nprocs_conf();
-    i32 processor_available = get_nprocs();
+    s32 processor_count = get_nprocs_conf();
+    s32 processor_available = get_nprocs();
     INFO("%i processor cores, cores available: %i", processor_count, processor_available)
     return processor_available;
 }
 
-bool thread_create(pfn_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread)
+
+bool thread_create(fpn_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread)
 {
 }
 

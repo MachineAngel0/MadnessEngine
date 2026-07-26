@@ -871,9 +871,9 @@ typedef struct Ability_Component
 
 
 #define Component_Size (BYTES_M(64))
-_Static_assert(sizeof(Heal_Component) <= Component_Size);
-_Static_assert(sizeof(Damage_Component) <= Component_Size);
-_Static_assert(sizeof(Passive_Reverse_Component) <= Component_Size);
+_Static_assert(sizeof(Heal_Component) <= Component_Size, "");
+_Static_assert(sizeof(Damage_Component) <= Component_Size, "");
+_Static_assert(sizeof(Passive_Reverse_Component) <= Component_Size, "");
 
 //damage enemy, and heal self ability
 // ability

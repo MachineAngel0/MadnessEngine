@@ -150,7 +150,7 @@ bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation
 }
 
 
-shader_creation_system_shader_start_main(Shader_Creation_System* shader_creation_system)
+void shader_creation_system_shader_start_main(Shader_Creation_System* shader_creation_system)
 {
     fprintf(shader_creation_system->open_file, "void main() {\n");
 }

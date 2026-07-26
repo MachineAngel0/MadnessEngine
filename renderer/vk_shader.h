@@ -1,6 +1,8 @@
 ﻿#ifndef VULKAN_SHADER_OBJECT_H
 #define VULKAN_SHADER_OBJECT_H
 
+#include "vulkan_struct_types.h"
+
 VkShaderModule create_shader_module(const vulkan_context* context, const u8* shader_bytes, u64 shader_size);
 
 

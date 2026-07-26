@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "str.h"
 #include "compiler/reflection_system.h"
+#include "maths/math_lib.h"
 
 
 void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
@@ -1113,7 +1114,7 @@ vec2s madness_ui_get_text_size(String text)
 
         f32 y_height = ((f32)g->height * font_scalar);
 
-        out_text_size.y = max(y_height, out_text_size.y);
+        out_text_size.y = max_f(y_height, out_text_size.y);
 
         //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
 
@@ -1150,7 +1151,7 @@ void madness_calculate_text_size(String text, vec2s screen_position, vec2s* out_
 
         f32 y_height = ((f32)g->height * font_scalar);
 
-        max_height_y = max(y_height, max_height_y);
+        max_height_y = max_f(y_height, max_height_y);
 
         //printf("xpos %f, ypos%f, w%f, h%f\n", xpos, ypos, w, h);
 

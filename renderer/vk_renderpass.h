@@ -1,6 +1,8 @@
 ﻿#ifndef VK_RENDERPASS_H
 #define VK_RENDERPASS_H
 
+#include "vulkan_struct_types.h"
+
 //NOTE: idk why these are flags, a renderpass can only be one type
 // unless its specifically to sort where draw objects go
 typedef enum Vulkan_Renderpass_Type

@@ -1,6 +1,13 @@
 ﻿#include "madness_txt.h"
 
+#include <stdio.h>
+#include <string.h>
+
+
 #include "c_string.h"
+#include "memory_system.h"
+#include "asserts.h"
+#include "math_types.h"
 
 
 Madness_txt* madness_txt_init(Memory_System* memory_system)
@@ -443,10 +450,14 @@ void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void*
 
         //scans for our format
         // arr: field[type][N]:
-        if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
+        if (sscanf(line, "%127[^[][%31[^]]][%31[^]]:",
+                 field_name, (unsigned)sizeof(field_name),
+                 value_str, (unsigned)sizeof(value_str),
+                 array_count, (unsigned)sizeof(array_count)) == 3)
+        /*if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
                      field_name, (unsigned)sizeof(field_name),
                      value_str, (unsigned)sizeof(value_str),
-                     array_count, (unsigned)sizeof(array_count)) == 3)
+                     array_count, (unsigned)sizeof(array_count)) == 3)*/
         {
             DEBUG("arr")
             DEBUG("field name: %s", field_name)

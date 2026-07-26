@@ -1,10 +1,11 @@
 ﻿#ifndef DATA_REGISTRY_H
 #define DATA_REGISTRY_H
 
+#include <limits.h>
+
 #include "c_string.h"
 #include "defines.h"
 #include "compiler/reflection_system.h"
-
 
 typedef struct Reflection_Runtime_Constants
 {
@@ -512,7 +513,7 @@ void reflection_registry_to_txt_format(Reflection_Registry* reflection_registry,
                 fprintf(file, "- %d", *(u32*)data);
                 break;
             case REFLECTION_TYPE_U64:
-                fprintf(file, "- %llu", *(u64*)data);
+                fprintf(file, "- %lu", *(u64*)data);
                 break;
             case REFLECTION_TYPE_S8:
                 fprintf(file, "- %d", *(s8*)data);
@@ -641,10 +642,15 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
             char array_count[32];
             //scans for our format
             // arr: field[type][N]:
-            if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
+            if (sscanf(line, "%127[^[][%31[^]]][%31[^]]:",
+            field_name, (unsigned)sizeof(field_name),
+                                    value_str, (unsigned)sizeof(value_str),
+                                    array_count, (unsigned)sizeof(array_count)) == 3)
+            //NOTE: not supported on linux:
+            /*if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
                          field_name, (unsigned)sizeof(field_name),
                          value_str, (unsigned)sizeof(value_str),
-                         array_count, (unsigned)sizeof(array_count)) == 3)
+                         array_count, (unsigned)sizeof(array_count)) == 3)*/
             {
                 DEBUG("arr");
                 DEBUG("field name: %s", field_name);

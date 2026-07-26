@@ -5,7 +5,9 @@
 #include "core/platform/event.h"
 #include "core/platform/input.h"
 #include "core/platform/audio.h"
+#include "resource/asset_system.h"
 #include "sprite_system.h"
+
 
 
 bool application_on_event(const Event_Type code, u32 sender, u32 listener_inst, Event_Data context);
@@ -48,10 +50,10 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
 
     //register events needed for this application
-    event_register(application_core->event_system, EVENT_APP_QUIT, 10, application_on_event);
-    event_register(application_core->event_system, EVENT_APP_RESIZE, 0, application_on_resized);
-    event_register(application_core->event_system, EVENT_KEY_RELEASED, 10, application_on_key);
-    event_register(application_core->event_system, EVENT_KEY_PRESSED, 12, application_on_key);
+    event_register(application_core->event_system, EVENT_APP_QUIT, STRING("RENDER APP"), application_on_event);
+    event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("RENDER APP"), application_on_resized);
+    event_register(application_core->event_system, EVENT_KEY_RELEASED, STRING("RENDER APP"), application_on_key);
+    event_register(application_core->event_system, EVENT_KEY_PRESSED, STRING("RENDER APP"), application_on_key);
 
 
     //start the platform

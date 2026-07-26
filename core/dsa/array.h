@@ -122,10 +122,10 @@ void array_merge_sort(Array* array, int (*cmp_func)(void*, void*));
 
 void array_radix_sort(Array* array, int (*cmp_func)(void*, void*));
 
-void array_qsort(Array* array, int (*cmp_func)(void*, void*));
+void array_qsort(Array* array, int (*cmp_func)(const void*, const void*));
 
 
-void array_test();
+void array_test(void);
 
 
 #endif //ARRAY_H

@@ -3,7 +3,7 @@
 
 
 #include "vk_swapchain.h"
-
+#include "vulkan_struct_types.h"
 
 // const char* instance_extensions = {
 //     //VK_KHR_SURFACE_EXTENSION_NAME // this does not work it will cause the instance to fail

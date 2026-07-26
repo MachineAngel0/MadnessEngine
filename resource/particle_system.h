@@ -57,7 +57,7 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
     };
 }
 
-void particle_system_fire_forget()
+void particle_system_fire_forget(void)
 {
 }
 

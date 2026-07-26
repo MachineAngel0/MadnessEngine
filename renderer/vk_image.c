@@ -1,7 +1,7 @@
 ﻿#include "vk_image.h"
-
-
 #include "stb_image.h"
+
+#include "vk_command_buffer.h"
 
 
 void vulkan_image_create(vulkan_context* context, u32 width, u32 height, VkFormat format,
@@ -125,7 +125,7 @@ void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_bu
     out_texture->height = texture_data->madness_texture->height;
 
     VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
-    stbi_uc* pixels = texture_data->pixel_data;
+    void* pixels = texture_data->pixel_data;
     u32 texWidth = texture_data->madness_texture->width;
     u32 texHeight = texture_data->madness_texture->height;
 

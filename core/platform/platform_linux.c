@@ -280,10 +280,10 @@ bool platform_pump_messages(Platform_State* plat_state)
             {
                 // TODO: CHECK THAT THIS IS CORRECT
                 xcb_resize_request_event_t* resize_event = (xcb_resize_request_event_t*)event;
-                event_context context;
-                context.data.u16[0] = (u16)resize_event->width;
-                context.data.u16[1] = (u16)resize_event->height;
-                event_fire(plat_state->event_system, EVENT_APP_RESIZE, 0, context);
+                Event_Data context;
+                context.data.event_data_window_resize.width = (u16)resize_event->width;
+                context.data.event_data_window_resize.height = (u16)resize_event->height;
+                event_fire(plat_state->event_system, EVENT_APP_RESIZE, STRING("LINUXPLATFORM"), context);
             }
 
         case XCB_CLIENT_MESSAGE:

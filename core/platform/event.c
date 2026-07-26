@@ -1,4 +1,5 @@
 ﻿#include "event.h"
+#include "logger.h"
 
 Event_System* event_init(Memory_System* memory_system)
 {

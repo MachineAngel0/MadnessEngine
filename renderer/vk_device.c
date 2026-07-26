@@ -1,7 +1,8 @@
 ﻿#include "vk_device.h"
 #include "../core/dsa/array.h"
 #include "platform/platform.h"
-
+#include "vk_device.h"
+#include "hash_set.h"
 
 bool get_vulkan_api_version(u32* apiVersion,
                             u32* variant,

@@ -1,6 +1,7 @@
 ﻿#ifndef TEXTURE_H
 #define TEXTURE_H
 #include "vk_buffer.h"
+#include "vulkan_enum_types.h"
 
 //TODO: look into unified image layouts
 // https://www.khronos.org/blog/so-long-image-layouts-simplifying-vulkan-synchronisation

@@ -1,6 +1,8 @@
 ﻿#ifndef COMMAND_BUFFER_H
 #define COMMAND_BUFFER_H
 
+#include "vulkan_struct_types.h"
+
 // used by the renderer, the rest are helper functions
 void vulkan_renderer_command_buffers_create(vulkan_context* vk_context);
 void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context);
