@@ -136,7 +136,7 @@ typedef enum UI_Window_Type
 
 typedef struct Window_State
 {
-    String window_name;
+    String* window_name;
     UI_Window_Type window_type;
 
     vec2s window_region_pos;
@@ -206,8 +206,9 @@ typedef struct Madness_UI
 
 
     //a window is anything with which things are drawn to inside of it
-    HASH_TABLE_STR_TYPE(Window_State)* window_state_hash;
-    STACK_TYPE(Window_State)* window_states_stack;
+    Window_State window_state_array[100];
+    u32 window_state_array_count;
+    STACK_TYPE(Window_State*)* window_states_stack;
 
     STACK_TYPE(Pop_Up_State)* pop_up_stack;
     ARRAY_TYPE(Pop_Up_State)* pop_up_frame_state;

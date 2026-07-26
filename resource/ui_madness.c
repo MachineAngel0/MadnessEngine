@@ -46,18 +46,12 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
                                                          madness_ui->free_list_allocator);
 
 
-    madness_ui->window_state_hash = hash_table_string_create(sizeof(Window_State),
-                                                             100,
-                                                             madness_ui->allocator,
-                                                             false);
-
-
     madness_ui->pop_up_stack = stack_create(sizeof(Pop_Up_State), 100, madness_ui->allocator);
     madness_ui->pop_up_frame_state = array_create(Pop_Up_State, 100, madness_ui->allocator);
     madness_ui->nuke_pop_up = false;
 
     //TODO: change the allocator interface
-    madness_ui->window_states_stack = stack_create(sizeof(Window_State), 100, madness_ui->allocator);
+    madness_ui->window_states_stack = stack_create(sizeof(Window_State*), 100, madness_ui->allocator);
 
 
     madness_ui->window_pos_stack = stack_create(sizeof(vec2s), 100, madness_ui->allocator);
@@ -145,23 +139,16 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
 
         //do a state update on the window positions
-        hash_table_string* hts = madness_ui->window_state_hash;
-        for (u32 i = 0; i < hts->capacity; i++)
+        for (u32 i = 0; i < windows_file_count; i++)
         {
-            if (hts->key_data[i].chars)
-            {
-                Window_State window_state;
-                hash_table_string_get(hts, hts->key_data[i], &window_state);
-                window_state.window_region_pos.x *= x_update_size;
-                window_state.window_region_pos.y *= y_update_size;
-                window_state.window_region_size.x *= x_update_size;
-                window_state.window_region_size.y *= y_update_size;
-                window_state.scroll_bar_percent_offset = 0;
-                window_state.scroll_offset = 0;
+            Window_State window_state = madness_ui->window_state_array[i];
 
-
-                hash_table_string_set(hts, hts->key_data[i], &window_state);
-            }
+            window_state.window_region_pos.x *= x_update_size;
+            window_state.window_region_pos.y *= y_update_size;
+            window_state.window_region_size.x *= x_update_size;
+            window_state.window_region_size.y *= y_update_size;
+            window_state.scroll_bar_percent_offset = 0;
+            window_state.scroll_offset = 0;
         }
     }
 
@@ -754,27 +741,40 @@ bool madness_ui_pop_up_close(void)
 
 void madness_ui_window_begin(String header_name)
 {
-    Window_State window_state;
-    if (!hash_table_string_get(madness_ui->window_state_hash, header_name, &window_state))
+    Window_State* window_state = NULL;
+
+    //find our window
+    for (u32 i = 0; i < madness_ui->window_state_array_count; i++)
     {
+        if (string_compare(madness_ui->window_state_array[i].window_name, &header_name))
+        {
+            window_state = &madness_ui->window_state_array[i];
+            break;
+        }
+    }
+
+    //if not found we create a new one
+    if (!window_state)
+    {
+        window_state = &madness_ui->window_state_array[madness_ui->window_state_array_count++];
+
         vec2s pos = madness_ui_get_window_pos();
         vec2s size = madness_ui_get_window_size();
 
         vec2s starting_size = {.x = 0.2, .y = 0.8};
-        window_state = (Window_State){
-            .window_name = header_name,
+        *window_state = (Window_State){
+            .window_name = string_duplicate_alloc(&header_name, madness_ui->allocator),
             .window_type = UI_WINDOW_TYPE_WINDOW,
             .window_region_pos = pos,
             .window_region_size = size,
             .header_size = glms_vec2_zero(),
             .scroll_offset = 0,
         };
-        hash_table_string_insert(madness_ui->window_state_hash, header_name, &window_state);
     }
 
 
-    madness_ui->current_window_screen_pos = window_state.window_region_pos;
-    madness_ui->current_window_screen_size = window_state.window_region_size;
+    madness_ui->current_window_screen_pos = window_state->window_region_pos;
+    madness_ui->current_window_screen_size = window_state->window_region_size;
 
     madness_ui->cursor_pos = madness_ui->current_window_screen_pos;
     madness_ui->cursor_pos.x += madness_ui->element_padding_x;
@@ -801,7 +801,7 @@ void madness_ui_window_begin(String header_name)
     header_node->string_id = header_name;
     header_node->hash_id = string_hash_u64(header_name);
 
-    window_state.header_size = header_node->size;
+    window_state->header_size = header_node->size;
 
     //Window Name
     // madness_ui_text_new(madness_ui, header_name);
@@ -823,8 +823,8 @@ void madness_ui_window_begin(String header_name)
     {
         if (madness_ui->mouse_down)
         {
-            window_state.window_region_pos.x += madness_ui->mouse_delta_x;
-            window_state.window_region_pos.y += madness_ui->mouse_delta_y;
+            window_state->window_region_pos.x += madness_ui->mouse_delta_x;
+            window_state->window_region_pos.y += madness_ui->mouse_delta_y;
         }
     }
     else if (is_hot(header_node->hash_id))
@@ -834,10 +834,10 @@ void madness_ui_window_begin(String header_name)
 
 
     //set proper cursor offset for the scroll region
-    madness_ui->cursor_pos.y -= window_state.scroll_offset;
+    madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
 
-    hash_table_string_set(madness_ui->window_state_hash, header_name, &window_state);
+
     stack_push(madness_ui->window_states_stack, &window_state);
 }
 
@@ -846,31 +846,31 @@ void madness_ui_window_end(void)
 {
     madness_ui_new_scissor_end();
 
-    Window_State state = stack_top(madness_ui->window_states_stack, Window_State);
+    Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
     stack_pop(madness_ui->window_states_stack);
 
-    float scroll_region_start_pos = (state.window_region_pos.y + state.header_size.y);
-    float scroll_region_size_y = (state.window_region_size.y - state.header_size.y);
+    float scroll_region_start_pos = (state->window_region_pos.y + state->header_size.y);
+    float scroll_region_size_y = (state->window_region_size.y - state->header_size.y);
 
     //NOTE: we add the scroll offset here because when we begin call madness_ui_window_begin(),
     // the content start position is offset by the scroll amount, applied to the cursor_pos.y position
     // giving us a smaller size of what the content size should really be
-    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state.scroll_offset;
+    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state->scroll_offset;
     float content_overflow = content_height - scroll_region_size_y;
 
     if (content_overflow > 0)
     {
         //scroll bar
         UI_Node* slider_bar = madness_ui_get_new_node();
-        slider_bar->size = (vec2s){8.f, state.window_region_size.y * 0.1};
+        slider_bar->size = (vec2s){8.f, state->window_region_size.y * 0.1};
         slider_bar->color = madness_ui->editor_style.layout_accent_color;
-        slider_bar->string_id = *string_concat(&state.window_name, &STRING("SLIDER"), madness_ui->frame_arena);
+        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_arena);
         slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
         slider_bar->color = COLOR_BLUE;
 
         //determines where the slider should be proportionally
-        float scroll_bar_pos_x = state.window_region_pos.x + state.window_region_size.x - slider_bar->size.x;
-        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+        float scroll_bar_pos_x = state->window_region_pos.x + state->window_region_size.x - slider_bar->size.x;
+        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
             scroll_bar_percent_offset);
         slider_bar->pos = (vec2s){scroll_bar_pos_x, scroll_bar_pos_y};
 
@@ -881,16 +881,16 @@ void madness_ui_window_end(void)
             //handle window scrolling
             if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
             {
-                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset - 0.1, 0, 1);
-                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
-                state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
+                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset - 0.1, 0, 1);
+                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
             if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
             {
                 // state.scroll_offset += 10;
-                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset + 0.1, 0, 1);
-                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
-                state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
+                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset + 0.1, 0, 1);
+                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
         }
         if (is_active(slider_bar->hash_id))
@@ -899,9 +899,9 @@ void madness_ui_window_end(void)
             float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
             float t = clamp_float(relative_y / track_width, 0.0f, 1.0f);
 
-            state.scroll_bar_percent_offset = 0 + t * (1 - 0);
-            state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
-            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+            state->scroll_bar_percent_offset = 0 + t * (1 - 0);
+            state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
+            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
                 scroll_bar_percent_offset);
         }
     }
@@ -910,10 +910,10 @@ void madness_ui_window_end(void)
 
     UI_Node* resize_node = madness_ui_get_new_node();
     resize_node->size = (vec2s){12, 12};
-    resize_node->string_id = *string_concat(&state.window_name, &STRING("resize"), madness_ui->frame_arena);
+    resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_arena);
     resize_node->hash_id = string_hash_u64(resize_node->string_id);
 
-    vec2s pos_before_adjustment = glms_vec2_add(state.window_region_pos, state.window_region_size);
+    vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
 
     resize_node->pos = glms_vec2_sub(pos_before_adjustment, resize_node->size);
     resize_node->color = COLOR_GREEN;
@@ -922,15 +922,15 @@ void madness_ui_window_end(void)
 
     if (is_active(resize_node->hash_id))
     {
-        state.window_region_size.x += madness_ui->mouse_delta_x;
-        state.window_region_size.y += madness_ui->mouse_delta_y;
-        state.window_region_size.x = clamp_float(state.window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
+        state->window_region_size.x += madness_ui->mouse_delta_x;
+        state->window_region_size.y += madness_ui->mouse_delta_y;
+        state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
                                                  madness_ui->screen_size.x);
-        state.window_region_size.y = clamp_float(state.window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
                                                  madness_ui->screen_size.y);
     }
 
-    hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
+    // hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
 }
 
 
@@ -951,14 +951,24 @@ void madness_scroll_box_begin(String id)
     scroll_box_node->color = COLOR_HOT_PINK;
 
     //we mainly just want the scroll bar offset
-    Window_State window_state;
-    if (!hash_table_string_get(madness_ui->window_state_hash, id, &window_state))
-    {
-        // vec2 pos = madness_ui_get_window_pos(madness_ui);
-        // vec2 size = madness_ui_get_window_size(madness_ui);
+    //find our window
+    Window_State* window_state = NULL;
 
-        window_state = (Window_State){
-            .window_name = id,
+    for (u32 i = 0; i < madness_ui->window_state_array_count; i++)
+    {
+        if (string_compare(madness_ui->window_state_array[i].window_name, &id))
+        {
+            window_state = &madness_ui->window_state_array[i];
+            break;
+        }
+    }
+
+    //if not found we create a new one
+    if (!window_state)
+    {
+        window_state = &madness_ui->window_state_array[madness_ui->window_state_array_count++];
+        *window_state = (Window_State){
+            .window_name = string_duplicate_alloc(&id, madness_ui->allocator),
             .window_type = UI_WINDOW_TYPE_SCROLLBAR,
             .window_region_pos = scroll_box_node->pos,
             .window_region_size = scroll_box_node->size,
@@ -966,15 +976,14 @@ void madness_scroll_box_begin(String id)
             .scroll_bar_percent_offset = 0,
             .scroll_offset = 0,
         };
-        hash_table_string_insert(madness_ui->window_state_hash, id, &window_state);
     }
 
 
-    window_state.window_region_pos = scroll_box_node->pos;
-    window_state.window_region_size = scroll_box_node->size;
+    window_state->window_region_pos = scroll_box_node->pos;
+    window_state->window_region_size = scroll_box_node->size;
 
     //offset by scroll offset
-    madness_ui->cursor_pos.y -= window_state.scroll_offset;
+    madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
     stack_push(madness_ui->window_states_stack, &window_state);
 }
@@ -984,29 +993,29 @@ void madness_scroll_box_end(void)
 {
     madness_ui_new_scissor_end();
 
-    Window_State state = stack_top(madness_ui->window_states_stack, Window_State);
+    Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
     stack_pop(madness_ui->window_states_stack);
 
 
     //scroll bar
-    float scroll_region_start_pos = (state.window_region_pos.y + state.header_size.y);
-    float scroll_region_size_y = (state.window_region_size.y - state.header_size.y);
+    float scroll_region_start_pos = (state->window_region_pos.y + state->header_size.y);
+    float scroll_region_size_y = (state->window_region_size.y - state->header_size.y);
 
-    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state.scroll_offset;
+    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state->scroll_offset;
     float content_overflow = content_height - scroll_region_size_y;
 
     if (content_overflow > 0)
     {
         UI_Node* slider_bar = madness_ui_get_new_node();
-        slider_bar->size = (vec2s){8.f, state.window_region_size.y * 0.1};
+        slider_bar->size = (vec2s){8.f, state->window_region_size.y * 0.1};
         slider_bar->color = madness_ui->editor_style.layout_accent_color;
-        slider_bar->string_id = *string_concat(&state.window_name, &STRING("SLIDER"), madness_ui->frame_arena);
+        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_arena);
         slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
         slider_bar->color = COLOR_BLUE;
 
         //determines where the slider should be proportionally
-        float scroll_bar_pos_x = state.window_region_pos.x + state.window_region_size.x - slider_bar->size.x;
-        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+        float scroll_bar_pos_x = state->window_region_pos.x + state->window_region_size.x - slider_bar->size.x;
+        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
             scroll_bar_percent_offset);
         slider_bar->pos = (vec2s){scroll_bar_pos_x, scroll_bar_pos_y};
 
@@ -1017,14 +1026,14 @@ void madness_scroll_box_end(void)
             //handle window scrolling
             if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
             {
-                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset - 0.1, 0, 1);
-                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset - 0.1, 0, 1);
+                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
             }
             if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
             {
                 // state.scroll_offset += 10;
-                state.scroll_bar_percent_offset = clamp_float(state.scroll_bar_percent_offset + 0.1, 0, 1);
-                state.scroll_offset = clamp_float(state.scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset + 0.1, 0, 1);
+                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
             }
         }
         if (is_active(slider_bar->hash_id))
@@ -1033,19 +1042,19 @@ void madness_scroll_box_end(void)
             float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
             float t = clamp_float(relative_y / track_width, 0.0f, 1.0f);
 
-            state.scroll_bar_percent_offset = 0 + t * (1 - 0);
-            state.scroll_offset = content_overflow * state.scroll_bar_percent_offset;
-            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state.
+            state->scroll_bar_percent_offset = 0 + t * (1 - 0);
+            state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
+            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
                 scroll_bar_percent_offset);
         }
     }
 
 
-    madness_ui->cursor_pos = state.window_region_pos;
-    madness_ui_advance_cursor(state.window_region_size);
+    madness_ui->cursor_pos = state->window_region_pos;
+    madness_ui_advance_cursor(state->window_region_size);
 
 
-    hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
+    // hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
 }
 
 

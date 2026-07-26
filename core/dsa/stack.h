@@ -49,6 +49,7 @@ void* stack_top_(stack* s);
     (*(type*)stack_top_((s)))
 
 
+
 u64 stack_size(const stack* s);
 
 //clears the stack, just sets the num_items = 0

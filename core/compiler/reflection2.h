@@ -29,7 +29,7 @@ typedef struct Reflection2_Struct_Field
 
     enum struct_field_type struct_field_oasdh;
 
-    //what if a struct is nested inside?
+    /*//what if a struct is nested inside?
     union
     {
         struct
@@ -51,7 +51,7 @@ typedef struct Reflection2_Struct_Field
             //with an array, we just want to know the stride of the thing, everything else, lets assume we can query
             struct Reflection_Container* struct_pointer;
         };
-    };
+    };*/
 
     // Reflection_Container_Type container_type; // var, pointer, array (this is honestly shitty, should be encoded into the type)
 } Reflection2_Struct_Field;
@@ -111,7 +111,7 @@ void reflection_dll_load(Input_System* input_system, reflection_dll* reflection_
 
 void dll_reload(Reflection2* reflections, Input_System* input_system)
 {
-    platform_reload_dynamic_library()
+    // platform_reload_dynamic_library()
 }
 
 
