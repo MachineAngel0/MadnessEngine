@@ -59,7 +59,6 @@
 //CORE - Compiler
 #include "../core/compiler/madness_lexer.h"
 #include "../core/compiler/reflection_system.h"
-#include "../core/compiler/reflection2.h"
 
 
 //CORE - SERIALIZATION

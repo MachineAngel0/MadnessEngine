@@ -151,8 +151,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     DEBUG_APP_STATE debug_game_mode = DEBUG_APP_STATE_EDITOR;
 
 
+
+
+
     while (application_core->is_running)
     {
+
+
         clock_update_frame_start(&application_core->clock);
         // clock_print_info(&application_core->clock);
 

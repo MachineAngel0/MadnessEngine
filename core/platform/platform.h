@@ -100,6 +100,7 @@ char* platform_get_static_library_extension(void);
 
 DLL_HANDLE platform_load_dynamic_library(const char* file_name);
 bool platform_unload_dynamic_library(DLL_HANDLE handle);
+bool platform_load_dynamic_library_from_handle(DLL_HANDLE handle, const char* file_name);
 bool platform_reload_dynamic_library(DLL_HANDLE handle);
 bool platform_file_copy(const char* source_file, char* new_file);
 

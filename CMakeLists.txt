@@ -12,6 +12,7 @@ set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
+        MADNESS_REFLECTION
         MadnessEngine
 
         MadnessEngine_renderer
@@ -61,6 +62,7 @@ find_package(Vulkan REQUIRED)
 include_directories(${Vulkan_INCLUDE_DIRS})
 
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/compiler/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/dsa/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/maths/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/core/memory/)
@@ -89,10 +91,16 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
 
 
-add_executable(MadnessEngine
-        unity_build_madness_pulse.c
+
+add_library(MADNESS_REFLECTION SHARED
+        core/build_core.h
+        core/build_core.c
         lib/build_lib.c
 )
+
+
+
+
 
 ### GAME ###
 add_executable(MadnessPulse
@@ -140,6 +148,11 @@ add_executable(CORE_UNIT_TEST
         core/build_core.h
         core/build_core.c
         core/core_unit_test_main.c
+        lib/build_lib.c
+)
+
+add_executable(MadnessEngine
+        unity_build_madness_pulse.c
         lib/build_lib.c
 )
 

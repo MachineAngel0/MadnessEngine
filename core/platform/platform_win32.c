@@ -419,15 +419,62 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
 
 bool platform_unload_dynamic_library(DLL_HANDLE handle)
 {
-    windows_file_handle file = file_handles[handle.handle];
-    if (file.dll_handle)
+    windows_file_handle* file = &file_handles[handle.handle];
+    if (file->dll_handle)
     {
-        if (FreeLibrary(file.dll_handle) == 0)
+        if (FreeLibrary(file->dll_handle) == 0)
         {
             WARN("FAILED TO UNLOAD DLL\n")
             WARN("%d", GetLastError());
+            platform_unload_dynamic_library(handle);
             return false;
         }
+    }
+    return true;
+}
+
+bool platform_load_dynamic_library_from_handle(DLL_HANDLE handle, const char* file_name)
+{
+    //its assumed the file does not have an extension name
+
+
+    //probably gonna have to have some sort of internal index for this
+    windows_file_handle* file_info = &file_handles[handle.handle];
+    if (file_info->dll_handle)
+    {
+        if (FreeLibrary(file_info->dll_handle) == 0)
+        {
+            WARN("FAILED TO UNLOAD DLL\n")
+            WARN("%d", GetLastError());
+        }
+    }
+
+
+    const char* dll_extension_name = platform_get_dynamic_library_extension();
+
+    const char* intermediate_temp_name = c_string_concat(file_name, "_TEMP", NULL);
+
+    const char* final_file_name = c_string_concat(file_name, dll_extension_name, NULL);
+    const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name, NULL);
+
+
+    if (!CopyFile(final_file_name, temp_dll_name, 0))
+    {
+        DWORD code = GetLastError();
+        WARN("FAILED TO COPY DLL from %s to %s. Error: %d", final_file_name, temp_dll_name, GetLastError());
+
+        if (code == 32 )
+        {
+            platform_sleep(100);
+            platform_load_dynamic_library_from_handle(handle, file_name);
+        }
+    }
+
+    file_info->dll_handle = LoadLibraryA(temp_dll_name);
+    if (!file_info->dll_handle)
+    {
+        FATAL("FAILED TO LOAD DLL: %s. Error: %d", temp_dll_name, GetLastError());
+        return false;
     }
     return true;
 }
@@ -435,7 +482,8 @@ bool platform_unload_dynamic_library(DLL_HANDLE handle)
 bool platform_reload_dynamic_library(DLL_HANDLE handle)
 {
     platform_unload_dynamic_library(handle);
-    platform_load_dynamic_library(handle.file_name);
+    // platform_load_dynamic_library(handle.file_name);
+    platform_load_dynamic_library_from_handle(handle, handle.file_name);
     return true;
 }
 
