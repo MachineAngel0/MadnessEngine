@@ -1,0 +1,6 @@
+#Heal_Component
+#1
+heal_amount[f32][1]:
+- 7.000000
+heal_only_if_dead[bool][1]:
+- false

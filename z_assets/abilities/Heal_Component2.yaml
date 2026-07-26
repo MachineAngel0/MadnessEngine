@@ -1,0 +1,10 @@
+#Heal_Component
+#2
+type[enum][1]:
+- 0
+heal_type[enum][1]:
+- 0
+heal_amount[f32][1]:
+- 0.000000
+heal_only_if_dead[bool][1]:
+- false
