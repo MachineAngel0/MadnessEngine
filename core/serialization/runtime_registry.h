@@ -642,10 +642,16 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
             char array_count[32];
             //scans for our format
             // arr: field[type][N]:
-            if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
+
+            //NOTE: doesnt work on linux
+            /*if (sscanf_s(line, "%127[^[][%31[^]]][%31[^]]:",
                          field_name, (unsigned)sizeof(field_name),
                          value_str, (unsigned)sizeof(value_str),
-                         array_count, (unsigned)sizeof(array_count)) == 3)
+                         array_count, (unsigned)sizeof(array_count)) == 3)*/
+            if (sscanf(line, "%127[^[][%31[^]]][%31[^]]:",
+                         field_name,
+                         value_str,
+                         array_count) == 3)
             {
                 DEBUG("arr");
                 DEBUG("field name: %s", field_name);
