@@ -2815,6 +2815,88 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
     return false;
 }
 
+
+bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
+                             void* passin_data, const char* id)
+{
+    // madness_ui_text(madness_ui, *string_create_allocator(struct_info.name, strlen(struct_info.name), madness_ui->frame_arena));
+    madness_ui_string(STRING_STRLEN(struct_info.name));
+
+    for (u32 field_index = 0; field_index < struct_info.field_count; field_index++)
+    {
+        Reflection_Runtime_Struct_Field field_info = struct_info.fields[field_index];
+        void* data = (u8*)passin_data + field_info.offset;
+
+        String* intermediate_name = string_concat(&STRING_STRLEN(struct_info.name), &STRING_STRLEN(id),
+                                                  madness_ui->frame_arena);
+        String* custom_name = string_concat(intermediate_name, &STRING_STRLEN(field_info.name),
+                                            madness_ui->frame_arena);
+
+        switch (field_info.type)
+        {
+        case REFLECTION_TYPE_INVALID:
+            break;
+        case REFLECTION_TYPE_U8:
+            madness_ui_u8(*custom_name, data, 1);
+            break;
+        case REFLECTION_TYPE_U16:
+            madness_ui_u16(*custom_name, data, 1);
+            break;
+        case REFLECTION_TYPE_U32:
+            madness_ui_u32(*custom_name, data, 1);
+            break;
+        case REFLECTION_TYPE_U64:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_S8:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_S16:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_S32:
+            madness_ui_s32(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_S64:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_F32:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_F64:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_SIZE_T:
+            madness_ui_float(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_BOOL:
+            madness_ui_check_box(*custom_name, data);
+            break;
+        case REFLECTION_TYPE_STRING:
+            madness_ui_text_box(*custom_name);
+            break;
+        case REFLECTION_TYPE_CHAR:
+            madness_ui_text_box(*custom_name);
+            break;
+        case REFLECTION_TYPE_ENUM:
+
+            Reflection_Runtime_Enum enums = reflection_registry_get_enum(reflection_registry, field_info.name);
+            madness_ui_combo_box_char(*custom_name, data, enums.enum_names,
+                                      enums.count);
+            break;
+        case REFLECTION_TYPE_STRUCT:
+            madness_ui_reflection_test(reflection_registry, field_info.type_name, id);
+            break;
+        case REFLECTION_TYPE_MAX:
+            break;
+        case REFLECTION_TYPE_CHAR_STRING:
+            break;
+        }
+    }
+    return false;
+}
+
+
 bool madness_ui_node_simple(String id, vec2s pos, String inputs[], u8 input_size,
                             String outputs[], u8 output_size, u32 node_id)
 {

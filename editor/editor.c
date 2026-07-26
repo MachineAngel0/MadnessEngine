@@ -417,3 +417,29 @@ void editor_meta_data_view(Editor* editor)
     }
     madness_ui_window_end();
 }
+void editor_material_asset_view(Editor* editor)
+{
+    Asset_System* asset_system = editor->asset_system;
+    madness_ui_window_begin(STRING("Material Reflection View"));
+    {
+        for (u32 i = 0; i < asset_system->material_system->material_batch_count; i++)
+        {
+            Material_Batch* batch = &asset_system->material_system->material_batch[i];
+            batch->material_asset->material_info.blend_mode;
+            batch->material_asset->material_info.mesh_type;
+            batch->material_asset->material_info.renderpass;
+            batch->material_asset->material_info.transluency;
+
+            /*
+            madness_ui_reflect_data(Reflection_Registry* reflection_registry, struct_info,
+                                   void* passin_data, const char* id)
+            */
+
+
+        }
+
+
+
+    }
+    madness_ui_window_end();
+}

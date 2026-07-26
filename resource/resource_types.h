@@ -710,7 +710,7 @@ typedef struct Material_System
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
     //sort material batches by their mesh type, possibly fine grain it later
-    Material_Batch material_batches[100];
+    Material_Batch material_batch[100];
     u32 material_batch_count;
 
 

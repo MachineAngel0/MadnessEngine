@@ -59,158 +59,23 @@ void asset_system_reload_texture(Asset_System* a);
 
 //should we have the asset system be responsible for basically everything, kinda, it should probably be able to touch everything
 Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path);
+bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Texture_Handle* out_handle);
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
-
-bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Texture_Handle* out_handle)
-{
-    Asset_MetaData meta_data = {0};
-
-    if (uuid.high == 0 && uuid.low == 0)
-    {
-        WARN("UUID OF 0,0 passed in ")
-        *out_handle = (Texture_Handle){0};
-        return true;
-    }
-
-    if (!asset_registry_get_metadata_from_uuid(asset_system, uuid, &meta_data))
-    {
-        MASSERT_MSG(false, "PLZ CONVERT ASSET")
-        *out_handle = (Texture_Handle){0};
-        return out_handle;
-    }
-
-
-    //has asset already been loaded
-    if (texture_system_exists(asset_system, out_handle, meta_data.hash))
-    {
-        return true;
-    }
-
-
-    FILE* fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
-    if (!fptr)
-    {
-        MASSERT(false);
-        *out_handle = (Texture_Handle){0};
-        return false;
-    }
-
-    bool editor = true;
-    if (editor)
-    {
-        Madness_Texture_Runtime runtime = {0};
-        asset_texture_deserialize_heap(&runtime, fptr, asset_system->heap_allocator);
-        texture_system_upload_new_texture(asset_system, meta_data.uuid, meta_data.hash, runtime.texture, runtime.pixel_data, out_handle);
-        return true;
-    }else
-    {
-        MASSERT(false);
-
-    }
-
-    fclose( fptr);
-
-    return true;
-}
-
 
 
 bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle);
-Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name); //TODO:
-
-bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle)
-{
-    MASSERT(false); // TOOD:
-}
-bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle)
-{
-    MADNESS_UUID uuid = {0, 0};
-    u64 hash = 0;
-
-    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
-
-    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, &uuid, &hash))
-    {
-        MASSERT_MSG(false, "PLZ CONVERT ASSET")
-        *out_handle = (Madness_Mesh_Handle){0};
-        return out_handle;
-    }
-
-    //has asset already been loaded
-    if (mesh_system_exists_mesh(asset_system, out_handle, hash))
-    {
-        return true;
-    }
+bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-    FILE* fptr = NULL;
+bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle);
+bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle);
 
-    //load from individal binary
-    bool debug = true;
-    if (debug)
-    {
-        Madness_Mesh_Runtime runtime_mesh = {0};
-
-        fptr = fopen(engine_asset_path, "rb");
-
-        asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
-
-        mesh_system_load_mesh(asset_system, &runtime_mesh);
-    }
-    else
-    {
-        //TODO:
-        MASSERT(false);
-        // search for asset by its hash name and its offset, then load it in with our format
-        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
-        // Madness_Texture_Runtime runtime_texture = {0};
-        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-    }
-    fclose(fptr);
-
-    return true;
-}
-
-bool asset_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid)
-{
-    Asset_MetaData meta_data = {0};
-    if (!asset_registry_get_metadata_from_uuid(asset_system,uuid, &meta_data))
-    {
-        MASSERT(false);
-        return false;
-    }
+bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
 
-    //material system does exists function
-    //has asset already been loaded
-    if (material_system_exists(asset_system, meta_data.uuid))
-    {
-        return true;
-    }
-
-    FILE* fptr = NULL;
-    bool debug = true;
-    if (debug)
-    {
-        fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
-
-        Material_Asset_Runtime runtime_material = {0};
-        runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
-        material_system_load_material_asset(asset_system, meta_data.uuid, meta_data.hash, &runtime_material);
-    }
-    else
-    {
-        MASSERT(false);
-        //TODO:
-    }
-
-    fclose( fptr);
 
 
-    return true;
 
-}
 
 //Data format stuff
 typedef struct Asset_MetaData_Header

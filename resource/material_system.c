@@ -21,7 +21,7 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
 
     reflection_registry_debug_print_info(material_system->reflection_registry);
 
-    memset(material_system->material_batches, 0, 100 * sizeof(Material_Batch));
+    memset(material_system->material_batch, 0, 100 * sizeof(Material_Batch));
 
     return material_system;
 }
@@ -38,7 +38,7 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d)
 {
-    render_packet_3d->material_batch = material_system->material_batches;
+    render_packet_3d->material_batch = material_system->material_batch;
     render_packet_3d->material_batch_count = material_system->material_batch_count;
 
 
@@ -51,7 +51,7 @@ bool material_system_exists(Asset_System* asset_system, MADNESS_UUID uuid)
 
     for (u32 i = 0; i < material_system->material_batch_count; i++)
     {
-        if (madness_uuid_compare(material_system->material_batches[i].material_asset_uuid,
+        if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
                                  uuid))
         {
             return true;
@@ -71,10 +71,10 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
 
     for (u32 i = 0; i < material_system->material_batch_count; i++)
     {
-        if (madness_uuid_compare(material_system->material_batches[i].material_asset_uuid,
+        if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
                                  material_instance->uuid_material_asset))
         {
-            material_batch = &material_system->material_batches[i];
+            material_batch = &material_system->material_batch[i];
             break;
         }
     }
@@ -82,14 +82,14 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     //if we didn't find it load it in
     if (material_batch == NULL)
     {
-        asset_load_material_asset(asset_system, material_instance->uuid_material_asset);
+        asset_load_material_asset_uuid(asset_system, material_instance->uuid_material_asset);
         //find it
         for (u32 i = 0; i < material_system->material_batch_count; i++)
         {
-            if (madness_uuid_compare(material_system->material_batches[i].material_asset_uuid,
+            if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
                                      material_instance->uuid_material_asset))
             {
-                material_batch = &material_system->material_batches[i];
+                material_batch = &material_system->material_batch[i];
                 break;
             }
         }
@@ -152,7 +152,7 @@ bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUI
     }
 
 
-    Material_Batch* batch = &material_system->material_batches[material_system->material_batch_count++];
+    Material_Batch* batch = &material_system->material_batch[material_system->material_batch_count++];
     batch->material_asset = material_asset->asset;
     batch->material_asset_uuid = uuid;
     batch->material_asset = material_asset->asset;
@@ -184,7 +184,7 @@ void material_system_add_mesh_instance_and_material(Asset_System* asset_system, 
         Material_Instance* mat_inst = &madness_mesh->material_instance[mesh_idx];
 
         //load in the instance data and resolve any texture ids, to then add them into the material batch
-        asset_load_material_asset(asset_system, mat_inst->uuid_material_asset);
+        asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
         material_system_load_material_instance(asset_system, mat_inst, &submesh_instance->material_handle);
     }
 }
@@ -198,9 +198,9 @@ bool material_system_change_material_param(Asset_System* asset_system, Material_
     Material_Batch* batch = NULL;
     for (u32 i = 0; i < material_system->material_batch_count; i++)
     {
-        if (material_system->material_batches[i].material_key == material_handle.material_id)
+        if (material_system->material_batch[i].material_key == material_handle.material_id)
         {
-            batch = &material_system->material_batches[i];
+            batch = &material_system->material_batch[i];
         }
     }
 

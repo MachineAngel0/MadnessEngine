@@ -34,7 +34,7 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     asset_system->scene = scene_init(memory_system);
 
     asset_system->material_system = memory_system_alloc(memory_system, sizeof(Material_System),
-                                                       MEMORY_SUBSYSTEM_RESOURCE);
+                                                        MEMORY_SUBSYSTEM_RESOURCE);
     material_system_init(asset_system->material_system, asset_system, memory_system);
 
     asset_system->sprite_system = sprite_system_init(memory_system);
@@ -74,7 +74,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* resource_system)
     //
 
     sprite_system_generate_render_packet(resource_system->sprite_system,
-                                     &resource_system->render_packet->sprite_data_packet);
+                                         &resource_system->render_packet->sprite_data_packet);
 
     material_system_generate_render_packet(resource_system->material_system,
                                            &resource_system->render_packet->draw_3d_data_packet);
@@ -91,12 +91,13 @@ bool asset_system_update_and_create_render_packet(Asset_System* resource_system)
     resource_system->render_packet->particle_packet = particle_system_generate_render_packet(
         resource_system->particle_system);
 
-    resource_system->render_packet->draw_3d_data_packet.mesh_instances = resource_system->mesh_system->mesh_parent_instance;
-    resource_system->render_packet->draw_3d_data_packet.mesh_instances_count = resource_system->mesh_system->mesh_parent_instance_count;
+    resource_system->render_packet->draw_3d_data_packet.mesh_instances = resource_system->mesh_system->
+        mesh_parent_instance;
+    resource_system->render_packet->draw_3d_data_packet.mesh_instances_count = resource_system->mesh_system->
+        mesh_parent_instance_count;
 
     return true;
 }
-
 
 
 void render_packet_clear(Render_Packet* renderer_packets)
@@ -177,7 +178,6 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 }
 
 
-
 bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle)
 {
     MADNESS_UUID uuid = {0, 0};
@@ -233,9 +233,6 @@ bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, 
         // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
         // Madness_Texture_Runtime runtime_texture = {0};
         // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-
-
-
     }
     fclose(fptr);
 
@@ -251,7 +248,156 @@ bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle text
     return false;
 }
 
-Texture_Handle asset_unload_font(Asset_System* asset_system, const char* asset_name)
+bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Texture_Handle* out_handle)
+{
+    Asset_MetaData meta_data = {0};
+
+    if (uuid.high == 0 && uuid.low == 0)
+    {
+        WARN("UUID OF 0,0 passed in ")
+        *out_handle = (Texture_Handle){0};
+        return true;
+    }
+
+    if (!asset_registry_get_metadata_from_uuid(asset_system, uuid, &meta_data))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Texture_Handle){0};
+        return out_handle;
+    }
+
+
+    //has asset already been loaded
+    if (texture_system_exists(asset_system, out_handle, meta_data.hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
+    if (!fptr)
+    {
+        MASSERT(false);
+        *out_handle = (Texture_Handle){0};
+        return false;
+    }
+
+    bool editor = true;
+    if (editor)
+    {
+        Madness_Texture_Runtime runtime = {0};
+        asset_texture_deserialize_heap(&runtime, fptr, asset_system->heap_allocator);
+        texture_system_upload_new_texture(asset_system, meta_data.uuid, meta_data.hash, runtime.texture,
+                                          runtime.pixel_data, out_handle);
+        return true;
+    }
+    else
+    {
+        MASSERT(false);
+    }
+
+    fclose(fptr);
+
+    return true;
+}
+
+bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle)
 {
     MASSERT(false);
+    return false;
+}
+
+bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle)
+{
+    MASSERT(false);
+    return false;
+}
+
+bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle)
+{
+    MADNESS_UUID uuid = {0, 0};
+    u64 hash = 0;
+
+    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+
+    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, &uuid, &hash))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Madness_Mesh_Handle){0};
+        return out_handle;
+    }
+
+    //has asset already been loaded
+    if (mesh_system_exists_mesh(asset_system, out_handle, hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        Madness_Mesh_Runtime runtime_mesh = {0};
+
+        fptr = fopen(engine_asset_path, "rb");
+
+        asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
+
+        mesh_system_load_mesh(asset_system, &runtime_mesh);
+    }
+    else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+    }
+    fclose(fptr);
+
+    return true;
+}
+
+bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
+{
+    Asset_MetaData meta_data = {0};
+    if (!asset_registry_get_metadata_from_uuid(asset_system, uuid, &meta_data))
+    {
+        MASSERT(false);
+        return false;
+    }
+
+
+    //material system does exists function
+    //has asset already been loaded
+    if (material_system_exists(asset_system, meta_data.uuid))
+    {
+        return true;
+    }
+
+    FILE* fptr = NULL;
+    bool debug = true;
+    if (debug)
+    {
+        fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
+
+        Material_Asset_Runtime runtime_material = {0};
+        runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
+        asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
+        material_system_load_material_asset(asset_system, meta_data.uuid, meta_data.hash, &runtime_material);
+    }
+    else
+    {
+        MASSERT(false);
+        //TODO:
+    }
+
+    fclose(fptr);
+
+
+    return true;
 }
