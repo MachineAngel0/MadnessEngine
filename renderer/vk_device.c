@@ -310,6 +310,8 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         if (index_array[i] == vulkan_context->device.graphics_queue_index)
         {
             queue_create_infos[i].queueCount = 2;
+            queue_create_infos[i].queueCount = clamp_int(queue_create_infos[i].queueCount,
+                                                         1, vulkan_context->device.queue_families[i].queueCount);
         }
 
         queue_create_infos[i].pQueuePriorities = &default_queue_priority;
@@ -621,14 +623,14 @@ bool select_physical_device(vulkan_context* vulkan_context)
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
         vulkan_physical_device_queue_family_info queue_info = {0};
-        bool result = physical_device_meets_requirements(
-            physical_devices[i],
-            vulkan_context->surface,
-            &vulkan_context->device.properties,
-            &vulkan_context->device.features,
-            &requirements,
-            &queue_info,
-            &vulkan_context->device.swapchain_capabilities);
+        bool result = physical_device_meets_requirements(vulkan_context,
+                                                         physical_devices[i],
+                                                         vulkan_context->surface,
+                                                         &vulkan_context->device.properties,
+                                                         &vulkan_context->device.features,
+                                                         &requirements,
+                                                         &queue_info,
+                                                         &vulkan_context->device.swapchain_capabilities);
 
         if (result)
         {
@@ -705,6 +707,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
 }
 
 bool physical_device_meets_requirements(
+    vulkan_context* vulkan_context,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,
@@ -731,8 +734,8 @@ bool physical_device_meets_requirements(
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, 0);
-    VkQueueFamilyProperties* queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+    vulkan_context->device.queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, vulkan_context->device.queue_families);
 
     //TODO: rn its only picking a queue with each available queue type, later if performance is needed,
     // then using a specialized queue, like for compute or transfer would be better
@@ -745,21 +748,21 @@ bool physical_device_meets_requirements(
         u8 current_transfer_score = 0;
 
         // Graphics queue?
-        if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        if (vulkan_context->device.queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
             out_queue_info->graphics_family_index = i;
             ++current_transfer_score;
         }
 
         // Compute queue?
-        if (queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+        if (vulkan_context->device.queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
         {
             out_queue_info->compute_family_index = i;
             ++current_transfer_score;
         }
 
         // Transfer queue?
-        if (queue_families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+        if (vulkan_context->device.queue_families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
         {
             // Take the index if it is the current lowest. This increases the
             // liklihood that it is a dedicated transfer queue.

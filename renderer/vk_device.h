@@ -50,6 +50,7 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context);
 bool select_physical_device(vulkan_context* vulkan_context);
 
 bool physical_device_meets_requirements(
+    vulkan_context* vulkan_context,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,
