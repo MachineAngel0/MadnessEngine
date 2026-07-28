@@ -48,7 +48,7 @@ bool platform_startup(
     Platform_State* plat_state,
     Input_System* input_system,
     Event_System* event_system,
-    Platform_Config* platform_config);
+    Platform_Config platform_config);
 
 
 void platform_shutdown(Platform_State* plat_state);

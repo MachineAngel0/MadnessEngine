@@ -61,7 +61,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
         &application_core->plat_state,
         application_core->input_system,
         application_core->event_system,
-        &platform_config))
+        platform_config))
     {
         return false;
     }

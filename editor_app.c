@@ -64,7 +64,7 @@ bool editor_app_run(Editor_Application* editor_app)
         &application_core->plat_state,
         application_core->input_system,
         application_core->event_system,
-        &platform_config);
+        platform_config);
 
 
     //start the renderer and UI
