@@ -61,7 +61,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
         &application_core->plat_state,
         application_core->input_system,
         application_core->event_system,
-        platform_config);
+        &platform_config);
 
 
     //start the renderer and UI

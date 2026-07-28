@@ -2,6 +2,9 @@
 #define VK_FRAMEBUFFER_H
 
 
+#include "vulkan_struct_types.h"
+
+
 
 void vulkan_framebuffer_create(
     vulkan_context* context,

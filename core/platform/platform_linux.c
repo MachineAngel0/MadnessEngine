@@ -50,7 +50,6 @@ typedef struct internal_state
 } Linux_Internal_State;
 
 
-
 // Key translation
 keys translate_keycode(u32 x_keycode);
 
@@ -60,7 +59,7 @@ bool platform_startup(
     Platform_State* plat_state,
     Input_System* input_system,
     Event_System* event_system,
-    Platform_Config platform_config)
+    Platform_Config* platform_config)
 {
     //set pointers needed by the platform
     MASSERT(event_system);
@@ -129,10 +128,10 @@ bool platform_startup(
         XCB_COPY_FROM_PARENT, // depth
         state->window,
         state->screen->root, // parent
-        platform_config.start_pos_x, //x
-        platform_config.start_pos_y, //y
-        platform_config.start_width, //width
-        platform_config.start_height, //height
+        platform_config->start_pos_x, //x
+        platform_config->start_pos_y, //y
+        platform_config->start_width, //width
+        platform_config->start_height, //height
         0, // No border
         XCB_WINDOW_CLASS_INPUT_OUTPUT, //class
         state->screen->root_visual,
@@ -156,8 +155,8 @@ bool platform_startup(
         XCB_ATOM_WM_NAME,
         XCB_ATOM_STRING,
         8, // data should be viewed 8 bits at a time
-        strlen(platform_config.name),
-        platform_config.name);
+        strlen(platform_config->name),
+        platform_config->name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -204,10 +203,6 @@ bool platform_startup(
     }
 
     linux_plat_state = plat_state;
-
-    //NOTE: because linux and tiling windows are assholes, we need to query for the actual size and pos of the window
-    platform_get_window_size(&platform_config.start_width, &platform_config.start_height);
-    platform_get_window_pos(&platform_config.start_pos_x, &platform_config.start_pos_y);
 
 
     return true;
@@ -507,31 +502,52 @@ void platform_get_window_size(s32* width, s32* height)
 {
     Linux_Internal_State* linux_internal_state = (Linux_Internal_State*)linux_plat_state->internal_state;
 
-    XWindowAttributes attributes;
-    XGetWindowAttributes(
-    linux_internal_state->display,
-    linux_internal_state->window,
-    &attributes);
+    XSync(linux_internal_state->display, False);
+    XSetEventQueueOwner(linux_internal_state->display, XCBOwnsEventQueue);
 
-    *width = attributes.width;
-    *height = attributes.height;
+    xcb_get_geometry_cookie_t cookie =
+        xcb_get_geometry(
+            linux_internal_state->connection,
+            linux_internal_state->window);
 
+    xcb_get_geometry_reply_t* reply =
+        xcb_get_geometry_reply(
+            linux_internal_state->connection,
+            cookie, NULL);
 
-    DEBUG("SYSTEM WINDOW WIDTH & HEIGHT: %d %d", *width, *height);
-
+    if (reply)
+    {
+        *width = reply->width;
+        *height = reply->height;
+        free(reply);
+    }
 }
 
 void platform_get_window_pos(s32* x, s32* y)
 {
     Linux_Internal_State* linux_internal_state = (Linux_Internal_State*)linux_plat_state->internal_state;
 
-    Window child;
+    XSync(linux_internal_state->display, False);
+    XSetEventQueueOwner(linux_internal_state->display, XCBOwnsEventQueue);
 
-    XTranslateCoordinates(linux_internal_state->display, linux_internal_state->window,
-        DefaultRootWindow(linux_internal_state->display), 0,0, x, y, &child);
+    xcb_translate_coordinates_cookie_t cookie = xcb_translate_coordinates(
+        linux_internal_state->connection,
+        linux_internal_state->window,
+        linux_internal_state->window,
+        0, 0);
 
-    DEBUG("SYSTEM WINDOW POS: %d %d", *x, *y);
+    xcb_translate_coordinates_reply_t* reply = xcb_translate_coordinates_reply(
+        linux_internal_state->connection,
+        cookie,
+        NULL
+    );
 
+    if (reply)
+    {
+        *x = reply->dst_x;
+        *y = reply->dst_y;
+        free(reply);
+    }
 }
 
 void platform_set_cursor_pos(int x, int y)
@@ -539,11 +555,11 @@ void platform_set_cursor_pos(int x, int y)
     Linux_Internal_State* state = (Linux_Internal_State*)linux_plat_state->internal_state;
 
     XWarpPointer(
-        state->display,     // Display*
-        None,        // source window
-        state->window,      // destination window
-        0, 0, 0, 0,  // source rectangle (ignored)
-        x, y         // destination coordinates
+        state->display, // Display*
+        None, // source window
+        state->window, // destination window
+        0, 0, 0, 0, // source rectangle (ignored)
+        x, y // destination coordinates
     );
 
     XFlush(state->display);

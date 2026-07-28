@@ -1,10 +1,13 @@
-﻿
+﻿#include "vk_framebuffer.h"
+
+
 void vulkan_framebuffer_create(vulkan_context* context, vulkan_renderpass* renderpass,
                                u32 width, u32 height,
                                u32 attachment_count, VkImageView* attachments,
                                vulkan_framebuffer* out_framebuffer)
 {
     // Take a copy of the attachments, renderpass and attachment count
+    // TODO: ?? why is there a malloc here??
     out_framebuffer->attachments = malloc(sizeof(VkImageView) * attachment_count);
     for (u32 i = 0; i < attachment_count; ++i)
     {

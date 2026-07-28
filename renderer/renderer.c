@@ -114,6 +114,18 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
         return false;
     }
 
+    if (vk_context->framebuffer_width != vk_context->device.swapchain_capabilities.capabilities.currentExtent.width)
+    {
+        vk_context->framebuffer_width = vk_context->device.swapchain_capabilities.capabilities.currentExtent.width;
+        vk_context->framebuffer_width_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.width;
+    }
+    if (vk_context->framebuffer_height != vk_context->device.swapchain_capabilities.capabilities.currentExtent.height)
+    {
+        vk_context->framebuffer_height = vk_context->device.swapchain_capabilities.capabilities.currentExtent.height;
+        vk_context->framebuffer_height_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.height;
+    }
+
+
     // Swapchain
     vulkan_swapchain_create(
         vk_context,
