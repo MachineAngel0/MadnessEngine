@@ -139,7 +139,7 @@ typedef struct vulkan_device
 
     VkPhysicalDeviceFeatures features;
     VkPhysicalDeviceMemoryProperties memory;
-
+    VkQueueFamilyProperties* queue_family_properties;
 
     VkFormat depth_format;
 } vulkan_device;

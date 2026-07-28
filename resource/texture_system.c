@@ -1,5 +1,6 @@
 ﻿#include "texture_system.h"
-
+#include "asset_converter.h"
+#include "asset_system.h"
 
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {

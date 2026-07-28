@@ -71,7 +71,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     platform_get_vulkan_extension_names(&extensions_names_array);
     darray_push(extensions_names_array, &VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-#if defined(DEBUG_BUILD)
+#ifdef DEBUG_BUILD
     darray_push(extensions_names_array, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     DEBUG("Required extensions:");
@@ -92,7 +92,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     VkValidationFeaturesEXT validation_features_info = {0};
     bool validation_ext_enabled = false;
 
-#ifndef NDEBUG
+#ifdef DEBUG_BUILD
     INFO("Validation layers enabled. Enumerating...");
 
 
@@ -136,7 +136,7 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
 
     validation_features_info.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
     validation_features_info.enabledValidationFeatureCount = 2;
-    validation_features_info.pEnabledValidationFeatures    = enable_features;
+    validation_features_info.pEnabledValidationFeatures = enable_features;
     validation_ext_enabled = true;
 
 #endif
@@ -154,9 +154,9 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     //TODO: enable if you want extra info, its very slow
     if (validation_ext_enabled)
     {
-    create_info.pNext = &validation_features_info;
+        create_info.pNext = &validation_features_info;
     }
-    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *) &validation_features_info;
+    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
 
     /*
         VkResult vkCreateInstance(
@@ -167,27 +167,28 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
 
     //create the debugger
-#ifndef NDEBUG
+#ifdef DEBUG_BUILD
 
     DEBUG("VULKAN INSTANCE CREATED");
 
     u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-                       VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
     debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debug_create_info.messageSeverity = log_severity;
     debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                                    VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_create_info.pfnUserCallback = vk_debug_callback;
     debug_create_info.pUserData = 0;
 
     //loading the function pointer
-    PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
         vulkan_context->instance, "vkCreateDebugUtilsMessengerEXT");
-    MASSERT_MSG(func, "Failed to create debug messenger!"); {
+    MASSERT_MSG(func, "Failed to create debug messenger!");
+    {
         //SAME THING: func == vkCreateDebugUtilsMessengerEXT
         VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
     }
@@ -206,29 +207,28 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 {
     switch (message_severity)
     {
-        default:
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            // M_ERROR("%d Validation Layer: Error %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
-            M_ERROR("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            WARN("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            INFO("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
-            break;
+    default:
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        // M_ERROR("%d Validation Layer: Error %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
+        M_ERROR("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        WARN("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        INFO("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
+        break;
     }
     return VK_FALSE;
-
 }
 
 bool vulkan_instance_destroy(vulkan_context* vulkan_context)
 {
     INFO("VULKAN DESTROYING DEBUGGER");
-    PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+    PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
         vulkan_context->instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != NULL)
     {
@@ -258,11 +258,11 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     if (hash_set_insert(indices, &vulkan_context->device.graphics_queue_index))
     {
         darray_push(index_array, vulkan_context->device.graphics_queue_index);
-    };
+    }
     if (hash_set_insert(indices, &vulkan_context->device.present_queue_index))
     {
         darray_push(index_array, vulkan_context->device.present_queue_index);
-    };
+    }
     if (hash_set_insert(indices, &vulkan_context->device.compute_queue_index))
     {
         darray_push(index_array, vulkan_context->device.compute_queue_index);
@@ -272,9 +272,31 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         darray_push(index_array, vulkan_context->device.transfer_queue_index);
     }
 
+    bool present_shares_graphics = false;
+    bool transfer_shares_graphics = false;
+    bool compute_shares_graphics = false;
+    bool transfer_shares_compute = false;
+    if (vulkan_context->device.graphics_queue_index == vulkan_context->device.present_queue_index)
+    {
+        present_shares_graphics = true;
+    }
+    if (vulkan_context->device.graphics_queue_index == vulkan_context->device.transfer_queue_index)
+    {
+        transfer_shares_graphics = true;
+    }
+    if (vulkan_context->device.graphics_queue_index == vulkan_context->device.compute_queue_index)
+    {
+        compute_shares_graphics = true;
+    }
+    if (vulkan_context->device.graphics_queue_index == vulkan_context->device.compute_queue_index)
+    {
+        transfer_shares_compute = true;
+    }
+
     u64 index_count = hash_set_get_size(indices);
     u64 index_array_size = darray_get_size(index_array);
     // s32 hash_set_contains_index(const hash_set* h, void* key)
+
 
     f32 default_queue_priority = 1.0f;
     //get device queue info for each unique queue family
@@ -365,7 +387,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .descriptorIndexing = VK_TRUE,
         .runtimeDescriptorArray = VK_TRUE,
         .descriptorBindingPartiallyBound = VK_TRUE,
-        .descriptorBindingSampledImageUpdateAfterBind  = VK_TRUE,
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
         .bufferDeviceAddressMultiDevice = VK_TRUE,
@@ -397,7 +419,6 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     vkGetPhysicalDeviceFeatures(vulkan_context->device.physical_device, &device_features);
 
 
-
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &enable_device_features2,
@@ -410,7 +431,6 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = 0,
     };
-
 
 
     // Create the device.
@@ -577,13 +597,25 @@ bool select_physical_device(vulkan_context* vulkan_context)
 
         requirements.sampler_anisotropy = true;
 
-        //TODO: temp code, clean this up later, when doing configs for the engine
+        //NOTE:
         // my linux laptop doesnt have a discrete, it has a integrated gpu, look into, for performance
-        #if MPLATFORM_LINUX
+        if (vulkan_context->device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        {
+            requirements.discrete_gpu = true;
+        }
+        else if (vulkan_context->device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+        {
+            requirements.discrete_gpu = false;
+        }
+        else
+        {
+            MASSERT_MSG(false, "PHYSICAL DEVICE TYPE IS NOT SUPPORTED. IS NOT DISCRETE OR INTEGRATED")
+        }
+        /*#if MPLATFORM_LINUX
             requirements.discrete_gpu = false;
         #else
             requirements.discrete_gpu = true;
-        #endif
+        #endif*/
 
         requirements.device_extension_names = darray_create(const char*);
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -604,22 +636,22 @@ bool select_physical_device(vulkan_context* vulkan_context)
             // GPU type, etc.
             switch (vulkan_context->device.properties.deviceType)
             {
-                default:
-                case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-                    INFO("GPU type is Unknown.");
-                    break;
-                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                    INFO("GPU type is Integrated.");
-                    break;
-                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                    INFO("GPU type is Discrete.");
-                    break;
-                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-                    INFO("GPU type is Virtual.");
-                    break;
-                case VK_PHYSICAL_DEVICE_TYPE_CPU:
-                    INFO("GPU type is CPU.");
-                    break;
+            default:
+            case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+                INFO("GPU type is Unknown.");
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                INFO("GPU type is Integrated.");
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                INFO("GPU type is Discrete.");
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                INFO("GPU type is Virtual.");
+                break;
+            case VK_PHYSICAL_DEVICE_TYPE_CPU:
+                INFO("GPU type is CPU.");
+                break;
             }
 
             INFO(
@@ -638,7 +670,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
             // Memory information
             for (u32 j = 0; j < vulkan_context->device.memory.memoryHeapCount; ++j)
             {
-                f32 memory_size_gib = (((f32) vulkan_context->device.memory.memoryHeaps[j].size) / GB(1));
+                f32 memory_size_gib = (((f32)vulkan_context->device.memory.memoryHeaps[j].size) / GB(1));
                 if (vulkan_context->device.memory.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
                 {
                     INFO("Local GPU memory: %.2f GB", memory_size_gib);
@@ -668,7 +700,6 @@ bool select_physical_device(vulkan_context* vulkan_context)
     }
 
 
-
     INFO("Physical device selected.");
     return true;
 }
@@ -688,7 +719,7 @@ bool physical_device_meets_requirements(
     out_queue_info->compute_family_index = -1;
     out_queue_info->transfer_family_index = -1;
 
-    // Discrete GPU?
+    /*// Discrete GPU?
     if (requirements->discrete_gpu)
     {
         if (properties->deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
@@ -696,7 +727,7 @@ bool physical_device_meets_requirements(
             INFO("Device is not a discrete GPU, and one is required. Skipping.");
             return false;
         }
-    }
+    }*/
 
     u32 queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, 0);
@@ -813,7 +844,7 @@ bool physical_device_meets_requirements(
                     bool found = false;
                     for (u32 j = 0; j < available_extension_count; ++j)
                     {
-                        if (strcmp(requirements->device_extension_names[i], available_extensions[j].extensionName))
+                        if (strcmp(requirements->device_extension_names[i], available_extensions[j].extensionName) == 0)
                         {
                             found = true;
                             break;
@@ -912,7 +943,6 @@ bool vulkan_device_detect_depth_format(vulkan_device* device)
     {
         VkFormatProperties format_properties;
         vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &format_properties);
-
 
 
         if ((format_properties.linearTilingFeatures & flags) == flags)
