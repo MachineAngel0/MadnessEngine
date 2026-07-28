@@ -103,6 +103,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     // Job_System* job_system = job_system_initialize(&application_core->memory_system);
 
 
+
+
     //Renderer
     renderer_plugin->renderer = renderer_init(&application_core->plat_state,
                                               platform_config, &application_core->memory_system,

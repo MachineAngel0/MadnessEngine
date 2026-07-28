@@ -122,6 +122,9 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
 bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context);
 
+void platform_get_window_size(s32* width, s32* height);
+void platform_get_window_pos(s32* x, s32* y);
+
 //Misc
 void platform_set_cursor_pos(int x, int y);
 void platform_get_cursor_pos(int* out_x, int* out_y);

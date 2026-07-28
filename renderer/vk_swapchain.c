@@ -8,7 +8,10 @@
 
 void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
 {
+
+
     VkExtent2D swapchain_extent = {width, height};
+
 
     //choose a swap surface format, that suits our needs
     bool found = false;

@@ -205,6 +205,11 @@ bool platform_startup(
 
     linux_plat_state = plat_state;
 
+    //NOTE: because linux and tiling windows are assholes, we need to query for the actual size and pos of the window
+    platform_get_window_size(&platform_config.start_width, &platform_config.start_height);
+    platform_get_window_pos(&platform_config.start_pos_x, &platform_config.start_pos_y);
+
+
     return true;
 }
 
@@ -496,6 +501,37 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
     vulkan_context->surface = state->surface;
     return true;
+}
+
+void platform_get_window_size(s32* width, s32* height)
+{
+    Linux_Internal_State* linux_internal_state = (Linux_Internal_State*)linux_plat_state->internal_state;
+
+    XWindowAttributes attributes;
+    XGetWindowAttributes(
+    linux_internal_state->display,
+    linux_internal_state->window,
+    &attributes);
+
+    *width = attributes.width;
+    *height = attributes.height;
+
+
+    DEBUG("SYSTEM WINDOW WIDTH & HEIGHT: %d %d", *width, *height);
+
+}
+
+void platform_get_window_pos(s32* x, s32* y)
+{
+    Linux_Internal_State* linux_internal_state = (Linux_Internal_State*)linux_plat_state->internal_state;
+
+    Window child;
+
+    XTranslateCoordinates(linux_internal_state->display, linux_internal_state->window,
+        DefaultRootWindow(linux_internal_state->display), 0,0, x, y, &child);
+
+    DEBUG("SYSTEM WINDOW POS: %d %d", *x, *y);
+
 }
 
 void platform_set_cursor_pos(int x, int y)
