@@ -437,12 +437,31 @@ void editor_material_asset_view(Editor* editor)
             madness_ui_reflect_data(Reflection_Registry* reflection_registry, struct_info,
                                    void* passin_data, const char* id)
             */
-
-
         }
+    }
+    madness_ui_window_end();
+
+
+    madness_ui_set_window_pos(600, 200);
+    madness_ui_window_begin(STRING("Material Creation"));
+    {
+        static Material_Info mat_info;
+        mat_info.material_name;
+        mat_info.blend_mode;
+        mat_info.mesh_type;
+        mat_info.renderpass;
+        mat_info.shader_name;
+        mat_info.transluency;
+
+
+
+
+
+
 
 
 
     }
     madness_ui_window_end();
+
 }

@@ -20,9 +20,8 @@ int main(void)
                              "../resource/generated/mat_structs.h");
 
 
-    reflection_game_data(reflection_system);
+    // reflection_game_data(reflection_system);
 
-    reflection_system_reset(reflection_system);
 
     reflection_system_parse(reflection_system, "../MadnessPulse/game_constants.h", REFLECTION_PARSE_CONSTANT);
     reflection_system_parse(reflection_system, "../MadnessPulse/game_enums.h", REFLECTION_PARSE_ENUM);
@@ -34,6 +33,15 @@ int main(void)
 
 
 
+    reflection_system_parse(reflection_system, "../resource/resource_types.h",
+                            REFLECTION_PARSE_CONSTANT);
+    reflection_system_parse(reflection_system, "../resource/resource_types.h", REFLECTION_PARSE_ENUM);
+    reflection_system_parse(reflection_system, "../resource/resource_types.h",
+                            REFLECTION_PARSE_STRUCT);
+
+    reflection_data_to_files(reflection_system, "resources",
+                             "../resource/generated/resource_types_enums.h",
+                             "../resource/generated/resource_types_structs.h");
 
 
 

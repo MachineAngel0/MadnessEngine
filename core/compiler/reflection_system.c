@@ -3,7 +3,7 @@
 
 Reflection_System* reflection_system_init(Memory_System* memory_system)
 {
-    Reflection_System* reflection_system = memory_system_alloc(memory_system, sizeof(Allocator),
+    Reflection_System* reflection_system = memory_system_alloc(memory_system, sizeof(Reflection_System),
                                                                MEMORY_SUBSYSTEM_REFLECTION);
     reflection_system->reflection_registry_constants = HASH_TABLE_CREATE(Reflection_Constant, 1000);
     reflection_system->reflection_registry_enums = HASH_TABLE_CREATE(Reflection_Enum, 1000);
@@ -29,8 +29,6 @@ void reflection_system_shutdown(Reflection_System* reflection_system, Memory_Sys
 {
     //TODO: free the allocators
     memory_system_memory_free(memory_system, reflection_system, MEMORY_SUBSYSTEM_REFLECTION);
-
-
 }
 
 void reflection_system_reset(Reflection_System* reflection_system)
@@ -39,6 +37,9 @@ void reflection_system_reset(Reflection_System* reflection_system)
     allocator_clear_and_zero(reflection_system->frame_allocator);
     reflection_system->header_file_list_count = 0;
 
+    hash_table_clear(reflection_system->reflection_registry_constants);
+    hash_table_clear(reflection_system->reflection_registry_enums);
+    hash_table_clear(reflection_system->reflection_registry_structs);
 }
 
 void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer)
@@ -217,7 +218,6 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
     };
 
 
-
     Token* pruned_tokens = lexer_prune_tokens(lexer->tokens, keep_list, ARRAY_SIZE(keep_list));
     u64 pruned_token_list_size = darray_get_size(pruned_tokens);
 
@@ -335,8 +335,9 @@ void reflection_system_parse(Reflection_System* reflection_system, const char* f
 
         if (!found)
         {
-            reflection_system->header_file_list[reflection_system->header_file_list_count++]
-                = string_create_allocator(file_path, strlen(file_path), reflection_system->allocator);
+            reflection_system->header_file_list[reflection_system->header_file_list_count]
+                = STRING_CREATE_FROM_BUFFER_ALLOCATOR(file_path, reflection_system->allocator);
+            reflection_system->header_file_list_count++;
         }
     }
     else
@@ -367,7 +368,7 @@ void reflection_system_parse(Reflection_System* reflection_system, const char* f
 void reflection_system_add_constant(Reflection_System* reflection_system, const char* constant_name, const u64 value)
 {
     Reflection_Constant reflection_constant = {0};
-    reflection_constant.name = constant_name;
+    reflection_constant.name = c_string_duplicate(constant_name);
     reflection_constant.value = value;
     hash_table_insert(reflection_system->reflection_registry_constants, constant_name, &reflection_constant);
 }
@@ -502,9 +503,9 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
     if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
     {
         Reflection_Struct_Field type_info = {0};
-        type_info.field_name = struct_member_name;
+        type_info.field_name = c_string_duplicate(struct_member_name);
         type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.type_name = type_name;
+        type_info.type_name = c_string_duplicate(type_name);
         type_info.container_type = Reflection_Container_Type_POINTER;
         darray_push(reflection_struct.type_list, type_info);
 
@@ -544,7 +545,7 @@ bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_
 }
 
 bool reflection_system_set_default_values(Reflection_System* reflection_system, Reflection_Type reflection_type,
-    void* data)
+                                          void* data)
 {
     MASSERT(false);
     //TODO:
@@ -602,7 +603,6 @@ bool reflection_system_set_default_values(Reflection_System* reflection_system, 
         break;
     }
     return true;
-
 }
 
 Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name)
@@ -614,7 +614,6 @@ Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_s
     }
     MASSERT(false);
     return (Reflection_Struct){0};
-
 }
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name)

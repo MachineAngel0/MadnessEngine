@@ -4,5 +4,4 @@
 
 void generate_runtime_enums_material(Reflection_Registry* reflection_registry)
 {
-    return;
 }

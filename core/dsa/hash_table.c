@@ -174,6 +174,16 @@ void hash_table_set(hash_table* h, const char* key_str, void* value)
     return;
 }
 
+void hash_table_clear(hash_table* h)
+{
+
+    u64 val_size = h->value_data_size;
+    u64 capacity = h->capacity;
+    hash_table_destroy(h);
+
+    h = _hash_table_create(val_size, capacity );
+
+}
 
 
 void hash_table_print(hash_table* h, void (*print_func_value)(void*))

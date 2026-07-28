@@ -298,7 +298,6 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     u64 index_array_size = darray_get_size(index_array);
     // s32 hash_set_contains_index(const hash_set* h, void* key)
 
-
     f32 default_queue_priority = 1.0f;
     //get device queue info for each unique queue family
     VkDeviceQueueCreateInfo* queue_create_infos = darray_create_reserve(VkDeviceQueueCreateInfo, index_count);

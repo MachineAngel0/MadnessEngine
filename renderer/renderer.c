@@ -611,7 +611,6 @@ void renderer_update(Renderer* renderer, float delta_time)
     // SET 1 GLOBAL TEXTURES: Textures
     // SET 2 NOTHING RN:
 
-
     mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
                              renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
                              graphics_command_buffer);

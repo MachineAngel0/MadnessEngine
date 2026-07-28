@@ -55,7 +55,7 @@ String* string_create_allocator(const char* word, const u64 length, Allocator* a
     str->length = length;
     //important to note that we use -1 to not include the null terminated string
     str->chars = allocator_alloc(allocator, sizeof(char) * str->length);
-    memset(str->chars, 0, sizeof(char) * str->length);
+    // memset(str->chars, 0, sizeof(char) * str->length);
     memcpy(str->chars, word, sizeof(char) * str->length);
 
     return str;
