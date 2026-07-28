@@ -237,7 +237,6 @@ typedef struct Skinned_Render_Item
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
-    u32 vertex_offset_bytes;
 
 } Skinned_Render_Item;
 
@@ -251,7 +250,7 @@ typedef struct Vulkan_SKMesh_Draw
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
-    u32 vertex_offset;
+    u32 vertex_offset_count;
 } Vulkan_Skinned_Draw;
 
 
@@ -271,7 +270,6 @@ typedef struct Vulkan_Shader_Batch
 
 
     Vulkan_Shader_Pipeline pipeline;
-    Vulkan_Shader_Pipeline shadow_pipeline;
     Vulkan_Shader_Pipeline wireframe_pipeline;
 
     Buffer_Handle indirect_draw_buffer_handle;

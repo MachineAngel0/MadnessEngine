@@ -505,7 +505,7 @@ typedef struct Skinned_Draw_Data
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
-    u32 vertex_byte_offset; //in vec3
+    // u32 vertex_offset_count; //in vec3
 } Skinned_Draw_Data;
 
 typedef struct Madness_Skinned_Submesh_Instance

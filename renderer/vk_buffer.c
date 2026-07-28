@@ -623,7 +623,7 @@ void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_ha
     //make sure its a staging buffer
     MASSERT(staging_buffer->type == BUFFER_TYPE_STAGING);
     MASSERT(device_local_buffer->type != BUFFER_TYPE_STAGING);
-    if (staging_buffer->current_offset < 0)
+    if (staging_buffer->current_offset <= 0)
     {
         WARN("vulkan_buffer_copy: 0 offset in staging buffer");
         return;

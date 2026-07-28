@@ -40,10 +40,10 @@ void main() {
 
     //need to index into the correct buffer
     mat4 skin_matrix =
-    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx + */ uint(joints.x)] * weights.x +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx*/ + uint(joints.y)] * weights.y +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx +*/ uint(joints.z)] * weights.z +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx +*/ uint(joints.w)] * weights.w;
+    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.x)] * weights.x +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.y)] * weights.y +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.z)] * weights.z +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.w)] * weights.w;
 
 
     //global mesh data

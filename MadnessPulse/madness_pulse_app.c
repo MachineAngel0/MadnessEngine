@@ -121,9 +121,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
-    Madness_Mesh_Handle handle;
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh", &handle);
 
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
@@ -134,15 +131,18 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     }*/
 
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
-    Madness_SkMesh_Handle handle ={0};
-    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/CesiumMan.mskin", &handle);
+    Madness_Mesh_Handle handle;
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh", &handle);
 
-    /*
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/MC/MC4.2_6.gltf");
-    Madness_SkMesh_Handle handle ={0};
-    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/MC4.2_6.mskin", &handle);
-    */
+
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
+    Madness_SkMesh_Handle handle2 ={0};
+    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/CesiumMan.mskin", &handle2);
+
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/MC_Test/MC4.2_6.gltf");
+    Madness_SkMesh_Handle handle3 ={0};
+    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/MC4.2_6.mskin", &handle3);
 
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");

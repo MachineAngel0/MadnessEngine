@@ -236,7 +236,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 .joint_idx = sub_mesh_instance->skinned_draw_data.joint_idx,
                 .weight_idx = sub_mesh_instance->skinned_draw_data.weight_idx,
                 .skinned_matrix_idx = sub_mesh_instance->skinned_draw_data.skinned_matrix_idx,
-                .vertex_offset_bytes = sub_mesh_instance->skinned_draw_data.vertex_byte_offset,
+
 
 
             };
@@ -339,7 +339,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                     .joint_idx = cur_render_item->joint_idx,
                     .weight_idx = cur_render_item->weight_idx,
                     .skinned_matrix_idx = cur_render_item->skinned_matrix_idx,
-                    .vertex_offset = cur_render_item->vertex_offset_bytes,
+                    .vertex_offset_count = cur_render_item->vertex_offset,
                 };
                 indirect_draw = (VkDrawIndexedIndirectCommand){
                     .indexCount = cur_render_item->index_count,

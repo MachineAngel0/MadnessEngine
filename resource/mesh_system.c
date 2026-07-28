@@ -265,7 +265,6 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
         submesh_inst->skinned_draw_data.joint_idx = skinned_submesh->joint_offset_vec4;
         submesh_inst->skinned_draw_data.weight_idx = skinned_submesh->weight_offset_vec4;
         submesh_inst->skinned_draw_data.skinned_matrix_idx = mesh_inst->skinned_matrix_count_offset;
-        submesh_inst->skinned_draw_data.vertex_byte_offset = madness_mesh->mesh_data[mesh_idx].vertex_offset;
     }
 
 
