@@ -50,50 +50,49 @@ Animation_Interpolation_Type Animation_Interpolation_Type_gltf_to_engine[cgltf_i
 typedef struct Animation_Channel
 {
     u32 sampler_idx;
-    Animation_Path_Type animation_path_type;
     u32 joint_index;
+    Animation_Path_Type animation_path_type;
 } Animation_Channel;
 
 typedef struct Animation_Sampler
 {
-    float* timestamps;
     u32 timestamps_count;
+    float* timestamps;
 
     float sampler_start;
     float sampler_end;
 
     //trs = translation rotation scale, and weights
+    u32 trs_interpolation_bytes;
+    Animation_Interpolation_Type interpolation_type;
     union
     {
+        //it might not matter to tag this but idk
         float* trs_float;
         vec3s* trs_vec3;
         vec4s* trs_vec4;
     } interperlation_data;
 
-    u32 trs_interpolation_count;
-    Animation_Interpolation_Type interpolation_type;
 } Animation_Sampler;
 
 typedef struct Animation
 {
-    String* animation_name;
-    Animation_Channel* channels;
     u32 channel_count;
-    Animation_Sampler* samplers;
     u32 sampler_count;
 
     float anim_start;
     float anim_end;
 
-    //TODO: current time is only here for testing
-    // float current_time;
+    String* animation_name;
+    Animation_Channel* channels;
+    Animation_Sampler* samplers;
 } Animation;
 
 typedef struct Joint
 {
-    const char* joint_name;
     u32 id;
     u32 parent_idx;
+    String* joint_name;
 } Joint;
 
 typedef struct GLTF_Animation_Data

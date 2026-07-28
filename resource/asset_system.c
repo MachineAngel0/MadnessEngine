@@ -1,5 +1,6 @@
 ﻿#include "asset_system.h"
 
+#include "animation_system.h"
 #include "asset_serialization.h"
 #include "material_system.h"
 #include "mesh_system.h"
@@ -41,10 +42,7 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     asset_system->mesh_system = mesh_system_init(asset_system, memory_system);
     asset_system->particle_system = particle_system_init(asset_system, memory_system);
 
-
-    //ifdef out for debug builds
-
-    //load the asset metadata
+    asset_system->animation_system = animation_init(memory_system);
 
 
     return asset_system;
@@ -54,6 +52,7 @@ Asset_System* asset_system_init(Memory_System* memory_system)
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system)
 {
     //shutdown the resource systems
+    animation_deinit(resource_system->animation_system, memory_system);
     particle_system_shutdown(resource_system->particle_system, memory_system);
     mesh_system_shutdown(resource_system->mesh_system, memory_system);
     sprite_system_shutdown(resource_system->sprite_system, memory_system);
@@ -64,37 +63,42 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 }
 
 
-bool asset_system_update_and_create_render_packet(Asset_System* resource_system)
+bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
 {
-    allocator_clear(resource_system->frame_allocator);
-    render_packet_clear(resource_system->render_packet);
-    resource_system->render_packet->texture_queue = resource_system->texture_system->texture_upload_queue;
-    resource_system->render_packet->mesh_queue = resource_system->mesh_system->mesh_ring_queue;
-    resource_system->render_packet->skinned_mesh_queue = resource_system->mesh_system->skinned_mesh_ring_queue;
+    allocator_clear(asset_system->frame_allocator);
+    render_packet_clear(asset_system->render_packet);
+    asset_system->render_packet->texture_queue = asset_system->texture_system->texture_upload_queue;
+    asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
+    asset_system->render_packet->skinned_mesh_queue = asset_system->mesh_system->skinned_mesh_ring_queue;
     //
 
-    sprite_system_generate_render_packet(resource_system->sprite_system,
-                                         &resource_system->render_packet->sprite_data_packet);
+    sprite_system_generate_render_packet(asset_system->sprite_system,
+                                         &asset_system->render_packet->sprite_data_packet);
 
-    material_system_generate_render_packet(resource_system->material_system,
-                                           &resource_system->render_packet->draw_3d_data_packet);
+    material_system_generate_render_packet(asset_system->material_system,
+                                           &asset_system->render_packet->draw_3d_data_packet);
 
-    scene_update(resource_system->scene, resource_system);
-    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_array = resource_system->scene->
+    scene_update(asset_system->scene, asset_system);
+    asset_system->render_packet->draw_3d_data_packet.world_space_matrix_array = asset_system->scene->
         world_transforms;
-    resource_system->render_packet->draw_3d_data_packet.world_space_matrix_count = resource_system->scene->
+    asset_system->render_packet->draw_3d_data_packet.world_space_matrix_count = asset_system->scene->
         transform_count;
 
-    resource_system->render_packet->draw_3d_data_packet.skinned_matrix = resource_system->mesh_system->
+    asset_system->render_packet->draw_3d_data_packet.skinned_matrix = asset_system->animation_system->
         skinned_matrix_array;
 
-    resource_system->render_packet->particle_packet = particle_system_generate_render_packet(
-        resource_system->particle_system);
+    asset_system->render_packet->particle_packet = particle_system_generate_render_packet(
+        asset_system->particle_system);
 
-    resource_system->render_packet->draw_3d_data_packet.mesh_instances = resource_system->mesh_system->
-        mesh_parent_instance;
-    resource_system->render_packet->draw_3d_data_packet.mesh_instances_count = resource_system->mesh_system->
-        mesh_parent_instance_count;
+    asset_system->render_packet->draw_3d_data_packet.mesh_instances = asset_system->mesh_system->
+        mesh_instance;
+    asset_system->render_packet->draw_3d_data_packet.mesh_instances_count = asset_system->mesh_system->
+        mesh_instance_count;
+
+    asset_system->render_packet->draw_3d_data_packet.skinned_instances = asset_system->mesh_system->
+        skinned_mesh_instance;
+    asset_system->render_packet->draw_3d_data_packet.skinned_instances_count = asset_system->mesh_system->
+        skinned_mesh_instance_count;
 
     return true;
 }
@@ -328,7 +332,7 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     }
 
     //has asset already been loaded
-    if (mesh_system_exists_mesh(asset_system, out_handle, hash))
+    if (mesh_system_exists_mesh(asset_system, out_handle, uuid, hash))
     {
         return true;
     }
@@ -346,7 +350,57 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
 
         asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
 
-        mesh_system_load_mesh(asset_system, &runtime_mesh);
+        mesh_system_load_mesh(asset_system, &runtime_mesh, uuid, hash);
+    }
+    else
+    {
+        //TODO:
+        MASSERT(false);
+        // search for asset by its hash name and its offset, then load it in with our format
+        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
+        // Madness_Texture_Runtime runtime_texture = {0};
+        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
+    }
+    fclose(fptr);
+
+    return true;
+}
+
+bool asset_load_skmesh_path(Asset_System* asset_system, const char* engine_asset_path,
+                            Madness_SkMesh_Handle* out_handle)
+{
+    MADNESS_UUID uuid = {0, 0};
+    u64 hash = 0;
+
+    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+
+    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, &uuid, &hash))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Madness_SkMesh_Handle){0};
+        return out_handle;
+    }
+
+    //has asset already been loaded
+    if (mesh_system_exists_skmesh(asset_system, out_handle, uuid, hash))
+    {
+        return true;
+    }
+
+
+    FILE* fptr = NULL;
+
+    //load from individal binary
+    bool debug = true;
+    if (debug)
+    {
+        Madness_SkMesh_Runtime runtime_mesh = {0};
+
+        fptr = fopen(engine_asset_path, "rb");
+
+        asset_skmesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
+
+        mesh_system_load_skinned_mesh(asset_system, &runtime_mesh, uuid, hash);
     }
     else
     {
@@ -367,7 +421,7 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
     Asset_MetaData meta_data = {0};
     if (!asset_registry_get_metadata_from_uuid(asset_system, uuid, &meta_data))
     {
-        MASSERT(false);
+        MASSERT("false");
         return false;
     }
 
@@ -384,6 +438,13 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
     if (debug)
     {
         fptr = fopen(string_to_c_string_allocator(meta_data.binary_file, asset_system->frame_allocator), "rb");
+
+        if (!fptr)
+        {
+            MASSERT(false);
+            return false;
+        }
+
 
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));

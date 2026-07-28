@@ -50,7 +50,6 @@
 #define INVALID_HANDLE 0
 
 
-
 typedef struct Handle
 {
     u32 id;
@@ -113,6 +112,7 @@ typedef struct Madness_Asset
 
 //Renderpass || translucency || Blend || Mesh Type
 typedef u32 Material_ID;
+
 typedef struct Material_Handle
 {
     Material_ID material_id;
@@ -163,18 +163,7 @@ typedef struct Animation_Handle
 } Animation_Handle;
 
 
-typedef struct Mesh_Render_Item
-{
-    u64 material_key;
-    u32 mesh_handle;
-    u32 submesh_handle;
-    u32 material_handle;
-    u32 transform_handle;
-    // u32 cull_bounds_handle;
-    u32 index_count;
-    u32 index_offset;
-    u32 vertex_offset;
-} Mesh_Render_Item;
+
 
 
 ///////////////// Texture  //////////////////////
@@ -293,11 +282,6 @@ typedef enum Shader_Blend
 } Shader_Blend_Mode;
 
 
-
-
-
-
-
 typedef enum Mesh_PBR_Flags
 {
     MESH_PIPELINE_COLOR = BITFLAG(1),
@@ -373,7 +357,6 @@ typedef struct Material_Asset_Runtime
     u32 version;
     Material_Asset* asset;
 } Material_Asset_Runtime;
-
 
 
 typedef struct Material_Batch
@@ -517,39 +500,31 @@ uint32_t    firstInstance;
 } Mesh_Indirect_Draw;
 
 
-typedef struct Skinned_Mesh_GPU_Upload
+typedef struct Skinned_Draw_Data
 {
-    u64 joint_bytes;
-    u64 weight_bytes;
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 skinned_matrix_idx;
+    u32 vertex_byte_offset; //in vec3
+} Skinned_Draw_Data;
 
-    u64 joint_offset;
-    u64 weight_offset;
-
-
-    vec4s* joints;
-    vec4s* weights;
-} Skinned_Mesh_GPU_Upload;
-
-
-typedef struct Madness_Skinned_SubMesh_Instance
+typedef struct Madness_Skinned_Submesh_Instance
 {
     //for the renderer
     Mesh_Indirect_Draw mesh_indirect_draw;
+    Skinned_Draw_Data skinned_draw_data;
     Material_Handle material_handle;
     Transform_Handle parent_transform_handle;
-} Madness_Skinned_SubMesh_Instance;
+} Madness_Skinned_Submesh_Instance;
 
-typedef struct Madness_Skinned_Mesh_Instance
-{
-    u32 mesh_count;
-    Madness_Skinned_SubMesh_Instance* sk_mesh_instance_array;
 
-    Madness_SkMesh_Handle sk_mesh_handle;
-    Transform_Handle transform_handle;
+typedef struct Madness_Animation_Data{
 
-    //OPTIMIZE: we would want a handle to the data, and access if needed, so that the updates are more cache friendly
+    GLTF_Animation_Data* animation_data; // pointer to the anim data
+
     //generated every frame
     mat4s* gpu_matrix;
+    u64 skinned_matrix_offset; // offset in the array
 
     //stored in memory
     vec3s* local_translation;
@@ -562,7 +537,21 @@ typedef struct Madness_Skinned_Mesh_Instance
     u32 current_animation_index;
     float current_time;
     bool looping;
-} Madness_SkMesh_Instance;
+}Madness_Animation;
+
+typedef struct Madness_Skinned_Mesh_Instance
+{
+    u32 mesh_count;
+    Madness_Skinned_Submesh_Instance* submesh_instances;
+
+    Madness_SkMesh_Handle skinned_mesh_asset;
+    Transform_Handle transform_handle;
+
+    Animation_Handle animation_handle;
+    u32 skinned_matrix_count_offset;
+
+
+} Madness_Skinned_Mesh_Instance;
 
 
 typedef struct Madness_SubMesh_Instance
@@ -576,9 +565,9 @@ typedef struct Madness_SubMesh_Instance
 typedef struct Madness_Mesh_Instance
 {
     //this generally is only for changing materials and transforms, and not for the renderer
+    u32 mesh_count;
     Madness_Mesh_Handle mesh_asset;
     Transform_Handle transform_handle;
-    u32 mesh_count;
     Madness_SubMesh_Instance* submesh_instances;
 } Madness_Mesh_Instance;
 
@@ -587,8 +576,7 @@ typedef struct Madness_Skinned_SubMesh
 {
     u64 joint_bytes;
     u64 weight_bytes;
-    u64 skinned_matrix_bytes;
-    u64 skinned_matrix_count;
+
 
     //runtime data
     u64 joint_offset_vec4;
@@ -596,8 +584,6 @@ typedef struct Madness_Skinned_SubMesh
 
     u64 weight_offset_vec4;
     u64 weight_offset_bytes;
-
-    u64 skinned_matrix_offset;
 } Madness_Skinned_SubMesh;
 
 typedef struct Madness_SubMesh
@@ -628,7 +614,6 @@ typedef struct Madness_SubMesh
 
 typedef struct Madness_Mesh
 {
-    //asset file data
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
     Material_Instance* material_instance;
@@ -658,18 +643,23 @@ typedef struct Madness_Mesh_GPU_Data
     u8* indices;
 } Madness_Mesh_GPU_Data;
 
+typedef struct Madness_SkMesh_GPU_Data
+{
+    vec4s* joints;
+    vec4s* weights;
+} Madness_SkMesh_GPU_Data;
+
 typedef struct Mesh_GPU_Upload
 {
     Madness_SubMesh* submesh;
     Madness_Mesh_GPU_Data* gpu_data;
 } Mesh_GPU_Upload;
 
-
-typedef struct Madness_SkMesh_GPU_Data
+typedef struct Skinned_Mesh_GPU_Upload
 {
-    vec4s* joints;
-    vec4s* weights;
-} Madness_SkMesh_GPU_Data;
+    Madness_Skinned_SubMesh* skinned_submesh;
+    Madness_SkMesh_GPU_Data* skinned_gpu_data;
+} Skinned_Mesh_GPU_Upload;
 
 
 typedef struct Madness_Mesh_Runtime
@@ -686,13 +676,12 @@ typedef struct Madness_SkMesh_Runtime
 {
     u32 version;
     u32 mesh_count;
-    Madness_SubMesh* sub_mesh;
+    Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
     Material_Instance* material_instance;
 
-
+    Madness_Skinned_SubMesh* skinned_submeshes;
     Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
-    Madness_Skinned_SubMesh* skinned_mesh_data;
     GLTF_Animation_Data* animation_data;
 } Madness_SkMesh_Runtime;
 
@@ -797,13 +786,13 @@ typedef struct Mesh_System
     Madness_Mesh madness_mesh[MAX_MESH_COUNT];
     u32 mesh_asset_count;
 
-    Madness_Skinned_Mesh skinned_mesh_asset_data[MAX_MESH_COUNT];
+    Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
     u32 sk_mesh_asset_count;
 
-    Madness_Mesh_Instance mesh_parent_instance[MAX_MESH_COUNT];
-    u32 mesh_parent_instance_count;
+    Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
+    u32 mesh_instance_count;
 
-    Madness_SkMesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
+    Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
 
@@ -820,13 +809,6 @@ typedef struct Mesh_System
     size_t joints_byte_size;
     size_t weight_byte_size;
 
-
-    size_t skinned_matrix_offset_size; //offset by mat4's
-
-
-    DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix_array;
-
-
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
@@ -835,7 +817,28 @@ typedef struct Mesh_System
     //TODO:
     //anything that couldn't be loaded in this frame
     RING_QUEUE_TYPE(const char*)* load_queue;
+
+
+    Madness_Asset madness_asset[100];
+    u32 madness_asset_count;
+
+    Madness_Asset skinned_madness_asset[100];
+    u32 skinned_madness_asset_count;
 } Mesh_System;
+
+
+typedef struct animation_system
+{
+    Frame_Allocator* frame_allocator;
+
+    size_t skinned_matrix_offset_count; //counts in mat4s
+
+    Array* skinned_matrix_array; // sent to the gup
+
+    Madness_Animation animation_data[MAX_SKINNED_MESH_COUNT];
+    u32 animation_count;
+
+} Animation_System;
 
 
 typedef struct Particle_System
@@ -866,6 +869,9 @@ typedef struct Render_Packet_3D
     Madness_Mesh_Instance* mesh_instances;
     u32 mesh_instances_count;
 
+    Madness_Skinned_Mesh_Instance* skinned_instances;
+    u32 skinned_instances_count;
+
     //TODO:
     // Madness_SkMesh_Instance* skinned_instances;
     // u32 skinned_instances_count;
@@ -874,7 +880,7 @@ typedef struct Render_Packet_3D
     mat4s* world_space_matrix_array;
     u32 world_space_matrix_count;
 
-    DYNAMIC_ARRAY_TYPE(mat4)* skinned_matrix;
+    ARRAY_TYPE(mat4)* skinned_matrix;
 } Render_Packet_3D;
 
 
@@ -942,6 +948,7 @@ typedef struct Resource_System
     Texture_System* texture_system;
     Material_System* material_system;
     Scene* scene;
+    Animation_System* animation_system;
 
     Particle_System* particle_system;
 

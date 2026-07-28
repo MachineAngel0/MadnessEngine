@@ -3,7 +3,6 @@
 
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {
-
     //textures
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
@@ -33,7 +32,8 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     texture_system->texture_hash_map = HASH_MAP_CREATE(u64, u32, MAX_TEXTURE_COUNT*2);
 
 
-    texture_system->texture_upload_queue = ring_queue_create(sizeof(Texture_GPU_Upload), MAX_TEXTURE_COUNT + MAX_FONT_COUNT);
+    texture_system->texture_upload_queue = ring_queue_create(sizeof(Texture_GPU_Upload),
+                                                             MAX_TEXTURE_COUNT + MAX_FONT_COUNT);
 
 
     //create our debug texture
@@ -110,7 +110,8 @@ bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handl
 }
 
 
-bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash, Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle)
+bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
+                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle)
 {
     Texture_System* texture_system = asset_system->texture_system;
 
@@ -151,9 +152,10 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID 
 }
 
 
-bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash, Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle)
+bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
+                                    Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data,
+                                    Texture_Handle* out_handle)
 {
-
     Texture_System* texture_system = asset_system->texture_system;
 
     //find a free texture slot
@@ -208,5 +210,5 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     meta_data->reference_count = 1;
 
 
-
+    return true;
 }

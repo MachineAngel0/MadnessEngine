@@ -71,7 +71,8 @@ void material_system_swap_material(Asset_System* asset_system, Material_Handle m
 
 void material_system_add_mesh_instance_and_material(Asset_System* asset_system, Madness_Mesh* madness_mesh,
                                                     Madness_Mesh_Instance* parent_instance);
-
+void material_system_add_skinned_instance_and_material(Asset_System* asset_system, Madness_Skinned_Mesh* madness_mesh,
+                                                    Madness_Skinned_Mesh_Instance* parent_instance);
 
 Material_ID material_system_generate_id(Material_Info* material_info);
 

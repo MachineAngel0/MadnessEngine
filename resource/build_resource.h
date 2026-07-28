@@ -8,6 +8,7 @@
 #include "sprite_system.h"
 #include "mesh_system.h"
 #include "material_system.h"
+#include "animation_system.h"
 
 #include "particle_system.h"
 

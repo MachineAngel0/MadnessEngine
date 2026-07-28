@@ -47,7 +47,7 @@ Asset_System* asset_system_init(Memory_System* memory_system);
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
 
 
-bool asset_system_update_and_create_render_packet(Asset_System* resource_system);
+bool asset_system_update_and_create_render_packet(Asset_System* asset_system);
 
 MAPI void render_packet_clear(Render_Packet* renderer_packets);
 
@@ -69,6 +69,11 @@ bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle
 
 bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle);
 bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle);
+
+bool asset_load_skmesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle);
+bool asset_load_skmesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_SkMesh_Handle* out_handle);
+
+
 
 bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 

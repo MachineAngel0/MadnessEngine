@@ -228,33 +228,36 @@ void editor_ui_stats(Editor* editor)
 
 void editor_ui_animation(Editor* editor)
 {
-    Mesh_System* mesh_system = editor->asset_system->mesh_system;
+    Animation_System* animation_system = editor->asset_system->animation_system;
     madness_ui_window_begin(STRING("Animation Data"));
     {
-        for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; i++)
+        for (u32 i = 0; i < animation_system->animation_count; i++)
         {
-            Madness_SkMesh_Instance* sk_mesh = &mesh_system->skinned_mesh_instance[i];
-            GLTF_Animation_Data* animation_data = sk_mesh_parent_instance_get_animation_data(
-                mesh_system, sk_mesh);
-            sk_mesh->current_animation_index;
+            Madness_Animation* madness_animation = &animation_system->animation_data[i];
+            GLTF_Animation_Data* animation_data =madness_animation->animation_data;
+            madness_animation->current_animation_index;
 
             char buffer[100];
             char buffer2[100];
             snprintf(buffer, 100, "Animation Index %d", i);
             snprintf(buffer2, 100, "Animation Looping %d", i);
 
-            if (madness_ui_u32(STRING_STRLEN(buffer), &sk_mesh->current_animation_index, 1))
+            madness_ui_float(STRING("Animation Current Time:"), &madness_animation->current_time, 0);
+            if (madness_ui_u32(STRING_STRLEN(buffer), &madness_animation->current_animation_index, 1))
             {
-                sk_mesh->current_animation_index = clamp_uint(
-                    mesh_system->skinned_mesh_instance[i].current_animation_index, 0,
+                madness_animation->current_animation_index = clamp_uint(
+                    madness_animation->current_animation_index, 0,
                     animation_data->animations_count - 1);
 
-                sk_mesh->current_time = 0;
+                madness_animation->current_time = 0;
             }
-            if (!madness_ui_check_box(STRING_STRLEN(buffer2), &sk_mesh->looping))
+            if (!madness_ui_check_box(STRING_STRLEN(buffer2), &madness_animation->looping))
             {
-                sk_mesh->current_time = 0;
+                madness_animation->current_time = 0;
             }
+
+
+
         }
     }
     madness_ui_window_end();

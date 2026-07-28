@@ -622,161 +622,209 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
         //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
         Material_Default* cur_mat = &default_mats[mesh_idx];
-        if (!data->meshes[mesh_idx].primitives->material)
+        if (data->meshes[mesh_idx].primitives->material)
         {
-            MASSERT(false)
-            WARN("NO MATERIAL DATA FOUND FOR GLTF MESH");
-            return false;
-        }
-
-        //COLOR TEXTURE
-        cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
-                                                              base_color_texture.texture;
-        if (color_texture && color_texture->image->uri)
-        {
-            cur_mat->flags |= MESH_PIPELINE_COLOR;
-            size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
-
-            char* texture_path = allocator_alloc(frame_allocator,
-                                                 allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
-            TRACE("COLOR Texture Path:  %s", texture_path);
-            asset_converter_texture(asset_system, texture_path, &cur_mat->color_texture);
-            memcpy(cur_mat->color.raw,
-                   data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                   sizeof(vec4s));
-
-
-            //base color
-            TRACE("No Color Texture using fall back color");
-            memcpy(cur_mat->color.raw,
-                   data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                   sizeof(vec4s));
-        }
-        else
-        {
-            // default_material->flags |= MESH_PIPELINE_COLOR;
-            TRACE("No Color Texture using fall back color");
-            memcpy(cur_mat->color.raw,
-                   data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                   sizeof(vec4s));
-        }
-
-        //METAL-ROUGHNESS
-        cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].
-                                                 primitives->material->pbr_metallic_roughness.
-                                                 metallic_roughness_texture.texture;
-        if (metal_roughness_texture)
-        {
-            if (metal_roughness_texture->image->uri)
+            //COLOR TEXTURE
+            cgltf_texture* color_texture = data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.
+                                                                  base_color_texture.texture;
+            if (color_texture && color_texture->image->uri)
             {
-                cur_mat->flags |= MESH_PIPELINE_ROUGHNESS;
-                cur_mat->flags |= MESH_PIPELINE_METALLIC;
-                size_t allocation_size = strlen(base_path) +
-                    strlen(metal_roughness_texture->image->uri) + 1;
+                cur_mat->flags |= MESH_PIPELINE_COLOR;
+                size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
+
+                char* texture_path = allocator_alloc(frame_allocator,
+                                                     allocation_size);
+                // takes a buffer, message format, then the remaining strings
+                snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
+                TRACE("COLOR Texture Path:  %s", texture_path);
+                asset_converter_texture(asset_system, texture_path, &cur_mat->color_texture);
+                memcpy(cur_mat->color.raw,
+                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+                       sizeof(vec4s));
+
+
+                //base color
+                TRACE("No Color Texture using fall back color");
+                memcpy(cur_mat->color.raw,
+                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+                       sizeof(vec4s));
+            }
+            else
+            {
+                // default_material->flags |= MESH_PIPELINE_COLOR;
+                TRACE("No Color Texture using fall back color");
+                memcpy(cur_mat->color.raw,
+                       data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
+                       sizeof(vec4s));
+            }
+
+            //METAL-ROUGHNESS
+            cgltf_texture* metal_roughness_texture = data->meshes[mesh_idx].
+                                                     primitives->material->pbr_metallic_roughness.
+                                                     metallic_roughness_texture.texture;
+            if (metal_roughness_texture)
+            {
+                if (metal_roughness_texture->image->uri)
+                {
+                    cur_mat->flags |= MESH_PIPELINE_ROUGHNESS;
+                    cur_mat->flags |= MESH_PIPELINE_METALLIC;
+                    size_t allocation_size = strlen(base_path) +
+                        strlen(metal_roughness_texture->image->uri) + 1;
+                    char* texture_path = allocator_alloc(frame_allocator, allocation_size);
+                    // takes a buffer, message format, then the remaining strings
+                    snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
+                    TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
+
+                    asset_converter_texture(asset_system, texture_path, &cur_mat->roughness_texture);
+                    asset_converter_texture(asset_system, texture_path, &cur_mat->metallic_texture);
+                }
+                if (metal_roughness_texture->image->buffer_view)
+                {
+                    //TODO: load texture data from the shader system
+                    INFO("WHOA A BUFFER VIEW ");
+                    const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
+                        metal_roughness_texture->image->buffer_view);
+                    INFO("WHOA A BUFFER VIEW ");
+                }
+            }
+
+            // AO
+            //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
+            cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
+            if (AO_texture && AO_texture->image->uri)
+            {
+                cur_mat->flags |= MESH_PIPELINE_AO;
+                size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
+                char* AO_texture_path = allocator_alloc(frame_allocator, allocation_size);
+                // takes a buffer, message format, then the remaining strings
+                snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
+
+                TRACE("AO Texture Path:  %s", AO_texture_path);
+
+                asset_converter_texture(asset_system, AO_texture_path, &cur_mat->ambient_occlusion_texture);
+            }
+
+
+            //NORMAL TEXTURE
+            // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
+            cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
+            if (normal_texture && normal_texture->image->uri)
+            {
+                cur_mat->flags |= MESH_PIPELINE_NORMAL;
+                size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
                 char* texture_path = allocator_alloc(frame_allocator, allocation_size);
                 // takes a buffer, message format, then the remaining strings
-                snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
-                TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
-
-                asset_converter_texture(asset_system, texture_path, &cur_mat->roughness_texture);
-                asset_converter_texture(asset_system, texture_path, &cur_mat->metallic_texture);
+                snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
+                TRACE("NORMAL Texture Path:  %s", texture_path);
+                asset_converter_texture(asset_system, texture_path, &cur_mat->normal_texture);
             }
-            if (metal_roughness_texture->image->buffer_view)
+
+            //EMISSIVE TEXTURE
+            cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.
+                                                                     texture;
+            if (emissive_texture && emissive_texture->image->uri)
             {
-                //TODO: load texture data from the shader system
-                INFO("WHOA A BUFFER VIEW ");
-                const u8* metal_roughness_texture_image_data = cgltf_buffer_view_data(
-                    metal_roughness_texture->image->buffer_view);
-                INFO("WHOA A BUFFER VIEW ");
+                cur_mat->flags |= MESH_PIPELINE_EMISSIVE;
+                size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
+
+                char* texture_path = allocator_alloc(frame_allocator, allocation_size);
+                // takes a buffer, message format, then the remaining strings
+                snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
+                TRACE("EMISSIVE Texture Path:  %s", texture_path);
+
+                asset_converter_texture(asset_system, texture_path, &cur_mat->emissive_texture);
             }
-        }
 
-        // AO
-        //NOTE: this material in theory can be included in the pbr-metal-roughness texture, in which case, just return a handle
-        cgltf_texture* AO_texture = data->meshes[mesh_idx].primitives->material->occlusion_texture.texture;
-        if (AO_texture && AO_texture->image->uri)
-        {
-            cur_mat->flags |= MESH_PIPELINE_AO;
-            size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
-            char* AO_texture_path = allocator_alloc(frame_allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
+            Material_Info default_info = {0};
+            if (data->skins_count > 0)
+            {
+                default_info = (Material_Info){
+                    .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
+                    .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                    .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                    .transluency = Shader_Transluency_Type_Opaque,
+                    .mesh_type = Shader_Mesh_Type_Skinned,
+                    .blend_mode = Shader_Blend_Mode_Default,
+                };
+            }
+            else
+            {
+                default_info = (Material_Info){
+                    .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
+                    .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                    .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                    .transluency = Shader_Transluency_Type_Opaque,
+                    .mesh_type = Shader_Mesh_Type_Mesh,
+                    .blend_mode = Shader_Blend_Mode_Default,
+                };
+            }
 
-            TRACE("AO Texture Path:  %s", AO_texture_path);
 
-            asset_converter_texture(asset_system, AO_texture_path, &cur_mat->ambient_occlusion_texture);
-        }
-
-
-        //NORMAL TEXTURE
-        // data->meshes[mesh_idx].primitives->material->has_pbr_metallic_roughness
-        cgltf_texture* normal_texture = data->meshes[mesh_idx].primitives->material->normal_texture.texture;
-        if (normal_texture && normal_texture->image->uri)
-        {
-            cur_mat->flags |= MESH_PIPELINE_NORMAL;
-            size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
-            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
-            TRACE("NORMAL Texture Path:  %s", texture_path);
-            asset_converter_texture(asset_system, texture_path, &cur_mat->normal_texture);
-        }
-
-        //EMISSIVE TEXTURE
-        cgltf_texture* emissive_texture = data->meshes[mesh_idx].primitives->material->emissive_texture.
-                                                                 texture;
-        if (emissive_texture && emissive_texture->image->uri)
-        {
-            cur_mat->flags |= MESH_PIPELINE_EMISSIVE;
-            size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
-
-            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
-            TRACE("EMISSIVE Texture Path:  %s", texture_path);
-
-            asset_converter_texture(asset_system, texture_path, &cur_mat->emissive_texture);
-        }
-
-        Material_Info default_info = {0};
-        if (data->skins_count > 0)
-        {
-            default_info = (Material_Info){
-                .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
-                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
-                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
-                .transluency = Shader_Transluency_Type_Opaque,
-                .mesh_type = Shader_Mesh_Type_Skinned,
-                .blend_mode = Shader_Blend_Mode_Default,
-            };
+            Material_Instance* mat_inst = &material_instances[mesh_idx];
+            asset_converter_material_asset(asset_system, &default_info,
+                                           asset_system->material_system->reflection_registry,
+                                           &mat_inst->uuid_material_asset);
+            material_instances[mesh_idx].material_data = cur_mat;
+            material_instances[mesh_idx].data_size = sizeof(Material_Default);
+            MADNESS_UUID madness_uuid = {0};
+            asset_converter_material_instance(asset_system, "Material_Default",
+                                              data->meshes[mesh_idx].primitives->material->name,
+                                              &mat_inst->uuid_material_asset,
+                                              mat_inst->material_data, mat_inst->data_size,
+                                              &madness_uuid);
         }
         else
         {
-            default_info = (Material_Info){
-                .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
-                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
-                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
-                .transluency = Shader_Transluency_Type_Opaque,
-                .mesh_type = Shader_Mesh_Type_Mesh,
-                .blend_mode = Shader_Blend_Mode_Default,
-            };
+            //NOTE: spec says, materials are optional on primitives
+            // we just fill it up with an default material
+
+            Material_Info default_info = {0};
+            if (data->skins_count > 0)
+            {
+                default_info = (Material_Info){
+                    .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
+                    .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                    .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                    .transluency = Shader_Transluency_Type_Opaque,
+                    .mesh_type = Shader_Mesh_Type_Skinned,
+                    .blend_mode = Shader_Blend_Mode_Default,
+                };
+            }
+            else
+            {
+                default_info = (Material_Info){
+                    .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
+                    .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
+                    .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
+                    .transluency = Shader_Transluency_Type_Opaque,
+                    .mesh_type = Shader_Mesh_Type_Mesh,
+                    .blend_mode = Shader_Blend_Mode_Default,
+                };
+            }
+
+
+            Material_Instance* mat_inst = &material_instances[mesh_idx];
+            asset_converter_material_asset(asset_system, &default_info,
+                                           asset_system->material_system->reflection_registry,
+                                           &mat_inst->uuid_material_asset);
+
+            cur_mat->color = glms_vec4_one();
+            cur_mat->roughness_strength = 1;
+            cur_mat->metallic_strength = 1;
+
+
+            material_instances[mesh_idx].material_data = cur_mat;
+            material_instances[mesh_idx].data_size = sizeof(Material_Default);
+            MADNESS_UUID madness_uuid = {0};
+            asset_converter_material_instance(asset_system, "Material_Default",
+                                              data->meshes[mesh_idx].name,
+                                              &mat_inst->uuid_material_asset,
+                                              mat_inst->material_data, mat_inst->data_size,
+                                              &madness_uuid);
+
+
         }
 
-
-        Material_Instance* mat_inst = &material_instances[mesh_idx];
-        asset_converter_material_asset(asset_system, &default_info,
-                                       asset_system->material_system->reflection_registry,
-                                       &mat_inst->uuid_material_asset);
-        material_instances[mesh_idx].material_data = cur_mat;
-        material_instances[mesh_idx].data_size = sizeof(Material_Default);
-        MADNESS_UUID madness_uuid = {0};
-        asset_converter_material_instance(asset_system, "Material_Default",
-                                          data->meshes[mesh_idx].primitives->material->name,
-                                          &mat_inst->uuid_material_asset,
-                                          mat_inst->material_data, mat_inst->data_size,
-                                          &madness_uuid);
     }
 
 
@@ -873,10 +921,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 Joint* cur_joint = &animation_data->joints[joint_idx];
                 cgltf_node* cgltf_joint = skin_data->joints[joint_idx];
 
-                cur_joint->joint_name = c_string_duplicate_allocator(cgltf_joint->name, frame_allocator);
+                cur_joint->joint_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(cgltf_joint->name, frame_allocator);
                 cur_joint->id = joint_idx;
 
-                hash_table_insert(joint_name_to_index, cur_joint->joint_name, &joint_idx);
+                hash_table_insert(joint_name_to_index,
+                                  string_to_c_string_allocator(cur_joint->joint_name, frame_allocator), &joint_idx);
             }
             //this pass is to get the parent id's and parent nodes
             for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
@@ -977,10 +1026,10 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                     cur_animation->anim_end = max_f(cur_animation->anim_end, cur_sampler->sampler_end);
 
                     //read gltf output data
-                    cur_sampler->trs_interpolation_count = anim_sampler->output->count;
                     // const uint8_t* trs_buffer_data = cgltf_buffer_view_data(anim_sampler->output->buffer_view);
                     cgltf_size output_num_floats = cgltf_accessor_unpack_floats(anim_sampler->output, NULL, 0);
                     cgltf_size output_float_bytes = output_num_floats * sizeof(float);
+                    cur_sampler->trs_interpolation_bytes = output_float_bytes;
                     float* trs_buffer_data = allocator_alloc(frame_allocator, output_float_bytes);
                     cgltf_accessor_unpack_floats(anim_sampler->output, trs_buffer_data, output_num_floats);
 
@@ -1030,6 +1079,17 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
     if (data->skins_count > 0)
     {
+        Madness_SkMesh_Runtime sk_mesh_runtime;
+        sk_mesh_runtime.version = 1;
+        sk_mesh_runtime.mesh_count = madness_mesh->mesh_count;
+        sk_mesh_runtime.submeshes = madness_mesh->mesh_data;
+        sk_mesh_runtime.mesh_gpu_upload = gpu_data;
+        sk_mesh_runtime.material_instance = material_instances;
+        sk_mesh_runtime.skmesh_gpu_upload = skinned_gpu_data;
+        sk_mesh_runtime.skinned_submeshes = skinned_mesh;
+        sk_mesh_runtime.animation_data = animation_data;
+
+
         String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
         string_builder_append_c_string(file_path_strip, gltf_path);
         string_builder_strip_extension(file_path_strip);
@@ -1038,8 +1098,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
         string_builder_append_c_string(str_builder, ENGINE_SK_MESH_PATH);
         string_builder_append_builder(str_builder, file_path_strip);
-        string_builder_append_c_string(str_builder, ENGINE_SK_MESH_PATH);
-
+        string_builder_append_c_string(str_builder, ENGINE_SKMESH_EXTENSION);
         const char* output_path = string_builder_to_c_string(str_builder);
 
         //write out the engine format data
@@ -1050,40 +1109,17 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             MASSERT(false);
         }
 
-        fwrite(&engine_format.version, sizeof(engine_format.version), 1, fptr);
-        fwrite(&engine_format.mesh_count, sizeof(engine_format.mesh_count), 1, fptr);
-        fwrite(engine_format.submeshes, sizeof(Madness_SubMesh) * engine_format.mesh_count, 1, fptr);
-        //submesh contains the material uuid
-
-        //mesh data
-        for (u32 i = 0; i < engine_format.mesh_count; ++i)
-        {
-            Madness_SubMesh* sub_mesh = &engine_format.submeshes[i];
-            fwrite(engine_format.mesh_gpu_upload[i].tangent, sub_mesh->tangent_bytes, 1, fptr);
-            fwrite(engine_format.mesh_gpu_upload[i].vertex_color, sub_mesh->vertex_color_bytes, 1, fptr);
-            fwrite(engine_format.mesh_gpu_upload[i].vertex, sub_mesh->vertex_bytes, 1, fptr);
-            fwrite(engine_format.mesh_gpu_upload[i].normal, sub_mesh->normal_bytes, 1, fptr);
-            fwrite(engine_format.mesh_gpu_upload[i].uv, sub_mesh->uv_bytes, 1, fptr);
-            fwrite(engine_format.mesh_gpu_upload[i].indices, sub_mesh->indices_bytes, 1, fptr);
-        }
-
-        //skeletal data
-        for (u32 i = 0; i < engine_format.mesh_count; ++i)
-        {
-        }
-        //animation data
-
+        asset_skmesh_serialize(&sk_mesh_runtime, fptr);
+        fclose(fptr);
 
         // write out metadata
         Asset_MetaData meta_data = {0};
         meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
         meta_data.binary_file = string_builder_to_string(str_builder);
-        meta_data.type = ASSET_SKINNED_MESH;
         meta_data.uuid = madness_uuid_generate_return();
         meta_data.hash = madness_uuid_hash(&meta_data.uuid);
+        meta_data.type = ASSET_SKINNED_MESH;
         asset_registry_add_asset(asset_system->asset_registry, &meta_data);
-
-        fclose(fptr);
     }
     else
     {
@@ -1109,6 +1145,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         }
 
         asset_mesh_serialize(&engine_format, fptr);
+        fclose(fptr);
 
 
         // write out metadata
@@ -1119,8 +1156,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         meta_data.hash = madness_uuid_hash(&meta_data.uuid);
         meta_data.type = ASSET_STATIC_MESH;
         asset_registry_add_asset(asset_system->asset_registry, &meta_data);
-
-        fclose(fptr);
     }
 
 

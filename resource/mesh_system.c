@@ -22,11 +22,10 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
     out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Skinned_Mesh_GPU_Upload),
                                                                  MAX_SKINNED_MESH_COUNT);
 
-    out_mesh_system->skinned_matrix_array = dynamic_array_create(mat4s, 100, resource_system->heap_allocator);
 
     out_mesh_system->mesh_asset_count = 0;
     out_mesh_system->sk_mesh_asset_count = 0;
-    out_mesh_system->mesh_parent_instance_count = 0;
+    out_mesh_system->mesh_instance_count = 0;
     out_mesh_system->skinned_mesh_instance_count = 0;
 
 
@@ -45,14 +44,52 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset)
+bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* out_handle, MADNESS_UUID uuid, u64 hash)
+{
+    for (u32 i = 0; i < asset_system->mesh_system->madness_asset_count; i++)
+    {
+        if (asset_system->mesh_system->madness_asset[i].hash == hash)
+        {
+            asset_system->mesh_system->madness_asset[i].reference_count++;
+            FATAL("mesh_system_exists_mesh: NOT PASSING BACK A MESH HANDLE IF ALREADY LOADED")
+            //TODO: this should be creating a new parent mesh instance
+
+            return true;
+        }
+    }
+
+
+    return false;
+}
+
+bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle* out_handle, MADNESS_UUID uuid,
+                               u64 hash)
+{
+    for (u32 i = 0; i < asset_system->mesh_system->skinned_madness_asset_count; i++)
+    {
+        if (asset_system->mesh_system->skinned_madness_asset[i].hash == hash)
+        {
+            asset_system->mesh_system->skinned_madness_asset[i].reference_count++;
+            FATAL("mesh_system_exists_mesh: NOT PASSING BACK A MESH HANDLE IF ALREADY LOADED")
+            //TODO: this should be creating a new parent skinned mesh instance
+
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
+void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, MADNESS_UUID uuid, u64 hash)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
     for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
     {
         Mesh_GPU_Upload upload = {
-            .submesh = &mesh_asset->submeshes[mesh_idx], .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx]
+            .submesh = &mesh_asset->submeshes[mesh_idx],
+            .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx]
         };
         ring_enqueue(mesh_system->mesh_ring_queue, &upload);
     }
@@ -89,8 +126,8 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 
     //create the instance
     //OPTIMIZE: submehses should really be a flat list so that the render can quickly extract data from it
-    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_parent_instance[mesh_system->
-        mesh_parent_instance_count++];
+    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_system->
+        mesh_instance_count++];
     mesh_inst->mesh_asset = (Madness_Mesh_Handle){.handle = mesh_system->mesh_asset_count - 1};
     mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
     mesh_inst->mesh_count = mesh_asset->mesh_count;
@@ -116,261 +153,131 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 
     //loads in the material asset if needed, and adds material instance data to the material batch
     material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
+
+
+    //take a reference to the og asset
+    Madness_Asset* asset = &mesh_system->madness_asset[mesh_system->madness_asset_count++];
+    asset->hash = hash;
+    asset->uuid = uuid;
+    asset->reference_count = 1;
+    asset->type = ASSET_STATIC_MESH;
 }
 
-void mesh_system_load_skinned_mesh(Asset_System* resource_system, Madness_SkMesh_Runtime* skmesh_asset)
+void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset, MADNESS_UUID uuid,
+                                   u64 hash)
 {
-    /*{
-        //create the parent instance
-        Sk_Mesh_Parent_Instance* sk_mesh_parent_inst = &mesh_system->skinned_mesh_instance[mesh_system->
-            skinned_mesh_instance_count++];
-        sk_mesh_parent_inst->sk_mesh_handle = (Sk_Mesh_Asset_Handle){.handle = mesh_system->sk_mesh_asset_count - 1};
-        sk_mesh_parent_inst->transform_handle = scene_get_new_mesh_transform(resource_system->scene);
-        sk_mesh_parent_inst->mesh_count = sk_mesh_asset_data->skinned_mesh_count;
-        sk_mesh_parent_inst->sk_mesh_instance_array = allocator_heap_alloc(
-            allocator, sizeof(Sk_Mesh_Instance) * sk_mesh_parent_inst->mesh_count);
+    Mesh_System* mesh_system = asset_system->mesh_system;
 
-        for (int i = 0; i < sk_mesh_asset_data->mesh_count; ++i)
-        {
-            Mesh_Data* mesh_data = &sk_mesh_asset_data->mesh_data[i];
-            Sk_Mesh_Data* sk_mesh_data = &sk_mesh_asset_data->skinned_mesh_data[i];
-            Sk_Mesh_Instance* sk_mesh_instance = &sk_mesh_parent_inst->sk_mesh_instance_array[i];
-            sk_mesh_instance->material_handle = mesh_data->default_material_handle;
-            sk_mesh_instance->parent_transform_handle = sk_mesh_parent_inst->transform_handle;
-
-            //gpu friendly format
-            sk_mesh_instance->sk_mesh_gpu_draw.material_instance_handle = sk_mesh_instance->material_handle.handle;
-            sk_mesh_instance->sk_mesh_gpu_draw.transform_idx = sk_mesh_parent_inst->transform_handle.handle;
-
-            sk_mesh_instance->sk_mesh_gpu_draw.joint_idx = sk_mesh_data->joint_offset_vec4;
-            sk_mesh_instance->sk_mesh_gpu_draw.weight_idx = sk_mesh_data->weight_offset_vec4;
-
-            //indirect draw, gpu friendly format
-            sk_mesh_instance->mesh_indirect_draw.vertex_offset = mesh_data->vertex_offset;
-
-            sk_mesh_instance->mesh_indirect_draw.index_count = mesh_data->index_count;
-            sk_mesh_instance->mesh_indirect_draw.index_offset = mesh_data->index_offset;
-        }
-
-
-        GLTF_Animation_Data* animation_data = sk_mesh_asset_data->animation_data;
-
-        sk_mesh_parent_inst->joint_count = sk_mesh_asset_data->animation_data->joint_count;
-
-        sk_mesh_parent_inst->local_translation = allocator_heap_alloc(
-            allocator, sizeof(vec3s) * sk_mesh_parent_inst->joint_count);
-        sk_mesh_parent_inst->local_rotation =
-            allocator_heap_alloc(allocator, sizeof(versors) * sk_mesh_parent_inst->joint_count);
-        sk_mesh_parent_inst->local_scale = allocator_heap_alloc(
-            allocator, sizeof(vec3s) * sk_mesh_parent_inst->joint_count);
-        sk_mesh_parent_inst->gpu_matrix = allocator_heap_alloc(
-            allocator, sizeof(mat4s) * sk_mesh_parent_inst->joint_count);
-
-        for (u32 j = 0; j < sk_mesh_parent_inst->joint_count; j++)
-        {
-            vec4s translation = {0};
-            mat4s rotation = {0};
-            vec3s scale = {0};
-
-            glms_decompose(
-                animation_data->resting_pose_local_matrix[j],
-                &translation,
-                &rotation,
-                &scale
-            );
-
-
-            glm_vec3_copy(translation.raw, sk_mesh_parent_inst->local_translation[j].raw);
-            // glm_quat_copy(rotation, sk_mesh_inst->local_rotation[j].raw);
-            sk_mesh_parent_inst->local_rotation[j] = glms_mat4_quat(rotation);
-            glm_vec3_copy(scale.raw, sk_mesh_parent_inst->local_scale[j].raw);
-        }
-
-
-        sk_mesh_parent_inst->current_animation_index = 0;
-        sk_mesh_parent_inst->current_time = 0;
-        sk_mesh_parent_inst->looping = true;
-
-        material_system_add_skmesh_instance_to_default_material_batch(resource_system, sk_mesh_parent_inst);
-    }*/
-}
-
-bool mesh_system_exists_mesh(Asset_System* resource_system, Madness_Mesh_Handle* out_handle, u64 hash)
-{
-    DEBUG("TODO: mesh_system_exists_mesh")
-    return false;
-}
-
-bool mesh_system_exists_skmesh(Asset_System* resource_system, Madness_SkMesh_Handle* out_handle, u64 hash)
-{
-    DEBUG("TODO: mesh_system_exists_mesh")
-    return false;
-}
-
-GLTF_Animation_Data* sk_mesh_parent_instance_get_animation_data(Mesh_System* mesh_system,
-                                                                Madness_SkMesh_Instance* sk_mesh_inst)
-{
-    return mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].animation_data;
-}
-
-void animation_update(Mesh_System* mesh_system, float delta_time, Frame_Allocator* frame_allocator)
-{
-    //update and interpolate the local transformations for the playing animations
-    //create the local matrix
-    // joint1 =  local parent * local joint
-    // joint2 =  joint1 * inverse_bind_matrix
-    //send to the gpu for the shader to work
-
-
-    //assume the mesh is loaded
-
-    dynamic_array_clear(mesh_system->skinned_matrix_array);
-
-
-    for (u32 i = 0; i < mesh_system->skinned_mesh_instance_count; ++i)
+    for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
     {
-        Madness_SkMesh_Instance* sk_mesh_inst = &mesh_system->skinned_mesh_instance[i];
+        Mesh_GPU_Upload upload = {
+            .submesh = &skmesh_asset->submeshes[mesh_idx], .gpu_data = &skmesh_asset->mesh_gpu_upload[mesh_idx]
+        };
+        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
 
 
-        GLTF_Animation_Data* animation_data = mesh_system->skinned_mesh_asset_data[sk_mesh_inst->sk_mesh_handle.handle].
-            animation_data;
-        Animation* anim_data = &animation_data->animations[sk_mesh_inst->current_animation_index];
+        Skinned_Mesh_GPU_Upload skinned_upload = {
+            .skinned_submesh = &skmesh_asset->skinned_submeshes[mesh_idx],
+            .skinned_gpu_data = &skmesh_asset->skmesh_gpu_upload[mesh_idx],
 
-        /*
-        for (u32 j = 0; j < sk_mesh_inst->joint_count; j++)
-        {
-            vec4s translation = {0};
-            mat4s rotation= {0};
-            vec3s scale= {0};
-
-            glms_decompose(
-                animation_data->resting_pose_local_matrix[j],
-                &translation,
-                &rotation,
-                &scale
-            );
-
-
-
-            glm_vec3_copy(translation.raw, sk_mesh_inst->local_translation[j].raw);
-            // glm_quat_copy(rotation, sk_mesh_inst->local_rotation[j].raw);
-            sk_mesh_inst->local_rotation[j] = glms_mat4_quat(rotation);
-            glm_vec3_copy(scale.raw, sk_mesh_inst->local_scale[j].raw);
-        }
-        */
-
-
-        sk_mesh_inst->current_time += delta_time;
-
-        if (sk_mesh_inst->current_time >= anim_data->anim_end)
-        {
-            //TODO: at some point this should be its own array of inactive animations
-            if (sk_mesh_inst->looping)
-            {
-                while (sk_mesh_inst->current_time >= anim_data->anim_end)
-                {
-                    sk_mesh_inst->current_time -= (anim_data->anim_end - anim_data->anim_start);
-                }
-            }
-        }
-
-
-        for (u32 channel_idx = 0; channel_idx < anim_data->channel_count; channel_idx++)
-        {
-            const Animation_Channel* channel = &anim_data->channels[channel_idx];
-            const Animation_Sampler* sampler = &anim_data->samplers[channel->sampler_idx];
-
-            u32 j_idx = channel->joint_index;
-
-            for (size_t timestamp_idx = 0; timestamp_idx < sampler->timestamps_count - 1; timestamp_idx++)
-            {
-                if (sampler->interpolation_type != Animation_Interpolation_Type_Linear)
-                {
-                    // DEBUG("ANIMATION UPDATE: Only using linear interpolations, which this is not");
-                    continue;
-                }
-
-                // Get the input keyframe values for the current time stamp
-                if ((sk_mesh_inst->current_time >= sampler->timestamps[timestamp_idx]) && (
-                    sk_mesh_inst->current_time <= sampler->timestamps[timestamp_idx + 1]))
-                {
-                    float interp_val = (sk_mesh_inst->current_time - sampler->timestamps[timestamp_idx]) / (sampler->
-                        timestamps[timestamp_idx + 1] - sampler->timestamps[timestamp_idx]);
-                    switch (channel->animation_path_type)
-                    {
-                    case Animation_Path_Type_Invalid:
-                        MASSERT(false);
-                        break;
-                    case Animation_Path_Type_Translation:
-                        sk_mesh_inst->local_translation[j_idx] = glms_vec3_lerp(
-                            sampler->interperlation_data.trs_vec3[timestamp_idx],
-                            sampler->interperlation_data.trs_vec3[timestamp_idx +
-                                1], interp_val);
-                        break;
-                    case Animation_Path_Type_Rotation:
-                        versors q1;
-                        q1.x = sampler->interperlation_data.trs_vec4[timestamp_idx].x;
-                        q1.y = sampler->interperlation_data.trs_vec4[timestamp_idx].y;
-                        q1.z = sampler->interperlation_data.trs_vec4[timestamp_idx].z;
-                        q1.w = sampler->interperlation_data.trs_vec4[timestamp_idx].w;
-
-                        versors q2;
-                        q2.x = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].x;
-                        q2.y = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].y;
-                        q2.z = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].z;
-                        q2.w = sampler->interperlation_data.trs_vec4[timestamp_idx + 1].w;
-
-                        sk_mesh_inst->local_rotation[j_idx] = glms_quat_normalize(
-                            glms_quat_slerp(q1, q2, interp_val));
-
-                        break;
-                    case Animation_Path_Type_Scale:
-                        sk_mesh_inst->local_scale[j_idx] = glms_vec3_lerp(
-                            sampler->interperlation_data.trs_vec3[timestamp_idx],
-                            sampler->interperlation_data.trs_vec3[timestamp_idx + 1],
-                            interp_val);
-                        break;
-                    case Animation_Path_Type_Weights:
-                        M_ERROR("Animation_Path_Type_Weights: unhandled type");
-                        break;
-                    case Animation_Path_Type_Max:
-                        MASSERT(false);
-                        break;
-                    }
-                }
-            }
-        }
-
-        mat4s* local_matrix = allocator_alloc(frame_allocator, sizeof(mat4s) * sk_mesh_inst->joint_count);
-        mat4s* model_matrix = allocator_alloc(frame_allocator, sizeof(mat4s) * sk_mesh_inst->joint_count);
-
-        for (u32 local_idx = 0; local_idx < sk_mesh_inst->joint_count; local_idx++)
-        {
-            // Joint(N, t) = Translation(N, t) * Rotation(N, t) * Scale(N, t)
-
-            local_matrix[local_idx] = glms_build_local_matrix(sk_mesh_inst->local_translation[local_idx],
-                                                              sk_mesh_inst->local_rotation[local_idx],
-                                                              sk_mesh_inst->local_scale[local_idx]);
-        }
-
-        model_matrix[0] = local_matrix[0];
-        for (u32 model_idx = 1; model_idx < sk_mesh_inst->joint_count; model_idx++)
-        {
-            //Joint(N, t) = Parent(N, t) * Joint(N, t)
-            u32 parent_index = animation_data->joints[model_idx].parent_idx;
-            model_matrix[model_idx] = glms_mat4_mul(model_matrix[parent_index], local_matrix[model_idx]);
-        }
-
-        for (u32 final_idx = 0; final_idx < sk_mesh_inst->joint_count; final_idx++)
-        {
-            //Joint(N, t) = Joint(N, t) * InverseBindMatrix(N)
-            //TODO: we have two copies of the data technically
-            sk_mesh_inst->gpu_matrix[final_idx] = glms_mat4_mul(model_matrix[final_idx],
-                                                                animation_data->inverse_bind_matrix[final_idx]
-            );
-
-
-            dynamic_array_push(mesh_system->skinned_matrix_array, &sk_mesh_inst->gpu_matrix[final_idx]);
-        }
+        };
+        ring_enqueue(mesh_system->skinned_mesh_ring_queue, &skinned_upload);
     }
+
+    Madness_Skinned_Mesh* madness_mesh = &mesh_system->madness_skinned_mesh[mesh_system->sk_mesh_asset_count++];
+    madness_mesh->mesh_count = skmesh_asset->mesh_count;
+    madness_mesh->mesh_data = skmesh_asset->submeshes;
+    madness_mesh->material_instance = skmesh_asset->material_instance;
+    madness_mesh->skinned_mesh_data = skmesh_asset->skinned_submeshes;
+    madness_mesh->animation_data = skmesh_asset->animation_data;
+
+    //TODO: out into its own function
+    //find free space for the loaded in data
+    for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
+    {
+        Madness_SubMesh* submesh = &madness_mesh->mesh_data[mesh_idx];
+        submesh->vertex_count_offset = mesh_system->vertex_count_size;
+        submesh->vertex_offset = mesh_system->vertex_byte_size;
+        submesh->uv_offset = mesh_system->uv_byte_size;
+        submesh->vertex_color_offset = mesh_system->vertex_color_byte_size;
+        submesh->tangent_offset = mesh_system->tangent_byte_size;
+        submesh->normal_offset = mesh_system->normals_byte_size;
+        submesh->index_offset = mesh_system->index_count_size;
+
+        mesh_system->vertex_count_size += submesh->vertex_bytes / sizeof(vec3s);
+        mesh_system->vertex_byte_size += submesh->vertex_bytes;
+        mesh_system->uv_byte_size += submesh->uv_bytes;
+        mesh_system->vertex_color_byte_size += submesh->vertex_color_bytes;
+        mesh_system->tangent_byte_size += submesh->tangent_bytes;
+        mesh_system->normals_byte_size += submesh->normal_bytes;
+        mesh_system->index_byte_size += submesh->indices_bytes;
+        mesh_system->index_count_size += submesh->index_count;
+
+
+        Madness_Skinned_SubMesh* skinned_submesh = &madness_mesh->skinned_mesh_data[mesh_idx];
+
+        skinned_submesh->joint_offset_bytes = mesh_system->joints_byte_size;
+        skinned_submesh->joint_offset_vec4 = mesh_system->joints_byte_size / sizeof(vec4s);
+        skinned_submesh->weight_offset_bytes = mesh_system->weight_byte_size;
+        skinned_submesh->weight_offset_vec4 = mesh_system->weight_byte_size / sizeof(vec4s);
+
+
+        mesh_system->joints_byte_size += skinned_submesh->joint_bytes;
+        mesh_system->weight_byte_size += skinned_submesh->weight_bytes;
+    }
+
+
+    //create the instance
+    //OPTIMIZE: submehses should really be a flat list so that the render can quickly extract data from it
+    Madness_Skinned_Mesh_Instance* mesh_inst = &mesh_system->skinned_mesh_instance[mesh_system->
+        skinned_mesh_instance_count++];
+    mesh_inst->skinned_mesh_asset = (Madness_SkMesh_Handle){.handle = mesh_system->skinned_mesh_instance_count - 1};
+    mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
+    mesh_inst->mesh_count = skmesh_asset->mesh_count;
+    mesh_inst->submesh_instances = allocator_heap_alloc(
+        asset_system->heap_allocator, sizeof(Madness_Skinned_Submesh_Instance) * skmesh_asset->mesh_count);
+
+
+    //load in animation data before we load in mesh instance, so we get an accurate skinned matrix count
+
+    animation_add_data(asset_system, madness_mesh, &mesh_inst->animation_handle, &mesh_inst->skinned_matrix_count_offset);
+
+
+    for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
+    {
+        Madness_Skinned_Submesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
+        Madness_Skinned_SubMesh* skinned_submesh = &madness_mesh->skinned_mesh_data[mesh_idx];
+
+        //handles
+        submesh_inst->material_handle = (Material_Handle){0};
+        submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
+
+        //indirect draw, gpu friendly format
+        submesh_inst->mesh_indirect_draw.vertex_count_offset
+            = madness_mesh->mesh_data[mesh_idx].vertex_count_offset;
+        submesh_inst->mesh_indirect_draw.index_count
+            = madness_mesh->mesh_data[mesh_idx].index_count;
+        submesh_inst->mesh_indirect_draw.index_offset
+            = madness_mesh->mesh_data[mesh_idx].index_offset;
+
+        //skinned draw data
+
+        submesh_inst->skinned_draw_data.joint_idx = skinned_submesh->joint_offset_vec4;
+        submesh_inst->skinned_draw_data.weight_idx = skinned_submesh->weight_offset_vec4;
+        submesh_inst->skinned_draw_data.skinned_matrix_idx = mesh_inst->skinned_matrix_count_offset;
+        submesh_inst->skinned_draw_data.vertex_byte_offset = madness_mesh->mesh_data[mesh_idx].vertex_offset;
+    }
+
+
+    //loads in the material asset if needed, and adds material instance data to the material batch
+    material_system_add_skinned_instance_and_material(asset_system, madness_mesh, mesh_inst);
+
+
+    //take a reference to the og asset
+    Madness_Asset* asset = &mesh_system->skinned_madness_asset[mesh_system->skinned_madness_asset_count++];
+    asset->hash = hash;
+    asset->uuid = uuid;
+    asset->reference_count = 1;
+    asset->type = ASSET_SKINNED_MESH;
 }
+

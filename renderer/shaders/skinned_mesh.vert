@@ -30,7 +30,7 @@ void main() {
     Skinned_Mesh_Draw_Data cur_mesh_data = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
 
     uint local_vertex_idx = gl_VertexIndex -  cur_mesh_data.vertex_offset;
-//    cur_mesh_data.vertex_offset;
+    //    cur_mesh_data.vertex_offset;
 
 
     //shoult not be draw idx
@@ -40,11 +40,10 @@ void main() {
 
     //need to index into the correct buffer
     mat4 skin_matrix =
-    ubo.skinned_matrix_buffer.skinned_matrix_data[uint(joints.x)] * weights.x +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[uint(joints.y)] * weights.y +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[uint(joints.z)] * weights.z +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[uint(joints.w)] * weights.w;
-
+    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx + */ uint(joints.x)] * weights.x +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx*/ + uint(joints.y)] * weights.y +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx +*/ uint(joints.z)] * weights.z +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[/*cur_mesh_data.skinned_matrix_idx +*/ uint(joints.w)] * weights.w;
 
 
     //global mesh data
@@ -53,10 +52,6 @@ void main() {
     out_normal = mat3(skin_matrix) * ubo.normal_buffer.normal_data[nonuniformEXT(draw_idx)];
     out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(draw_idx)];
     out_tangent = /*mat3(skin_matrix) * */ubo.tangent_buffer.tangent_data[nonuniformEXT(draw_idx)];
-
-
-
-
 
 
     //get transform data

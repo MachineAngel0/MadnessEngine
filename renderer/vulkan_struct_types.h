@@ -202,14 +202,19 @@ typedef struct vulkan_shader_pipeline
     VkPipeline handle;
 } Vulkan_Shader_Pipeline;
 
-typedef struct Vulkan_SKMesh_Draw
+
+typedef struct Mesh_Render_Item
 {
-    u32 transform_idx;
-    u32 material_instance_handle;
-    u32 joint_idx;
-    u32 weight_idx;
+    u64 material_key;
+    u32 mesh_handle;
+    u32 submesh_handle;
+    u32 material_handle;
+    u32 transform_handle;
+    // u32 cull_bounds_handle;
+    u32 index_count;
+    u32 index_offset;
     u32 vertex_offset;
-} Vulkan_Skinned_Draw;
+} Mesh_Render_Item;
 
 typedef struct Vulkan_Mesh_Draw
 {
@@ -217,10 +222,43 @@ typedef struct Vulkan_Mesh_Draw
     u32 material_instance_handle;
 } Vulkan_Mesh_Draw;
 
+typedef struct Skinned_Render_Item
+{
+    u64 material_key;
+    u32 mesh_handle;
+    u32 submesh_handle;
+    u32 material_handle;
+    u32 transform_handle;
+    // u32 cull_bounds_handle;
+    u32 index_count;
+    u32 index_offset;
+    u32 vertex_offset;
+
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 skinned_matrix_idx;
+    u32 vertex_offset_bytes;
+
+} Skinned_Render_Item;
+
+
+
+
+typedef struct Vulkan_SKMesh_Draw
+{
+    u32 transform_idx;
+    u32 material_instance_handle;
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 skinned_matrix_idx;
+    u32 vertex_offset;
+} Vulkan_Skinned_Draw;
+
+
 typedef struct Vulkan_Shader_Batch
 {
     const char* shader_name;
-    const char* material_name;
+    // const char* material_name;
 
     Shader_Mesh_Type mesh_type;
     Shader_Transluency_Type transluency;

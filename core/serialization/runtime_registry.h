@@ -513,7 +513,7 @@ void reflection_registry_to_txt_format(Reflection_Registry* reflection_registry,
                 fprintf(file, "- %d", *(u32*)data);
                 break;
             case REFLECTION_TYPE_U64:
-                fprintf(file, "- %lu", *(u64*)data);
+                fprintf(file, "- %llu", *(u64*)data);
                 break;
             case REFLECTION_TYPE_S8:
                 fprintf(file, "- %d", *(s8*)data);

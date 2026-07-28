@@ -7,6 +7,7 @@
 #include "mesh_system.c"
 #include "material_system.c"
 #include "shader_creation_system.c"
+#include "animation_system.c"
 
 #include "asset_serialization.c"
 #include "asset_converter.c"

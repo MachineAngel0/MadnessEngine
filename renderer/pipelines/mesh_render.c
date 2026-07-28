@@ -112,11 +112,10 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
                                             submesh_upload_data->submesh->uv_bytes);
 
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->tangent_staging_buffer_handle,
-                                    submesh_upload_data->gpu_data->tangent,
-                                    submesh_upload_data->submesh->tangent_bytes);
+                                            submesh_upload_data->gpu_data->tangent,
+                                            submesh_upload_data->submesh->tangent_bytes);
 
         //TODO: free the data on the cpu
-
     }
 
     //skinned data
@@ -130,12 +129,12 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 
         vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
             renderer, mesh_renderer->joint_buffer_handle,
-            command_buffer, skinned_mesh_upload_data.joints,
-            skinned_mesh_upload_data.joint_bytes);
+            command_buffer, skinned_mesh_upload_data.skinned_gpu_data->joints,
+            skinned_mesh_upload_data.skinned_submesh->joint_bytes);
         vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
             renderer, mesh_renderer->weight_buffer_handle,
-            command_buffer, skinned_mesh_upload_data.weights,
-            skinned_mesh_upload_data.weight_bytes);
+            command_buffer, skinned_mesh_upload_data.skinned_gpu_data->weights,
+            skinned_mesh_upload_data.skinned_submesh->weight_bytes);
     }
 
 
@@ -169,7 +168,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->skinned_matrix_buffer,
                                                    mesh_renderer->skinned_matrix_staging_buffer_handle, command_buffer,
                                                    render_packet->draw_3d_data_packet.skinned_matrix->data,
-                                                   dynamic_array_get_byte_size(
+                                                   array_get_byte_size(
                                                        render_packet->draw_3d_data_packet.skinned_matrix));
 }
 
@@ -179,12 +178,17 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 {
     //TODO: were going to assume we have already done culling,
     // but we would need to pass in another structure for actually culled data
+    // or even cull and create the render format at the same time, instead of two seperate arrays
 
     // loop through our meshes and create render items for each
 
     //TODO: TEMP
     Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator, 100 * sizeof(Mesh_Render_Item));
     u32 render_item_count = 0;
+
+    Skinned_Render_Item* skinned_render_items = allocator_alloc(&renderer->frame_allocator,
+                                                                100 * sizeof(Skinned_Render_Item));
+    u32 skinned_render_item_count = 0;
 
     // Vulkan_Mesh_Draw draw_data = {
     // .transform_idx = sub_mesh_instance->parent_transform_handle.handle,
@@ -212,9 +216,36 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         }
     }
 
+    for (u32 i = 0; i < render_packet->draw_3d_data_packet.skinned_instances_count; i++)
+    {
+        Madness_Skinned_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.skinned_instances[i];
+        for (u32 submesh_idx = 0; submesh_idx < mesh_instance->mesh_count; submesh_idx++)
+        {
+            Madness_Skinned_Submesh_Instance* sub_mesh_instance = &mesh_instance->submesh_instances[submesh_idx];
+
+            Skinned_Render_Item* render_inst = &skinned_render_items[skinned_render_item_count++];
+            *render_inst = (Skinned_Render_Item){
+                .material_key = sub_mesh_instance->material_handle.material_id,
+                .mesh_handle = mesh_instance->skinned_mesh_asset.handle,
+                .submesh_handle = submesh_idx,
+                .material_handle = sub_mesh_instance->material_handle.buffer_handle,
+                .transform_handle = mesh_instance->transform_handle.handle,
+                .index_count = sub_mesh_instance->mesh_indirect_draw.index_count,
+                .index_offset = sub_mesh_instance->mesh_indirect_draw.index_offset,
+                .vertex_offset = sub_mesh_instance->mesh_indirect_draw.vertex_count_offset,
+                .joint_idx = sub_mesh_instance->skinned_draw_data.joint_idx,
+                .weight_idx = sub_mesh_instance->skinned_draw_data.weight_idx,
+                .skinned_matrix_idx = sub_mesh_instance->skinned_draw_data.skinned_matrix_idx,
+                .vertex_offset_bytes = sub_mesh_instance->skinned_draw_data.vertex_byte_offset,
+
+
+            };
+        }
+    }
+
+
     //TODO/ OPTIMIZE : sort render items by material id,
     // when a render item doesn't match, that means we move onto the next batch
-
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
     Vulkan_Mesh_Draw mesh_draw = {0};
@@ -261,6 +292,69 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                     command_buffer,
                     &mesh_draw,
                     sizeof(Vulkan_Mesh_Draw));
+
+
+                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                    renderer, current_batch->indirect_draw_buffer_handle,
+                    command_buffer,
+                    &indirect_draw,
+                    sizeof(VkDrawIndexedIndirectCommand));
+
+
+                current_batch->draw_count++;
+            }
+        }
+    }
+
+
+    Vulkan_Skinned_Draw skinned_draw = {0};
+    for (u32 batch_idx = 0; batch_idx < renderer->shader_system->skinned_batch_count; batch_idx++)
+    {
+        Vulkan_Shader_Batch* current_batch = &renderer->shader_system->skinned_batch[batch_idx];
+        current_batch->draw_count = 0;
+
+        vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
+        vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
+        vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
+
+
+        //TODO/ OPTIMIZE: we can upload only whats needed per frame, instead of the whole thing,
+        // but who knows if individual uploads would be slower?
+        // honestly, just depends on the performance, should profile
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, current_batch->material_data_buffer_handle,
+            command_buffer,
+            current_batch->material_batch_reference->material_data->data,
+            dynamic_array_get_byte_size(current_batch->material_batch_reference->material_data));
+
+        for (u32 item_idx = 0; item_idx < skinned_render_item_count; item_idx++)
+        {
+            Skinned_Render_Item* cur_render_item = &skinned_render_items[item_idx];
+
+            if (cur_render_item->material_key == current_batch->material_id)
+            {
+                skinned_draw = (Vulkan_Skinned_Draw){
+                    .transform_idx = cur_render_item->transform_handle,
+                    .material_instance_handle = cur_render_item->material_handle,
+                    .joint_idx = cur_render_item->joint_idx,
+                    .weight_idx = cur_render_item->weight_idx,
+                    .skinned_matrix_idx = cur_render_item->skinned_matrix_idx,
+                    .vertex_offset = cur_render_item->vertex_offset_bytes,
+                };
+                indirect_draw = (VkDrawIndexedIndirectCommand){
+                    .indexCount = cur_render_item->index_count,
+                    .firstIndex = cur_render_item->index_offset,
+                    .vertexOffset = cur_render_item->vertex_offset,
+                    .instanceCount = 1,
+                    .firstInstance = 0
+                };
+
+
+                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                    renderer, current_batch->draw_data_buffer_handle,
+                    command_buffer,
+                    &skinned_draw,
+                    sizeof(Vulkan_Skinned_Draw));
 
 
                 vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(

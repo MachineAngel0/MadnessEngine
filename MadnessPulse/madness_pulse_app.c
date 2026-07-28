@@ -119,7 +119,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                     application_core->asset_system);
 
 
-    asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
+    /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
     Madness_Mesh_Handle handle;
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
@@ -128,7 +128,21 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
 
+    for (u32 i = 0; i < 100; i++)
+    {
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
 
+    }*/
+
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
+    Madness_SkMesh_Handle handle ={0};
+    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/CesiumMan.mskin", &handle);
+
+    /*
+    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/MC/MC4.2_6.gltf");
+    Madness_SkMesh_Handle handle ={0};
+    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/MC4.2_6.mskin", &handle);
+    */
 
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     // mesh_load_gltf(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
@@ -212,9 +226,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         //                              application_core->clock.delta_time,
         //                              application_core->resource_system->frame_allocator);
 
-        animation_update(application_core->asset_system->mesh_system,
-                         application_core->clock.delta_time,
-                         application_core->asset_system->frame_allocator);
+        animation_system_update(application_core->asset_system->animation_system,
+                         application_core->clock.delta_time);
 
         particle_system_update(application_core->asset_system->particle_system,
                                application_core->clock.delta_time);

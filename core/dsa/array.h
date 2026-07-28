@@ -53,7 +53,7 @@ void array_print_range(Array* array, u64 start, u64 end, void (*print_func)(void
 bool array_is_empty(const Array* array);
 bool array_is_full(const Array* array);
 bool array_valid_index(const Array* array, const u64 index);
-u64 array_get_bytes_used(const Array* array);
+u64 array_get_byte_size(const Array* array);
 
 Array* array_copy(Array* src, Allocator* allocator);
 

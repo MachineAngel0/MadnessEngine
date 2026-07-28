@@ -424,10 +424,10 @@ void renderer_update(Renderer* renderer, float delta_time)
                                              renderer->shader_system->mesh_batch_count,
                                              graphics_command_buffer, &renderer->predepth_mesh_pipeline);
 
-    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
                                              renderer->shader_system->skinned_batch,
                                              renderer->shader_system->skinned_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);*/
+                                             graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
 
     vkCmdEndRendering(graphics_command_buffer->handle);
 
@@ -603,9 +603,9 @@ void renderer_update(Renderer* renderer, float delta_time)
     mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
                              renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
                              graphics_command_buffer);
-    /*mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
                              renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
-                             graphics_command_buffer);*/
+                             graphics_command_buffer);
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 

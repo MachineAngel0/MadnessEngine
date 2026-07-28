@@ -136,7 +136,7 @@ bool array_valid_index(const Array* array, const u64 index)
     return index < array->num_items;
 }
 
-u64 array_get_bytes_used(const Array* array)
+u64 array_get_byte_size(const Array* array)
 {
     return array->num_items * array->stride;
 }

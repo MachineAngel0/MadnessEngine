@@ -18,6 +18,7 @@ struct Skinned_Mesh_Draw_Data{
     uint material_idx;
     uint joint_idx;
     uint weight_idx;
+    uint skinned_matrix_idx;
     uint vertex_offset;
 };
 

@@ -178,6 +178,21 @@ void material_system_add_mesh_instance_and_material(Asset_System* asset_system, 
     }
 }
 
+void material_system_add_skinned_instance_and_material(Asset_System* asset_system, Madness_Skinned_Mesh* madness_mesh,
+                                                    Madness_Skinned_Mesh_Instance* parent_instance)
+{
+    for (u32 mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
+    {
+        Madness_Skinned_Submesh_Instance* submesh_instance = &parent_instance->submesh_instances[mesh_idx];
+        Material_Instance* mat_inst = &madness_mesh->material_instance[mesh_idx];
+
+        //load in the instance data and resolve any texture ids, to then add them into the material batch
+        asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
+        material_system_load_material_instance(asset_system, mat_inst, &submesh_instance->material_handle);
+    }
+}
+
+
 
 bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
                                            const char* param_name, const void* new_data)
