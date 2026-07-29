@@ -39,8 +39,11 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     madness_ui->pop_up_ui_nodes = array_create(UI_Node,
                                                MAX_UI_NODE_COUNT, madness_ui->allocator);
 
-
-    madness_ui->string_builder = string_builder_create(100, madness_ui->allocator);
+    for (u32 i = 0; i < MAX_MADNESS_UI_STRING_BUILDERS; i++)
+    {
+        //TODO: use a pool for the strings
+        madness_ui->string_builder_state[i].active_menu_item = string_builder_create(256, madness_ui->allocator);
+    }
 
 
     madness_ui->draw_command_list = dynamic_array_create(UI_Draw_Command, MAX_UI_DRAW_COUNT,
@@ -838,7 +841,6 @@ void madness_ui_window_begin(String header_name)
     madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
 
-
     stack_push(madness_ui->window_states_stack, &window_state);
 }
 
@@ -926,9 +928,9 @@ void madness_ui_window_end(void)
         state->window_region_size.x += madness_ui->mouse_delta_x;
         state->window_region_size.y += madness_ui->mouse_delta_y;
         state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
-                                                 madness_ui->screen_size.x);
+                                                  madness_ui->screen_size.x);
         state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                 madness_ui->screen_size.y);
+                                                  madness_ui->screen_size.y);
     }
 
     // hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
@@ -2133,6 +2135,29 @@ void madness_ui_text_box(String id)
     madness_ui_advance_cursor(label_node->size);
     madness_ui_same_line();
 
+    //search for the string builder in the string builder state by the id, if none found take a new one
+    String_Builder_State* string_state = NULL;
+    for (u32 i = 0; i < madness_ui->string_buidler_state_count; i++)
+    {
+        if (string_compare(madness_ui->string_builder_state[i].id, &id))
+        {
+            string_state = &madness_ui->string_builder_state[i];
+            break;
+        }
+    }
+    if (!string_state)
+    {
+        if (madness_ui->string_buidler_state_count >= MAX_MADNESS_UI_STRING_BUILDERS)
+        {
+            WARN("out of string builders");
+            return;
+        }
+        string_state = &madness_ui->string_builder_state[madness_ui->string_buidler_state_count++];
+        string_state->id = string_duplicate_alloc(&id, madness_ui->allocator);
+    }
+    MASSERT(string_state);
+
+
 
     //grab a node
     UI_Node* text_box = madness_ui_get_new_node();
@@ -2152,17 +2177,17 @@ void madness_ui_text_box(String id)
         //check for any keypressed and update the text
         if (input_key_released_unique(madness_ui->input_system_reference, KEY_BACKSPACE))
         {
-            string_builder_decrement(madness_ui->string_builder);
+            string_builder_decrement(string_state->active_menu_item);
         }
 
         if (madness_ui->released_key)
         {
-            string_builder_append_c_string(madness_ui->string_builder, &madness_ui->released_key);
+            string_builder_append_c_string(string_state->active_menu_item, &madness_ui->released_key);
         }
     }
 
 
-    String* display_string = string_builder_to_string(madness_ui->string_builder);
+    String* display_string = string_builder_to_string(string_state->active_menu_item);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
                                UI_ALIGNMENT_LEFT,
@@ -2829,8 +2854,6 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
 bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
                              void* passing_data, const char* id)
 {
-
-
     // madness_ui_text(madness_ui, *string_create_allocator(struct_info.name, strlen(struct_info.name), madness_ui->frame_arena));
     madness_ui_string(STRING_STRLEN(struct_info.name));
 

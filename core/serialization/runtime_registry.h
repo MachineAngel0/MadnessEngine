@@ -22,6 +22,14 @@ typedef struct Reflection_Runtime_Enum
     u32 count;
 } Reflection_Runtime_Enum;
 
+typedef struct Reflection_Runtime_Enum_Bitflag
+{
+    const char* name;
+    const char** enum_names;
+    bool* bitflag_values; // if one is checked, that means yes
+    u32 count;
+} Reflection_Runtime_Enum_Bitflag;
+
 typedef struct Reflection_Runtime_Struct_Field
 {
     const char* name;

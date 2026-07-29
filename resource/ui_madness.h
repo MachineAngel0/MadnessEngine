@@ -178,6 +178,15 @@ typedef struct Menu_Bar_State
 
 } Menu_Bar_State;
 
+#define MAX_MADNESS_UI_STRING_BUILDERS 100
+typedef struct String_Builder_State
+{
+    String* id;
+    // u64 hash_id;
+    String_Builder* active_menu_item;
+} String_Builder_State;
+
+
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
@@ -244,7 +253,10 @@ typedef struct Madness_UI
 
     //Keep an array of strings used in textboxes
     //should be an array at some point,
-    String_Builder* string_builder;
+    //TODO: should cap the memory usage of string builders to 256 per string builder
+    String_Builder_State string_builder_state[MAX_MADNESS_UI_STRING_BUILDERS];
+    u32 string_buidler_state_count;
+
     hash_table* textbox_ids; //maps textbox names to their id in the string builder array
 
     vec2s screen_size; // this gets queried every frame

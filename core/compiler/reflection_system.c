@@ -778,11 +778,21 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
         fwrite("_enum_string[] = {\n", strlen("_enum_string[] = {\n"), 1, enum_to_string_lut_file);
 
         u64 enum_iteration_size = enum_info->enum_size;
+        /*
+         *NOTE: this version of doing [enum_name] = "enum_name" doesn't work with bitfields,
+         * bitflag(0) = 1 << 0 -> 1, leaving 0 as null value in the enum string lut
         for (u64 j = 0; j < enum_iteration_size; j++)
         {
             fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
             fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
             fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
+            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
+            fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+        }*/
+
+        for (u64 j = 0; j < enum_iteration_size; j++)
+        {
+            fwrite("\t\"", strlen("\t\""), 1, enum_to_string_lut_file);
             fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
             fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
         }
@@ -798,6 +808,7 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
     for (u64 i = 0; i < reflection_system->reflection_enums_size; i++)
     {
         Reflection_Enum enum_info = reflection_system->reflection_registry_enums[i];
+
         if (!enum_info.name) { continue; }
 
         //this is basically what its writing
@@ -819,13 +830,13 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
                 "\t{\n"
                 "\t\t.name = \"%s\",\n"
                 "\t\t.enum_names = %s_enum_string,\n"
-                "\t\t.count = ARRAY_SIZE(%s_enum_string),\n"
+                "\t\t.count = %d,\n"
                 "\t};\n"
                 "\treflection_registry_add_enums(reflection_registry, %s_enum);\n\n",
                 enum_info.name,
                 enum_info.name,
                 enum_info.name,
-                enum_info.name,
+                enum_info.enum_size,
                 enum_info.name);
     }
     fprintf(enum_to_string_lut_file, "}\n");

@@ -437,6 +437,7 @@ void editor_material_asset_view(Editor* editor)
             batch->material_asset->material_info.renderpass;
             batch->material_asset->material_info.transluency;
 
+
             /*
             madness_ui_reflect_data(Reflection_Registry* reflection_registry, struct_info,
                                    void* passin_data, const char* id)
