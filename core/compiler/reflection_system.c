@@ -5,41 +5,86 @@ Reflection_System* reflection_system_init(Memory_System* memory_system)
 {
     Reflection_System* reflection_system = memory_system_alloc(memory_system, sizeof(Reflection_System),
                                                                MEMORY_SUBSYSTEM_REFLECTION);
-    reflection_system->reflection_registry_constants = HASH_TABLE_CREATE(Reflection_Constant, 1000);
-    reflection_system->reflection_registry_enums = HASH_TABLE_CREATE(Reflection_Enum, 1000);
-    reflection_system->reflection_registry_structs = HASH_TABLE_CREATE(Reflection_Struct, 1000);
 
 
-    u64 mem_size = KB(32);
+    u64 mem_size = MB(4);
 
     reflection_system->allocator = memory_system_allocator_create(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
     reflection_system->frame_allocator = memory_system_allocator_create(
         memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
 
-    reflection_system->header_file_list_capacity = HEADER_FILE_LIST_COUNT;
+    reflection_system->header_file_list_capacity = REFLECTION_HEADER_FILE_LIST_COUNT;
     reflection_system->header_file_list_count = 0;
     reflection_system->header_file_list = allocator_alloc(reflection_system->allocator,
                                                           sizeof(String*) * reflection_system->
                                                           header_file_list_capacity);
 
+    reflection_system->reflection_registry_constants = allocator_alloc(reflection_system->allocator,
+                                                                       sizeof(Reflection_Constant) *
+                                                                       REFLECTION_ARRAY_SIZES);
+    reflection_system->reflection_registry_enums = allocator_alloc(reflection_system->allocator,
+                                                                   sizeof(Reflection_Enum) *
+                                                                   REFLECTION_ARRAY_SIZES);
+    reflection_system->reflection_registry_structs = allocator_alloc(reflection_system->allocator,
+                                                                     sizeof(Reflection_Struct) *
+                                                                     REFLECTION_ARRAY_SIZES);
+
+
+    reflection_system->reflection_constants_size = 0;
+    reflection_system->reflection_enums_size = 0;
+    reflection_system->reflection_struct_size = 0;
+
+
+    reflection_system->reflection_constants_size_max = REFLECTION_ARRAY_SIZES;
+    reflection_system->reflection_enum_size_max = REFLECTION_ARRAY_SIZES;
+    reflection_system->reflection_struct_size_max = REFLECTION_ARRAY_SIZES;
+
     return reflection_system;
 }
 
-void reflection_system_shutdown(Reflection_System* reflection_system, Memory_System* memory_system)
+void reflection_system_deinit(Reflection_System* reflection_system, Memory_System* memory_system)
 {
     //TODO: free the allocators
+
+
+
     memory_system_memory_free(memory_system, reflection_system, MEMORY_SUBSYSTEM_REFLECTION);
+
+
+
 }
 
 void reflection_system_reset(Reflection_System* reflection_system)
 {
     allocator_clear_and_zero(reflection_system->allocator);
     allocator_clear_and_zero(reflection_system->frame_allocator);
+
+    //reallocate everything,
+    //TODO: honestly might just be better to do a shutdown and start it up again
+    reflection_system->header_file_list = allocator_alloc(reflection_system->allocator,
+                                                      sizeof(String*) * reflection_system->
+                                                      header_file_list_capacity);
+
+    reflection_system->reflection_registry_constants = allocator_alloc(reflection_system->allocator,
+                                                                       sizeof(Reflection_Constant) *
+                                                                       REFLECTION_ARRAY_SIZES);
+    reflection_system->reflection_registry_enums = allocator_alloc(reflection_system->allocator,
+                                                                   sizeof(Reflection_Enum) *
+                                                                   REFLECTION_ARRAY_SIZES);
+    reflection_system->reflection_registry_structs = allocator_alloc(reflection_system->allocator,
+                                                                     sizeof(Reflection_Struct) *
+                                                                     REFLECTION_ARRAY_SIZES);
+
+
+
     reflection_system->header_file_list_count = 0;
 
-    hash_table_clear(reflection_system->reflection_registry_constants);
-    hash_table_clear(reflection_system->reflection_registry_enums);
-    hash_table_clear(reflection_system->reflection_registry_structs);
+    reflection_system->reflection_constants_size = 0;
+    reflection_system->reflection_enums_size = 0;
+    reflection_system->reflection_struct_size = 0;
+
+
+
 }
 
 void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer)
@@ -76,30 +121,72 @@ void reflection_system_parse_enums(Reflection_System* reflection_system, Lexer* 
     MASSERT(lexer);
     DEBUG("ENUM PARSE START")
 
-    u64 token_size = darray_get_size(lexer->tokens);
+
+    Token_Type keep_list[] = {
+        //single char tokens
+        /*Token_OpenParen,
+        Token_CloseParen,*/
+        Token_Colon,
+        Token_Semicolon,
+        Token_Asterisk,
+        Token_OpenBracket,
+        Token_CloseBracket,
+        Token_OpenBrace,
+        Token_CloseBrace,
+
+        // Literals.
+        Token_String,
+        Token_Identifier,
+        Token_Number,
+
+        //keywords
+        Token_Enum,
+        Token_BITFLAG,
+
+    };
+
+
+    Token* pruned_tokens = lexer_prune_tokens(lexer->tokens, keep_list, ARRAY_SIZE(keep_list));
+    u64 token_size = darray_get_size(pruned_tokens);
+
 
     for (u64 i = 0; i < token_size; i++)
     {
-        if (lexer->tokens[i].type == Token_Enum)
+        if (pruned_tokens[i].type == Token_Enum)
         {
             //create a registry with the specific name
             i++; // get the name
 
             // string_builder_print(&lexer3->tokens[i].string_builder);
-            const char* enum_name = string_builder_to_c_string(&lexer->tokens[i].string_builder);
-            reflection_system_add_enum(reflection_system, enum_name);
+            const char* enum_name = string_builder_to_c_string(&pruned_tokens[i].string_builder);
+            reflection_system_add_enum_entry(reflection_system, enum_name);
 
             i++; // offset into the enum structure
 
-            u32 enum_value = 0;
-            while (i < token_size && lexer->tokens[i].type != Token_CloseBrace)
+            //add the fields of the enum
+            while (i < token_size && pruned_tokens[i].type != Token_CloseBrace)
             {
-                if (lexer->tokens[i].type == Token_Identifier)
+                //we have to check if we have bitflags
+                if (pruned_tokens[i].type == Token_Identifier)
                 {
+                    //do a check to see if were using bitflags
+                    if (pruned_tokens[i+1].type == Token_BITFLAG && pruned_tokens[i+2].type == Token_Number)
+                    {
+                        //get the bitflag value
+                        const u64 value = string_builder_to_number(&pruned_tokens[i+2].string_builder);
+                        const u64 bit_value = BITFLAG(value);
+
+                        reflection_system_add_enum_field(reflection_system, enum_name,
+                                               string_builder_to_c_string(&pruned_tokens[i].string_builder), Reflection_Enum_Type_Bitflag, bit_value);
+                        i++; //only once since, there is an outside increment, so we dont have an infinite loop
+                    }
                     // string_builder_print(&lexer3->tokens[i].string_builder);
-                    reflection_system_add_enum_field(reflection_system, enum_name,
-                                                     string_builder_to_c_string(&lexer->tokens[i].string_builder));
-                    enum_value++;
+                    else
+                    {
+                        reflection_system_add_enum_field(reflection_system, enum_name,
+                                               string_builder_to_c_string(&pruned_tokens[i].string_builder), Reflection_Enum_Type_Normal, 0);
+                    }
+
                 }
                 i++;
             }
@@ -206,6 +293,7 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
         Token_F32,
         Token_F64,
         Token_char,
+        Token_string_type,
         Token_size_t,
         Token_bool,
 
@@ -265,56 +353,6 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
     }
 }
 
-Reflection_Compact_List reflection_system_get_data(Reflection_System* reflection_system)
-{
-    Reflection_Compact_List list = {0};
-    list.constant_list = malloc(
-        sizeof(Reflection_Constant) * reflection_system->reflection_registry_constants->num_entries);
-    list.constant_list_size = reflection_system->reflection_registry_constants->num_entries;
-
-    list.enum_list = malloc(sizeof(Reflection_Enum) * reflection_system->reflection_registry_enums->num_entries);
-    list.enum_list_size = reflection_system->reflection_registry_enums->num_entries;
-
-    list.struct_list = malloc(sizeof(Reflection_Struct) * reflection_system->reflection_registry_structs->num_entries);
-    list.struct_list_size = reflection_system->reflection_registry_structs->num_entries;
-
-    u32 constant_count = 0;
-    u32 enum_count = 0;
-    u32 struct_count = 0;
-
-
-    for (u64 i = 0; i < reflection_system->reflection_registry_constants->capacity; i++)
-    {
-        if (!reflection_system->reflection_registry_constants->key_str_data[i]) { continue; }
-
-        Reflection_Constant* reflection_constant = &((Reflection_Constant*)reflection_system->
-                                                                           reflection_registry_constants->value_data)[
-            i];
-        list.constant_list[constant_count] = *reflection_constant;
-        constant_count++;
-    }
-
-    for (u64 i = 0; i < reflection_system->reflection_registry_enums->capacity; i++)
-    {
-        if (!reflection_system->reflection_registry_enums->key_str_data[i]) { continue; }
-        Reflection_Enum* reflection_enum = &((Reflection_Enum*)reflection_system->reflection_registry_enums->value_data)
-            [i];
-        list.enum_list[enum_count] = *reflection_enum;
-        enum_count++;
-    }
-
-    for (u64 i = 0; i < reflection_system->reflection_registry_structs->capacity; i++)
-    {
-        if (!reflection_system->reflection_registry_structs->key_str_data[i]) { continue; }
-        Reflection_Struct* reflection_struct = &((Reflection_Struct*)reflection_system->reflection_registry_structs->
-            value_data)[i];
-        list.struct_list[struct_count] = *reflection_struct;
-        struct_count++;
-    }
-
-    return list;
-}
-
 
 void reflection_system_parse(Reflection_System* reflection_system, const char* file_path,
                              const Reflection_Parse_Type parse_type)
@@ -367,105 +405,119 @@ void reflection_system_parse(Reflection_System* reflection_system, const char* f
 
 void reflection_system_add_constant(Reflection_System* reflection_system, const char* constant_name, const u64 value)
 {
-    Reflection_Constant reflection_constant = {0};
-    reflection_constant.name = c_string_duplicate(constant_name);
-    reflection_constant.value = value;
-    hash_table_insert(reflection_system->reflection_registry_constants, constant_name, &reflection_constant);
+    if (reflection_system->reflection_constants_size >= reflection_system->reflection_constants_size_max)
+    {
+        MASSERT(false);
+    }
+
+    Reflection_Constant* reflection_constant = &reflection_system->reflection_registry_constants[reflection_system->
+        reflection_constants_size++];
+    reflection_constant->name = c_string_duplicate(constant_name);
+    reflection_constant->value = value;
 }
 
 u64 reflection_system_constant_query(Reflection_System* reflection_system, const char* constant_name)
 {
-    hash_table_contains(reflection_system->reflection_registry_constants, constant_name);
-
-    Reflection_Constant reflection_constant = {0};
-    if (hash_table_get(reflection_system->reflection_registry_constants, constant_name, &reflection_constant))
+    for (u32 i = 0; i < reflection_system->reflection_constants_size; i++)
     {
-        return reflection_constant.value;
+        Reflection_Constant* reflection_constant = &reflection_system->reflection_registry_constants[i];
+        if (strcmp(reflection_constant->name, constant_name) == 0)
+        {
+            return reflection_constant->value;
+        }
     }
+
     MASSERT(false);
     return 0;
 }
 
 
-void reflection_system_add_enum(Reflection_System* reflection_system, const char* enum_name)
+void reflection_system_add_enum_entry(Reflection_System* reflection_system, const char* enum_name)
 {
-    Reflection_Enum reflection_enum = {0};
-    reflection_enum.type_list = darray_create_reserve(Reflection_Type_Enum, 1);
-    reflection_enum.name = c_string_duplicate_allocator(enum_name, reflection_system->allocator);
-    hash_table_insert(reflection_system->reflection_registry_enums, enum_name, &reflection_enum);
-}
-
-void reflection_system_add_enum_field(Reflection_System* reflection_system, const char* enum_name,
-                                      const char* type_field_name)
-{
-    Reflection_Enum reflection_enum = {0};
-    if (hash_table_get(reflection_system->reflection_registry_enums, enum_name, &reflection_enum))
-    {
-        Reflection_Type_Enum type_info;
-
-        char* type_field_str = c_string_duplicate_allocator(type_field_name, reflection_system->allocator);
-        type_info.name = type_field_str;
-        type_info.enum_position = reflection_enum.enum_size;
-
-        reflection_enum.enum_size += 1;
-        darray_push(reflection_enum.type_list, type_info);
-
-
-        hash_table_set(reflection_system->reflection_registry_enums,
-                       c_string_duplicate_allocator(enum_name, reflection_system->allocator), &reflection_enum);
-
-        reflection_system_add_constant(reflection_system, type_field_str, type_info.enum_position);
-    }
-    else
+    if (reflection_system->reflection_enums_size >= reflection_system->reflection_enum_size_max)
     {
         MASSERT(false);
     }
+
+    Reflection_Enum* reflection_enum = &reflection_system->reflection_registry_enums[reflection_system->
+        reflection_enums_size++];
+
+    reflection_enum->enum_size = 0;
+    reflection_enum->name = c_string_duplicate_allocator(enum_name, reflection_system->allocator);
 }
 
-Reflection_Enum reflection_system_enum_query(Reflection_System* reflection_system, const char* enum_name)
+void reflection_system_add_enum_field(Reflection_System* reflection_system, const char* enum_name,
+                                      const char* type_field_name, Reflection_Enum_Type enum_type, u64 bitflag_value)
 {
-    Reflection_Enum reflection_enum = {0};
-    if (hash_table_get(reflection_system->reflection_registry_enums, enum_name, &reflection_enum))
+    for (u32 i = 0; i < reflection_system->reflection_enums_size; i++)
     {
-        return reflection_enum;
+        Reflection_Enum* reflection_enum = &reflection_system->reflection_registry_enums[i];
+        if (strcmp(reflection_enum->name, enum_name) == 0)
+        {
+            if (reflection_enum->enum_size >= REFLECTION_TYPE_FIELDS_MAX)
+            {
+                MASSERT(false);
+            }
+
+
+            Reflection_Type_Enum* type_info = &reflection_enum->type_list[reflection_enum->enum_size];
+
+            type_info->name = c_string_duplicate_allocator(type_field_name, reflection_system->allocator);
+            type_info->enum_position = reflection_enum->enum_size;
+            type_info->type = enum_type;
+            type_info->bitvalue = bitflag_value;
+            reflection_enum->enum_size++;
+
+            //TODO: this is a little fucked not gonna lie
+            reflection_system_add_constant(reflection_system, type_info->name, type_info->enum_position);
+
+            return;
+        }
     }
-    return (Reflection_Enum){0};
+    MASSERT(false);
+}
+
+Reflection_Enum* reflection_system_enum_query(Reflection_System* reflection_system, const char* enum_name)
+{
+    for (u32 i = 0; i < reflection_system->reflection_enums_size; i++)
+    {
+        Reflection_Enum* reflection_enum = &reflection_system->reflection_registry_enums[i];
+        if (strcmp(reflection_enum->name, enum_name) == 0)
+        {
+            return reflection_enum;
+        }
+    }
+    MASSERT(false);
+    return NULL;
 }
 
 bool reflection_system_does_enum_exist(Reflection_System* reflection_system, const char* enum_name)
 {
-    return hash_table_contains(reflection_system->reflection_registry_enums, enum_name);
-}
-
-Reflection_Enum_Query_Array reflection_system_enum_query_list(Reflection_System* reflection_system,
-                                                              const char* enum_name, Frame_Allocator* frame_allocator)
-{
-    //generate the enums first and then the struct data we would want
-    Reflection_Enum enum_info = reflection_system_enum_query(reflection_system, enum_name);
-
-    u64 enum_iteration_size = darray_get_size(enum_info.type_list);
-
-    Reflection_Enum_Query_Array query_list = {0};
-    query_list.enum_array_sizes = enum_iteration_size;
-    query_list.enum_array_names = allocator_alloc(frame_allocator, sizeof(char*) * query_list.enum_array_sizes);
-
-    for (u64 j = 0; j < enum_iteration_size; j++)
+    for (u32 i = 0; i < reflection_system->reflection_enums_size; i++)
     {
-        query_list.enum_array_names[j] = enum_info.type_list[j].name;
+        Reflection_Enum* reflection_enum = &reflection_system->reflection_registry_enums[i];
+        if (strcmp(reflection_enum->name, enum_name) == 0)
+        {
+            return true;
+        }
     }
-
-
-    return query_list;
+    return false;
 }
 
 
 bool reflection_system_add_struct(Reflection_System* reflection_system, const char* struct_name)
 {
-    Reflection_Struct reflection_struct = {0};
-    reflection_struct.name = c_string_duplicate_allocator(struct_name, reflection_system->allocator);
-    reflection_struct.type_list = darray_create_reserve(Reflection_Struct_Field, 1);
-    reflection_struct.struct_size = 0;
-    hash_table_insert(reflection_system->reflection_registry_structs, struct_name, &reflection_struct);
+    if (reflection_system->reflection_struct_size >= reflection_system->reflection_struct_size_max)
+    {
+        MASSERT(false);
+    }
+
+    Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[reflection_system->
+        reflection_struct_size++];
+    reflection_struct->name = c_string_duplicate_allocator(struct_name, reflection_system->allocator);
+    reflection_struct->type_list_size = 0;
+    reflection_struct->struct_size = 0;
+
     return true;
 }
 
@@ -473,25 +525,29 @@ bool reflection_system_add_struct_field(Reflection_System* reflection_system, co
                                         Reflection_Type reflection_type, const char* type_name,
                                         const char* struct_member_name)
 {
-    Reflection_Struct reflection_struct = {0};
-    if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
+    for (u32 i = 0; i < reflection_system->reflection_struct_size; i++)
     {
-        Reflection_Struct_Field type_info = {0};
-        type_info.field_name = c_string_duplicate_allocator(struct_member_name, reflection_system->allocator);
-        type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.type_name = type_name;
-        type_info.container_type = Reflection_Container_Type_VARIABLE;
+        Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[i];
+        if (strcmp(reflection_struct->name, struct_name) == 0)
+        {
+            if (reflection_struct->type_list_size >= REFLECTION_TYPE_FIELDS_MAX)
+            {
+                MASSERT(false);
+            }
 
-        darray_push(reflection_struct.type_list, type_info);
+            Reflection_Struct_Field* type_info = &reflection_struct->type_list[reflection_struct->type_list_size];
 
-        hash_table_set(reflection_system->reflection_registry_structs,
-                       struct_name, &reflection_struct);
-        return true;
+            type_info->field_name = c_string_duplicate_allocator(struct_member_name, reflection_system->allocator);
+            type_info->type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
+            type_info->type_name = type_name;
+            type_info->container_type = Reflection_Container_Type_VARIABLE;
+            reflection_struct->type_list_size++;
+
+            return true;
+        }
     }
-    else
-    {
-        MASSERT(false);
-    }
+    MASSERT(false);
+
     return false;
 }
 
@@ -499,23 +555,29 @@ bool reflection_system_add_struct_field_ptr_heap(Reflection_System* reflection_s
                                                  Reflection_Type reflection_type, const char* type_name,
                                                  const char* struct_member_name)
 {
-    Reflection_Struct reflection_struct = {0};
-    if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
+    for (u32 i = 0; i < reflection_system->reflection_struct_size; i++)
     {
-        Reflection_Struct_Field type_info = {0};
-        type_info.field_name = c_string_duplicate(struct_member_name);
-        type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.type_name = c_string_duplicate(type_name);
-        type_info.container_type = Reflection_Container_Type_POINTER;
-        darray_push(reflection_struct.type_list, type_info);
+        Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[i];
+        if (strcmp(reflection_struct->name, struct_name) == 0)
+        {
+            if (reflection_struct->type_list_size >= REFLECTION_TYPE_FIELDS_MAX)
+            {
+                MASSERT(false);
+            }
 
-        hash_table_set(reflection_system->reflection_registry_structs, struct_name, &reflection_struct);
-        return true;
+            Reflection_Struct_Field* type_info = &reflection_struct->type_list[reflection_struct->type_list_size];
+
+            type_info->field_name = c_string_duplicate(struct_member_name);
+            type_info->type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
+            type_info->type_name = c_string_duplicate(type_name);
+            type_info->container_type = Reflection_Container_Type_POINTER;
+            reflection_struct->type_list_size++;
+
+            return true;
+        }
     }
-    else
-    {
-        MASSERT(false);
-    }
+    MASSERT(false);
+
     return false;
 }
 
@@ -525,22 +587,29 @@ bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_
                                                   const char* struct_member_name, u64 array_size)
 
 {
-    Reflection_Struct reflection_struct = {0};
-    if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
+    for (u32 i = 0; i < reflection_system->reflection_struct_size; i++)
     {
-        Reflection_Struct_Field type_info = {0};
-        type_info.field_name = struct_member_name;
-        type_info.type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
-        type_info.type_name = type_name;
-        type_info.container_type = Reflection_Container_Type_STACK_ARRAY;
-        type_info.stack_size = array_size;
+        Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[i];
+        if (strcmp(reflection_struct->name, struct_name) == 0)
+        {
+            if (reflection_struct->type_list_size >= REFLECTION_TYPE_FIELDS_MAX)
+            {
+                MASSERT(false);
+            }
 
-        darray_push(reflection_struct.type_list, type_info);
+            Reflection_Struct_Field* type_info = &reflection_struct->type_list[reflection_struct->type_list_size];
+            type_info->field_name = struct_member_name;
+            type_info->type = Compiler_type_to_Reflection_Type_LUT[reflection_type]; // size is implicit in the type
+            type_info->type_name = type_name;
+            type_info->container_type = Reflection_Container_Type_STACK_ARRAY;
+            type_info->stack_size = array_size;
+            reflection_struct->type_list_size++;
 
-        hash_table_set(reflection_system->reflection_registry_structs, struct_name, &reflection_struct);
-        return true;
+            return true;
+        }
     }
     MASSERT(false);
+
     return false;
 }
 
@@ -605,33 +674,35 @@ bool reflection_system_set_default_values(Reflection_System* reflection_system, 
     return true;
 }
 
-Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name)
+Reflection_Struct* reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name)
 {
-    Reflection_Struct reflection_struct = {0};
-    if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_struct))
+    for (u32 i = 0; i < reflection_system->reflection_struct_size; i++)
     {
-        return reflection_struct;
+        Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[i];
+        if (strcmp(reflection_struct->name, struct_name) == 0)
+        {
+            return reflection_struct;
+        }
     }
+
     MASSERT(false);
-    return (Reflection_Struct){0};
+    return NULL;
 }
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name)
 {
-    return hash_table_contains(reflection_system->reflection_registry_structs, struct_name);
+    for (u32 i = 0; i < reflection_system->reflection_struct_size; i++)
+    {
+        Reflection_Struct* reflection_struct = &reflection_system->reflection_registry_structs[i];
+        if (strcmp(reflection_struct->name, struct_name) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-Reflection_Struct_Field* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
-                                                                  const char* struct_name)
-{
-    Reflection_Struct reflection_enum = {0};
-    if (hash_table_get(reflection_system->reflection_registry_structs, struct_name, &reflection_enum))
-    {
-        return reflection_enum.type_list;
-    }
-    MASSERT(false);
-    return NULL;
-}
 
 static const char* reflection_type_to_str(Reflection_Type type)
 {
@@ -665,167 +736,12 @@ static const char* reflection_type_to_str(Reflection_Type type)
     }
 }
 
-void reflection_game_data(Reflection_System* reflection_system)
-{
-    //TODO: we are not freeing anything and especially nothing using the string_builder to C-string function
-    MASSERT(reflection_system);
-
-    reflection_system_parse(reflection_system, "../MadnessPulse/game_constants.h", REFLECTION_PARSE_CONSTANT);
-    reflection_system_parse(reflection_system, "../MadnessPulse/game_enums.h", REFLECTION_PARSE_ENUM);
-    reflection_system_parse(reflection_system, "../MadnessPulse/game_structs.h", REFLECTION_PARSE_STRUCT);
-
-
-    Reflection_Compact_List reflection_data = reflection_system_get_data(reflection_system);
-
-
-    //generate the enums first and then the struct data we would want
-    FILE* enum_to_string_lut_file = fopen("../MadnessPulse/game_reflection_enums_generated.h", "w");
-    const char* header =
-        "#include <stddef.h>\n"
-        "#include \"game_constants.h\"\n"
-        "#include \"game_enums.h\"\n"
-        "#include \"game_structs.h\"\n\n"
-        "#include \"runtime_registry.h\"\n\n";
-
-    fwrite(header, strlen(header), 1, enum_to_string_lut_file);
-
-
-    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
-    {
-        Reflection_Enum enum_info = reflection_data.enum_list[i];
-        if (!enum_info.name) { continue; }
-
-        fwrite("const char* ", strlen("const char* "), 1, enum_to_string_lut_file);
-        fwrite(enum_info.name, strlen(enum_info.name), 1, enum_to_string_lut_file);
-        fwrite("_enum_string[] = {\n", strlen("_enum_string[] = {\n"), 1, enum_to_string_lut_file);
-
-        u64 enum_iteration_size = darray_get_size(enum_info.type_list);
-        for (u64 j = 0; j < enum_iteration_size; j++)
-        {
-            fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
-            fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
-            fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
-        }
-
-        fwrite("};\n\n", strlen("};\n\n"), 1, enum_to_string_lut_file);
-    }
-
-
-    fprintf(enum_to_string_lut_file, "void generate_runtime_enums(Reflection_Registry* reflection_registry)\n{\n");
-
-    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
-    {
-        Reflection_Enum enum_info = reflection_data.enum_list[i];
-        if (!enum_info.name) { continue; }
-
-        //this is basically what its writing
-        /*void generate_enum_data(Reflection_Registry* reflection_registry)
-        {
-            const Reflection_Runtime_Enum Resistance_Type_Enum =
-            {
-                .name = "Resistance_Type",
-                .enum_names = Resistance_Type_enum_string_test,
-                .count = ARRAY_SIZE(Resistance_Type_enum_string_test),
-            };
-            reflection_registry_add_enums(reflection_registry, Resistance_Type_Enum);
-
-            //write the next field
-        }*/
-
-        fprintf(enum_to_string_lut_file,
-                "\tconst Reflection_Runtime_Enum %s_enum =\n"
-                "\t{\n"
-                "\t\t.name = \"%s\",\n"
-                "\t\t.enum_names = %s_enum_string,\n"
-                "\t\t.count = ARRAY_SIZE(%s_enum_string),\n"
-                "\t};\n"
-                "\treflection_registry_add_enums(reflection_registry, %s_enum);\n\n",
-                enum_info.name,
-                enum_info.name,
-                enum_info.name,
-                enum_info.name,
-                enum_info.name);
-    }
-    fprintf(enum_to_string_lut_file, "}\n");
-
-    fclose(enum_to_string_lut_file);
-
-
-    FILE* reflection_offset_file = fopen("../MadnessPulse/game_reflection_struct_generated.h", "w");
-    fwrite(header, strlen(header), 1, reflection_offset_file);
-
-    fprintf(reflection_offset_file, "void generate_runtime_structs(Reflection_Registry* reflection_registry)\n{\n");
-
-    for (u64 i = 0; i < reflection_data.struct_list_size; i++)
-    {
-        Reflection_Struct struct_info = reflection_data.struct_list[i];
-        if (!struct_info.name) { continue; }
-
-        u64 field_count = darray_get_size(struct_info.type_list);
-
-        // fields array
-        fprintf(reflection_offset_file,
-                "\tReflection_Runtime_Struct_Field %s_Fields[] =\n"
-                "\t{\n",
-                struct_info.name);
-
-        for (u64 j = 0; j < field_count; j++)
-        {
-            Reflection_Struct_Field field = struct_info.type_list[j];
-            if (!field.field_name) { continue; }
-
-
-            fprintf(reflection_offset_file,
-                    "\t\t{\n"
-                    "\t\t\t.name = \"%s\",\n"
-                    "\t\t\t.type = %s,\n"
-                    "\t\t\t.type_name = \"%s\",\n"
-                    "\t\t\t.offset = offsetof(%s, %s)\n"
-                    "\t\t},\n",
-                    field.field_name,
-                    reflection_type_to_str(field.type),
-                    field.type_name ? field.type_name : "",
-                    struct_info.name,
-                    field.field_name);
-        }
-
-        fprintf(reflection_offset_file, "\t};\n\n");
-
-        // struct info
-        fprintf(reflection_offset_file,
-                "\t Reflection_Runtime_Struct %s_Runtime_Struct =\n"
-                "\t{\n"
-                "\t\t.name = \"%s\",\n"
-                "\t\t.fields = %s_Fields,\n"
-                "\t\t.field_count = %llu,\n"
-                "\t\t.struct_size = sizeof(%s)\n"
-                "\t};\n\n",
-                struct_info.name,
-                struct_info.name,
-                struct_info.name,
-                field_count,
-                struct_info.name);
-
-        fprintf(reflection_offset_file,
-                "\treflection_registry_add_struct(reflection_registry, %s_Runtime_Struct);\n\n",
-                struct_info.name);
-    }
-
-    fprintf(reflection_offset_file, "}\n");
-    fclose(reflection_offset_file);
-}
-
 
 void reflection_data_to_files(Reflection_System* reflection_system, const char* function_name,
                               const char* generated_enum_file_path, const char* generated_struct_file_path)
 {
     //TODO: we are not freeing anything and especially nothing using the string_builder to C-string function
     MASSERT(reflection_system);
-
-
-    Reflection_Compact_List reflection_data = reflection_system_get_data(reflection_system);
 
 
     //generate the enums first and then the struct data we would want
@@ -852,22 +768,22 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
     }
 
 
-    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
+    for (u64 i = 0; i < reflection_system->reflection_enums_size; i++)
     {
-        Reflection_Enum enum_info = reflection_data.enum_list[i];
-        if (!enum_info.name) { continue; }
+        Reflection_Enum* enum_info = &reflection_system->reflection_registry_enums[i];
+        if (!enum_info->name) { continue; }
 
         fwrite("const char* ", strlen("const char* "), 1, enum_to_string_lut_file);
-        fwrite(enum_info.name, strlen(enum_info.name), 1, enum_to_string_lut_file);
+        fwrite(enum_info->name, strlen(enum_info->name), 1, enum_to_string_lut_file);
         fwrite("_enum_string[] = {\n", strlen("_enum_string[] = {\n"), 1, enum_to_string_lut_file);
 
-        u64 enum_iteration_size = darray_get_size(enum_info.type_list);
+        u64 enum_iteration_size = enum_info->enum_size;
         for (u64 j = 0; j < enum_iteration_size; j++)
         {
             fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
+            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
             fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
-            fwrite(enum_info.type_list[j].name, strlen(enum_info.type_list[j].name), 1, enum_to_string_lut_file);
+            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
             fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
         }
 
@@ -879,9 +795,9 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
     fwrite(function_name, strlen(function_name), 1, enum_to_string_lut_file);
     fprintf(enum_to_string_lut_file, "(Reflection_Registry* reflection_registry)\n{\n");
 
-    for (u64 i = 0; i < reflection_data.enum_list_size; i++)
+    for (u64 i = 0; i < reflection_system->reflection_enums_size; i++)
     {
-        Reflection_Enum enum_info = reflection_data.enum_list[i];
+        Reflection_Enum enum_info = reflection_system->reflection_registry_enums[i];
         if (!enum_info.name) { continue; }
 
         //this is basically what its writing
@@ -941,23 +857,22 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
     fprintf(enum_to_string_lut_file, "(Reflection_Registry* reflection_registry)\n{\n");
 
 
-    for (u64 i = 0; i < reflection_data.struct_list_size; i++)
+    for (u64 i = 0; i < reflection_system->reflection_struct_size; i++)
     {
-        Reflection_Struct struct_info = reflection_data.struct_list[i];
-        if (!struct_info.name) { continue; }
+        Reflection_Struct* struct_info = &reflection_system->reflection_registry_structs[i];
+        if (!struct_info->name) { continue; }
 
-        u64 field_count = darray_get_size(struct_info.type_list);
 
         // fields array
         fprintf(reflection_offset_file,
                 "\tReflection_Runtime_Struct_Field %s_Fields[] =\n"
                 "\t{\n",
-                struct_info.name);
+                struct_info->name);
 
-        for (u64 j = 0; j < field_count; j++)
+        for (u64 j = 0; j < struct_info->type_list_size; j++)
         {
-            Reflection_Struct_Field field = struct_info.type_list[j];
-            if (!field.field_name) { continue; }
+            Reflection_Struct_Field* field = &struct_info->type_list[j];
+            if (!field->field_name) { continue; }
 
 
             fprintf(reflection_offset_file,
@@ -967,11 +882,11 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
                     "\t\t\t.type_name = \"%s\",\n"
                     "\t\t\t.offset = offsetof(%s, %s)\n"
                     "\t\t},\n",
-                    field.field_name,
-                    reflection_type_to_str(field.type),
-                    field.type_name ? field.type_name : "",
-                    struct_info.name,
-                    field.field_name);
+                    field->field_name,
+                    reflection_type_to_str(field->type),
+                    field->type_name ? field->type_name : "",
+                    struct_info->name,
+                    field->field_name);
         }
 
         fprintf(reflection_offset_file, "\t};\n\n");
@@ -982,18 +897,18 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
                 "\t{\n"
                 "\t\t.name = \"%s\",\n"
                 "\t\t.fields = %s_Fields,\n"
-                "\t\t.field_count = %llu,\n"
+                "\t\t.field_count = %d,\n"
                 "\t\t.struct_size = sizeof(%s)\n"
                 "\t};\n\n",
-                struct_info.name,
-                struct_info.name,
-                struct_info.name,
-                field_count,
-                struct_info.name);
+                struct_info->name,
+                struct_info->name,
+                struct_info->name,
+                struct_info->type_list_size,
+                struct_info->name);
 
         fprintf(reflection_offset_file,
                 "\treflection_registry_add_struct(reflection_registry, %s_Runtime_Struct);\n\n",
-                struct_info.name);
+                struct_info->name);
     }
 
     fprintf(reflection_offset_file, "}\n");

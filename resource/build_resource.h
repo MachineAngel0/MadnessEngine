@@ -30,7 +30,9 @@
 
 
 
-#include "../resource/generated/mat_enums.h"
-#include "../resource/generated/mat_structs.h"
+#include "../resource/generated/reflection_material_enums.h"
+#include "../resource/generated/reflection_material_structs.h"
+#include "../resource/generated/reflection_resource_types_enums.h"
+#include "../resource/generated/reflection_resource_types_structs.h"
 
 

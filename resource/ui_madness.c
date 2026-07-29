@@ -2827,15 +2827,17 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
 
 
 bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
-                             void* passin_data, const char* id)
+                             void* passing_data, const char* id)
 {
+
+
     // madness_ui_text(madness_ui, *string_create_allocator(struct_info.name, strlen(struct_info.name), madness_ui->frame_arena));
     madness_ui_string(STRING_STRLEN(struct_info.name));
 
     for (u32 field_index = 0; field_index < struct_info.field_count; field_index++)
     {
         Reflection_Runtime_Struct_Field field_info = struct_info.fields[field_index];
-        void* data = (u8*)passin_data + field_info.offset;
+        void* data = (u8*)passing_data + field_info.offset;
 
         String* intermediate_name = string_concat(&STRING_STRLEN(struct_info.name), &STRING_STRLEN(id),
                                                   madness_ui->frame_arena);
@@ -2890,7 +2892,7 @@ bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflectio
             break;
         case REFLECTION_TYPE_ENUM:
 
-            Reflection_Runtime_Enum enums = reflection_registry_get_enum(reflection_registry, field_info.name);
+            Reflection_Runtime_Enum enums = reflection_registry_get_enum(reflection_registry, field_info.type_name);
             madness_ui_combo_box_char(*custom_name, data, enums.enum_names,
                                       enums.count);
             break;

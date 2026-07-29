@@ -150,4 +150,4 @@ bool IsAlpha(char c);
 bool IsNumber(char c);
 
 
-#endif //COMPILER_H
+#endif //MADNESS_LEXER_H

@@ -2,6 +2,8 @@
 #define RESOURCE_TYPES_H
 
 
+
+
 #include <stdalign.h>
 
 #include "array_freelist.h"
@@ -119,12 +121,12 @@ typedef struct Material_Handle
     u32 buffer_handle;
 } Material_Handle;
 
-typedef struct Mesh_Asset_Handle
+typedef struct Madness_Mesh_Handle
 {
     u32 handle;
 } Madness_Mesh_Handle;
 
-typedef struct Sk_Mesh_Asset_Handle
+typedef struct Madness_SkMesh_Handle
 {
     u32 handle;
 } Madness_SkMesh_Handle;
@@ -518,7 +520,7 @@ typedef struct Madness_Skinned_Submesh_Instance
 } Madness_Skinned_Submesh_Instance;
 
 
-typedef struct Madness_Animation_Data{
+typedef struct Madness_Animation{
 
     GLTF_Animation_Data* animation_data; // pointer to the anim data
 
@@ -827,7 +829,7 @@ typedef struct Mesh_System
 } Mesh_System;
 
 
-typedef struct animation_system
+typedef struct Animation_System
 {
     Frame_Allocator* frame_allocator;
 
@@ -931,7 +933,7 @@ typedef struct Asset_Registry
 } Asset_Registry;
 
 
-typedef struct Resource_System
+typedef struct Asset_System
 {
     //the asset system is just a container for all the system,
     //gather the cpu-gpu resources and send them to renderer

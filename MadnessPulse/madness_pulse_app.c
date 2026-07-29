@@ -58,8 +58,14 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     Reflection_Registry* reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
+    //reflection runtimes
     generate_runtime_enums(reflection_registry);
     generate_runtime_structs(reflection_registry);
+    generate_runtime_enums_resources(reflection_registry);
+    generate_runtime_structs_resources(reflection_registry);
+    generate_runtime_enums_material(reflection_registry);
+    generate_runtime_structs_material(reflection_registry);
+    //
     reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
     reflection_registry_runtime_load_data_from_txt(reflection_registry);
 

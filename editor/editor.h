@@ -17,6 +17,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_REFLECTION_ABILITY,
     EDITOR_UI_STATE_MATERIAL,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
+    EDITOR_UI_STATE_MATERIAL_CREATION,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
@@ -38,6 +39,7 @@ typedef struct Editor
     float highest_ms;
 
     Editor_UI_State state;
+
 } Editor;
 
 
@@ -56,6 +58,7 @@ void editor_texture_view(Editor* editor);
 void editor_meta_data_view(Editor* editor);
 void editor_ui_stats(Editor* editor);
 void editor_ui_animation(Editor* editor);
+void editor_material_asset_view(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

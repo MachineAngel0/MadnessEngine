@@ -102,12 +102,23 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
 };
 
 
+#define REFLECTION_HEADER_FILE_LIST_COUNT 10
+#define REFLECTION_ARRAY_SIZES 1000
+// NOTE: you could probably do 128 and no one would ever likely go over that, unless their insane
+#define REFLECTION_TYPE_FIELDS_MAX 64
+
 typedef enum Reflection_Container_Type
 {
     Reflection_Container_Type_VARIABLE,
     Reflection_Container_Type_STACK_ARRAY,
     Reflection_Container_Type_POINTER,
 } Reflection_Container_Type;
+
+typedef enum Reflection_Enum_Type
+{
+    Reflection_Enum_Type_Normal,
+    Reflection_Enum_Type_Bitflag,
+}Reflection_Enum_Type;
 
 
 typedef struct Reflection_Constant
@@ -122,21 +133,16 @@ typedef struct Reflection_Type_Enum
 {
     const char* name;
     u32 enum_position; // get the size of the enum
+    Reflection_Enum_Type type;
+    u64 bitvalue;
 } Reflection_Type_Enum;
 
 typedef struct Reflection_Enum
 {
     const char* name; // name of struct/enum
-    //darray
-    darray_type(Reflection_Type_Enum)* type_list;
+    Reflection_Type_Enum type_list[REFLECTION_TYPE_FIELDS_MAX];
     u32 enum_size;
 } Reflection_Enum;
-
-typedef struct Reflection_Enum_Query_Array
-{
-    const char** enum_array_names;
-    u32 enum_array_sizes;
-} Reflection_Enum_Query_Array;
 
 
 typedef struct Reflection_Struct_Field
@@ -152,7 +158,8 @@ typedef struct Reflection_Struct
 {
     const char* name; // name of struct/enum
     size_t struct_size; // this is here because padding is a thing
-    darray_type(Reflection_Struct_Field)* type_list;
+    Reflection_Struct_Field type_list[REFLECTION_TYPE_FIELDS_MAX];
+    u32 type_list_size;
 } Reflection_Struct;
 
 typedef enum Reflection_Parse_Type
@@ -162,40 +169,33 @@ typedef enum Reflection_Parse_Type
     REFLECTION_PARSE_STRUCT,
 } Reflection_Parse_Type;
 
-typedef struct Reflection_Compact_List
-{
-    //TODO: not in use, might not use
-    Reflection_Constant* constant_list;
-    u32 constant_list_size;
-    Reflection_Enum* enum_list;
-    u32 enum_list_size;
-    Reflection_Struct* struct_list;
-    u32 struct_list_size;
-} Reflection_Compact_List;
-
 
 typedef struct Reflection_System
 {
-    // key -> Reflection Constant
-    HASH_TABLE_TYPE(Reflection_Constant)* reflection_registry_constants;
-    // key -> Reflection_Enum -> Reflection_Type_Enum
-    HASH_TABLE_TYPE(Reflection_Type_Enum)* reflection_registry_enums;
-    // key -> Reflection_Struct -> Reflection_Type_Struct
-    HASH_TABLE_TYPE(Reflection_Struct)* reflection_registry_structs;
-
     Allocator* allocator;
     Frame_Allocator* frame_allocator;
 
+    Reflection_Constant* reflection_registry_constants;
+    u32 reflection_constants_size;
+    u32 reflection_constants_size_max;
+
+    Reflection_Enum* reflection_registry_enums;
+    u32 reflection_enums_size;
+    u32 reflection_enum_size_max;
+
+    Reflection_Struct* reflection_registry_structs;
+    u32 reflection_struct_size;
+    u32 reflection_struct_size_max;
+
+
     String** header_file_list;
     u32 header_file_list_count;
-#define HEADER_FILE_LIST_COUNT 10
     u32 header_file_list_capacity;
 } Reflection_System;
 
 
 Reflection_System* reflection_system_init(Memory_System* memory_system);
-
-void reflection_system_shutdown(Reflection_System* reflection_system, Memory_System* memory_system);
+void reflection_system_deinit(Reflection_System* reflection_system, Memory_System* memory_system);
 
 void reflection_system_reset(Reflection_System* reflection_system);
 
@@ -210,15 +210,9 @@ void reflection_system_parse_enums(Reflection_System* reflection_system, Lexer* 
 void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer* lexer);
 
 
-//get literally all the data, in a nice array format
-Reflection_Compact_List reflection_system_get_data(Reflection_System* reflection_system);
-
-
 //for individual queries
 u64 reflection_system_constant_query(Reflection_System* reflection_system, const char* constant_name);
-Reflection_Enum_Query_Array reflection_system_enum_query_list(Reflection_System* reflection_system,
-                                                              const char* enum_name, Frame_Allocator* frame_allocator);
-Reflection_Struct reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
+Reflection_Struct* reflection_system_struct_query(Reflection_System* reflection_system, const char* struct_name);
 
 //INTERNAL
 
@@ -227,12 +221,12 @@ void reflection_system_add_constant(Reflection_System* reflection_system, const 
 
 
 //Enum
-void reflection_system_add_enum(Reflection_System* reflection_system, const char* enum_name);
+void reflection_system_add_enum_entry(Reflection_System* reflection_system, const char* enum_name);
 
 void reflection_system_add_enum_field(Reflection_System* reflection_system, const char* enum_name,
-                                      const char* type_field_name);
+                                      const char* type_field_name, Reflection_Enum_Type enum_type, u64 bitflag_value);
 
-Reflection_Enum reflection_system_enum_query(Reflection_System* reflection_system, const char* enum_name);
+Reflection_Enum* reflection_system_enum_query(Reflection_System* reflection_system, const char* enum_name);
 bool reflection_system_does_enum_exist(Reflection_System* reflection_system, const char* enum_name);
 
 
@@ -251,16 +245,11 @@ bool reflection_system_add_struct_field_ptr_stack(Reflection_System* reflection_
                                                   Reflection_Type reflection_type, const char* type_name,
                                                   const char* struct_member_name, u64 array_size);
 
-bool reflection_system_set_default_values(Reflection_System* reflection_system, Reflection_Type reflection_type, void* data);
+bool reflection_system_set_default_values(Reflection_System* reflection_system, Reflection_Type reflection_type,
+                                          void* data);
 
 
 bool reflection_system_does_struct_exist(Reflection_System* reflection_system, const char* struct_name);
-
-
-Reflection_Struct_Field* reflection_system_generate_struct_offset(Reflection_System* reflection_system,
-                                                                  const char* struct_name);
-
-void reflection_game_data(Reflection_System* reflection_system);
 
 
 //HELLA IMPORTANT FUNCTION CALL HERE

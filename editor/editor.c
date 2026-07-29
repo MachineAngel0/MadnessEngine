@@ -136,6 +136,9 @@ void editor_ui(Editor* editor)
         editor_meta_data_view(editor);
 
         break;
+    case EDITOR_UI_STATE_MATERIAL_CREATION:
+        editor_material_asset_view(editor);
+        break;
     }
 }
 
@@ -420,6 +423,7 @@ void editor_meta_data_view(Editor* editor)
     }
     madness_ui_window_end();
 }
+
 void editor_material_asset_view(Editor* editor)
 {
     Asset_System* asset_system = editor->asset_system;
@@ -443,20 +447,14 @@ void editor_material_asset_view(Editor* editor)
 
 
     madness_ui_set_window_pos(600, 200);
+
+    static Material_Info material_info;
     madness_ui_window_begin(STRING("Material Creation"));
     {
-        static Material_Info mat_info;
-        mat_info.material_name;
-        mat_info.blend_mode;
-        mat_info.mesh_type;
-        mat_info.renderpass;
-        mat_info.shader_name;
-        mat_info.transluency;
+        Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct(editor->reflection_registry,
+                                                         "Material_Info");
 
-
-
-
-
+        madness_ui_reflect_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
 
 
 

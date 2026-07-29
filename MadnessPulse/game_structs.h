@@ -1414,7 +1414,7 @@ typedef struct AI_Ability_Cooldown
     u32 cooldown_duration;
     //0 means its allowed to use this ability
     u32 cooldown_current_value;
-} Ai_Ability_Cooldown;
+} AI_Ability_Cooldown;
 
 
 typedef struct AI_Consideration
