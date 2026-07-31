@@ -1,5 +1,6 @@
 ﻿#include "mesh_system.h"
 
+#include "animation_system.h"
 #include "cgltf.h"
 #include "material_system.h"
 #include "resource_types.h"
@@ -44,11 +45,11 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* out_handle, MADNESS_UUID uuid, u64 hash)
+bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* out_handle, u64 hash)
 {
     for (u32 i = 0; i < asset_system->mesh_system->madness_asset_count; i++)
     {
-        if (asset_system->mesh_system->madness_asset[i].hash == hash)
+        if (asset_system->mesh_system->madness_asset[i].path_hash == hash)
         {
             asset_system->mesh_system->madness_asset[i].reference_count++;
             FATAL("mesh_system_exists_mesh: NOT PASSING BACK A MESH HANDLE IF ALREADY LOADED")
@@ -62,12 +63,12 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
     return false;
 }
 
-bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle* out_handle, MADNESS_UUID uuid,
+bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle* out_handle,
                                u64 hash)
 {
     for (u32 i = 0; i < asset_system->mesh_system->skinned_madness_asset_count; i++)
     {
-        if (asset_system->mesh_system->skinned_madness_asset[i].hash == hash)
+        if (asset_system->mesh_system->skinned_madness_asset[i].path_hash == hash)
         {
             asset_system->mesh_system->skinned_madness_asset[i].reference_count++;
             FATAL("mesh_system_exists_mesh: NOT PASSING BACK A MESH HANDLE IF ALREADY LOADED")
@@ -81,7 +82,7 @@ bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle
 
 
 
-void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, MADNESS_UUID uuid, u64 hash)
+void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, u64 hash, String* engine_path)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
@@ -157,14 +158,14 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 
     //take a reference to the og asset
     Madness_Asset* asset = &mesh_system->madness_asset[mesh_system->madness_asset_count++];
-    asset->hash = hash;
-    asset->uuid = uuid;
+    asset->path_hash = hash;
+    asset->engine_path = engine_path;
     asset->reference_count = 1;
     asset->type = ASSET_STATIC_MESH;
 }
 
-void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset, MADNESS_UUID uuid,
-                                   u64 hash)
+void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset,
+                                   u64 hash, String* engine_path)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
@@ -274,8 +275,8 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
 
     //take a reference to the og asset
     Madness_Asset* asset = &mesh_system->skinned_madness_asset[mesh_system->skinned_madness_asset_count++];
-    asset->hash = hash;
-    asset->uuid = uuid;
+    asset->path_hash = hash;
+    asset->engine_path = engine_path;
     asset->reference_count = 1;
     asset->type = ASSET_SKINNED_MESH;
 }

@@ -67,6 +67,7 @@
 #include "../core/serialization/madness_txt.h"
 #include "../core/serialization/runtime_registry.h"
 #include "../core/serialization/UUID.h"
+#include "../core/serialization/bit_manipulation.h"
 
 
 

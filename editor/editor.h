@@ -11,13 +11,13 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_ENGINE_STATS,
     EDITOR_UI_STATE_SCENE,
     EDITOR_UI_STATE_TEXTURE_VIEWER,
-    EDITOR_UI_STATE_ASSET_METADATA,
+    EDITOR_UI_STATE_MATERIAL_CREATION,
     EDITOR_UI_STATE_ANIMATION,
+    EDITOR_UI_STATE_ASSET_METADATA,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
     EDITOR_UI_STATE_REFLECTION_ABILITY,
     EDITOR_UI_STATE_MATERIAL,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
-    EDITOR_UI_STATE_MATERIAL_CREATION,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
@@ -39,12 +39,13 @@ typedef struct Editor
     float highest_ms;
 
     Editor_UI_State state;
-
 } Editor;
 
 
 MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                         Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry);
+                         Asset_System* resource_system, Clock* clock,
+                         Reflection_Registry* reflection_registry,
+                         Reflection_Registry* material_registry);
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
 

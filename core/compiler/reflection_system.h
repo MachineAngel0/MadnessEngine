@@ -118,7 +118,13 @@ typedef enum Reflection_Enum_Type
 {
     Reflection_Enum_Type_Normal,
     Reflection_Enum_Type_Bitflag,
-}Reflection_Enum_Type;
+} Reflection_Enum_Type;
+
+const char* Reflection_Enum_Type_String_Lut[] =
+{
+    [Reflection_Enum_Type_Normal] = "Reflection_Enum_Type_Normal",
+    [Reflection_Enum_Type_Bitflag] = "Reflection_Enum_Type_Bitflag",
+};
 
 
 typedef struct Reflection_Constant

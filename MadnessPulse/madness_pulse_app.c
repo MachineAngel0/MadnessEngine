@@ -15,7 +15,6 @@
 #include "../resource/animation_system.h"
 
 
-
 bool application_on_resized(const Event_Type code, String sender, String listener_inst, Event_Data context);
 bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
@@ -68,6 +67,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //
     reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
     reflection_registry_runtime_load_data_from_txt(reflection_registry);
+    //
+    Reflection_Registry* material_reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
+    generate_runtime_enums_material(material_reflection_registry);
+    generate_runtime_structs_material(material_reflection_registry);
 
 
     Heal_Component heal_comp_write = {
@@ -91,9 +94,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                                        application_core->asset_system);
 
 
-
-
-
     //register events needed for this application
     event_register(application_core->event_system, EVENT_APP_QUIT, STRING("application"), application_on_event);
     event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("application"), application_on_resized);
@@ -107,7 +107,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //start the job system
     // Job_System* job_system = job_system_initialize(&application_core->memory_system);
-
 
 
     //Renderer
@@ -139,9 +138,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     }*/
 
-    Madness_Mesh_Handle handle;
+    /*
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh", &handle);
+    Madness_Mesh_Handle handle =
+        asset_load_mesh(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");
+        */
 
     /*
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
@@ -166,7 +167,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
                                  application_core->asset_system,
-                                 &application_core->clock, reflection_registry);
+                                 &application_core->clock, reflection_registry, material_reflection_registry);
 
     //MAIN LOOP
 
@@ -182,13 +183,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     DEBUG_APP_STATE debug_game_mode = DEBUG_APP_STATE_EDITOR;
 
 
-
-
-
     while (application_core->is_running)
     {
-
-
         clock_update_frame_start(&application_core->clock);
         // clock_print_info(&application_core->clock);
 
@@ -235,7 +231,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         //                              application_core->resource_system->frame_allocator);
 
         animation_system_update(application_core->asset_system->animation_system,
-                         application_core->clock.delta_time);
+                                application_core->clock.delta_time);
 
         particle_system_update(application_core->asset_system->particle_system,
                                application_core->clock.delta_time);

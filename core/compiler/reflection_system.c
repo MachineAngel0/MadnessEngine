@@ -47,11 +47,7 @@ void reflection_system_deinit(Reflection_System* reflection_system, Memory_Syste
     //TODO: free the allocators
 
 
-
     memory_system_memory_free(memory_system, reflection_system, MEMORY_SUBSYSTEM_REFLECTION);
-
-
-
 }
 
 void reflection_system_reset(Reflection_System* reflection_system)
@@ -62,8 +58,8 @@ void reflection_system_reset(Reflection_System* reflection_system)
     //reallocate everything,
     //TODO: honestly might just be better to do a shutdown and start it up again
     reflection_system->header_file_list = allocator_alloc(reflection_system->allocator,
-                                                      sizeof(String*) * reflection_system->
-                                                      header_file_list_capacity);
+                                                          sizeof(String*) * reflection_system->
+                                                          header_file_list_capacity);
 
     reflection_system->reflection_registry_constants = allocator_alloc(reflection_system->allocator,
                                                                        sizeof(Reflection_Constant) *
@@ -76,15 +72,11 @@ void reflection_system_reset(Reflection_System* reflection_system)
                                                                      REFLECTION_ARRAY_SIZES);
 
 
-
     reflection_system->header_file_list_count = 0;
 
     reflection_system->reflection_constants_size = 0;
     reflection_system->reflection_enums_size = 0;
     reflection_system->reflection_struct_size = 0;
-
-
-
 }
 
 void reflection_system_parse_constants(Reflection_System* reflection_system, Lexer* lexer)
@@ -170,23 +162,24 @@ void reflection_system_parse_enums(Reflection_System* reflection_system, Lexer* 
                 if (pruned_tokens[i].type == Token_Identifier)
                 {
                     //do a check to see if were using bitflags
-                    if (pruned_tokens[i+1].type == Token_BITFLAG && pruned_tokens[i+2].type == Token_Number)
+                    if (pruned_tokens[i + 1].type == Token_BITFLAG && pruned_tokens[i + 2].type == Token_Number)
                     {
                         //get the bitflag value
-                        const u64 value = string_builder_to_number(&pruned_tokens[i+2].string_builder);
+                        const u64 value = string_builder_to_number(&pruned_tokens[i + 2].string_builder);
                         const u64 bit_value = BITFLAG(value);
 
                         reflection_system_add_enum_field(reflection_system, enum_name,
-                                               string_builder_to_c_string(&pruned_tokens[i].string_builder), Reflection_Enum_Type_Bitflag, bit_value);
+                                                         string_builder_to_c_string(&pruned_tokens[i].string_builder),
+                                                         Reflection_Enum_Type_Bitflag, bit_value);
                         i++; //only once since, there is an outside increment, so we dont have an infinite loop
                     }
                     // string_builder_print(&lexer3->tokens[i].string_builder);
                     else
                     {
                         reflection_system_add_enum_field(reflection_system, enum_name,
-                                               string_builder_to_c_string(&pruned_tokens[i].string_builder), Reflection_Enum_Type_Normal, 0);
+                                                         string_builder_to_c_string(&pruned_tokens[i].string_builder),
+                                                         Reflection_Enum_Type_Normal, 0);
                     }
-
                 }
                 i++;
             }
@@ -783,18 +776,33 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
          * bitflag(0) = 1 << 0 -> 1, leaving 0 as null value in the enum string lut
         for (u64 j = 0; j < enum_iteration_size; j++)
         {
-            fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
-            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
-            fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
-            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
-            fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+
         }*/
+
+        Reflection_Enum_Type type_for_string = Reflection_Enum_Type_Normal;
+
+        if (enum_iteration_size > 0)
+        {
+            type_for_string = enum_info->type_list[0].type;
+        }
 
         for (u64 j = 0; j < enum_iteration_size; j++)
         {
-            fwrite("\t\"", strlen("\t\""), 1, enum_to_string_lut_file);
-            fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
-            fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+            switch (type_for_string)
+            {
+            case Reflection_Enum_Type_Normal:
+                fwrite("\t[", strlen("\t["), 1, enum_to_string_lut_file);
+                fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
+                fwrite("]= \"", strlen("]= \""), 1, enum_to_string_lut_file);
+                fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
+                fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+                break;
+            case Reflection_Enum_Type_Bitflag:
+                fwrite("\t\"", strlen("\t\""), 1, enum_to_string_lut_file);
+                fwrite(enum_info->type_list[j].name, strlen(enum_info->type_list[j].name), 1, enum_to_string_lut_file);
+                fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+                break;
+            };
         }
 
         fwrite("};\n\n", strlen("};\n\n"), 1, enum_to_string_lut_file);
@@ -831,19 +839,22 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
                 "\t\t.name = \"%s\",\n"
                 "\t\t.enum_names = %s_enum_string,\n"
                 "\t\t.count = %d,\n"
+                "\t\t.type = %s,\n"
+                "\t\t.bitflag_values = NULL, //filled in the function if applicable\n"
                 "\t};\n"
                 "\treflection_registry_add_enums(reflection_registry, %s_enum);\n\n",
                 enum_info.name,
                 enum_info.name,
                 enum_info.name,
                 enum_info.enum_size,
+                Reflection_Enum_Type_String_Lut[enum_info.type_list[0].type],
                 enum_info.name);
     }
     fprintf(enum_to_string_lut_file, "}\n");
 
     fclose(enum_to_string_lut_file);
 
-
+    // structs
     FILE* reflection_offset_file = fopen(generated_struct_file_path, "w");
     if (!reflection_offset_file)
     {
@@ -862,6 +873,26 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
         fwrite("\"\n\n", strlen("\"\n\n"), 1, enum_to_string_lut_file);
     }
 
+
+    //generate string list of all the structs
+
+    fwrite("const char* ", strlen("const char* "), 1, enum_to_string_lut_file);
+    fwrite(function_name, strlen(function_name), 1, enum_to_string_lut_file);
+    fwrite("_struct_string_list[] = {\n", strlen("_struct_string_list[] = {\n"), 1, enum_to_string_lut_file);
+
+    for (u64 i = 0; i < reflection_system->reflection_struct_size; i++)
+    {
+        Reflection_Struct* struct_info = &reflection_system->reflection_registry_structs[i];
+
+        if (!struct_info->name) { continue; }
+
+        fwrite("\t\"", strlen("\t\""), 1, enum_to_string_lut_file);
+        fwrite(struct_info->name, strlen(struct_info->name), 1, enum_to_string_lut_file);
+        fwrite("\", \n", strlen("\", \n"), 1, enum_to_string_lut_file);
+    }
+    fwrite("};\n\n", strlen("};\n\n"), 1, enum_to_string_lut_file);
+
+    //generate struct reflections
 
     fprintf(reflection_offset_file, "void generate_runtime_structs_");
     fwrite(function_name, strlen(function_name), 1, reflection_offset_file);

@@ -1,11 +1,12 @@
 ﻿#include "logger.h"
 
 
-bool logger_init(void)
+bool logger_init(Madness_Logger* logger, const char* file_name, Memory_System* memory_system)
 {
-    //TODO: LOG FILE
+
     return true;
 }
+
 void logger_shutdown(void)
 {
 

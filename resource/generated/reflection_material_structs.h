@@ -2,6 +2,16 @@
 #include "runtime_registry.h"
 #include "../resource/material_types.h"
 
+const char* material_struct_string_list[] = {
+	"Material_Default", 
+	"Material_Default_CPU", 
+	"Material_Black_Hole", 
+	"Material_Flat_Color", 
+	"Material_Spherical_Billboard", 
+};
+
+
+
 void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 {
 	Reflection_Runtime_Struct_Field Material_Default_Fields[] =
@@ -62,38 +72,38 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 		},
 		{
 			.name = "color_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, color_texture)
 		},
 		{
 			.name = "normal_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, normal_texture)
 		},
 		{
 			.name = "metallic_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, metallic_texture)
 		},
 		{
 			.name = "roughness_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, roughness_texture)
 		},
 		{
 			.name = "ambient_occlusion_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, ambient_occlusion_texture)
 		},
 		{
 			.name = "emissive_texture",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
 			.offset = offsetof(Material_Default, emissive_texture)
 		},
 	};

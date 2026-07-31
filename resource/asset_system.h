@@ -37,10 +37,17 @@
 //assets imported with different names, are treated as a different asset, even if they are the same as another asset
 
 //TODO:
-// METADATA
-// ENGINE FORMAT
 // WAY TO CREATE MULTIPLE OF A THING for modification
+// RUNTIME FORMAT
+// probably keep a hash of the paths, for quicker lookups
 
+typedef struct Asset_Load_Handle
+{
+    //for when we use a more generic load function call
+    //we use the type to get the type of handle we were given back
+    Asset_Type type;
+    void* handle;
+}Asset_Load_Handle;
 
 Asset_System* asset_system_init(Memory_System* memory_system);
 
@@ -52,30 +59,29 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system);
 MAPI void render_packet_clear(Render_Packet* renderer_packets);
 
 
-//NEW
 
+//ASSET MANAGER
+//NOTE: these only load from the engine path, as a fallback they will try to look for the import path file
+// you only need to pass in the asset name, like error_texture and not error_texture.mtex
 
-void asset_system_reload_texture(Asset_System* a);
+bool asset_system_does_source_already_exist(const char* import_file_path);
+bool asset_system_does_engine_already_exist(const char* engine_file_path);
 
-//should we have the asset system be responsible for basically everything, kinda, it should probably be able to touch everything
-Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path);
-bool asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Texture_Handle* out_handle);
+Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_path);
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-bool asset_load_font(Asset_System* asset_system, const char* engine_asset_path, Texture_Handle* out_handle);
+Texture_Handle asset_load_font(Asset_System* asset_system, const char* engine_asset_path);
 bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-bool asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle);
-bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_Mesh_Handle* out_handle);
+Madness_Mesh_Handle asset_load_mesh(Asset_System* asset_system, const char* engine_asset_path);
 
-bool asset_load_skmesh_uuid(Asset_System* asset_system, MADNESS_UUID* uuid, Madness_Mesh_Handle* out_handle);
-bool asset_load_skmesh_path(Asset_System* asset_system, const char* engine_asset_path, Madness_SkMesh_Handle* out_handle);
+Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
-
-bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
+bool asset_load_material_asset(Asset_System* asset_system, const char* asset_path);
+bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
 
 
 

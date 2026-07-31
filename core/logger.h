@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "defines.h"
 #include "asserts.h"
+#include "memory_system.h"
 
 //fatal and error will always be logged
 #define M_ERROR_ENABLED 1
@@ -31,7 +32,13 @@ typedef enum log_level
     LOG_LEVEL_TRACE = 5,
 } log_level;
 
-bool logger_init(void);
+
+typedef struct Madness_Logger
+{
+    const char* file_name;
+} Madness_Logger;
+
+bool logger_init(Madness_Logger* logger, const char* file_name, Memory_System* memory_system);
 void logger_shutdown(void);
 
 //log string lookup table

@@ -28,12 +28,12 @@ typedef struct Material_Default
 
     u32 padding0;
 
-    MADNESS_UUID color_texture;
-    MADNESS_UUID normal_texture;
-    MADNESS_UUID metallic_texture;
-    MADNESS_UUID roughness_texture;
-    MADNESS_UUID ambient_occlusion_texture;
-    MADNESS_UUID emissive_texture;
+    String* color_texture;
+    String* normal_texture;
+    String* metallic_texture;
+    String* roughness_texture;
+    String* ambient_occlusion_texture;
+    String* emissive_texture;
 
 
 } Material_Default;

@@ -52,12 +52,13 @@ bool material_system_exists(Asset_System* asset_system, MADNESS_UUID uuid)
 bool material_system_load_material_instance(Asset_System* asset_system, Material_Instance* material_instance,
                                             Material_Handle* out_handle)
 {
+    /*
     Material_System* material_system = asset_system->material_system;
 
     Material_Batch* material_batch = NULL;
 
     //find the material batch associated with the material data
-
+    MASSERT(false); //TODO: not using uuid as the texture location, using uuid
     for (u32 i = 0; i < material_system->material_batch_count; i++)
     {
         if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
@@ -71,7 +72,7 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     //if we didn't find it load it in
     if (material_batch == NULL)
     {
-        asset_load_material_asset_uuid(asset_system, material_instance->uuid_material_asset);
+        asset_load_material_asset(asset_system, material_instance->uuid_material_asset);
         //find it
         for (u32 i = 0; i < material_system->material_batch_count; i++)
         {
@@ -125,7 +126,7 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     out_handle->material_id = material_batch->material_key;
     out_handle->buffer_handle = material_batch->material_data->num_items;
     dynamic_array_push(material_batch->material_data, material_data);
-
+*/
     return true;
 }
 
@@ -153,8 +154,8 @@ bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUI
 
     Madness_Asset* madness_asset = &material_system->material_madness_asset[material_system->
         material_madness_asset_count++];
-    madness_asset->uuid = uuid;
-    madness_asset->hash = uuid_hash;
+    // madness_asset->engine_path = uuid;
+    madness_asset->path_hash = uuid_hash;
     madness_asset->type = ASSET_MATERIAL;
     madness_asset->reference_count = 1;
 
@@ -173,7 +174,7 @@ void material_system_add_mesh_instance_and_material(Asset_System* asset_system, 
         Material_Instance* mat_inst = &madness_mesh->material_instance[mesh_idx];
 
         //load in the instance data and resolve any texture ids, to then add them into the material batch
-        asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
+        // asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
         material_system_load_material_instance(asset_system, mat_inst, &submesh_instance->material_handle);
     }
 }
@@ -187,7 +188,7 @@ void material_system_add_skinned_instance_and_material(Asset_System* asset_syste
         Material_Instance* mat_inst = &madness_mesh->material_instance[mesh_idx];
 
         //load in the instance data and resolve any texture ids, to then add them into the material batch
-        asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
+        // asset_load_material_asset_uuid(asset_system, mat_inst->uuid_material_asset);
         material_system_load_material_instance(asset_system, mat_inst, &submesh_instance->material_handle);
     }
 }

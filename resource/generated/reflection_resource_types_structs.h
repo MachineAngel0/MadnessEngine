@@ -2,6 +2,71 @@
 #include "runtime_registry.h"
 #include "../resource/resource_types.h"
 
+const char* resources_struct_string_list[] = {
+	"Handle", 
+	"Asset_MetaData", 
+	"Texture_Handle", 
+	"Madness_Asset", 
+	"Material_Handle", 
+	"Madness_Mesh_Handle", 
+	"Madness_SkMesh_Handle", 
+	"Transform_Handle", 
+	"Sprite_Handle", 
+	"Animation_Handle", 
+	"Madness_Texture", 
+	"Texture_GPU_Upload", 
+	"Madness_Texture_Runtime", 
+	"Glyph", 
+	"Madness_Font", 
+	"Madness_Font_Runtime", 
+	"PC_General", 
+	"PC_Particle", 
+	"PC_Shadow_Mapping", 
+	"Material_Info", 
+	"Material_GPU_Definition", 
+	"Material_Asset", 
+	"Material_Instance", 
+	"Material_Asset_Runtime", 
+	"Material_Batch", 
+	"Particle_Animation_vec3", 
+	"Particle_Animation_vec2", 
+	"Particle_Animation_float", 
+	"Particle_Emitter", 
+	"Particle", 
+	"Particle_Mesh", 
+	"Mesh_Indirect_Draw", 
+	"Skinned_Draw_Data", 
+	"Madness_Skinned_Submesh_Instance", 
+	"Madness_Animation", 
+	"Madness_Skinned_Mesh_Instance", 
+	"Madness_SubMesh_Instance", 
+	"Madness_Mesh_Instance", 
+	"Madness_Skinned_SubMesh", 
+	"Madness_SubMesh", 
+	"Madness_Mesh", 
+	"Madness_Skinned_Mesh", 
+	"Madness_Mesh_GPU_Data", 
+	"Madness_SkMesh_GPU_Data", 
+	"Mesh_GPU_Upload", 
+	"Skinned_Mesh_GPU_Upload", 
+	"Madness_Mesh_Runtime", 
+	"Madness_SkMesh_Runtime", 
+	"Material_System", 
+	"Sprite_System", 
+	"Texture_System", 
+	"Scene", 
+	"Mesh_System", 
+	"Animation_System", 
+	"Particle_System", 
+	"Render_Packet_3D", 
+	"Render_Packet_UI", 
+	"Render_Packet_Sprite", 
+	"Render_Packet_Particle", 
+	"Render_Packet", 
+	"Asset_Registry", 
+	"Asset_System", 
+};
+
 void generate_runtime_structs_resources(Reflection_Registry* reflection_registry)
 {
 	Reflection_Runtime_Struct_Field Handle_Fields[] =
@@ -57,10 +122,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Asset_MetaData, source_file)
 		},
 		{
-			.name = "binary_file",
+			.name = "engine_path",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Asset_MetaData, binary_file)
+			.offset = offsetof(Asset_MetaData, engine_path)
 		},
 	};
 
@@ -109,16 +174,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Madness_Asset_Fields[] =
 	{
 		{
-			.name = "uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Madness_Asset, uuid)
-		},
-		{
-			.name = "hash",
+			.name = "path_hash",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u64",
-			.offset = offsetof(Madness_Asset, hash)
+			.offset = offsetof(Madness_Asset, path_hash)
 		},
 		{
 			.name = "reference_count",
@@ -131,6 +190,12 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type = REFLECTION_TYPE_ENUM,
 			.type_name = "Asset_Type",
 			.offset = offsetof(Madness_Asset, type)
+		},
+		{
+			.name = "engine_path",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Madness_Asset, engine_path)
 		},
 	};
 
@@ -657,10 +722,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Material_Instance_Fields[] =
 	{
 		{
-			.name = "uuid_material_asset",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Instance, uuid_material_asset)
+			.name = "material_asset_path",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Material_Instance, material_asset_path)
 		},
 		{
 			.name = "data_size",

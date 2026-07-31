@@ -193,7 +193,7 @@ typedef struct Madness_UI
 {
     Heap_Allocator* free_list_allocator;
     Allocator* allocator; //permanent storage location, rn mainly just for loading fonts, would be better as a pool arena
-    Frame_Allocator* frame_arena;
+    Frame_Allocator* frame_allocator;
 
     Input_System* input_system_reference; // does not own memory
     Asset_System* resource_system;
@@ -253,7 +253,8 @@ typedef struct Madness_UI
 
     //Keep an array of strings used in textboxes
     //should be an array at some point,
-    //TODO: should cap the memory usage of string builders to 256 per string builder
+    //TODO: should cap the memory usage of string builders to 256 per string builder,
+    // rn they can keep resizing to infinite
     String_Builder_State string_builder_state[MAX_MADNESS_UI_STRING_BUILDERS];
     u32 string_buidler_state_count;
 
@@ -311,7 +312,7 @@ Madness_UI* madness_ui;
 // then we need to know that as well
 
 MAPI void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
-                          Asset_System* resource_system);
+                          Asset_System* asset_system);
 MAPI bool madness_ui_shutdown(void);
 
 //pass in the size every frame, in the event the size changes
@@ -398,6 +399,12 @@ MAPI bool madness_ui_combo_box(String id, u32* selected_value, String* string_ar
                                u32 string_array_size);
 MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array,
                                     u32 char_array_size);
+
+//
+MAPI bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
+                               u32 string_array_size);
+
+
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
 // < enum day <selected dat> -> enum day <Tuesday>
 // > monday
@@ -416,7 +423,7 @@ MAPI bool madness_ui_circle(String id, float* thickness);
 MAPI bool madness_ui_progress_bar(String label, float current, float max);
 
 
-MAPI bool madness_ui_reflection_test(Reflection_Registry* reflection_registry, const char* struct_name, const char* identifier);
+MAPI bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_registry, const char* struct_name, const char* identifier);
 
 
 typedef struct Material_Link

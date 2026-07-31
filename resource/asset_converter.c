@@ -7,17 +7,17 @@
 #include "asset_registry.h"
 #include "math_lib.h"
 
-bool asset_convert_file(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
+bool asset_convert_file(Asset_System* asset_system, const char* file_path, String* out_engine_path)
 {
     const char* extension_name = c_string_path_get_extension(file_path, asset_system->frame_allocator);
     if (strcmp(extension_name, ".png") == 0)
     {
-        asset_converter_texture(asset_system, file_path, out_uuid);
+        asset_converter_texture(asset_system, file_path, out_engine_path);
         return true;
     }
     if (strcmp(extension_name, ".jpg") == 0)
     {
-        asset_converter_texture(asset_system, file_path, out_uuid);
+        asset_converter_texture(asset_system, file_path, out_engine_path);
         return true;
     }
     //TODO: system fonts like .ttf into msdf fonts
@@ -28,24 +28,12 @@ bool asset_convert_file(Asset_System* asset_system, const char* file_path, MADNE
     }
 
 
-    WARN("ASSET CONVERT FILE: NO VALID FILE EXT FOUND");
+    WARN("ASSET CONVERT FILE: NO VALID FILE EXT FOUND: %s", file_path);
     return false;
 }
 
-bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
+bool asset_converter_texture(Asset_System* asset_system, const char* file_path, String* out_engine_path)
 {
-    if (out_uuid)
-    {
-        if (asset_registry_exists_by_source_path(asset_system,
-                                                 STRING_CREATE_FROM_BUFFER_ALLOCATOR(
-                                                     file_path, asset_system->frame_allocator),
-                                                 out_uuid))
-        {
-            return true;
-        }
-    }
-
-
     Madness_Texture_Runtime runtime_texture = {0};
     runtime_texture.version = 1;
     //load the image data from file
@@ -87,19 +75,11 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
 
     fclose(fptr);
 
+    out_engine_path = string_builder_to_string(str_builder);
 
-    Asset_MetaData meta_data = {0};
-    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string(str_builder);
-    meta_data.uuid = madness_uuid_generate_return();
-    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-    meta_data.type = ASSET_TEXTURE;
-    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
+                             ASSET_TEXTURE, asset_system->heap_allocator);
 
-    if (out_uuid)
-    {
-        *out_uuid = meta_data.uuid;
-    }
 
     return true;
 }
@@ -303,13 +283,8 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     fclose(fptr);
 
 
-    Asset_MetaData meta_data = {0};
-    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string(str_builder);
-    meta_data.uuid = madness_uuid_generate_return();
-    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-    meta_data.type = ASSET_FONT;
-    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
+                             ASSET_FONT, asset_system->heap_allocator);
 
     return true;
 }
@@ -414,13 +389,8 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     fclose(fptr);
 
-    Asset_MetaData meta_data = {0};
-    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(file_path, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string(str_builder);
-    meta_data.uuid = madness_uuid_generate_return();
-    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-    meta_data.type = ASSET_FONT;
-    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
+                             ASSET_FONT, asset_system->heap_allocator);
 
     return true;
 }
@@ -640,7 +610,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             // takes a buffer, message format, then the remaining strings
             snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
             TRACE("COLOR Texture Path:  %s", texture_path);
-            asset_converter_texture(asset_system, texture_path, &cur_mat->color_texture);
+            asset_converter_texture(asset_system, texture_path, cur_mat->color_texture);
+
             memcpy(cur_mat->color.raw,
                    data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
                    sizeof(vec4s));
@@ -678,8 +649,13 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
                 TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-                asset_converter_texture(asset_system, texture_path, &cur_mat->roughness_texture);
-                asset_converter_texture(asset_system, texture_path, &cur_mat->metallic_texture);
+                asset_converter_texture(asset_system, texture_path, cur_mat->roughness_texture);
+                asset_converter_texture(asset_system, texture_path, cur_mat->metallic_texture);
+
+                cur_mat->metallic_strength =
+                    data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.metallic_factor;
+                cur_mat->roughness_strength =
+                    data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.roughness_factor;
             }
             if (metal_roughness_texture->image->buffer_view)
             {
@@ -704,7 +680,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
             TRACE("AO Texture Path:  %s", AO_texture_path);
 
-            asset_converter_texture(asset_system, AO_texture_path, &cur_mat->ambient_occlusion_texture);
+            asset_converter_texture(asset_system, AO_texture_path, cur_mat->ambient_occlusion_texture);
         }
 
 
@@ -719,7 +695,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             // takes a buffer, message format, then the remaining strings
             snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
-            asset_converter_texture(asset_system, texture_path, &cur_mat->normal_texture);
+            asset_converter_texture(asset_system, texture_path, cur_mat->normal_texture);
         }
 
         //EMISSIVE TEXTURE
@@ -735,7 +711,10 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
 
-            asset_converter_texture(asset_system, texture_path, &cur_mat->emissive_texture);
+            asset_converter_texture(asset_system, texture_path, cur_mat->emissive_texture);
+
+            cur_mat->emissive_strength = data->meshes[mesh_idx].primitives->material->emissive_strength.
+                                                                emissive_strength;
         }
 
         Material_Info default_info = {0};
@@ -766,15 +745,18 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         Material_Instance* mat_inst = &material_instances[mesh_idx];
         asset_converter_material_asset(asset_system, &default_info,
                                        asset_system->material_system->reflection_registry,
-                                       &mat_inst->uuid_material_asset);
+                                       mat_inst->material_asset_path);
+
         material_instances[mesh_idx].material_data = cur_mat;
         material_instances[mesh_idx].data_size = sizeof(Material_Default);
         MADNESS_UUID madness_uuid = {0};
+        // MASSERT(false); //TODO:
+        /*
         asset_converter_material_instance(asset_system, "Material_Default",
                                           data->meshes[mesh_idx].primitives->material->name,
-                                          &mat_inst->uuid_material_asset,
-                                          mat_inst->material_data, mat_inst->data_size,
-                                          &madness_uuid);
+                                          mat_inst->material_asset_path,
+                                          mat_inst->material_data, mat_inst->data_size);
+                                          */
     }
 
 
@@ -1053,14 +1035,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         asset_skmesh_serialize(&sk_mesh_runtime, fptr);
         fclose(fptr);
 
-        // write out metadata
-        Asset_MetaData meta_data = {0};
-        meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
-        meta_data.binary_file = string_builder_to_string(str_builder);
-        meta_data.uuid = madness_uuid_generate_return();
-        meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-        meta_data.type = ASSET_SKINNED_MESH;
-        asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+
+        asset_registry_add_asset(asset_system->asset_registry, gltf_path, output_path,
+                                 ASSET_SKINNED_MESH, asset_system->heap_allocator);
     }
     else
     {
@@ -1098,23 +1075,16 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         // write out metadata
-        Asset_MetaData meta_data = {0};
-        meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(gltf_path, asset_system->heap_allocator);
-        meta_data.binary_file = string_builder_to_string(str_builder);
-        meta_data.uuid = madness_uuid_generate_return();
-        meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-        meta_data.type = ASSET_STATIC_MESH;
-        asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+        asset_registry_add_asset(asset_system->asset_registry, gltf_path, output_path,
+                                 ASSET_STATIC_MESH, asset_system->heap_allocator);
     }
-
 
     cgltf_free(data);
     return true;
 }
 
 bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
-                                    Reflection_Registry* reflection_registry_material,
-                                    MADNESS_UUID* out_uuid)
+                                    Reflection_Registry* reflection_registry_material, String* out_engine_path)
 {
     //We are always going to assume that our reflection registry is up to date and that it is the source of truth
 
@@ -1129,23 +1099,6 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* m
     string_builder_append_string(str_builder, material_info->shader_name);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
 
-
-    String* compare_string = string_builder_to_string_allocator(str_builder, asset_system->frame_allocator);
-
-    //check if the material already exists
-    for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
-    {
-        Asset_MetaData* meta_data = (Asset_MetaData*)_dynamic_array_get(asset_system->asset_registry->asset_meta_data,
-                                                                        i);
-        if (meta_data->type == ASSET_MATERIAL)
-        {
-            if (string_compare(meta_data->source_file, compare_string))
-            {
-                *out_uuid = meta_data->uuid;
-                return true;
-            }
-        }
-    }
 
 
     Material_Asset asset = {0};
@@ -1210,36 +1163,23 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* m
     asset_material_serialize(&asset_editor, fptr);
 
 
-    Asset_MetaData meta_data = {0};
-    meta_data.source_file = string_builder_to_string_heap(str_builder, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string_heap(str_builder, asset_system->heap_allocator);
-    meta_data.uuid = madness_uuid_generate_return();
-    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-    meta_data.type = ASSET_MATERIAL;
-    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+    asset_registry_add_asset(asset_system->asset_registry, output_path, output_path,
+                             ASSET_MATERIAL, asset_system->heap_allocator);
 
-    *out_uuid = meta_data.uuid;
 
     fclose(fptr);
     return true;
 }
 
 bool asset_converter_material_instance(Asset_System* asset_system, const char* material_name, const char* asset_name,
-                                       MADNESS_UUID* material_asset_uuid, void* material_data, u32 material_size,
-                                       MADNESS_UUID* out_uuid)
+                                       const char* material_asset_path, void* material_data, u32 material_size)
 {
     MADNESS_UUID resolve_material_asset_uuid = {0};
     Reflection_Runtime_Struct runtime_material_data = {0};
-    if (material_asset_uuid)
-    {
-        resolve_material_asset_uuid = *material_asset_uuid;
-    }
-    else
-    {
-        //search for the asset
-        runtime_material_data = reflection_registry_get_struct(
-            asset_system->material_system->reflection_registry, material_name);
-    }
+
+    //search for the asset
+    runtime_material_data = reflection_registry_get_struct(
+        asset_system->material_system->reflection_registry, material_name);
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
@@ -1257,20 +1197,15 @@ bool asset_converter_material_instance(Asset_System* asset_system, const char* m
     }
 
     Material_Instance material_instance = {
-        .uuid_material_asset = resolve_material_asset_uuid, .data_size = material_size, .material_data = material_data
+        .material_asset_path = STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_asset_path, asset_system->frame_allocator),
+        .data_size = material_size, .material_data = material_data
     };
     asset_material_instance_serialize(&material_instance, fptr);
 
 
-    Asset_MetaData meta_data = {0};
-    meta_data.source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(asset_name, asset_system->heap_allocator);
-    meta_data.binary_file = string_builder_to_string(str_builder);
-    meta_data.uuid = madness_uuid_generate_return();
-    meta_data.hash = madness_uuid_hash(&meta_data.uuid);
-    meta_data.type = ASSET_MATERIAL_INSTANCE;
-    asset_registry_add_asset(asset_system->asset_registry, &meta_data);
+    asset_registry_add_asset(asset_system->asset_registry, asset_name, output_path, ASSET_MATERIAL_INSTANCE,
+                             asset_system->heap_allocator);
 
-    *out_uuid = meta_data.uuid;
     fclose(fptr);
     return true;
 }

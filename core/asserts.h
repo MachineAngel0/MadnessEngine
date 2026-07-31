@@ -35,6 +35,12 @@ void report_unreachable(const char* file, int32_t line);
         }                                                            \
     }
 
+#define MASSERT_FALSE()                                              \
+    {                                                                \
+            report_assertion_failure("MASSERT_FALSE", "", __FILE__, __LINE__); \
+            debugBreak();                                            \
+    }
+
 #define MASSERT_MSG(expr, message)                                        \
     {                                                                     \
         if (expr) {                                                       \
@@ -44,10 +50,10 @@ void report_unreachable(const char* file, int32_t line);
         }                                                                 \
     }
 
-#define MASSERT_MSG_FALSE(message)                                              \
-    {                                                                           \
-        report_assertion_failure("MASSERT_FALSE", message, __FILE__, __LINE__); \
-        debugBreak();                                                           \
+#define MASSERT_MSG_FALSE(message)                                                  \
+    {                                                                               \
+        report_assertion_failure("MASSERT_MSG_FALSE", message, __FILE__, __LINE__); \
+        debugBreak();                                                               \
     }
 
 

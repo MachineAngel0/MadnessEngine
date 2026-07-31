@@ -8,7 +8,7 @@
 
 
 void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
-                     Asset_System* resource_system)
+                     Asset_System* asset_system)
 {
     madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
 
@@ -18,7 +18,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     madness_ui->free_list_allocator = memory_system_alloc(memory_system, sizeof(Heap_Allocator),
                                                           MEMORY_SUBSYSTEM_UI);
     madness_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
-    madness_ui->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    madness_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
 
     void* free_list_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
     void* allocator_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
@@ -26,10 +26,10 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     allocator_heap_init(madness_ui->free_list_allocator, free_list_memory, ui_arena_mem_size);
     allocator_init(madness_ui->allocator, allocator_memory, ui_arena_mem_size);
-    allocator_init(madness_ui->frame_arena, frame_allocator_memory, ui_arena_mem_size);
+    allocator_init(madness_ui->frame_allocator, frame_allocator_memory, ui_arena_mem_size);
 
     madness_ui->input_system_reference = input_system;
-    madness_ui->resource_system = resource_system;
+    madness_ui->resource_system = asset_system;
 
 
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
@@ -113,12 +113,9 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     //     MASSERT_MSG(false, "UI SYSTEM Failed to load default font");
     // };
 
-    bool result = asset_load_font(resource_system, "../z_assets_engine/fonts/arial_msdf.mfont",
-                                  &madness_ui->default_font_handle);
-    if (!result)
-    {
-        MASSERT_MSG(false, "MADNESS UI SYSTEM Failed to load default msdf font");
-    }
+    asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
+
+    madness_ui->default_font_handle = asset_load_font(asset_system, "arial_msdf");
 
     INFO("MADNESS UI SYSTEM CREATED");
 }
@@ -132,7 +129,7 @@ bool madness_ui_shutdown(void)
 void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 {
     //clear draw info and reset the hot id
-    allocator_clear(madness_ui->frame_arena);
+    allocator_clear(madness_ui->frame_allocator);
 
 
     //on resize, scale the ui window size's accordingly
@@ -250,7 +247,7 @@ void madness_ui_end(void)
     //Generate Draw Data
     // madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
     //                                            madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
-    madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
+    madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_allocator,
                                                madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
     madness_ui->ui_draw_data_count = madness_ui->ui_nodes->num_items; // needs to be here for the render draw count
 
@@ -450,7 +447,7 @@ UI_Node* madness_ui_get_new_node(void)
     if (!stack_is_empty(madness_ui->pop_up_stack))
     {
         MASSERT(madness_ui->pop_up_ui_nodes->num_items < madness_ui->pop_up_ui_nodes->capacity);
-        UI_Node* out_node = (UI_Node*)_array_get(madness_ui->ui_nodes, madness_ui->ui_nodes->num_items++);
+        UI_Node* out_node = (UI_Node*)_array_get(madness_ui->pop_up_ui_nodes, madness_ui->pop_up_ui_nodes->num_items++);
 
         return out_node;
     }
@@ -563,7 +560,7 @@ void madness_ui_center_child_node(vec2s parent_pos, vec2s parent_size, vec2s chi
 char* madness_ui_float_to_char(const float value)
 {
     int len = snprintf(NULL, 0, "%.3f", value);
-    char* result = allocator_alloc(madness_ui->frame_arena, len + 1);
+    char* result = allocator_alloc(madness_ui->frame_allocator, len + 1);
     snprintf(result, len + 1, "%.3f", value);
 
     return result;
@@ -572,7 +569,7 @@ char* madness_ui_float_to_char(const float value)
 char* madness_ui_int_to_char(Madness_UI* madness_ui, const u32 value)
 {
     int len = snprintf(NULL, 0, "%u", value);
-    char* result = allocator_alloc(madness_ui->frame_arena, len + 1);
+    char* result = allocator_alloc(madness_ui->frame_allocator, len + 1);
     snprintf(result, len + 1, "%u", value);
 
     return result;
@@ -867,7 +864,7 @@ void madness_ui_window_end(void)
         UI_Node* slider_bar = madness_ui_get_new_node();
         slider_bar->size = (vec2s){8.f, state->window_region_size.y * 0.1};
         slider_bar->color = madness_ui->editor_style.layout_accent_color;
-        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_arena);
+        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_allocator);
         slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
         slider_bar->color = COLOR_BLUE;
 
@@ -913,7 +910,7 @@ void madness_ui_window_end(void)
 
     UI_Node* resize_node = madness_ui_get_new_node();
     resize_node->size = (vec2s){12, 12};
-    resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_arena);
+    resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_allocator);
     resize_node->hash_id = string_hash_u64(resize_node->string_id);
 
     vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
@@ -1012,7 +1009,7 @@ void madness_scroll_box_end(void)
         UI_Node* slider_bar = madness_ui_get_new_node();
         slider_bar->size = (vec2s){8.f, state->window_region_size.y * 0.1};
         slider_bar->color = madness_ui->editor_style.layout_accent_color;
-        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_arena);
+        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_allocator);
         slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
         slider_bar->color = COLOR_BLUE;
 
@@ -1182,12 +1179,12 @@ bool madness_ui_drop_down(String label, bool* state)
     String* modified_label;
     if (*state)
     {
-        modified_label = string_concat(&STRING("(<>) "), &label, madness_ui->frame_arena);
+        modified_label = string_concat(&STRING("(<>) "), &label, madness_ui->frame_allocator);
         drop_down_header_node->color = madness_ui->editor_style.permanent_active;
     }
     else
     {
-        modified_label = string_concat(&STRING("(><) "), &label, madness_ui->frame_arena);
+        modified_label = string_concat(&STRING("(><) "), &label, madness_ui->frame_allocator);
     }
 
     madness_ui_string_internal(*modified_label, drop_down_header_node->pos, drop_down_header_node->size,
@@ -2128,7 +2125,7 @@ bool madness_ui_s32(String text, s32* i, u32 increment_value)
 
 void madness_ui_text_box(String id)
 {
-    UI_Node* label_node = madness_ui_string_internal(STRING("Text Box:"), madness_ui->cursor_pos, (vec2s){0, 0},
+    UI_Node* label_node = madness_ui_string_internal(id, madness_ui->cursor_pos, (vec2s){0, 0},
                                                      UI_ALIGNMENT_LEFT,
                                                      UI_ALIGNMENT_LEFT);
 
@@ -2156,7 +2153,6 @@ void madness_ui_text_box(String id)
         string_state->id = string_duplicate_alloc(&id, madness_ui->allocator);
     }
     MASSERT(string_state);
-
 
 
     //grab a node
@@ -2293,8 +2289,8 @@ bool madness_ui_float2(String text, float* x, float* y, float increment_value)
     madness_ui_string(text);
     madness_ui_same_line();
 
-    String* x_id = string_concat(&text, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&text, &STRING("y"), madness_ui->frame_arena);
+    String* x_id = string_concat(&text, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&text, &STRING("y"), madness_ui->frame_allocator);
 
 
     bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, x, increment_value);
@@ -2313,8 +2309,8 @@ bool madness_ui_float3(String text, float* x, float* y, float* z, float incremen
 {
     madness_ui_string(text);
 
-    String* x_id = string_concat(&text, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&text, &STRING("y"), madness_ui->frame_arena);
+    String* x_id = string_concat(&text, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&text, &STRING("y"), madness_ui->frame_allocator);
 
 
     bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, x, increment_value);
@@ -2338,8 +2334,8 @@ bool madness_ui_vec2(String label, vec2s* v, float increment_value)
     madness_ui_same_line();
 
 
-    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_arena);
+    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_allocator);
 
 
     bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
@@ -2361,9 +2357,9 @@ bool madness_ui_vec3(String label, vec3s* v, float increment_value)
     madness_ui_same_line();
 
 
-    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_arena);
-    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_arena);
+    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_allocator);
+    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_allocator);
 
 
     bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
@@ -2388,10 +2384,10 @@ bool madness_ui_vec4(String label, vec4s* v, float increment_value)
     madness_ui_same_line();
 
 
-    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_arena);
-    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_arena);
-    String* w_id = string_concat(&label, &STRING("w"), madness_ui->frame_arena);
+    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_allocator);
+    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_allocator);
+    String* w_id = string_concat(&label, &STRING("w"), madness_ui->frame_allocator);
 
 
     bool has_moved1 = madness_ui_float_internal(madness_ui, *x_id, &v->x, increment_value);
@@ -2450,7 +2446,7 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
     //basically we want to defer this draw after everything else
     if (string_compare(&madness_ui->active_combo_box, &id))
     {
-        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_arena);
+        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_allocator);
         madness_ui_pop_up_open(*pop_up_name, madness_ui->cursor_pos);
 
         /*
@@ -2529,7 +2525,7 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
 {
     //TODO: should size to the largest element or currently named string
     char* temp = char_array[*selected_value];
-    String* selected_string = string_create_allocator(temp, strlen(temp), madness_ui->frame_arena);
+    String* selected_string = string_create_allocator(temp, strlen(temp), madness_ui->frame_allocator);
     vec2s text_size = madness_ui_get_text_size(*selected_string);
 
     UI_Node* combo_box_node = madness_ui_get_new_node();
@@ -2563,13 +2559,13 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     //basically we want to defer this draw after everything else
     if (string_compare(&madness_ui->active_combo_box, &id))
     {
-        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_arena);
+        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_allocator);
         madness_ui_pop_up_open(*pop_up_name, madness_ui->cursor_pos);
 
         for (u32 i = 0; i < char_array_size; i++)
         {
             char* inner_temp = char_array[i];
-            String* draw = string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_arena);
+            String* draw = string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_allocator);
             UI_Node* string_node = madness_ui_string_internal(*draw, madness_ui->cursor_pos, combo_box_node->size,
                                                               UI_ALIGNMENT_LEFT,
                                                               UI_ALIGNMENT_CENTER);
@@ -2601,6 +2597,88 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     return false;
 }
 
+bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
+    u32 string_array_size)
+{
+
+
+    //TODO: should size to the largest element or currently named string
+    String selected_string = string_array[*selected_value];
+    *out_select_string = string_array[*selected_value];
+    vec2s text_size = madness_ui_get_text_size(selected_string);
+
+    UI_Node* combo_box_node = madness_ui_get_new_node();
+    combo_box_node->string_id = id;
+    combo_box_node->hash_id = string_hash_u64(id);
+    combo_box_node->pos = madness_ui->cursor_pos;
+    combo_box_node->size = (vec2s){
+        text_size.x + madness_ui->text_padding_x, madness_ui_get_default_element_height()
+    };
+    combo_box_node->color = madness_ui->editor_style.color;
+
+
+    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_CENTER,
+                               UI_ALIGNMENT_CENTER);
+    madness_ui_advance_cursor(combo_box_node->size);
+
+
+    madness_ui_set_interaction_state(combo_box_node);
+    //active state
+    if (is_active(combo_box_node->hash_id))
+    {
+        combo_box_node->color = madness_ui->editor_style.pressed_color;
+        madness_ui->active_combo_box = id;
+    }
+    //hot state
+    else if (is_hot(combo_box_node->hash_id))
+    {
+        combo_box_node->color = madness_ui->editor_style.hovered_color;
+    }
+
+    //basically we want to defer this draw after everything else
+    if (string_compare(&madness_ui->active_combo_box, &id))
+    {
+        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_allocator);
+        madness_ui_pop_up_open(*pop_up_name, madness_ui->cursor_pos);
+
+        //TODO: probably should be a scroll box here
+
+        for (u32 i = 0; i < string_array_size; i++)
+        {
+            String draw = string_array[i];
+            UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
+                                                              UI_ALIGNMENT_LEFT,
+                                                              UI_ALIGNMENT_CENTER);
+            madness_ui_set_interaction_state(string_node);
+            if (is_hot(string_node->hash_id))
+            {
+                string_node->color = madness_ui->editor_style.hovered_color;
+            }
+
+            if (region_hit(string_node->pos, string_node->size))
+            {
+                if (madness_ui->mouse_down)
+                {
+                    *selected_value = i;
+                    madness_ui->nuke_pop_up = true;
+                }
+            }
+            // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
+            madness_ui_advance_cursor(string_node->size);
+        }
+
+        madness_ui_pop_up_close();
+    }
+
+
+    // return madness_ui_use_ui_element(madness_ui, combo_box_node->hash_id, combo_box_node->pos, combo_box_node->size);
+    // this should return when somehting has changed or on click, and let the user decide
+    return false;
+
+
+}
+
+
 void madness_ui_padding(const char* identifier)
 {
     madness_ui_advance_cursor((vec2s){madness_ui->element_padding_x, madness_ui->element_padding_y});
@@ -2622,9 +2700,9 @@ bool madness_ui_color_picker(String label, vec3s* color_value)
     madness_ui_advance_cursor(color_node->size);
 
 
-    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_arena);
-    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_arena);
-    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_arena);
+    String* x_id = string_concat(&label, &STRING("x"), madness_ui->frame_allocator);
+    String* y_id = string_concat(&label, &STRING("y"), madness_ui->frame_allocator);
+    String* z_id = string_concat(&label, &STRING("z"), madness_ui->frame_allocator);
 
     float increment_value = 0.05;
     madness_ui_same_line();
@@ -2764,8 +2842,8 @@ bool madness_ui_progress_bar(String label, float current, float max)
     return false;
 }
 
-bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
-                                const char* struct_name, const char* identifier)
+bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_registry,
+                                            const char* struct_name, const char* identifier)
 {
     Reflection_Runtime_Data runtime_data = reflection_registry_get_or_create_runtime_data(
         reflection_registry, struct_name, identifier);
@@ -2782,9 +2860,9 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
         void* data = (u8*)runtime_data.data + field_info.offset;
 
         String* intermediate_name = string_concat(&STRING_STRLEN(struct_name), &STRING_STRLEN(identifier),
-                                                  madness_ui->frame_arena);
+                                                  madness_ui->frame_allocator);
         String* custom_name = string_concat(intermediate_name, &STRING_STRLEN(field_info.name),
-                                            madness_ui->frame_arena);
+                                            madness_ui->frame_allocator);
 
         switch (field_info.type)
         {
@@ -2835,11 +2913,29 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
         case REFLECTION_TYPE_ENUM:
             Reflection_Runtime_Enum runtime_enum = reflection_registry_get_enum(
                 reflection_registry, field_info.type_name);
-            madness_ui_combo_box_char(*custom_name, data, runtime_enum.enum_names,
-                                      runtime_enum.count);
+            switch (runtime_enum.type)
+            {
+            case Reflection_Enum_Type_Normal:
+                madness_ui_combo_box_char(*custom_name, data, runtime_enum.enum_names,
+                                          runtime_enum.count);
+                break;
+            case Reflection_Enum_Type_Bitflag:
+
+                for (u32 i = 0; i < runtime_enum.count; i++)
+                {
+                    String* enum_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(
+                        runtime_enum.enum_names[i], madness_ui->frame_allocator);
+                    String* check_box_name = string_concat(custom_name, enum_name, madness_ui->frame_allocator);
+                    madness_ui_check_box(*check_box_name, &runtime_enum.bitflag_values[i]);
+                }
+
+                break;
+            }
+
+
             break;
         case REFLECTION_TYPE_STRUCT:
-            madness_ui_reflection_test(reflection_registry, field_info.type_name, identifier);
+            madness_ui_reflection_runtime_registry(reflection_registry, field_info.type_name, identifier);
             break;
         case REFLECTION_TYPE_MAX:
             break;
@@ -2851,8 +2947,8 @@ bool madness_ui_reflection_test(Reflection_Registry* reflection_registry,
 }
 
 
-bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
-                             void* passing_data, const char* id)
+bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
+                                   void* passing_data, const char* id)
 {
     // madness_ui_text(madness_ui, *string_create_allocator(struct_info.name, strlen(struct_info.name), madness_ui->frame_arena));
     madness_ui_string(STRING_STRLEN(struct_info.name));
@@ -2862,10 +2958,12 @@ bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflectio
         Reflection_Runtime_Struct_Field field_info = struct_info.fields[field_index];
         void* data = (u8*)passing_data + field_info.offset;
 
-        String* intermediate_name = string_concat(&STRING_STRLEN(struct_info.name), &STRING_STRLEN(id),
-                                                  madness_ui->frame_arena);
-        String* custom_name = string_concat(intermediate_name, &STRING_STRLEN(field_info.name),
-                                            madness_ui->frame_arena);
+        String_Builder* builder = string_builder_create(256, madness_ui->frame_allocator);
+        string_builder_append_c_string(builder, field_info.name);
+        string_builder_append_c_string(builder, "_");
+        string_builder_append_c_string(builder, id);
+
+        String* custom_name = string_builder_to_string(builder);
 
         switch (field_info.type)
         {
@@ -2914,13 +3012,31 @@ bool madness_ui_reflect_data(Reflection_Registry* reflection_registry, Reflectio
             madness_ui_text_box(*custom_name);
             break;
         case REFLECTION_TYPE_ENUM:
+            Reflection_Runtime_Enum runtime_enum = reflection_registry_get_enum(
+                reflection_registry, field_info.type_name);
+            switch (runtime_enum.type)
+            {
+            case Reflection_Enum_Type_Normal:
+                madness_ui_combo_box_char(*custom_name, data, runtime_enum.enum_names,
+                                          runtime_enum.count);
+                break;
+            case Reflection_Enum_Type_Bitflag:
 
-            Reflection_Runtime_Enum enums = reflection_registry_get_enum(reflection_registry, field_info.type_name);
-            madness_ui_combo_box_char(*custom_name, data, enums.enum_names,
-                                      enums.count);
+                for (u32 i = 0; i < runtime_enum.count; i++)
+                {
+                    String_Builder* builder = string_builder_create(256, madness_ui->frame_allocator);
+                    string_builder_append_c_string(builder, runtime_enum.enum_names[i]);
+                    string_builder_append_c_string(builder, "_");
+                    string_builder_append_c_string(builder, id);
+                    madness_ui_check_box(*string_builder_to_string(builder), &runtime_enum.bitflag_values[i]);
+                }
+
+                break;
+            }
+
             break;
         case REFLECTION_TYPE_STRUCT:
-            madness_ui_reflection_test(reflection_registry, field_info.type_name, id);
+            madness_ui_reflection_runtime_registry(reflection_registry, field_info.type_name, id);
             break;
         case REFLECTION_TYPE_MAX:
             break;

@@ -88,11 +88,11 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
 typedef struct Asset_MetaData
 {
     //meta data for our editor/debug builds
-    MADNESS_UUID uuid;
-    u64 hash;
+    MADNESS_UUID uuid; // not in use rn, but will be useful if i ever integrate asset renaming
+    u64 hash; // hashes the engine_file
     Asset_Type type;
-    String* source_file; // TODO: change to string
-    String* binary_file; // TODO: change to string
+    String* source_file; //256 in length max
+    String* engine_path; //256 in length max
 } Asset_MetaData;
 
 typedef struct Texture_Handle
@@ -106,10 +106,10 @@ typedef struct Texture_Handle
 typedef struct Madness_Asset
 {
     //runtime format for assets
-    MADNESS_UUID uuid;
-    u64 hash;
+    u64 path_hash;
     u64 reference_count;
     Asset_Type type;
+    String* engine_path; // should just be a reference, mainly for debugging
 } Madness_Asset;
 
 //Renderpass || translucency || Blend || Mesh Type
@@ -346,9 +346,9 @@ typedef struct Material_Asset
 
 typedef struct Material_Instance
 {
-    //Contains customized data for a specific material asset
+    // Contains customized data for a specific material asset
     // NOTE: the material data is the serialized data containing the UUID for textures
-    MADNESS_UUID uuid_material_asset; // points to the material asset
+    String* material_asset_path; // points to the material asset
     u32 data_size;
     void* material_data;
 } Material_Instance;

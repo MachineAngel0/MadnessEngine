@@ -160,7 +160,7 @@ bool asset_material_deserialize_heap(Material_Asset_Runtime* runtime, FILE* fptr
 
 MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr)
 {
-    fwrite(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
+    // fwrite(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
     fwrite(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     fwrite(instance->material_data, instance->data_size, 1, fptr);
     return true;
@@ -174,7 +174,7 @@ bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr
 
 MAPI bool asset_material_instance_deserialize_heap(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator)
 {
-    fread(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
+    // fread(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
     fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     instance->material_data = allocator_heap_alloc(allocator, instance->data_size);
     fread(instance->material_data, instance->data_size, 1, fptr);
@@ -244,7 +244,7 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Allocator
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
         Material_Instance* material_instance = &runtime->material_instance[i];
-        fwrite(&material_instance->uuid_material_asset, sizeof(material_instance->uuid_material_asset), 1, fptr);
+        // fwrite(&material_instance->uuid_material_asset, sizeof(material_instance->uuid_material_asset), 1, fptr);
         fwrite(&material_instance->data_size, sizeof(material_instance->data_size), 1, fptr);
         fwrite(material_instance->material_data, material_instance->data_size, 1, fptr);
     }

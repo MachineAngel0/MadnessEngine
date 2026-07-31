@@ -3,7 +3,8 @@
 #include "memory/memory_system.h"
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                    Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry)
+                    Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry,
+                    Reflection_Registry* material_registry)
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
@@ -101,9 +102,9 @@ void editor_ui(Editor* editor)
                 reflection_registry_runtime_serialize_all_data_to_txt_format(editor->reflection_registry);
             }
 
-            madness_ui_reflection_test(editor->reflection_registry, "Heal_Component", "1");
-            madness_ui_reflection_test(editor->reflection_registry, "Heal_Component", "2");
-            madness_ui_reflection_test(editor->reflection_registry, "Damage_Component", "1");
+            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "1");
+            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "2");
+            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Damage_Component", "1");
 
             // madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Game_Level_Data", "1");
 
@@ -126,7 +127,7 @@ void editor_ui(Editor* editor)
                 reflection_registry_runtime_serialize_all_data_to_txt_format(material_reflection_registry);
             }
 
-            madness_ui_reflection_test(material_reflection_registry, "Material_Default", "1");
+            madness_ui_reflection_runtime_registry(material_reflection_registry, "Material_Default", "1");
         }
         madness_ui_window_end();
 
@@ -237,7 +238,7 @@ void editor_ui_animation(Editor* editor)
         for (u32 i = 0; i < animation_system->animation_count; i++)
         {
             Madness_Animation* madness_animation = &animation_system->animation_data[i];
-            GLTF_Animation_Data* animation_data =madness_animation->animation_data;
+            GLTF_Animation_Data* animation_data = madness_animation->animation_data;
             madness_animation->current_animation_index;
 
             char buffer[100];
@@ -258,9 +259,6 @@ void editor_ui_animation(Editor* editor)
             {
                 madness_animation->current_time = 0;
             }
-
-
-
         }
     }
     madness_ui_window_end();
@@ -391,7 +389,7 @@ void editor_texture_view(Editor* editor)
             if (texture_system_exists(asset_system, &texture_handle, meta_data->hash))
             {
                 madness_ui_string(*meta_data->source_file);
-                madness_ui_string(*meta_data->binary_file);
+                madness_ui_string(*meta_data->engine_path);
                 madness_image_handle(texture_handle);
             }
 
@@ -418,7 +416,7 @@ void editor_meta_data_view(Editor* editor)
             madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
 
             madness_ui_string(*meta_data->source_file);
-            madness_ui_string(*meta_data->binary_file);
+            madness_ui_string(*meta_data->engine_path);
         }
     }
     madness_ui_window_end();
@@ -452,15 +450,20 @@ void editor_material_asset_view(Editor* editor)
     static Material_Info material_info;
     madness_ui_window_begin(STRING("Material Creation"));
     {
+        madness_ui_button(STRING("Create Material Asset"));
+        {
+            //TODO:
+        }
+
+
         Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct(editor->reflection_registry,
-                                                         "Material_Info");
+            "Material_Info");
 
-        madness_ui_reflect_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
-
-
-
-
+        madness_ui_reflect_using_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
+        static u32 selected_index;
+        madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
+                             material_struct_string_list,
+                             ARRAY_SIZE(material_struct_string_list));
     }
     madness_ui_window_end();
-
 }

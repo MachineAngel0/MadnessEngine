@@ -20,15 +20,11 @@ typedef struct Reflection_Runtime_Enum
     const char* name;
     const char** enum_names;
     u32 count;
-} Reflection_Runtime_Enum;
 
-typedef struct Reflection_Runtime_Enum_Bitflag
-{
-    const char* name;
-    const char** enum_names;
-    bool* bitflag_values; // if one is checked, that means yes
-    u32 count;
-} Reflection_Runtime_Enum_Bitflag;
+    Reflection_Enum_Type type;
+    bool* bitflag_values; // only used if we are an enum with bitflags, signified by the type
+
+} Reflection_Runtime_Enum;
 
 typedef struct Reflection_Runtime_Struct_Field
 {
@@ -199,6 +195,10 @@ void reflection_registry_save_meta_data(Reflection_Registry* reflection_registry
 
 void reflection_registry_add_enums(Reflection_Registry* reflection_registry, Reflection_Runtime_Enum reflection_enum)
 {
+    if (reflection_enum.type == Reflection_Enum_Type_Bitflag)
+    {
+        reflection_enum.bitflag_values = allocator_heap_alloc(reflection_registry->allocator, sizeof(bool) * reflection_enum.count);
+    }
     dynamic_array_push(reflection_registry->enum_list, &reflection_enum);
 }
 

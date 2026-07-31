@@ -43,8 +43,8 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
 
 
-    texture_system->default_texture_handle = asset_load_texture_path(
-        asset_system, "../z_assets_engine/texture/error_texture.mtex");
+    texture_system->default_texture_handle = asset_load_texture(
+        asset_system, "error_texture");
 
     return texture_system;
 }
@@ -111,8 +111,9 @@ bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handl
 }
 
 
-bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
-                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle)
+bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
+                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle,
+                                       String* engine_path)
 {
     Texture_System* texture_system = asset_system->texture_system;
 
@@ -144,8 +145,8 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID 
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->uuid = uuid;
-    meta_data->hash = hash;
+    meta_data->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
+    meta_data->path_hash = hash;
     meta_data->type = ASSET_TEXTURE;
     meta_data->reference_count = 1;
 
@@ -155,7 +156,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, MADNESS_UUID 
 
 bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
                                     Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data,
-                                    Texture_Handle* out_handle)
+                                    Texture_Handle* out_handle, String* engine_path)
 {
     Texture_System* texture_system = asset_system->texture_system;
 
@@ -205,8 +206,8 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->uuid = uuid;
-    meta_data->hash = hash;
+    meta_data->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
+    meta_data->path_hash = hash;
     meta_data->type = ASSET_FONT;
     meta_data->reference_count = 1;
 
