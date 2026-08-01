@@ -102,7 +102,6 @@ void* stack_top_(stack* s)
     MASSERT(s);
     if (stack_is_empty(s))
     {
-
         return NULL;
     }
     // return &s->data[s->stride * s->num_items];

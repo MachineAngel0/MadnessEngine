@@ -535,6 +535,13 @@ void madness_ui_advance_cursor(vec2s ui_screen_size)
     //     madness_ui->cursor_pos.y += ui_screen_size.y; // + madness_ui->element_padding_y;
     // }
 
+    if (!stack_is_empty(madness_ui->window_states_stack))
+    {
+        Window_State* window_state = stack_top(madness_ui->window_states_stack, Window_State*);
+        window_state->window_relative_cursor_pos.x = madness_ui->current_window_screen_pos.x + madness_ui->element_padding_x;
+        window_state->window_relative_cursor_pos.y += madness_ui->prev_item_size.y + madness_ui->element_padding_y;
+    }
+
     madness_ui->prev_item_size = ui_screen_size;
     madness_ui->prev_line = madness_ui->cursor_pos;
     madness_ui->cursor_pos.x = madness_ui->current_window_screen_pos.x + madness_ui->element_padding_x;
@@ -545,6 +552,26 @@ void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size)
 {
     //only meant for the menu bar
     madness_ui->cursor_pos.x = ui_screen_size.x + madness_ui->element_padding_x;
+}
+
+bool madness_ui_skip_render(vec2s size)
+{
+    //check if we are oustide the view of the window, in which case we do not render, create a draw the ui item
+    Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
+
+    //check if the item is above the window
+    if (state->window_relative_cursor_pos.y < state->scroll_offset - madness_ui_get_default_element_height())
+    {
+        madness_ui_advance_cursor(size);
+        return true;
+    }
+    //check if the item is below the window
+    if (state->window_relative_cursor_pos.y + state->header_size.y - state->scroll_offset > state->window_region_size.y - size.y)
+    {
+        madness_ui_advance_cursor(size);
+        return true;
+    }
+    return false;
 }
 
 
@@ -750,6 +777,7 @@ void madness_ui_window_begin(String header_name)
         if (string_compare(madness_ui->window_state_array[i].window_name, &header_name))
         {
             window_state = &madness_ui->window_state_array[i];
+            window_state->window_relative_cursor_pos = glms_vec2_zero();
             break;
         }
     }
@@ -770,6 +798,7 @@ void madness_ui_window_begin(String header_name)
             .window_region_size = size,
             .header_size = glms_vec2_zero(),
             .scroll_offset = 0,
+            .window_relative_cursor_pos = glms_vec2_zero(),
         };
     }
 
@@ -1338,9 +1367,10 @@ void madness_ui_set_interaction_state(UI_Node* new_node)
     }
 }
 
+
+
 bool madness_ui_button(const String label)
 {
-    // Window_State state = *(Window_State*)stack_top_(madness_ui->window_states_stack);
 
     vec2s text_size = madness_ui_get_text_size(label);
     vec2s button_size = (vec2s){
@@ -1349,6 +1379,10 @@ bool madness_ui_button(const String label)
     };
 
 
+    if (madness_ui_skip_render(button_size))
+    {
+        return false;
+    }
 
 
     UI_Node* button_node = madness_ui_get_new_node();
@@ -2603,10 +2637,8 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
 }
 
 bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
-    u32 string_array_size)
+                                 u32 string_array_size)
 {
-
-
     //TODO: should size to the largest element or currently named string
     String selected_string = string_array[*selected_value];
     *out_select_string = string_array[*selected_value];
@@ -2679,8 +2711,6 @@ bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_sel
     // return madness_ui_use_ui_element(madness_ui, combo_box_node->hash_id, combo_box_node->pos, combo_box_node->size);
     // this should return when somehting has changed or on click, and let the user decide
     return false;
-
-
 }
 
 

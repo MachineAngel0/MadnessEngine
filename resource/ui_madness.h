@@ -149,6 +149,8 @@ typedef struct Window_State
 
     float scroll_offset; // should ideally be in a range of size, and then we increment the size by that
     float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
+
+    vec2s window_relative_cursor_pos; // track how far down items have gone down relative to the window
 } Window_State;
 
 typedef struct Pop_Up_State
@@ -483,6 +485,7 @@ MAPI bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* 
 void madness_ui_same_line(void);
 void madness_ui_advance_cursor(vec2s ui_screen_size);
 void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size);
+bool madness_ui_skip_render(vec2s size);
 
 void madness_ui_set_button_size(float button_size);
 void madness_ui_set_font_size(float font_size);
