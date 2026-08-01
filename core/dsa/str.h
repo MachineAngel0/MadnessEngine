@@ -13,7 +13,11 @@ typedef struct String
 {
     u64 length;
     char* chars;
+
 } String;
+
+typedef String Path_String;
+
 
 typedef struct String_Tokenizer
 {

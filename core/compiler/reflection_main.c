@@ -50,6 +50,20 @@ int main(void)
                              "../resource/generated/reflection_material_enums.h",
                              "../resource/generated/reflection_material_structs.h");
 
+    //shader definitions
+    reflection_system_reset(reflection_system);
+
+
+    reflection_system_parse(reflection_system, "../renderer/shaders/shader_includes/materials.glsl",
+                            REFLECTION_PARSE_CONSTANT);
+    reflection_system_parse(reflection_system, "../renderer/shaders/shader_includes/materials.glsl", REFLECTION_PARSE_ENUM);
+    reflection_system_parse(reflection_system, "../renderer/shaders/shader_includes/materials.glsl",
+                            REFLECTION_PARSE_STRUCT);
+
+    reflection_data_to_files(reflection_system, "material",
+                             "../resource/generated/reflection_shader_enums.h",
+                             "../resource/generated/reflection_shader_structs.h");
+
 
 
     memory_system_shutdown(&memory_system);

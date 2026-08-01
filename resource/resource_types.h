@@ -21,6 +21,9 @@
 
 ///////////////// PATHS  //////////////////////
 
+#define IMPORT_PATH_NO_SLASH "../z_assets"
+#define IMPORT_PATH_SLASH "../z_assets/"
+
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
 #define IMPORT_TEXTURE_PATH "../z_assets/texture"
 #define IMPORT_FONTS_PATH "../z_assets/fonts"
@@ -28,6 +31,9 @@
 #define IMPORT_SK_MESH_PATH "../z_assets/skinned_mesh"
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
+
+#define ENGINE_PATH_NO_SLASH "../z_assets_engine"
+#define ENGINE_PATH_SLASH "../z_assets_engine/"
 
 #define ENGINE_RESOURCE_PATH "../z_assets_engine/asset_list/"
 #define ENGINE_TEXTURE_PATH "../z_assets_engine/texture/"

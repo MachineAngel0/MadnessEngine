@@ -125,13 +125,25 @@ bool filesystem_has_file_changed(File_Handle* file_path);
 
 bool filesystem_does_file_exists(const char* file_path);
 bool filesystem_does_directory_exists(const char* directory_path);
+bool filesystem_is_directory_empty(const char* directory_path);
 
 
 bool filesystem_create_directory(const char* directory_path);
 bool filesystem_create_file_platform(const char* file_path);
 
 bool filesystem_scan_directory(const char* directory_path);
-bool filesystem_is_directory_empty(const char* directory_path);
+bool filesystem_scan_directory_recursive(const char* directory_path);
+
+typedef struct Asset_List_Scan
+{
+    u32 max_count;
+    u32 count;
+    String* strings;
+    Allocator* allocator;
+}Asset_List_Scan;
+
+bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan);
+
 
 
 

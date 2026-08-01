@@ -4,14 +4,12 @@
 #if MPLATFORM_WINDOWS
 
 
-
 //FILE SYSTEM
 typedef struct Windows_File_Data
 {
     const char* file_name;
     FILETIME last_write_time;
     HANDLE directory_windows_handle;
-
 } Windows_File_Data;
 
 Windows_File_Data windows_file_data[1000];
@@ -57,10 +55,8 @@ bool platform_has_filed_changed(File_Watch_Handle file_watch_handle)
 }
 
 
-
 File_Watch_Handle platform_register_directory_watch(const char* directory_name)
 {
-
     HANDLE dir = CreateFileA(
         directory_name,
         FILE_LIST_DIRECTORY,
@@ -97,16 +93,16 @@ void platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
     DWORD bytesReturned;
 
     if (ReadDirectoryChangesW(
-            file_data->directory_windows_handle,
-            buffer,
-            sizeof(buffer),
-            TRUE, // watch subdirectories
-            FILE_NOTIFY_CHANGE_FILE_NAME |
-            FILE_NOTIFY_CHANGE_DIR_NAME |
-            FILE_NOTIFY_CHANGE_LAST_WRITE,
-            &bytesReturned,
-            NULL,
-            NULL))
+        file_data->directory_windows_handle,
+        buffer,
+        sizeof(buffer),
+        TRUE, // watch subdirectories
+        FILE_NOTIFY_CHANGE_FILE_NAME |
+        FILE_NOTIFY_CHANGE_DIR_NAME |
+        FILE_NOTIFY_CHANGE_LAST_WRITE,
+        &bytesReturned,
+        NULL,
+        NULL))
     {
         FILE_NOTIFY_INFORMATION* info = (FILE_NOTIFY_INFORMATION*)buffer;
 
@@ -120,8 +116,8 @@ void platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
                 break;
 
             info = (FILE_NOTIFY_INFORMATION*)((char*)info + info->NextEntryOffset);
-
-        } while (1);
+        }
+        while (1);
     }
 }
 
@@ -140,7 +136,7 @@ bool filesystem_does_directory_exists(const char* directory_path)
 
     // Check if the path is valid and matches a directory attribute
     return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-           (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+        (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 
@@ -169,15 +165,17 @@ bool filesystem_create_file_platform(const char* file_path)
         GENERIC_WRITE,
         0,
         NULL,
-        CREATE_NEW,           // Fails if file exists
+        CREATE_NEW, // Fails if file exists
         FILE_ATTRIBUTE_NORMAL,
         NULL
     );
 
-    if (handle == INVALID_HANDLE_VALUE) {
-        if (GetLastError() == ERROR_FILE_EXISTS) {
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_FILE_EXISTS)
+        {
             printf("File already exists\n");
-            return 1;  // File exists - not an error
+            return 1; // File exists - not an error
         }
         printf("Error creating file\n");
         return 0;
@@ -199,37 +197,174 @@ bool filesystem_scan_directory(const char* directory_path)
 
     findHandle = FindFirstFileA(search_path, &findFileData);
 
-    if (findHandle == INVALID_HANDLE_VALUE) {
+    if (findHandle == INVALID_HANDLE_VALUE)
+    {
         printf("Error: Could not open directory %s\n", directory_path);
         return false;
     }
 
-    do {
+    do
+    {
         // Skip "." and ".."
         if (strcmp(findFileData.cFileName, ".") == 0 ||
-            strcmp(findFileData.cFileName, "..") == 0) {
+            strcmp(findFileData.cFileName, "..") == 0)
+        {
             continue;
-            }
+        }
 
         // Check if it's a file or directory
-        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
             printf("[DIR]  %s\n", findFileData.cFileName);
-        } else {
+        }
+        else
+        {
             printf("[FILE] %s (%ld bytes)\n",
                    findFileData.cFileName,
                    findFileData.nFileSizeLow);
         }
-
-    } while (FindNextFileA(findHandle, &findFileData));
+    }
+    while (FindNextFileA(findHandle, &findFileData));
 
     FindClose(findHandle);
     return true;
 }
 
+bool filesystem_scan_directory_recursive(const char* directory_path)
+{
+    WIN32_FIND_DATAA findFileData;
+    HANDLE findHandle;
+    char search_path[MAX_PATH];
+    char full_path[MAX_PATH];
+
+    if (snprintf(search_path, sizeof(search_path), "%s/*", directory_path) >= (int)sizeof(search_path))
+    {
+        printf("Error: path too long: %s\n", directory_path);
+        return false;
+    }
+
+    findHandle = FindFirstFileA(search_path, &findFileData);
+
+    if (findHandle == INVALID_HANDLE_VALUE)
+    {
+        printf("Error: Could not open directory %s\n", directory_path);
+        return false;
+    }
+
+    do
+    {
+        // Skip "." and ".."
+        if (strcmp(findFileData.cFileName, ".") == 0 ||
+            strcmp(findFileData.cFileName, "..") == 0)
+        {
+            continue;
+        }
+
+        if (snprintf(full_path, sizeof(full_path), "%s/%s", directory_path, findFileData.cFileName)
+            >= (int)sizeof(full_path))
+        {
+            printf("Error: path too long, skipping %s\n", findFileData.cFileName);
+            continue;
+        }
+
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+            {
+                printf("[LINK] %s (skipped)\n", full_path);
+                continue;
+            }
+
+            printf("[DIR]  %s\n", full_path);
+            filesystem_scan_directory_recursive(full_path); // recurse into it
+        }
+        else
+        {
+            printf("[FILE] %s (%ld bytes)\n", full_path, findFileData.nFileSizeLow);
+        }
+    }
+    while (FindNextFileA(findHandle, &findFileData));
+
+    FindClose(findHandle);
+    return true;
+}
+
+bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan)
+{
+    MASSERT(asset_list_scan)
+    MASSERT(asset_list_scan->allocator)
+    MASSERT(asset_list_scan->strings)
+
+    WIN32_FIND_DATAA findFileData;
+    HANDLE findHandle;
+    char search_path[MAX_PATH];
+    char full_path[MAX_PATH];
+
+    if (snprintf(search_path, sizeof(search_path), "%s/*", directory_path) >= sizeof(search_path))
+    {
+        printf("Error: path too long: %s\n", directory_path);
+        return false;
+    }
+
+    findHandle = FindFirstFileA(search_path, &findFileData);
+
+    if (findHandle == INVALID_HANDLE_VALUE)
+    {
+        WARN("filesystem_get_assets_from_directory: Could not open directory %s\n", directory_path);
+        return false;
+    }
+
+    do
+    {
+        // Skip "." and ".."
+        if (strcmp(findFileData.cFileName, ".") == 0 ||
+            strcmp(findFileData.cFileName, "..") == 0)
+        {
+            continue;
+        }
+
+        if (snprintf(full_path, sizeof(full_path), "%s/%s", directory_path, findFileData.cFileName)
+            >= sizeof(full_path))
+        {
+            WARN("Error: path too long, skipping %s\n", findFileData.cFileName);
+            continue;
+        }
+
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+            {
+                INFO("[LINK] %s (skipped)", full_path);
+                continue;
+            }
+
+            INFO("[DIR]  %s", full_path);
+            // recurse into the directory to find the other files in it
+            filesystem_get_assets_from_directory(full_path, asset_list_scan);
+        }
+        else if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+        {
+            String string = asset_list_scan->strings[asset_list_scan->count++];
+            string.length = strlen(full_path);
+            string.chars = c_string_duplicate_allocator(full_path, asset_list_scan->allocator);
+            INFO("[FILE] %s (%ld bytes)", full_path, findFileData.nFileSizeLow);
+        }
+        else
+        {
+            WARN("[OTHER] %s (%ld bytes)", full_path, findFileData.nFileSizeLow);
+        }
+    }
+    while (FindNextFileA(findHandle, &findFileData));
+
+    FindClose(findHandle);
+    return true;
 
 
+}
 
-bool filesystem_is_directory_empty(const char* directory_path) {
+
+bool filesystem_is_directory_empty(const char* directory_path)
+{
     WIN32_FIND_DATAA findFileData;
     HANDLE findHandle;
     char search_path[256];
@@ -238,23 +373,26 @@ bool filesystem_is_directory_empty(const char* directory_path) {
 
     findHandle = FindFirstFileA(search_path, &findFileData);
 
-    if (findHandle == INVALID_HANDLE_VALUE) {
-        return true;  // Directory doesn't exist or is empty
+    if (findHandle == INVALID_HANDLE_VALUE)
+    {
+        return true; // Directory doesn't exist or is empty
     }
 
-    do {
+    do
+    {
         // If we find anything other than "." and "..", it's not empty
         if (strcmp(findFileData.cFileName, ".") != 0 &&
-            strcmp(findFileData.cFileName, "..") != 0) {
+            strcmp(findFileData.cFileName, "..") != 0)
+        {
             FindClose(findHandle);
-            return false;  // Not empty
-            }
-    } while (FindNextFileA(findHandle, &findFileData));
+            return false; // Not empty
+        }
+    }
+    while (FindNextFileA(findHandle, &findFileData));
 
     FindClose(findHandle);
-    return true;  // Empty
+    return true; // Empty
 }
-
 
 
 #endif

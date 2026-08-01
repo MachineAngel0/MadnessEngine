@@ -28,7 +28,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_ENGINE_STATS;
+    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -85,7 +85,8 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test(editor->madness_ui);
-        madness_ui_example();
+        // madness_ui_example();
+        madness_ui_window_testing();
         break;
     case EDITOR_UI_STATE_ENGINE_STATS:
         editor_ui_stats(editor);
@@ -448,6 +449,7 @@ void editor_material_asset_view(Editor* editor)
     madness_ui_set_window_pos(600, 200);
 
     static Material_Info material_info;
+    static u8 fuck_you_memory[1024];
     madness_ui_window_begin(STRING("Material Creation"));
     {
         madness_ui_button(STRING("Create Material Asset"));
@@ -455,15 +457,24 @@ void editor_material_asset_view(Editor* editor)
             //TODO:
         }
 
+        static u32 selected_index;
+        madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
+                         material_struct_string_list,
+                         ARRAY_SIZE(material_struct_string_list));
 
+        Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
+    material_struct_string_list[selected_index]);
+
+        madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
+
+
+        /*
         Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct(editor->reflection_registry,
             "Material_Info");
 
         madness_ui_reflect_using_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
-        static u32 selected_index;
-        madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
-                             material_struct_string_list,
-                             ARRAY_SIZE(material_struct_string_list));
+        */
+
     }
     madness_ui_window_end();
 }

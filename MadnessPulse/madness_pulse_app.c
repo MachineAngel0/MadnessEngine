@@ -8,6 +8,7 @@
 #include "sprite_system.h"
 #include "../app_types.h"
 #include "clock.h"
+#include "filesystem.h"
 #include "../resource/asset_system.h"
 #include "../platform/audio.h"
 #include "../resource/mesh_system.h"
@@ -68,7 +69,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
     reflection_registry_runtime_load_data_from_txt(reflection_registry);
     //
-    Reflection_Registry* material_reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
+    Reflection_Registry* material_reflection_registry = reflection_registry_init(
+        &app_internal->application_core.memory_system);
     generate_runtime_enums_material(material_reflection_registry);
     generate_runtime_structs_material(material_reflection_registry);
 
@@ -169,6 +171,41 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                  application_core->asset_system,
                                  &application_core->clock, reflection_registry, material_reflection_registry);
 
+
+    //testing some stuff
+    if (filesystem_does_file_exists("../z_assets/misc/destiny_mutltithreading.png"))
+    {
+        DEBUG("FILE EXISTS")
+    }
+    else
+    {
+        DEBUG("FILE NO EXISTS")
+    }
+    if (filesystem_does_directory_exists("../z_assets"))
+    {
+        DEBUG("DIRECTORY EXISTS")
+    }
+    else
+    {
+        DEBUG("DIRECTORY NO EXISTS")
+    }
+
+    if (filesystem_is_directory_empty("../z_assets"))
+    {
+        DEBUG("DIRECTORY NO EMPTY")
+    }
+
+    //TODO: move out to either the asset system or editor
+    #define MAX_ASSETS_STRINGS 5000u
+    Asset_List_Scan* list_scan = memory_system_alloc(&application_core->memory_system, sizeof(Asset_List_Scan),
+                                                     MEMORY_SUBSYSTEM_RESOURCE);
+
+    list_scan->allocator = memory_system_allocator_create(&application_core->memory_system, (sizeof(String) * MAX_ASSETS_STRINGS) + (256/*max_string_count*/ * MAX_ASSETS_STRINGS),
+                                                     MEMORY_SUBSYSTEM_RESOURCE);
+    list_scan->strings = allocator_alloc(list_scan->allocator, sizeof(String) * MAX_ASSETS_STRINGS);
+    list_scan->max_count = MAX_ASSETS_STRINGS;
+    filesystem_get_assets_from_directory("../z_assets", list_scan);
+
     //MAIN LOOP
 
     clock_start(&application_core->clock);
@@ -207,6 +244,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                          renderer_plugin->renderer->context.framebuffer_height_new);
         insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
                           renderer_plugin->renderer->context.framebuffer_height_new);
+
 
         //game and editor switch between
         if (input_key_released_unique(application_core->input_system, KEY_TAB))

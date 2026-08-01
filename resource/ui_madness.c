@@ -1340,11 +1340,16 @@ void madness_ui_set_interaction_state(UI_Node* new_node)
 
 bool madness_ui_button(const String label)
 {
+    // Window_State state = *(Window_State*)stack_top_(madness_ui->window_states_stack);
+
     vec2s text_size = madness_ui_get_text_size(label);
     vec2s button_size = (vec2s){
         text_size.x + madness_ui->text_padding_x,
         madness_ui_get_default_element_height(),
     };
+
+
+
 
     UI_Node* button_node = madness_ui_get_new_node();
     button_node->string_id = label;
@@ -3594,6 +3599,27 @@ void madness_ui_config_menu(void)
 
         madness_ui_float2(STRING("Window Size"), &madness_ui->screen_size.x,
                           &madness_ui->screen_size.y, 0);
+    }
+    madness_ui_window_end();
+}
+
+
+void madness_ui_window_testing(void)
+{
+    madness_ui_set_window_pos(700, 100);
+    madness_ui_set_window_size(350, 250);
+    madness_ui_window_begin(STRING("UI Config"));
+    {
+        madness_ui_button(STRING("1"));
+        madness_ui_button(STRING("2"));
+        madness_ui_button(STRING("3"));
+        madness_ui_button(STRING("4"));
+        madness_ui_button(STRING("5"));
+        madness_ui_button(STRING("6"));
+        madness_ui_button(STRING("7"));
+        madness_ui_button(STRING("8"));
+        madness_ui_button(STRING("9"));
+        madness_ui_button(STRING("10"));
     }
     madness_ui_window_end();
 }

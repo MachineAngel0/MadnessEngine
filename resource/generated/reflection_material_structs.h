@@ -10,8 +10,6 @@ const char* material_struct_string_list[] = {
 	"Material_Spherical_Billboard", 
 };
 
-
-
 void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 {
 	Reflection_Runtime_Struct_Field Material_Default_Fields[] =
