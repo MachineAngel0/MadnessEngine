@@ -212,7 +212,8 @@ typedef struct Madness_Texture_Runtime
 
 
 //FONT/TEXT
-#define DEFAULT_FONT_CREATION_SIZE 32.0f // this should realy be 40
+//NOTE: this should realy be 40, but looks nicer as 32, im doing something wierd cause its casuing text padding
+#define DEFAULT_FONT_CREATION_SIZE 32.0f
 #define GLYPH_LENGTH 96
 #define GLYPH_START 32
 #define GLYPH_END 128

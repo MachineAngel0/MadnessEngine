@@ -35,7 +35,7 @@ float median(float r, float g, float b) {
 vec2 sqr(vec2 x) { return x*x; }// squares vector components
 
 //TODO: this isn't correct, needs to be set cpu side, and this needs to be in linear color range, not rgb
-const float pxRange = 2;// set to distance field's pixel range
+const float pxRange = 4;// set to distance field's pixel range
 
 float screenPxRange(sampler2D msdf, vec2 uv) {
     vec2 unitRange = vec2(pxRange)/vec2(textureSize(msdf, 0));

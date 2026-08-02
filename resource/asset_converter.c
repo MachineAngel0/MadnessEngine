@@ -324,11 +324,12 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     // float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
     // float glyph_size = 32.f; // this you would just have to know, or force it based on texture_size
 
-    float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
-    float glyph_size = 40.f; // this you would just have to know, or force it based on texture_size
+    // float texture_size = 256.f; // this can be gotten from stbi -> 256*256 rgba(*4)
+    // float glyph_size = 40.f; // this you would just have to know, or force it based on texture_size
+    // float glyph_size = 56.f;
 
-    // float texture_size = 512.f; // this can be gotten from stbi -> 256*256 rgba(*4)
-    // float glyph_size = 56.f; // this you would just have to know, or force it based on texture_size
+    float texture_size = 512.f;
+    float glyph_size = 40.f;
 
 
     char buffer[256];

@@ -34,6 +34,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
     madness_ui->editor_font_size = EDITOR_FONT_SIZE;
+    madness_ui->text_outline = EDITOR_TEXT_OUTLINE;
 
     madness_ui->ui_nodes = array_create(UI_Node, MAX_UI_NODE_COUNT, madness_ui->allocator);
     madness_ui->pop_up_ui_nodes = array_create(UI_Node,
@@ -3617,8 +3618,9 @@ void madness_ui_config_menu(void)
     madness_ui_set_window_size(350, 500);
     madness_ui_window_begin(STRING("UI Config"));
     {
-        madness_ui_string(STRING("font size"));
-        madness_ui_float(STRING("font size"), &madness_ui->editor_font_size, 1);
+
+        madness_ui_float(STRING("default font size"), &madness_ui->default_font_size, 1);
+        madness_ui_float(STRING("editor font size"), &madness_ui->editor_font_size, 1);
 
         madness_ui_float2(STRING("element Paddingx&y"), &madness_ui->element_padding_x,
                           &madness_ui->element_padding_y, 1);

@@ -26,6 +26,8 @@ typedef struct Material_2D_Param_Data
 } Material_2D_Param_Data;
 
 #define EDITOR_FONT_SIZE 16.0f
+#define EDITOR_TEXT_OUTLINE 0.5f
+
 
 
 typedef enum UI_Layout_Direction
