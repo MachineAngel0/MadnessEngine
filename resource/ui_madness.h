@@ -24,6 +24,7 @@
 
 #define MAX_MADNESS_UI_STRING_BUILDERS 100
 #define MAX_MADNESS_UI_WINDOWS 100
+#define MAX_COMBO_BOX_STATES 100
 
 typedef struct PC_UI
 {
@@ -185,6 +186,13 @@ typedef struct Pop_Up_State
     UI_Node* pop_up_scissor_start_node;
 } Pop_Up_State;
 
+typedef struct Combo_Box_String_State
+{
+    String* combo_box_name;
+    u32 selected_index;
+} Combo_Box_String_State;
+
+
 
 typedef struct Menu_Bar_State
 {
@@ -242,6 +250,12 @@ typedef struct Madness_UI
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
     Window_Flag_Latest window_flag_stack;
+
+
+
+    Combo_Box_String_State combo_box_states[MAX_COMBO_BOX_STATES];
+    u32 combo_box_state_array_count;
+
 
     // HASH_TABLE_STR_TYPE(String_Builder*)* text_box_states; // TODO:
 
@@ -355,8 +369,8 @@ void madness_ui_menu_bar_end(void);
 bool madness_ui_menu_item_begin(String menu_name);
 bool madness_ui_menu_item_end(void);
 
-bool madness_ui_pop_up_open(String pop_up_name, vec2s pop_up_start_location);
-bool madness_ui_pop_up_close(void);
+bool madness_ui_pop_up_begin(String pop_up_name, vec2s pop_up_start_location);
+bool madness_ui_pop_up_end(void);
 
 
 MAPI void madness_ui_window_begin(String header_name);
@@ -409,8 +423,12 @@ MAPI bool madness_ui_vec2(String label, vec2s* v, float increment_value);
 MAPI bool madness_ui_vec3(String label, vec3s* v, float increment_value);
 MAPI bool madness_ui_vec4(String label, vec4s* v, float increment_value);
 
-
+//TODO: since we dont know how many element we will have, it needs an end function
 MAPI bool madness_ui_drop_down(String label, bool* state);
+// <>thing
+// ><thing
+// >thing1
+// >thing2
 
 //TODO:
 MAPI bool madness_ui_drop_down_tree(String id, String text);
@@ -424,7 +442,7 @@ MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_
                                     u32 char_array_size);
 
 //
-MAPI bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
+MAPI bool madness_ui_combo_box_string(String id, String* out_select_string, String* string_array,
                                       u32 string_array_size);
 
 

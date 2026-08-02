@@ -28,7 +28,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
+    editor->state = EDITOR_UI_STATE_ENGINE_STATS;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -459,14 +459,14 @@ void editor_material_asset_view(Editor* editor)
 
         static u32 selected_index;
         if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
-                         material_struct_string_list,
-                         ARRAY_SIZE(material_struct_string_list)))
+                                      material_struct_string_list,
+                                      ARRAY_SIZE(material_struct_string_list)))
         {
             memset(fuck_you_memory, 0, 1024);
         }
 
         Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
-    material_struct_string_list[selected_index]);
+            material_struct_string_list[selected_index]);
 
         madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
 
@@ -477,7 +477,6 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_reflect_using_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
         */
-
     }
     madness_ui_window_end();
 }
