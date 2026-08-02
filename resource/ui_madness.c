@@ -1,7 +1,7 @@
 ﻿#include "../resource/ui_madness.h"
 
-#include "hash_table.h"
 #include "logger.h"
+#include "stack.h"
 #include "str.h"
 #include "compiler/reflection_system.h"
 #include "maths/math_lib.h"
@@ -102,6 +102,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
         .permanent_active = COLOR_HOT_PINK,
         .header_color = (vec3s){0.425, 0.05, 0.456},
         .pop_up_color = (vec3s){0.110, 0.120, 0.162},
+        .scrollbox_color = COLOR_HOT_PINK,
     };
 
 
@@ -563,20 +564,20 @@ void madness_ui_same_line(void)
     madness_ui->cursor_pos.y -= madness_ui->prev_item_size.y + madness_ui->element_padding_y;
 }
 
+
+void madness_ui_set_cursor_pos(vec2s ui_screen_pos)
+{
+    madness_ui->cursor_pos.x = ui_screen_pos.x + madness_ui->element_padding_x;
+    madness_ui->cursor_pos.y = ui_screen_pos.y + madness_ui->element_padding_y;
+    madness_ui->prev_line = ui_screen_pos;
+    madness_ui->prev_item_size = (vec2s){0, 0};
+}
+
 void madness_ui_advance_cursor(vec2s ui_screen_size)
 {
-    // if (madness_ui->same_line)
-    // {
-    //     madness_ui->cursor_pos.x += ui_screen_size.x;
-    // }
-    // else
-    // {
-    //     madness_ui->cursor_pos.x = madness_ui->current_layout_screen_pos.x;
-    //     madness_ui->cursor_pos.y += ui_screen_size.y; // + madness_ui->element_padding_y;
-    // }
-
     if (!stack_is_empty(madness_ui->window_states_stack))
     {
+        //we only add to the top window, as when we pop the top window, its parent content height will increase by its size
         Window_State* window_state = stack_top(madness_ui->window_states_stack, Window_State*);
         window_state->window_relative_cursor_pos.x = madness_ui->current_window_screen_pos.x + madness_ui->
             element_padding_x;
@@ -603,10 +604,38 @@ bool madness_ui_is_outside_window(vec2s size, bool advance_cursor)
         return false;
     }
 
-    Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
+    // Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
 
     //check if the item is above the window
-    if (state->window_relative_cursor_pos.y < state->scroll_offset - madness_ui_get_default_element_height() ||
+
+    if (!stack_is_empty(madness_ui->window_states_stack))
+    {
+        //we have to iterate all of them to ensure the parent windows have the correct relative offsets
+        for (u32 i = 0; i < madness_ui->window_states_stack->num_items; i++)
+        {
+            Window_State* window_state = *(Window_State**)stack_get(madness_ui->window_states_stack, i);
+            if (window_state->window_relative_cursor_pos.y < window_state->scroll_offset -
+                madness_ui_get_default_element_height() ||
+                (window_state->window_relative_cursor_pos.y + window_state->header_size.y - window_state->scroll_offset
+                    > window_state->window_region_size.y - size.y))
+            {
+                if (advance_cursor)
+                {
+                    madness_ui_advance_cursor(size);
+                }
+                return true;
+            }
+        }
+
+
+        /*
+        Window_State* window_state = stack_top(madness_ui->window_states_stack, Window_State*);
+        window_state->window_relative_cursor_pos.x = madness_ui->current_window_screen_pos.x + madness_ui->
+            element_padding_x;
+        window_state->window_relative_cursor_pos.y += madness_ui->prev_item_size.y + madness_ui->element_padding_y;*/
+    }
+
+    /*if (state->window_relative_cursor_pos.y < state->scroll_offset - madness_ui_get_default_element_height() ||
         (state->window_relative_cursor_pos.y + state->header_size.y - state->scroll_offset > state->window_region_size.y
             - size.y))
     {
@@ -615,7 +644,7 @@ bool madness_ui_is_outside_window(vec2s size, bool advance_cursor)
             madness_ui_advance_cursor(size);
         }
         return true;
-    }
+    }*/
     return false;
 }
 
@@ -776,6 +805,8 @@ bool madness_ui_pop_up_open(String pop_up_name, vec2s pop_up_start_location)
 
 
     stack_push(madness_ui->pop_up_stack, &pop_up_state);
+
+
     return false;
 }
 
@@ -808,6 +839,7 @@ bool madness_ui_pop_up_close(void)
     madness_ui_new_scissor_end();
     stack_pop(madness_ui->pop_up_stack);
 
+
     return false;
 }
 
@@ -823,6 +855,8 @@ void madness_ui_window_begin(String header_name)
         {
             window_state = &madness_ui->window_state_array[i];
             window_state->window_relative_cursor_pos = glms_vec2_zero();
+
+
             break;
         }
     }
@@ -835,16 +869,23 @@ void madness_ui_window_begin(String header_name)
         vec2s pos = madness_ui_get_window_pos();
         vec2s size = madness_ui_get_window_size();
 
-        vec2s starting_size = {.x = 0.2, .y = 0.8};
         *window_state = (Window_State){
             .window_name = string_duplicate_alloc(&header_name, madness_ui->allocator),
-            .window_type = UI_WINDOW_TYPE_WINDOW,
             .window_region_pos = pos,
             .window_region_size = size,
             .header_size = glms_vec2_zero(),
             .scroll_offset = 0,
             .window_relative_cursor_pos = glms_vec2_zero(),
         };
+    }
+
+    //set flags every frame in case they get changed
+    window_state->flags = madness_ui_get_window_flags();
+
+    //if we are a nested window, then we want to start at the current cursor position
+    if (!stack_is_empty(madness_ui->window_states_stack))
+    {
+        window_state->window_region_pos = madness_ui->cursor_pos;
     }
 
 
@@ -854,62 +895,94 @@ void madness_ui_window_begin(String header_name)
     madness_ui->cursor_pos = madness_ui->current_window_screen_pos;
     madness_ui->cursor_pos.x += madness_ui->element_padding_x;
 
+    //set proper cursor offset for the scroll region
+    madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
+    vec2s header_size = glms_vec2_zero();
+    if (window_state->flags & UI_Window_Flag_Header)
+    {
+        header_size = (vec2s){
+            madness_ui->current_window_screen_size.x,
+            madness_ui_get_default_element_height(),
+        };
+    }
+    window_state->header_size = header_size;
+
+    if (madness_ui_is_outside_window(header_size, true))
+    {
+        stack_push(madness_ui->window_states_stack, &window_state);
+        return;
+    }
+
+    //TODO: MORNING, the background and header arent suppose to render
     //create the background
     UI_Node* background_node = madness_ui_get_new_node();
     background_node->pos = madness_ui->current_window_screen_pos;
     background_node->size = madness_ui->current_window_screen_size;
-    background_node->color = madness_ui->editor_style.layout_color;
+    //scroll box needs a distinct color to stand out
+    if (window_state->flags & UI_Window_Flag_Scrollbox)
+    {
+        background_node->color = madness_ui->editor_style.scrollbox_color;
+    }
+    else
+    {
+        background_node->color = madness_ui->editor_style.layout_color;
+    }
     background_node->string_id = header_name;
 
 
     //create the header
-    vec2s header_size = {
-        madness_ui->current_window_screen_size.x,
-        madness_ui_get_default_element_height(),
-    };
-
-    UI_Node* header_node = madness_ui_get_new_node();
-    header_node->pos = madness_ui->current_window_screen_pos;
-    header_node->size = header_size;
-    header_node->color = madness_ui->editor_style.header_color;
-    header_node->string_id = header_name;
-    header_node->hash_id = string_hash_u64(header_name);
-
-    window_state->header_size = header_node->size;
-
-    //Window Name
-    // madness_ui_text_new(madness_ui, header_name);
-    madness_ui_string_internal(header_name, madness_ui->cursor_pos, header_node->size, UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
-
-    madness_ui_advance_cursor(header_node->size);
-
-
-    madness_ui_new_scissor_start(glms_vec2_add(madness_ui->current_window_screen_pos, header_size),
-                                 (vec2s){
-                                     madness_ui->current_window_screen_size.x,
-                                     madness_ui->current_window_screen_size.y - header_size.y
-                                 });
-
-
-    madness_ui_set_interaction_state(header_node);
-    if (is_active(header_node->hash_id))
+    if (window_state->flags & UI_Window_Flag_Header)
     {
-        if (madness_ui->mouse_down)
+        UI_Node* header_node = madness_ui_get_new_node();
+        header_size = (vec2s){
+            madness_ui->current_window_screen_size.x,
+            madness_ui_get_default_element_height(),
+        };
+
+        header_node->pos = madness_ui->current_window_screen_pos;
+        header_node->size = header_size;
+        header_node->color = madness_ui->editor_style.header_color;
+        header_node->string_id = header_name;
+        header_node->hash_id = string_hash_u64(header_name);
+        window_state->header_size = header_node->size;
+
+        //Window Name
+        // madness_ui_text_new(madness_ui, header_name);
+        vec2s string_header_pos = (vec2s){
+            madness_ui->cursor_pos.x, madness_ui->cursor_pos.y + window_state->scroll_offset
+        };
+        madness_ui_string_internal(header_name, string_header_pos, header_node->size, UI_ALIGNMENT_LEFT,
+                                   UI_ALIGNMENT_CENTER);
+
+        madness_ui_advance_cursor(header_node->size);
+
+
+        madness_ui_new_scissor_start(glms_vec2_add(madness_ui->current_window_screen_pos, header_size),
+                                     (vec2s){
+                                         madness_ui->current_window_screen_size.x,
+                                         madness_ui->current_window_screen_size.y - header_size.y
+                                     });
+
+
+        madness_ui_set_interaction_state(header_node);
+        if (is_active(header_node->hash_id))
         {
-            window_state->window_region_pos.x += madness_ui->mouse_delta_x;
-            window_state->window_region_pos.y += madness_ui->mouse_delta_y;
+            header_node->color = madness_ui->editor_style.pressed_color;
+            if (window_state->flags & UI_Window_Flag_Movable)
+            {
+                if (madness_ui->mouse_down)
+                {
+                    window_state->window_region_pos.x += madness_ui->mouse_delta_x;
+                    window_state->window_region_pos.y += madness_ui->mouse_delta_y;
+                }
+            }
+        }
+        else if (is_hot(header_node->hash_id))
+        {
+            header_node->color = madness_ui->editor_style.hovered_color;
         }
     }
-    else if (is_hot(header_node->hash_id))
-    {
-        header_node->color = madness_ui->editor_style.hovered_color;
-    }
-
-
-    //set proper cursor offset for the scroll region
-    madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
 
     stack_push(madness_ui->window_states_stack, &window_state);
@@ -983,163 +1056,70 @@ void madness_ui_window_end(void)
     //TODO: since the resize node is in conflict with the auto sizer, double clicking the resize should auto resize
     // but using the resize bar at all turns off the auto resize
     //resize the window up if needed, it looks a little funny but whatever
-    if (content_overflow > 0)
+    if (state->flags & UI_Window_Flag_Autoresize)
     {
-        state->window_region_size.y = content_height + (madness_ui_get_default_element_height() * 2);
-        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.y - state->window_region_pos.y -
-                                                  (madness_ui_get_default_element_height()));
+        if (content_overflow > 0)
+        {
+            state->window_region_size.y = content_height + (madness_ui_get_default_element_height() * 2);
+            state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                      madness_ui->screen_size.y - state->window_region_pos.y -
+                                                      (madness_ui_get_default_element_height()));
+        }
     }
 
     // resize bar
-
-    UI_Node* resize_node = madness_ui_get_new_node();
-    resize_node->size = (vec2s){12, 12};
-    resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_allocator);
-    resize_node->hash_id = string_hash_u64(resize_node->string_id);
-
-    vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
-
-    resize_node->pos = glms_vec2_sub(pos_before_adjustment, resize_node->size);
-    resize_node->color = COLOR_GREEN;
-
-    madness_ui_set_interaction_state(resize_node);
-
-    if (is_active(resize_node->hash_id))
+    if (state->flags & UI_Window_Flag_Resizable)
     {
-        state->window_region_size.x += madness_ui->mouse_delta_x;
-        state->window_region_size.y += madness_ui->mouse_delta_y;
-        state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.x);
-        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.y);
+        UI_Node* resize_node = madness_ui_get_new_node();
+        resize_node->size = (vec2s){12, 12};
+        resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_allocator);
+        resize_node->hash_id = string_hash_u64(resize_node->string_id);
+
+        vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
+
+        resize_node->pos = glms_vec2_sub(pos_before_adjustment, resize_node->size);
+        resize_node->color = COLOR_GREEN;
+
+        madness_ui_set_interaction_state(resize_node);
+
+        if (is_active(resize_node->hash_id))
+        {
+            state->window_region_size.x += madness_ui->mouse_delta_x;
+            state->window_region_size.y += madness_ui->mouse_delta_y;
+            state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
+                                                      madness_ui->screen_size.x);
+            state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                      madness_ui->screen_size.y);
+        }
     }
 
+    madness_ui_set_cursor_pos(state->window_region_pos);
+    madness_ui_advance_cursor(state->window_region_size);
+
     // hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
+
+    /*if (!stack_is_empty(madness_ui->window_states_stack))
+    {
+         Window_State* parent_state = stack_top(madness_ui->window_states_stack, Window_State*);
+        parent_state->window_relative_cursor_pos.y += state->window_region_size.y;
+    }*/
 }
 
 
 void madness_scroll_box_begin(String id)
 {
-    u32 scroll_height_in_elements = 5;
-    vec2s scroll_box_size = (vec2s){
-        madness_ui->current_window_screen_size.x * 0.95,
-        madness_ui_get_default_element_height() * scroll_height_in_elements
-    };
+    madness_ui_set_window_flags(UI_Window_Flag_Resizable | UI_Window_Flag_Header |
+        UI_Window_Flag_Scrollable |
+        UI_Window_Flag_Dont_Save_Position |
+        UI_Window_Flag_Scrollbox);
 
-    madness_ui_new_scissor_start(madness_ui->cursor_pos, scroll_box_size);
-
-    UI_Node* scroll_box_node = madness_ui_get_new_node();
-    scroll_box_node->string_id = id;
-    scroll_box_node->pos = madness_ui->cursor_pos;
-    scroll_box_node->size = scroll_box_size;
-    scroll_box_node->color = COLOR_HOT_PINK;
-
-    //we mainly just want the scroll bar offset
-    //find our window
-    Window_State* window_state = NULL;
-
-    for (u32 i = 0; i < madness_ui->window_state_array_count; i++)
-    {
-        if (string_compare(madness_ui->window_state_array[i].window_name, &id))
-        {
-            window_state = &madness_ui->window_state_array[i];
-            break;
-        }
-    }
-
-    //if not found we create a new one
-    if (!window_state)
-    {
-        window_state = &madness_ui->window_state_array[madness_ui->window_state_array_count++];
-        *window_state = (Window_State){
-            .window_name = string_duplicate_alloc(&id, madness_ui->allocator),
-            .window_type = UI_WINDOW_TYPE_SCROLLBAR,
-            .window_region_pos = scroll_box_node->pos,
-            .window_region_size = scroll_box_node->size,
-            .header_size = glms_vec2_zero(),
-            .scroll_bar_percent_offset = 0,
-            .scroll_offset = 0,
-        };
-    }
-
-
-    window_state->window_region_pos = scroll_box_node->pos;
-    window_state->window_region_size = scroll_box_node->size;
-
-    //offset by scroll offset
-    madness_ui->cursor_pos.y -= window_state->scroll_offset;
-
-    stack_push(madness_ui->window_states_stack, &window_state);
+    madness_ui_window_begin(id);
 }
 
 
 void madness_scroll_box_end(void)
 {
-    madness_ui_new_scissor_end();
-
-    Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
-    stack_pop(madness_ui->window_states_stack);
-
-
-    //scroll bar
-    float scroll_region_start_pos = (state->window_region_pos.y + state->header_size.y);
-    float scroll_region_size_y = (state->window_region_size.y - state->header_size.y);
-
-    float content_height = madness_ui->cursor_pos.y - scroll_region_start_pos + state->scroll_offset;
-    float content_overflow = content_height - scroll_region_size_y;
-
-    if (content_overflow > 0)
-    {
-        UI_Node* slider_bar = madness_ui_get_new_node();
-        slider_bar->size = (vec2s){8.f, state->window_region_size.y * 0.1};
-        slider_bar->color = madness_ui->editor_style.layout_accent_color;
-        slider_bar->string_id = *string_concat(state->window_name, &STRING("SLIDER"), madness_ui->frame_allocator);
-        slider_bar->hash_id = string_hash_u64(slider_bar->string_id);
-        slider_bar->color = COLOR_BLUE;
-
-        //determines where the slider should be proportionally
-        float scroll_bar_pos_x = state->window_region_pos.x + state->window_region_size.x - slider_bar->size.x;
-        float scroll_bar_pos_y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
-            scroll_bar_percent_offset);
-        slider_bar->pos = (vec2s){scroll_bar_pos_x, scroll_bar_pos_y};
-
-        madness_ui_set_interaction_state(slider_bar);
-        if (is_hot(slider_bar->hash_id))
-        {
-            slider_bar->color = madness_ui->editor_style.hovered_color;
-            //handle window scrolling
-            if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
-            {
-                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset - 0.1, 0, 1);
-                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
-            }
-            if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
-            {
-                // state.scroll_offset += 10;
-                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset + 0.1, 0, 1);
-                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
-            }
-        }
-        if (is_active(slider_bar->hash_id))
-        {
-            float track_width = scroll_region_size_y - slider_bar->size.y;
-            float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
-            float t = clamp_float(relative_y / track_width, 0.0f, 1.0f);
-
-            state->scroll_bar_percent_offset = 0 + t * (1 - 0);
-            state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
-            slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
-                scroll_bar_percent_offset);
-        }
-    }
-
-
-    madness_ui->cursor_pos = state->window_region_pos;
-    madness_ui_advance_cursor(state->window_region_size);
-
-
-    // hash_table_string_set(madness_ui->window_state_hash, state.window_name, &state);
+    madness_ui_window_end();
 }
 
 
@@ -1147,12 +1127,6 @@ void madness_ui_set_window_pos(u32 x, u32 y)
 {
     vec2s push_data = {.x = x, .y = y};
     stack_push(madness_ui->window_pos_stack, &push_data);
-}
-
-void madness_ui_set_window_size(u32 width, u32 height)
-{
-    vec2s push_data = {.x = width, .y = height};
-    stack_push(madness_ui->window_size_stack, &push_data);
 }
 
 vec2s madness_ui_get_window_pos(void)
@@ -1166,6 +1140,12 @@ vec2s madness_ui_get_window_pos(void)
     return out;
 }
 
+void madness_ui_set_window_size(u32 width, u32 height)
+{
+    vec2s push_data = {.x = width, .y = height};
+    stack_push(madness_ui->window_size_stack, &push_data);
+}
+
 vec2s madness_ui_get_window_size(void)
 {
     if (stack_is_empty(madness_ui->window_size_stack))
@@ -1175,6 +1155,25 @@ vec2s madness_ui_get_window_size(void)
     vec2s out = stack_top(madness_ui->window_size_stack, vec2s);
     stack_pop(madness_ui->window_size_stack);
     return out;
+}
+
+
+void madness_ui_set_window_flags(UI_Window_Flag flags)
+{
+    madness_ui->window_flag_stack.flags = flags;
+    madness_ui->window_flag_stack.use = true;
+}
+
+UI_Window_Flag madness_ui_get_window_flags(void)
+{
+    if (madness_ui->window_flag_stack.use)
+    {
+        madness_ui->window_flag_stack.use = false;
+        return madness_ui->window_flag_stack.flags;
+    }
+    //default
+    const UI_Window_Flag default_flags = UI_Window_Flag_Movable | UI_Window_Flag_Resizable | UI_Window_Flag_Header;
+    return default_flags;
 }
 
 
@@ -2562,6 +2561,7 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
     String selected_string = string_array[*selected_value];
     vec2s text_size = madness_ui_get_text_size(selected_string);
 
+
     UI_Node* combo_box_node = madness_ui_get_new_node();
     combo_box_node->string_id = id;
     combo_box_node->hash_id = string_hash_u64(id);
@@ -3570,7 +3570,6 @@ void madness_ui_serialize_windows()
         Window_State* state = &madness_ui->window_state_array[i];
 
         string_serialize(state->window_name, file);
-        fwrite(&state->window_type, sizeof(state->window_type), 1, file);
         fwrite(&state->window_region_size, sizeof(state->window_region_size), 1, file);
         fwrite(&state->window_region_pos, sizeof(state->window_region_pos), 1, file);
         fwrite(&state->header_size, sizeof(state->header_size), 1, file);
@@ -3612,7 +3611,6 @@ void madness_ui_deserialize_windows()
         Window_State* state = &madness_ui->window_state_array[i];
         state->window_name = allocator_alloc(madness_ui->allocator, sizeof(String));
         string_deserialize(state->window_name, file, madness_ui->allocator);
-        fread(&state->window_type, sizeof(state->window_type), 1, file);
         fread(&state->window_region_size, sizeof(state->window_region_size), 1, file);
         fread(&state->window_region_pos, sizeof(state->window_region_pos), 1, file);
         fread(&state->header_size, sizeof(state->header_size), 1, file);
@@ -3732,7 +3730,6 @@ void madness_ui_example(void)
                     FATAL("BUTTONS AND DEATH");
                 };
             }
-
             madness_scroll_box_end();
             madness_ui_button(STRING("File oh oh yes "));
             madness_ui_button(STRING("File oh oh yes "));

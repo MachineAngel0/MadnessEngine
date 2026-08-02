@@ -48,6 +48,8 @@ void* stack_top_(stack* s);
 #define stack_top(s, type)\
     (*(type*)stack_top_((s)))
 
+//dont use this unless you have to
+void* stack_get(stack* s, u32 index);
 
 
 u64 stack_size(const stack* s);

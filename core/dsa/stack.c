@@ -108,6 +108,11 @@ void* stack_top_(stack* s)
     return (((uint8_t*)s->data) + (s->stride * (s->num_items - 1)));
 }
 
+void* stack_get(stack* s, u32 index)
+{
+   return (void*)((u8*)s->data + (index * s->stride));
+
+}
 
 
 u64 stack_size(const stack* s)

@@ -47,7 +47,6 @@ typedef struct Madness_UI_File_Header
 } Madness_UI_File_Header;
 
 
-
 typedef enum UI_Layout_Direction
 {
     UI_LAYOUT_HORIZONTAL,
@@ -77,10 +76,8 @@ typedef struct UI_Editor_Style
 
     vec3s header_color;
     vec3s pop_up_color;
-
-
+    vec3s scrollbox_color;
 } UI_Editor_Style;
-
 
 
 struct UI_Circle
@@ -126,7 +123,6 @@ typedef struct UI_Node
 } UI_Node;
 
 
-
 typedef struct scroll_box_state
 {
     u32 max_nodes_to_display; // user sets info
@@ -136,34 +132,31 @@ typedef struct scroll_box_state
 } scroll_box_state;
 
 
-typedef enum UI_Window_Type
-{
-    UI_WINDOW_TYPE_NONE,
-    UI_WINDOW_TYPE_WINDOW,
-    UI_WINDOW_TYPE_SCROLLBAR,
-    UI_WINDOW_TYPE_POPUP,
-    UI_WINDOW_TYPE_MAX,
-} UI_Window_Type;
 
 typedef enum UI_Window_Flag
 {
-    UI_Window_Flag_Window,
-    UI_Window_Flag_Scrollable,
-    UI_Window_Flag_Resizable,
-    UI_Window_Flag_Movable,
-    UI_Window_Flag_Autoresize,
-    UI_Window_Flag_Dont_Save_Position,
+    UI_Window_Flag_Window = BITFLAG(0),
+    UI_Window_Flag_Scrollable = BITFLAG(1),
+    UI_Window_Flag_Scrollbox = BITFLAG(2), // for setting the background
+    UI_Window_Flag_Resizable = BITFLAG(3),
+    UI_Window_Flag_Header = BITFLAG(4),
+    UI_Window_Flag_Movable = BITFLAG(5),
+    UI_Window_Flag_Autoresize = BITFLAG(6),
+    UI_Window_Flag_Dont_Save_Position = BITFLAG(7),
+    UI_Window_Flag_Dropdown = BITFLAG(8), // TODO: for combo box and making them scrollable
 } UI_Window_Flag;
 
 
-
-
+typedef struct Window_Flag_Latest
+{
+    bool use;
+    UI_Window_Flag flags;
+} Window_Flag_Latest;
 
 
 typedef struct Window_State
 {
     String* window_name;
-    UI_Window_Type window_type;
 
     vec2s window_region_pos;
     vec2s window_region_size;
@@ -177,6 +170,7 @@ typedef struct Window_State
     float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
 
     vec2s window_relative_cursor_pos; // track how far down items have gone down relative to the window
+    UI_Window_Flag flags; // track how far down items have gone down relative to the window
 } Window_State;
 
 typedef struct Pop_Up_State
@@ -189,9 +183,6 @@ typedef struct Pop_Up_State
 
     UI_Node* pop_up_node;
     UI_Node* pop_up_scissor_start_node;
-
-
-
 } Pop_Up_State;
 
 
@@ -203,7 +194,6 @@ typedef struct Menu_Bar_State
     vec2s menu_cursor_position;
 
     String active_menu_item;
-
 } Menu_Bar_State;
 
 typedef struct String_Builder_State
@@ -214,12 +204,12 @@ typedef struct String_Builder_State
 } String_Builder_State;
 
 
-
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
 {
     Heap_Allocator* free_list_allocator;
-    Allocator* allocator; //permanent storage location, rn mainly just for loading fonts, would be better as a pool arena
+    Allocator* allocator;
+    //permanent storage location, rn mainly just for loading fonts, would be better as a pool arena
     Frame_Allocator* frame_allocator;
 
     Input_System* input_system_reference; // does not own memory
@@ -240,7 +230,6 @@ typedef struct Madness_UI
     u64 ui_draw_data_count;
 
 
-
     //a window is anything with which things are drawn to inside of it
     Window_State window_state_array[MAX_MADNESS_UI_WINDOWS];
     u32 window_state_array_count;
@@ -252,14 +241,15 @@ typedef struct Madness_UI
 
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
+    Window_Flag_Latest window_flag_stack;
 
     // HASH_TABLE_STR_TYPE(String_Builder*)* text_box_states; // TODO:
 
     String active_combo_box;
     Menu_Bar_State menu_bar_state;
 
-     float text_outline;
-     vec3s text_outline_color;
+    float text_outline;
+    vec3s text_outline_color;
 
 
     // Mouse/Key STATE // // TODO: gamepad and proper keyboard navigation
@@ -311,7 +301,6 @@ typedef struct Madness_UI
     // space between each ui element and its inner text
     float text_padding_x;
     float text_padding_y;
-
 
 
     //MISC //
@@ -376,10 +365,10 @@ MAPI void madness_ui_window_end(void);
 
 MAPI void madness_ui_set_window_pos(u32 x, u32 y);
 MAPI void madness_ui_set_window_size(u32 width, u32 height);
+MAPI void madness_ui_set_window_flags(UI_Window_Flag flags);
 MAPI vec2s madness_ui_get_window_pos(void);
 MAPI vec2s madness_ui_get_window_size(void);
-
-
+MAPI UI_Window_Flag madness_ui_get_window_flags(void);
 
 
 MAPI void madness_scroll_box_begin(String id);
@@ -436,7 +425,7 @@ MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_
 
 //
 MAPI bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
-                               u32 string_array_size);
+                                      u32 string_array_size);
 
 
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
@@ -457,7 +446,8 @@ MAPI bool madness_ui_circle(String id, float* thickness);
 MAPI bool madness_ui_progress_bar(String label, float current, float max);
 
 
-MAPI bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_registry, const char* struct_name, const char* identifier);
+MAPI bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_registry, const char* struct_name,
+                                                 const char* identifier);
 
 
 typedef struct Material_Link
@@ -517,6 +507,8 @@ MAPI bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* 
 void madness_ui_same_line(void);
 void madness_ui_advance_cursor(vec2s ui_screen_size);
 void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size);
+void madness_ui_set_cursor_pos(vec2s ui_screen_pos);
+
 bool madness_ui_is_outside_window(vec2s size, bool advance_cursor);
 
 void madness_ui_set_button_size(float button_size);
@@ -590,7 +582,6 @@ MAPI bool is_active(int id);
 MAPI bool is_hot(int id);
 
 void madness_ui_set_interaction_state(UI_Node* new_node);
-
 
 
 //serialization
