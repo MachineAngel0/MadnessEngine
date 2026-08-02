@@ -132,6 +132,18 @@ typedef enum UI_Window_Type
     UI_WINDOW_TYPE_MAX,
 } UI_Window_Type;
 
+typedef enum UI_Window_Flag
+{
+    UI_Window_Flag_Window,
+    UI_Window_Flag_Scrollable,
+    UI_Window_Flag_Resizable,
+    UI_Window_Flag_Movable,
+    UI_Window_Flag_Autoresize,
+} UI_Window_Flag;
+
+
+
+
 
 
 typedef struct Window_State
@@ -233,6 +245,8 @@ typedef struct Madness_UI
     String active_combo_box;
     Menu_Bar_State menu_bar_state;
 
+     float text_outline;
+     vec3s text_outline_color;
 
 
     // Mouse/Key STATE // // TODO: gamepad and proper keyboard navigation
@@ -485,7 +499,7 @@ MAPI bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* 
 void madness_ui_same_line(void);
 void madness_ui_advance_cursor(vec2s ui_screen_size);
 void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size);
-bool madness_ui_skip_render(vec2s size);
+bool madness_ui_is_outside_window(vec2s size);
 
 void madness_ui_set_button_size(float button_size);
 void madness_ui_set_font_size(float font_size);

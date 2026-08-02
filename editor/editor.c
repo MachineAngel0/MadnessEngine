@@ -84,9 +84,9 @@ void editor_ui(Editor* editor)
         // insanity_ui_test();
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
-        // madness_ui_test(editor->madness_ui);
-        // madness_ui_example();
-        madness_ui_window_testing();
+        // madness_ui_test();
+        madness_ui_example();
+        // madness_ui_window_testing();
         break;
     case EDITOR_UI_STATE_ENGINE_STATS:
         editor_ui_stats(editor);

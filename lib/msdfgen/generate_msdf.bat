@@ -13,5 +13,7 @@
 
 msdf-atlas-gen.exe -font "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\fonts\arial.ttf" -type msdf -dimensions 256 256  -size 32 -yorigin top -imageout arial.png
 msdf-atlas-gen.exe -font "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\fonts\arial.ttf" -type msdf -dimensions 256 256 -pxrange 2 -size 40 -yorigin top -imageout "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\msdf_fonts\arial_msdf.png" -csv "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\msdf_fonts\arial_msdf.csv"
+:: msdf-atlas-gen.exe -font "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\fonts\arial.ttf" -type msdf -dimensions 512 512 -pxrange 6 -size 56 -yorigin top -imageout "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\msdf_fonts\arial_msdf.png" -csv "C:\Users\Adams Humbert\Documents\Clion\MadnessEngine\z_assets\msdf_fonts\arial_msdf.csv"
+
 
 @pause

@@ -554,7 +554,7 @@ void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size)
     madness_ui->cursor_pos.x = ui_screen_size.x + madness_ui->element_padding_x;
 }
 
-bool madness_ui_skip_render(vec2s size)
+bool madness_ui_is_outside_window(vec2s size)
 {
     //check if we are oustide the view of the window, in which case we do not render, create a draw the ui item
     Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
@@ -1293,7 +1293,8 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 
 
     // debug the location of the text
-    UI_Node* debug_text_node = madness_ui_get_new_node();
+    // UI_Node* debug_text_node = madness_ui_get_new_node();
+    UI_Node* debug_text_node = allocator_alloc(madness_ui->frame_allocator, sizeof(UI_Node));
     // text_node->pos = madness_ui->cursor_pos;
     debug_text_node->pos = text_pos;
     debug_text_node->size = text_size;
@@ -1301,6 +1302,7 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
     debug_text_node->text = text;
     debug_text_node->string_id = text;
     debug_text_node->hash_id = string_hash_u64(text);
+
 
     //generate the actual text now that we have the proper position
     vec2s text_current_pos = text_pos;
@@ -1332,6 +1334,8 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
         text_node->texture_handle = madness_ui->default_font_handle;
         text_node->flags |= UI_FLAG_TEXT;
         text_node->character = c;
+        text_node->outline_thickness = madness_ui->text_outline;
+        text_node->outline_color = madness_ui->text_outline_color;
 
         text_current_pos.x += (g->advance) * font_scalar; // move offset forward
     }
@@ -1379,7 +1383,7 @@ bool madness_ui_button(const String label)
     };
 
 
-    if (madness_ui_skip_render(button_size))
+    if (madness_ui_is_outside_window(button_size))
     {
         return false;
     }
@@ -3629,6 +3633,10 @@ void madness_ui_config_menu(void)
 
         madness_ui_float2(STRING("Window Size"), &madness_ui->screen_size.x,
                           &madness_ui->screen_size.y, 0);
+
+        madness_ui_float(STRING("Text Outline"), &madness_ui->text_outline, 0.01);
+        madness_ui_vec3(STRING("Text Outline Color"), &madness_ui->text_outline_color, 1.0);
+
     }
     madness_ui_window_end();
 }

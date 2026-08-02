@@ -88,6 +88,7 @@ void main() {
         outColor = vec4(color, fill_alpha);
     }
 
+/*
     if ((inst_data.flags & UI_FLAG_TEXT) != 0u){
         outColor = vec4(in_color, 1.0f) * texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv);// if we want colors overlayed
 
@@ -101,6 +102,47 @@ void main() {
 
         outColor = mix(background_color, text_color, opacity);
     }
+*/
+    if ((inst_data.flags & UI_FLAG_TEXT) != 0u)
+    {
+        vec3 msd = texture(texture_samples[nonuniformEXT(in_texture_idx)], in_uv).rgb;
+
+        // Median of the MSDF channels
+        float sd = median(msd.r, msd.g, msd.b);
+
+        // Convert from texture-space distance to screen-space pixels
+        float pxRange = screenPxRange(texture_samples[nonuniformEXT(in_texture_idx)], in_uv);
+
+        // Signed distance (0 = glyph edge)
+        float dist = (sd - 0.5) * pxRange;
+
+        vec3 fillColor = in_color;
+        vec3 outlineColor = inst_data.outline_color;
+
+        // Thickness in screen pixels
+        float outlineWidth = inst_data.outline_thickness;
+
+        // Fill mask
+        float fill = smoothstep(-0.5, 0.5, dist);
+
+        // Everything inside the expanded glyph
+        float expanded = smoothstep(
+        -outlineWidth - 0.5,
+        -outlineWidth + 0.5,
+        dist);
+
+        // Outline only
+        float outline = clamp(expanded - fill, 0.0, 1.0);
+
+        // Blend colors
+        vec3 color = mix(outlineColor, fillColor, fill);
+
+        // Combined alpha
+        float alpha = max(fill, outline);
+
+        outColor = vec4(color, alpha);
+    }
+
 
     if ((inst_data.flags & UI_FLAG_CIRCLE) != 0u){
 
