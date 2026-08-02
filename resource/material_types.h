@@ -37,6 +37,7 @@ typedef struct Material_Default
 
 
 } Material_Default;
+
 typedef struct Material_Default_CPU
 {
     u32 flags;

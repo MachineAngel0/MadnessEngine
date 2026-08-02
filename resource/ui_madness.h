@@ -501,7 +501,7 @@ MAPI bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* 
 void madness_ui_same_line(void);
 void madness_ui_advance_cursor(vec2s ui_screen_size);
 void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size);
-bool madness_ui_is_outside_window(vec2s size);
+bool madness_ui_is_outside_window(vec2s size, bool advance_cursor);
 
 void madness_ui_set_button_size(float button_size);
 void madness_ui_set_font_size(float font_size);

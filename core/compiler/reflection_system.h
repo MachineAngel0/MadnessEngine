@@ -262,4 +262,7 @@ bool reflection_system_does_struct_exist(Reflection_System* reflection_system, c
 void reflection_data_to_files(Reflection_System* reflection_system, const char* function_name,
                               const char* generated_enum_file_path, const char* generated_struct_file_path);
 
+void reflection_data_generate_structs_from_shader(Reflection_System* reflection_system, const char* function_name,
+                                                  const char* generated_struct_file_path);
+
 #endif //REFLECTION_H

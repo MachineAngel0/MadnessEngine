@@ -956,3 +956,59 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
     fprintf(reflection_offset_file, "}\n");
     fclose(reflection_offset_file);
 }
+
+void reflection_data_generate_structs_from_shader(Reflection_System* reflection_system, const char* function_name,
+                                                  const char* generated_struct_file_path)
+{
+    //TODO: we are not freeing anything and especially nothing using the string_builder to C-string function
+    MASSERT(reflection_system);
+
+    const char* header =
+        "#include <stddef.h>\n"
+        "#include \"runtime_registry.h\"\n";
+
+
+    // structs
+    FILE* reflection_offset_file = fopen(generated_struct_file_path, "w");
+    if (!reflection_offset_file)
+    {
+        MASSERT(false);
+    }
+
+
+    fwrite(header, strlen(header), 1, reflection_offset_file);
+
+    //generate structs from shaders
+
+    for (u64 i = 0; i < reflection_system->reflection_struct_size; i++)
+    {
+        Reflection_Struct* struct_info = &reflection_system->reflection_registry_structs[i];
+        if (!struct_info->name) { continue; }
+
+        if (struct_info->type_list_size == 0){continue;}
+
+        fprintf(reflection_offset_file,
+                           "typedef struct %s { \n",
+                           struct_info->name);
+
+        // fields array
+        for (u64 j = 0; j < struct_info->type_list_size; j++)
+        {
+            Reflection_Struct_Field* field = &struct_info->type_list[j];
+            if (!field->field_name) { continue; }
+
+            fprintf(reflection_offset_file,
+                    "%s %s;\n",
+                    field->type_name,
+                    field->field_name);
+        }
+
+        fprintf(reflection_offset_file,
+                   "  } %s;\n",
+                   struct_info->name
+                   );
+    }
+
+
+    fclose(reflection_offset_file);
+}

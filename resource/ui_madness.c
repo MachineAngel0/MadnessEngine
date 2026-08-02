@@ -520,8 +520,16 @@ UI_Node* madness_ui_get_last_used_node(Madness_UI* madness_ui)
 
 void madness_ui_same_line(void)
 {
+
+    if (!stack_is_empty(madness_ui->window_states_stack))
+    {
+        Window_State* window_state = stack_top(madness_ui->window_states_stack, Window_State*);
+        window_state->window_relative_cursor_pos.y -= madness_ui->prev_item_size.y + madness_ui->element_padding_y;
+    }
+
     madness_ui->cursor_pos.x = madness_ui->prev_line.x + madness_ui->prev_item_size.x + madness_ui->element_padding_x;
     madness_ui->cursor_pos.y -= madness_ui->prev_item_size.y + madness_ui->element_padding_y;
+
 }
 
 void madness_ui_advance_cursor(vec2s ui_screen_size)
@@ -555,21 +563,24 @@ void madness_ui_advance_cursor_horizontal(vec2s ui_screen_size)
     madness_ui->cursor_pos.x = ui_screen_size.x + madness_ui->element_padding_x;
 }
 
-bool madness_ui_is_outside_window(vec2s size)
+bool madness_ui_is_outside_window(vec2s size, bool advance_cursor)
 {
     //check if we are oustide the view of the window, in which case we do not render, create a draw the ui item
+    if (stack_is_empty(madness_ui->window_states_stack))
+    {
+        return false;
+    }
+
     Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
 
     //check if the item is above the window
-    if (state->window_relative_cursor_pos.y < state->scroll_offset - madness_ui_get_default_element_height())
+    if (state->window_relative_cursor_pos.y < state->scroll_offset - madness_ui_get_default_element_height() ||
+        (state->window_relative_cursor_pos.y + state->header_size.y - state->scroll_offset > state->window_region_size.y - size.y))
     {
-        madness_ui_advance_cursor(size);
-        return true;
-    }
-    //check if the item is below the window
-    if (state->window_relative_cursor_pos.y + state->header_size.y - state->scroll_offset > state->window_region_size.y - size.y)
-    {
-        madness_ui_advance_cursor(size);
+        if (advance_cursor)
+        {
+            madness_ui_advance_cursor(size);
+        }
         return true;
     }
     return false;
@@ -1304,6 +1315,12 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
     debug_text_node->string_id = text;
     debug_text_node->hash_id = string_hash_u64(text);
 
+    if (madness_ui_is_outside_window(text_size, false))
+    {
+        return debug_text_node;
+    }
+
+
 
     //generate the actual text now that we have the proper position
     vec2s text_current_pos = text_pos;
@@ -1384,7 +1401,7 @@ bool madness_ui_button(const String label)
     };
 
 
-    if (madness_ui_is_outside_window(button_size))
+    if (madness_ui_is_outside_window(button_size, true))
     {
         return false;
     }
