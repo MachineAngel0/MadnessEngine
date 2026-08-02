@@ -11,7 +11,19 @@
 //Vertex Data
 
 
+//TODO: just warn the user to increase the initial size and not render the overflowed nodes
+#define MAX_UI_NODE_COUNT 100000
+#define MAX_UI_DRAW_COUNT 500
 
+#define MIN_UI_NODE_SCREEN_SIZE 250
+
+#define EDITOR_FONT_SIZE 16.0f
+#define EDITOR_TEXT_OUTLINE 0.5f
+
+#define MADNESS_UI_SAVE_FILE_PATH "../z_assets_engine/ui/madness_ui_window_data.bin"
+
+#define MAX_MADNESS_UI_STRING_BUILDERS 100
+#define MAX_MADNESS_UI_WINDOWS 100
 
 typedef struct PC_UI
 {
@@ -25,8 +37,14 @@ typedef struct Material_2D_Param_Data
     u32 texture_index;
 } Material_2D_Param_Data;
 
-#define EDITOR_FONT_SIZE 16.0f
-#define EDITOR_TEXT_OUTLINE 0.5f
+
+typedef struct Madness_UI_File_Header
+{
+    u8 magic[4];
+    u32 count;
+    u32 bytes_size;
+    u32 extra;
+} Madness_UI_File_Header;
 
 
 
@@ -61,15 +79,8 @@ typedef struct UI_Editor_Style
     vec3s pop_up_color;
 
 
-
 } UI_Editor_Style;
 
-
-//TODO:  just a temporary value for now, will increase later
-#define MAX_UI_NODE_COUNT 100000
-#define MAX_UI_DRAW_COUNT 500
-
-#define MIN_UI_NODE_SCREEN_SIZE 250
 
 
 struct UI_Circle
@@ -141,6 +152,7 @@ typedef enum UI_Window_Flag
     UI_Window_Flag_Resizable,
     UI_Window_Flag_Movable,
     UI_Window_Flag_Autoresize,
+    UI_Window_Flag_Dont_Save_Position,
 } UI_Window_Flag;
 
 
@@ -194,7 +206,6 @@ typedef struct Menu_Bar_State
 
 } Menu_Bar_State;
 
-#define MAX_MADNESS_UI_STRING_BUILDERS 100
 typedef struct String_Builder_State
 {
     String* id;
@@ -231,7 +242,7 @@ typedef struct Madness_UI
 
 
     //a window is anything with which things are drawn to inside of it
-    Window_State window_state_array[100];
+    Window_State window_state_array[MAX_MADNESS_UI_WINDOWS];
     u32 window_state_array_count;
     STACK_TYPE(Window_State*)* window_states_stack;
 
@@ -570,5 +581,12 @@ MAPI bool is_active(int id);
 MAPI bool is_hot(int id);
 
 void madness_ui_set_interaction_state(UI_Node* new_node);
+
+
+
+//serialization
+MAPI void madness_ui_serialize_windows();
+MAPI void madness_ui_deserialize_windows();
+
 
 #endif //UI_H
