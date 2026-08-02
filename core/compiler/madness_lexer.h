@@ -80,10 +80,11 @@ typedef enum Token_Type
     Token_F32,
     Token_F64,
 
-    Token_char,
-    Token_size_t,
-    Token_bool,
-    Token_string_type, //my custom type
+    Token_Char,
+    Token_Size_t,
+    Token_Bool,
+    Token_String_Type, //my custom type
+    Token_Path_String, // string type but for reflection reasons its unqiue
     Token_BITFLAG, // macro
 
     TOKEN_VEC2,

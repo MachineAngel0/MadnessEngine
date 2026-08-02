@@ -25,6 +25,7 @@ typedef enum Reflection_Type
     REFLECTION_TYPE_CHAR,
     REFLECTION_TYPE_CHAR_STRING, // char*
     REFLECTION_TYPE_STRING, // String*
+    REFLECTION_TYPE_PATH_STRING, // Path_String*
     REFLECTION_TYPE_ENUM,
     REFLECTION_TYPE_STRUCT,
 
@@ -57,6 +58,7 @@ u8 Reflection_Type_Size_LUT[REFLECTION_TYPE_MAX] = {
     [REFLECTION_TYPE_CHAR] = sizeof(char),
     [REFLECTION_TYPE_CHAR_STRING] = sizeof(char*),
     [REFLECTION_TYPE_STRING] = sizeof(String),
+    [REFLECTION_TYPE_PATH_STRING] = sizeof(Path_String),
     [REFLECTION_TYPE_ENUM] = sizeof(u32),
     [REFLECTION_TYPE_STRUCT] = 0,
     [REFLECTION_TYPE_VEC2] = sizeof(vec2s),
@@ -85,11 +87,12 @@ Reflection_Type Compiler_type_to_Reflection_Type_LUT[] = {
     [Token_S64] = REFLECTION_TYPE_S64,
     [Token_F32] = REFLECTION_TYPE_F32,
     [Token_F64] = REFLECTION_TYPE_F64,
-    [Token_char] = REFLECTION_TYPE_CHAR,
-    [Token_bool] = REFLECTION_TYPE_BOOL,
-    [Token_string_type] = REFLECTION_TYPE_STRING,
+    [Token_Char] = REFLECTION_TYPE_CHAR,
+    [Token_Bool] = REFLECTION_TYPE_BOOL,
+    [Token_String_Type] = REFLECTION_TYPE_STRING,
+    [Token_Path_String] = REFLECTION_TYPE_PATH_STRING,
     [Token_String] = REFLECTION_TYPE_CHAR_STRING,
-    [Token_size_t] = REFLECTION_TYPE_SIZE_T,
+    [Token_Size_t] = REFLECTION_TYPE_SIZE_T,
     [Token_Enum] = REFLECTION_TYPE_ENUM,
     [Token_Struct] = REFLECTION_TYPE_STRUCT,
     [Token_Identifier] = REFLECTION_TYPE_STRUCT,

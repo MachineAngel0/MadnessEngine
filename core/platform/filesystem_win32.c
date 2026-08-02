@@ -344,9 +344,9 @@ bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List
         }
         else if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
         {
-            String string = asset_list_scan->strings[asset_list_scan->count++];
-            string.length = strlen(full_path);
-            string.chars = c_string_duplicate_allocator(full_path, asset_list_scan->allocator);
+            String* string = &asset_list_scan->strings[asset_list_scan->count++];
+            string->length = strlen(full_path);
+            string->chars = c_string_duplicate_allocator(full_path, asset_list_scan->allocator);
             INFO("[FILE] %s (%ld bytes)", full_path, findFileData.nFileSizeLow);
         }
         else

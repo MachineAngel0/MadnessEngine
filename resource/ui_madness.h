@@ -312,6 +312,8 @@ typedef struct Madness_UI
     float text_padding_x;
     float text_padding_y;
 
+
+
     //MISC //
 
     //Material Node
@@ -320,6 +322,9 @@ typedef struct Madness_UI
     vec2s input_pos;
     bool output_pressed;
     u32 output_pressed_id;
+
+
+    Asset_List_Scan* asset_list_scan_refence;
 
 
     // DRAW LIST
@@ -522,6 +527,10 @@ void madness_ui_set_padding_xy(float x, float y);
 
 //menu for showing configs
 MAPI void madness_ui_config_menu(void);
+
+//
+MAPI void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan);
+
 
 //API END
 

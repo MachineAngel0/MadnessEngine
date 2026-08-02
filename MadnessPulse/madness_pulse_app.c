@@ -206,6 +206,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     list_scan->max_count = MAX_ASSETS_STRINGS;
     filesystem_get_assets_from_directory("../z_assets", list_scan);
 
+    madness_ui_add_asset_list(list_scan);
+
     //MAIN LOOP
 
     clock_start(&application_core->clock);

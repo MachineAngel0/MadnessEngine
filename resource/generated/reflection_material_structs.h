@@ -70,38 +70,38 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 		},
 		{
 			.name = "color_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, color_texture)
 		},
 		{
 			.name = "normal_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, normal_texture)
 		},
 		{
 			.name = "metallic_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, metallic_texture)
 		},
 		{
 			.name = "roughness_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, roughness_texture)
 		},
 		{
 			.name = "ambient_occlusion_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, ambient_occlusion_texture)
 		},
 		{
 			.name = "emissive_texture",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Default, emissive_texture)
 		},
 	};

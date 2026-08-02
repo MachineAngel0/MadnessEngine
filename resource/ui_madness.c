@@ -2093,7 +2093,7 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
     char float_char[12]; // Large enough to hold the digits, sign, and null terminator
 
     // Safely write the integer into the character array
-    snprintf(float_char, sizeof(float_char), "%llu", *i);
+    snprintf(float_char, sizeof(float_char), "%u", *i);
     String float_string = STRING_STRLEN(float_char);
 
     vec2s text_size = madness_ui_get_text_size(float_string);
@@ -2741,7 +2741,8 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
 
     // return madness_ui_use_ui_element(madness_ui, combo_box_node->hash_id, combo_box_node->pos, combo_box_node->size);
     // this should return when somehting has changed or on click, and let the user decide
-    return false;
+    // return false;
+    return madness_ui->nuke_pop_up;
 }
 
 bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_select_string, String* string_array,
@@ -2787,7 +2788,6 @@ bool madness_ui_combo_box_string(String id, u32* selected_value, String* out_sel
         madness_ui_pop_up_open(*pop_up_name, madness_ui->cursor_pos);
 
         //TODO: probably should be a scroll box here
-
         for (u32 i = 0; i < string_array_size; i++)
         {
             String draw = string_array[i];
@@ -3061,6 +3061,12 @@ bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_regi
         case REFLECTION_TYPE_STRING:
             madness_ui_text_box(*custom_name);
             break;
+        case REFLECTION_TYPE_PATH_STRING:
+            static u32 selected_string;
+            madness_ui_combo_box_string(*custom_name, &selected_string, data,
+                                        madness_ui->asset_list_scan_refence->strings,
+                                        madness_ui->asset_list_scan_refence->count);
+            break;
         case REFLECTION_TYPE_CHAR:
             madness_ui_text_box(*custom_name);
             break;
@@ -3156,11 +3162,18 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_SIZE_T:
             madness_ui_float(*custom_name, data, 1.0);
             break;
+
         case REFLECTION_TYPE_BOOL:
             madness_ui_check_box(*custom_name, data);
             break;
         case REFLECTION_TYPE_STRING:
             madness_ui_text_box(*custom_name);
+            break;
+        case REFLECTION_TYPE_PATH_STRING:
+            static u32 selected_string;
+            madness_ui_combo_box_string(*custom_name, &selected_string, data,
+                                        madness_ui->asset_list_scan_refence->strings,
+                                        madness_ui->asset_list_scan_refence->count);
             break;
         case REFLECTION_TYPE_CHAR:
             madness_ui_text_box(*custom_name);
@@ -3192,6 +3205,17 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_STRUCT:
             madness_ui_reflection_runtime_registry(reflection_registry, field_info.type_name, id);
             break;
+
+        case REFLECTION_TYPE_VEC2:
+            madness_ui_vec2(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_VEC3:
+            madness_ui_vec3(*custom_name, data, 1.0);
+            break;
+        case REFLECTION_TYPE_VEC4:
+            madness_ui_vec4(*custom_name, data, 1.0);
+            break;
+
         case REFLECTION_TYPE_MAX:
             break;
         case REFLECTION_TYPE_CHAR_STRING:
@@ -3848,6 +3872,11 @@ void madness_ui_config_menu(void)
         madness_ui_vec3(STRING("Text Outline Color"), &madness_ui->text_outline_color, 1.0);
     }
     madness_ui_window_end();
+}
+
+void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan)
+{
+    madness_ui->asset_list_scan_refence = asset_list_scan;
 }
 
 

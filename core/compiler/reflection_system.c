@@ -285,10 +285,11 @@ void reflection_system_parse_struct(Reflection_System* reflection_system, Lexer*
         Token_S64,
         Token_F32,
         Token_F64,
-        Token_char,
-        Token_string_type,
-        Token_size_t,
-        Token_bool,
+        Token_Char,
+        Token_String_Type,
+        Token_Path_String,
+        Token_Size_t,
+        Token_Bool,
 
         TOKEN_VEC2,
         TOKEN_VEC3,
@@ -714,6 +715,7 @@ static const char* reflection_type_to_str(Reflection_Type type)
     case REFLECTION_TYPE_SIZE_T: return "REFLECTION_TYPE_SIZE_T";
     case REFLECTION_TYPE_BOOL: return "REFLECTION_TYPE_BOOL";
     case REFLECTION_TYPE_STRING: return "REFLECTION_TYPE_STRING";
+    case REFLECTION_TYPE_PATH_STRING: return "REFLECTION_TYPE_PATH_STRING";
     case REFLECTION_TYPE_CHAR: return "REFLECTION_TYPE_CHAR";
     case REFLECTION_TYPE_ENUM: return "REFLECTION_TYPE_ENUM";
     case REFLECTION_TYPE_STRUCT: return "REFLECTION_TYPE_STRUCT";

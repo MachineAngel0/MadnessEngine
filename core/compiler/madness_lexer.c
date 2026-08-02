@@ -130,16 +130,19 @@ bool lexer_is_token_data_type(Token token)
     case Token_F64:
         return true;
         break;
-    case Token_char:
+    case Token_Char:
         return true;
         break;
-    case Token_size_t:
+    case Token_Size_t:
         return true;
         break;
-    case Token_bool:
+    case Token_Bool:
         return true;
         break;
-    case Token_string_type:
+    case Token_String_Type:
+        return true;
+        break;
+    case Token_Path_String:
         return true;
         break;
     case TOKEN_VEC2:
@@ -448,19 +451,23 @@ void nextToken(Lexer* lexer, Token* token)
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "size_t"))
                 {
-                    token->type = Token_size_t;
+                    token->type = Token_Size_t;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "char"))
                 {
-                    token->type = Token_char;
+                    token->type = Token_Char;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "bool"))
                 {
-                    token->type = Token_bool;
+                    token->type = Token_Bool;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "String"))
                 {
-                    token->type = Token_string_type;
+                    token->type = Token_String_Type;
+                }
+                if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "Path_String"))
+                {
+                    token->type = Token_Path_String;
                 }
                 if (STRING_BUILDER_COMPARE_WITH_CHAR(&token->string_builder, "const"))
                 {
