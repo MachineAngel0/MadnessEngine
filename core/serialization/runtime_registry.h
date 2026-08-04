@@ -1,5 +1,5 @@
-﻿#ifndef DATA_REGISTRY_H
-#define DATA_REGISTRY_H
+﻿#ifndef RUNTIME_REGISTRY_H
+#define RUNTIME_REGISTRY_H
 
 #include <limits.h>
 
@@ -23,7 +23,6 @@ typedef struct Reflection_Runtime_Enum
 
     Reflection_Enum_Type type;
     bool* bitflag_values; // only used if we are an enum with bitflags, signified by the type
-
 } Reflection_Runtime_Enum;
 
 typedef struct Reflection_Runtime_Struct_Field
@@ -197,7 +196,8 @@ void reflection_registry_add_enums(Reflection_Registry* reflection_registry, Ref
 {
     if (reflection_enum.type == Reflection_Enum_Type_Bitflag)
     {
-        reflection_enum.bitflag_values = allocator_heap_alloc(reflection_registry->allocator, sizeof(bool) * reflection_enum.count);
+        reflection_enum.bitflag_values = allocator_heap_alloc(reflection_registry->allocator,
+                                                              sizeof(bool) * reflection_enum.count);
     }
     dynamic_array_push(reflection_registry->enum_list, &reflection_enum);
 }
@@ -657,9 +657,9 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
                          value_str, (unsigned)sizeof(value_str),
                          array_count, (unsigned)sizeof(array_count)) == 3)*/
             if (sscanf(line, "%127[^[][%31[^]]][%31[^]]:",
-                         field_name,
-                         value_str,
-                         array_count) == 3)
+                       field_name,
+                       value_str,
+                       array_count) == 3)
             {
                 DEBUG("arr");
                 DEBUG("field name: %s", field_name);
@@ -848,6 +848,178 @@ void reflection_registry_debug_print_info(Reflection_Registry* reflection_regist
 }
 
 
+
+
+void reflection_serialize_type(Reflection_Type type, void* data, FILE* fptr)
+{
+    switch (type)
+    {
+    case REFLECTION_TYPE_INVALID:
+        MASSERT_FALSE();
+        break;
+    case REFLECTION_TYPE_U8:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U16:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U32:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U64:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S8:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S16:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S32:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S64:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_F32:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_F64:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_SIZE_T:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_BOOL:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_CHAR:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_CHAR_STRING:
+        MASSERT_FALSE(); //i dont want to support this
+        break;
+    case REFLECTION_TYPE_STRING:
+        string_serialize(*(String**)data, fptr);
+        break;
+    case REFLECTION_TYPE_PATH_STRING:
+        string_serialize(*(Path_String**)data, fptr);
+        break;
+    case REFLECTION_TYPE_ENUM:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_STRUCT:
+        MASSERT_FALSE(); //i dont want to support this
+        break;
+    case REFLECTION_TYPE_VEC2:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_VEC3:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_VEC4:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAT3:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAT4:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_UUID:
+        fwrite(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAX:
+        MASSERT_FALSE();
+        break;
+    }
+}
+
+void reflection_deserialize_type(Reflection_Type type, void* data, FILE* fptr, Allocator* allocator)
+{
+    switch (type)
+    {
+    case REFLECTION_TYPE_INVALID:
+        MASSERT_FALSE();
+        break;
+    case REFLECTION_TYPE_U8:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U16:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U32:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_U64:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S8:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S16:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S32:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_S64:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_F32:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_F64:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_SIZE_T:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_BOOL:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_CHAR:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_CHAR_STRING:
+        MASSERT_FALSE(); //i dont want to support this
+        break;
+    case REFLECTION_TYPE_STRING:
+        string_deserialize(data, fptr, allocator);
+        break;
+    case REFLECTION_TYPE_PATH_STRING:
+        string_deserialize(data, fptr, allocator);
+        break;
+    case REFLECTION_TYPE_ENUM:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_STRUCT:
+        MASSERT_FALSE(); //idk id have to look into this more to seralize this
+        break;
+    case REFLECTION_TYPE_VEC2:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_VEC3:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_VEC4:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAT3:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAT4:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_UUID:
+        fread(data, reflection_type_get_size(type), 1, fptr);
+        break;
+    case REFLECTION_TYPE_MAX:
+        MASSERT_FALSE();
+        break;
+    }
+}
+
 void reflection_registry_serialize_runtime_struct(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr)
 {
     fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
@@ -887,8 +1059,10 @@ void reflection_registry_deserialize_runtime_struct(Reflection_Runtime_Struct* r
         fread(&field->offset, sizeof(field->offset), 1, fptr);
     }
 }
-void reflection_registry_deserialize_runtime_struct_heap(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr,
-                                                    Heap_Allocator* allocator)
+
+void reflection_registry_deserialize_runtime_struct_heap(Reflection_Runtime_Struct* reflection_runtime_struct,
+                                                         FILE* fptr,
+                                                         Heap_Allocator* allocator)
 {
     fread(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
     fread(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
@@ -896,8 +1070,8 @@ void reflection_registry_deserialize_runtime_struct_heap(Reflection_Runtime_Stru
     string_deserialize_heap(reflection_struct_name, fptr, allocator);
     reflection_runtime_struct->name = string_to_c_string_alloc_heap(reflection_struct_name, allocator);
 
-     reflection_runtime_struct->fields = allocator_heap_alloc(allocator, sizeof(Reflection_Runtime_Struct_Field) * reflection_runtime_struct->field_count);
-
+    reflection_runtime_struct->fields = allocator_heap_alloc(
+        allocator, sizeof(Reflection_Runtime_Struct_Field) * reflection_runtime_struct->field_count);
 
 
     for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
@@ -915,4 +1089,60 @@ void reflection_registry_deserialize_runtime_struct_heap(Reflection_Runtime_Stru
     }
 }
 
-#endif //DATA_REGISTRY_H
+
+void reflection_registry_serialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr, void* data)
+{
+    fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
+    fwrite(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
+    string_serialize(&STRING_STRLEN(reflection_runtime_struct->name), fptr);
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        string_serialize(&STRING_STRLEN(field->name), fptr);
+        string_serialize(&STRING_STRLEN(field->type_name), fptr);
+        fwrite(&field->type, sizeof(field->type), 1, fptr);
+        fwrite(&field->offset, sizeof(field->offset), 1, fptr);
+    }
+
+
+    //serialize the actual data
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        reflection_serialize_type(field->type, ((u8*)data + field->offset), fptr);
+    }
+
+}
+
+void reflection_registry_deserialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr, void* data, Allocator* allocator)
+{
+    fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
+    fwrite(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
+    string_serialize(&STRING_STRLEN(reflection_runtime_struct->name), fptr);
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        string_serialize(&STRING_STRLEN(field->name), fptr);
+        string_serialize(&STRING_STRLEN(field->type_name), fptr);
+        fwrite(&field->type, sizeof(field->type), 1, fptr);
+        fwrite(&field->offset, sizeof(field->offset), 1, fptr);
+    }
+
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        reflection_serialize_type(field->type, data, fptr);
+    }
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
+        reflection_deserialize_type(field->type, data, fptr, allocator);
+    }
+}
+
+
+#endif //RUNTIME_REGISTRY_H

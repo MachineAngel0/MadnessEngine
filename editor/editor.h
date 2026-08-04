@@ -15,6 +15,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_TEXTURE_VIEWER,
     EDITOR_UI_STATE_ANIMATION,
     EDITOR_UI_STATE_ASSET_METADATA,
+    EDITOR_UI_STATE_MESH_VIEWER,
     EDITOR_UI_STATE_REFLECTION_ABILITY,
     EDITOR_UI_STATE_MATERIAL,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
@@ -60,6 +61,7 @@ void editor_meta_data_view(Editor* editor);
 void editor_ui_stats(Editor* editor);
 void editor_ui_animation(Editor* editor);
 void editor_material_asset_view(Editor* editor);
+void editor_mesh_view(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

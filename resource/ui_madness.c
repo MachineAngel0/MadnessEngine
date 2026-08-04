@@ -117,7 +117,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
 
-    madness_ui->default_font_handle = asset_load_font(asset_system, "arial_msdf");
+    madness_ui->default_font_handle = asset_load_font_path(asset_system, "arial_msdf");
 
 
     madness_ui_deserialize_windows();

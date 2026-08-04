@@ -70,38 +70,38 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 		},
 		{
 			.name = "color_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, color_texture)
 		},
 		{
 			.name = "normal_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, normal_texture)
 		},
 		{
 			.name = "metallic_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, metallic_texture)
 		},
 		{
 			.name = "roughness_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, roughness_texture)
 		},
 		{
 			.name = "ambient_occlusion_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, ambient_occlusion_texture)
 		},
 		{
 			.name = "emissive_texture",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Default, emissive_texture)
 		},
 	};
@@ -260,13 +260,19 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "vec4",
 			.offset = offsetof(Material_Flat_Color, color)
 		},
+		{
+			.name = "color_texture",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
+			.offset = offsetof(Material_Flat_Color, color_texture)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_Flat_Color_Runtime_Struct =
 	{
 		.name = "Material_Flat_Color",
 		.fields = Material_Flat_Color_Fields,
-		.field_count = 1,
+		.field_count = 2,
 		.struct_size = sizeof(Material_Flat_Color)
 	};
 

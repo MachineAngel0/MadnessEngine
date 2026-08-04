@@ -131,8 +131,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
 
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
+
 
     for (u32 i = 0; i < 100; i++)
     {
@@ -140,11 +139,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     }*/
 
-    /*
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     Madness_Mesh_Handle handle =
-        asset_load_mesh(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");
-        */
+        asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");
+
+    /*asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh");*/
 
     /*
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
@@ -173,40 +173,37 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     //testing some stuff
-    if (filesystem_does_file_exists("../z_assets/misc/destiny_mutltithreading.png"))
-    {
-        DEBUG("FILE EXISTS")
-    }
-    else
-    {
-        DEBUG("FILE NO EXISTS")
-    }
-    if (filesystem_does_directory_exists("../z_assets"))
-    {
-        DEBUG("DIRECTORY EXISTS")
-    }
-    else
-    {
-        DEBUG("DIRECTORY NO EXISTS")
-    }
-
-    if (filesystem_is_directory_empty("../z_assets"))
-    {
-        DEBUG("DIRECTORY NO EMPTY")
-    }
-
     //TODO: move out to either the asset system or editor
-    #define MAX_ASSETS_STRINGS 5000u
+#define MAX_ASSETS_STRINGS 5000u
+    /*
     Asset_List_Scan* list_scan = memory_system_alloc(&application_core->memory_system, sizeof(Asset_List_Scan),
                                                      MEMORY_SUBSYSTEM_RESOURCE);
 
-    list_scan->allocator = memory_system_allocator_create(&application_core->memory_system, (sizeof(String) * MAX_ASSETS_STRINGS) + (256/*max_string_count*/ * MAX_ASSETS_STRINGS),
-                                                     MEMORY_SUBSYSTEM_RESOURCE);
+    list_scan->allocator = memory_system_allocator_create(&application_core->memory_system,
+                                                          (sizeof(String) * MAX_ASSETS_STRINGS) + (256
+                                                              /*max_string_count#1# * MAX_ASSETS_STRINGS),
+                                                          MEMORY_SUBSYSTEM_RESOURCE);
     list_scan->strings = allocator_alloc(list_scan->allocator, sizeof(String) * MAX_ASSETS_STRINGS);
     list_scan->max_count = MAX_ASSETS_STRINGS;
     filesystem_get_assets_from_directory("../z_assets", list_scan);
 
     madness_ui_add_asset_list(list_scan);
+    */
+
+    Asset_List_Scan* madness_texture_list = memory_system_alloc(&application_core->memory_system,
+                                                                sizeof(Asset_List_Scan),
+                                                                MEMORY_SUBSYSTEM_RESOURCE);
+
+    madness_texture_list->allocator = memory_system_allocator_create(&application_core->memory_system,
+                                                                     (sizeof(String) * MAX_ASSETS_STRINGS) + (256
+                                                                         /*max_string_count*/ * MAX_ASSETS_STRINGS),
+                                                                     MEMORY_SUBSYSTEM_RESOURCE);
+    madness_texture_list->strings = allocator_alloc(madness_texture_list->allocator,
+                                                    sizeof(String) * MAX_ASSETS_STRINGS);
+    madness_texture_list->max_count = MAX_ASSETS_STRINGS;
+    filesystem_get_assets_from_directory("../z_assets_engine/texture", madness_texture_list);
+    madness_ui_add_asset_list(madness_texture_list);
+
 
     //MAIN LOOP
 

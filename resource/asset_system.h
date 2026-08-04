@@ -67,20 +67,24 @@ MAPI void render_packet_clear(Render_Packet* renderer_packets);
 bool asset_system_does_source_already_exist(const char* import_file_path);
 bool asset_system_does_engine_already_exist(const char* engine_file_path);
 
-Texture_Handle asset_load_texture(Asset_System* asset_system, const char* asset_path);
+Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path);
+Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-Texture_Handle asset_load_font(Asset_System* asset_system, const char* engine_asset_path);
+Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engine_asset_path);
+Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-Madness_Mesh_Handle asset_load_mesh(Asset_System* asset_system, const char* engine_asset_path);
+Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path);
+Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
 Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
-bool asset_load_material_asset(Asset_System* asset_system, const char* asset_path);
+bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path);
+bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
 
 

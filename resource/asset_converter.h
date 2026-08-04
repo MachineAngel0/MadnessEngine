@@ -5,10 +5,10 @@
 
 
 //takes in any file and checks its extension type, and calls the appropriate function
-MAPI bool asset_convert_file(Asset_System* asset_system, const char* file_path, String* out_engine_path);
+MAPI bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
 
 
-MAPI bool asset_converter_texture(Asset_System* asset_system, const char* file_path, String* out_engine_path);
+MAPI bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
 
 MAPI bool asset_converter_font(Asset_System* asset_system, const char* file_path);
 
@@ -25,8 +25,18 @@ MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf
 
 
 bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
-                                    Reflection_Registry* reflection_registry_material, String* out_engine_path);
+                                    Reflection_Registry* reflection_registry_material, MADNESS_UUID* out_uuid);
 
-bool asset_converter_material_instance(Asset_System* asset_system, const char* material_name, const char* asset_name,
-                                       const char* material_asset_path, void* material_data, u32 material_size);
+
+bool asset_converter_material_instance_from_material_asset(Asset_System* asset_system,
+                                                           Material_Instance* mat_inst,
+                                                           Material_Info* material_info,
+                                                           const char* asset_name);
+
+bool asset_converter_material_instance_from_material_info(Asset_System* asset_system,
+                                                          Material_Info* material_info,
+                                                          const char* asset_name,
+                                                          void* material_data,
+                                                          MADNESS_UUID mat_asset_uuid);
+
 #endif

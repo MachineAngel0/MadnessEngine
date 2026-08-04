@@ -52,8 +52,7 @@ bool asset_font_deserialize_heap(Madness_Font_Runtime* runtime, FILE* fptr, Heap
     fread(&runtime->version, sizeof(runtime->version), 1, fptr);
     fread(&runtime->font_texture, sizeof(Madness_Font), 1, fptr);
     fread(&runtime->texture, sizeof(Madness_Texture), 1, fptr);
-    runtime->pixel_data = allocator_heap_alloc(allocator,
-                                               runtime->texture.pixels_size);
+    runtime->pixel_data = allocator_heap_alloc(allocator, runtime->texture.pixels_size);
     fread(runtime->pixel_data, runtime->texture.pixels_size, 1, fptr);
     return true;
 }
@@ -68,6 +67,7 @@ bool asset_material_serialize(Material_Asset_Runtime* runtime, FILE* fptr)
     fwrite(&runtime->asset->material_info.transluency, sizeof(runtime->asset->material_info.transluency), 1, fptr);
     fwrite(&runtime->asset->material_info.mesh_type, sizeof(runtime->asset->material_info.mesh_type), 1, fptr);
     fwrite(&runtime->asset->material_info.blend_mode, sizeof(runtime->asset->material_info.blend_mode), 1, fptr);
+    fwrite(&runtime->asset->material_info.material_id, sizeof(runtime->asset->material_info.material_id), 1, fptr);
 
     reflection_registry_serialize_runtime_struct(runtime->asset->reflection_material_data, fptr);
 
@@ -96,6 +96,7 @@ bool asset_material_deserialize(Material_Asset_Runtime* runtime, FILE* fptr, All
     fread(&runtime->asset->material_info.transluency, sizeof(runtime->asset->material_info.transluency), 1, fptr);
     fread(&runtime->asset->material_info.mesh_type, sizeof(runtime->asset->material_info.mesh_type), 1, fptr);
     fread(&runtime->asset->material_info.blend_mode, sizeof(runtime->asset->material_info.blend_mode), 1, fptr);
+    fread(&runtime->asset->material_info.material_id, sizeof(runtime->asset->material_info.material_id), 1, fptr);
 
     reflection_registry_deserialize_runtime_struct(runtime->asset->reflection_material_data, fptr, allocator);
 
@@ -129,6 +130,7 @@ bool asset_material_deserialize_heap(Material_Asset_Runtime* runtime, FILE* fptr
     fread(&runtime->asset->material_info.transluency, sizeof(runtime->asset->material_info.transluency), 1, fptr);
     fread(&runtime->asset->material_info.mesh_type, sizeof(runtime->asset->material_info.mesh_type), 1, fptr);
     fread(&runtime->asset->material_info.blend_mode, sizeof(runtime->asset->material_info.blend_mode), 1, fptr);
+    fread(&runtime->asset->material_info.material_id, sizeof(runtime->asset->material_info.material_id), 1, fptr);
 
     runtime->asset->reflection_material_data = allocator_heap_alloc(allocator, sizeof(Reflection_Runtime_Struct));
     runtime->asset->material_gpu_definition = allocator_heap_alloc(allocator, sizeof(Material_GPU_Definition));
@@ -160,24 +162,29 @@ bool asset_material_deserialize_heap(Material_Asset_Runtime* runtime, FILE* fptr
 
 MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr)
 {
-    // fwrite(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
+    fwrite(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
     fwrite(&instance->data_size, sizeof(instance->data_size), 1, fptr);
-    fwrite(instance->material_data, instance->data_size, 1, fptr);
+    fwrite(&instance->material_data, instance->data_size, 1, fptr);
     return true;
 }
 
 bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr, Allocator* allocator)
 {
-    MASSERT(false);
-    return false;
+    fread(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
+    fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
+    instance->material_data = allocator_alloc(allocator, instance->data_size);
+    fread(&instance->material_data, instance->data_size, 1, fptr);
+
+    return true;
 }
 
 MAPI bool asset_material_instance_deserialize_heap(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator)
 {
-    // fread(&instance->uuid_material_asset, sizeof(instance->uuid_material_asset), 1, fptr);
+    fread(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
     fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     instance->material_data = allocator_heap_alloc(allocator, instance->data_size);
-    fread(instance->material_data, instance->data_size, 1, fptr);
+    fread(&instance->material_data, instance->data_size, 1, fptr);
+
     return true;
 }
 
@@ -244,9 +251,7 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Allocator
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
         Material_Instance* material_instance = &runtime->material_instance[i];
-        // fwrite(&material_instance->uuid_material_asset, sizeof(material_instance->uuid_material_asset), 1, fptr);
-        fwrite(&material_instance->data_size, sizeof(material_instance->data_size), 1, fptr);
-        fwrite(material_instance->material_data, material_instance->data_size, 1, fptr);
+        asset_material_instance_deserialize(material_instance, fptr, allocator);
     }
     return true;
 }
@@ -494,7 +499,6 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Alloc
     }
 
 
-
     return true;
 }
 
@@ -617,7 +621,6 @@ bool asset_skmesh_deserialize_heap(Madness_SkMesh_Runtime* runtime, FILE* fptr, 
             fread(sampler->interperlation_data.trs_float, sampler->trs_interpolation_bytes, 1, fptr);
         }
     }
-
 
 
     return true;

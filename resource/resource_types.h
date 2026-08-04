@@ -119,7 +119,7 @@ typedef struct Madness_Asset
 } Madness_Asset;
 
 //Renderpass || translucency || Blend || Mesh Type
-typedef u32 Material_ID;
+typedef u64 Material_ID;
 
 typedef struct Material_Handle
 {
@@ -267,6 +267,11 @@ typedef enum Shader_Renderpass_Type
     Renderpass_Type_Predepth = BITFLAG(0),
     Renderpass_Type_Shadow = BITFLAG(1),
     Renderpass_Type_Color = BITFLAG(2), // this is for both opaque and transparent
+    Renderpass_Type_Reserved1 = BITFLAG(3),
+    Renderpass_Type_Reserved2 = BITFLAG(4),
+    Renderpass_Type_Reserved3 = BITFLAG(5),
+    Renderpass_Type_Reserved4 = BITFLAG(6),
+    Renderpass_Type_Reserved5 = BITFLAG(7),
 } Shader_Renderpass_Type;
 
 
@@ -293,6 +298,7 @@ typedef enum Shader_Blend
 
 typedef enum Mesh_PBR_Flags
 {
+    //Where's bitflag 0???
     MESH_PIPELINE_COLOR = BITFLAG(1),
     MESH_PIPELINE_NORMAL = BITFLAG(2),
     MESH_PIPELINE_EMISSIVE = BITFLAG(3),
@@ -331,6 +337,8 @@ typedef struct Material_Info
     Shader_Transluency_Type transluency;
     Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
+
+    Material_ID material_id;
 } Material_Info;
 
 typedef struct Material_GPU_Definition
@@ -353,10 +361,9 @@ typedef struct Material_Asset
 
 typedef struct Material_Instance
 {
-    // Contains customized data for a specific material asset
     // NOTE: the material data is the serialized data containing the UUID for textures
-    String* material_asset_path; // points to the material asset
-    u32 data_size;
+    MADNESS_UUID material_asset_uuid;
+    u64 data_size;
     void* material_data;
 } Material_Instance;
 

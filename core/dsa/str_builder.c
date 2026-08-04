@@ -103,10 +103,17 @@ void string_builder_append_builder(String_Builder* src, String_Builder* copy_str
 void string_builder_append_c_string(String_Builder* str_builder, const char* word)
 {
     //check if we have enough space
-    u32 word_size = strlen(word);
-    if (str_builder->current_length + word_size > str_builder->capacity)
+    u64 word_size = strlen(word);
+    string_builder_append_c_string_length(str_builder, word, word_size);
+
+}
+
+void string_builder_append_c_string_length(String_Builder* str_builder, const char* word, const u64 length)
+{
+    //check if we have enough space
+    if (str_builder->current_length + length > str_builder->capacity)
     {
-        u64 length_requested = str_builder->current_length + word_size;
+        u64 length_requested = str_builder->current_length + length;
         u64 new_capacity = str_builder->capacity * 2;
         if (new_capacity < length_requested)
         {
@@ -121,8 +128,8 @@ void string_builder_append_c_string(String_Builder* str_builder, const char* wor
     };
 
     //copy the word into the string
-    memcpy(str_builder->str + str_builder->current_length, word, word_size);
-    str_builder->current_length += word_size;
+    memcpy(str_builder->str + str_builder->current_length, word, length);
+    str_builder->current_length += length;
 }
 
 void string_builder_append_char(String_Builder* str_builder, const char character)
@@ -147,6 +154,16 @@ void string_builder_append_char(String_Builder* str_builder, const char characte
     //copy the word into the string
     memcpy(str_builder->str + str_builder->current_length, &character, 1);
     str_builder->current_length += 1;
+}
+
+void string_builder_append_u64(String_Builder* str_builder, const u64 val, Allocator* allocator)
+{
+
+    u32 val_length = snprintf(NULL, 0, "%llu", val);
+    char* str = allocator_alloc(allocator, val_length + 1);
+    snprintf(str, val_length + 1, "%llu", val);
+
+    string_builder_append_c_string_length(str_builder, str, val_length);
 }
 
 

@@ -722,15 +722,15 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Material_Instance_Fields[] =
 	{
 		{
-			.name = "material_asset_path",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
-			.offset = offsetof(Material_Instance, material_asset_path)
+			.name = "material_asset_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Material_Instance, material_asset_uuid)
 		},
 		{
 			.name = "data_size",
 			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
+			.type_name = "u64",
 			.offset = offsetof(Material_Instance, data_size)
 		},
 	};

@@ -71,7 +71,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     insanity_ui->screen_size = (vec2s){800.0f, 600.0f};
 
 
-    insanity_ui->default_font_handle = asset_load_font(asset_system, "arial_msdf");
+    insanity_ui->default_font_handle = asset_load_font_path(asset_system, "arial_msdf");
 
 
 
@@ -510,7 +510,7 @@ void insanity_ui_push_text_float(float val)
 
 void insanity_ui_push_image(const char* texture_file)
 {
-    insanity_ui->image_stack = asset_load_texture(insanity_ui->asset_system,
+    insanity_ui->image_stack = asset_load_texture_path(insanity_ui->asset_system,
                                                                texture_file);
 }
 

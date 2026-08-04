@@ -52,17 +52,15 @@ bool material_system_exists(Asset_System* asset_system, MADNESS_UUID uuid)
 bool material_system_load_material_instance(Asset_System* asset_system, Material_Instance* material_instance,
                                             Material_Handle* out_handle)
 {
-    /*
     Material_System* material_system = asset_system->material_system;
 
     Material_Batch* material_batch = NULL;
 
     //find the material batch associated with the material data
-    MASSERT(false); //TODO: not using uuid as the texture location, using uuid
     for (u32 i = 0; i < material_system->material_batch_count; i++)
     {
         if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
-                                 material_instance->uuid_material_asset))
+                                 material_instance->material_asset_uuid))
         {
             material_batch = &material_system->material_batch[i];
             break;
@@ -72,12 +70,12 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     //if we didn't find it load it in
     if (material_batch == NULL)
     {
-        asset_load_material_asset(asset_system, material_instance->uuid_material_asset);
+        asset_load_material_asset_uuid(asset_system, material_instance->material_asset_uuid);
         //find it
         for (u32 i = 0; i < material_system->material_batch_count; i++)
         {
             if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
-                                     material_instance->uuid_material_asset))
+                                     material_instance->material_asset_uuid))
             {
                 material_batch = &material_system->material_batch[i];
                 break;
@@ -99,19 +97,32 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
         {
             MASSERT(material_batch->material_asset->material_gpu_definition->types[i] == REFLECTION_TYPE_U32);
 
-            //load in texture and set the bindless id to the proper spot in the material data
+            //load in texture and use the bindless index
+            MADNESS_UUID uuid_data = *(MADNESS_UUID*)((u8*)material_instance->material_data + field->offset);
+            //sometimes we dont have a texture so we just set the value to zero
+            if (uuid_data.high == 0 && uuid_data.low == 0)
+            {
+                u32 default_texture = 0;
+                //copy into the gpu struct
+                memcpy(((u8*)material_data + material_batch->material_asset->material_gpu_definition->field_offsets[i]),
+                       &default_texture,
+                       sizeof(u32));
+            }
+            else
+            {
+                Texture_Handle texture_handle = asset_load_texture_uuid(asset_system, uuid_data);
 
-            MADNESS_UUID* uuid_data = (MADNESS_UUID*)((u8*)material_instance->material_data + field->offset);
-            Texture_Handle texture_handle = {0};
-            asset_load_texture_uuid(asset_system, *uuid_data, &texture_handle);
+                //copy into the gpu struct
+                memcpy(((u8*)material_data + material_batch->material_asset->material_gpu_definition->field_offsets[i]),
+                       &texture_handle.handle,
+                       sizeof(u32));
+            }
 
 
-            memcpy(((u8*)material_data + material_batch->material_asset->material_gpu_definition->field_offsets[i]),
-                   &texture_handle.handle,
-                   sizeof(u32));
         }
         else if (material_batch->material_asset->material_gpu_definition->types[i] == field->type)
         {
+            //copy into the gpu struct
             memcpy((u8*)material_data + material_batch->material_asset->material_gpu_definition->field_offsets[i],
                    (u8*)material_instance->material_data + field->offset,
                    reflection_type_get_size(material_batch->material_asset->material_gpu_definition->types[i]));
@@ -126,7 +137,6 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     out_handle->material_id = material_batch->material_key;
     out_handle->buffer_handle = material_batch->material_data->num_items;
     dynamic_array_push(material_batch->material_data, material_data);
-*/
     return true;
 }
 
@@ -160,7 +170,6 @@ bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUI
     madness_asset->reference_count = 1;
 
 
-
     return true;
 }
 
@@ -180,7 +189,7 @@ void material_system_add_mesh_instance_and_material(Asset_System* asset_system, 
 }
 
 void material_system_add_skinned_instance_and_material(Asset_System* asset_system, Madness_Skinned_Mesh* madness_mesh,
-                                                    Madness_Skinned_Mesh_Instance* parent_instance)
+                                                       Madness_Skinned_Mesh_Instance* parent_instance)
 {
     for (u32 mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
     {
@@ -192,7 +201,6 @@ void material_system_add_skinned_instance_and_material(Asset_System* asset_syste
         material_system_load_material_instance(asset_system, mat_inst, &submesh_instance->material_handle);
     }
 }
-
 
 
 bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
@@ -243,10 +251,13 @@ void material_system_swap_material(Asset_System* asset_system, Material_Handle m
 
 Material_ID material_system_generate_id(Material_Info* material_info)
 {
-    return material_info->mesh_type +
-        material_info->transluency +
-        material_info->blend_mode +
-        material_info->renderpass +
-        string_hash_u32(*material_info->material_name) +
-        string_hash_u32(*material_info->shader_name);
+    u64 hash = hash_64_continous_start();
+    hash = hash_64_continous(hash, (u8*)&material_info->mesh_type, sizeof(material_info->mesh_type));
+    hash = hash_64_continous(hash, (u8*)&material_info->transluency, sizeof(material_info->transluency));
+    hash = hash_64_continous(hash, (u8*)&material_info->blend_mode, sizeof(material_info->blend_mode));
+    hash = hash_64_continous(hash, (u8*)&material_info->renderpass, sizeof(material_info->renderpass));
+    hash = hash_64_continous(hash, (u8*)material_info->material_name->chars, material_info->material_name->length);
+    hash = hash_64_continous(hash, (u8*)material_info->shader_name->chars, material_info->shader_name->length);
+
+    return hash;
 }

@@ -141,6 +141,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_MATERIAL_CREATION:
         editor_material_asset_view(editor);
         break;
+    case EDITOR_UI_STATE_MESH_VIEWER:
+        editor_mesh_view(editor);
+        break;
     }
 }
 
@@ -477,6 +480,16 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_reflect_using_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
         */
+    }
+    madness_ui_window_end();
+}
+
+void editor_mesh_view(Editor* editor)
+{
+    editor->asset_system->mesh_system;
+
+    madness_ui_window_begin(STRING("Mesh View"));
+    {
     }
     madness_ui_window_end();
 }

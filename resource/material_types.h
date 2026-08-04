@@ -28,12 +28,12 @@ typedef struct Material_Default
 
     u32 padding0;
 
-    Path_String* color_texture;
-    Path_String* normal_texture;
-    Path_String* metallic_texture;
-    Path_String* roughness_texture;
-    Path_String* ambient_occlusion_texture;
-    Path_String* emissive_texture;
+    MADNESS_UUID color_texture;
+    MADNESS_UUID normal_texture;
+    MADNESS_UUID metallic_texture;
+    MADNESS_UUID roughness_texture;
+    MADNESS_UUID ambient_occlusion_texture;
+    MADNESS_UUID emissive_texture;
 
 
 } Material_Default;
@@ -77,6 +77,7 @@ typedef struct Material_Black_Hole
 typedef struct Material_Flat_Color
 {
     vec4 color;
+    Path_String* color_texture;
 } Material_Flat_Color;
 
 typedef struct Material_Spherical_Billboard

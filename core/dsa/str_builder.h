@@ -43,7 +43,9 @@ void string_builder_append_builder(String_Builder* src, String_Builder* copy_str
 
 
 void string_builder_append_c_string(String_Builder* str_builder, const char* word);
+void string_builder_append_c_string_length(String_Builder* str_builder, const char* word, u64 length);
 void string_builder_append_char(String_Builder* str_builder, char character);
+void string_builder_append_u64(String_Builder* str_builder, u64 val, Allocator* allocator);
 
 void string_builder_decrement(String_Builder* str_builder);
 

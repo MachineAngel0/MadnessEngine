@@ -268,4 +268,8 @@ void reflection_data_to_files(Reflection_System* reflection_system, const char* 
 void reflection_data_generate_structs_from_shader(Reflection_System* reflection_system, const char* function_name,
                                                   const char* generated_struct_file_path);
 
+
+
+
+
 #endif //REFLECTION_H

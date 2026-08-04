@@ -1,8 +1,10 @@
-﻿
-
-#ifndef CONTAINER_UTILITY_H
+﻿#ifndef CONTAINER_UTILITY_H
 #define CONTAINER_UTILITY_H
 #include "asserts.h"
+
+
+#define TYPE_STRING(type) #type
+
 
 bool is_power_of_two(uintptr_t x)
 {
@@ -10,6 +12,7 @@ bool is_power_of_two(uintptr_t x)
     //ex: 8  8 = 1000, 7 = 0111  1000 & 0111 = 0000, therefore power of two
     return (x & (x - 1)) == 0;
 }
+
 //To align a memory address to the specified alignment is simple modulo arithmetic.
 //find how many bytes forward you need to go in order for the memory address is a multiple of the specified alignment
 uintptr_t align_forward(uintptr_t ptr, size_t align)
@@ -19,7 +22,7 @@ uintptr_t align_forward(uintptr_t ptr, size_t align)
     MASSERT(is_power_of_two(align));
 
     p = ptr;
-    a = (uintptr_t) align;
+    a = (uintptr_t)align;
     // Same as (p % a) but faster as 'a' is a power of two
     modulo = p & (a - 1);
 
@@ -134,14 +137,13 @@ uint32_t generate_hash_key_32bit(const void* key, size_t data_size)
     const uint8_t* bytes = (const uint8_t*)key;
     uint32_t hash = FNV_OFFSET_BASIS_32;
 
-    for(size_t i = 0; i < data_size; i++)
+    for (size_t i = 0; i < data_size; i++)
     {
         hash ^= bytes[i];
         hash *= FNV_PRIME_32;
     }
 
     return hash;
-
 }
 
 uint64_t generate_hash_key_64bit(uint8_t* key, size_t data_size)
@@ -166,7 +168,34 @@ uint64_t generate_hash_key_64bit(uint8_t* key, size_t data_size)
     const uint8_t* bytes = (const uint8_t*)key;
     uint64_t hash = FNV_OFFSET_BASIS_64;
 
-    for(size_t i = 0; i < data_size; i++)
+    for (size_t i = 0; i < data_size; i++)
+    {
+        hash ^= bytes[i];
+        hash *= FNV_PRIME_64;
+    }
+
+    return hash;
+}
+
+
+//generate a unique hash based on a serious of hashed values
+// used like so:
+// u64 hash = hash_64_continous_start();
+// hash = hash_64_continous(hash, (u8*)data, data_size);
+// hash = hash_64_continous(hash, (u8*)data_1, data_1_size); etc...
+uint64_t hash_64_continous_start()
+{
+    return FNV_OFFSET_BASIS_64;
+}
+
+uint64_t hash_64_continous(uint64_t hash, uint8_t* key, size_t data_size)
+{
+    // https://en.wikipedia.org/wiki/Jenkins_hash_function#lookup3
+
+    // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+    const uint8_t* bytes = (const uint8_t*)key;
+
+    for (size_t i = 0; i < data_size; i++)
     {
         hash ^= bytes[i];
         hash *= FNV_PRIME_64;

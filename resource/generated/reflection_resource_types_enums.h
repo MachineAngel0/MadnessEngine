@@ -32,6 +32,11 @@ const char* Shader_Renderpass_Type_enum_string[] = {
 	"Renderpass_Type_Predepth", 
 	"Renderpass_Type_Shadow", 
 	"Renderpass_Type_Color", 
+	"Renderpass_Type_Reserved1", 
+	"Renderpass_Type_Reserved2", 
+	"Renderpass_Type_Reserved3", 
+	"Renderpass_Type_Reserved4", 
+	"Renderpass_Type_Reserved5", 
 };
 
 const char* Shader_Blend_enum_string[] = {
@@ -107,7 +112,7 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	{
 		.name = "Shader_Renderpass_Type",
 		.enum_names = Shader_Renderpass_Type_enum_string,
-		.count = 3,
+		.count = 8,
 		.type = Reflection_Enum_Type_Bitflag,
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
