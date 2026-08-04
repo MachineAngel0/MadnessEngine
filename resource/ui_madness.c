@@ -2172,6 +2172,91 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
     return has_changed;
 }
 
+bool madness_ui_u64(String text, u64* i, u64 increment_value)
+{
+     madness_ui_string(text);
+    madness_ui_same_line();
+
+    char float_char[12]; // Large enough to hold the digits, sign, and null terminator
+
+    // Safely write the integer into the character array
+    snprintf(float_char, sizeof(float_char), "%llu", *i);
+    String float_string = STRING_STRLEN(float_char);
+
+    vec2s text_size = madness_ui_get_text_size(float_string);
+
+
+    UI_Node* node = madness_ui_get_new_node();
+    node->string_id = text;
+    node->hash_id = string_hash_u64(text);
+    node->pos = madness_ui->cursor_pos;
+    node->size = (vec2s){
+        text_size.x + madness_ui->text_padding_x,
+        madness_ui_get_default_element_height(),
+    };
+    node->color = madness_ui->editor_style.color;
+
+
+    // madness_ui_text_new(madness_ui, float_string);
+    madness_ui_string_internal(float_string, node->pos, node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+
+    madness_ui_advance_cursor(node->size);
+
+
+    bool has_changed = false;
+
+    madness_ui_set_interaction_state(node);
+
+    if (is_active(node->hash_id))
+    {
+        node->color = madness_ui->editor_style.pressed_color;
+
+        if (madness_ui->mouse_down)
+        {
+            s16 mouse_change_x;
+            s16 mouse_change_y;
+
+            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+
+            if (mouse_change_x > 0)
+            {
+                *i += increment_value;
+                // *f += increment_override;
+                has_changed = true;
+            }
+            if (mouse_change_x < 0)
+            {
+                *i -= increment_value;
+                // *f -= increment_override;
+                has_changed = true;
+            }
+        }
+    }
+    else if (is_hot(node->hash_id))
+    {
+        node->color = madness_ui->editor_style.hovered_color;
+        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        {
+            *i += increment_value;
+            has_changed = true;
+        }
+        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        {
+            *i -= increment_value;
+            has_changed = true;
+        }
+
+        set_hot(node->hash_id);
+
+        if (can_be_active())
+        {
+            set_active(node->hash_id);
+        }
+    }
+
+    return has_changed;
+}
+
 bool madness_ui_s32(String text, s32* i, u32 increment_value)
 {
     madness_ui_string(text);
@@ -3197,7 +3282,7 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_PATH_STRING:
             static u32 selected_string;
             madness_ui_string(*custom_name);
-            madness_ui_combo_box_string(*custom_name, data, madness_ui->asset_list_scan_refence->strings,
+            madness_ui_combo_box_string(*custom_name, *(Path_String**)data, madness_ui->asset_list_scan_refence->strings,
                                         madness_ui->asset_list_scan_refence->count);
             break;
         case REFLECTION_TYPE_CHAR:
@@ -3240,10 +3325,19 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_VEC4:
             madness_ui_vec4(*custom_name, data, 1.0);
             break;
-
-        case REFLECTION_TYPE_MAX:
-            break;
         case REFLECTION_TYPE_CHAR_STRING:
+            break;
+        case REFLECTION_TYPE_MAT3:
+            break;
+        case REFLECTION_TYPE_MAT4:
+            break;
+        case REFLECTION_TYPE_UUID:
+            MADNESS_UUID* uuid = data;
+            madness_ui_u64(*custom_name, &uuid->high, 1.0);
+            madness_ui_same_line();
+            madness_ui_u64(*custom_name, &uuid->low, 1.0);
+            break;
+        case REFLECTION_TYPE_MAX:
             break;
         }
     }

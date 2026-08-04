@@ -48,7 +48,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     runtime_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
     runtime_texture.texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
     runtime_texture.texture.format = Texture_Format_Default;
-    runtime_texture.texture.type = ASSET_FONT;
+    runtime_texture.texture.type = ASSET_TEXTURE;
     runtime_texture.pixel_data = pixel_data;
 
     String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
@@ -232,7 +232,6 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     if (!raw_file)
     {
         WARN("FONT_INIT: COULDN'T OPEN FONT ATLAS DEBUG RAW");
-        fclose(raw_file);
     }
 
     fwrite(atlas_RGBA_pixels, 1, atlasRGBA_size, raw_file);
@@ -360,6 +359,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
         g->u1 = u1 / texture_size;
         g->v1 = v1 / texture_size;
     }
+    fclose(file);
 
     // bake ascender into yoff so draw_text needs no correction
     float ascender_px = ascender * glyph_size;
@@ -543,13 +543,13 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (color_accessor)
         {
             //get size information
-            cgltf_size color_floats_count = cgltf_accessor_unpack_floats(texcoord_accessor, NULL, 0);
+            cgltf_size color_floats_count = cgltf_accessor_unpack_floats(color_accessor, NULL, 0);
             cgltf_size color_byte_size = color_floats_count * sizeof(float);
             submesh->vertex_color_bytes = color_byte_size;
 
             //alloc and copy data
             float* vertex_color_data = allocator_alloc(frame_allocator, color_byte_size);
-            cgltf_accessor_unpack_floats(texcoord_accessor, vertex_color_data, color_floats_count);
+            cgltf_accessor_unpack_floats(color_accessor, vertex_color_data, color_floats_count);
             submesh_gpu->vertex_color = allocator_alloc(frame_allocator, color_byte_size);
             memcpy(submesh_gpu->vertex_color, vertex_color_data, color_byte_size);
         }
@@ -622,7 +622,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
             //base color
-            TRACE("No Color Texture using fall back color");
             memcpy(cur_mat->color.raw,
                    data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
                    sizeof(vec4s));

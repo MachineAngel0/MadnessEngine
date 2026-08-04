@@ -414,6 +414,7 @@ MAPI void madness_ui_slider_arrow_u32(String id, u32* slider_val, u32 min, u32 m
 MAPI bool madness_ui_u8(String text, u8* i, u32 increment_value);
 MAPI bool madness_ui_u16(String text, u16* i, u32 increment_value);
 MAPI bool madness_ui_u32(String text, u32* i, u32 increment_value);
+MAPI bool madness_ui_u64(String text, u64* i, u64 increment_value);
 MAPI bool madness_ui_s32(String text, s32* i, u32 increment_value);
 
 MAPI bool madness_ui_float(String text, float* f, float increment_value);

@@ -615,14 +615,14 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		{
 			.name = "shader_name",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Info, shader_name)
 		},
 		{
 			.name = "material_name",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
 			.offset = offsetof(Material_Info, material_name)
 		},
 		{

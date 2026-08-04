@@ -453,12 +453,28 @@ void editor_material_asset_view(Editor* editor)
 
     static Material_Info material_info;
     static u8 fuck_you_memory[1024];
+    static Material_Info mat_info;
+    if (!mat_info.material_name)
+    {
+        mat_info.material_name= STRING_CREATE("0");
+    }
+    if (!mat_info.shader_name)
+    {
+        mat_info.shader_name= STRING_CREATE("0");
+    }
     madness_ui_window_begin(STRING("Material Creation"));
     {
         madness_ui_button(STRING("Create Material Asset"));
         {
             //TODO:
         }
+
+
+        Reflection_Runtime_Struct material_info_struct = reflection_registry_get_struct(
+            editor->reflection_registry, TYPE_STRING(Material_Info));
+
+        madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
+
 
         static u32 selected_index;
         if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,

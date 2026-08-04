@@ -330,8 +330,8 @@ typedef struct PC_Shadow_Mapping
 
 typedef struct Material_Info
 {
-    String* shader_name;
-    String* material_name;
+    Path_String* shader_name;
+    Path_String* material_name;
 
     Shader_Renderpass_Type renderpass;
     Shader_Transluency_Type transluency;

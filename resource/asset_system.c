@@ -573,4 +573,6 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path)
 {
+    MASSERT(false);
+    return false;
 }
