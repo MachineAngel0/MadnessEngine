@@ -42,6 +42,11 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer, vulkan_command_buffer* c
                                                    default_sprite_indices,
                                                    sizeof(u16) * 6);
 
+    //insanity ui
+    ui_renderer->insanity_ui_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                            BUFFER_TYPE_CPU_STORAGE,
+                                                            ui_buffer_sizes);
+
     return ui_renderer;
 }
 
@@ -51,9 +56,11 @@ void ui_renderer_madness_upload_draw_data(UI_Renderer_Backend* ui_renderer, Rend
                                           vulkan_command_buffer* command_buffer)
 {
     ui_renderer->madness_ui_render_packet = &render_packet->ui_data_packet.madness_ui_render_packet;
+    ui_renderer->insanity_ui_render_packet = &render_packet->ui_data_packet.insanity_ui_render_packet;
 
     // reset material buffer
     vulkan_buffer_reset_offset(renderer, ui_renderer->ui_material_staging_ssbo_handle);
+    vulkan_buffer_reset_offset(renderer, ui_renderer->insanity_ui_material_ssbo_handle);
 
     // ui material data
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
@@ -61,6 +68,12 @@ void ui_renderer_madness_upload_draw_data(UI_Renderer_Backend* ui_renderer, Rend
                                                    ui_renderer->ui_material_staging_ssbo_handle, command_buffer,
                                                    ui_renderer->madness_ui_render_packet->ui_material_data,
                                                    ui_renderer->madness_ui_render_packet->ui_material_bytes);
+
+    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer,
+                                               ui_renderer->insanity_ui_material_ssbo_handle,
+                                               command_buffer,
+                                               ui_renderer->insanity_ui_render_packet->ui_material_data,
+                                               ui_renderer->insanity_ui_render_packet->ui_material_bytes);
 
     //need one per draw call
     /*VkDrawIndexedIndirectCommand indirect_draw_ui = {0};
@@ -158,4 +171,66 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
             break;
         }
     }
+
+
+    //insanity_ui
+
+
+    PC_UI pc_insanity_ui = {
+        renderer->buffer_system->global_ubo_handle.handle,
+        get_buffer_device_address(renderer->context.device.logical_device,
+                                  vulkan_buffer_get(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->handle),
+    };
+
+
+    VkPushConstantsInfo insanity_pc_info = {0};
+    insanity_pc_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    insanity_pc_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    insanity_pc_info.layout = renderer->ui_pipeline.pipeline_layout;
+    insanity_pc_info.offset = 0;
+    insanity_pc_info.size = sizeof(PC_UI);
+    insanity_pc_info.pValues = &pc_insanity_ui;
+    insanity_pc_info.pNext = NULL;
+
+    vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                      renderer->ui_pipeline.handle);
+    vkCmdPushConstants2(command_buffer->handle, &insanity_pc_info);
+
+    //two pipelines are slower than one, and much much faster if I use instancing for them
+
+    //draw
+    for (u32 i = 0; i < ui_renderer->insanity_ui_render_packet->draw_command_count; i++)
+    {
+        switch (ui_renderer->insanity_ui_render_packet->draw_command[i].type)
+        {
+        case UI_DRAW_TYPE_DRAW:
+            //bind pipeline
+            //push constant, issue draw at material index
+            // firstInstance -> gl_InstanceIndex
+            // vkCmdDraw(command_buffer->handle, 6, 1, 0, i);
+            vkCmdDraw(command_buffer->handle, 6,
+                      ui_renderer->insanity_ui_render_packet->draw_command[i].count, 0,
+                      ui_renderer->insanity_ui_render_packet->draw_command[i].offset);
+
+            break;
+        case UI_DRAW_TYPE_SCISSOR_START:
+            // vec2 scissor_pos = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_pos;
+            // vec2 size = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_size;
+            // VkRect2D scissor = {
+                // .offset = {.x = scissor_pos.x, .y = scissor_pos.y},
+                // .extent = {.width = size.x, .height = size.y},
+            // };
+            // vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);
+            break;
+        case UI_DRAW_TYPE_SCISSOR_END:
+            // VkRect2D default_scissor = {
+            // .offset = {.x = 0, .y = 0},
+            // .extent = {.width = renderer->context.framebuffer_width, .height = renderer->context.framebuffer_height},
+            // };
+            // vkCmdSetScissor(command_buffer->handle, 0, 1, &default_scissor);
+            break;
+        }
+    }
+
 }
+

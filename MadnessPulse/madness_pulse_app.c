@@ -139,9 +139,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     }*/
 
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
+    /*asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
     Madness_Mesh_Handle handle =
-        asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");
+        asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");*/
 
     /*asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh");*/
@@ -281,6 +281,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
         application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
+        application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet =
+        insanity_get_render_data();
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
         // insanity_get_render_data();

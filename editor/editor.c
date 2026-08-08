@@ -28,7 +28,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_ENGINE_STATS;
+    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -81,7 +81,7 @@ void editor_ui(Editor* editor)
         editor_ui_animation(editor);
         break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
-        // insanity_ui_test();
+        insanity_ui_test();
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test();

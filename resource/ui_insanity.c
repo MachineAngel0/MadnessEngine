@@ -15,14 +15,8 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     u64 ui_frame_arena_mem_size = MB(16);
 
 
-    insanity_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
-    insanity_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
-
-    void* arena_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
-    void* frame_arena_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
-
-    allocator_init(insanity_ui->allocator, arena_memory, ui_arena_mem_size);
-    allocator_init(insanity_ui->frame_allocator, frame_arena_memory, ui_arena_mem_size);
+    insanity_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
+    insanity_ui->frame_allocator = memory_system_allocator_create(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
 
     insanity_ui->input_system_reference = input_system;
     insanity_ui->asset_system = asset_system;
@@ -30,7 +24,7 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     insanity_ui->default_font_size = INSANITY_DEFAULT_FONT_SIZE;
     insanity_ui->editor_font_size = INSANITY_EDITOR_FONT_SIZE;
-    insanity_ui->ui_nodes = array_create(Insanity_UI, INSANITY_MAX_UI_NODE_COUNT, insanity_ui->allocator);
+    insanity_ui->ui_nodes = array_create(Insanity_UI_Node, INSANITY_MAX_UI_NODE_COUNT, insanity_ui->allocator);
     Insanity_UI_Node node = {0};
     array_fill(insanity_ui->ui_nodes, &node);
     //stacks
@@ -521,7 +515,7 @@ Texture_Handle insanity_ui_get_image(void)
 
 Insanity_UI_Node* insanity_ui_get_new_node()
 {
-    Insanity_UI_Node* out_node = _array_get(insanity_ui->ui_nodes->data, insanity_ui->ui_nodes->num_items);
+    Insanity_UI_Node* out_node = (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items++);
 
     if (insanity_ui->ui_stack_count > 0)
     {

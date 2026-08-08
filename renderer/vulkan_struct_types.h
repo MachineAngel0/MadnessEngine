@@ -647,6 +647,13 @@ typedef struct UI_Renderer
     u64 draw_count;
 
     UI_Render_Packet* madness_ui_render_packet;
+
+
+    //insanity ui
+    UI_Render_Packet* insanity_ui_render_packet;
+    Buffer_Handle insanity_ui_material_ssbo_handle;
+    u64 insanity_ui_draw_count;
+
 } UI_Renderer_Backend;
 
 

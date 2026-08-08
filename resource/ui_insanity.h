@@ -30,7 +30,7 @@
 #define INSANITY_EDITOR_FONT_SIZE 24.0f
 
 #define INSANITY_MAX_UI_NODE_COUNT 1000
-#define INSANITY_MAX_UI_NODE_CHILD_COUNT 100
+#define INSANITY_MAX_UI_NODE_CHILD_COUNT 32
 
 //UI
 
@@ -164,9 +164,6 @@ typedef struct Insanity_UI
 
     UI_Node_Draw_Data* node_draw_data_array;
     u64 node_draw_data_array_size;
-
-    UI_Node_Draw_Data* text_draw_data_array;
-    u64 text_draw_data_array_size;
 
 
     int hot;
