@@ -2,11 +2,17 @@
 #define PARTICLE_SYSTEM_H
 
 
+
+
+
 #include "asset_system.h"
 #include "resource_types.h"
 
 
 #define PARTICLE_COUNT 1000
+
+
+
 
 
 Particle_System* particle_system_init(Asset_System* resource_system, Memory_System* memory_system)

@@ -7,13 +7,13 @@
 #include "sprite_system.h"
 
 
-Asset_System* asset_system_init(Memory_System* memory_system)
+Asset_System* asset_system_init(Memory_System* memory_system, Renderer* renderer)
 {
     Asset_System* asset_system = memory_system_alloc(memory_system, sizeof(Asset_System),
                                                      MEMORY_SUBSYSTEM_RESOURCE);
     asset_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet),
                                                       MEMORY_SUBSYSTEM_RESOURCE);
-
+    asset_system->renderer = renderer; //ref
 
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
                                                                        MEMORY_SUBSYSTEM_RESOURCE);
@@ -23,7 +23,7 @@ Asset_System* asset_system_init(Memory_System* memory_system)
     //Asset Registry
     asset_system->asset_registry = memory_system_alloc(memory_system, sizeof(Asset_Registry),
                                                        MEMORY_SUBSYSTEM_RESOURCE);
-    asset_registry_init(asset_system->asset_registry, asset_system->heap_allocator);
+    asset_registry_init(asset_system->asset_registry, asset_system->heap_allocator, memory_system);
 
 
     //Texture
@@ -63,11 +63,12 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 }
 
 
+
+
 bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
 {
     allocator_clear(asset_system->frame_allocator);
     render_packet_clear(asset_system->render_packet);
-    asset_system->render_packet->texture_queue = asset_system->texture_system->texture_upload_queue;
     asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
     asset_system->render_packet->skinned_mesh_queue = asset_system->mesh_system->skinned_mesh_ring_queue;
     //
@@ -127,7 +128,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     String* load_asset_path = string_builder_to_string(string_builder);
 
     Asset_MetaData* meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (!asset_registry_exists_by_engine_path(asset_system, load_asset_path, meta_data))
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
     {
         //TODO: try to load in the asset from the import path
         MASSERT_FALSE();
@@ -179,7 +180,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 
 Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
-        Texture_Handle texture_handle = {0};
+    Texture_Handle texture_handle = {0};
 
     //either load from metadata -> binary or binary blob
     //then send into the texture system
@@ -187,7 +188,7 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     //the deserialization is the same, it just depends which file data we end up giving it
 
     Asset_MetaData* meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (!asset_registry_exists_by_uuid(asset_system, uuid, meta_data))
+    if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, meta_data))
     {
         //TODO: try to load in the asset from the import path
         MASSERT_FALSE();
@@ -251,7 +252,7 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
     String* load_asset_path = string_builder_to_string(string_builder);
 
     Asset_MetaData* meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (!asset_registry_exists_by_engine_path(asset_system, load_asset_path, meta_data))
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
     {
         //TODO: try to load in the asset from the import path
         FATAL("ASSET NOT FOUND: %s", engine_asset_path);
@@ -316,7 +317,7 @@ Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uui
         return out_handle;
     }
 
-    if (!asset_registry_exists_by_uuid(asset_system, uuid, meta_data))
+    if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return out_handle;
@@ -384,7 +385,7 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
 
     Madness_Mesh_Handle mesh_handle = {0};
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, out_meta_data))
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return mesh_handle;
@@ -407,9 +408,11 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
 
         fptr = fopen(engine_asset_path, "rb");
 
+
         asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
 
-        mesh_system_load_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path);
+        mesh_system_load_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
+                              out_meta_data->uuid);
     }
     else
     {
@@ -432,7 +435,7 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
 
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));;
-    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, out_meta_data))
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return out_handle;
@@ -457,7 +460,8 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
 
         asset_skmesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
 
-        mesh_system_load_skinned_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path);
+        mesh_system_load_skinned_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
+                                      out_meta_data->uuid);
     }
     else
     {
@@ -479,7 +483,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, asset_system->frame_allocator);
 
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));;
-    if (!asset_registry_exists_by_engine_path(asset_system, asset_path_string, out_meta_data))
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return false;
@@ -525,9 +529,8 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
 bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
-
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));;
-    if (!asset_registry_exists_by_uuid(asset_system, uuid, out_meta_data))
+    if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return false;

@@ -1,6 +1,7 @@
 ﻿#include "texture_system.h"
 #include "asset_converter.h"
 #include "asset_system.h"
+#include "shader_system.h"
 
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {
@@ -31,10 +32,6 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
     //hash map
     texture_system->texture_hash_map = HASH_MAP_CREATE(u64, u32, MAX_TEXTURE_COUNT*2);
-
-
-    texture_system->texture_upload_queue = ring_queue_create(sizeof(Texture_GPU_Upload),
-                                                             MAX_TEXTURE_COUNT + MAX_FONT_COUNT);
 
 
     //create our debug texture
@@ -139,9 +136,13 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     upload_texture.bindless_location = free_index;
     upload_texture.pixel_data = pixel_data;
 
-    ring_enqueue(texture_system->texture_upload_queue, &upload_texture);
+
+    renderer_texture_create(asset_system->renderer, &upload_texture);
 
     hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
+
+    //unload texture data
+    allocator_heap_free(asset_system->heap_allocator, upload_texture.pixel_data);
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
@@ -149,6 +150,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     meta_data->path_hash = hash;
     meta_data->type = ASSET_TEXTURE;
     meta_data->reference_count = 1;
+
 
     return out_handle;
 }
@@ -200,9 +202,13 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     upload_texture.bindless_location = free_index;
     upload_texture.pixel_data = pixel_data;
 
-    ring_enqueue(texture_system->texture_upload_queue, &upload_texture);
+    //send to renderer for upload
+    renderer_texture_create(asset_system->renderer, &upload_texture);
 
     hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
+
+    //unload texture data
+    allocator_heap_free(asset_system->heap_allocator, upload_texture.pixel_data);
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
@@ -210,6 +216,23 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     meta_data->path_hash = hash;
     meta_data->type = ASSET_FONT;
     meta_data->reference_count = 1;
+
+
+    return true;
+}
+
+bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
+{
+    Texture_System* texture_system = asset_system->texture_system;
+
+
+    texture_system->texture_asset[texture_handle.handle].reference_count--;
+    if (texture_system->texture_asset[texture_handle.handle].reference_count <=0)
+    {
+        //unload the texture
+        renderer_texture_free(asset_system->renderer, texture_handle);
+
+    }
 
 
     return true;

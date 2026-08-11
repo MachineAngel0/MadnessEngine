@@ -4,6 +4,8 @@
 
 #include "resource_import_types.h"
 #include "resource_types.h"
+#include "resource_asset_system_type.h"
+
 #include "texture_system.h"
 #include "sprite_system.h"
 #include "mesh_system.h"

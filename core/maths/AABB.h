@@ -12,18 +12,22 @@ typedef struct AABB3
 {
     //stands for axially aligned bounding box.
     //Axially aligned bounding boxes have the restriction that their sides be perpendicular to principal axes.
-    vec3 min;
-    vec3 max;
+    vec3s min;
+    vec3s max;
 } AABB3;
 
 
 inline void aabb_empty(AABB3* aabb)
 {
-    aabb->min.x = aabb->min.y = aabb->min.z = FLT_MAX;
-    aabb->max.x = aabb->max.y = aabb->max.z = -FLT_MAX;
+    aabb->min.x = FLT_MAX;
+    aabb->min.y = FLT_MAX;
+    aabb->min.z = FLT_MAX;
+    aabb->max.x = -FLT_MAX;
+    aabb->max.y = -FLT_MAX;
+    aabb->max.z = -FLT_MAX;
 }
 
-inline void aabb_add(AABB3* aabb, const vec3* p)
+inline void aabb_add(AABB3* aabb, const vec3s* p)
 {
     if (p->x < aabb->min.x) { aabb->min.x = p->x; }
     if (p->x > aabb->max.x) { aabb->max.x = p->x; }
@@ -34,30 +38,31 @@ inline void aabb_add(AABB3* aabb, const vec3* p)
 }
 
 
-inline vec3 aabb_center(const AABB3* aabb)
+inline vec3s aabb_center(const AABB3* aabb)
 {
-    vec3 intermediate = vec3_add(aabb->min, aabb->max);
-    vec3 center = vec3_div_scalar(intermediate, 2.0f);
+    vec3s intermediate = glms_vec3_add(aabb->min, aabb->max);
+    vec3s center = vec3_div_scalar(intermediate, 2.0f);
 
     return center;
 }
 
-inline vec3 aabb_size(const AABB3* aabb)
+inline vec3s aabb_size(const AABB3* aabb)
 {
     return vec3_sub(aabb->max, aabb->min);
 }
 
-inline vec3 aabb_radius_vector(const AABB3* aabb)
+inline vec3s aabb_radius_vector(const AABB3* aabb)
 {
-    vec3 temp = vec3_sub(aabb->max, aabb_center(aabb));
-    return vec3_div_scalar(temp, 2.0f);
+    vec3s temp = glms_vec3_sub(aabb->max, aabb_center(aabb));
+    return glms_vec3_scale(temp, 1.f / 2.0f);
+    // return vec3_div_scalar(temp, 2.0f);
 }
 
 void bounding_box_create()
 {
     // Our list of points
     const int vec3_points = 0;
-    vec3 list[vec3_points];
+    vec3s list[vec3_points];
 
     // First, empty the box
     //TODO: REPLACE MALLOC

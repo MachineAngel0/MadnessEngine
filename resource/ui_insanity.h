@@ -295,8 +295,70 @@ MAPI Insanity_UI_Node* insanity_ui_get_top_node(void);
 MAPI bool insanity_rect_hit(vec2s pos, vec2s size);
 MAPI char* insanity_ui_float_to_char(float value);
 
+
+static uint8_t INSANITY_UI_LATCH;
+#define insanity_ui_draw_parent(id) \
+for(INSANITY_UI_LATCH = (insanity_ui_push_parent(id), 0);\
+INSANITY_UI_LATCH <= 0; \
+INSANITY_UI_LATCH = 1, insanity_ui_pop_parent())
+
+#define insanity_ui_draw(id) \
+insanity_ui_draw_rect(id)
+
+
 //Test
 MAPI void insanity_ui_test(void);
+
+
+
+//IDEAl API
+
+//FEATURES:
+// UI sizes and positions should be modifiable with a GUI and saved into a file somewhere for loading, without me needing to constantly recompile the game
+// think of the ui system in silver case
+// ui need to be able to be nested inside other ui elements, maybe like madness ui or actually have the ui nodes have children
+// explore functions like, draw_below or draw inbetween two nodes, and something like an early resolve
+// animations - specify the state of one thing, and then the end state of that thing, size, pos, rotation, color,
+// I like the idea of percent sizing but it can feel confusing, for sure things need to auto size on window changes
+// honestly i like the whole start and end window, i just want it as a macro this time so its easier to use
+// idk if cursor position is the correct way to go about it in this new ui, this isnt neccessarily bad, just that i probably need more data to describe max size and stuff like that
+
+
+// start window - do things, size here, blah blah, end window, auto size if you feel like it
+
+
+// void draw_from_offset_of_pos_of_another_node()
+// void draw_from_offset_of_pos_size_of_another_node()
+
+//window_begin{}window_end -> window auto_size
+
+// flow/what it should look like:
+// draw_here()
+// draw_at_origin() -> offset_from_xy_pos()
+
+// start layout
+// add left padding to cursor
+// draw()
+// draw()
+// draw() -> offset_by_x_units();
+// end layout
+
+// start layout
+// add horizontal_layout()
+// draw()
+// draw()
+// draw()
+// add horizontal_layout2()
+// draw()
+// draw()
+// draw()
+// add horizontal_layout2()
+// draw()
+// draw() -> draw_inside_prev_draw();
+// draw()
+// draw()
+// end layout
+
 
 
 #endif //INSANITY_UI_H

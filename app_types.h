@@ -32,6 +32,22 @@ typedef struct Application_Core
 } Application_Core;
 
 
+
+typedef struct Application_Config
+{
+    //TODO: plug into the engine
+    u64 memory_amount; // in bytes
+
+    u32 texture_count;
+    u32 font_count;
+    u32 mesh_count;
+    u32 animation_count;
+    u32 audio_count;
+
+} Application_Config;
+
+
+
 // PLUGINS
 
 typedef struct Renderer_Plugin

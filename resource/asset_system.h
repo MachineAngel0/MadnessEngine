@@ -49,7 +49,7 @@ typedef struct Asset_Load_Handle
     void* handle;
 }Asset_Load_Handle;
 
-Asset_System* asset_system_init(Memory_System* memory_system);
+Asset_System* asset_system_init(Memory_System* memory_system, Renderer* renderer);
 
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
 

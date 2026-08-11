@@ -92,7 +92,6 @@ typedef struct gamepad_system
     gamepad_state* gamepad_player_info;
     u32 player_count;
 
-    Event_System* event_system;//ref
 }gamepad_system;
 
 static gamepad_system gamepad;
@@ -107,9 +106,9 @@ bool gamepad_button_recieve(Event_Type code, String sender_id, String subscriber
 
 bool gamepad_button_press(Event_Type code, String sender_id, String subscriber_id, Event_Data data);
 
-void gamepad_init(Memory_System* memory_system, Event_System* event_system);
+void gamepad_init(Memory_System* memory_system);
 
-void gamepad_shutdown(Event_System* event_system);
+void gamepad_shutdown(void);
 
 void gamepad_update(void);
 void gamepad_poll(void);

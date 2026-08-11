@@ -742,7 +742,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 .mesh_type = Shader_Mesh_Type_Mesh,
                 .blend_mode = Shader_Blend_Mode_Default,
             };
-
         }
         default_info.material_id = material_system_generate_id(&default_info);
         //generate the id, as we dont likley want to do this at runtime
@@ -1249,4 +1248,25 @@ bool asset_converter_material_instance_from_material_info(Asset_System* asset_sy
 
     fclose(fptr);
     return true;
+}
+
+bool asset_converter_reload_textures(Asset_System* asset_system, Memory_System* memory_system)
+{
+    Asset_List_Scan* scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS,
+                                          IMPORT_TEXTURE_PATH);
+
+    for (u32 i = 0; i < scan->count; i++)
+    {
+        Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+
+        MADNESS_UUID uuid = {0};
+        asset_converter_texture(asset_system, string_to_c_string_allocator(&scan->strings[i], scratch_allocator.allocator), &uuid);
+
+        scratch_allocator_end(scratch_allocator);
+
+    }
+
+
+    asset_lists_free(scan, memory_system);
+
 }

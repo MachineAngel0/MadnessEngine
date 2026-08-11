@@ -1,4 +1,5 @@
 ﻿#include "filesystem.h"
+#include "../../../../../../../Program Files (x86)/Windows Kits/10/include/10.0.26100.0/ucrt/corecrt_math_defines.h"
 
 
 #if MPLATFORM_WINDOWS
@@ -9,18 +10,42 @@ typedef struct Windows_File_Data
 {
     const char* file_name;
     FILETIME last_write_time;
-    HANDLE directory_windows_handle;
+    HANDLE file_windows_handle;
 } Windows_File_Data;
+
+typedef struct Windows_Directory_Data
+{
+    const char* directory_path;
+    HANDLE directory_handle;
+    OVERLAPPED overlapped;
+
+    BYTE buffer[64 * 1024];
+
+    File_Watch_Event event_queue[256];
+
+    u32 queue_read;
+    u32 queue_write;
+
+
+    bool pending;
+} Windows_Directory_Data;
+
 
 Windows_File_Data windows_file_data[1000];
 static int windows_file_count = 1;
+
+
+Windows_Directory_Data windows_directory_data[1000];
+static int windows_directory_count = 1;
+
+// RING_QUEUE_TYPE(File_Watch_Event) queued_file_events;
 
 
 File_Watch_Handle platform_register_file_watch(const char* file_name)
 {
     WIN32_FILE_ATTRIBUTE_DATA file_info;
     if (!GetFileAttributesExA(file_name, GetFileExInfoStandard, &file_info))
-        return (File_Watch_Handle){0, file_name};
+        return (File_Watch_Handle){0};
 
     //write the file time
     Windows_File_Data* file_data = &windows_file_data[windows_file_count];
@@ -28,7 +53,7 @@ File_Watch_Handle platform_register_file_watch(const char* file_name)
     file_data->last_write_time = file_info.ftLastWriteTime;
 
     //hand out the handle
-    File_Watch_Handle out_handle = {windows_file_count, file_name};
+    File_Watch_Handle out_handle = {windows_file_count};
     windows_file_count++;
 
     return out_handle;
@@ -57,68 +82,300 @@ bool platform_has_filed_changed(File_Watch_Handle file_watch_handle)
 
 File_Watch_Handle platform_register_directory_watch(const char* directory_name)
 {
-    HANDLE dir = CreateFileA(
+    HANDLE dir_win_handle = CreateFileA(
         directory_name,
         FILE_LIST_DIRECTORY,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        FILE_SHARE_READ |
+        FILE_SHARE_WRITE |
+        FILE_SHARE_DELETE,
         NULL,
         OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
         NULL
     );
 
-    //get a file struct
-    Windows_File_Data* file_data = &windows_file_data[windows_file_count];
-    file_data->file_name = directory_name;
-    file_data->directory_windows_handle = dir;
-
-    if (dir == INVALID_HANDLE_VALUE)
+    if (dir_win_handle == INVALID_HANDLE_VALUE)
     {
         M_ERROR("Failed to open directory\n");
-        return (File_Watch_Handle){0, directory_name};
+        return (File_Watch_Handle){0};
     }
 
-    File_Watch_Handle out_handle = {windows_file_count, directory_name};
-    windows_file_count++;
+    //get a file struct
+    Windows_Directory_Data* directory_data = &windows_directory_data[windows_directory_count];
+    directory_data->directory_path = c_string_duplicate(directory_name); // TODO: allocator
+    directory_data->directory_handle = dir_win_handle;
+
+    directory_data->overlapped.hEvent =
+        CreateEventA(
+            NULL,
+            TRUE,
+            FALSE,
+            NULL
+        );
+
+    if (!directory_data->overlapped.hEvent)
+    {
+        CloseHandle(directory_data->directory_handle);
+        M_ERROR("Failed to create overlap event");
+        return (File_Watch_Handle){0};
+    }
+
+
+    File_Watch_Handle out_handle = {windows_directory_count};
+    windows_directory_count++;
 
     return out_handle;
 }
 
-void platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
+
+bool platform_update_directory(File_Watch_Handle directory_watch_handle)
+{
+    Windows_Directory_Data* file_data =
+        &windows_directory_data[directory_watch_handle.handle];
+
+    DWORD bytes_transferred;
+
+    /*
+     * Start a new asynchronous directory read.
+     */
+    if (!file_data->pending)
+    {
+        ResetEvent(file_data->overlapped.hEvent);
+
+        BOOL result =
+            ReadDirectoryChangesW(
+                file_data->directory_handle,
+                file_data->buffer,
+                sizeof(file_data->buffer),
+                TRUE,
+
+                FILE_NOTIFY_CHANGE_FILE_NAME |
+                FILE_NOTIFY_CHANGE_DIR_NAME |
+                FILE_NOTIFY_CHANGE_LAST_WRITE |
+                FILE_NOTIFY_CHANGE_SIZE,
+
+                NULL,
+                &file_data->overlapped,
+                NULL
+            );
+
+        if (!result)
+        {
+            DWORD error = GetLastError();
+            M_ERROR("PLATFORM UPDATE DIRECTORY: ReadDirectoryChangesW RESULT %d", error);
+            if (error != ERROR_IO_PENDING)
+                return false;
+        }
+
+        file_data->pending = true;
+
+        return true;
+    }
+
+    /*
+     * Check if the asynchronous read has completed.
+     * FALSE means do not block.
+     */
+    BOOL result =
+        GetOverlappedResult(
+            file_data->directory_handle,
+            &file_data->overlapped,
+            &bytes_transferred,
+            FALSE
+        );
+
+    if (!result)
+    {
+        DWORD error = GetLastError();
+
+        if (error == ERROR_IO_INCOMPLETE)
+            return true;
+
+        file_data->pending = false;
+
+        return false;
+    }
+
+    file_data->pending = false;
+
+    if (bytes_transferred == 0)
+        return true;
+
+    /*
+     * Parse all FILE_NOTIFY_INFORMATION records.
+     */
+    DWORD offset = 0;
+
+    while (offset < bytes_transferred)
+    {
+        FILE_NOTIFY_INFORMATION* info =
+            (FILE_NOTIFY_INFORMATION*)
+            (file_data->buffer + offset);
+
+        File_Watch_Event event = {0};
+
+        switch (info->Action)
+        {
+        case FILE_ACTION_ADDED:
+            event.action = FILE_WATCH_ACTION_ADDED;
+            break;
+
+        case FILE_ACTION_REMOVED:
+            event.action = FILE_WATCH_ACTION_REMOVED;
+            break;
+
+        case FILE_ACTION_MODIFIED:
+            event.action = FILE_WATCH_ACTION_MODIFIED;
+            break;
+
+        case FILE_ACTION_RENAMED_OLD_NAME:
+            event.action = FILE_WATCH_ACTION_RENAMED;
+            break;
+
+        case FILE_ACTION_RENAMED_NEW_NAME:
+            event.action = FILE_WATCH_ACTION_RENAMED_NEW;
+            break;
+
+        default:
+            goto next_event;
+        }
+
+        int filename_length =
+            WideCharToMultiByte(
+                CP_UTF8,
+                0,
+                info->FileName,
+                info->FileNameLength / sizeof(WCHAR),
+                event.path,
+                sizeof(event.path) - 1,
+                NULL,
+                NULL
+            );
+
+        if (filename_length > 0)
+        {
+            event.path[filename_length] = '\0';
+
+            u32 next_write =
+                (file_data->queue_write + 1) %
+                ARRAY_SIZE(file_data->event_queue);
+
+            /*
+             * Queue is not full.
+             */
+            if (next_write != file_data->queue_read)
+            {
+                file_data->event_queue[
+                    file_data->queue_write
+                ] = event;
+
+                file_data->queue_write =
+                    next_write;
+            }
+        }
+
+    next_event:
+
+        if (info->NextEntryOffset == 0)
+            break;
+
+        offset += info->NextEntryOffset;
+    }
+
+    return true;
+}
+
+bool platform_poll_directory_changes(
+    File_Watch_Handle directory_watch_handle,
+    File_Watch_Event* out_event)
+{
+    Windows_Directory_Data* file_data =
+        &windows_directory_data[directory_watch_handle.handle];
+
+
+    if (file_data->queue_read ==
+        file_data->queue_write)
+    {
+        return false;
+    }
+
+    *out_event =
+        file_data->event_queue[
+            file_data->queue_read
+        ];
+
+    file_data->queue_read =
+        (file_data->queue_read + 1) %
+        ARRAY_SIZE(file_data->event_queue);
+
+    return true;
+}
+
+
+bool platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
 {
     //get a file struct
     Windows_File_Data* file_data = &windows_file_data[directory_watch_handle.handle];
 
-    char buffer[2048];
+    char buffer[64 * 1024];
     DWORD bytesReturned;
 
-    if (ReadDirectoryChangesW(
-        file_data->directory_windows_handle,
+    b32 result = ReadDirectoryChangesW(
+        file_data->file_windows_handle,
         buffer,
         sizeof(buffer),
         TRUE, // watch subdirectories
         FILE_NOTIFY_CHANGE_FILE_NAME |
         FILE_NOTIFY_CHANGE_DIR_NAME |
-        FILE_NOTIFY_CHANGE_LAST_WRITE,
+        FILE_NOTIFY_CHANGE_LAST_WRITE |
+        FILE_NOTIFY_CHANGE_SIZE,
         &bytesReturned,
         NULL,
-        NULL))
+        NULL);
+
+    if (!result) { return false; }
+
+    FILE_NOTIFY_INFORMATION* info = (FILE_NOTIFY_INFORMATION*)buffer;
+    for (;;)
     {
-        FILE_NOTIFY_INFORMATION* info = (FILE_NOTIFY_INFORMATION*)buffer;
+        wchar_t path[MAX_PATH];
 
-        do
+        DWORD length = info->FileNameLength / sizeof(wchar_t);
+
+        memcpy(path, info->FileName, info->FileNameLength);
+        path[length] = L'\0';
+
+        switch (info->Action)
         {
-            wprintf(L"Changed: %.*s\n",
-                    info->FileNameLength / 2,
-                    info->FileName);
+        case FILE_ACTION_ADDED:
+            // queue added
+            break;
 
-            if (info->NextEntryOffset == 0)
-                break;
+        case FILE_ACTION_REMOVED:
+            // queue removed
+            break;
 
-            info = (FILE_NOTIFY_INFORMATION*)((char*)info + info->NextEntryOffset);
+        case FILE_ACTION_MODIFIED:
+            // queue modified
+            break;
+
+        case FILE_ACTION_RENAMED_OLD_NAME:
+            // old name
+            break;
+
+        case FILE_ACTION_RENAMED_NEW_NAME:
+            // new name
+            break;
         }
-        while (1);
+
+        if (info->NextEntryOffset == 0)
+            break;
+
+        info = (FILE_NOTIFY_INFORMATION*)
+            ((BYTE*)info + info->NextEntryOffset);
     }
+
+    return true;
 }
 
 
@@ -358,8 +615,6 @@ bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List
 
     FindClose(findHandle);
     return true;
-
-
 }
 
 

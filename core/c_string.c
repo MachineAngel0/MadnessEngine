@@ -87,6 +87,14 @@ const char* c_string_concat_heap(const char* str1, const char* str2, Heap_Alloca
     return out_str;
 }
 
+void c_string_convert_forward_to_backslashes(char* path)
+{
+    for (char* c = path; *c; ++c)
+    {
+        if (*c == '/') *c = '\\';
+    }
+}
+
 
 // Performs string formatting to dest given format string and parameters.
 char* c_string_path_strip(const char* path, Allocator* arena)

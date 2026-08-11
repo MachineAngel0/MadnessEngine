@@ -18,12 +18,12 @@
 #include "vk_device.h"
 
 
-typedef struct internal_state
+typedef struct windows_internal_state
 {
     HINSTANCE h_instance;
     HWND hwnd;
     VkSurfaceKHR surface;
-} internal_state;
+} windows_internal_state;
 
 // Clock
 static f64 clock_frequency;
@@ -34,11 +34,10 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 bool platform_startup(
     Platform_State* plat_state,
     Input_System* input_system_reference,
-    Event_System* event_system,
     Platform_Config platform_config)
 {
-    plat_state->internal_state = malloc(sizeof(internal_state));
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    plat_state->internal_state = malloc(sizeof(windows_internal_state));
+    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
 
     if (input_system_reference)
     {
@@ -69,9 +68,9 @@ bool platform_startup(
 
     // Create window
     u32 client_x = platform_config.start_pos_x;
-    u32 client_y =  platform_config.start_pos_y;
-    u32 client_width =  platform_config.start_width;
-    u32 client_height =  platform_config.start_height;
+    u32 client_y = platform_config.start_pos_y;
+    u32 client_width = platform_config.start_width;
+    u32 client_height = platform_config.start_height;
 
     u32 window_x = client_x;
     u32 window_y = client_y;
@@ -137,7 +136,7 @@ bool platform_startup(
 void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
     timeEndPeriod(1);; // Set system timer resolution to 1 ms
 
     if (state->hwnd)
@@ -229,7 +228,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         return 1;
     case WM_CLOSE:
         Event_Data data = {};
-        event_fire(input_system->event_system_reference, EVENT_APP_QUIT, STRING("win32 platform"), data);
+        event_fire(EVENT_APP_QUIT, STRING("win32 platform"), data);
         return true;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -245,7 +244,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             Event_Data context;
             context.data.event_data_window_resize.width = (u16)width;
             context.data.event_data_window_resize.height = (u16)height;
-            event_fire(input_system->event_system_reference, EVENT_APP_RESIZE, STRING("win32 platform"), context);
+            event_fire(EVENT_APP_RESIZE, STRING("win32 platform"), context);
         }
         break;
     case WM_KEYDOWN:
@@ -463,7 +462,7 @@ bool platform_load_dynamic_library_from_handle(DLL_HANDLE handle, const char* fi
         DWORD code = GetLastError();
         WARN("FAILED TO COPY DLL from %s to %s. Error: %d", final_file_name, temp_dll_name, GetLastError());
 
-        if (code == 32 )
+        if (code == 32)
         {
             platform_sleep(100);
             platform_load_dynamic_library_from_handle(handle, file_name);
@@ -502,6 +501,30 @@ bool platform_file_copy(const char* source_file, char* new_file)
 }
 
 
+bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
+{
+
+    c_string_convert_forward_to_backslashes(start_file_absolute_path);
+
+
+    OPENFILENAMEA ofn = {0};
+    out_path[0] = '\0'; // clear so a cancel doesn't leave stale data
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL; // can be NULL if you have no window handle, from my usage, it stop games window
+    // ofn.lpstrFilter = L"Mesh Files\0*.fbx;*.gltf;*.obj\*.mmesh\0All Files\0*.*\0"; //TODO: this is fucked looking
+    ofn.lpstrFile = out_path;
+    if (start_file_absolute_path)
+    {
+        ofn.lpstrInitialDir = start_file_absolute_path;
+    }
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+    ofn.lpstrTitle = L"Select an asset";
+
+    return GetOpenFileNameA(&ofn); // returns true if user picked a file
+}
+
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
@@ -512,7 +535,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 
     // Simply cold-cast to the known type.
-    internal_state* state = (internal_state*)plat_state->internal_state;
+    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
 
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -565,7 +588,7 @@ void platform_get_cursor_pos(int* out_x, int* out_y)
 
 void platform_windows_resize(Platform_State* platform_state, int width, int height)
 {
-    internal_state* state = platform_state->internal_state;
+    windows_internal_state* state = platform_state->internal_state;
 
     //change the size but does not move due to no move flag
     SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE);

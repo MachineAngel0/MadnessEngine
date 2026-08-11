@@ -108,21 +108,26 @@ bool filesystem_create_file(const char* file_path)
 }
 
 
+//NEW API
+
+/*
+typedef struct Madness_File
+{
+    File_Mode file_mode;
+    FILE* fptr; // might need to be void* platform_specifics;
+} Madness_File;
+*/
+
+
+// bool filesystem_open(const char* path, file_modes mode, bool binary, Madness_File* out_file);
+// bool filesystem_close(Madness_File* file);
+// bool filesystem_read(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+// bool filesystem_write(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+// bool filesystem_read_all_bytes(Madness_File* handle, u8** out_bytes, u64* out_bytes_read);
+
 //PLATFORM SPECIFIC CODE
 
-typedef struct File_Handle
-{
-    u32 handle;
-} File_Handle;
-
-//returns a file handle, 0 if an invalid file, but should be safe since it won't crash anything
-File_Handle* filesystem_register_file(const char* file_path);
-void filesystem_unregister_file_by_handle(File_Handle file_handle);
-void filesystem_unregister_file_by_name(const char* file_path);
-
-bool filesystem_has_file_changed(File_Handle* file_path);
-
-
+//FILE UTILITY
 bool filesystem_does_file_exists(const char* file_path);
 bool filesystem_does_directory_exists(const char* directory_path);
 bool filesystem_is_directory_empty(const char* directory_path);
@@ -142,24 +147,73 @@ typedef struct Asset_List_Scan
     Allocator* allocator;
 }Asset_List_Scan;
 
+
+Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
+                                      const char* relative_asset_path);
+bool asset_lists_free(Asset_List_Scan* asset_list_scan, Memory_System* memory_system);
+
 bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan);
 
 
+//FILE WATCHER
 
-
-//NEW API
-
-/*
-typedef struct Madness_File
+typedef struct File_Watch_Handle
 {
-    File_Mode file_mode;
-    FILE* fptr; // might need to be void* platform_specifics;
-} Madness_File;
-*/
+    uint64_t handle;
+} File_Watch_Handle;
+
+//returns a file handle, 0 if an invalid file, but should be safe since it won't crash anything
+File_Watch_Handle filesystem_register_file(const char* file_path);
+void filesystem_unregister_file_by_handle(File_Watch_Handle file_handle);
+void filesystem_unregister_file_by_name(const char* file_path);
+
+bool filesystem_has_file_changed(File_Watch_Handle file_handle);
+bool filesystem_has_directory_changed(File_Watch_Handle file_handle);
 
 
-// bool filesystem_open(const char* path, file_modes mode, bool binary, Madness_File* out_file);
-// bool filesystem_close(Madness_File* file);
-// bool filesystem_read(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
-// bool filesystem_write(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
-// bool filesystem_read_all_bytes(Madness_File* handle, u8** out_bytes, u64* out_bytes_read);
+
+typedef enum File_Watch_Action
+{
+    FILE_WATCH_ACTION_ADDED,
+    FILE_WATCH_ACTION_REMOVED,
+    FILE_WATCH_ACTION_MODIFIED,
+    FILE_WATCH_ACTION_RENAMED,
+    FILE_WATCH_ACTION_RENAMED_OLD,
+    FILE_WATCH_ACTION_RENAMED_NEW,
+}File_Watch_Action;
+
+typedef struct File_Watch_Event
+{
+    File_Watch_Action action;
+    char path[260];
+} File_Watch_Event;
+
+typedef struct Madness_File_Watcher
+{
+    Allocator* allocator;
+
+    File_Watch_Handle directory_handles[32]; // abritrary amount
+    u32 directory_handle_count; // abritrary amount
+
+    void* platform_internals;
+} Madness_File_Watcher;
+
+
+static Madness_File_Watcher* madness_file_watcher;
+
+bool filewatcher_init(Memory_System* memory_system);
+bool filewatcher_deinit(void);
+bool filewatcher_update(void);
+
+void filewatcher_directory_register(const char* directory_path);
+void filewatcher_directory_unregister(const char* directory_path);
+
+
+
+//what do i want rn
+// if an asset gets imported, convert it, if an asset is not yet converted, then convert it
+
+
+
+
+

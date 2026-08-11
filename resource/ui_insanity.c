@@ -771,15 +771,6 @@ void insanity_ui_pop_parent(void)
 static float x_size = 1;
 
 
-static uint8_t _UI_LATCH;
-#define insanity_ui_draw_parent(id) \
-for(_UI_LATCH = (insanity_ui_push_parent(id), 0);\
-_UI_LATCH <= 0; \
-_UI_LATCH = 1, insanity_ui_pop_parent())
-
-#define insanity_ui_draw(id) \
-    insanity_ui_draw_rect(id)
-
 
 void insanity_ui_test()
 {

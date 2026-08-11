@@ -29,7 +29,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     allocator_init(madness_ui->frame_allocator, frame_allocator_memory, ui_arena_mem_size);
 
     madness_ui->input_system_reference = input_system;
-    madness_ui->resource_system = asset_system;
+    madness_ui->asset_system = asset_system;
 
 
     madness_ui->default_font_size = DEFAULT_FONT_CREATION_SIZE;
@@ -1187,7 +1187,7 @@ vec2s madness_ui_get_text_size(String text)
     vec2s out_text_size = glms_vec2_zero();
 
     Madness_Font font_data;
-    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+    texture_system_get_font(madness_ui->asset_system->texture_system, madness_ui->default_font_handle, &font_data);
 
     for (u64 i = 0; i < text.length; i++)
     {
@@ -1224,7 +1224,7 @@ void madness_calculate_text_size(String text, vec2s screen_position, vec2s* out_
     float max_height_y = 0;
 
     Madness_Font font_data;
-    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle, &font_data);
+    texture_system_get_font(madness_ui->asset_system->texture_system, madness_ui->default_font_handle, &font_data);
 
     for (u64 i = 0; i < text.length; i++)
     {
@@ -1380,7 +1380,7 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
     vec2s text_current_pos = text_pos;
     f32 font_scalar = madness_ui->editor_font_size / madness_ui->default_font_size;
     Madness_Font font_data;
-    texture_system_get_font(madness_ui->resource_system->texture_system, madness_ui->default_font_handle,
+    texture_system_get_font(madness_ui->asset_system->texture_system, madness_ui->default_font_handle,
                             &font_data);
 
     for (u64 i = 0; i < text.length; i++)
@@ -1560,20 +1560,27 @@ void madness_image(String id, Texture_System* texture_system, const char* icon_p
 
 void madness_image_handle(Texture_Handle handle)
 {
-    UI_Node* checkbox_node = madness_ui_get_new_node();
-    checkbox_node->string_id = STRING("image");
-    checkbox_node->hash_id = string_hash_u64(checkbox_node->string_id);
-    checkbox_node->pos = madness_ui->cursor_pos;
-    checkbox_node->size = (vec2s){
+    vec2s image_box_size = (vec2s){
         64, 64
     };
-    checkbox_node->flags |= UI_FLAG_IMAGE;
-    checkbox_node->texture_handle = handle;
-    checkbox_node->color = COLOR_WHITE;
-    checkbox_node->uv_offset = (vec2s){0, 0};
-    checkbox_node->uv_size = (vec2s){1.0, 1.0};
 
-    madness_ui_advance_cursor((vec2s){checkbox_node->size.x, checkbox_node->size.y});
+    if (madness_ui_is_outside_window(image_box_size,true))
+    {
+        return;
+    }
+
+    UI_Node* image_box_node = madness_ui_get_new_node();
+    image_box_node->string_id = STRING("image");
+    image_box_node->hash_id = string_hash_u64(image_box_node->string_id);
+    image_box_node->pos = madness_ui->cursor_pos;
+    image_box_node->size = image_box_size;
+    image_box_node->flags |= UI_FLAG_IMAGE;
+    image_box_node->texture_handle = handle;
+    image_box_node->color = COLOR_WHITE;
+    image_box_node->uv_offset = (vec2s){0, 0};
+    image_box_node->uv_size = (vec2s){1.0, 1.0};
+
+    madness_ui_advance_cursor((vec2s){image_box_node->size.x, image_box_node->size.y});
 }
 
 float map_range(float v, float a, float b, float x, float y)
@@ -2174,7 +2181,7 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
 
 bool madness_ui_u64(String text, u64* i, u64 increment_value)
 {
-     madness_ui_string(text);
+    madness_ui_string(text);
     madness_ui_same_line();
 
     char float_char[12]; // Large enough to hold the digits, sign, and null terminator
@@ -2388,7 +2395,7 @@ void madness_ui_text_box(String id)
     text_box->pos = madness_ui->cursor_pos;
 
     float size_x = clamp_float(madness_ui->current_window_screen_size.x - label_node->size.x, 4, 10000);
-    text_box->size = (vec2s){size_x * 0.9, madness_ui_get_default_element_height()};
+    text_box->size = (vec2s){size_x - madness_ui_get_default_element_height(), madness_ui_get_default_element_height()};
     text_box->color = madness_ui->editor_style.textbox_color;
 
 
@@ -2417,6 +2424,90 @@ void madness_ui_text_box(String id)
 
 
     madness_ui_advance_cursor(text_box->size);
+}
+
+String_Builder* madness_ui_text_box_get_string(String id)
+{
+    //search for the string builder in the string builder state by the id, if none found take a new one
+    for (u32 i = 0; i < madness_ui->string_buidler_state_count; i++)
+    {
+        if (string_compare(madness_ui->string_builder_state[i].id, &id))
+        {
+            return madness_ui->string_builder_state[i].active_menu_item;
+        }
+    }
+
+    return NULL;
+}
+
+void madness_ui_file_picker(String id)
+{
+    //search for the string builder in the string builder state by the id, if none found take a new one
+    String_Builder_State* string_state = NULL;
+    for (u32 i = 0; i < madness_ui->string_buidler_state_count; i++)
+    {
+        if (string_compare(madness_ui->string_builder_state[i].id, &id))
+        {
+            string_state = &madness_ui->string_builder_state[i];
+            break;
+        }
+    }
+    if (!string_state)
+    {
+        if (madness_ui->string_buidler_state_count >= MAX_MADNESS_UI_STRING_BUILDERS)
+        {
+            WARN("out of string builders");
+            return;
+        }
+        string_state = &madness_ui->string_builder_state[madness_ui->string_buidler_state_count++];
+        string_state->id = string_duplicate_alloc(&id, madness_ui->allocator);
+    }
+    MASSERT(string_state);
+
+
+    if (madness_ui_button(id))
+    {
+        char path[MAX_PATH];
+        if (platform_open_file_dialogue(path, "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine"))
+        {
+            wprintf(L"Selected: %s\n", path);
+            string_builder_clear(string_state->active_menu_item);
+            string_builder_append_c_string(string_state->active_menu_item, path);
+        }
+        else
+        {
+            wprintf(L"FILE PICKER ERROR.\n");
+        }
+    }
+
+    madness_ui_same_line();
+
+    //grab a node
+    UI_Node* text_box = madness_ui_get_new_node();
+    text_box->string_id = id;
+    text_box->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
+    text_box->pos = madness_ui->cursor_pos;
+
+    Window_State* top_window = stack_top(madness_ui->window_states_stack, Window_State*);
+
+
+    float size_x = clamp_float(
+        madness_ui->current_window_screen_size.x - (madness_ui->cursor_pos.x - top_window->window_region_pos.x),
+        0,
+        10000);
+    text_box->size = (vec2s){size_x - madness_ui_get_default_element_height(), madness_ui_get_default_element_height()};
+    text_box->color = madness_ui->editor_style.textbox_color;
+
+
+
+    String* display_string = string_builder_to_string(string_state->active_menu_item);
+
+    madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
+                               UI_ALIGNMENT_LEFT,
+                               UI_ALIGNMENT_CENTER);
+
+    madness_ui_advance_cursor(text_box->size);
+
 }
 
 bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, float increment_value)
@@ -3174,8 +3265,9 @@ bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_regi
             break;
         case REFLECTION_TYPE_PATH_STRING:
             static u32 selected_string;
-            madness_ui_combo_box_string(*custom_name, data, madness_ui->asset_list_scan_refence->strings,
-                                        madness_ui->asset_list_scan_refence->count);
+            //TODO:
+            /*madness_ui_combo_box_string(*custom_name, data, madness_ui->asset_list_scan_reference->strings,
+                                        madness_ui->asset_list_scan_reference->count);*/
             break;
         case REFLECTION_TYPE_CHAR:
             madness_ui_text_box(*custom_name);
@@ -3282,8 +3374,9 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_PATH_STRING:
             static u32 selected_string;
             madness_ui_string(*custom_name);
-            madness_ui_combo_box_string(*custom_name, *(Path_String**)data, madness_ui->asset_list_scan_refence->strings,
-                                        madness_ui->asset_list_scan_refence->count);
+            /*madness_ui_combo_box_string(*custom_name, *(Path_String**)data,
+                                        madness_ui->asset_list_scan_reference->strings,
+                                        madness_ui->asset_list_scan_reference->count);*/
             break;
         case REFLECTION_TYPE_CHAR:
             madness_ui_text_box(*custom_name);
@@ -4016,9 +4109,9 @@ void madness_ui_config_menu(void)
     madness_ui_window_end();
 }
 
-void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan)
+void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan, Asset_Type asset_type)
 {
-    madness_ui->asset_list_scan_refence = asset_list_scan;
+    madness_ui->asset_list_scan_reference[asset_type] = asset_list_scan;
 }
 
 

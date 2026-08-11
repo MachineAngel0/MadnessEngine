@@ -7,6 +7,7 @@
 #include <stdalign.h>
 
 #include "array_freelist.h"
+#include "filesystem.h"
 #include "hash_map.h"
 #include "material_types.h"
 #include "resource_import_types.h"
@@ -53,6 +54,7 @@
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 
 
+#define MAX_ASSETS_STRINGS 5000u
 ///////////////// RESOURCES AND HANDLES //////////////////////
 
 #define INVALID_HANDLE 0
@@ -74,6 +76,7 @@ typedef enum Asset_Type
     ASSET_AUDIO,
     ASSET_MATERIAL,
     ASSET_MATERIAL_INSTANCE,
+    ASSET_SCENE,
     // RESOURCE_PARTICLE,
 
     ASSET_TYPE_MAX,
@@ -88,7 +91,11 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_AUDIO] = "ASSET_AUDIO",
     [ASSET_MATERIAL] = "ASSET_MATERIAL",
     [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
+    [ASSET_SCENE] = "ASSET_SCENE",
 };
+
+
+
 
 
 typedef struct Asset_MetaData
@@ -766,15 +773,20 @@ typedef struct Texture_System
     HASH_MAP_TYPE(u64, u32)* texture_hash_map;
 
 
-    //textures that the renderer needs to upload to the gpu
-    RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_upload_queue;
-
     Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
     u32 texture_asset_count;
 } Texture_System;
 
 typedef struct Scene
 {
+
+    String* scene_name;
+
+
+    // String** engine_file;
+    MADNESS_UUID* asset_uuid;
+    u32 uuid_counts;
+
     Transform* transforms;
     int transform_count;
 
@@ -785,6 +797,8 @@ typedef struct Scene
     // Transform* static_transform;
     // Transform* dynamic_transform;
 } Scene;
+
+
 
 
 typedef struct Mesh_System
@@ -868,6 +882,10 @@ typedef struct Particle_System
 
     Particle* particles;
     u32 particles_count;
+
+    //each emitter manages a range of particles in a flat list
+
+
 } Particle_System;
 
 
@@ -924,7 +942,6 @@ typedef struct Render_Packet_Particle
 typedef struct Render_Packet
 {
     //just references
-    RING_QUEUE_TYPE(Texture)* texture_queue;
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_queue;
 
@@ -944,35 +961,10 @@ typedef struct Asset_Registry
     DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
 
     //ideally we have another data format which points to the data?? just for easy lookup and display
+
 } Asset_Registry;
 
 
-typedef struct Asset_System
-{
-    //the asset system is just a container for all the system,
-    //gather the cpu-gpu resources and send them to renderer
-
-    //Systems
-    // TODO: might change this into a pool allocator, or even segregated list allocator
-    Heap_Allocator* heap_allocator;
-    Frame_Allocator* frame_allocator;
-
-    // Shader_System* shader_system;
-    // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer
-    Sprite_System* sprite_system;
-    Mesh_System* mesh_system;
-    Texture_System* texture_system;
-    Material_System* material_system;
-    Scene* scene;
-    Animation_System* animation_system;
-
-    Particle_System* particle_system;
-
-    //Render Packet
-    Render_Packet* render_packet;
-
-    Asset_Registry* asset_registry;
-} Asset_System;
 
 
 #endif //RESOURCE_TYPES_H

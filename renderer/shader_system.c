@@ -4,29 +4,30 @@
 
 Shader_System* shader_system_init(Renderer* renderer)
 {
-    Shader_System* out_shader_system = allocator_alloc(&renderer->allocator, sizeof(Shader_System));
-    renderer->shader_system = out_shader_system;
+    Shader_System* shader_system = allocator_alloc(&renderer->allocator, sizeof(Shader_System));
+    renderer->shader_system = shader_system;
 
-    out_shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
+    shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
     //                      "../renderer/texture/error_texture.png",
     //                      &(*out_shader_system)->error_texture);
 
-    out_shader_system->pipeline_indexes = 0;
-    out_shader_system->available_texture_indexes = 0;
+    shader_system->pipeline_indexes = 0;
+    shader_system->available_texture_indexes = 0;
 
-    out_shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
+    shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
 
-    memset(out_shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
+    memset(shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
 
     //we store the pointer, we dont want a copy
-    out_shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_ID), 100);
+    shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_ID), 100);
 
+    shader_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
     INFO("SHADER SYSTEM CREATED")
 
 
-    return out_shader_system;
+    return shader_system;
 }
 
 
@@ -39,7 +40,6 @@ Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, u32 bind
 {
     return &system->textures[bindless_location];
 }
-
 
 
 void shader_system_update(Renderer* renderer, Shader_System* system)
@@ -57,6 +57,24 @@ void shader_system_update(Renderer* renderer, Shader_System* system)
                                        system->material_params,
                                        sizeof(Material_Param_Data) * system->material_param_indexes);
                                        */
+
+
+    //free textures
+    Vulkan_Texture* texture;
+    while (!ring_queue_is_empty(system->texture_deletion_queue))
+    {
+        ring_dequeue(system->texture_deletion_queue, &texture);
+
+        MASSERT(texture);
+
+
+        texture->texture_image;
+        texture->texture_image_memory;
+        texture->texture_image_view;
+        texture->texture_sampler;
+
+        vulkan_texture_free(&renderer->context, texture);
+    }
 }
 
 //pass out the texture index
@@ -121,26 +139,27 @@ Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* s
 }
 
 
-void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* shader_system,
-                                          Descriptor_System* descriptor_system, Render_Packet* render_packet)
+bool renderer_texture_create(Renderer* renderer, Texture_GPU_Upload* texture_upload)
 {
-    ring_queue* texture_queue = render_packet->texture_queue;
-    Texture_GPU_Upload* texture_upload = allocator_alloc(&renderer->frame_allocator, sizeof(Texture_GPU_Upload));
+    Vulkan_Texture* vulkan_texture = &renderer->shader_system->textures[texture_upload->bindless_location];
 
-    while (!ring_queue_is_empty(texture_queue))
-    {
+    //create the texture
+    vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture_upload,
+                                     vulkan_texture);
+    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system,
+                                           texture_upload->bindless_location);
 
-        ring_dequeue(texture_queue, texture_upload);
+    return true;
+}
 
-        Vulkan_Texture* vulkan_texture = &shader_system->textures[texture_upload->bindless_location];
 
-        //create the texture
-        vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture_upload,
-                                         vulkan_texture);
-        update_texture_bindless_descriptor_set(renderer, descriptor_system,
-                                               texture_upload->bindless_location);
+bool renderer_texture_free(Renderer* renderer, Texture_Handle handle)
+{
+    Vulkan_Texture* vulkan_texture = &renderer->shader_system->textures[handle.handle];
 
-        //TODO: pass in the allocator, that allocated this
-        allocator_heap_free(renderer->resource_system->heap_allocator, texture_upload->pixel_data);
-    }
+    //queue the texture to be unloaded
+    ring_enqueue(renderer->shader_system->texture_deletion_queue, vulkan_texture);
+
+
+    return true;
 }

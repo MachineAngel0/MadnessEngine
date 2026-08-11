@@ -29,9 +29,10 @@ typedef struct Editor
     Asset_System* asset_system; // ref
     Clock* clock; // ref
     Reflection_Registry* reflection_registry; // ref
+    Memory_System* memory_system; // ref
 
     Allocator* editor_arena;
-    Frame_Allocator* editor_frame_arena;
+    Frame_Allocator* editor_frame_allocator;
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
@@ -40,6 +41,21 @@ typedef struct Editor
     float highest_ms;
 
     Editor_UI_State state;
+
+    //meshes
+    Asset_List_Scan* texture_list;
+
+    //meshes
+    Asset_List_Scan* madness_mesh_list;
+
+    //skeletal meshes
+    Asset_List_Scan* madness_skmesh_list;
+
+    //scene
+    Asset_List_Scan* scene_list;
+
+
+
 } Editor;
 
 
@@ -47,8 +63,17 @@ MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
                          Asset_System* resource_system, Clock* clock,
                          Reflection_Registry* reflection_registry,
                          Reflection_Registry* material_registry);
+
+Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
+                                      const char* relative_asset_path);
+bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system);
+
+
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
+
+
+
 
 
 void editor_ui(Editor* editor);

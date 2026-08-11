@@ -83,27 +83,26 @@ bool gamepad_button_press(Event_Type code, String sender_id, String subscriber_i
     return true;
 }
 
-void gamepad_init(Memory_System* memory_system, Event_System* event_system)
+void gamepad_init(Memory_System* memory_system)
 {
     x_input_load_dll();
 
     gamepad.player_count = gamepad_get_max_player_count();
     gamepad.gamepad_player_info = memory_system_alloc(memory_system, sizeof(gamepad_state) * gamepad.player_count, MEMORY_SUBSYSTEM_GAMEPAD);
-    gamepad.event_system = event_system;
 
 
-    event_register(event_system, EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
-    event_register(event_system, EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
+    event_register(EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
+    event_register(EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
 }
 
-void gamepad_shutdown(Event_System* event_system)
+void gamepad_shutdown(void)
 {
     //set memory to zero
     memset(&gamepad, 0, sizeof(gamepad_system));
 
     //TODO: DEBUG WRAP
-    event_unregister(event_system, EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
-    event_unregister(event_system, EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
+    event_unregister(EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), gamepad_button_recieve);
+    event_unregister(EVENT_GAMEPAD_PRESS, STRING("Gamepad"), gamepad_button_press);
 }
 
 void gamepad_poll(void)
@@ -190,9 +189,9 @@ void gamepad_poll(void)
                     {
                         Event_Data context;
                         context.data.event_data_gamepad_button.button = i; // gamepad enum
-                        event_fire(gamepad.event_system, gamepad.gamepad_player_info[controller_index].gamepad_current[i]
-                                             ? EVENT_GAMEPAD_PRESS
-                                             : EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), context);
+                        event_fire(gamepad.gamepad_player_info[controller_index].gamepad_current[i]
+                                       ? EVENT_GAMEPAD_PRESS
+                                       : EVENT_GAMEPAD_RELEASE, STRING("Gamepad"), context);
                     }
                 }
             }

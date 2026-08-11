@@ -92,7 +92,7 @@ void vulkan_image_view_create(vulkan_context* context, VkFormat format,
 }
 
 
-void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image)
+void vulkan_texture_free(vulkan_context* context, Vulkan_Texture* image)
 {
     if (image->texture_image_view)
     {

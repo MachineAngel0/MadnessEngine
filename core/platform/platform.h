@@ -40,14 +40,12 @@ typedef struct Platform_State
 {
     void* internal_state;
     Input_System* input_system; // just a pointer, does not own the memory
-    Event_System* event_system; // just a pointer, does not own the memory
 } Platform_State;
 
 
 bool platform_startup(
     Platform_State* plat_state,
     Input_System* input_system,
-    Event_System* event_system,
     Platform_Config platform_config);
 
 
@@ -87,11 +85,7 @@ typedef struct DLL_HANDLE
     const char* file_name;
 } DLL_HANDLE;
 
-typedef struct File_Watch_Handle
-{
-    uint64_t handle;
-    const char* file_name;
-} File_Watch_Handle;
+
 
 
 //DLL
@@ -114,7 +108,15 @@ File_Watch_Handle platform_register_file_watch(const char* file_name); // regist
 bool platform_has_filed_changed(File_Watch_Handle file_watch_handle); // checks if that file has been changed
 
 File_Watch_Handle platform_register_directory_watch(const char* directory_name);
-void platform_has_directory_changed(File_Watch_Handle directory_watch_handle);
+bool platform_has_directory_changed(File_Watch_Handle directory_watch_handle);
+
+
+bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path);
+
+
+bool platform_update_directory(File_Watch_Handle directory_watch_handle);
+bool platform_poll_directory_changes(File_Watch_Handle directory_watch_handle, File_Watch_Event* out_event);
+
 
 
 // RENDERER

@@ -17,12 +17,9 @@ typedef struct Asset_Registry_Header
 } Asset_Registry_Header;
 
 
-
-
-bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocator);
+bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocator, Memory_System* memory_system);
 
 void asset_registry_shutdown(Asset_Registry* asset_registry);
-
 
 
 void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaData* asset_meta_data);
@@ -36,15 +33,18 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry);
 void asset_registry_remove(Asset_Registry* asset_registry);
 
 
-
 //functions to find the asset and return the metadata associated with it
-bool asset_registry_exists_by_engine_path(Asset_System* asset_system, String* engine_path,
+bool asset_registry_exists_by_engine_path(Asset_Registry* asset_registry, String* engine_path,
                                           Asset_MetaData* out_meta_data);
 
-bool asset_registry_exists_by_source_path(Asset_System* asset_system, String* source_path, Asset_MetaData* out_meta_data);
+bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String* source_path,
+                                          Asset_MetaData* out_meta_data);
 
-bool asset_registry_exists_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
-                                           Asset_MetaData* out_meta_data);
+bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID uuid,
+                                   Asset_MetaData* out_meta_data);
+
+
+
 
 
 #endif

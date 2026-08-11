@@ -46,7 +46,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->asset_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system, TODO);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
 

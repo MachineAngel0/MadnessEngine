@@ -25,7 +25,7 @@ void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 hei
 void vulkan_image_view_create(vulkan_context* context, VkFormat format,
                               VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
 
-void vulkan_image_destroy(vulkan_context* context, Vulkan_Texture* image);
+void vulkan_texture_free(vulkan_context* context, Vulkan_Texture* image);
 
 
 

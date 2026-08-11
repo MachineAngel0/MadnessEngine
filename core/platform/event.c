@@ -3,7 +3,7 @@
 
 Event_System* event_init(Memory_System* memory_system)
 {
-    Event_System* event_system = memory_system_alloc(memory_system, sizeof(Event_System), MEMORY_SUBSYSTEM_EVENT);
+    event_system = memory_system_alloc(memory_system, sizeof(Event_System), MEMORY_SUBSYSTEM_EVENT);
 
     u64 event_system_mem_requirement = MB(1);
     void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
@@ -15,7 +15,7 @@ Event_System* event_init(Memory_System* memory_system)
     return event_system;
 }
 
-bool event_shutdown(Event_System* event_system, Memory_System* memory_system)
+bool event_shutdown(Memory_System* memory_system)
 {
     MASSERT(event_system)
     MASSERT(memory_system)
@@ -30,7 +30,7 @@ bool event_shutdown(Event_System* event_system, Memory_System* memory_system)
 }
 
 
-void event_register(Event_System* event_system, Event_Type event, String subscriber, const event_callback callback)
+void event_register(Event_Type event, String subscriber, const event_callback callback)
 {
     MASSERT(event_system)
 
@@ -63,7 +63,7 @@ void event_register(Event_System* event_system, Event_Type event, String subscri
     dynamic_array_push(event_system->events_table[event].subscriber_array, new_sub_data);
 }
 
-void event_unregister(Event_System* event_system, Event_Type event, String subscriber, event_callback callback)
+void event_unregister(Event_Type event, String subscriber, event_callback callback)
 {
     MASSERT(event_system)
 
@@ -80,7 +80,7 @@ void event_unregister(Event_System* event_system, Event_Type event, String subsc
     }
 }
 
-void event_fire(Event_System* event_system, Event_Type event, String sender_name, Event_Data context)
+void event_fire(Event_Type event, String sender_name, Event_Data context)
 {
     MASSERT(event_system)
 
@@ -104,12 +104,12 @@ void event_fire(Event_System* event_system, Event_Type event, String sender_name
     }
 }
 
-void event_queue(Event_System* event_system, Event_Queue_Packet event_queue_packet)
+void event_queue(Event_Queue_Packet event_queue_packet)
 {
     ring_enqueue(event_system->event_queue, &event_queue_packet);
 }
 
-void event_flush_queue(Event_System* event_system)
+void event_flush_queue(void)
 {
     while (!ring_queue_is_empty(event_system->event_queue))
     {
@@ -133,17 +133,18 @@ void event_flush_queue(Event_System* event_system)
 
 bool test_event(Event_Type code, String sender_name, String subscriber_name, Event_Data data)
 {
+    MASSERT(event_system)
     printf("i am the event, the awakening");
     return true;
 }
 
-void event_test(Event_System* event_system, Memory_System* memory_system)
+void event_test(Memory_System* memory_system)
 {
     MASSERT(event_system)
 
     // event_init();
 
-    event_register(event_system, EVENT_TEST, STRING("Sub1"), test_event);
+    event_register(EVENT_TEST, STRING("Sub1"), test_event);
 
 
     Event_Data_Test test = {.yes = true, .numbers = 420, .words = STRING("Words")};
@@ -157,8 +158,8 @@ void event_test(Event_System* event_system, Memory_System* memory_system)
     context2.data.event_data_test = test;
 
 
-    event_fire(event_system, EVENT_TEST, STRING("I am the sender"), context);
-    event_unregister(event_system, EVENT_TEST, STRING("I am the sender"), test_event);
+    event_fire(EVENT_TEST, STRING("I am the sender"), context);
+    event_unregister(EVENT_TEST, STRING("I am the sender"), test_event);
 
-    event_shutdown(event_system, memory_system);
+    event_shutdown(memory_system);
 }

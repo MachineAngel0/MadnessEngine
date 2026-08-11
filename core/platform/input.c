@@ -16,8 +16,6 @@ Input_System* input_init(Event_System* event_system, Memory_System* memory_syste
 
     allocator_init(&input_system->input_system_arena, input_system_mem, input_system_mem_requirement);
 
-    input_system->event_system_reference = event_system;
-
 
     return input_system;
 }
@@ -55,7 +53,7 @@ void input_process_key(Input_System* input_system, keys key, bool pressed)
         // Fire off an event for immediate processing.
         Event_Data context;
         context.data.event_data_input_key.key = key;
-        event_fire(input_system->event_system_reference, pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, STRING("Input_System"), context);
+        event_fire(pressed ? EVENT_KEY_PRESSED : EVENT_KEY_RELEASED, STRING("Input_System"), context);
     }
 }
 
@@ -76,7 +74,7 @@ void input_process_mouse_move(Input_System* input_system, s16 x, s16 y)
         Event_Data context;
         context.data.event_data_input_mouse_movement.x = x;
         context.data.event_data_input_mouse_movement.y = y;
-        event_fire(input_system->event_system_reference, EVENT_MOUSE_MOVED, STRING("Input_System"), context);
+        event_fire(EVENT_MOUSE_MOVED, STRING("Input_System"), context);
     }
 }
 
@@ -89,7 +87,7 @@ void input_process_mouse_wheel(Input_System* input_system, s8 z_delta)
     // Fire the event.
     Event_Data context;
     context.data.event_data_input_mouse_wheel.z_delta = z_delta;
-    event_fire(input_system->event_system_reference, EVENT_MOUSE_WHEEL, STRING("Input_System"), context);
+    event_fire(EVENT_MOUSE_WHEEL, STRING("Input_System"), context);
 }
 
 void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed)
@@ -105,7 +103,7 @@ void input_process_mouse_button(Input_System* input_system, mouse_buttons button
         // Fire off an event for immediate processing.
         Event_Data context;
         context.data.event_data_input_button.button = button;
-        event_fire(input_system->event_system_reference, pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, STRING("Input_System"), context);
+        event_fire(pressed ? EVENT_MOUSE_PRESSED : EVENT_MOUSE_RELEASED, STRING("Input_System"), context);
     }
 }
 

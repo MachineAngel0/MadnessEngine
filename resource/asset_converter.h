@@ -2,7 +2,7 @@
 #define ASSET_CONVERTER_H
 
 #include "resource_types.h"
-
+#include "resource_asset_system_type.h"
 
 //takes in any file and checks its extension type, and calls the appropriate function
 MAPI bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
@@ -38,5 +38,12 @@ bool asset_converter_material_instance_from_material_info(Asset_System* asset_sy
                                                           const char* asset_name,
                                                           void* material_data,
                                                           MADNESS_UUID mat_asset_uuid);
+
+bool asset_converter_reload_textures(Asset_System* asset_system, Memory_System* memory_system);
+
+
+
+
+
 
 #endif

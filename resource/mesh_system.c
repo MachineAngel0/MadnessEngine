@@ -82,7 +82,7 @@ bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle
 
 
 
-void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, u64 hash, String* engine_path)
+void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, u64 hash, String* engine_path, MADNESS_UUID uuid)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
@@ -130,7 +130,7 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_system->
         mesh_instance_count++];
     mesh_inst->mesh_asset = (Madness_Mesh_Handle){.handle = mesh_system->mesh_asset_count - 1};
-    mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
+    scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
     mesh_inst->mesh_count = mesh_asset->mesh_count;
     mesh_inst->submesh_instances = allocator_heap_alloc(
         asset_system->heap_allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
@@ -165,7 +165,7 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 }
 
 void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset,
-                                   u64 hash, String* engine_path)
+                                   u64 hash, String* engine_path, MADNESS_UUID uuid)
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
@@ -233,7 +233,7 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
     Madness_Skinned_Mesh_Instance* mesh_inst = &mesh_system->skinned_mesh_instance[mesh_system->
         skinned_mesh_instance_count++];
     mesh_inst->skinned_mesh_asset = (Madness_SkMesh_Handle){.handle = mesh_system->skinned_mesh_instance_count - 1};
-    mesh_inst->transform_handle = scene_get_new_mesh_transform(asset_system->scene);
+    scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
     mesh_inst->mesh_count = skmesh_asset->mesh_count;
     mesh_inst->submesh_instances = allocator_heap_alloc(
         asset_system->heap_allocator, sizeof(Madness_Skinned_Submesh_Instance) * skmesh_asset->mesh_count);

@@ -145,22 +145,25 @@ typedef struct Event_System
 
 } Event_System;
 
+static Event_System* event_system;
+
+
 //TODO: event queue
 
 MAPI Event_System* event_init(Memory_System* memory_system);
 
-bool event_shutdown(Event_System* event_system, Memory_System* memory_system);
+bool event_shutdown(Memory_System* memory_system);
 
-MAPI void event_register(Event_System* event_system, Event_Type event, String subscriber,
+MAPI void event_register(Event_Type event, String subscriber,
                          event_callback callback);
 
-MAPI void event_unregister(Event_System* event_system, Event_Type event, String subscriber, event_callback callback);
+MAPI void event_unregister(Event_Type event, String subscriber, event_callback callback);
 
-MAPI void event_fire(Event_System* event_system, Event_Type event, String sender_name, Event_Data context);
+MAPI void event_fire(Event_Type event, String sender_name, Event_Data context);
 
 //TODO:
-MAPI void event_queue(Event_System* event_system, Event_Queue_Packet event_queue_packet);
-MAPI void event_flush_queue(Event_System* event_system);
+MAPI void event_queue(Event_Queue_Packet event_queue_packet);
+MAPI void event_flush_queue(void);
 
 
 #endif //EVENT_H

@@ -5,113 +5,113 @@
 #include <string.h>
 #include <sys/stat.h>
 
-// bool filesystem_exists(const char* path) {
-//     struct stat buffer;
-//     return stat(path, &buffer) == 0;
-// }
-//
-// bool filesystem_open(const char* path, file_modes mode, bool binary, file_handle* out_handle) {
-//     out_handle->is_valid = false;
-//     out_handle->handle = 0;
-//     const char* mode_str;
-//
-//     if ((mode & FILE_MODE_READ) != 0 && (mode & FILE_MODE_WRITE) != 0) {
-//         mode_str = binary ? "w+b" : "w+";
-//     } else if ((mode & FILE_MODE_READ) != 0 && (mode & FILE_MODE_WRITE) == 0) {
-//         mode_str = binary ? "rb" : "r";
-//     } else if ((mode & FILE_MODE_READ) == 0 && (mode & FILE_MODE_WRITE) != 0) {
-//         mode_str = binary ? "wb" : "w";
-//     } else {
-//         M_ERROR("Invalid mode passed while trying to open file: '%s'", path);
-//         return false;
-//     }
-//
-//     // Attempt to open the file.
-//     FILE* file = fopen(path, mode_str);
-//     if (!file) {
-//         M_ERROR("Error opening file: '%s'", path);
-//         return false;
-//     }
-//
-//     out_handle->handle = file;
-//     out_handle->is_valid = true;
-//
-//     return true;
-// }
-//
-// void filesystem_close(file_handle* handle) {
-//     if (handle->handle) {
-//         fclose((FILE*)handle->handle);
-//         handle->handle = 0;
-//         handle->is_valid = false;
-//     }
-// }
-//
-// bool filesystem_read_line(file_handle* handle, char** line_buf) {
-//     if (handle->handle) {
-//         // Since we are reading a single line, it should be safe to assume this is enough characters.
-//         char buffer[32000];
-//         if (fgets(buffer, 32000, (FILE*)handle->handle) != 0) {
-//             u64 length = strlen(buffer);
-//             *line_buf = malloc((sizeof(char) * length) + 1);
-//             strcpy(*line_buf, buffer);
-//             return true;
-//         }
-//     }
-//     return false;
-// }
-//
-// bool filesystem_write_line(file_handle* handle, const char* text) {
-//     if (handle->handle) {
-//         s32 result = fputs(text, (FILE*)handle->handle);
-//         if (result != EOF) {
-//             result = fputc('\n', (FILE*)handle->handle);
-//         }
-//
-//         // Make sure to flush the stream so it is written to the file immediately.
-//         // This prevents data loss in the event of a crash.
-//         fflush((FILE*)handle->handle);
-//         return result != EOF;
-//     }
-//     return false;
-// }
-//
-// bool filesystem_read(file_handle* handle, u64 data_size, void* out_data, u64* out_bytes_read) {
-//     if (handle->handle && out_data) {
-//         *out_bytes_read = fread(out_data, 1, data_size, (FILE*)handle->handle);
-//         if (*out_bytes_read != data_size) {
-//             return false;
-//         }
-//         return true;
-//     }
-//     return false;
-// }
-//
-// bool filesystem_read_all_bytes(file_handle* handle, u8** out_bytes, u64* out_bytes_read) {
-//     if (handle->handle) {
-//         // File size
-//         fseek((FILE*)handle->handle, 0, SEEK_END);
-//         u64 size = ftell((FILE*)handle->handle);
-//         rewind((FILE*)handle->handle);
-//
-//         *out_bytes = malloc(sizeof(u8) * size);
-//         *out_bytes_read = fread(*out_bytes, 1, size, (FILE*)handle->handle);
-//         if (*out_bytes_read != size) {
-//             return false;
-//         }
-//         return true;
-//     }
-//     return false;
-// }
-//
-// bool filesystem_write(file_handle* handle, u64 data_size, const void* data, u64* out_bytes_written) {
-//     if (handle->handle) {
-//         *out_bytes_written = fwrite(data, 1, data_size, (FILE*)handle->handle);
-//         if (*out_bytes_written != data_size) {
-//             return false;
-//         }
-//         fflush((FILE*)handle->handle);
-//         return true;
-//     }
-//     return false;
-// }
+#include "platform.h"
+
+
+Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
+                                      const char* relative_asset_path)
+{
+    Asset_List_Scan* asset_list = memory_system_alloc(memory_system,
+                                                      sizeof(Asset_List_Scan),
+                                                      MEMORY_SUBSYSTEM_RESOURCE);
+    asset_list->allocator = memory_system_allocator_create(memory_system,
+                                                           (sizeof(String) * max_asset_count) + (256 /*string count*/
+                                                               * max_asset_count),
+                                                           MEMORY_SUBSYSTEM_RESOURCE);
+    asset_list->strings = allocator_alloc(asset_list->allocator,
+                                          sizeof(String) * max_asset_count);
+    asset_list->max_count = max_asset_count;
+
+    filesystem_get_assets_from_directory(relative_asset_path, asset_list);
+
+    return asset_list;
+}
+
+bool asset_lists_free(Asset_List_Scan* asset_list_scan, Memory_System* memory_system)
+{
+    memory_system_allocator_free(memory_system, asset_list_scan->allocator, MEMORY_SUBSYSTEM_RESOURCE);
+    memory_system_memory_free(memory_system, asset_list_scan, MEMORY_SUBSYSTEM_RESOURCE);
+}
+
+
+File_Watch_Handle filesystem_register_file(const char* file_path)
+{
+    return platform_register_file_watch(file_path);
+}
+
+bool filesystem_has_file_changed(File_Watch_Handle file_handle)
+{
+    return platform_has_filed_changed(file_handle);
+}
+
+bool filesystem_has_directory_changed(File_Watch_Handle file_handle)
+{
+    return platform_has_directory_changed(file_handle);
+}
+
+///////////////// FILE WATCHER /////////////////
+
+
+bool filewatcher_init(Memory_System* memory_system)
+{
+    madness_file_watcher = memory_system_alloc(memory_system, sizeof(Madness_File_Watcher), MEMORY_SUBSYSTEM_MISC);
+    madness_file_watcher->allocator = memory_system_allocator_create(memory_system, KB(64), MEMORY_SUBSYSTEM_MISC);
+
+    MASSERT(madness_file_watcher);
+    return true;
+}
+
+bool filewatcher_update(void)
+{
+    MASSERT(madness_file_watcher);
+    for (int i = 0; i < madness_file_watcher->directory_handle_count; ++i)
+    {
+        platform_update_directory(madness_file_watcher->directory_handles[i]);
+
+        File_Watch_Event event;
+
+        while (platform_poll_directory_changes(
+            madness_file_watcher->directory_handles[i],
+            &event))
+        {
+            // Process event
+            INFO("FILE EVENT: %s %d", event.path, event.action)
+            //TODO: send out an event
+        }
+    }
+
+
+
+    return true;
+
+}
+
+
+
+bool filewatcher_deinit(void)
+{
+    MASSERT(madness_file_watcher);
+    return true;
+}
+
+
+void filewatcher_directory_register(const char* directory_path)
+{
+    MASSERT(madness_file_watcher);
+
+    File_Watch_Handle* handle = &madness_file_watcher->directory_handles[madness_file_watcher->directory_handle_count++];
+    *handle = platform_register_directory_watch(directory_path);
+
+}
+
+void filewatcher_directory_unregister(const char* directory_path)
+{
+    //TODO:
+    MASSERT_FALSE();
+}
+
+
+bool filewatcher_poll(Madness_File_Watcher* watcher, File_Watch_Event event)
+{
+
+}

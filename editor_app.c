@@ -47,16 +47,16 @@ bool editor_app_run(Editor_Application* editor_app)
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
-    application_core->asset_system = asset_system_init(&application_core->memory_system);
+    application_core->asset_system = asset_system_init(&application_core->memory_system, TODO);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
 
 
     //register events needed for this application
-    event_register(application_core->event_system, EVENT_APP_QUIT, STRING("Application"), application_on_event);
-    event_register(application_core->event_system, EVENT_APP_RESIZE, STRING("Application"), application_on_resized);
-    event_register(application_core->event_system, EVENT_KEY_RELEASED, STRING("Application"), application_on_key);
-    event_register(application_core->event_system, EVENT_KEY_PRESSED, STRING("Application"), application_on_key);
+    event_register(EVENT_APP_QUIT, STRING("Application"), application_on_event);
+    event_register(EVENT_APP_RESIZE, STRING("Application"), application_on_resized);
+    event_register(EVENT_KEY_RELEASED, STRING("Application"), application_on_key);
+    event_register(EVENT_KEY_PRESSED, STRING("Application"), application_on_key);
 
 
     //start the platform
@@ -71,8 +71,7 @@ bool editor_app_run(Editor_Application* editor_app)
     renderer_plugin->renderer = renderer_init(&application_core->plat_state,
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system,
-                                              application_core->event_system,
-                                              application_core->asset_system);
+                                              application_core->event_system);
 
     renderer_plugin->madness_ui = madness_ui_init(&application_core->memory_system,
                                                   application_core->input_system,
@@ -89,7 +88,7 @@ bool editor_app_run(Editor_Application* editor_app)
     //TODO: theres a bug if i try to load in the same object twiceqq
     mesh_load_gltf_new(application_core->asset_system->mesh_system, "../z_assets/models/cube_gltf/Cube.gltf",
                        &renderer_plugin->renderer->allocator, &renderer_plugin->renderer->frame_allocator,
-                       renderer_plugin->renderer->resource_system);
+                       renderer_plugin->renderer->asset_system);
     /*
         mesh_load_gltf_new(application_core->resource_system->mesh_system,
                            "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf",
@@ -151,7 +150,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
         //render
         renderer_update(renderer_plugin->renderer,
-                        application_core->clock.delta_time);
+                        application_core->clock.delta_time, TODO);
 
 
         clock_update_frame_end(&application_core->clock);

@@ -2,7 +2,7 @@
 #define MESH_RENDER_H
 
 
-MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer, Asset_System* resource_system);
+MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer);
 
 
 

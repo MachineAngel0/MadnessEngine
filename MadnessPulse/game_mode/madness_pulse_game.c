@@ -4,8 +4,8 @@
 
 
 Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
-                                            Event_System* event_system, Input_System* input, Asset_System*
-                                            resource_system)
+                                            Input_System* input,
+                                            Asset_System* resource_system)
 {
     Madness_Pulse_Game* game = memory_system_alloc(memory_system, sizeof(Madness_Pulse_Game), MEMORY_SUBSYSTEM_GAME);
     game->game_state = Game_State_Enum_Main_Menu;
@@ -19,7 +19,6 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
     allocator_init(&game->frame_allocator, game_frame_memory, game_memory_size);
     allocator_heap_init(&game->heap_allocator, game_free_list_memory, game_memory_size);
 
-    game->event_system = event_system;
     game->resource_system = resource_system;
     game->input_system = input;
 
@@ -87,7 +86,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
         if (madness_ui_button(STRING("Quit")))
         {
             Event_Data data = {0};
-            event_fire(game->event_system, EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
+            event_fire(EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
         }
         madness_ui_window_end();
         break;

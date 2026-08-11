@@ -17,6 +17,10 @@ u64 madness_uuid_hash(MADNESS_UUID* uuid);
 bool madness_uuid_compare(MADNESS_UUID uuid1, MADNESS_UUID uuid2);
 
 
+bool madness_uuid_serialize(MADNESS_UUID uuid, FILE* fptr);
+bool madness_uuid_deserialize(MADNESS_UUID* uuid1, FILE* fptr);
+
+
 //TODO:
 //u64 madness_uuid_hash(MADNESS_UUID uuid);
 #endif //MADNESSENGINE_UUID_H

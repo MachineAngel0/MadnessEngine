@@ -11,6 +11,7 @@ const char* Asset_Type_enum_string[] = {
 	[ASSET_AUDIO]= "ASSET_AUDIO", 
 	[ASSET_MATERIAL]= "ASSET_MATERIAL", 
 	[ASSET_MATERIAL_INSTANCE]= "ASSET_MATERIAL_INSTANCE", 
+	[ASSET_SCENE]= "ASSET_SCENE", 
 	[ASSET_TYPE_MAX]= "ASSET_TYPE_MAX", 
 };
 
@@ -72,7 +73,7 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	{
 		.name = "Asset_Type",
 		.enum_names = Asset_Type_enum_string,
-		.count = 9,
+		.count = 10,
 		.type = Reflection_Enum_Type_Normal,
 		.bitflag_values = NULL, //filled in the function if applicable
 	};

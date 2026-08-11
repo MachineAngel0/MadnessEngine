@@ -311,7 +311,7 @@ typedef struct Shader_System
     u32 max_indexes;
 
     //since textures could be read this frame, we wait a frame to delete them
-    //TODO: ring_queue* texture_delete_queue
+    RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
 
 
     //TODO: I would look into this if sorting my draw calls starts to become an issue
@@ -731,8 +731,6 @@ typedef struct renderer
 
 
     Input_System* input_system; //meant only to be used for debugging
-
-    Asset_System* resource_system; //reference
 
     //general resources taken from the resource system
     Shader_System* shader_system;

@@ -31,14 +31,12 @@ bool renderer_on_key(const Event_Type code, String sender, String listener_inst,
 
 
 Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform_config, Memory_System* memory_system,
-                        Input_System* input_system,
-                        Event_System* event_system, Asset_System* resource_system)
+                        Input_System* input_system)
 {
     MASSERT(platform_state);
     MASSERT(memory_system);
     MASSERT(input_system);
     MASSERT(event_system);
-    MASSERT(resource_system);
 
 
     Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
@@ -52,9 +50,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
         renderer->input_system = input_system;
     }
 
-    renderer->resource_system = resource_system; //reference
 
-    event_register(event_system, EVENT_KEY_RELEASED, STRING("RENDERER"), renderer_on_key);
+
+    event_register(EVENT_KEY_RELEASED, STRING("RENDERER"), renderer_on_key);
 
 
     //set up memory for the renderer
@@ -175,13 +173,13 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     //System specific draws
     // Mesh System
-    renderer->mesh_renderer = mesh_renderer_init(renderer, renderer->resource_system);
+    renderer->mesh_renderer = mesh_renderer_init(renderer);
 
     //Particle System
-    renderer->particle_render = particle_renderer_init(renderer, renderer->resource_system);
+    renderer->particle_render = particle_renderer_init(renderer);
 
     // Sprite Backend
-    renderer->sprite_renderer = sprite_render_init(renderer, renderer->resource_system);
+    renderer->sprite_renderer = sprite_render_init(renderer);
     // UI Backend
     renderer->ui_renderer = ui_render_init(renderer, renderer->context.graphics_command_buffer);
 
@@ -209,15 +207,13 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 static bool texture_flip = false;
 
-void renderer_update(Renderer* renderer, float delta_time)
+void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packets)
 {
     MASSERT(renderer);
 
     //NOTE: only duplicate resources which are uploaded from the cpu to the gpu, not anything that lives on the gpu like textures
     // this includes, command buffers, sync objects, and cpu side uniform buffers
     // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,
-
-    Render_Packet* render_packets = renderer->resource_system->render_packet;
 
     vulkan_context* vk_context = &renderer->context;
 
@@ -226,8 +222,6 @@ void renderer_update(Renderer* renderer, float delta_time)
 
     shader_system_check_for_new_shader_batches(renderer, renderer->shader_system, render_packets);
 
-    shader_system_load_textures_into_gpu(renderer, renderer->shader_system, renderer->descriptor_system,
-                                         render_packets);
 
     //TODO: move out to the editor
     if (input_key_released_unique(renderer->input_system, KEY_U))
@@ -300,6 +294,11 @@ void renderer_update(Renderer* renderer, float delta_time)
         //if it fails it could mean that the swapchain is recreating itself
         return;
     }
+
+
+    //free textures and any other texture/shader updated
+    shader_system_update(renderer, renderer->shader_system);
+
 
 
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);

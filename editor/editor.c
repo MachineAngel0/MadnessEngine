@@ -16,21 +16,27 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     allocator_init(editor->editor_arena, editor_memory, editor_memory_size);
 
 
-    editor->editor_frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
+    editor->editor_frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
     void* editor_memory_frame = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_frame_arena, editor_memory_frame, editor_memory_size);
+    allocator_init(editor->editor_frame_allocator, editor_memory_frame, editor_memory_size);
 
 
     editor->renderer = renderer;
     editor->asset_system = resource_system;
     editor->clock = clock;
     editor->reflection_registry = reflection_registry;
+    editor->memory_system = memory_system;
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
+    editor->state = EDITOR_UI_STATE_SCENE;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
+
+    editor_generate_asset_lists(editor, memory_system);
+
+
+
 
     return editor;
 }
@@ -49,6 +55,48 @@ bool editor_shutdown(Editor* editor)
 {
     return true;
 }
+
+bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
+{
+
+
+    //meshes
+    editor->texture_list =
+        asset_lists_generate(memory_system,
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/texture");
+
+    //meshes
+    editor->madness_mesh_list =
+        asset_lists_generate(memory_system,
+                         MAX_ASSETS_STRINGS,
+                         "../z_assets_engine/mesh");
+
+
+    //skeletal meshes
+    editor->madness_skmesh_list =
+        asset_lists_generate(memory_system,
+                         MAX_ASSETS_STRINGS,
+                         "../z_assets_engine/skinned_mesh");
+
+    //scenes
+    editor->scene_list =
+        asset_lists_generate(memory_system,
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/scene");
+
+
+
+    madness_ui_add_asset_list(editor->texture_list, ASSET_TEXTURE);
+    madness_ui_add_asset_list(editor->madness_mesh_list, ASSET_STATIC_MESH);
+    madness_ui_add_asset_list(editor->madness_skmesh_list, ASSET_SKINNED_MESH);
+    madness_ui_add_asset_list(editor->scene_list, ASSET_SCENE);
+
+
+    return true;
+}
+
+
 
 static float thick = 1.0f;
 
@@ -276,7 +324,7 @@ void editor_ui_scene(Editor* editor)
     madness_ui_set_window_pos(50, 50);
     madness_ui_window_begin(STRING("Scene"));
     {
-        madness_scroll_box_begin(STRING("Scene Scroll Box"));
+        // madness_scroll_box_begin(STRING("Scene Scroll Box"));
 
         for (int i = 0; i < editor->asset_system->scene->transform_count; i++)
         {
@@ -286,6 +334,14 @@ void editor_ui_scene(Editor* editor)
             snprintf(buffer_transform, 50, "pos%d", i);
             snprintf(buffer_rotation, 50, "rotation%d", i);
             snprintf(buffer_scale, 50, "scale%d", i);
+
+            //TODO: have the uuid here to identify the thing in the world
+
+            /*if (madness_ui_vec3(STRING(buffer_transform), &editor->asset_system->scene->transforms[i].position,
+                                1.0f))
+            {
+                transform_mark_dirty(&editor->asset_system->scene->transforms[i]);
+            }*/
 
             if (madness_ui_vec3(STRING(buffer_transform), &editor->asset_system->scene->transforms[i].position,
                                 1.0f))
@@ -304,14 +360,14 @@ void editor_ui_scene(Editor* editor)
             }
         }
 
-        madness_scroll_box_end();
+        // madness_scroll_box_end();
     }
     madness_ui_window_end();
 
     madness_ui_set_window_pos(400, 50);
     madness_ui_window_begin(STRING("Lights"));
     {
-        madness_scroll_box_begin(STRING("Lights Scroll Box"));
+        // madness_scroll_box_begin(STRING("Lights Scroll Box"));
         {
             for (u32 i = 0; i < light_system->directional_light_count; ++i)
             {
@@ -346,7 +402,54 @@ void editor_ui_scene(Editor* editor)
                 madness_ui_vec4(STRING(buffer2), &spot_light->color, 0.1f);
             }
         }
-        madness_scroll_box_end();
+        // madness_scroll_box_end();
+    }
+    madness_ui_window_end();
+
+
+    // scene serialization
+    madness_ui_set_window_pos(1200, 50);
+    madness_ui_window_begin(STRING("Scene Serialization"));
+    {
+        if (madness_ui_button(STRING("SCENE SAVE")))
+        {
+            scene_save(editor->asset_system->scene);
+        }
+
+        String scene_name = STRING("SCENE LOAD");
+        madness_ui_text_box(scene_name);
+
+        if (madness_ui_button(STRING("SCENE LOAD")))
+        {
+            String_Builder* string_builder = madness_ui_text_box_get_string(scene_name);
+            if (string_builder)
+            {
+                scene_load(editor->asset_system->scene,
+                           string_builder_to_string_allocator(string_builder, editor->editor_frame_allocator));
+            }
+        }
+
+        String scene_mesh_asset_name = STRING("MESH PATH");
+        madness_ui_file_picker(scene_mesh_asset_name);
+        if (madness_ui_button(STRING("LOAD MESH ASSET")))
+        {
+            asset_load_mesh_path(editor->asset_system,
+                                 string_builder_to_c_string(madness_ui_text_box_get_string(scene_mesh_asset_name)));
+        }
+
+        String mesh_path2 = STRING("Mesh Path2");
+        Path_String path_string;
+        madness_ui_combo_box_string(mesh_path2, &path_string,
+                            editor->madness_mesh_list->strings,
+                            editor->madness_mesh_list->count);
+
+        String scene_name2 = STRING("SCENE LOAD2");
+        if (madness_ui_button(STRING("LOAD MESH ASSET2")))
+        {
+            asset_load_mesh_path(editor->asset_system,
+                                 string_to_c_string(&path_string));
+        }
+
     }
     madness_ui_window_end();
 }
@@ -456,11 +559,11 @@ void editor_material_asset_view(Editor* editor)
     static Material_Info mat_info;
     if (!mat_info.material_name)
     {
-        mat_info.material_name= STRING_CREATE("0");
+        mat_info.material_name = STRING_CREATE("0");
     }
     if (!mat_info.shader_name)
     {
-        mat_info.shader_name= STRING_CREATE("0");
+        mat_info.shader_name = STRING_CREATE("0");
     }
     madness_ui_window_begin(STRING("Material Creation"));
     {

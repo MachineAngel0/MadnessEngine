@@ -133,7 +133,6 @@ typedef struct scroll_box_state
 } scroll_box_state;
 
 
-
 typedef enum UI_Window_Flag
 {
     UI_Window_Flag_Window = BITFLAG(0),
@@ -193,7 +192,6 @@ typedef struct Combo_Box_String_State
 } Combo_Box_String_State;
 
 
-
 typedef struct Menu_Bar_State
 {
     vec2s menu_bar_pos;
@@ -221,7 +219,7 @@ typedef struct Madness_UI
     Frame_Allocator* frame_allocator;
 
     Input_System* input_system_reference; // does not own memory
-    Asset_System* resource_system;
+    Asset_System* asset_system;
 
     //this should be an array at some point
     Texture_Handle default_font_handle;
@@ -250,7 +248,6 @@ typedef struct Madness_UI
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
     Window_Flag_Latest window_flag_stack;
-
 
 
     Combo_Box_String_State combo_box_states[MAX_COMBO_BOX_STATES];
@@ -327,7 +324,8 @@ typedef struct Madness_UI
     u32 output_pressed_id;
 
 
-    Asset_List_Scan* asset_list_scan_refence;
+    //NOTE: if i really wanted this to be generic then, i would use strings instead of the enum
+    Asset_List_Scan* asset_list_scan_reference[ASSET_TYPE_MAX];
 
 
     // DRAW LIST
@@ -391,6 +389,11 @@ MAPI void madness_scroll_box_end(void);
 
 //TEXT//
 MAPI void madness_ui_text_box(String id);
+String_Builder* madness_ui_text_box_get_string(String id);
+
+
+void madness_ui_file_picker(String id);
+
 
 MAPI UI_Node* madness_ui_string(String text);
 MAPI UI_Node* madness_ui_string_internal(String text, vec2s parent_pos, vec2s parent_size,
@@ -540,7 +543,7 @@ void madness_ui_set_padding_xy(float x, float y);
 MAPI void madness_ui_config_menu(void);
 
 //
-MAPI void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan);
+MAPI void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan, Asset_Type asset_type);
 
 
 //API END

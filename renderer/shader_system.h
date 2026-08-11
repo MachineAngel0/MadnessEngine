@@ -26,8 +26,9 @@ void shader_system_update(Renderer* renderer, Shader_System* system);
 
 //TODO: Texture_Handle shader_system_add_texture_data(renderer* renderer, Shader_System* system, void* pixel_data, u32 width, u32 height);
 
-void shader_system_load_textures_into_gpu(Renderer* renderer, Shader_System* shader_system,
-                                          Descriptor_System* descriptor_system, Render_Packet* render_packet);
+bool renderer_texture_create(Renderer* renderer, Texture_GPU_Upload* texture_upload);
+bool renderer_texture_free(Renderer* renderer, Texture_Handle handle);
+
 
 
 //Shader Batch system
