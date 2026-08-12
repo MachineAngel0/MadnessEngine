@@ -525,6 +525,8 @@ bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
     return GetOpenFileNameA(&ofn); // returns true if user picked a file
 }
 
+
+
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");

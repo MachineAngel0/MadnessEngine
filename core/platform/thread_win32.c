@@ -17,16 +17,22 @@ s32 get_threads_available()
 }
 
 
-bool thread_create(fpn_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread)
+bool thread_create(fptr_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread)
 {
-    if (!start_function_ptr) return false;
+    if (!start_function_ptr)
+    {
+
+        M_ERROR("THREAD CREATE: INVALID START FUNCTION PTR", out_thread->thread_id);
+        return false;
+    }
 
     out_thread->data = CreateThread(0, 0,
                                     (LPTHREAD_START_ROUTINE)start_function_ptr, params, 0,
                                     (DWORD*)&out_thread->thread_id);
-    DEBUG("Starting process on thread id: %#x", out_thread->thread_id);
+    DEBUG("Starting process on OS thread id: %#x", out_thread->thread_id);
     if (!out_thread->data)
     {
+        M_ERROR("THREAD CREATE: OS FAILED TO CREATE THREAD", out_thread->thread_id);
         return false;
     }
 
@@ -155,7 +161,7 @@ bool mutex_create(Madness_Mutex* out_mutex)
     }
 
     out_mutex->data = CreateMutex(0, false, 0);
-    MASSERT_MSG(!out_mutex->data, "Mutex Create: FAILED TO CREATE MUTEX")
+    MASSERT_MSG(out_mutex->data, "Mutex Create: FAILED TO CREATE MUTEX")
 
     return true;
 }

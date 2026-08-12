@@ -1,11 +1,84 @@
 ﻿#include "filesystem.h"
-#include "../../../../../../../Program Files (x86)/Windows Kits/10/include/10.0.26100.0/ucrt/corecrt_math_defines.h"
-
 
 #if MPLATFORM_WINDOWS
 
 
 //FILE SYSTEM
+
+typedef struct Windows_IO
+{
+    HANDLE file_handle;
+} Windows_IO;
+
+bool platform_file_open(Madness_File_Platform* file, const char* path, File_Modes file_modes, Allocator* allocator)
+{
+    file->internal_data = allocator_alloc(allocator, sizeof(Windows_IO));
+    Windows_IO* windows_io = (Windows_IO*)file->internal_data;
+
+    DWORD win_file_mode;
+    DWORD win_share_mode;
+    switch (file->file_mode)
+    {
+    case FILE_MODE_READ:
+        win_file_mode = GENERIC_READ;
+        win_share_mode = FILE_SHARE_READ;
+        break;
+    case FILE_MODE_WRITE:
+        win_file_mode = GENERIC_WRITE;
+        win_share_mode = FILE_SHARE_WRITE;
+        break;
+    case FILE_MODE_READ_WRITE:
+        win_file_mode = GENERIC_WRITE | GENERIC_READ;
+        win_share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+        break;
+    case FILE_MODE_WRITE_APPEND:
+        win_file_mode = FILE_APPEND_DATA;
+        win_share_mode = FILE_SHARE_WRITE;
+        break;
+    case FILE_MODE_READ_WRITE_APPEND:
+        win_file_mode = GENERIC_READ | FILE_APPEND_DATA;
+        win_share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+        break;
+    }
+
+    windows_io->file_handle = CreateFileA(path, win_file_mode, win_share_mode,
+                                     NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+                                     NULL);
+
+
+    if (windows_io->file_handle == INVALID_HANDLE_VALUE)
+    {
+        // error
+        return false;
+    }
+
+
+    return true;
+}
+
+bool platform_file_close(Madness_File_Platform* file)
+{
+    Windows_IO* windows_io = (Windows_IO*)file->internal_data;
+    return CloseHandle(windows_io->file_handle);
+}
+
+bool platform_file_read(Madness_File_Platform* madness_file)
+{
+    Windows_IO* windows_io = (Windows_IO*)madness_file->internal_data;
+    const char* data = "Hello from Native Win32 API!";
+    DWORD bytesWritten = 0;
+    return ReadFile(windows_io->file_handle, data, (DWORD)strlen(data), &bytesWritten, NULL);
+}
+
+bool platform_file_write(Madness_File_Platform* madness_file)
+{
+    Windows_IO* windows_io = (Windows_IO*)madness_file->internal_data;
+    const char* data = "Hello from Native Win32 API!";
+    DWORD bytesWritten = 0;
+    return WriteFile(windows_io->file_handle, data, (DWORD)strlen(data), &bytesWritten, NULL);
+}
+
+
 typedef struct Windows_File_Data
 {
     const char* file_name;
@@ -546,7 +619,7 @@ bool filesystem_scan_directory_recursive(const char* directory_path)
     return true;
 }
 
-bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan)
+bool platform_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan)
 {
     MASSERT(asset_list_scan)
     MASSERT(asset_list_scan->allocator)
@@ -597,7 +670,7 @@ bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List
 
             INFO("[DIR]  %s", full_path);
             // recurse into the directory to find the other files in it
-            filesystem_get_assets_from_directory(full_path, asset_list_scan);
+            platform_get_assets_from_directory(full_path, asset_list_scan);
         }
         else if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
         {
@@ -618,7 +691,7 @@ bool filesystem_get_assets_from_directory(const char* directory_path, Asset_List
 }
 
 
-bool filesystem_is_directory_empty(const char* directory_path)
+bool platform_is_directory_empty(const char* directory_path)
 {
     WIN32_FIND_DATAA findFileData;
     HANDLE findHandle;
@@ -647,6 +720,11 @@ bool filesystem_is_directory_empty(const char* directory_path)
 
     FindClose(findHandle);
     return true; // Empty
+}
+
+
+bool platform_file_open_async()
+{
 }
 
 

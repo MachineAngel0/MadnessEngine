@@ -116,6 +116,18 @@ bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 
 bool platform_update_directory(File_Watch_Handle directory_watch_handle);
 bool platform_poll_directory_changes(File_Watch_Handle directory_watch_handle, File_Watch_Event* out_event);
+bool platform_is_directory_empty(const char* directory_path);
+bool platform_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan);
+
+
+//FILE SYSTEM
+bool platform_file_open(Madness_File_Platform* file, const char* path, File_Modes file_modes, Allocator* allocator);
+bool platform_file_close(Madness_File_Platform* file);
+bool platform_file_read(Madness_File_Platform* file);
+bool platform_file_write(Madness_File_Platform* file);
+//FILE SYSTEM - ASYNC
+bool platform_file_read_async();
+bool platform_file_write_async();
 
 
 

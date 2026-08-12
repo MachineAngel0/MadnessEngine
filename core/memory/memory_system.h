@@ -72,11 +72,11 @@ typedef struct Memory_System
 
     //TODO: it should be that everytime an allocator wants to get created it goes through here, and gets a tagged names
     // then the memory system can do a query on each allocator
-    Allocator* allocator_list;
+    Allocator allocator_list[128];
     u32 allocator_count;
-    Heap_Allocator* fl_allocator_list;
+    Heap_Allocator* fl_allocator_list[128];
     u32 freelist_allocator_count;
-    Pool_Allocator* pool_allocator_list;
+    Pool_Allocator* pool_allocator_list[128];
     u32 pool_allocator_count;
 
 

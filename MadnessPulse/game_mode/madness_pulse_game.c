@@ -56,7 +56,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
         if (madness_ui_button(STRING("Load Game")))
         {
-            if (filesystem_is_directory_empty(SAVE_GAME_PATH))
+            if (platform_is_directory_empty(SAVE_GAME_PATH))
             {
                 //TODO: pop up and a sound, saying to press new game
             }

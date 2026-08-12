@@ -35,6 +35,7 @@ void allocator_heap_init(Heap_Allocator* fl, void* backing_memory, const size_t 
 
 void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t alignment)
 {
+    //TODO: alignment
     MASSERT(fl);
     if (size <= 0)
     {

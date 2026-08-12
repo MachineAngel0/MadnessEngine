@@ -19,6 +19,20 @@ bool asset_texture_deserialize(Madness_Texture_Runtime* runtime, FILE* fptr, All
 
 bool asset_texture_deserialize_heap(Madness_Texture_Runtime* runtime, FILE* fptr, Heap_Allocator* allocator)
 {
+
+    /* unsuccessful attempt, wierd padding/alignment issues
+    u64 size = filesystem_file_size(fptr);
+    void* data = allocator_heap_alloc(allocator, size);
+
+    fread(data, size, 1, fptr);
+    runtime = (Madness_Texture_Runtime*)data;
+    memcpy(&runtime->texture, (u8*)data + sizeof(runtime->version), sizeof(Madness_Texture));
+    runtime->pixel_data = (u8*)((u8*)data + (runtime->version) +sizeof(Madness_Texture));
+    /*runtime->version = (u8*)data;
+    runtime->texture = *(Madness_Texture*)((u8*)data + sizeof(runtime->version));
+    runtime->pixel_data = (u8*)((u8*)data + sizeof(runtime->version) + sizeof(runtime->texture));#1#
+    */
+
     fread(&runtime->version, sizeof(runtime->version), 1, fptr);
     fread(&runtime->texture, sizeof(Madness_Texture), 1, fptr);
     runtime->pixel_data = allocator_heap_alloc(allocator, runtime->texture.pixels_size);

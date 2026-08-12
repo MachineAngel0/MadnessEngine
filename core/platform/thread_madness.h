@@ -3,6 +3,20 @@
 
 #include "defines.h"
 
+//macro that states whether threads are available or not
+#ifdef __STDC_NO_THREADS__
+#error I need threads to build this program!
+#endif
+
+//tests for atomic support
+#if __STDC_VERSION__ < 201112L || __STDC_NO_ATOMICS__ == 1
+#define HAS_ATOMICS 0
+#else
+#define HAS_ATOMICS 1
+#endif
+
+
+
 typedef struct Madness_Thread
 {
     void* data;
@@ -19,11 +33,13 @@ typedef struct Madness_Semaphore
     void* data;
 } Madness_Semaphore;
 
-typedef u32 (fpn_thread_start)(void*);
+typedef u32 (fptr_thread_start)(void*);
 
 // Thread
+//get logical processor cores
+s32 get_threads_available(void);
 
-bool thread_create(fpn_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread);
+bool thread_create(fptr_thread_start start_function_ptr, void* params, bool auto_detach, Madness_Thread* out_thread);
 void thread_destroy(Madness_Thread* madness_thread);
 void thread_detach(Madness_Thread* madness_thread);
 bool thread_join(Madness_Thread* madness_thread);
@@ -34,8 +50,7 @@ void thread_sleep(Madness_Thread* madness_thread, u32 milliseconds);
 u64 thread_get_id(void);
 
 
-//get logical processor cores
-s32 get_threads_available(void);
+
 
 // Mutex
 bool mutex_create(Madness_Mutex* out_mutex);
