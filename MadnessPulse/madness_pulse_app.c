@@ -92,9 +92,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
 
-    //TODO:
-    /*job_system_init(&application_core->memory_system);
-    job_system_test();*/
+    job_system_init(&application_core->memory_system);
+    job_system_test();
 
     //register events needed for this application
     event_register(EVENT_APP_QUIT, STRING("application"), application_on_event);

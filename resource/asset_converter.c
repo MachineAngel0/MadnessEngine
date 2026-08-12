@@ -1268,5 +1268,5 @@ bool asset_converter_reload_textures(Asset_System* asset_system, Memory_System* 
 
 
     asset_lists_free(scan, memory_system);
-
+    return true;
 }

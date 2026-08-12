@@ -4,12 +4,22 @@
 
 static Job_System* job_system;
 
+#define THREAD_STACK_MEMORY_SIZE KB(4)
+#define MAX_JOB_COUNTER_POOL 128 // I doubt it will be more than this
+
 u32 job_thread_run(void* data)
 {
     u32 thread_index = *(u32*)data;
+    Job_Thread job_thread = job_system->job_threads[thread_index];
     Madness_Thread thread = job_system->job_threads[thread_index].thread;
     u64 thread_id = thread_get_id();
-    thread.thread_id;
+    // thread.thread_id;
+
+    //allocate some memory on the stack for this thread
+    /*
+    u8 memory[THREAD_STACK_MEMORY_SIZE];
+    allocator_init(&job_thread.allocator, memory, THREAD_STACK_MEMORY_SIZE);
+    */
 
     while (true)
     {
@@ -18,26 +28,33 @@ u32 job_thread_run(void* data)
             break;
         }
 
-        Job_Info info = {0};
+        Job_Info job_task = {0};
         if (!mutex_lock(&job_system->mutex))
         {
             INFO("FAILED TO OBTAIN LOCK ON MUTEX ON JOB THREAD");
         }
         if (!ring_queue_is_empty(job_system->work_queue))
         {
-            ring_dequeue(job_system->work_queue, &info);
+            ring_dequeue(job_system->work_queue, &job_task);
         }
         if (mutex_unlock(&job_system->mutex))
         {
             // INFO("FAILED TO RELEASE MUTEX ON JOB THREAD");
         }
 
-        if (info.job_start)
+        if (job_task.job_start)
         {
-            bool result = info.job_start(info.param_data);
+            bool result = job_task.job_start(job_task.param_data);
+
+            if (job_task.job_counter)
+            {
+                job_counter_decrement(job_task.job_counter);
+            }
+
+            allocator_malloc_free(job_task.param_data);
         }
     }
-    return 1;
+    return true;
 }
 
 
@@ -61,6 +78,13 @@ bool job_system_init(Memory_System* memory_system)
     //large amount can lower it later
     job_system->work_queue = ring_queue_create(sizeof(Job_Info), 1024);
 
+    u64 job_counter_memory_size = MAX_JOB_COUNTER_POOL * sizeof(Job_Counter);
+    void* job_counter_pool_memory =
+        memory_system_alloc(memory_system, job_counter_memory_size, MEMORY_SUBSYSTEM_THREAD);
+
+    pool_allocator_init(&job_system->job_counter_pool, job_counter_pool_memory, job_counter_memory_size,
+                        sizeof(Job_Counter), 8);
+
 
     for (u32 i = 0; i < job_system->thread_count; i++)
     {
@@ -68,7 +92,8 @@ bool job_system_init(Memory_System* memory_system)
         job_thread->job_thread_index = i;
 
         u64 thread_allocator_memory_size = MB(1);
-        void* allocator_memory = memory_system_alloc(memory_system, thread_allocator_memory_size, MEMORY_SUBSYSTEM_THREAD);
+        void* allocator_memory = memory_system_alloc(memory_system, thread_allocator_memory_size,
+                                                     MEMORY_SUBSYSTEM_THREAD);
         allocator_init(&job_thread->allocator, allocator_memory, thread_allocator_memory_size);
         job_thread->allocator;
 
@@ -106,9 +131,66 @@ Job_Info job_create(Job_Type type, fptr_job_start entry_point, fptr_job_complete
     job.param_data = allocator_malloc(job_param_data_size); //TODO: free and replace with an allocator
     memcpy(job.param_data, job_param_data, job_param_data_size);
     job.param_data_size = job_param_data_size;
+    job.job_counter = NULL;
 
-/**/
+    /**/
     return job;
+}
+
+Job_Info job_create_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success,
+                            fptr_job_complete on_fail, void* job_param_data, u32 job_param_data_size,
+                            Job_Counter* counter)
+{
+    Job_Info job;
+    job.job_start = entry_point;
+    job.job_success = on_success;
+    job.job_fail = on_fail;
+    job.job_type = type;
+
+
+    job.param_data = allocator_malloc(job_param_data_size); //TODO: free and replace with an allocator
+    memcpy(job.param_data, job_param_data, job_param_data_size);
+    job.param_data_size = job_param_data_size;
+    job.job_counter = counter;
+
+    /**/
+    return job;
+}
+
+Job_Counter* job_counter_create(u32 initial_job_count)
+{
+    //allocate a new job
+    Job_Counter* job_counter = pool_allocator_alloc(&job_system->job_counter_pool);
+    atomic_u32_init(&job_counter->atomic_jobs_remaining, 0, NULL);
+    job_counter_add_jobs(job_counter, initial_job_count);
+    return job_counter;
+}
+
+void job_counter_add_jobs(Job_Counter* job_counter, u32 job_count)
+{
+    //add to the counter
+    atomic_u32_fetch_add(&job_counter->atomic_jobs_remaining, job_count);
+}
+
+void job_counter_decrement(Job_Counter* job_counter)
+{
+    //add to the counter
+    atomic_u32_fetch_sub(&job_counter->atomic_jobs_remaining, 1);
+}
+
+
+void job_system_wait_free(Job_Counter* job_counter)
+{
+    //wait until the specific job finishes
+    while (atomic_u32_load(&job_counter->atomic_jobs_remaining) != 0)
+    {
+        //TODO: have the main thread do some work
+        INFO("JOB SYSTEM WAIT FREE: WAITING FOR WORK TO FINISH")
+    }
+
+
+    //once its done we can free the counter
+    pool_allocator_free(&job_system->job_counter_pool, job_counter);
 }
 
 
@@ -123,19 +205,25 @@ bool job_system_test_start(void* params)
 
 void job_system_test()
 {
+    Job_Counter* job_counter = job_counter_create(200);
     for (u32 i = 0; i < 100; i++)
     {
         Job_Test_Param job1 = {.is_successful = false, .val = rand_range_i(0, 100), .loop_index = i};
         Job_Test_Param job2 = {.is_successful = true, .val = rand_range_i(0, 100), .loop_index = i};
 
-        Job_Info job_info1 = job_create(JOB_TYPE_GENERAL, job_system_test_start,
-                                        NULL, NULL,
-                                        &job1, sizeof(Job_Test_Param));
-        Job_Info job_info2 = job_create(JOB_TYPE_GENERAL, job_system_test_start,
-                                        NULL, NULL,
-                                        &job2, sizeof(Job_Test_Param));
+        Job_Info job_info1 = job_create_counter(JOB_TYPE_GENERAL, job_system_test_start,
+                                                NULL, NULL,
+                                                &job1, sizeof(Job_Test_Param), job_counter);
+        Job_Info job_info2 = job_create_counter(JOB_TYPE_GENERAL, job_system_test_start,
+                                                NULL, NULL,
+                                                &job2, sizeof(Job_Test_Param), job_counter);
 
         job_system_submit(&job_info1);
         job_system_submit(&job_info2);
     }
+
+
+    job_system_wait_free(job_counter);
+
+    DEBUG("JOB TEST: all jobs ran");
 }

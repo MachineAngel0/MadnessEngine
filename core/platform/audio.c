@@ -3,6 +3,7 @@
 #include "defines.h"
 #include "logger.h"
 
+#include "miniaudio.h"
 static ma_engine audio_engine;
 
 Madness_Audio_System* audio_system_init(Memory_System* memory_system, Asset_System* resource_system)

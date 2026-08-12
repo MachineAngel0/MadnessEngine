@@ -4,9 +4,9 @@
 #if MPLATFORM_WINDOWS
 #include <windows.h>
 #include <windowsx.h>
+#include "winnt.h"
 #include "logger.h"
 #include "platform.h"
-
 
 s32 get_threads_available()
 {
@@ -21,7 +21,6 @@ bool thread_create(fptr_thread_start start_function_ptr, void* params, bool auto
 {
     if (!start_function_ptr)
     {
-
         M_ERROR("THREAD CREATE: INVALID START FUNCTION PTR", out_thread->thread_id);
         return false;
     }
@@ -40,7 +39,6 @@ bool thread_create(fptr_thread_start start_function_ptr, void* params, bool auto
     {
         CloseHandle(out_thread->data);
     }
-
 
 
     return true;
@@ -282,5 +280,131 @@ bool semaphore_wait(Madness_Semaphore* semaphore, u64 timeout_ms)
     return true;
 }
 
+typedef struct Windows_Atomic_U32
+{
+    volatile LONG atomic_u32;
+} Windows_Atomic_U32;
+
+typedef struct Windows_Atomic_U64
+{
+    volatile LONG64 atomic_u64;
+} Windows_Atomic_U64;
+
+
+
+void atomic_u32_init(Madness_Atomic_U32* atomic, u32 value, Allocator* allocator)
+{
+    if (allocator)
+    {
+        atomic->data = allocator_alloc(allocator, sizeof(Windows_Atomic_U32));
+    }else
+    {
+        atomic->data = malloc(sizeof(Windows_Atomic_U32));
+
+    }
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    windows_atomic->atomic_u32 = (LONG)value;
+}
+
+
+
+
+u32 atomic_u32_load(Madness_Atomic_U32* atomic)
+{
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    return (u32)InterlockedCompareExchange(
+        &windows_atomic->atomic_u32,
+        0,
+        0
+    );
+}
+
+void atomic_u32_store(Madness_Atomic_U32* atomic, u32 value)
+{
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    InterlockedExchange(
+        &windows_atomic->atomic_u32,
+        (LONG)value
+    );
+}
+
+u32 atomic_u32_fetch_add(Madness_Atomic_U32* atomic, u32 value)
+{
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    return InterlockedExchangeAdd(
+        &windows_atomic->atomic_u32,
+        (LONG)value);
+}
+
+u32 atomic_u32_fetch_sub(Madness_Atomic_U32* atomic, u32 value)
+{
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    return InterlockedExchangeAdd(
+        &windows_atomic->atomic_u32,
+        -(LONG)value);
+}
+
+
+void atomic_u64_init(Madness_Atomic_U64* atomic, u64 value, Allocator* allocator)
+{
+    atomic->data = allocator_alloc(allocator, sizeof(Windows_Atomic_U64));
+    Windows_Atomic_U64* windows_atomic =
+        (Windows_Atomic_U64*)atomic->data;
+
+    windows_atomic->atomic_u64 = (LONG)value;
+}
+
+u32 atomic_u64_load(Madness_Atomic_U64* atomic)
+{
+    Windows_Atomic_U64* windows_atomic =
+       (Windows_Atomic_U64*)atomic->data;
+
+    return (u64)InterlockedCompareExchange64(
+        &windows_atomic->atomic_u64,
+        0,
+        0
+    );
+}
+
+void atomic_u64_store(Madness_Atomic_U64* atomic, u64 value)
+{
+    Windows_Atomic_U64* windows_atomic =
+        (Windows_Atomic_U64*)atomic->data;
+
+    InterlockedExchange64(
+        &windows_atomic->atomic_u64,
+        (LONG64)value
+    );
+}
+
+u32 atomic_u64_fetch_add(Madness_Atomic_U64* atomic, u64 value)
+{
+    Windows_Atomic_U64* windows_atomic =
+    (Windows_Atomic_U64*)atomic->data;
+
+    return InterlockedExchangeAdd64(
+        &windows_atomic->atomic_u64,
+        (LONG64)value);
+}
+
+u32 atomic_u64_fetch_sub(Madness_Atomic_U64* atomic, u64 value)
+{
+    Windows_Atomic_U64* windows_atomic =
+    (Windows_Atomic_U64*)atomic->data;
+
+    return InterlockedExchangeAdd64(
+        &windows_atomic->atomic_u64,
+        -(LONG64)value);
+}
 
 #endif

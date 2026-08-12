@@ -65,7 +65,7 @@ bool platform_file_close(Madness_File_Platform* file)
 bool platform_file_read(Madness_File_Platform* madness_file)
 {
     Windows_IO* windows_io = (Windows_IO*)madness_file->internal_data;
-    const char* data = "Hello from Native Win32 API!";
+     char* data = "Hello from Native Win32 API!";
     DWORD bytesWritten = 0;
     return ReadFile(windows_io->file_handle, data, (DWORD)strlen(data), &bytesWritten, NULL);
 }
@@ -725,6 +725,7 @@ bool platform_is_directory_empty(const char* directory_path)
 
 bool platform_file_open_async()
 {
+    return false;
 }
 
 

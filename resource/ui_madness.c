@@ -2470,7 +2470,7 @@ void madness_ui_file_picker(String id)
         char path[MAX_PATH];
         if (platform_open_file_dialogue(path, "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine"))
         {
-            wprintf(L"Selected: %s\n", path);
+            printf("Selected: %s\n", path);
             string_builder_clear(string_state->active_menu_item);
             string_builder_append_c_string(string_state->active_menu_item, path);
         }

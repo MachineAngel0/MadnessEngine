@@ -17,6 +17,7 @@
 
 
 
+
 typedef struct Madness_Thread
 {
     void* data;
@@ -65,5 +66,31 @@ void semaphore_destroy(Madness_Semaphore* madness_semaphore);
 bool semaphore_signal(Madness_Semaphore* madness_semaphore);
 bool semaphore_wait(Madness_Semaphore* madness_semaphore, u64 wait_ms);
 
+
+// Atomics
+
+//TODO: linux implementation
+typedef struct Madness_Atomic_U32
+{
+    void* data;
+}Madness_Atomic_U32;
+
+typedef struct Madness_Atomic_U64
+{
+    void* data;
+}Madness_Atomic_U64;
+
+void atomic_u32_init(Madness_Atomic_U32* atomic, u32 value, Allocator* allocator);
+u32 atomic_u32_load(Madness_Atomic_U32* atomic);
+void atomic_u32_store(Madness_Atomic_U32* atomic, u32 value);
+u32 atomic_u32_fetch_add(Madness_Atomic_U32* atomic, u32 value);
+u32 atomic_u32_fetch_sub(Madness_Atomic_U32* atomic, u32 value);
+
+
+void atomic_u64_init(Madness_Atomic_U64* atomic, u64 value, Allocator* allocator);
+u32 atomic_u64_load(Madness_Atomic_U64* atomic);
+void atomic_u64_store(Madness_Atomic_U64* atomic, u64 value);
+u32 atomic_u64_fetch_add(Madness_Atomic_U64* atomic, u64 value);
+u32 atomic_u64_fetch_sub(Madness_Atomic_U64* atomic, u64 value);
 
 #endif //MADNESS_THREAD_H

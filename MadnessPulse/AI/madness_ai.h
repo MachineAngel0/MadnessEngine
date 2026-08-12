@@ -91,6 +91,8 @@ AI_Ability* madness_ai_get_ability(Madness_AI* ai, Character_Name character_name
             return ability;
         }
     }
+
+    return NULL;
 }
 
 void madness_ai_add_heal_consideration(Madness_AI* madness_ai, Character_Name ai_name, Ability_Name name, u8 turn_index,
@@ -162,6 +164,9 @@ ARRAY_TYPE(AI_Ability)* madness_ai_get_abilties_for_turn_index(Madness_Pulse_Gam
                                                                Character_Name ai_name, u8 turn_index)
 {
     //TODO:
+    MASSERT_FALSE();
+    return NULL;
+
 }
 
 ARRAY_TYPE(AI_Ability)* madness_ai_filter_abilities_with_cooldowns(Madness_Pulse_Game* game);
