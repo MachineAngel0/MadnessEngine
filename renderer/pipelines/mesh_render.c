@@ -195,6 +195,8 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
     // };
 
+    //TODO: realizing now that visibility work load doens't need to happen in the renderer,
+    // it can be an intemediate step that generates the info needed for the render packet
     for (u32 i = 0; i < render_packet->draw_3d_data_packet.mesh_instances_count; i++)
     {
         Madness_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.mesh_instances[i];
@@ -208,7 +210,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 .mesh_handle = mesh_instance->mesh_asset.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.buffer_handle,
-                .transform_handle = mesh_instance->transform_handle.handle,
+                .transform_handle = mesh_instance->transform_handle.handle, // TODO: query the bindless index
                 .index_count = sub_mesh_instance->mesh_indirect_draw.index_count,
                 .index_offset = sub_mesh_instance->mesh_indirect_draw.index_offset,
                 .vertex_offset = sub_mesh_instance->mesh_indirect_draw.vertex_count_offset,
@@ -229,7 +231,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 .mesh_handle = mesh_instance->skinned_mesh_asset.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.buffer_handle,
-                .transform_handle = mesh_instance->transform_handle.handle,
+                .transform_handle = mesh_instance->transform_handle.handle, // TODO: query the bindless index
                 .index_count = sub_mesh_instance->mesh_indirect_draw.index_count,
                 .index_offset = sub_mesh_instance->mesh_indirect_draw.index_offset,
                 .vertex_offset = sub_mesh_instance->mesh_indirect_draw.vertex_count_offset,

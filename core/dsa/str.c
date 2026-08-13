@@ -120,7 +120,7 @@ bool string_compare(const String* str1, const String* str2)
     {
         if (str1->chars[i] != str2->chars[i])
         {
-            printf("%c, %c", str1->chars[i], str2->chars[i]);
+            // DEBUG("STRING COMPARE: %c, %c", str1->chars[i], str2->chars[i]);
             return false;
         }
     }

@@ -48,6 +48,9 @@ typedef struct Application_Config
 
 
 
+
+
+
 // PLUGINS
 
 typedef struct Renderer_Plugin
@@ -135,5 +138,11 @@ typedef struct Editor_Application
 } Editor_Application;
 
 bool editor_app_run(Editor_Application* editor_app);
+
+
+
+
+
+
 
 #endif

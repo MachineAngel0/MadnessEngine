@@ -9,19 +9,17 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
 
-    memset(texture_system->texture_array, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Texture));
+    memset(texture_system->textures, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Texture));
     texture_system->available_texture_queue = ring_queue_create(sizeof(u32), MAX_TEXTURE_COUNT);
 
 
     for (u32 i = 0; i < MAX_TEXTURE_COUNT; i++)
     {
-        texture_system->texture_handles[i].type = ASSET_TEXTURE;
-        texture_system->texture_handles[i].handle = i;
         ring_enqueue(texture_system->available_texture_queue, &i);
     }
 
     //fonts
-    memset(texture_system->font_array, 0, MAX_FONT_COUNT * sizeof(Madness_Font));
+    memset(texture_system->font_textures, 0, MAX_FONT_COUNT * sizeof(Madness_Font));
     texture_system->available_font_queue = ring_queue_create(sizeof(u32), MAX_FONT_COUNT);
 
     for (u32 i = 0; i < MAX_FONT_COUNT; i++)
@@ -35,9 +33,11 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
 
     //create our debug texture
+    /*
     asset_converter_texture(asset_system, "../z_assets/textures/error_texture.png", NULL);
     asset_converter_texture(asset_system, "../z_assets/textures/test_particle.png", NULL);
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
+    */
 
 
     texture_system->default_texture_handle = asset_load_texture_path(
@@ -57,15 +57,37 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
 
 bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Madness_Texture* out_texture)
 {
-    MASSERT(handle.type == ASSET_TEXTURE);
-    if (texture_system->texture_handles->generation != handle.generation)
+    if (texture_system->textures->generation != handle.generation)
     {
+        WARN("texture_system_get_texture: trying to get a font. use get_font");
+        // out_texture = &texture_system->textures[0];
         out_texture = NULL;
         return false;
     }
 
-    *out_texture = texture_system->texture_array[handle.handle];
+    if (texture_system->textures[handle.handle].type != ASSET_TEXTURE)
+    {
+        WARN("texture_system_get_texture: trying to get a font. use get_font");
+        MASSERT_FALSE();
+        return false;
+    }
+    *out_texture = texture_system->textures[handle.handle];
     return true;
+}
+
+bool texture_system_get_bindless_slot(Texture_System* texture_system, Texture_Handle handle, u32* out_slot)
+{
+
+    if (texture_system->textures[handle.handle].generation != handle.generation)
+    {
+        *out_slot = 1;
+        return false;
+    }
+
+
+
+
+
 }
 
 Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
@@ -84,11 +106,15 @@ Texture_Handle texture_system_get_default_texture(Texture_System* texture_system
 
 bool texture_system_get_font(Texture_System* texture_system, const Texture_Handle handle, Madness_Font* out_font)
 {
-    MASSERT(handle.type == ASSET_FONT);
+    Madness_Texture* texture = &texture_system->textures[handle.handle];
+    if (texture_system->textures[handle.handle].type != ASSET_FONT)
+    {
+        WARN("texture_system_get_font: trying to get a normal texture. use get_font");
+        MASSERT_FALSE();
+        return false;
+    }
 
-    Madness_Texture* texture = &texture_system->texture_array[handle.handle];
-    MASSERT(texture->type == ASSET_FONT);
-    *out_font = texture_system->font_array[texture->font_index];
+    *out_font = texture_system->font_textures[texture->font_index];
     return true;
 }
 
@@ -99,7 +125,7 @@ bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handl
     u32 texture_idx = 0;
     if (hash_map_get(texture_system->texture_hash_map, &hash, &texture_idx))
     {
-        *out_handle = texture_system->texture_handles[texture_idx];
+        *out_handle = (Texture_Handle){texture_idx, texture_system->textures[texture_idx].generation};
         texture_system->texture_asset[texture_idx].reference_count++;
         return true;
     }
@@ -125,11 +151,9 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     }
 
     texture_system->in_use_textures_count++;
-    Madness_Texture* texture = &texture_system->texture_array[free_index];
+    Madness_Texture* texture = &texture_system->textures[free_index];
     *texture = texture_data;
-    Texture_Handle* handle = &texture_system->texture_handles[free_index];
-    handle->type = ASSET_TEXTURE;
-    *out_handle = *handle;
+    out_handle->handle = free_index;
 
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
@@ -184,18 +208,17 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     texture_system->in_use_textures_count++;
 
 
-    Madness_Font* font_texture = &texture_system->font_array[free_font_index];
+    Madness_Font* font_texture = &texture_system->font_textures[free_font_index];
     *font_texture = texture_font_data;
 
 
-    Madness_Texture* texture = &texture_system->texture_array[free_index];
+    Madness_Texture* texture = &texture_system->textures[free_index];
     *texture = texture_data;
     texture->font_index = free_font_index;
 
-    //make sure we are giving out the correct type and handle
-    Texture_Handle* handle = &texture_system->texture_handles[free_index];
-    handle->type = ASSET_FONT;
-    *out_handle = *handle;
+    //set handle info
+    out_handle->handle = free_font_index;
+    out_handle->generation = texture->generation;
 
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;

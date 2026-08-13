@@ -61,6 +61,7 @@ bool platform_audio_init(Platform_State* plat_state, int32_t buffer_size, int32_
 bool platform_audio_shutdown(Platform_State* plat_state);
 
 //MEMORY
+void* platform_reserve_memory(u64 size, bool aligned);
 void* platform_allocate(u64 size, bool aligned);
 
 void platform_free(void* block);

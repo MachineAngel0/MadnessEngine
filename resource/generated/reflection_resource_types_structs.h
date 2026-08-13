@@ -141,12 +141,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Texture_Handle_Fields[] =
 	{
 		{
-			.name = "type",
-			.type = REFLECTION_TYPE_ENUM,
-			.type_name = "Asset_Type",
-			.offset = offsetof(Texture_Handle, type)
-		},
-		{
 			.name = "handle",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
@@ -164,7 +158,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Texture_Handle",
 		.fields = Texture_Handle_Fields,
-		.field_count = 3,
+		.field_count = 2,
 		.struct_size = sizeof(Texture_Handle)
 	};
 
@@ -390,13 +384,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Madness_Texture, font_index)
 		},
+		{
+			.name = "generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Texture, generation)
+		},
 	};
 
 	 Reflection_Runtime_Struct Madness_Texture_Runtime_Struct =
 	{
 		.name = "Madness_Texture",
 		.fields = Madness_Texture_Fields,
-		.field_count = 7,
+		.field_count = 8,
 		.struct_size = sizeof(Madness_Texture)
 	};
 
@@ -1833,22 +1833,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Texture_System, default_texture_handle)
 		},
 		{
-			.name = "texture_array",
+			.name = "textures",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Texture",
-			.offset = offsetof(Texture_System, texture_array)
+			.offset = offsetof(Texture_System, textures)
 		},
 		{
-			.name = "font_array",
+			.name = "font_textures",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Font",
-			.offset = offsetof(Texture_System, font_array)
-		},
-		{
-			.name = "texture_handles",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Texture_Handle",
-			.offset = offsetof(Texture_System, texture_handles)
+			.offset = offsetof(Texture_System, font_textures)
 		},
 		{
 			.name = "in_use_textures_count",
@@ -1880,7 +1874,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Texture_System",
 		.fields = Texture_System_Fields,
-		.field_count = 8,
+		.field_count = 7,
 		.struct_size = sizeof(Texture_System)
 	};
 

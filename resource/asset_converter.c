@@ -34,13 +34,27 @@ bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, 
 
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
+    //check for supported file formats
+    if (!c_string_path_is_extension(file_path, ".png") && !c_string_path_is_extension(file_path, ".jpeg") && !
+        c_string_path_is_extension(file_path, ".jpg"))
+    {
+        WARN("asset_converter_texture: INVALID TEXTURE EXTENSION: %s", file_path);
+        return false;
+    }
+
+
     Madness_Texture_Runtime runtime_texture = {0};
     runtime_texture.version = 1;
     //load the image data from file
     int texWidth, texHeight, texChannels;
     u8* pixel_data = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
-    MASSERT(pixel_data);
+    if (!pixel_data)
+    {
+        INFO("STBI FAIL REASON %s: FILE_PATH: %s", stbi_failure_reason(), file_path);
+        MASSERT_FALSE();
+        return false;
+    }
 
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
     runtime_texture.texture.width = texWidth; // 4 stride rgba
@@ -289,8 +303,19 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
+    //TODO: we should check ahead of time for the csv file as well
+    //check for supported file formats
+    if (!c_string_path_is_extension(file_path, ".png"))
+    {
+        WARN("asset_converter_texture: INVALID TEXTURE EXTENSION: %s", file_path);
+        return false;
+    }
+
+
     Madness_Font_Runtime engine_texture = {0};
     engine_texture.version = 1.0;
+
+
 
     //load the image data from file
     //load the image data from file
@@ -299,10 +324,12 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     if (!pixel_data)
     {
-        WARN("TEXTURE SYSTEM LOAD TEXTURE: failed to load texture image!");
-        MASSERT_MSG(pixel_data, "FAILED TO LOAD MSDF FONT");
+        INFO("STBI FAIL REASON %s: FILE_PATH: %s", stbi_failure_reason(), file_path);
+        MASSERT_FALSE();
         return false;
     }
+
+
 
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
     engine_texture.texture.width = texture_width; // 4 stride rgba
@@ -1253,17 +1280,17 @@ bool asset_converter_material_instance_from_material_info(Asset_System* asset_sy
 bool asset_converter_reload_textures(Asset_System* asset_system, Memory_System* memory_system)
 {
     Asset_List_Scan* scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS,
-                                          IMPORT_TEXTURE_PATH);
+                                                 IMPORT_TEXTURE_PATH);
 
     for (u32 i = 0; i < scan->count; i++)
     {
         Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
 
         MADNESS_UUID uuid = {0};
-        asset_converter_texture(asset_system, string_to_c_string_allocator(&scan->strings[i], scratch_allocator.allocator), &uuid);
+        asset_converter_texture(asset_system,
+                                string_to_c_string_allocator(&scan->strings[i], scratch_allocator.allocator), &uuid);
 
         scratch_allocator_end(scratch_allocator);
-
     }
 
 

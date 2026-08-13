@@ -5,13 +5,13 @@
 #include "ring_queue.h"
 
 #if HAS_ATOMICS
-    #include "stdatomic.h"
+#include "stdatomic.h"
 #endif
 
 
 // typedef bool (job_start)(void* param, void* result);
-typedef bool (fptr_job_start)(void* param);
-typedef void (fptr_job_complete)(void*);
+typedef bool (*fptr_job_start)(void* param);
+typedef void (*fptr_job_complete)(void*);
 
 
 typedef enum Job_Type
@@ -33,9 +33,9 @@ alignas(64) typedef struct /*alignas(64)*/ Job_Info
 {
     Job_Type job_type;
 
-    fptr_job_start* job_start;
-    fptr_job_complete* job_success;
-    fptr_job_complete* job_fail;
+    fptr_job_start job_start;
+    fptr_job_complete job_success;
+    fptr_job_complete job_fail;
 
     void* param_data;
     u32 param_data_size;
@@ -49,6 +49,15 @@ alignas(64) typedef struct /*alignas(64)*/ Job_Info
 } Job_Info;
 
 
+alignas(64) typedef struct /*alignas(64)*/ Job_Result
+{
+    u8 job_thread_id; // thread this finished on
+    fptr_job_complete completion_callback;
+
+    u32 params_size;
+    void* params;
+} Job_Result;
+
 
 typedef struct Job_Thread
 {
@@ -61,16 +70,19 @@ typedef struct Job_Thread
 } Job_Thread;
 
 
-#define MAX_MADNESS_THREADS 32
+#define MAX_MADNESS_THREADS 32  // not likely to have that many threads
 
 typedef struct Job_System
 {
     s32 thread_count;
 
-    Job_Thread job_threads[MAX_MADNESS_THREADS]; // not likely to have that many threads
+    Job_Thread job_threads[MAX_MADNESS_THREADS];
 
-    Madness_Mutex mutex;
+    Madness_Mutex ring_mutex;
+    Madness_Semaphore ring_semaphore;
     RING_QUEUE_TYPE(Job_Info)* work_queue; // not likely to have that many threads
+
+    RING_QUEUE_TYPE(Job_Info)* background_work_queue; // not likely to have that many threads
 
     bool running;
 
@@ -88,8 +100,9 @@ void job_system_submit(Job_Info* job_info);
 Job_Info job_create(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success, fptr_job_complete on_fail,
                     void* job_param_data, u32 job_param_data_size);
 
-Job_Info job_create_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success, fptr_job_complete on_fail,
-                    void* job_param_data, u32 job_param_data_size, Job_Counter* counter);
+Job_Info job_create_with_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success,
+                            fptr_job_complete on_fail,
+                            void* job_param_data, u32 job_param_data_size, Job_Counter* counter);
 
 
 Job_Counter* job_counter_create(u32 initial_job_count);

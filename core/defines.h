@@ -63,6 +63,24 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define GB(x) (1024ULL * MB(x)) //gigabytes
 #define TB(x) (1024ULL * GB(x)) // terabyte, should never need this
 
+// build type queries
+bool app_is_debug_build()
+{
+#ifdef DEBUG_BUILD
+    return true;
+#endif
+    return false;
+}
+
+bool app_is_release_build()
+{
+#ifdef RELEASE_BUILD
+    return true;
+#endif
+    return false;
+}
+
+
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)

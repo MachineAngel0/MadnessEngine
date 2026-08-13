@@ -15,6 +15,7 @@ typedef struct Asset_System
     // TODO: might change this into a pool allocator, or even segregated list allocator
     Heap_Allocator* heap_allocator;
     Frame_Allocator* frame_allocator;
+    Allocator* allocator;
 
     Renderer* renderer;
 

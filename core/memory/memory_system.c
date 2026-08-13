@@ -1,10 +1,14 @@
 ﻿#include "memory_system.h"
 
+#include "platform.h"
+
 
 void memory_system_init(Memory_System* memory_system, u64 memory_request_size)
 {
     MASSERT(memory_system);
+
     memset(memory_system, 0, sizeof(Memory_System));
+    // void* reserved_memory = platform_reserve_memory(memory_request_size, true);
     void* memory = platform_allocate(memory_request_size, true);
     //this should absolutely hard crash
     MASSERT_MSG(memory, "memory_system_init: FAILED TO ALLOCATE MEMORY FOR THE APPLICATION ");

@@ -76,7 +76,7 @@ bool ring_dequeue(ring_queue* q, void* out_data)
 
     if (q->num_items == 0)
     {
-        WARN("RING DEQUEUE: NOTHING TO DEQUEUE")
+        // INFO("RING DEQUEUE: NOTHING TO DEQUEUE")
         return false;
     }
 

@@ -21,6 +21,7 @@ MAPI char* c_string_ext_strip(const char* path, Allocator* arena);
 
 MAPI char* c_string_path_get_extension(const char* path, Allocator* arena);
 MAPI bool c_string_path_is_extension(const char* path, const char* extensions_name);
+MAPI bool c_string_path_is_texture_extension(const char* path, const char* extensions_name);
 
 
 // Case-sensitive string comparison. True if the same, otherwise false.

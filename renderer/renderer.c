@@ -220,7 +220,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     allocator_clear(&renderer->frame_allocator);
     buffer_system_frame_start(renderer);
 
-    shader_system_check_for_new_shader_batches(renderer, renderer->shader_system, render_packets);
 
 
     //TODO: move out to the editor
@@ -298,6 +297,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //free textures and any other texture/shader updated
     shader_system_update(renderer, renderer->shader_system);
+    shader_system_check_for_new_shader_batches(renderer, renderer->shader_system, render_packets);
 
 
 

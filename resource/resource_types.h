@@ -26,8 +26,8 @@
 #define IMPORT_PATH_SLASH "../z_assets/"
 
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
-#define IMPORT_TEXTURE_PATH "../z_assets/texture"
-#define IMPORT_FONTS_PATH "../z_assets/fonts"
+#define IMPORT_TEXTURE_PATH "../z_assets/textures"
+#define IMPORT_FONTS_PATH "../z_assets/msdf_fonts"
 #define IMPORT_MESH_PATH "../z_assets/mesh"
 #define IMPORT_SK_MESH_PATH "../z_assets/skinned_mesh"
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
@@ -110,7 +110,6 @@ typedef struct Asset_MetaData
 
 typedef struct Texture_Handle
 {
-    Asset_Type type; // font or texture
     u32 handle;
     u32 generation;
 } Texture_Handle;
@@ -200,7 +199,10 @@ typedef struct Madness_Texture
     Texture_Format format;
     u64 pixels_size;
     Asset_Type type; // used to identify if we have are a font
-    u32 font_index; // runtime only data
+    // runtime only data
+    u32 font_index;
+    // u32 bindless_slot;
+    u32 generation;
 } Madness_Texture;
 
 typedef struct Texture_GPU_Upload
@@ -760,10 +762,8 @@ typedef struct Texture_System
     Texture_Handle default_texture_handle;
 
     //Textures
-    Madness_Texture texture_array[MAX_TEXTURE_COUNT];
-    Madness_Font font_array[MAX_FONT_COUNT];
-
-    Texture_Handle texture_handles[MAX_TEXTURE_COUNT];
+    Madness_Texture textures[MAX_TEXTURE_COUNT];
+    Madness_Font font_textures[MAX_FONT_COUNT];
 
     u32 in_use_textures_count;
     u32 max_textures;

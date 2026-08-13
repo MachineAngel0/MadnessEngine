@@ -20,6 +20,7 @@ bool application_on_resized(const Event_Type code, String sender, String listene
 bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
 
+
 static Madness_Pulse_Application* app_internal;
 
 bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
@@ -92,8 +93,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
 
-    job_system_init(&application_core->memory_system);
-    job_system_test();
+    // job_system_init(&application_core->memory_system);
+    // job_system_test();
 
     //register events needed for this application
     event_register(EVENT_APP_QUIT, STRING("application"), application_on_event);
@@ -104,8 +105,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         &application_core->plat_state,
         application_core->input_system,
         platform_config);
-
-
 
 
     //Renderer
@@ -171,8 +170,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     filewatcher_directory_register("../z_assets");
 
 
-
-
     //MAIN LOOP
 
     clock_start(&application_core->clock);
@@ -205,6 +202,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                             renderer_plugin->renderer->context.framebuffer_width_new,
                             renderer_plugin->renderer->context.framebuffer_height_new);
                             */
+
+        // job_system_test();
+
 
         madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
                          renderer_plugin->renderer->context.framebuffer_height_new);
@@ -250,7 +250,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
         application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet =
-        insanity_get_render_data();
+            insanity_get_render_data();
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
         // insanity_get_render_data();

@@ -159,9 +159,26 @@ bool platform_pump_messages(Platform_State* plat_state)
 }
 
 
+void* platform_reserve_memory(u64 size, bool aligned)
+{
+    // 1. Declare the SYSTEM_INFO structure
+    SYSTEM_INFO si;
+
+    // 2. Call the Win32 API to populate the structure
+    GetSystemInfo(&si);
+
+    // 3. Extract and print the page size (typically 4096 bytes)
+    printf("The architecture memory page size is: %u bytes\n", si.dwPageSize);
+
+    // Note: dwAllocationGranularity represents the granularity for virtual memory allocations
+    printf("The virtual memory allocation granularity is: %u bytes\n", si.dwAllocationGranularity);
+
+    return VirtualAlloc(0, size, MEM_RESERVE, PAGE_READWRITE);
+}
+
 void* platform_allocate(u64 size, bool aligned)
 {
-    return VirtualAlloc(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    return VirtualAlloc(0, size, MEM_COMMIT, PAGE_READWRITE);
     // return malloc(size);
 }
 

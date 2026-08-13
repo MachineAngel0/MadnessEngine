@@ -141,14 +141,15 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
 
     }
 
-    if (input_key_released_unique(input_system, KEY_Q))
+
+    /*if (input_key_released_unique(input_system, KEY_Q))
     {
         camera_change_fov(cam, -10.0f);
     }
     if (input_key_released_unique(input_system, KEY_E))
     {
         camera_change_fov(cam, 10.0f);
-    }
+    }*/
 }
 
 mat4s camera_get_view_matrix(camera* cam)

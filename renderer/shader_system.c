@@ -86,7 +86,7 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
         Texture_Handle* handle;
         hash_table_get(system->texture_file_to_handle, filepath, &handle);
         return *handle;
-    };
+    }
 
 
     //get an available index

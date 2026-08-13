@@ -20,10 +20,12 @@ Asset_System* asset_system_init(Memory_System* memory_system, Renderer* renderer
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
 
+
+
     //Asset Registry
     asset_system->asset_registry = memory_system_alloc(memory_system, sizeof(Asset_Registry),
                                                        MEMORY_SUBSYSTEM_RESOURCE);
-    asset_registry_init(asset_system->asset_registry, asset_system->heap_allocator, memory_system);
+    asset_registry_init(asset_system, asset_system->asset_registry, asset_system->heap_allocator, memory_system);
 
 
     //Texture
@@ -43,6 +45,7 @@ Asset_System* asset_system_init(Memory_System* memory_system, Renderer* renderer
     asset_system->particle_system = particle_system_init(asset_system, memory_system);
 
     asset_system->animation_system = animation_init(memory_system);
+
 
 
     return asset_system;

@@ -1,8 +1,8 @@
 ﻿#include "asset_registry.h"
 
 
-
-bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocator, Memory_System* memory_system)
+bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_registry, Heap_Allocator* allocator,
+                         Memory_System* memory_system)
 {
     FILE* fptr = fopen(ASSET_REGISTRY_BIN_PATH, "rb");
 
@@ -60,8 +60,96 @@ bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocat
     }
 
 
+    if (app_is_debug_build())
+    {
+        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                           memory_system, ASSET_TEXTURE);
+        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                           memory_system, ASSET_FONT);
+    }
+
     return true;
 }
+
+bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
+                                        Memory_System* memory_system, Asset_Type asset_type)
+{
+    //loop throught all files in the import path, and check to see if any new assets have been added
+
+    const char* asset_path;
+    switch (asset_type)
+    {
+    case ASSET_TEXTURE:
+        asset_path = IMPORT_TEXTURE_PATH;
+        break;
+    case ASSET_FONT:
+        asset_path = IMPORT_FONTS_PATH;
+        break;
+    case ASSET_SPRITE:
+        break;
+    case ASSET_STATIC_MESH:
+        break;
+    case ASSET_SKINNED_MESH:
+        break;
+    case ASSET_AUDIO:
+        break;
+    case ASSET_MATERIAL:
+        break;
+    case ASSET_MATERIAL_INSTANCE:
+        break;
+    case ASSET_SCENE:
+        break;
+    case ASSET_TYPE_MAX:
+        break;
+    }
+
+
+    Asset_List_Scan* list_scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, asset_path);
+    for (u32 i = 0; i < list_scan->count; i++)
+    {
+        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+        const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], asset_system->frame_allocator);
+
+        switch (asset_type)
+        {
+        case ASSET_TEXTURE:
+            if (!asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
+            {
+                //create the asset
+                MADNESS_UUID uuid;
+                asset_converter_texture(asset_system, file_path, &uuid);
+            }
+            break;
+        case ASSET_FONT:
+            if (!asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
+            {
+                //create the asset
+                asset_converter_msdf_font(asset_system, file_path);
+            }
+            break;
+        case ASSET_SPRITE:
+            break;
+        case ASSET_STATIC_MESH:
+            break;
+        case ASSET_SKINNED_MESH:
+            break;
+        case ASSET_AUDIO:
+            break;
+        case ASSET_MATERIAL:
+            break;
+        case ASSET_MATERIAL_INSTANCE:
+            break;
+        case ASSET_SCENE:
+            break;
+        case ASSET_TYPE_MAX:
+            break;
+        }
+
+
+        scratch_allocator_end(scratch);
+    }
+}
+
 
 void asset_registry_shutdown(Asset_Registry* asset_registry)
 {
@@ -175,7 +263,10 @@ bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String
         if (string_compare(meta_data->source_file, source_path))
         {
             //found
-            *out_meta_data = *meta_data;
+            if (out_meta_data)
+            {
+                *out_meta_data = *meta_data;
+            }
             return true;
         }
     }

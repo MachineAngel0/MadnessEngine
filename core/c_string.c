@@ -210,6 +210,7 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 }
 
 
+
 // Case-sensitive string comparison. True if the same, otherwise false.
 bool c_strings_equal(const char* str0, const char* str1)
 {

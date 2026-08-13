@@ -36,8 +36,6 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     editor_generate_asset_lists(editor, memory_system);
 
 
-
-
     return editor;
 }
 
@@ -45,6 +43,22 @@ bool editor_update(Editor* editor)
 {
     //do the ui and stuff
     //manage a bunch of ui state
+    if (input_key_released_unique(editor->renderer->input_system, KEY_E))
+    {
+        editor->state = (editor->state + 1) % EDITOR_UI_STATE_MAX;
+    }
+
+    if (input_key_released_unique(editor->renderer->input_system, KEY_Q))
+    {
+        if (editor->state == 0)
+        {
+            editor->state = EDITOR_UI_STATE_MAX;
+        }
+        else
+        {
+            editor->state = (editor->state - 1);
+        }
+    }
 
     editor_ui(editor);
 
@@ -58,8 +72,6 @@ bool editor_shutdown(Editor* editor)
 
 bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
 {
-
-
     //meshes
     editor->texture_list =
         asset_lists_generate(memory_system,
@@ -69,22 +81,21 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
     //meshes
     editor->madness_mesh_list =
         asset_lists_generate(memory_system,
-                         MAX_ASSETS_STRINGS,
-                         "../z_assets_engine/mesh");
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/mesh");
 
 
     //skeletal meshes
     editor->madness_skmesh_list =
         asset_lists_generate(memory_system,
-                         MAX_ASSETS_STRINGS,
-                         "../z_assets_engine/skinned_mesh");
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/skinned_mesh");
 
     //scenes
     editor->scene_list =
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
                              "../z_assets_engine/scene");
-
 
 
     madness_ui_add_asset_list(editor->texture_list, ASSET_TEXTURE);
@@ -97,17 +108,11 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
 }
 
 
-
 static float thick = 1.0f;
 
 
 void editor_ui(Editor* editor)
 {
-    if (input_key_released_unique(editor->renderer->input_system, KEY_Q))
-    {
-        editor->state = (editor->state + 1) % EDITOR_UI_STATE_MAX;
-    }
-
     switch (editor->state)
     {
     case EDITOR_UI_STATE_MAX:
@@ -440,8 +445,8 @@ void editor_ui_scene(Editor* editor)
         String mesh_path2 = STRING("Mesh Path2");
         Path_String path_string;
         madness_ui_combo_box_string(mesh_path2, &path_string,
-                            editor->madness_mesh_list->strings,
-                            editor->madness_mesh_list->count);
+                                    editor->madness_mesh_list->strings,
+                                    editor->madness_mesh_list->count);
 
         String scene_name2 = STRING("SCENE LOAD2");
         if (madness_ui_button(STRING("LOAD MESH ASSET2")))
@@ -449,7 +454,6 @@ void editor_ui_scene(Editor* editor)
             asset_load_mesh_path(editor->asset_system,
                                  string_to_c_string(&path_string));
         }
-
     }
     madness_ui_window_end();
 }

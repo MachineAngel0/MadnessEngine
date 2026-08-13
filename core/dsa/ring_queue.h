@@ -19,7 +19,6 @@ typedef struct ring_queue
     // total size of our queue, used to keep track of the memory size
     u32 capacity;
 
-    bool is_ptr_type;
 
 } ring_queue;
 

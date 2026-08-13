@@ -1,7 +1,6 @@
 ﻿#ifndef ASSET_REGISTRY_H
 #define ASSET_REGISTRY_H
 
-#include "asserts.h"
 #include "resource_types.h"
 
 //AR = madness asset registry
@@ -17,11 +16,14 @@ typedef struct Asset_Registry_Header
 } Asset_Registry_Header;
 
 
-bool asset_registry_init(Asset_Registry* asset_registry, Heap_Allocator* allocator, Memory_System* memory_system);
+bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_registry, Heap_Allocator* allocator, Memory_System* memory_system);
 
 void asset_registry_shutdown(Asset_Registry* asset_registry);
 
+bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
+                                        Memory_System* memory_system, Asset_Type asset_type);
 
+//
 void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaData* asset_meta_data);
 
 void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source_path,

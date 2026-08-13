@@ -10,8 +10,8 @@ static Job_System* job_system;
 u32 job_thread_run(void* data)
 {
     u32 thread_index = *(u32*)data;
-    Job_Thread job_thread = job_system->job_threads[thread_index];
-    Madness_Thread thread = job_system->job_threads[thread_index].thread;
+    Job_Thread* job_thread = &job_system->job_threads[thread_index];
+    // Madness_Thread thread = job_system->job_threads[thread_index].thread;
     u64 thread_id = thread_get_id();
     // thread.thread_id;
 
@@ -23,24 +23,31 @@ u32 job_thread_run(void* data)
 
     while (true)
     {
-        if (!job_system || !job_system->running || !thread.data)
+        if (!job_system || !job_system->running || !job_thread)
         {
             break;
         }
 
         Job_Info job_task = {0};
-        if (!mutex_lock(&job_system->mutex))
+
+        //wait until a job is available
+        if (!semaphore_wait(&job_system->ring_semaphore, INFINITE))
+        {
+            M_ERROR("Failed waiting on job semaphore");
+            break;
+        }
+
+        if (!mutex_lock(&job_system->ring_mutex))
         {
             INFO("FAILED TO OBTAIN LOCK ON MUTEX ON JOB THREAD");
         }
-        if (!ring_queue_is_empty(job_system->work_queue))
+
+        ring_dequeue(job_system->work_queue, &job_task);
+        if (!mutex_unlock(&job_system->ring_mutex))
         {
-            ring_dequeue(job_system->work_queue, &job_task);
+            INFO("FAILED TO RELEASE MUTEX ON JOB THREAD");
         }
-        if (mutex_unlock(&job_system->mutex))
-        {
-            // INFO("FAILED TO RELEASE MUTEX ON JOB THREAD");
-        }
+
 
         if (job_task.job_start)
         {
@@ -51,7 +58,8 @@ u32 job_thread_run(void* data)
                 job_counter_decrement(job_task.job_counter);
             }
 
-            allocator_malloc_free(job_task.param_data);
+            //TODO: replace, also not thread safe if we use our own allocator
+            free(job_task.param_data);
         }
     }
     return true;
@@ -70,10 +78,17 @@ bool job_system_init(Memory_System* memory_system)
     job_system->running = true;
 
 
-    if (!mutex_create(&job_system->mutex))
+    if (!mutex_create(&job_system->ring_mutex))
     {
         FATAL("OS ERROR CANNOT CREATE MUTEX");
+        MASSERT_FALSE()
     }
+    if (!semaphore_create(&job_system->ring_semaphore, 1024, 0))
+    {
+        FATAL("OS ERROR CANNOT CREATE SEMAPHORE");
+        MASSERT_FALSE()
+    }
+
 
     //large amount can lower it later
     job_system->work_queue = ring_queue_create(sizeof(Job_Info), 1024);
@@ -115,7 +130,10 @@ void job_system_deinit(Memory_System* memory_system)
 
 void job_system_submit(Job_Info* job_info)
 {
+    mutex_lock(&job_system->ring_mutex);
     ring_enqueue(job_system->work_queue, job_info);
+    mutex_unlock(&job_system->ring_mutex);
+    semaphore_signal(&job_system->ring_semaphore);
 }
 
 Job_Info job_create(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success, fptr_job_complete on_fail,
@@ -137,9 +155,9 @@ Job_Info job_create(Job_Type type, fptr_job_start entry_point, fptr_job_complete
     return job;
 }
 
-Job_Info job_create_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success,
-                            fptr_job_complete on_fail, void* job_param_data, u32 job_param_data_size,
-                            Job_Counter* counter)
+Job_Info job_create_with_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success,
+                                 fptr_job_complete on_fail, void* job_param_data, u32 job_param_data_size,
+                                 Job_Counter* counter)
 {
     Job_Info job;
     job.job_start = entry_point;
@@ -148,7 +166,10 @@ Job_Info job_create_counter(Job_Type type, fptr_job_start entry_point, fptr_job_
     job.job_type = type;
 
 
-    job.param_data = allocator_malloc(job_param_data_size); //TODO: free and replace with an allocator
+    //TODO: replace, also not thread safe if we use our own allocator
+    job.param_data = malloc(job_param_data_size); //TODO: free and replace with an allocator
+
+
     memcpy(job.param_data, job_param_data, job_param_data_size);
     job.param_data_size = job_param_data_size;
     job.job_counter = counter;
@@ -185,7 +206,42 @@ void job_system_wait_free(Job_Counter* job_counter)
     while (atomic_u32_load(&job_counter->atomic_jobs_remaining) != 0)
     {
         //TODO: have the main thread do some work
-        INFO("JOB SYSTEM WAIT FREE: WAITING FOR WORK TO FINISH")
+        // INFO("JOB SYSTEM WAIT FREE: WAITING FOR WORK TO FINISH")
+        INFO("JOB SYSTEM WAIT FREE: MAIN THREADING GOING TO WORK")
+
+        Job_Info job_task = {0};
+
+        //we use a zero here because it is opertunisitc, it's not necessarily going to do many jobs
+        if (!semaphore_wait(&job_system->ring_semaphore, 0))
+        {
+            INFO("JOB SYSTEM WAIT FREE: Failed waiting on job semaphore");
+            continue;
+        }
+
+        if (!mutex_lock(&job_system->ring_mutex))
+        {
+            INFO("FAILED TO OBTAIN LOCK ON MUTEX ON JOB THREAD");
+        }
+
+        ring_dequeue(job_system->work_queue, &job_task);
+        if (!mutex_unlock(&job_system->ring_mutex))
+        {
+            INFO("FAILED TO RELEASE MUTEX ON JOB THREAD");
+        }
+
+
+        if (job_task.job_start)
+        {
+            bool result = job_task.job_start(job_task.param_data);
+
+            if (job_task.job_counter)
+            {
+                job_counter_decrement(job_task.job_counter);
+            }
+
+            //TODO: replace, also not thread safe if we use our own allocator
+            free(job_task.param_data);
+        }
     }
 
 
@@ -198,7 +254,17 @@ bool job_system_test_start(void* params)
 {
     Job_Test_Param* job_params = (Job_Test_Param*)params;
 
-    DEBUG("Test Job: %d, %d, Loop Index: %d", job_params->is_successful, job_params->val, job_params->loop_index);
+    TRACE("Test Job: %d, %d, Loop Index: %d", job_params->is_successful, job_params->val, job_params->loop_index);
+
+    /*
+     * //simiulates fake expensive work
+    volatile u64 x = 0;
+
+    for (u64 i = 0; i < 10000000; ++i)
+    {
+        x += i;
+    }*/
+
 
     return true;
 }
@@ -211,12 +277,13 @@ void job_system_test()
         Job_Test_Param job1 = {.is_successful = false, .val = rand_range_i(0, 100), .loop_index = i};
         Job_Test_Param job2 = {.is_successful = true, .val = rand_range_i(0, 100), .loop_index = i};
 
-        Job_Info job_info1 = job_create_counter(JOB_TYPE_GENERAL, job_system_test_start,
-                                                NULL, NULL,
-                                                &job1, sizeof(Job_Test_Param), job_counter);
-        Job_Info job_info2 = job_create_counter(JOB_TYPE_GENERAL, job_system_test_start,
-                                                NULL, NULL,
-                                                &job2, sizeof(Job_Test_Param), job_counter);
+        Job_Info job_info1 = job_create_with_counter(JOB_TYPE_GENERAL, job_system_test_start,
+                                                     NULL, NULL,
+                                                     &job1, sizeof(Job_Test_Param), job_counter);
+        Job_Info job_info2 = job_create_with_counter(JOB_TYPE_GENERAL, job_system_test_start,
+                                                     NULL, NULL,
+                                                     &job2, sizeof(Job_Test_Param), job_counter);
+
 
         job_system_submit(&job_info1);
         job_system_submit(&job_info2);

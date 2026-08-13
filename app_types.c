@@ -3,6 +3,7 @@
 #include "platform.h"
 
 
+
 bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin)
 {
     renderer_plugin->renderer_dll_handle = platform_load_dynamic_library("./MADNESSRENDERER");
@@ -45,8 +46,5 @@ bool renderer_plugin_set_default_fpn(Renderer_Plugin* renderer_plugin)
     }
 
 
-
     return true;
 }
-
-
