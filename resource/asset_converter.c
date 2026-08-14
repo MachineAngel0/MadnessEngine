@@ -492,37 +492,37 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     MASSERT(result == cgltf_result_success)
 
 
-    Madness_Mesh* madness_mesh = allocator_alloc(asset_system->frame_allocator,
+    Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
                                                  sizeof(Madness_Mesh));
 
     madness_mesh->mesh_count = data->meshes_count;
-    madness_mesh->mesh_data = allocator_alloc(asset_system->frame_allocator,
+    madness_mesh->mesh_data = allocator_alloc(scratch.allocator,
                                               sizeof(Madness_SubMesh) * data->meshes_count);
 
-    Madness_Mesh_GPU_Data* gpu_data = allocator_alloc(asset_system->frame_allocator,
+    Madness_Mesh_GPU_Data* gpu_data = allocator_alloc(scratch.allocator,
                                                       sizeof(Madness_Mesh_GPU_Data) * data->meshes_count);
-    Material_Instance* material_instances = allocator_alloc(asset_system->frame_allocator,
+    Material_Instance* material_instances = allocator_alloc(scratch.allocator,
                                                             sizeof(Material_Instance) * data->meshes_count);
 
     //check if we are loading a skinned or normal mesh
-    Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(asset_system->frame_allocator,
+    Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(scratch.allocator,
                                                             sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
-    Madness_SkMesh_GPU_Data* skinned_gpu_data = allocator_alloc(asset_system->frame_allocator,
+    Madness_SkMesh_GPU_Data* skinned_gpu_data = allocator_alloc(scratch.allocator,
                                                                 sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
-    GLTF_Animation_Data* animation_data = allocator_alloc(asset_system->frame_allocator,
+    GLTF_Animation_Data* animation_data = allocator_alloc(scratch.allocator,
                                                           sizeof(GLTF_Animation_Data));
     if (data->skins_count > 0)
     {
-        skinned_mesh = allocator_alloc(asset_system->frame_allocator,
+        skinned_mesh = allocator_alloc(scratch.allocator,
                                        sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
-        skinned_gpu_data = allocator_alloc(asset_system->frame_allocator,
+        skinned_gpu_data = allocator_alloc(scratch.allocator,
                                            sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
-        animation_data = allocator_alloc(asset_system->frame_allocator,
+        animation_data = allocator_alloc(scratch.allocator,
                                          sizeof(GLTF_Animation_Data));
     }
 
 
-    Material_Default* default_mats = allocator_alloc(asset_system->frame_allocator,
+    Material_Default* default_mats = allocator_alloc(scratch.allocator,
                                                      sizeof(Material_Default) * data->meshes_count);
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
@@ -638,7 +638,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         }
         else if (index_stride == 4)
         {
-            submesh->index_type = INDEX_TYPE_U16;
+            submesh->index_type = INDEX_TYPE_U32;
         }
         else
         {
@@ -652,11 +652,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                                                submesh->indices_bytes);
         submesh->index_count = submesh->indices_bytes / index_stride;
 
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices, submesh_gpu->indices, sizeof(u16), submesh->index_count);
 
-        const uint8_t* index_buffer_data = cgltf_buffer_view_data(
-            data->meshes[mesh_idx].primitives->indices->buffer_view);
-        memcpy(submesh_gpu->indices, index_buffer_data,
-               submesh->indices_bytes);
 
 
         //LOAD TEXTURES/MATERIALS
@@ -1336,23 +1333,3 @@ bool asset_converter_material_instance_from_material_info(Asset_System* asset_sy
     return true;
 }
 
-bool asset_converter_reload_textures(Asset_System* asset_system, Memory_System* memory_system)
-{
-    Asset_List_Scan* scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS,
-                                                 IMPORT_TEXTURE_PATH);
-
-    for (u32 i = 0; i < scan->count; i++)
-    {
-        Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
-
-        MADNESS_UUID uuid = {0};
-        asset_converter_texture(asset_system,
-                                string_to_c_string_allocator(&scan->strings[i], scratch_allocator.allocator), &uuid);
-
-        scratch_allocator_end(scratch_allocator);
-    }
-
-
-    asset_lists_free(scan, memory_system);
-    return true;
-}

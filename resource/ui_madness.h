@@ -21,6 +21,7 @@
 #define EDITOR_TEXT_OUTLINE 0.5f
 
 #define MADNESS_UI_SAVE_FILE_PATH "../z_assets_engine/ui/madness_ui_window_data.bin"
+#define MADNESS_UI_SAVE_FILE_PATH_TEMP "../z_assets_engine/ui/madness_ui_window_data_temp.bin"
 
 #define MAX_MADNESS_UI_STRING_BUILDERS 100
 #define MAX_MADNESS_UI_WINDOWS 100

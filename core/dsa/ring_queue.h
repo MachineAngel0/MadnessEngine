@@ -5,7 +5,6 @@
 //circular queue / array based queue
 typedef struct ring_queue
 {
-    // an array of void*
     void* data;
 
     //you can also think of these as the head and tail
@@ -26,8 +25,6 @@ typedef struct ring_queue
 
 
 ring_queue* ring_queue_create(u32 data_size, u32 capacity);
-void ring_queue_destroy(ring_queue* queue);
-
 void ring_queue_free(ring_queue* queue);
 
 void ring_queue_clear(ring_queue* queue);
@@ -49,6 +46,8 @@ bool ring_queue_peek(const ring_queue* q, void* out_data);
 
 //
 void ring_queue_empty(ring_queue* q);
+u32 ring_queue_size(ring_queue* queue);
+
 
 void ring_queue_print(ring_queue* queue, void (*print_func)(void*));
 

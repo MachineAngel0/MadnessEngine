@@ -116,6 +116,7 @@ typedef struct Madness_Asset
     u64 reference_count;
     Asset_Type type;
     String* engine_path; // should just be a reference, mainly for debugging
+
 } Madness_Asset;
 
 //Renderpass || translucency || Blend || Mesh Type
@@ -132,11 +133,20 @@ typedef struct Madness_Mesh_Handle
     u32 handle;
 } Madness_Mesh_Handle;
 
+typedef struct Madness_Mesh_Handle_Internal
+{
+    u32 handle;
+} Madness_Mesh_Handle_Internal;
+
 typedef struct Madness_SkMesh_Handle
 {
     u32 handle;
 } Madness_SkMesh_Handle;
 
+typedef struct Madness_SkMesh_Handle_Internal
+{
+    u32 handle;
+} Madness_SkMesh_Handle_Internal;
 
 /*//used by the game/editor to modify meshes
 typedef struct Mesh_Handle
@@ -563,7 +573,7 @@ typedef struct Madness_Skinned_Mesh_Instance
     u32 mesh_count;
     Madness_Skinned_Submesh_Instance* submesh_instances;
 
-    Madness_SkMesh_Handle skinned_mesh_asset;
+    Madness_SkMesh_Handle_Internal skinned_mesh_asset;
     Transform_Handle transform_handle;
 
     Animation_Handle animation_handle;
@@ -583,7 +593,7 @@ typedef struct Madness_Mesh_Instance
 {
     //this generally is only for changing materials and transforms, and not for the renderer
     u32 mesh_count;
-    Madness_Mesh_Handle mesh_asset;
+    Madness_Mesh_Handle_Internal mesh_asset;
     Transform_Handle transform_handle;
     Madness_SubMesh_Instance* submesh_instances;
 } Madness_Mesh_Instance;
@@ -635,6 +645,11 @@ typedef struct Madness_Mesh
     Madness_SubMesh* mesh_data;
     Material_Instance* material_instance;
     Material_Handle* material_handles;
+
+    u64 path_hash;
+    String* engine_path;
+    u32 generation;
+    u32 reference_count;
 } Madness_Mesh;
 
 
@@ -807,10 +822,10 @@ typedef struct Mesh_System
 
 
     Madness_Mesh madness_mesh[MAX_MESH_COUNT];
-    u32 mesh_asset_count;
+    u32 madness_mesh_count;
 
     Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
-    u32 sk_mesh_asset_count;
+    u32 madness_sk_mesh_count;
 
     Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
     u32 mesh_instance_count;
@@ -842,8 +857,7 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(const char*)* load_queue;
 
 
-    Madness_Asset madness_asset[100];
-    u32 madness_asset_count;
+
 
     Madness_Asset skinned_madness_asset[100];
     u32 skinned_madness_asset_count;

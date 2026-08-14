@@ -432,6 +432,10 @@ typedef struct vulkan_context
     VkAllocationCallbacks* allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
 
+    // debug labels
+    PFN_vkCmdBeginDebugUtilsLabelEXT debug_label_start;
+    PFN_vkCmdEndDebugUtilsLabelEXT debug_label_end;
+
     //Surface
     VkSurfaceKHR surface;
     // The framebuffer's current width and height.
@@ -570,7 +574,7 @@ typedef struct global_ubo
 
     //camera
     vec4s camera_position;
-    vec2s screem_dimensions;
+    vec2s screen_dimensions;
 
     f32 padding;
 

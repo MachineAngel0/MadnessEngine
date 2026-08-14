@@ -16,11 +16,6 @@ ring_queue* ring_queue_create(u32 data_size, u32 capacity)
     return queue;
 }
 
-void ring_queue_destroy(ring_queue* queue)
-{
-    free(queue->data);
-    free(queue);
-}
 
 void ring_queue_free(ring_queue* queue)
 {
@@ -125,7 +120,7 @@ void ring_queue_empty(ring_queue* q)
     q->back = -1;
 }
 
-int ring_queue_size(ring_queue* queue)
+u32 ring_queue_size(ring_queue* queue)
 {
     MASSERT(queue);
     return queue->num_items;

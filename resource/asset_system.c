@@ -402,9 +402,8 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
     }
 
     //has asset already been loaded
-    if (mesh_system_exists_mesh(asset_system, &mesh_handle, out_meta_data->hash))
+    if (mesh_system_exists_mesh(asset_system, &mesh_handle, out_meta_data->hash, out_meta_data->uuid))
     {
-        //TODO: in theory we want to be creating another model
         return mesh_handle;
     }
 
@@ -423,7 +422,7 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
         asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
 
         mesh_system_load_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
-                              out_meta_data->uuid);
+                              out_meta_data->uuid, &mesh_handle);
     }
     else
     {

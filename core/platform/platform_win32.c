@@ -413,7 +413,7 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name)
     const char* temp_dll_name = c_string_concat(intermediate_temp_name, dll_extension_name, NULL);
 
 
-    if (!CopyFile(final_file_name, temp_dll_name, 0))
+    if (!CopyFileA(final_file_name, temp_dll_name, 0))
     {
         DWORD code = GetLastError();
         WARN("FAILED TO COPY DLL from %s to %s. Error: %d", final_file_name, temp_dll_name, GetLastError());
@@ -511,11 +511,6 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
     return GetProcAddress(file_handle.dll_handle, function_name);
 }
 
-bool platform_file_copy(const char* source_file, char* new_file)
-{
-    CopyFile(source_file, new_file, 0);
-    return true;
-}
 
 
 bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
@@ -543,6 +538,18 @@ bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 }
 
 
+bool platform_file_copy(const char* destination_file, char* source_file)
+{
+
+    if (!CopyFileA(source_file, destination_file, 0))
+    {
+        M_ERROR("platform_file_copy WIN32: copy failed reason code: %d", GetLastError());
+        return false;
+    }
+
+    return true;
+
+}
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {

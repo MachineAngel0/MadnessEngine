@@ -58,8 +58,8 @@ void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_bu
                                       VkSemaphoreSubmitInfo* signal_semaphore);
 
 //TODO: rn will break compile, have to load in the funciton pointers
-void vulkan_command_buffer_begin_debug_label(vulkan_command_buffer* command_buffer, const char* name);
-void vulkan_command_buffer_end_debug_label(vulkan_command_buffer* command_buffer);
+void vulkan_command_buffer_begin_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer, const char* name);
+void vulkan_command_buffer_end_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer);
 
 
 //TODO: refactor

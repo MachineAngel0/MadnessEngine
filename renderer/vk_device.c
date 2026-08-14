@@ -72,18 +72,20 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     platform_get_vulkan_extension_names(&extensions_names_array);
     darray_push(extensions_names_array, &VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-#ifdef DEBUG_BUILD
-    darray_push(extensions_names_array, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-    DEBUG("Required extensions:");
-
-    u32 length = darray_get_size(extensions_names_array);
-
-    for (u32 i = 0; i < length; ++i)
+    if (app_is_debug_build())
     {
-        DEBUG(extensions_names_array[i]);
+        //add debug utils
+        darray_push(extensions_names_array, &VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+        DEBUG("Required extensions:");
+
+        u32 length = darray_get_size(extensions_names_array);
+
+        for (u32 i = 0; i < length; ++i)
+        {
+            DEBUG(extensions_names_array[i]);
+        }
     }
-#endif
 
     //Validation layer extensions
     const char** validation_layers_names = 0;
@@ -93,54 +95,54 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     VkValidationFeaturesEXT validation_features_info = {0};
     bool validation_ext_enabled = false;
 
-#ifdef DEBUG_BUILD
-    INFO("Validation layers enabled. Enumerating...");
-
-
-    validation_layers_names = darray_create(const char*);
-    darray_push(validation_layers_names, &"VK_LAYER_KHRONOS_validation");
-    validation_layers_count = darray_get_size(validation_layers_names);
-
-    u32 available_layers_count = 0;
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, NULL));
-    VkLayerProperties* available_layers = darray_create_reserve(VkLayerProperties, available_layers_count);
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers));
-
-    for (u64 i = 0; i < validation_layers_count; i++)
+    if (app_is_debug_build())
     {
-        INFO("Searching for layer: %s...", validation_layers_names[i]);
-        bool layerFound = false;
+        INFO("Validation layers enabled. Enumerating...");
 
-        for (u32 j = 0; j < available_layers_count; j++)
+
+        validation_layers_names = darray_create(const char*);
+        darray_push(validation_layers_names, &"VK_LAYER_KHRONOS_validation");
+        validation_layers_count = darray_get_size(validation_layers_names);
+
+        u32 available_layers_count = 0;
+        VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, NULL));
+        VkLayerProperties* available_layers = darray_create_reserve(VkLayerProperties, available_layers_count);
+        VK_CHECK(vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers));
+
+        for (u64 i = 0; i < validation_layers_count; i++)
         {
-            if (strcmp(validation_layers_names[i], available_layers[j].layerName) == 0)
-            {
-                layerFound = true;
-                INFO("FOUND.");
+            INFO("Searching for layer: %s...", validation_layers_names[i]);
+            bool layerFound = false;
 
-                break;
+            for (u32 j = 0; j < available_layers_count; j++)
+            {
+                if (strcmp(validation_layers_names[i], available_layers[j].layerName) == 0)
+                {
+                    layerFound = true;
+                    INFO("FOUND.");
+
+                    break;
+                }
+            }
+
+            if (!layerFound)
+            {
+                FATAL("Required validaton layer is missing: %s", validation_layers_names[i]);
+                return false;
             }
         }
+        INFO("All required validation layers are present.");
 
-        if (!layerFound)
-        {
-            FATAL("Required validaton layer is missing: %s", validation_layers_names[i]);
-            return false;
-        }
+        VkValidationFeatureEnableEXT enable_features[2] = {
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+        };
+
+        validation_features_info.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        validation_features_info.enabledValidationFeatureCount = 2;
+        validation_features_info.pEnabledValidationFeatures = enable_features;
+        validation_ext_enabled = true;
     }
-    INFO("All required validation layers are present.");
-
-    VkValidationFeatureEnableEXT enable_features[2] = {
-        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
-        VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-    };
-
-    validation_features_info.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-    validation_features_info.enabledValidationFeatureCount = 2;
-    validation_features_info.pEnabledValidationFeatures = enable_features;
-    validation_ext_enabled = true;
-
-#endif
 
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -153,11 +155,12 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     create_info.pNext = 0;
 
     //TODO: enable if you want extra info, its very slow
+    /*
     if (validation_ext_enabled)
     {
-        create_info.pNext = &validation_features_info;
+        create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
     }
-    create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
+    */
 
     /*
         VkResult vkCreateInstance(
@@ -168,33 +171,33 @@ bool vulkan_instance_create(vulkan_context* vulkan_context)
     VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
 
     //create the debugger
-#ifdef DEBUG_BUILD
-
-    DEBUG("VULKAN INSTANCE CREATED");
-
-    u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
-    debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_create_info.messageSeverity = log_severity;
-    debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debug_create_info.pfnUserCallback = vk_debug_callback;
-    debug_create_info.pUserData = 0;
-
-    //loading the function pointer
-    PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        vulkan_context->instance, "vkCreateDebugUtilsMessengerEXT");
-    MASSERT_MSG(func, "Failed to create debug messenger!");
+    if (app_is_debug_build())
     {
-        //SAME THING: func == vkCreateDebugUtilsMessengerEXT
-        VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
+        DEBUG("VULKAN INSTANCE CREATED");
+
+        u32 log_severity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+        VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
+        debug_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debug_create_info.messageSeverity = log_severity;
+        debug_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        debug_create_info.pfnUserCallback = vk_debug_callback;
+        debug_create_info.pUserData = 0;
+
+        //loading the function pointer
+        PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+            vulkan_context->instance, "vkCreateDebugUtilsMessengerEXT");
+        MASSERT_MSG(func, "Failed to create debug messenger!");
+        {
+            //SAME THING: func == vkCreateDebugUtilsMessengerEXT
+            VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
+        }
+        DEBUG("VULKAN DEBUGGER CREATED");
     }
-    DEBUG("VULKAN DEBUGGER CREATED");
-#endif
 
 
     return true;
@@ -444,6 +447,18 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
 
     INFO("Logical device created.");
 
+    // some debug info
+    if (app_is_debug_build())
+    {
+        vulkan_context->debug_label_start = (PFN_vkCmdBeginDebugUtilsLabelEXT)
+            vkGetDeviceProcAddr(
+                vulkan_context->device.logical_device, "vkCmdBeginDebugUtilsLabelEXT");
+        vulkan_context->debug_label_end = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(
+            vulkan_context->device.logical_device, "vkCmdEndDebugUtilsLabelEXT");
+
+        MASSERT(vulkan_context->debug_label_start);
+        MASSERT(vulkan_context->debug_label_end);
+    }
     // Get queues.
     vkGetDeviceQueue(
         vulkan_context->device.logical_device,

@@ -325,7 +325,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer, renderer->light_system->spot_light_storage_buffer_handle);
     ubo.spot_lights_count = renderer->light_system->spot_light_count;
     ubo.camera_position = camera_get_world_position(&renderer->main_camera);
-    ubo.screem_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
+    ubo.screen_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
     ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;
 
@@ -390,6 +390,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     };
 
     //Depth Prepass//
+    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Depth Prepass");
 
     image_insert_memory_barrier(graphics_command_buffer->handle,
                                 vk_context->swapchain.depth_attachment.texture_image,
@@ -426,9 +427,14 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pColorAttachments = NULL,
         .pDepthAttachment = &predepth_attachment,
     };
+
     vkCmdBeginRendering(graphics_command_buffer->handle, &predepth_rendering_info);
     vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &default_viewport);
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
+
+
+
+
 
     //draw geometry into depth buffer
     mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
@@ -442,6 +448,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                              graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
 
     vkCmdEndRendering(graphics_command_buffer->handle);
+    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
 
     //transition to be read by the later stages
     image_insert_memory_barrier(

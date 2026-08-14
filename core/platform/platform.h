@@ -97,7 +97,6 @@ DLL_HANDLE platform_load_dynamic_library(const char* file_name);
 bool platform_unload_dynamic_library(DLL_HANDLE handle);
 bool platform_load_dynamic_library_from_handle(DLL_HANDLE handle, const char* file_name);
 bool platform_reload_dynamic_library(DLL_HANDLE handle);
-bool platform_file_copy(const char* source_file, char* new_file);
 
 //has to get cast into the function pointer
 void* platform_get_function_address(DLL_HANDLE handle, const char* function_name);
@@ -129,6 +128,8 @@ bool platform_file_write(Madness_File_Platform* file);
 //FILE SYSTEM - ASYNC
 bool platform_file_read_async();
 bool platform_file_write_async();
+
+bool platform_file_copy(const char* source_file, char* destination_file);
 
 
 

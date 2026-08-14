@@ -131,11 +131,18 @@ bool madness_ui_shutdown(void)
 }
 
 
+static u32 madness_ui_frame_count_for_serialization;
+
 void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 {
     // if (input_was_key_released(madness_ui->input_system_reference, KEY_LCONTROL) && input_was_key_released(madness_ui->input_system_reference, KEY_S))
     // {
-    madness_ui_serialize_windows();
+
+    if (madness_ui_frame_count_for_serialization++ >= 60)
+    {
+        madness_ui_serialize_windows();
+        madness_ui_frame_count_for_serialization = 0;
+    }
     // }
 
     //clear draw info and reset the hot id
@@ -3756,7 +3763,7 @@ bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* pos4)
 
 void madness_ui_serialize_windows()
 {
-    FILE* file = fopen(MADNESS_UI_SAVE_FILE_PATH, "wb");
+    FILE* file = fopen(MADNESS_UI_SAVE_FILE_PATH_TEMP, "wb");
     if (!file)
     {
         WARN("madness_ui_serialize_windows: COULD NOT OPEN FILE");
@@ -3791,6 +3798,9 @@ void madness_ui_serialize_windows()
     }
 
     fclose(file);
+
+    platform_file_copy( MADNESS_UI_SAVE_FILE_PATH, MADNESS_UI_SAVE_FILE_PATH_TEMP);
+
 }
 
 void madness_ui_deserialize_windows()

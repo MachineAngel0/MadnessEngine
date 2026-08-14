@@ -202,7 +202,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                             renderer_plugin->renderer->context.framebuffer_height_new);
                             */
 
-        job_system_test();
+        // job_system_test();
 
 
         madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,

@@ -171,8 +171,8 @@ void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer
 
 
 void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                            VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
-                                            VkSemaphoreSubmitInfo* signal_semaphore)
+                                      VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
+                                      VkSemaphoreSubmitInfo* signal_semaphore)
 {
     VkCommandBufferSubmitInfo command_buffer_submit_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
@@ -215,15 +215,19 @@ void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_bu
     vkDestroyFence(context->device.logical_device, fence, 0);
 }
 
-void vulkan_command_buffer_begin_debug_label(vulkan_command_buffer* command_buffer, const char* name)
+void vulkan_command_buffer_begin_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer,
+                                             const char* name)
 {
-    // VkDebugUtilsLabelEXT debug_label = {.sType =  VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, .pNext = NULL, .pLabelName = name, .color = {1.0,0.0,0.0,1.0}};
-    // vkCmdBeginDebugUtilsLabelEXT(command_buffer->handle, &debug_label);
+    VkDebugUtilsLabelEXT debug_label = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, .pNext = NULL, .pLabelName = name,
+        .color = {1.0, 0.0, 0.0, 1.0}
+    };
+    renderer->context.debug_label_start(command_buffer->handle, &debug_label);
 }
 
-void vulkan_command_buffer_end_debug_label(vulkan_command_buffer* command_buffer)
+void vulkan_command_buffer_end_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer)
 {
-    // vkCmdEndDebugUtilsLabelEXT(command_buffer->handle);
+    renderer->context.debug_label_end(command_buffer->handle);
 }
 
 

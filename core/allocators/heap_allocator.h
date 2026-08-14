@@ -46,7 +46,7 @@ typedef struct Heap_Allocator
 void allocator_heap_init(Heap_Allocator* fl, void* backing_memory,  size_t memory_size);
 
 void* allocator_heap_alloc(Heap_Allocator* fl,  size_t size);
-void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t alignment);
+void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t alignment);
 
 
 void allocator_heap_free(Heap_Allocator* fl, void* ptr);

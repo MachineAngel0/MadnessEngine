@@ -33,10 +33,10 @@ void allocator_heap_init(Heap_Allocator* fl, void* backing_memory, const size_t 
     fl->head->prev = NULL;
 }
 
-void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t alignment)
+void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t alignment)
 {
     //TODO: alignment
-    MASSERT(fl);
+    MASSERT(ha);
     if (size <= 0)
     {
         WARN("allocator_heap_alloc_aligned: size is 0 or less");
@@ -44,7 +44,7 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t align
     }
 
 
-    Heap_Block* current = fl->head;
+    Heap_Block* current = ha->head;
     //check to see if we have enough memory
     while (current)
     {
@@ -72,8 +72,8 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* fl, size_t size, size_t align
     current->block_size = size;
     current->next = new_block;
 
-    fl->head = new_block;
-    fl->used += size + sizeof(Heap_Block);
+    ha->head = new_block;
+    ha->used += size + sizeof(Heap_Block);
 
     /*void* out_data = (void*)((u8*)current + sizeof(Heap_Block));
     memset(out_data,0,current->block_size);*/
