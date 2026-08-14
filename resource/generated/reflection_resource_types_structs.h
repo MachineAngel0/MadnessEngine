@@ -64,6 +64,8 @@ const char* resources_struct_string_list[] = {
 	"Render_Packet_Particle", 
 	"Render_Packet", 
 	"Asset_Registry", 
+	"Asset_System", 
+	"Asset_System", 
 };
 
 void generate_runtime_structs_resources(Reflection_Registry* reflection_registry)
@@ -385,6 +387,18 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Texture, font_index)
 		},
 		{
+			.name = "bindless_slot_external",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Texture, bindless_slot_external)
+		},
+		{
+			.name = "bindless_slot",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Texture, bindless_slot)
+		},
+		{
 			.name = "generation",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
@@ -396,7 +410,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Madness_Texture",
 		.fields = Madness_Texture_Fields,
-		.field_count = 8,
+		.field_count = 10,
 		.struct_size = sizeof(Madness_Texture)
 	};
 
@@ -416,19 +430,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u8",
 			.offset = offsetof(Texture_GPU_Upload, pixel_data)
 		},
-		{
-			.name = "bindless_location",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Texture_GPU_Upload, bindless_location)
-		},
 	};
 
 	 Reflection_Runtime_Struct Texture_GPU_Upload_Runtime_Struct =
 	{
 		.name = "Texture_GPU_Upload",
 		.fields = Texture_GPU_Upload_Fields,
-		.field_count = 3,
+		.field_count = 2,
 		.struct_size = sizeof(Texture_GPU_Upload)
 	};
 
@@ -2307,5 +2315,74 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Asset_Registry_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Asset_System_Fields[] =
+	{
+		{
+			.name = "sprite_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Sprite_System",
+			.offset = offsetof(Asset_System, sprite_system)
+		},
+		{
+			.name = "mesh_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Mesh_System",
+			.offset = offsetof(Asset_System, mesh_system)
+		},
+		{
+			.name = "texture_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Texture_System",
+			.offset = offsetof(Asset_System, texture_system)
+		},
+		{
+			.name = "material_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_System",
+			.offset = offsetof(Asset_System, material_system)
+		},
+		{
+			.name = "scene",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Scene",
+			.offset = offsetof(Asset_System, scene)
+		},
+		{
+			.name = "animation_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Animation_System",
+			.offset = offsetof(Asset_System, animation_system)
+		},
+		{
+			.name = "particle_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_System",
+			.offset = offsetof(Asset_System, particle_system)
+		},
+		{
+			.name = "render_packet",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Render_Packet",
+			.offset = offsetof(Asset_System, render_packet)
+		},
+		{
+			.name = "asset_registry",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Asset_Registry",
+			.offset = offsetof(Asset_System, asset_registry)
+		},
+	};
+
+	 Reflection_Runtime_Struct Asset_System_Runtime_Struct =
+	{
+		.name = "Asset_System",
+		.fields = Asset_System_Fields,
+		.field_count = 9,
+		.struct_size = sizeof(Asset_System)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Asset_System_Runtime_Struct);
+
 
 }

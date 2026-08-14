@@ -517,23 +517,6 @@ bool string_deserialize(String* string, FILE* fptr, Frame_Allocator* allocator)
     return true;
 }
 
-bool string_serialize_fl(String* string, FILE* fptr, Heap_Allocator* allocator)
-{
-    MASSERT(fptr);
-    MASSERT(allocator);
-
-    fread(&string->length, sizeof(string->length), 1, fptr);
-    // Allocate extra space for null terminator
-    string->chars = allocator_heap_alloc(allocator, string->length + 1);
-    fread(string->chars, string->length, 1, fptr);
-    // Null-terminate the string
-    string->chars[string->length] = '\0';
-
-    allocator_heap_free(allocator, string->chars);
-
-
-    return true;
-}
 
 bool string_deserialize_heap(String* string, FILE* fptr, Heap_Allocator* allocator)
 {

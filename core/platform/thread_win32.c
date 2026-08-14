@@ -291,16 +291,15 @@ typedef struct Windows_Atomic_U64
 } Windows_Atomic_U64;
 
 
-
 void atomic_u32_init(Madness_Atomic_U32* atomic, u32 value, Allocator* allocator)
 {
     if (allocator)
     {
         atomic->data = allocator_alloc(allocator, sizeof(Windows_Atomic_U32));
-    }else
+    }
+    else
     {
         atomic->data = malloc(sizeof(Windows_Atomic_U32));
-
     }
     Windows_Atomic_U32* windows_atomic =
         (Windows_Atomic_U32*)atomic->data;
@@ -309,12 +308,12 @@ void atomic_u32_init(Madness_Atomic_U32* atomic, u32 value, Allocator* allocator
 }
 
 
-
-
 u32 atomic_u32_load(Madness_Atomic_U32* atomic)
 {
     Windows_Atomic_U32* windows_atomic =
         (Windows_Atomic_U32*)atomic->data;
+
+    // MemoryBarrier(); // Prevents reordering reads/writes past this point
 
     return (u32)InterlockedCompareExchange(
         &windows_atomic->atomic_u32,
@@ -323,10 +322,23 @@ u32 atomic_u32_load(Madness_Atomic_U32* atomic)
     );
 }
 
+u32 atomic_u32_compare_and_swap(Madness_Atomic_U32* atomic, u32 new_val, u32 old_val)
+{
+    Windows_Atomic_U32* windows_atomic =
+        (Windows_Atomic_U32*)atomic->data;
+
+    return (u32)InterlockedCompareExchange(
+        &windows_atomic->atomic_u32,
+        (LONG)new_val,
+        (LONG)old_val
+    );
+}
+
 void atomic_u32_store(Madness_Atomic_U32* atomic, u32 value)
 {
     Windows_Atomic_U32* windows_atomic =
         (Windows_Atomic_U32*)atomic->data;
+
 
     InterlockedExchange(
         &windows_atomic->atomic_u32,
@@ -367,7 +379,7 @@ void atomic_u64_init(Madness_Atomic_U64* atomic, u64 value, Allocator* allocator
 u32 atomic_u64_load(Madness_Atomic_U64* atomic)
 {
     Windows_Atomic_U64* windows_atomic =
-       (Windows_Atomic_U64*)atomic->data;
+        (Windows_Atomic_U64*)atomic->data;
 
     return (u64)InterlockedCompareExchange64(
         &windows_atomic->atomic_u64,
@@ -390,7 +402,7 @@ void atomic_u64_store(Madness_Atomic_U64* atomic, u64 value)
 u32 atomic_u64_fetch_add(Madness_Atomic_U64* atomic, u64 value)
 {
     Windows_Atomic_U64* windows_atomic =
-    (Windows_Atomic_U64*)atomic->data;
+        (Windows_Atomic_U64*)atomic->data;
 
     return InterlockedExchangeAdd64(
         &windows_atomic->atomic_u64,
@@ -400,7 +412,7 @@ u32 atomic_u64_fetch_add(Madness_Atomic_U64* atomic, u64 value)
 u32 atomic_u64_fetch_sub(Madness_Atomic_U64* atomic, u64 value)
 {
     Windows_Atomic_U64* windows_atomic =
-    (Windows_Atomic_U64*)atomic->data;
+        (Windows_Atomic_U64*)atomic->data;
 
     return InterlockedExchangeAdd64(
         &windows_atomic->atomic_u64,

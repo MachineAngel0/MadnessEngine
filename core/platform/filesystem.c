@@ -16,7 +16,7 @@ bool filesystem_open(const char* path, File_Modes mode, bool binary, CFile* file
         file_mode = "w";
         break;
     case FILE_MODE_READ_WRITE:
-        //open for read write and at the beggining. does not create file
+        //open for read write and at the begining. does not create file
         // mode[0] = "r+";
 
         //open for r/w. file is created if not found

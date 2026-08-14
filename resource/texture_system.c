@@ -12,9 +12,11 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     memset(texture_system->textures, 0, MAX_TEXTURE_COUNT * sizeof(Madness_Texture));
     texture_system->available_texture_queue = ring_queue_create(sizeof(u32), MAX_TEXTURE_COUNT);
 
+    texture_system->texture_gpu_upload_queue = ring_queue_create(sizeof(Texture_GPU_Upload), MAX_TEXTURE_COUNT);
 
     for (u32 i = 0; i < MAX_TEXTURE_COUNT; i++)
     {
+        texture_system->textures[i].bindless_slot = i;
         ring_enqueue(texture_system->available_texture_queue, &i);
     }
 
@@ -77,17 +79,13 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
 
 bool texture_system_get_bindless_slot(Texture_System* texture_system, Texture_Handle handle, u32* out_slot)
 {
-
     if (texture_system->textures[handle.handle].generation != handle.generation)
     {
         *out_slot = 1;
         return false;
     }
 
-
-
-
-
+    return texture_system->textures[handle.handle].bindless_slot_external;
 }
 
 Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
@@ -151,22 +149,33 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     }
 
     texture_system->in_use_textures_count++;
+    //set texture data
     Madness_Texture* texture = &texture_system->textures[free_index];
-    *texture = texture_data;
-    out_handle->handle = free_index;
+    texture->width = texture_data.width;
+    texture->height = texture_data.height;
+    texture->channels = texture_data.channels;
+    texture->format = texture_data.format;
+    texture->pixels_size = texture_data.pixels_size;
+    texture->type = texture_data.type;
 
+    //update bindless and generation
+    texture->bindless_slot_external = 0;
+    texture->generation++;
+
+    //fill out the handle
+    out_handle->handle = free_index;
+    out_handle->generation = texture->generation;
+
+    //queue for upload on the gpu
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
-    upload_texture.bindless_location = free_index;
     upload_texture.pixel_data = pixel_data;
+    upload_texture.texture_memory_allocator = asset_system->heap_allocator; // TODO: replace with texture memory allocator
+    ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
-
-    renderer_texture_create(asset_system->renderer, &upload_texture);
 
     hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
 
-    //unload texture data
-    allocator_heap_free(asset_system->heap_allocator, upload_texture.pixel_data);
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
@@ -213,25 +222,33 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
 
 
     Madness_Texture* texture = &texture_system->textures[free_index];
-    *texture = texture_data;
+    texture->width = texture_data.width;
+    texture->height = texture_data.height;
+    texture->channels = texture_data.channels;
+    texture->format = texture_data.format;
+    texture->pixels_size = texture_data.pixels_size;
+    texture->type = texture_data.type;
     texture->font_index = free_font_index;
 
-    //set handle info
-    out_handle->handle = free_font_index;
+    //update bindless and generation
+    texture->bindless_slot_external = 0;
+    texture->generation++;
+
+    //fill out the handle
+    out_handle->handle = free_index;
     out_handle->generation = texture->generation;
 
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
-    upload_texture.bindless_location = free_index;
     upload_texture.pixel_data = pixel_data;
+    upload_texture.texture_memory_allocator = asset_system->heap_allocator; // TODO: replace with texture memory allocator
+
 
     //send to renderer for upload
-    renderer_texture_create(asset_system->renderer, &upload_texture);
+    ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
     hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
 
-    //unload texture data
-    allocator_heap_free(asset_system->heap_allocator, upload_texture.pixel_data);
 
     //update asset data
     Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
@@ -250,11 +267,12 @@ bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle te
 
 
     texture_system->texture_asset[texture_handle.handle].reference_count--;
-    if (texture_system->texture_asset[texture_handle.handle].reference_count <=0)
+    if (texture_system->texture_asset[texture_handle.handle].reference_count <= 0)
     {
         //unload the texture
-        renderer_texture_free(asset_system->renderer, texture_handle);
-
+        //TODO: actually not even neccessary, we only need to delete the texture vulkan side if there is one there,
+        // which honestly should just get handled by default on upload
+        // vulkan_texture_system_free(asset_system->renderer, texture_handle);
     }
 
 

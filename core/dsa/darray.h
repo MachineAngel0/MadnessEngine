@@ -1,7 +1,7 @@
 ﻿#ifndef DARRAY_H
 #define DARRAY_H
 
-#include "allocator_heap.h"
+#include "heap_allocator.h"
 #include "array.h"
 
 

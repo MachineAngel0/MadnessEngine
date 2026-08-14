@@ -20,7 +20,6 @@ typedef struct Lock_Free_Queue
     // total size of our queue, used to keep track of the memory size
     u32 capacity;
 
-    bool is_ptr_type;
 
 } Lock_Free_Queue;
 

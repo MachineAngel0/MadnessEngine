@@ -50,9 +50,13 @@ void string_builder_append_u64(String_Builder* str_builder, u64 val, Allocator* 
 void string_builder_decrement(String_Builder* str_builder);
 
 
-bool string_builder_strip_path(String_Builder* builder);
+bool string_builder_strip_path_to_base_name(String_Builder* builder);
 bool string_builder_strip_extension(String_Builder* builder);
+bool string_builder_strip_path_from_beginning(String_Builder* builder);
+bool string_builder_strip_path_from_end(String_Builder* builder);
 
+
+String_Builder* string_builder_duplicate(const String_Builder* builder, Allocator* allocator);
 
 
 String* string_builder_to_string(const String_Builder* builder);

@@ -293,25 +293,11 @@ typedef struct Vulkan_Shader_Batch
 
 typedef struct Shader_System
 {
-    Vulkan_Texture textures[MAX_TEXTURE_COUNT];
-    // count up for now, releasing is another issue
-    u32 available_texture_indexes;
-
-    // Vulkan_Texture renderpass_textures[100];
-    // u32 renderpass_texture_indexes;
-
     Vulkan_Shader_Pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;
 
     //idk if i need this
     Pipeline_Handle default_pipeline_handle;
-
-    hash_table* texture_file_to_handle;
-    // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
-    u32 max_indexes;
-
-    //since textures could be read this frame, we wait a frame to delete them
-    RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
 
 
     //TODO: I would look into this if sorting my draw calls starts to become an issue
@@ -333,6 +319,25 @@ typedef struct Shader_System
 
 } Shader_System;
 
+
+
+typedef struct Vulkan_Texture_System
+{
+    Vulkan_Texture textures[MAX_TEXTURE_COUNT];
+    // count up for now, releasing is another issue
+    u32 available_texture_indexes;
+
+    // Vulkan_Texture renderpass_textures[100];
+    // u32 renderpass_texture_indexes;
+
+
+    hash_table* texture_file_to_handle;
+    // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
+
+    //since textures could be read this frame, we wait a frame to delete them
+    RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
+
+} Vulkan_Texture_System;
 
 typedef struct Buffer_System
 {
@@ -740,6 +745,7 @@ typedef struct renderer
 
     //renderer specific
     Buffer_System* buffer_system;
+    Vulkan_Texture_System* texture_system;
     Light_System* light_system;
     Descriptor_System* descriptor_system;
 

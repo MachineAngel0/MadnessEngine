@@ -14,6 +14,7 @@
 #include "camera.h"
 #include "lights.h"
 #include "shader_system.h"
+#include "vulkan_texture_system.h"
 #include "vk_buffer.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"

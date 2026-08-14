@@ -66,12 +66,16 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
                                            memory_system, ASSET_TEXTURE);
         asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
                                            memory_system, ASSET_FONT);
+
+        //ASSET_STATIC_MESH: used in this case as a catch all for both normal and skeletal meshes
+       asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                      memory_system, ASSET_STATIC_MESH);
     }
 
     return true;
 }
 
-bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
+void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
                                         Memory_System* memory_system, Asset_Type asset_type)
 {
     //loop throught all files in the import path, and check to see if any new assets have been added
@@ -88,6 +92,7 @@ bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
     case ASSET_SPRITE:
         break;
     case ASSET_STATIC_MESH:
+        asset_path = IMPORT_MESH_PATH;
         break;
     case ASSET_SKINNED_MESH:
         break;
@@ -103,35 +108,33 @@ bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
         break;
     }
 
-
     Asset_List_Scan* list_scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, asset_path);
     for (u32 i = 0; i < list_scan->count; i++)
     {
         Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
         const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], asset_system->frame_allocator);
 
+        if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
+        {
+            continue;
+        }
+
         switch (asset_type)
         {
         case ASSET_TEXTURE:
-            if (!asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
-            {
-                //create the asset
-                MADNESS_UUID uuid;
-                asset_converter_texture(asset_system, file_path, &uuid);
-            }
+            MADNESS_UUID uuid;
+            asset_converter_texture(asset_system, file_path, &uuid);
             break;
         case ASSET_FONT:
-            if (!asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
-            {
-                //create the asset
-                asset_converter_msdf_font(asset_system, file_path);
-            }
+            asset_converter_msdf_font(asset_system, file_path);
             break;
         case ASSET_SPRITE:
             break;
         case ASSET_STATIC_MESH:
+            asset_converter_mesh(asset_system, file_path);
             break;
         case ASSET_SKINNED_MESH:
+            asset_converter_mesh(asset_system, file_path);
             break;
         case ASSET_AUDIO:
             break;
@@ -225,8 +228,8 @@ void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source
         asset_registry_exists_by_engine_path(asset_registry, str_engine_path, &meta_data))
     {
         //update these just in case
-        meta_data.source_file = str_source_file;
-        meta_data.engine_path = str_engine_path;
+        *meta_data.source_file = *str_source_file;
+        *meta_data.engine_path = *str_engine_path;
     }
     else
     {

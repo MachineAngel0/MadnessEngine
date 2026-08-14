@@ -581,7 +581,7 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
 
 
 void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
-                       VkImage image, uint32_t width, uint32_t height)
+                       VkImage image, u32 width, u32 height)
 {
     vulkan_command_buffer commandBuffer = {0};
     vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context, vulkan_context->graphics_command_pool,
@@ -675,7 +675,7 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
 }
 
 void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buffer, Vulkan_Texture* texture,
-                          const unsigned char* pixel_data, uint32_t width, uint32_t height)
+                          const unsigned char* pixel_data, u32 width, u32 height)
 {
     //text_system.glyph_textures[text_system.glyphs[glyph]] = texture;
     printf("IMAGE SIZE: width %d height  %d \n", width, height);

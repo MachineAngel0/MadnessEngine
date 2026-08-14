@@ -7,16 +7,20 @@
 #include "sprite_system.h"
 
 
-Asset_System* asset_system_init(Memory_System* memory_system, Renderer* renderer)
+Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry)
 {
     Asset_System* asset_system = memory_system_alloc(memory_system, sizeof(Asset_System),
                                                      MEMORY_SUBSYSTEM_RESOURCE);
+
+    asset_system->global_reflection_registry = global_reflection_registry;
+
     asset_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet),
                                                       MEMORY_SUBSYSTEM_RESOURCE);
-    asset_system->renderer = renderer; //ref
 
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
                                                                        MEMORY_SUBSYSTEM_RESOURCE);
+
+
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
 
@@ -74,7 +78,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     render_packet_clear(asset_system->render_packet);
     asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
     asset_system->render_packet->skinned_mesh_queue = asset_system->mesh_system->skinned_mesh_ring_queue;
-    //
+    asset_system->render_packet->texture_upload_queue = asset_system->texture_system->texture_gpu_upload_queue;
 
     sprite_system_generate_render_packet(asset_system->sprite_system,
                                          &asset_system->render_packet->sprite_data_packet);
@@ -103,6 +107,9 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         skinned_mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.skinned_instances_count = asset_system->mesh_system->
         skinned_mesh_instance_count;
+
+
+
 
     return true;
 }

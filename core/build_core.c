@@ -1,9 +1,11 @@
 ﻿
+//CORE - Allocators
+#include "../core/allocators/allocator.c"
+#include "../core/allocators/stack_allocator.c"
+#include "../core/allocators/heap_allocator.c"
+#include "../core/allocators/pool_allocator.c"
+#include "../core/allocators/tagged_frame_allocator.c"
 //CORE - DSA
-#include "../core/dsa/allocator.c"
-#include "../core/dsa/allocator_stack.c"
-#include "../core/dsa/allocator_heap.c"
-#include "../core/dsa/allocator_pool.c"
 #include "../core/dsa/array.c"
 #include "../core/dsa/b_tree_red_black.c"
 #include "../core/dsa/binary_tree.c"

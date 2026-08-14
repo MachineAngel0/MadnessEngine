@@ -7,22 +7,17 @@ Shader_System* shader_system_init(Renderer* renderer)
     Shader_System* shader_system = allocator_alloc(&renderer->allocator, sizeof(Shader_System));
     renderer->shader_system = shader_system;
 
-    shader_system->max_indexes = SHADER_SYSTEM_CAPACITY;
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
     //                      "../renderer/texture/error_texture.png",
     //                      &(*out_shader_system)->error_texture);
 
     shader_system->pipeline_indexes = 0;
-    shader_system->available_texture_indexes = 0;
 
-    shader_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
 
-    memset(shader_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
 
     //we store the pointer, we dont want a copy
     shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_ID), 100);
 
-    shader_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
     INFO("SHADER SYSTEM CREATED")
 
@@ -36,77 +31,25 @@ void shader_system_shutdown(Shader_System* system)
     //TODO: create and hookup to the renderer shutdown
 }
 
-Vulkan_Texture* shader_system_get_vulkan_texture(Shader_System* system, u32 bindless_location)
+
+
+
+void shader_system_update(Renderer* renderer, Shader_System* shader_system, Render_Packet* render_packet)
 {
-    return &system->textures[bindless_location];
-}
-
-
-void shader_system_update(Renderer* renderer, Shader_System* system)
-{
-    //TODO: not in use rn, but idk if i really want to control material uploads here, they should be handled by the system there in
-    //updates all the material data, every frame, since they are bound to change possibly every frame
-    //or we could just update at a given index, since the offsets are the same
-
-    /*
-    vulkan_buffer_reset_offset(renderer, system->material_mesh_ssbo_handle);
-
-    vulkan_buffer_data_copy_and_upload(renderer,
-                                       system->material_mesh_ssbo_handle,
-                                       system->material_mesh_staging_handle,
-                                       system->material_params,
-                                       sizeof(Material_Param_Data) * system->material_param_indexes);
-                                       */
-
-
-    //free textures
-    Vulkan_Texture* texture;
-    while (!ring_queue_is_empty(system->texture_deletion_queue))
+    //TODO: we should call this at start up once
+    for (int i = 0; i < render_packet->draw_3d_data_packet.material_batch_count; ++i)
     {
-        ring_dequeue(system->texture_deletion_queue, &texture);
-
-        MASSERT(texture);
-
-
-        texture->texture_image;
-        texture->texture_image_memory;
-        texture->texture_image_view;
-        texture->texture_sampler;
-
-        vulkan_texture_free(&renderer->context, texture);
-    }
-}
-
-//pass out the texture index
-
-Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System* system, char const* filepath)
-{
-    if (hash_table_contains(system->texture_file_to_handle, filepath))
-    {
-        Texture_Handle* handle;
-        hash_table_get(system->texture_file_to_handle, filepath, &handle);
-        return *handle;
+        if (hash_set_contains(shader_system->shader_batch_hash_set,
+                              &render_packet->draw_3d_data_packet.material_batch[i].material_key))
+        {
+            continue;
+        }
+        shader_system_shader_batch_create(renderer, shader_system,
+                                          &render_packet->draw_3d_data_packet.material_batch[i]);
     }
 
-
-    //get an available index
-    Texture_Handle out_texture_handle;
-    out_texture_handle.handle = system->available_texture_indexes;
-    //add to hash table
-    hash_table_insert(system->texture_file_to_handle, filepath, &out_texture_handle);
-
-    //create the texture
-    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(&renderer->context, renderer->context.graphics_command_buffer, filepath, out_texture);
-
-    //increment index for next usage
-    system->available_texture_indexes++;
-
-    //TODO: batch this upload once a frame
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle.handle);
-
-    return out_texture_handle;
 }
+
 
 
 // Vulkan_Texture* shader_system_new_render_pass_texture(Shader_System* system)
@@ -114,52 +57,96 @@ Texture_Handle shader_system_add_texture_file(Renderer* renderer, Shader_System*
 //     return &system->renderpass_textures[system->renderpass_texture_indexes++];
 // }
 
-Texture_Handle shader_system_update_texture(Renderer* renderer, Shader_System* system, Texture_Handle* handle,
-                                            const char* filepath)
+
+
+
+
+void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system, Material_Batch* material_batch)
 {
-    //overwrite if neccessary
-    Texture_Handle out_texture_handle = *handle;
+    Vulkan_Shader_Batch* shader_batch = NULL;
+    switch (material_batch->material_asset->material_info.mesh_type)
+    {
+    case Shader_Mesh_Type_Mesh:
+        shader_batch = &shader_system->mesh_batch[shader_system->mesh_batch_count++];
+        break;
+    case Shader_Mesh_Type_Skinned:
+        shader_batch = &shader_system->skinned_batch[shader_system->skinned_batch_count++];
+        break;
+    }
 
-    // create texture if it's not already loaded
-    // update descriptor set
-    // pass out a new texture handle that points to the new location
+    if (!shader_batch)
+    {
+        MASSERT(false);
+    }
+    shader_batch->material_batch_reference = material_batch;
 
-    //NOTE: it might not be a good idea to overwrite a texture since another material may be using it,
-    // would be better to pass out a new handle for it to use
+    shader_batch->material_id = material_batch->material_key;
+    shader_batch->shader_name = string_to_c_string_alloc_heap(material_batch->material_asset->material_info.shader_name, renderer->heap_allocator);
+    shader_batch->transluency = material_batch->material_asset->material_info.transluency;
+    shader_batch->renderpass_types = material_batch->material_asset->material_info.renderpass;
+    shader_batch->mesh_type = material_batch->material_asset->material_info.mesh_type;
+    shader_batch->blend_mode = material_batch->material_asset->material_info.blend_mode;
+    shader_batch->material_stride = material_batch->material_asset->material_gpu_definition->struct_size;
+    shader_batch->draw_count = 0;
 
-    /* TODO:
-    create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
-                         "../renderer/texture/error_texture.png",
-                         &renderer->context.shader_texture.texture_test_object);
-    update_descriptors_texture_reflect_test(&renderer->context, &renderer->context.global_descriptor_pool,
-                                            &renderer->context.shader_texture); // need to update the need for a shader texture
-                                            */
 
-    return out_texture_handle;
+    //load pipeline from our configs
+    //TODO: add more configs when neccessary
+    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode,
+                                    shader_batch->transluency,
+                                    &shader_batch->pipeline, &shader_batch->wireframe_pipeline);
+
+
+    u32 ssbo_init_amount = 0;
+    if (material_batch->material_data->num_items > 0)
+    {
+        ssbo_init_amount = material_batch->material_data->num_items;
+    }
+    else
+    {
+        ssbo_init_amount = 10;
+    }
+
+
+    //create the ssbo's
+    shader_batch->material_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     shader_batch->material_stride *
+                                                                     ssbo_init_amount);
+    switch (shader_batch->mesh_type)
+    {
+    case Shader_Mesh_Type_Mesh:
+
+        shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     sizeof(Vulkan_Mesh_Draw) * ssbo_init_amount);
+        break;
+    case Shader_Mesh_Type_Skinned:
+
+        shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     sizeof(Vulkan_Skinned_Draw) * ssbo_init_amount);
+        break;
+    }
+
+
+    shader_batch->indirect_draw_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                     BUFFER_TYPE_INDIRECT,
+                                                                     sizeof(VkDrawIndexedIndirectCommand) *
+                                                                     ssbo_init_amount);
+
+    //create the push constant, this basically will never change
+    shader_batch->pc_data.draw_data_buffer = vulkan_buffer_get_device_address(
+        renderer, shader_batch->draw_data_buffer_handle);
+    shader_batch->pc_data.material_buffer = vulkan_buffer_get_device_address(
+        renderer, shader_batch->material_data_buffer_handle);
+
+    hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->material_id);
+}
+
+void shader_system_shader_batch_free(Renderer* renderer, Shader_System* shader_system, const char* shader_name)
+{
+    //TODO:
 }
 
 
-bool renderer_texture_create(Renderer* renderer, Texture_GPU_Upload* texture_upload)
-{
-    Vulkan_Texture* vulkan_texture = &renderer->shader_system->textures[texture_upload->bindless_location];
-
-    //create the texture
-    vulkan_texture_create_from_image(&renderer->context, renderer->context.graphics_command_buffer, texture_upload,
-                                     vulkan_texture);
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system,
-                                           texture_upload->bindless_location);
-
-    return true;
-}
-
-
-bool renderer_texture_free(Renderer* renderer, Texture_Handle handle)
-{
-    Vulkan_Texture* vulkan_texture = &renderer->shader_system->textures[handle.handle];
-
-    //queue the texture to be unloaded
-    ring_enqueue(renderer->shader_system->texture_deletion_queue, vulkan_texture);
-
-
-    return true;
-}

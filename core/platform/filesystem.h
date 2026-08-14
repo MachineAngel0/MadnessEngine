@@ -20,13 +20,6 @@ typedef enum File_State {
     FILE_STATE_CLOSED,
 } File_State;
 
-typedef struct Madness_File_Platform
-{
-    File_State file_state;
-    File_Modes file_mode;
-    // FILE* fptr; // might need to be void* platform_specifics;
-    void* internal_data;
-} Madness_File_Platform;
 
 typedef struct CFile
 {
@@ -48,19 +41,29 @@ u64 filesystem_get_file_size(CFile* file);
 
 
 ///// platform based synchronize operations ////
-bool filesystem_open_platform(const char* path, File_Modes mode, bool binary, Madness_File_Platform* out_file/*, bool use_os*/);
+/* NOTE: these are probably not needed
+bool filesystem_open_platform(const char* path, File_Modes mode, bool binary, Madness_File_Platform* out_file/*, bool use_os#1#);
 bool filesystem_close_platform(Madness_File_Platform* file);
 bool filesystem_read_platform(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
 bool filesystem_write_platform(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
 bool filesystem_read_all_bytes_platform(Madness_File_Platform* handle, u8** out_bytes, u64* out_bytes_read);
+*/
 
 
 ///// async operations ////
+// these are implied to be platform based operations
+typedef struct Madness_File_Platform
+{
+    File_State file_state;
+    File_Modes file_mode;
+    // FILE* fptr; // might need to be void* platform_specifics;
+    void* internal_data;
+} Madness_File_Platform;
 
-//NOTE: no need to make file open/close async, its generally fast enough
-// bool filesystem_read_async(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
-// bool filesystem_write_async(Madness_File* handle, u64 data_size, void* out_data, u64* out_bytes_read);
-// bool filesystem_read_all_bytes_async(Madness_File* handle, u8** out_bytes, u64* out_bytes_read);
+bool filesystem_open_aync(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+bool filesystem_close_async(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+bool filesystem_read_async(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
+// bool filesystem_write_async(Madness_File_Platform* handle, u64 data_size, void* out_data, u64* out_bytes_read);
 
 
 
@@ -87,8 +90,9 @@ bool filesystem_does_file_exists(const char* file_path);
 bool filesystem_does_directory_exists(const char* directory_path);
 
 
-bool filesystem_create_directory(const char* directory_path);
-bool filesystem_create_file_platform(const char* file_path);
+bool platform_create_directory(const char* directory_path);
+bool platform_create_directory_recursive(const char* directory_path);
+bool platform_create_file(const char* file_path);
 
 bool filesystem_scan_directory(const char* directory_path);
 bool filesystem_scan_directory_recursive(const char* directory_path);

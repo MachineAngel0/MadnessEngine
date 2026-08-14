@@ -2,8 +2,7 @@
 #define AUDIO_H
 
 
-#include "resource_asset_system_type.h"
-
+#include "resource_types.h"
 
 typedef struct Sound_Data
 {

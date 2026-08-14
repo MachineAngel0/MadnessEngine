@@ -2,8 +2,6 @@
 #define RESOURCE_TYPES_H
 
 
-
-
 #include <stdalign.h>
 
 #include "array_freelist.h"
@@ -29,7 +27,6 @@
 #define IMPORT_TEXTURE_PATH "../z_assets/textures"
 #define IMPORT_FONTS_PATH "../z_assets/msdf_fonts"
 #define IMPORT_MESH_PATH "../z_assets/mesh"
-#define IMPORT_SK_MESH_PATH "../z_assets/skinned_mesh"
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
 #define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
 
@@ -93,9 +90,6 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
     [ASSET_SCENE] = "ASSET_SCENE",
 };
-
-
-
 
 
 typedef struct Asset_MetaData
@@ -177,9 +171,6 @@ typedef struct Animation_Handle
 } Animation_Handle;
 
 
-
-
-
 ///////////////// Texture  //////////////////////
 
 typedef enum Texture_Format
@@ -201,7 +192,10 @@ typedef struct Madness_Texture
     Asset_Type type; // used to identify if we have are a font
     // runtime only data
     u32 font_index;
-    // u32 bindless_slot;
+    // what is queried when we get the bindless slot, so that we can use a temp texture until the actual texture loads
+    u32 bindless_slot_external;
+    // this is the actual bindless slot
+    u32 bindless_slot;
     u32 generation;
 } Madness_Texture;
 
@@ -209,7 +203,7 @@ typedef struct Texture_GPU_Upload
 {
     Madness_Texture* madness_texture;
     u8* pixel_data;
-    u32 bindless_location;
+    Heap_Allocator* texture_memory_allocator;
 } Texture_GPU_Upload;
 
 typedef struct Madness_Texture_Runtime
@@ -543,8 +537,8 @@ typedef struct Madness_Skinned_Submesh_Instance
 } Madness_Skinned_Submesh_Instance;
 
 
-typedef struct Madness_Animation{
-
+typedef struct Madness_Animation
+{
     GLTF_Animation_Data* animation_data; // pointer to the anim data
 
     //generated every frame
@@ -562,7 +556,7 @@ typedef struct Madness_Animation{
     u32 current_animation_index;
     float current_time;
     bool looping;
-}Madness_Animation;
+} Madness_Animation;
 
 typedef struct Madness_Skinned_Mesh_Instance
 {
@@ -574,8 +568,6 @@ typedef struct Madness_Skinned_Mesh_Instance
 
     Animation_Handle animation_handle;
     u32 skinned_matrix_count_offset;
-
-
 } Madness_Skinned_Mesh_Instance;
 
 
@@ -773,13 +765,16 @@ typedef struct Texture_System
     HASH_MAP_TYPE(u64, u32)* texture_hash_map;
 
 
+    Heap_Allocator* texture_memory_allocator; // TODO: can wait for a bit but needs to be done eventually
+
     Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
     u32 texture_asset_count;
+
+    RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_gpu_upload_queue;
 } Texture_System;
 
 typedef struct Scene
 {
-
     String* scene_name;
 
 
@@ -797,8 +792,6 @@ typedef struct Scene
     // Transform* static_transform;
     // Transform* dynamic_transform;
 } Scene;
-
-
 
 
 typedef struct Mesh_System
@@ -867,7 +860,6 @@ typedef struct Animation_System
 
     Madness_Animation animation_data[MAX_SKINNED_MESH_COUNT];
     u32 animation_count;
-
 } Animation_System;
 
 
@@ -884,8 +876,6 @@ typedef struct Particle_System
     u32 particles_count;
 
     //each emitter manages a range of particles in a flat list
-
-
 } Particle_System;
 
 
@@ -944,6 +934,7 @@ typedef struct Render_Packet
     //just references
     RING_QUEUE_TYPE(Mesh_Upload_Data)* mesh_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_queue;
+    RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_upload_queue;
 
 
     //FOR RENDERING
@@ -961,10 +952,37 @@ typedef struct Asset_Registry
     DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
 
     //ideally we have another data format which points to the data?? just for easy lookup and display
-
 } Asset_Registry;
 
 
+typedef struct Asset_System
+{
+    //the asset system is just a container for all the system,
+    //gather the cpu-gpu resources and send them to renderer
 
+    //Systems
+    // TODO: might change this into a pool allocator, or even segregated list allocator
+    Heap_Allocator* heap_allocator;
+    Frame_Allocator* frame_allocator;
+    Allocator* allocator;
+
+    Reflection_Registry* global_reflection_registry; // ref
+
+    // Shader_System* shader_system;
+    // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer
+    Sprite_System* sprite_system;
+    Mesh_System* mesh_system;
+    Texture_System* texture_system;
+    Material_System* material_system;
+    Scene* scene;
+    Animation_System* animation_system;
+
+    Particle_System* particle_system;
+
+    //Render Packet
+    Render_Packet* render_packet;
+
+    Asset_Registry* asset_registry;
+} Asset_System;
 
 #endif //RESOURCE_TYPES_H

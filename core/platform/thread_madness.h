@@ -86,6 +86,10 @@ void atomic_u32_store(Madness_Atomic_U32* atomic, u32 value);
 u32 atomic_u32_fetch_add(Madness_Atomic_U32* atomic, u32 value);
 u32 atomic_u32_fetch_sub(Madness_Atomic_U32* atomic, u32 value);
 
+//load that checks the value is the intended value we wanted
+// if it returns the old value, our atomic op failed
+u32 atomic_u32_compare_and_swap(Madness_Atomic_U32* atomic, u32 new_val, u32 old_val);
+
 
 void atomic_u64_init(Madness_Atomic_U64* atomic, u64 value, Allocator* allocator);
 u32 atomic_u64_load(Madness_Atomic_U64* atomic);

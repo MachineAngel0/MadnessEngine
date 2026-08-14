@@ -58,17 +58,17 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     // reflection_game_data(reflection_system);
 
 
-    Reflection_Registry* reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
+    Reflection_Registry* global_reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
     //reflection runtimes
-    generate_runtime_enums(reflection_registry);
-    generate_runtime_structs(reflection_registry);
-    generate_runtime_enums_resources(reflection_registry);
-    generate_runtime_structs_resources(reflection_registry);
-    generate_runtime_enums_material(reflection_registry);
-    generate_runtime_structs_material(reflection_registry);
+    generate_runtime_enums(global_reflection_registry);
+    generate_runtime_structs(global_reflection_registry);
+    generate_runtime_enums_resources(global_reflection_registry);
+    generate_runtime_structs_resources(global_reflection_registry);
+    generate_runtime_enums_material(global_reflection_registry);
+    generate_runtime_structs_material(global_reflection_registry);
     //
-    reflection_registry_load_meta_data(reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
-    reflection_registry_runtime_load_data_from_txt(reflection_registry);
+    reflection_registry_load_meta_data(global_reflection_registry, Reflection_Runtime_Meta_Data_File_Path);
+    reflection_registry_runtime_load_data_from_txt(global_reflection_registry);
     //
     Reflection_Registry* material_reflection_registry = reflection_registry_init(
         &app_internal->application_core.memory_system);
@@ -80,10 +80,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         .heal_amount = 10.8f,
         .heal_only_if_dead = false
     };
-    reflection_registry_to_txt_format(reflection_registry, "Heal_Component", "1", &heal_comp_write,
+    reflection_registry_to_txt_format(global_reflection_registry, "Heal_Component", "1", &heal_comp_write,
                                       "../z_assets/abilities/abilities.yaml");
     Heal_Component heal_comp_read = {0};
-    reflection_registry_read_from_txt_format(reflection_registry, "Heal_Component", "1", &heal_comp_read,
+    reflection_registry_read_from_txt_format(global_reflection_registry, "Heal_Component", "1", &heal_comp_read,
                                              "../z_assets/abilities/abilities.yaml");
 
 
@@ -93,8 +93,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     application_core->event_system = event_init(&application_core->memory_system);
     application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
 
-    // job_system_init(&application_core->memory_system);
-    // job_system_test();
+    job_system_init(&application_core->memory_system);
 
     //register events needed for this application
     event_register(EVENT_APP_QUIT, STRING("application"), application_on_event);
@@ -112,7 +111,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system);
     //asset system
-    application_core->asset_system = asset_system_init(&application_core->memory_system, renderer_plugin->renderer);
+    application_core->asset_system = asset_system_init(&application_core->memory_system, global_reflection_registry);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
     //UI
@@ -164,7 +163,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
                                  application_core->asset_system,
-                                 &application_core->clock, reflection_registry, material_reflection_registry);
+                                 &application_core->clock, global_reflection_registry, material_reflection_registry);
 
     filewatcher_init(&application_core->memory_system);
     filewatcher_directory_register("../z_assets");
@@ -203,7 +202,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                             renderer_plugin->renderer->context.framebuffer_height_new);
                             */
 
-        // job_system_test();
+        job_system_test();
 
 
         madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,

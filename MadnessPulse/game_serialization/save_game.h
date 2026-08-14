@@ -28,7 +28,7 @@ _Static_assert(ARRAY_SIZE(starting_reserve_inventory) < INVENTORY_MAX_BATTLE_LIS
 
 void save_game_setup(Madness_Pulse_Game* game)
 {
-    filesystem_create_directory(SAVE_GAME_PATH);
+    platform_create_directory(SAVE_GAME_PATH);
 
     //load up save games
 
@@ -144,7 +144,7 @@ bool save_file_create(Madness_Pulse_Game* game)
 
     if (found_free_slot)
     {
-        filesystem_create_file_platform(filepath);
+        platform_create_file(filepath);
 
         FILE* save_file = fopen(filepath, "wb");
         const Save_Meta_Data default_meta_data = {

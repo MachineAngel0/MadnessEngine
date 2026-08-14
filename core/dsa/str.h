@@ -2,7 +2,7 @@
 #define STRINGS_H
 
 #include "defines.h"
-#include "allocator_heap.h"
+#include "heap_allocator.h"
 
 //TODO: refactor to ensure immutability, and ease of use with str_builder
 
@@ -13,7 +13,6 @@ typedef struct String
 {
     u64 length;
     char* chars;
-
 } String;
 
 typedef String Path_String;

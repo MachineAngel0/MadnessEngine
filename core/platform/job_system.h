@@ -3,6 +3,7 @@
 
 #include "defines.h"
 #include "ring_queue.h"
+#include "work_steal_queue.h"
 
 #if HAS_ATOMICS
 #include "stdatomic.h"
@@ -17,22 +18,22 @@ typedef void (*fptr_job_complete)(void*);
 typedef enum Job_Type
 {
     //can be literally anything
-    JOB_TYPE_GENERAL = BITFLAG(0),
-    //IO operation
-    JOB_TYPE_RESOURCE_LOAD = BITFLAG(1),
-    //Renderer
-    JOB_TYPE_GPU_RESOURCE = BITFLAG(2),
+    JOB_TYPE_GENERAL,
+    //IO operation and general asset loading
+    JOB_TYPE_RESOURCE_LOAD,
+    /*//Renderer
+    JOB_TYPE_GPU_RESOURCE,*/ // well see about having support for this, might not be neccessary
 } Job_Type;
 
 typedef struct Job_Counter
 {
     Madness_Atomic_U32 atomic_jobs_remaining;
+    char* job_name;
 } Job_Counter;
 
-alignas(64) typedef struct /*alignas(64)*/ Job_Info
+/*alignas(64)*/
+typedef struct /*alignas(64)*/ Job_Info
 {
-    Job_Type job_type;
-
     fptr_job_start job_start;
     fptr_job_complete job_success;
     fptr_job_complete job_fail;
@@ -40,12 +41,16 @@ alignas(64) typedef struct /*alignas(64)*/ Job_Info
     void* param_data;
     u32 param_data_size;
 
+    Job_Type job_type;
+
     Job_Counter* job_counter;
 
     /*
     u16* dependencies;
     u16 dependencies_count;
     */
+
+    u8 padding[80];
 } Job_Info;
 
 
@@ -66,7 +71,9 @@ typedef struct Job_Thread
 
     Job_Type jobs_can_run;
 
-    Allocator allocator;
+
+    Allocator* allocator;
+    Work_Steal_Queue* thread_work_queue;
 } Job_Thread;
 
 
@@ -78,16 +85,21 @@ typedef struct Job_System
 
     Job_Thread job_threads[MAX_MADNESS_THREADS];
 
-    Madness_Mutex ring_mutex;
-    Madness_Semaphore ring_semaphore;
-    RING_QUEUE_TYPE(Job_Info)* work_queue; // not likely to have that many threads
+    Madness_Mutex general_work_mutex;
+    Madness_Semaphore general_work_semaphore;
+    RING_QUEUE_TYPE(Job_Info)* general_work_queue;
 
-    RING_QUEUE_TYPE(Job_Info)* background_work_queue; // not likely to have that many threads
+    Madness_Mutex general_resource_mutex;
+    Madness_Semaphore general_resource_semaphore;
+    RING_QUEUE_TYPE(Job_Info)* general_resource_queue; // limited amount of threads given to io operations
 
     bool running;
 
-
     Pool_Allocator job_counter_pool;
+    Pool_Allocator job_counter_string_pool;
+
+
+    // Allocator allocator[MAX_MADNESS_THREADS];
 } Job_System;
 
 bool job_system_init(Memory_System* memory_system);
@@ -101,11 +113,11 @@ Job_Info job_create(Job_Type type, fptr_job_start entry_point, fptr_job_complete
                     void* job_param_data, u32 job_param_data_size);
 
 Job_Info job_create_with_counter(Job_Type type, fptr_job_start entry_point, fptr_job_complete on_success,
-                            fptr_job_complete on_fail,
-                            void* job_param_data, u32 job_param_data_size, Job_Counter* counter);
+                                 fptr_job_complete on_fail,
+                                 void* job_param_data, u32 job_param_data_size, Job_Counter* counter);
 
 
-Job_Counter* job_counter_create(u32 initial_job_count);
+Job_Counter* job_counter_create(const char* job_name, u32 initial_job_count);
 
 /**
  * @brief for use inside jobs that need to submit more jobs, and increase the jobs remaining count

@@ -9,25 +9,44 @@ String_Builder* string_builder_create(const u64 capacity, Allocator* allocator)
     assert(capacity > 0);
 
     String_Builder* builder = allocator_alloc(allocator, sizeof(String_Builder));
-    builder->str = malloc(capacity * sizeof(char));
+    builder->str = allocator_alloc(allocator, capacity * sizeof(char));
     builder->current_length = 0;
     builder->capacity = capacity;
 
     builder->allocator = allocator;
+    builder->heap_allocator = NULL;
 
     return builder;
 }
 
+String_Builder* string_builder_create_heap(const u64 capacity, Heap_Allocator* allocator)
+{
+    assert(capacity > 0);
+
+    String_Builder* builder = allocator_heap_alloc(allocator, sizeof(String_Builder));
+    builder->str = allocator_heap_alloc(allocator, capacity * sizeof(char));
+    builder->current_length = 0;
+    builder->capacity = capacity;
+
+    builder->allocator = NULL;
+    builder->heap_allocator = allocator;
+
+    return builder;
+}
 
 void string_builder_free(String_Builder* builder)
 {
     assert(builder);
     assert(builder->str);
 
-    free(builder->str);
-    free(builder);
+    if (builder->heap_allocator)
+    {
 
-    builder = NULL;
+        allocator_heap_free(builder->heap_allocator, builder->str);
+        allocator_heap_free(builder->heap_allocator, builder);
+    }
+
+
 }
 
 /*
@@ -177,7 +196,7 @@ void string_builder_decrement(String_Builder* str_builder)
 }
 
 
-bool string_builder_strip_path(String_Builder* builder)
+bool string_builder_strip_path_to_base_name(String_Builder* builder)
 {
     //assuming something like this ../path/thing/other_thing/name.ext
     // we will make the string builder contain only name.ext
@@ -203,13 +222,13 @@ bool string_builder_strip_extension(String_Builder* builder)
 {
     MASSERT(builder);
 
-
-    for (; builder->current_length > 0; builder->current_length--)
+    u64 new_index = builder->current_length;
+    for (; new_index > 0; new_index--)
     {
-        if (builder->str[builder->current_length] == '.')
+        if (builder->str[new_index] == '.')
         {
             //once more to move past the extension
-            builder->current_length--;
+            builder->current_length = new_index;
             return true;
         }
     }
@@ -217,6 +236,69 @@ bool string_builder_strip_extension(String_Builder* builder)
     //basically was not a valid path string
     MASSERT_MSG_FALSE("string_builder_strip_extension: PATH STRING DOES NOT CONTAIN /");
     return false;
+}
+
+bool string_builder_strip_path_from_beginning(String_Builder* builder)
+{
+    //assuming something like this ..base/path/thing/other_thing/name.ext
+    //it will remove base, and incrementally moves forward
+
+
+    size_t starting_length = builder->current_length;
+
+    for (u32 i = 0; i < starting_length; i++)
+    {
+        if (builder->str[i] == '/')
+        {
+            //we add one to remove the '/'
+            u64 new_length = starting_length - (i + 1);
+            memcpy(builder->str, builder->str + (i + 1), new_length);
+            builder->current_length = new_length;
+            return true;
+        }
+
+    }
+
+
+    //basically was not a valid path string
+    MASSERT_MSG(false, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+    return false;
+
+
+}
+
+bool string_builder_strip_path_from_end(String_Builder* builder)
+{
+    size_t starting_length = builder->current_length;
+
+    for (u32 i = starting_length; i > 0; i--)
+    {
+        if (builder->str[i] == '/')
+        {
+            //we add one to remove the '/'
+            builder->current_length = i;
+            return true;
+        }
+
+    }
+
+
+    //basically was not a valid path string
+    MASSERT_MSG(false, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
+    return false;
+
+
+
+}
+
+String_Builder* string_builder_duplicate(const String_Builder* builder, Allocator* allocator)
+{
+
+    String_Builder* out_builder = string_builder_create(builder->capacity, allocator);
+    memcpy(out_builder->str, builder->str, builder->current_length);
+
+
+    return out_builder;
 }
 
 String* string_builder_to_string(const String_Builder* builder)

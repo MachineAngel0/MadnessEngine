@@ -81,10 +81,13 @@ void animation_system_update(Animation_System* animation_system, float delta_tim
     //send to the gpu for the shader to work
 
 
+    allocator_clear(animation_system->frame_allocator);
+
+
     //TODO: we can multithread the animation updates, but the upload into the array has to be ordered
     // or we use the count and offset, which we will know somehow, to upload into that part of the array
-
-    allocator_clear(animation_system->frame_allocator);
+    /*Job_Counter* job_counter = job_counter_create("animation update", 100);
+    job_create_with_counter();*/
 
     u32 joint_count = 0;
     for (u32 anim_idx = 0; anim_idx < animation_system->animation_count; ++anim_idx)
@@ -95,7 +98,7 @@ void animation_system_update(Animation_System* animation_system, float delta_tim
     //TODO: probably something better than a dynamic array for this honestly (normal array?)
     animation_system->skinned_matrix_array = array_create(mat4s, joint_count, animation_system->frame_allocator);
 
-
+    //can be jobified
     for (u32 anim_idx = 0; anim_idx < animation_system->animation_count; ++anim_idx)
     {
         Madness_Animation* madness_anim = &animation_system->animation_data[anim_idx];

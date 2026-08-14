@@ -20,7 +20,7 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
 
 void asset_registry_shutdown(Asset_Registry* asset_registry);
 
-bool asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
+void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Registry* asset_registry,
                                         Memory_System* memory_system, Asset_Type asset_type);
 
 //

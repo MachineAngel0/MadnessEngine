@@ -542,7 +542,7 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
 {
     //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
 
-    Vulkan_Texture* texture = shader_system_get_vulkan_texture(renderer->shader_system, bindless_location);
+    Vulkan_Texture* texture = vulkan_texture_system_get_vulkan_texture(renderer->texture_system, bindless_location);
     MASSERT(texture);
 
 

@@ -165,7 +165,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
-
+    // Texture System
+    renderer->texture_system = vulkan_texture_system_init(renderer);
     //Shader System
     renderer->shader_system = shader_system_init(renderer);
     // Light System
@@ -296,8 +297,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //free textures and any other texture/shader updated
-    shader_system_update(renderer, renderer->shader_system);
-    shader_system_check_for_new_shader_batches(renderer, renderer->shader_system, render_packets);
+    vulkan_texture_system_update(renderer, render_packets);
+    shader_system_update(renderer, renderer->shader_system, render_packets);
 
 
 

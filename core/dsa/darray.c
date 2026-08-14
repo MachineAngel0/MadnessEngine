@@ -6,7 +6,7 @@
 #include "misc_util.h"
 
 #include "unit_test.h"
-#include "allocator_stack.h"
+#include "stack_allocator.h"
 
 
 void* _darray_create(const u64 capacity, const u64 stride)

@@ -32,8 +32,38 @@ bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, 
     return false;
 }
 
+String_Builder* asset_converter_create_file_path(const Scratch_Allocator scratch_allocator, const char* file_path,
+                                                 const char* engine_path, const char* engine_ext)
+{
+    String_Builder* file_path_strip = string_builder_create(256, scratch_allocator.allocator);
+    string_builder_append_c_string(file_path_strip, file_path);
+    string_builder_strip_extension(file_path_strip);
+    string_builder_strip_path_from_beginning(file_path_strip); // removes ../
+    string_builder_print(file_path_strip);
+    string_builder_strip_path_from_beginning(file_path_strip); // removes zassets/
+    string_builder_print(file_path_strip);
+    string_builder_strip_path_from_beginning(file_path_strip); //  removes {asset_type}/
+    string_builder_print(file_path_strip);
+
+    String_Builder* str_builder = string_builder_create(256, scratch_allocator.allocator);
+    string_builder_append_c_string(str_builder, engine_path);
+    string_builder_append_builder(str_builder, file_path_strip);
+    string_builder_append_c_string(str_builder, engine_ext);
+    return str_builder;
+}
+
+void asset_converter_create_directory_for_engine_asset(String_Builder* str_builder_output_path)
+{
+    string_builder_strip_extension(str_builder_output_path);
+    string_builder_strip_path_from_end(str_builder_output_path);
+    string_builder_print(str_builder_output_path);
+    platform_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
+}
+
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+
     //check for supported file formats
     if (!c_string_path_is_extension(file_path, ".png") && !c_string_path_is_extension(file_path, ".jpeg") && !
         c_string_path_is_extension(file_path, ".jpg"))
@@ -65,18 +95,14 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     runtime_texture.texture.type = ASSET_TEXTURE;
     runtime_texture.pixel_data = pixel_data;
 
-    String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(file_path_strip, file_path);
-    string_builder_strip_extension(file_path_strip);
-    string_builder_strip_path(file_path_strip);
+    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
+                                                                               file_path, ENGINE_TEXTURE_PATH,
+                                                                               ENGINE_TEXTURE_EXTENSION);
+    const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_TEXTURE_PATH);
-    string_builder_append_builder(str_builder, file_path_strip);
-    string_builder_append_c_string(str_builder, ENGINE_TEXTURE_EXTENSION);
+    //create path if it does not exist
+    asset_converter_create_directory_for_engine_asset(str_builder_output_path);
 
-
-    const char* output_path = string_builder_to_c_string(str_builder);
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {
@@ -94,12 +120,15 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
                              ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
 
+    scratch_allocator_end(scratch_allocator);
+
     return true;
 }
 
 
 bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 {
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
     Madness_Font font_structure = {0};
     Madness_Texture texture = {0};
 
@@ -265,17 +294,14 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 
     //write it out to the file
-    String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(file_path_strip, file_path);
-    string_builder_strip_extension(file_path_strip);
-    string_builder_strip_path(file_path_strip);
+    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
+                                                                           file_path, ENGINE_FONTS_PATH,
+                                                                           ENGINE_FONTS_EXTENSION);
+    const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_FONTS_PATH);
-    string_builder_append_builder(str_builder, file_path_strip);
-    string_builder_append_c_string(str_builder, ENGINE_FONTS_EXTENSION);
+    //create path if it does not exist
+    asset_converter_create_directory_for_engine_asset(str_builder_output_path);
 
-    const char* output_path = string_builder_to_c_string(str_builder);
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {
@@ -298,11 +324,14 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
                              ASSET_FONT, asset_system->heap_allocator, NULL);
 
+    scratch_allocator_end(scratch_allocator);
+
     return true;
 }
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
     //TODO: we should check ahead of time for the csv file as well
     //check for supported file formats
     if (!c_string_path_is_extension(file_path, ".png"))
@@ -314,7 +343,6 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     Madness_Font_Runtime engine_texture = {0};
     engine_texture.version = 1.0;
-
 
 
     //load the image data from file
@@ -330,7 +358,6 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     }
 
 
-
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
     engine_texture.texture.width = texture_width; // 4 stride rgba
     engine_texture.texture.height = texture_height; // 4 stride rgba
@@ -339,8 +366,8 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     engine_texture.texture.type = ASSET_FONT;
     engine_texture.pixel_data = pixel_data;
 
-    const char* file_name = c_string_ext_strip(file_path, asset_system->frame_allocator);
-    const char* csv_path = c_string_concat(file_name, "csv", asset_system->frame_allocator);
+    const char* file_name = c_string_ext_strip(file_path, scratch_allocator.allocator);
+    const char* csv_path = c_string_concat(file_name, "csv", scratch_allocator.allocator);
 
     FILE* file = fopen(csv_path, "r");
     MASSERT(file)
@@ -397,17 +424,16 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
 
     //write it out to the file
-    String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(file_path_strip, file_path);
-    string_builder_strip_extension(file_path_strip);
-    string_builder_strip_path(file_path_strip);
+    //write it out to the file
+    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
+                                                                           file_path, ENGINE_FONTS_PATH,
+                                                                           ENGINE_FONTS_EXTENSION);
+    const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_FONTS_PATH);
-    string_builder_append_builder(str_builder, file_path_strip);
-    string_builder_append_c_string(str_builder, ENGINE_FONTS_EXTENSION);
+    //create path if it does not exist
+    asset_converter_create_directory_for_engine_asset(str_builder_output_path);
 
-    const char* output_path = string_builder_to_c_string(str_builder);
+
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {
@@ -423,12 +449,28 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
                              ASSET_FONT, asset_system->heap_allocator, NULL);
 
+    scratch_allocator_end(scratch_allocator);
     return true;
+}
+
+bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
+{
+    if (c_string_path_is_extension(gltf_path, ".gltf"))
+    {
+        asset_converter_gltf_mesh(asset_system, gltf_path);
+
+        return true;
+    }
+
+    //if wanted support other file formats
+
+
+    return false;
 }
 
 bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
 {
-    Frame_Allocator* frame_allocator = asset_system->frame_allocator;
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
 
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -504,8 +546,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             submesh->vertex_count = submesh->vertex_bytes / sizeof(vec3s);
 
             //alloc and copy data
-            float* pos_data = allocator_alloc(frame_allocator, float_bytes);
-            submesh_gpu->vertex = allocator_alloc(frame_allocator, float_bytes);
+            float* pos_data = allocator_alloc(scratch.allocator, float_bytes);
+            submesh_gpu->vertex = allocator_alloc(scratch.allocator, float_bytes);
             cgltf_accessor_unpack_floats(pos_accessor, pos_data, num_floats);
             memcpy(submesh_gpu->vertex, pos_data, float_bytes);
         }
@@ -522,8 +564,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             submesh->normal_bytes = norm_bytes;
 
             //alloc and copy data
-            float* normal_data = allocator_alloc(frame_allocator, norm_bytes);
-            submesh_gpu->normal = allocator_alloc(frame_allocator, norm_bytes);
+            float* normal_data = allocator_alloc(scratch.allocator, norm_bytes);
+            submesh_gpu->normal = allocator_alloc(scratch.allocator, norm_bytes);
             cgltf_accessor_unpack_floats(norm_accessor, normal_data, norm_floats);
             memcpy(submesh_gpu->normal, normal_data, norm_bytes);
         }
@@ -541,8 +583,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
             //alloc and copy data
-            float* tangent_data = allocator_alloc(frame_allocator, tangent_bytes);
-            submesh_gpu->tangent = allocator_alloc(frame_allocator, tangent_bytes);
+            float* tangent_data = allocator_alloc(scratch.allocator, tangent_bytes);
+            submesh_gpu->tangent = allocator_alloc(scratch.allocator, tangent_bytes);
             cgltf_accessor_unpack_floats(tangent_accessor, tangent_data, tangent_floats);
             memcpy(submesh_gpu->tangent, tangent_data, tangent_bytes);
         }
@@ -559,9 +601,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
             //alloc and copy data
-            float* uv_data = allocator_alloc(frame_allocator, uv_byte_size);
+            float* uv_data = allocator_alloc(scratch.allocator, uv_byte_size);
             cgltf_accessor_unpack_floats(texcoord_accessor, uv_data, uv_floats_count);
-            submesh_gpu->uv = allocator_alloc(frame_allocator, uv_byte_size);
+            submesh_gpu->uv = allocator_alloc(scratch.allocator, uv_byte_size);
             memcpy(submesh_gpu->uv, uv_data, uv_byte_size);
         }
 
@@ -575,16 +617,16 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             submesh->vertex_color_bytes = color_byte_size;
 
             //alloc and copy data
-            float* vertex_color_data = allocator_alloc(frame_allocator, color_byte_size);
+            float* vertex_color_data = allocator_alloc(scratch.allocator, color_byte_size);
             cgltf_accessor_unpack_floats(color_accessor, vertex_color_data, color_floats_count);
-            submesh_gpu->vertex_color = allocator_alloc(frame_allocator, color_byte_size);
+            submesh_gpu->vertex_color = allocator_alloc(scratch.allocator, color_byte_size);
             memcpy(submesh_gpu->vertex_color, vertex_color_data, color_byte_size);
         }
         else
         {
             //get size information
             submesh->vertex_color_bytes = submesh->vertex_count * sizeof(vec4s);
-            submesh_gpu->vertex_color = allocator_alloc(frame_allocator, submesh->vertex_color_bytes);
+            submesh_gpu->vertex_color = allocator_alloc(scratch.allocator, submesh->vertex_color_bytes);
             memset(submesh_gpu->vertex_color, 1, submesh->vertex_color_bytes);
         }
         // Load indices
@@ -606,7 +648,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         //TODO: there can be multiple primitices/indices, will come back to
         submesh->indices_bytes = data->meshes[mesh_idx].primitives->indices->count *
             index_stride;
-        submesh_gpu->indices = allocator_alloc(frame_allocator,
+        submesh_gpu->indices = allocator_alloc(scratch.allocator,
                                                submesh->indices_bytes);
         submesh->index_count = submesh->indices_bytes / index_stride;
 
@@ -619,7 +661,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
         //LOAD TEXTURES/MATERIALS
         // GET BASE PATH
-        char* base_path = c_string_path_strip(gltf_path, frame_allocator);
+        char* base_path = c_string_path_strip(gltf_path, scratch.allocator);
 
         //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
         Material_Default* cur_mat = &default_mats[mesh_idx];
@@ -636,7 +678,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cur_mat->flags |= MESH_PIPELINE_COLOR;
             size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
 
-            char* texture_path = allocator_alloc(frame_allocator,
+            char* texture_path = allocator_alloc(scratch.allocator,
                                                  allocation_size);
             // takes a buffer, message format, then the remaining strings
             snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
@@ -674,7 +716,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 cur_mat->flags |= MESH_PIPELINE_METALLIC;
                 size_t allocation_size = strlen(base_path) +
                     strlen(metal_roughness_texture->image->uri) + 1;
-                char* texture_path = allocator_alloc(frame_allocator, allocation_size);
+                char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
                 // takes a buffer, message format, then the remaining strings
                 snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
                 TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
@@ -704,7 +746,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         {
             cur_mat->flags |= MESH_PIPELINE_AO;
             size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
-            char* AO_texture_path = allocator_alloc(frame_allocator, allocation_size);
+            char* AO_texture_path = allocator_alloc(scratch.allocator, allocation_size);
             // takes a buffer, message format, then the remaining strings
             snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
 
@@ -720,7 +762,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         {
             cur_mat->flags |= MESH_PIPELINE_NORMAL;
             size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
-            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
+            char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
             // takes a buffer, message format, then the remaining strings
             snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
             TRACE("NORMAL Texture Path:  %s", texture_path);
@@ -736,7 +778,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cur_mat->flags |= MESH_PIPELINE_EMISSIVE;
             size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
 
-            char* texture_path = allocator_alloc(frame_allocator, allocation_size);
+            char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
             // takes a buffer, message format, then the remaining strings
             snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
             TRACE("EMISSIVE Texture Path:  %s", texture_path);
@@ -773,12 +815,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         default_info.material_id = material_system_generate_id(&default_info);
         //generate the id, as we dont likley want to do this at runtime
         Material_Instance* mat_inst = &material_instances[mesh_idx];
-        material_instances[mesh_idx].material_data = cur_mat;
-        material_instances[mesh_idx].data_size = reflection_registry_get_struct(
-            asset_system->material_system->reflection_registry, TYPE_STRING(Material_Default)).struct_size;
+        mat_inst->material_data = cur_mat;
+       mat_inst->data_size = reflection_registry_get_struct(
+            asset_system->global_reflection_registry, TYPE_STRING(Material_Default)).struct_size;
 
         asset_converter_material_asset(asset_system, &default_info,
-                                       asset_system->material_system->reflection_registry,
                                        &mat_inst->material_asset_uuid);
 
 
@@ -808,8 +849,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 skinned_submesh->joint_bytes = float_bytes;
 
                 //alloc and copy data
-                float* joint_data = allocator_alloc(frame_allocator, float_bytes);
-                skinned_submesh_gpu->joints = allocator_alloc(frame_allocator, float_bytes);
+                float* joint_data = allocator_alloc(scratch.allocator, float_bytes);
+                skinned_submesh_gpu->joints = allocator_alloc(scratch.allocator, float_bytes);
                 cgltf_accessor_unpack_floats(joint_accessor, joint_data, num_floats);
                 memcpy(skinned_submesh_gpu->joints, joint_data, float_bytes);
             }
@@ -826,8 +867,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 skinned_submesh->weight_bytes = float_bytes;
 
                 //alloc and copy data
-                float* weight_data = allocator_alloc(frame_allocator, float_bytes);
-                skinned_submesh_gpu->weights = allocator_alloc(frame_allocator, float_bytes);
+                float* weight_data = allocator_alloc(scratch.allocator, float_bytes);
+                skinned_submesh_gpu->weights = allocator_alloc(scratch.allocator, float_bytes);
                 cgltf_accessor_unpack_floats(weight_accessor, weight_data, num_floats);
                 memcpy(skinned_submesh_gpu->weights, weight_data, float_bytes);
             }
@@ -836,7 +877,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
         hash_table* joint_name_to_index = HASH_TABLE_CREATE(size_t, 200);
 
-        animation_data->animations = allocator_alloc(frame_allocator, sizeof(Animation) * data->animations_count);
+        animation_data->animations = allocator_alloc(scratch.allocator, sizeof(Animation) * data->animations_count);
         animation_data->animations_count = data->animations_count;
 
 
@@ -844,9 +885,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         {
             cgltf_skin* skin_data = &data->skins[skin_idx];
             animation_data->joint_count = skin_data->joints_count;
-            animation_data->joints = allocator_alloc(frame_allocator, skin_data->joints_count * sizeof(Joint));
+            animation_data->joints = allocator_alloc(scratch.allocator, skin_data->joints_count * sizeof(Joint));
             animation_data->resting_pose_local_matrix = allocator_alloc(
-                frame_allocator, skin_data->joints_count * sizeof(mat4s));
+                scratch.allocator, skin_data->joints_count * sizeof(mat4s));
 
             // Inverse bind matrices — one 4x4 float matrix per joint
             if (skin_data->inverse_bind_matrices)
@@ -856,8 +897,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 cgltf_size ibm_bytes = ibm_floats * sizeof(float);
 
                 //alloc and copy data
-                float* ibm_date = allocator_alloc(frame_allocator, ibm_bytes);
-                animation_data->inverse_bind_matrix = allocator_alloc(frame_allocator, ibm_bytes);
+                float* ibm_date = allocator_alloc(scratch.allocator, ibm_bytes);
+                animation_data->inverse_bind_matrix = allocator_alloc(scratch.allocator, ibm_bytes);
 
                 cgltf_accessor_unpack_floats(skin_data->inverse_bind_matrices, ibm_date, ibm_floats);
                 memcpy(animation_data->inverse_bind_matrix, ibm_date, ibm_bytes);
@@ -865,7 +906,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             else
             {
                 // glTF spec: absent inverse_bind_matrices means identity per joint
-                animation_data->inverse_bind_matrix = allocator_alloc(frame_allocator,
+                animation_data->inverse_bind_matrix = allocator_alloc(scratch.allocator,
                                                                       sizeof(mat4s) * skin_data->joints_count);
 
                 for (cgltf_size j = 0; j < skin_data->joints_count; j++)
@@ -880,11 +921,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 Joint* cur_joint = &animation_data->joints[joint_idx];
                 cgltf_node* cgltf_joint = skin_data->joints[joint_idx];
 
-                cur_joint->joint_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(cgltf_joint->name, frame_allocator);
+                cur_joint->joint_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(cgltf_joint->name, scratch.allocator);
                 cur_joint->id = joint_idx;
 
                 hash_table_insert(joint_name_to_index,
-                                  string_to_c_string_allocator(cur_joint->joint_name, frame_allocator), &joint_idx);
+                                  string_to_c_string_allocator(cur_joint->joint_name, scratch.allocator), &joint_idx);
             }
             //this pass is to get the parent id's and parent nodes
             for (size_t joint_idx = 0; joint_idx < data->skins[skin_idx].joints_count; joint_idx++)
@@ -914,24 +955,24 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 if (anim_data->name)
                 {
                     cur_animation->animation_name =
-                        STRING_CREATE_FROM_BUFFER_ALLOCATOR(anim_data->name, frame_allocator);
+                        STRING_CREATE_FROM_BUFFER_ALLOCATOR(anim_data->name, scratch.allocator);
                 }
                 else
                 {
                     cur_animation->animation_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(
-                        data->meshes[0].name, frame_allocator);
+                        data->meshes[0].name, scratch.allocator);
                     cur_animation->animation_name = string_concat(cur_animation->animation_name,
                                                                   string_from_int(
-                                                                      animation_idx, frame_allocator),
-                                                                  frame_allocator);
+                                                                      animation_idx, scratch.allocator),
+                                                                  scratch.allocator);
                 }
                 cgltf_size channel_count = anim_data->channels_count;
                 cgltf_size sampler_count = anim_data->samplers_count;
                 cur_animation->channel_count = channel_count;
                 cur_animation->sampler_count = sampler_count;
 
-                cur_animation->channels = allocator_alloc(frame_allocator, sizeof(Animation_Channel) * channel_count);
-                cur_animation->samplers = allocator_alloc(frame_allocator, sizeof(Animation_Sampler) * sampler_count);
+                cur_animation->channels = allocator_alloc(scratch.allocator, sizeof(Animation_Channel) * channel_count);
+                cur_animation->samplers = allocator_alloc(scratch.allocator, sizeof(Animation_Sampler) * sampler_count);
 
 
                 for (size_t channel_idx = 0; channel_idx < channel_count; channel_idx++)
@@ -963,12 +1004,12 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                     //read gltf input data
                     cur_sampler->timestamps_count = anim_sampler->input->count;
                     cur_sampler->timestamps =
-                        allocator_alloc(frame_allocator, sizeof(float) * cur_sampler->timestamps_count);
+                        allocator_alloc(scratch.allocator, sizeof(float) * cur_sampler->timestamps_count);
                     //get size information
                     cgltf_size num_floats = cgltf_accessor_unpack_floats(anim_sampler->input, NULL, 0);
                     cgltf_size float_bytes = num_floats * sizeof(float);
                     //alloc and copy data
-                    float* timestamp_data = allocator_alloc(frame_allocator, float_bytes);
+                    float* timestamp_data = allocator_alloc(scratch.allocator, float_bytes);
                     cgltf_accessor_unpack_floats(anim_sampler->input, timestamp_data, num_floats);
                     memcpy(cur_sampler->timestamps, timestamp_data, float_bytes);
 
@@ -989,7 +1030,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                     cgltf_size output_num_floats = cgltf_accessor_unpack_floats(anim_sampler->output, NULL, 0);
                     cgltf_size output_float_bytes = output_num_floats * sizeof(float);
                     cur_sampler->trs_interpolation_bytes = output_float_bytes;
-                    float* trs_buffer_data = allocator_alloc(frame_allocator, output_float_bytes);
+                    float* trs_buffer_data = allocator_alloc(scratch.allocator, output_float_bytes);
                     cgltf_accessor_unpack_floats(anim_sampler->output, trs_buffer_data, output_num_floats);
 
                     cur_sampler->interpolation_type = Animation_Interpolation_Type_gltf_to_engine[anim_sampler->
@@ -998,18 +1039,18 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                     {
                     //these are the only supported formats in the gltf spec for samplers
                     case cgltf_type_scalar: // weights
-                        cur_sampler->interperlation_data.trs_float = allocator_alloc(frame_allocator,
+                        cur_sampler->interperlation_data.trs_float = allocator_alloc(scratch.allocator,
                             sizeof(float) * output_num_floats);
                         memcpy(cur_sampler->interperlation_data.trs_float, trs_buffer_data, output_float_bytes);
                         break;
                     case cgltf_type_vec3: // translation, scale
                         cur_sampler->interperlation_data.trs_vec3 = allocator_alloc(
-                            frame_allocator, sizeof(float) * output_num_floats);
+                            scratch.allocator, sizeof(float) * output_num_floats);
                         memcpy(cur_sampler->interperlation_data.trs_vec3, trs_buffer_data, output_float_bytes);
                         break;
                     case cgltf_type_vec4: // rotation
                         cur_sampler->interperlation_data.trs_vec4 = allocator_alloc(
-                            frame_allocator, sizeof(float) * output_num_floats);
+                            scratch.allocator, sizeof(float) * output_num_floats);
                         memcpy(cur_sampler->interperlation_data.trs_vec4, trs_buffer_data, output_float_bytes);
                         break;
                     default:
@@ -1040,16 +1081,14 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         sk_mesh_runtime.animation_data = animation_data;
 
 
-        String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
-        string_builder_append_c_string(file_path_strip, gltf_path);
-        string_builder_strip_extension(file_path_strip);
-        string_builder_strip_path(file_path_strip);
+        String_Builder* str_builder = asset_converter_create_file_path(scratch, gltf_path,
+                                                      ENGINE_SK_MESH_PATH, ENGINE_SKMESH_EXTENSION);
 
-        String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-        string_builder_append_c_string(str_builder, ENGINE_SK_MESH_PATH);
-        string_builder_append_builder(str_builder, file_path_strip);
-        string_builder_append_c_string(str_builder, ENGINE_SKMESH_EXTENSION);
+
         const char* output_path = string_builder_to_c_string(str_builder);
+        asset_converter_create_directory_for_engine_asset(str_builder);
+
+
 
         //write out the engine format data
         FILE* fptr = fopen(output_path, "wb");
@@ -1076,19 +1115,16 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         engine_format.mesh_gpu_upload = gpu_data;
         engine_format.material_instance = material_instances;
 
-        String_Builder* file_path_strip = string_builder_create(256, asset_system->frame_allocator);
-        string_builder_append_c_string(file_path_strip, gltf_path);
-        string_builder_strip_extension(file_path_strip);
-        string_builder_strip_path(file_path_strip);
 
-        String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-        string_builder_append_c_string(str_builder, ENGINE_MESH_PATH);
-        string_builder_append_builder(str_builder, file_path_strip);
-        string_builder_append_c_string(str_builder, ENGINE_MESH_EXTENSION);
+        String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
+                                                                               gltf_path, ENGINE_MESH_PATH,
+                                                                               ENGINE_MESH_EXTENSION);
+        const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
-        const char* output_path = string_builder_to_c_string(str_builder);
+        //create path if it does not exist
+        asset_converter_create_directory_for_engine_asset(str_builder_output_path);
 
-        //write out the engine format data
+
         //write out the engine format data
         FILE* fptr = fopen(output_path, "wb");
 
@@ -1107,11 +1143,13 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     }
 
     cgltf_free(data);
+
+    scratch_allocator_end(scratch);
     return true;
 }
 
 bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
-                                    Reflection_Registry* reflection_registry_material, MADNESS_UUID* out_uuid)
+                                    MADNESS_UUID* out_uuid)
 {
     //We are always going to assume that our reflection registry is up to date and that it is the source of truth
 
@@ -1129,7 +1167,7 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* m
     asset.material_info.material_id = material_system_generate_id(material_info);
 
     Reflection_Runtime_Struct reflection_material = reflection_registry_get_struct(
-        reflection_registry_material, MATERIAL_DEFAULT_NAME);
+        asset_system->global_reflection_registry, MATERIAL_DEFAULT_NAME);
     asset.reflection_material_data = &reflection_material;
 
 
@@ -1205,7 +1243,7 @@ bool asset_converter_material_instance_from_material_asset(Asset_System* asset_s
                                                            const char* asset_name)
 {
     Reflection_Runtime_Struct runtime_material_data = reflection_registry_get_struct(
-        asset_system->material_system->reflection_registry,
+        asset_system->global_reflection_registry,
         string_to_c_string_allocator(material_info->material_name, asset_system->frame_allocator));
 
     MASSERT(mat_inst->material_asset_uuid.high != 0);
@@ -1243,7 +1281,7 @@ bool asset_converter_material_instance_from_material_info(Asset_System* asset_sy
                                                           MADNESS_UUID mat_asset_uuid)
 {
     Reflection_Runtime_Struct runtime_material_data = reflection_registry_get_struct(
-        asset_system->material_system->reflection_registry,
+        asset_system->global_reflection_registry,
         string_to_c_string_allocator(material_info->material_name, asset_system->frame_allocator));
 
 

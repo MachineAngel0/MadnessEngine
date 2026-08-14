@@ -1,4 +1,6 @@
-﻿#include "filesystem.h"
+﻿#include <io.h>
+
+#include "filesystem.h"
 
 #if MPLATFORM_WINDOWS
 
@@ -470,9 +472,9 @@ bool filesystem_does_directory_exists(const char* directory_path)
 }
 
 
-bool filesystem_create_directory(const char* directory_path)
+bool platform_create_directory(const char* directory_path)
 {
-    if (CreateDirectory(directory_path, NULL))
+    if (CreateDirectoryA(directory_path, NULL))
     {
         DEBUG("filesystem_create_directory WIN32: successfully created directory");
         return true;
@@ -484,11 +486,63 @@ bool filesystem_create_directory(const char* directory_path)
         return true;
     }
 
-    FATAL("filesystem_create_directory WIN32: DID NOT created directory");
+    FATAL("filesystem_create_directory WIN32: DID NOT created directory, Reason %d", GetLastError());
     return false;
 }
 
-bool filesystem_create_file_platform(const char* file_path)
+bool platform_create_directory_recursive(const char* directory_path)
+{
+    char buffer[MAX_PATH];
+    strcpy_s(buffer, sizeof(buffer), directory_path);
+
+    for (char* p = buffer; *p; p++)
+    {
+        if (*p == '/' || *p == '\\')
+        {
+            char separator = *p;
+            *p = '\0';
+
+            if (buffer[0] != '\0')
+            {
+                if (!CreateDirectoryA(buffer, NULL))
+                {
+                    DWORD error = GetLastError();
+
+                    if (error != ERROR_ALREADY_EXISTS)
+                    {
+                        FATAL(
+                            "Failed creating directory '%s', error %lu",
+                            buffer,
+                            error);
+                        return false;
+                    }
+                }
+            }
+
+            *p = separator;
+        }
+    }
+
+    if (!CreateDirectoryA(buffer, NULL))
+    {
+        DWORD error = GetLastError();
+
+        if (error != ERROR_ALREADY_EXISTS)
+        {
+            FATAL(
+                "Failed creating directory '%s', error %lu",
+                buffer,
+                error);
+            return false;
+        }
+    }
+
+    return true;
+
+
+}
+
+bool platform_create_file(const char* file_path)
 {
     HANDLE handle = CreateFileA(
         file_path,
@@ -502,12 +556,13 @@ bool filesystem_create_file_platform(const char* file_path)
 
     if (handle == INVALID_HANDLE_VALUE)
     {
+        WARN("PLATFORM CREATE FILE WIN32: Error creating file %d", GetLastError());
         if (GetLastError() == ERROR_FILE_EXISTS)
         {
             printf("File already exists\n");
             return 1; // File exists - not an error
         }
-        printf("Error creating file\n");
+        ;
         return 0;
     }
 
