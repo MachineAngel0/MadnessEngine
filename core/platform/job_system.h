@@ -67,8 +67,9 @@ alignas(64) typedef struct /*alignas(64)*/ Job_Result
 typedef struct Job_Thread
 {
     Madness_Thread thread;
-    u8 job_thread_index;
+    u8 job_thread_array_index;
 
+    u64 job_thread_platform_id;
     Job_Type jobs_can_run;
 
 
@@ -128,11 +129,7 @@ void job_counter_decrement(Job_Counter* job_counter);
 void job_system_wait_free(Job_Counter* job_counter);
 
 
-//TODO: no work stealing queues for now
-// just one queue for now, until we add work stealing
-// have a way for right now to explicity wait for the job types to finish
-// the main thread in the wait function should execute a job, so its not bieng idle
-//
+Allocator* job_system_get_thread_allocator();
 
 
 typedef struct Job_Test_Param
@@ -143,6 +140,9 @@ typedef struct Job_Test_Param
 } Job_Test_Param;
 
 void job_system_test();
+
+
+
 
 
 #endif //JOB_SYSTEM_H

@@ -12,7 +12,7 @@ u32 job_thread_run(void* data)
     u32 thread_index = *(u32*)data;
     Job_Thread* job_thread = &job_system->job_threads[thread_index];
     // Madness_Thread thread = job_system->job_threads[thread_index].thread;
-    u64 thread_id = thread_get_id();
+    job_thread->job_thread_platform_id = thread_get_id();
     // thread.thread_id;
 
     //allocate some memory on the stack for this thread
@@ -80,7 +80,6 @@ u32 job_thread_run_resource(void* data)
     //create our worker queues
 
 
-
     while (true)
     {
         if (!job_system || !job_system->running || !job_thread)
@@ -138,11 +137,6 @@ bool job_system_init(Memory_System* memory_system)
     memcpy(job_system->job_threads, &thread_default, sizeof(Job_Type));
 
 
-
-
-
-
-
     //set up our background resource loader threads
     if (job_system->thread_count >= 15)
     {
@@ -191,9 +185,10 @@ bool job_system_init(Memory_System* memory_system)
     const u64 job_counter_string_size = 256;
     const u64 job_counter_memory_string_size = MAX_JOB_COUNTER_POOL * job_counter_string_size; //small string
     void* job_counter_string_memory_pool =
-            memory_system_alloc(memory_system, job_counter_memory_size, MEMORY_SUBSYSTEM_THREAD);
-    pool_allocator_init(&job_system->job_counter_string_pool, job_counter_string_memory_pool, job_counter_memory_string_size,
-                      job_counter_string_size, 8);
+        memory_system_alloc(memory_system, job_counter_memory_size, MEMORY_SUBSYSTEM_THREAD);
+    pool_allocator_init(&job_system->job_counter_string_pool, job_counter_string_memory_pool,
+                        job_counter_memory_string_size,
+                        job_counter_string_size, 8);
 
 
     u64 total_thread_allocator_memory = MB(64);
@@ -202,15 +197,15 @@ bool job_system_init(Memory_System* memory_system)
     for (u32 i = 0; i < job_system->thread_count; i++)
     {
         Job_Thread* job_thread = &job_system->job_threads[i];
-        job_thread->job_thread_index = i;
+        job_thread->job_thread_array_index = i;
 
 
-       job_thread->allocator = memory_system_allocator_create(memory_system, per_thread_allocator_memory,
-                                                     MEMORY_SUBSYSTEM_THREAD);
+        job_thread->allocator = memory_system_allocator_create(memory_system, per_thread_allocator_memory,
+                                                               MEMORY_SUBSYSTEM_THREAD);
         switch (job_thread->jobs_can_run)
         {
         case JOB_TYPE_GENERAL:
-            if (!thread_create(job_thread_run, &job_system->job_threads[i].job_thread_index, false,
+            if (!thread_create(job_thread_run, &job_system->job_threads[i].job_thread_array_index, false,
                                &job_thread->thread))
             {
                 FATAL("OS ERROR CANNOT SPAWN THREAD");
@@ -218,7 +213,7 @@ bool job_system_init(Memory_System* memory_system)
             }
             break;
         case JOB_TYPE_RESOURCE_LOAD:
-            if (!thread_create(job_thread_run_resource, &job_system->job_threads[i].job_thread_index, false,
+            if (!thread_create(job_thread_run_resource, &job_system->job_threads[i].job_thread_array_index, false,
                                &job_thread->thread))
             {
                 FATAL("OS ERROR CANNOT SPAWN THREAD");
@@ -373,6 +368,19 @@ void job_system_wait_free(Job_Counter* job_counter)
     //once its done we can free the counter
     pool_allocator_free(&job_system->job_counter_string_pool, job_counter->job_name);
     pool_allocator_free(&job_system->job_counter_pool, job_counter);
+}
+
+Allocator* job_system_get_thread_allocator()
+{
+    u64 thread_id = thread_get_id();
+    for (u32 i = 0; i < job_system->thread_count; i++)
+    {
+       if (job_system->job_threads[i].job_thread_platform_id == thread_id)
+       {
+           return job_system->job_threads[i].allocator;
+       }
+
+    }
 }
 
 

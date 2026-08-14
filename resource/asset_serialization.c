@@ -178,7 +178,7 @@ MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* f
 {
     fwrite(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
     fwrite(&instance->data_size, sizeof(instance->data_size), 1, fptr);
-    fwrite(&instance->material_data, instance->data_size, 1, fptr);
+    fwrite(instance->material_data, instance->data_size, 1, fptr);
     return true;
 }
 
@@ -187,7 +187,7 @@ bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr
     fread(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
     fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     instance->material_data = allocator_alloc(allocator, instance->data_size);
-    fread(&instance->material_data, instance->data_size, 1, fptr);
+    fread(instance->material_data, instance->data_size, 1, fptr);
 
     return true;
 }
@@ -197,7 +197,7 @@ MAPI bool asset_material_instance_deserialize_heap(Material_Instance* instance, 
     fread(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
     fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     instance->material_data = allocator_heap_alloc(allocator, instance->data_size);
-    fread(&instance->material_data, instance->data_size, 1, fptr);
+    fread(instance->material_data, instance->data_size, 1, fptr);
 
     return true;
 }

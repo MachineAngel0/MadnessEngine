@@ -822,9 +822,25 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         asset_converter_material_asset(asset_system, &default_info,
                                        &mat_inst->material_asset_uuid);
 
+        if (data->meshes[mesh_idx].primitives->material->name)
+        {
+            asset_converter_material_instance_from_material_asset(asset_system, mat_inst, &default_info,
+                                                                  data->meshes[mesh_idx].primitives->material->name);
+        }else
+        {
+            String_Builder* base_name = string_builder_create(256, scratch.allocator);
+            string_builder_append_c_string(base_name, gltf_path);
+            string_builder_strip_path_to_base_name(base_name);
 
-        asset_converter_material_instance_from_material_asset(asset_system, mat_inst, &default_info,
-                                                              data->meshes[mesh_idx].primitives->material->name);
+            String_Builder* string_mat_name = string_builder_create(256, scratch.allocator);
+            string_builder_append_builder(string_mat_name, base_name);
+            string_builder_append_c_string(string_mat_name, "No_Mat_Name");
+            string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
+
+
+            asset_converter_material_instance_from_material_asset(asset_system, mat_inst, &default_info,
+                                                      string_builder_to_c_string(string_mat_name));
+        }
     }
 
 
@@ -1259,6 +1275,11 @@ bool asset_converter_material_instance_from_material_asset(Asset_System* asset_s
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
 
     const char* output_path = string_builder_to_c_string(str_builder);
+
+
+
+
+
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {

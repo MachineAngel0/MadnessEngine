@@ -404,6 +404,7 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
     //has asset already been loaded
     if (mesh_system_exists_mesh(asset_system, &mesh_handle, out_meta_data->hash))
     {
+        //TODO: in theory we want to be creating another model
         return mesh_handle;
     }
 
