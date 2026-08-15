@@ -136,7 +136,7 @@ bool platform_file_copy(const char* source_file, char* destination_file);
 // RENDERER
 void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
-bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context);
+bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context);
 
 void platform_get_window_size(s32* width, s32* height);
 void platform_get_window_pos(s32* x, s32* y);

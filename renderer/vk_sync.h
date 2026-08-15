@@ -2,9 +2,9 @@
 #define VK_FENCES_H
 
 
-void sync_object_per_frame_init(Renderer* renderer, vulkan_context* context);
+void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context);
 
-bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns);
+bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns);
 
 void create_semaphore(Renderer* renderer);
 
@@ -178,7 +178,7 @@ void tranfer_graphics_memory_barrier_acquire(Renderer* renderer, vulkan_command_
 */
 
 
-void memory_barrier_transfer(Renderer* renderer, vulkan_command_buffer* command_buffer)
+void memory_barrier_transfer(Renderer* renderer, Vulkan_Command_Buffer* command_buffer)
 {
     // If there is a semaphore signal + wait between this being submitted and
     // the vertex buffer being used, then skip this pipeline barrier.

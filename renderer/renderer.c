@@ -41,7 +41,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
     memset(renderer, 0, sizeof(Renderer));
-    vulkan_context* vk_context = &renderer->context;
+    Vulkan_Context* vk_context = &renderer->context;
 
 
     //grab the input system if its valid
@@ -56,8 +56,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     //set up memory for the renderer
-    u64 renderer_system_mem_requirement = GB(0.5);
-    u64 frame_arena_mem_size = GB(0.5);
+    u64 renderer_system_mem_requirement = MB(512);
+    u64 frame_arena_mem_size = MB(256);
+    u64 heap__mem_size = MB(256);
 
 
     void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
@@ -140,7 +141,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     vulkan_renderpass_create_new(vk_context);
 
     // Swapchain framebuffers.
-    vk_context->swapchain.framebuffers = darray_create_reserve(vulkan_framebuffer, vk_context->swapchain.image_count);
+    vk_context->swapchain.framebuffers = darray_create_reserve(Vulkan_Framebuffer, vk_context->swapchain.image_count);
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
     //SHADOW PASS TEXTURE
@@ -216,7 +217,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // this includes, command buffers, sync objects, and cpu side uniform buffers
     // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,
 
-    vulkan_context* vk_context = &renderer->context;
+    Vulkan_Context* vk_context = &renderer->context;
 
     allocator_clear(&renderer->frame_allocator);
     buffer_system_frame_start(renderer);
@@ -352,7 +353,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Begin recording commands.
     //TODO: might have to change to primary command buffer
-    vulkan_command_buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
+    Vulkan_Command_Buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
         current_frame];
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
     vulkan_command_buffer_begin(graphics_command_buffer, false, false, false);
@@ -710,7 +711,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 void renderer_shutdown(Renderer* renderer)
 {
-    vulkan_context* vk_context = &renderer->context;
+    Vulkan_Context* vk_context = &renderer->context;
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -820,7 +821,7 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
     if (!renderer) return;
-    vulkan_context* vk_context = &renderer->context;
+    Vulkan_Context* vk_context = &renderer->context;
 
 
     if (!vk_context->is_init)

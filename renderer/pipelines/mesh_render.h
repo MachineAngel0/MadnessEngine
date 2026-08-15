@@ -8,24 +8,24 @@ MAPI Mesh_Renderer* mesh_renderer_init(Renderer* renderer);
 
 
 MAPI void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
-                                         vulkan_command_buffer* command_buffer);
+                                         Vulkan_Command_Buffer* command_buffer);
 MAPI void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                              Render_Packet* render_packet, vulkan_command_buffer* command_buffer);
+                                              Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer);
 
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer,
                                          Render_Packet* render_packet,
-                                         vulkan_command_buffer* command_buffer);
+                                         Vulkan_Command_Buffer* command_buffer);
 
 void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                              vulkan_command_buffer* command_buffer);
+                              Vulkan_Command_Buffer* command_buffer);
 
 
 //TODO: should be pass in a custom push constant??? since we will likely need it
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                             Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                                            vulkan_command_buffer* command_buffer, Vulkan_Shader_Pipeline* shader_pipeline);
+                                            Vulkan_Command_Buffer* command_buffer, Vulkan_Shader_Pipeline* shader_pipeline);
 
 
 #endif //MESH_RENDER_H

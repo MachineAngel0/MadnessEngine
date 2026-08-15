@@ -4,62 +4,64 @@
 #include "vulkan_struct_types.h"
 
 // used by the renderer, the rest are helper functions
-void vulkan_renderer_command_buffers_create(vulkan_context* vk_context);
-void vulkan_renderer_command_buffer_destroy(vulkan_context* vk_context);
+void vulkan_renderer_command_buffers_create(Vulkan_Context* vk_context);
+void vulkan_renderer_command_buffer_destroy(Vulkan_Context* vk_context);
 
 
 void vulkan_command_buffer_allocate(
-    vulkan_context* context,
+    Vulkan_Context* context,
     VkCommandPool pool,
-    bool is_primary,
-    vulkan_command_buffer* out_command_buffer);
+    Vulkan_Command_Buffer_Level cb_level,
+    Vulkan_Command_Buffer* out_command_buffer);
 
-void vulkan_command_buffer_reset(vulkan_command_buffer* command_buffer);
+void vulkan_command_buffer_reset(Vulkan_Command_Buffer* command_buffer);
 void vulkan_command_buffer_free(
-    vulkan_context* context,
+    Vulkan_Context* context,
     VkCommandPool pool,
-    vulkan_command_buffer* command_buffer);
+    Vulkan_Command_Buffer* command_buffer);
 
 
 void vulkan_command_buffer_begin(
-    vulkan_command_buffer* command_buffer,
+    Vulkan_Command_Buffer* command_buffer,
     bool is_single_use,
     bool is_renderpass_continue,
     bool is_simultaneous_use);
 
 
-void vulkan_command_buffer_end(vulkan_command_buffer* command_buffer);
+void vulkan_command_buffer_end(Vulkan_Command_Buffer* command_buffer);
 
 
 /**
  * Allocates and begins recording to out_command_buffer.
  */
 void vulkan_command_buffer_allocate_and_begin_single_use(
-    vulkan_context* context,
+    Vulkan_Context* context,
     VkCommandPool pool,
-    vulkan_command_buffer* out_command_buffer);
+    Vulkan_Command_Buffer* out_command_buffer);
+
+/**
+ * Ends recording, submits to queue, does not free memory
+ */
+void vulkan_command_buffer_end_and_submit_single_use(
+    Vulkan_Command_Buffer* command_buffer,
+    VkQueue queue, VkSubmitInfo2* submit_info);
 
 /**
  * Ends recording, submits to and waits for queue operation and frees the provided command buffer.
  */
-void vulkan_command_buffer_end_single_use(
-    vulkan_context* context,
-    VkCommandPool pool,
-    vulkan_command_buffer* command_buffer,
-    VkQueue queue);
+void vulkan_command_buffer_end_and_submit_and_free_single_use(Vulkan_Context* context, VkCommandPool pool,
+                                          Vulkan_Command_Buffer* command_buffer, VkQueue queue);
 
 
+void vulkan_command_buffer_submit(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer, VkQueue queue);
 
-
-void vulkan_command_buffer_submit(vulkan_context* context, vulkan_command_buffer* command_buffer, VkQueue queue);
-
-void vulkan_command_buffer_submit_new(vulkan_context* context, vulkan_command_buffer* command_buffer,
+void vulkan_command_buffer_submit_new(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer,
                                       VkQueue queue, VkSemaphoreSubmitInfo* wait_semaphore,
                                       VkSemaphoreSubmitInfo* signal_semaphore);
 
 //TODO: rn will break compile, have to load in the funciton pointers
-void vulkan_command_buffer_begin_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer, const char* name);
-void vulkan_command_buffer_end_debug_label(Renderer* renderer, vulkan_command_buffer* command_buffer);
+void vulkan_command_buffer_begin_debug_label(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, const char* name);
+void vulkan_command_buffer_end_debug_label(Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
 
 
 //TODO: refactor

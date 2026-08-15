@@ -21,18 +21,18 @@ Buffer_System* buffer_system_free(Renderer* renderer);
 void buffer_system_frame_start(Renderer* renderer);
 
 
-uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
+uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 // Get device address of a buffer
 VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 
 //TODO: used in texture image, replace with a storage buffer call or retrieve
-bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
+bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 
-void buffer_copy(vulkan_context* vulkan_context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+void buffer_copy(Vulkan_Context* vulkan_context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
                         VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
                         VkDeviceSize srcOffset, VkDeviceSize dstOffset);
 
@@ -86,9 +86,9 @@ void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer
 
 
 void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
-                                          Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer);
+                                          Buffer_Handle staging_buffer_handle, Vulkan_Command_Buffer* command_buffer);
 void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_Handle buffer_handle,
-                                           Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer,
+                                           Buffer_Handle staging_buffer_handle, Vulkan_Command_Buffer* command_buffer,
                                            void* data, u64 data_size);
 
 /* TODO: dont need rn but could use later
@@ -98,8 +98,8 @@ void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vu
 */
 
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_size);
+                                                    Vulkan_Command_Buffer* command_buffer, void* data, u64 data_size);
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_byte_size);
+                                                    Vulkan_Command_Buffer* command_buffer, void* data, u64 data_byte_size);
 
 #endif //VK_BUFFER_H

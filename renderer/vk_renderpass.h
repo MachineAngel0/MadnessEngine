@@ -134,34 +134,34 @@ typedef struct Render_Graph
 //post -> most likely just the color
 //UI -> color, load op
 
-void vulkan_renderpass_create_new(vulkan_context* context);
+void vulkan_renderpass_create_new(Vulkan_Context* context);
 
 
-Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
+Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
                                            VkFormat format, u32 width, u32 height);
 
 //TODO: implement this function properly when needed
-void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_command_buffer* command_buffer);
+void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer);
 
 //OLD API
 
 void vulkan_renderpass_create(
-    vulkan_context* context,
-    vulkan_renderpass* out_renderpass,
+    Vulkan_Context* context,
+    Vulkan_Renderpass* out_renderpass,
     vec4s screen_pos, vec4s clear_color,
     f32 depth,
     u32 stencil);
 
 
-void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* renderpass);
+void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass);
 
 
-void vulkan_renderpass_begin(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
-void vulkan_renderpass_end(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
 
 
-void vulkan_renderpass_UI_begin(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
-void vulkan_renderpass_UI_end(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
+void vulkan_renderpass_UI_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
 
 
 void fake_renderpass_begin(void)

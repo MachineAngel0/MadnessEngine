@@ -1,7 +1,7 @@
 ﻿#include "vk_shader.h"
 
 
-VkShaderModule create_shader_module(const vulkan_context* context, const u8* shader_bytes, const u64 shader_size)
+VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, const u64 shader_size)
 {
     VkShaderModuleCreateInfo shader_module_create_info = {0};
     //shader_module_create_info.flags = 0;

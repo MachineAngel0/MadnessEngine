@@ -626,7 +626,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
 }
 
 
-void vulkan_pipeline_destroy(vulkan_context* context, Vulkan_Shader_Pipeline* pipeline)
+void vulkan_pipeline_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pipeline)
 {
     if (!pipeline)
     {

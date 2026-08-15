@@ -17,7 +17,7 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer)
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                buffer_memory_size);
     sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_CPU_STORAGE,
+                                                                       BUFFER_TYPE_STORAGE,
                                                                        buffer_memory_size);
 
     sprite_backend->sprite_indirect_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
@@ -38,7 +38,7 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer)
 
 
 void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend,
-                             Render_Packet_Sprite* sprite_render_packet, vulkan_command_buffer* command_buffer)
+                             Render_Packet_Sprite* sprite_render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     MASSERT(renderer)
     MASSERT(sprite_backend)
@@ -94,7 +94,7 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
 }
 
 
-void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, vulkan_command_buffer* command_buffer)
+void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer)
 {
     MASSERT(sprite_backend)
 

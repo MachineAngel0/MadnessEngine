@@ -577,7 +577,7 @@ void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
     Vulkan_Buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
 
 
-    MASSERT_MSG(buffer->type == BUFFER_TYPE_CPU_STORAGE,
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_STORAGE,
                 "update_storage_buffer_bindless_descriptor_set: NOT A CPU_STORAGE BUFFER TYPE PASSED IN");
 
 

@@ -13,7 +13,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 
     particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create(
         renderer, renderer->buffer_system,
-        BUFFER_TYPE_CPU_STORAGE,
+        BUFFER_TYPE_STORAGE,
         mesh_buffer_data_size);
 
     //default blend for now
@@ -38,7 +38,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 
 
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
-                                        Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
+                                        Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     vulkan_buffer_reset_offset(renderer, particle_render->spherical_billboard_material_buffer_handle);
 
@@ -67,7 +67,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
 }
 
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,
-                                  vulkan_command_buffer* command_buffer)
+                                  Vulkan_Command_Buffer* command_buffer)
 {
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,

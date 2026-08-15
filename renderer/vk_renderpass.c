@@ -1,7 +1,7 @@
 ﻿#include "vk_renderpass.h"
 
 
-void vulkan_renderpass_create_new(vulkan_context* context)
+void vulkan_renderpass_create_new(Vulkan_Context* context)
 {
     Render_Graph render_graph = {0};
 
@@ -21,7 +21,7 @@ void vulkan_renderpass_create_new(vulkan_context* context)
                                                                          context->framebuffer_height);
 }
 
-void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_command_buffer* command_buffer)
+void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer)
 {
     // A new feature of the dynamic rendering local read extension is the ability to use pipeline barriers in the dynamic render pass
     // to allow framebuffer-local dependencies (i.e. read-after-write) between draw calls using the "by region" flag
@@ -46,7 +46,7 @@ void vulkan_renderpass_insert_memory_barrier(vulkan_context* context, vulkan_com
 }
 
 
-Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
+Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
                                            VkFormat format, u32 width, u32 height)
 {
     Attachment* attachment = &render_graph->attachments[render_graph->attachments_count++];
@@ -138,7 +138,7 @@ Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph
 
     // Without render passes and their implicit layout transitions, we need to explicitly transition the attachments
     // We use a new layout introduced by this extension that makes writes to images visible via input attachments
-    vulkan_command_buffer temp_command_buffer;
+    Vulkan_Command_Buffer temp_command_buffer;
     vulkan_command_buffer_allocate_and_begin_single_use(context,
                                                         context->graphics_command_pool, &temp_command_buffer);
 
@@ -160,13 +160,13 @@ Attachment_Handle vulkan_create_attachment(vulkan_context* context, Render_Graph
     };
     vkCmdPipelineBarrier2(temp_command_buffer.handle, &dependency_info);
 
-    vulkan_command_buffer_end_single_use(context, context->graphics_command_pool,
+    vulkan_command_buffer_end_and_submit_and_free_single_use(context, context->graphics_command_pool,
                                          &temp_command_buffer, context->device.graphics_queue);
 
     return attachment_handle;
 }
 
-void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_renderpass, vec4s screen_pos,
+void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_renderpass, vec4s screen_pos,
                               vec4s clear_color,
                               f32 depth, u32 stencil)
 {
@@ -272,7 +272,7 @@ void vulkan_renderpass_create(vulkan_context* context, vulkan_renderpass* out_re
         &out_renderpass->handle));
 }
 
-void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* renderpass)
+void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass)
 {
     if (renderpass && renderpass->handle)
     {
@@ -281,7 +281,7 @@ void vulkan_renderpass_destroy(vulkan_context* context, vulkan_renderpass* rende
     }
 }
 
-void vulkan_renderpass_begin(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
+void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame)
 {
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(command_buffer->handle,
@@ -341,7 +341,7 @@ void vulkan_renderpass_begin(Renderer* renderer, vulkan_command_buffer* command_
 }
 
 
-void vulkan_renderpass_end(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
+void vulkan_renderpass_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame)
 {
     // Finish the current dynamic rendering section
     vkCmdEndRendering(command_buffer->handle);
@@ -349,7 +349,7 @@ void vulkan_renderpass_end(Renderer* renderer, vulkan_command_buffer* command_bu
     // End renderpass
 }
 
-void vulkan_renderpass_UI_begin(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
+void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame)
 {
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     VkImageSubresourceRange image_subresource_range = {0};
@@ -405,7 +405,7 @@ void vulkan_renderpass_UI_begin(Renderer* renderer, vulkan_command_buffer* comma
     vkCmdBeginRendering(command_buffer->handle, &rendering_info);
 }
 
-void vulkan_renderpass_UI_end(Renderer* renderer, vulkan_command_buffer* command_buffer, u32 current_frame)
+void vulkan_renderpass_UI_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame)
 {
     // Finish the current dynamic rendering section
     vkCmdEndRendering(command_buffer->handle);

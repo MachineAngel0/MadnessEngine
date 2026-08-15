@@ -144,7 +144,7 @@ u64 array_get_byte_size(const Array* array)
 Array* array_copy(Array* src, Allocator* allocator)
 {
     Array* out_array = _array_create(src->stride, src->capacity,
-                                                 allocator);
+                                     allocator);
     memcpy(out_array->data, src->data, src->num_items * src->stride);
     out_array->num_items = src->num_items;
 #ifndef NDEBUG
@@ -323,32 +323,34 @@ void array_remove_swap(Array* array, u64 index)
     {
         WARN("ARRAY REMOVE SWAP FAILED, INVALID INDEX");
         return;
-    };
+    }
 
     //memcpy the last item into the removal spot
-    memcpy((u8*)array->data + (array->stride * index),
-           (u8*)array->data + (array->num_items - 1),
+    void* removal_spot = (u8*)array->data + (array->stride * index);
+    void* last_spot = (u8*)array->data + (array->stride * (array->num_items - 1));
+    memcpy(removal_spot,
+           last_spot,
            array->stride);
     //minus one cause num_items always points to a free spot/ or nothing if full
     array->num_items--;
 }
 
-void array_counting_sort(Array* array, int(* cmp_func)(void*, void*))
+void array_counting_sort(Array* array, int (*cmp_func)(void*, void*))
 {
     MASSERT(false);
 }
 
-void array_merge_sort(Array* array, int(* cmp_func)(void*, void*))
+void array_merge_sort(Array* array, int (*cmp_func)(void*, void*))
 {
     MASSERT(false);
 }
 
-void array_radix_sort(Array* array, int(* cmp_func)(void*, void*))
+void array_radix_sort(Array* array, int (*cmp_func)(void*, void*))
 {
     MASSERT(false);
 }
 
-void array_qsort(Array* array, int(* cmp_func)(const void*,const  void*))
+void array_qsort(Array* array, int (*cmp_func)(const void*, const void*))
 {
     qsort(array->data, array->num_items, array->stride, cmp_func);
 }

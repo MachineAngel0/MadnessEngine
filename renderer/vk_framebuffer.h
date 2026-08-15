@@ -7,18 +7,18 @@
 
 
 void vulkan_framebuffer_create(
-    vulkan_context* context,
-    vulkan_renderpass* renderpass,
+    Vulkan_Context* context,
+    Vulkan_Renderpass* renderpass,
     u32 width,
     u32 height,
     u32 attachment_count,
     VkImageView* attachments,
-    vulkan_framebuffer* out_framebuffer);
+    Vulkan_Framebuffer* out_framebuffer);
 
 
-void vulkan_framebuffer_destroy(vulkan_context* context, vulkan_framebuffer* framebuffer);
+void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer);
 
 //used by the renderer
-void regenerate_framebuffer(vulkan_context* context, vulkan_swapchain* swapchain, vulkan_renderpass* renderpass);
+void regenerate_framebuffer(Vulkan_Context* context, vulkan_swapchain* swapchain, Vulkan_Renderpass* renderpass);
 
 #endif

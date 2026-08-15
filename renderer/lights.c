@@ -49,15 +49,15 @@ Light_System* light_system_init(Renderer* renderer)
 
     //TODO: allocate larger sizes for the buffers
     out_light_system->directional_light_storage_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
         sizeof(Directional_Light) * out_light_system->directional_light_count);
 
     out_light_system->point_light_storage_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
         sizeof(Point_Light) * out_light_system->point_light_count);
 
     out_light_system->spot_light_storage_buffer_handle = vulkan_buffer_create(
-    renderer, renderer->buffer_system, BUFFER_TYPE_CPU_STORAGE,
+    renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
     sizeof(Spot_Light) * out_light_system->point_light_count);
 
 
@@ -92,7 +92,7 @@ Light_System* light_system_init(Renderer* renderer)
     return out_light_system;
 }
 
-void light_system_update(Renderer* renderer, Light_System* light_system, vulkan_command_buffer* command_buffer)
+void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer)
 {
     //TODO: probably shouldn't be reuploading every frame
 

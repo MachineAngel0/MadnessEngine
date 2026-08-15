@@ -6,7 +6,7 @@
 #include "vk_image.h"
 #include "vk_framebuffer.h"
 
-void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
+void vulkan_swapchain_create(Vulkan_Context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
 {
 
 
@@ -193,7 +193,7 @@ void vulkan_swapchain_create(vulkan_context* context, u32 width, u32 height, vul
     INFO("SWAPCHAIN CREATED");
 }
 
-void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapchain)
+void vulkan_swapchain_destroy(Vulkan_Context* context, vulkan_swapchain* swapchain)
 {
     vkDeviceWaitIdle(context->device.logical_device);
     vulkan_texture_free(context, &swapchain->depth_attachment);
@@ -207,14 +207,14 @@ void vulkan_swapchain_destroy(vulkan_context* context, vulkan_swapchain* swapcha
     INFO("SWAPCHAIN DESTROYED");
 }
 
-void vulkan_swapchain_recreate(vulkan_context* context, u32 width, u32 height, vulkan_swapchain* swapchain)
+void vulkan_swapchain_recreate(Vulkan_Context* context, u32 width, u32 height, vulkan_swapchain* swapchain)
 {
     //destroy the old and create the new
     vulkan_swapchain_destroy(context, swapchain);
     vulkan_swapchain_create(context, width, height, swapchain);
 }
 
-bool vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_swapchain* swapchain, u64 timeout_ns,
+bool vulkan_swapchain_acquire_next_image_index(Vulkan_Context* context, vulkan_swapchain* swapchain, u64 timeout_ns,
                                                VkSemaphore image_available_semaphore, VkFence fence_out,
                                                u32* out_image_index)
 {
@@ -235,7 +235,7 @@ bool vulkan_swapchain_acquire_next_image_index(vulkan_context* context, vulkan_s
     return true;
 }
 
-void vulkan_swapchain_present_image(vulkan_context* context, vulkan_swapchain* swapchain,
+void vulkan_swapchain_present_image(Vulkan_Context* context, vulkan_swapchain* swapchain,
                                     VkQueue present_queue, VkSemaphore render_complete_semaphore,
                                     u32 present_image_index)
 {
@@ -260,7 +260,7 @@ void vulkan_swapchain_present_image(vulkan_context* context, vulkan_swapchain* s
     }
 }
 
-bool recreate_swapchain(vulkan_context* context)
+bool recreate_swapchain(Vulkan_Context* context)
 {
     // If already being recreated, do not try again.
     if (context->recreating_swapchain)

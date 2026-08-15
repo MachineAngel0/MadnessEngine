@@ -6,7 +6,7 @@
 //TODO: look into unified image layouts
 // https://www.khronos.org/blog/so-long-image-layouts-simplifying-vulkan-synchronisation
 
-void vulkan_image_create(vulkan_context* context,
+void vulkan_image_create(Vulkan_Context* context,
                          u32 width, u32 height,
                          VkFormat format, VkImageTiling tiling,
                          VkImageUsageFlags usage,
@@ -17,26 +17,26 @@ void vulkan_image_create(vulkan_context* context,
 
 
 
-void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 height, VkFormat format,
-    vulkan_command_buffer* command_buffer, Vulkan_Texture* out_texture);
+void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
+    Vulkan_Command_Buffer* command_buffer, Vulkan_Texture* out_texture);
 
 
-void vulkan_image_view_create(vulkan_context* context, VkFormat format,
+void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
                               VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
 
-void vulkan_texture_free(vulkan_context* context, Vulkan_Texture* image);
+void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image);
 
 
 
-void create_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
+void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer,
                           const char* filepath, Vulkan_Texture* out_texture);
 
 
-void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
                              VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
-void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
-    VkImage image, u32 width, u32 height);
+void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
+                       VkImage image, u32 width, u32 height);
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture);
 
@@ -51,19 +51,20 @@ void image_insert_memory_barrier(
     VkPipelineStageFlags dstStageMask,
     VkImageSubresourceRange subresourceRange);
 
-void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buffer,
+void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
                           Vulkan_Texture* texture, const unsigned char* pixel_data, u32 width, u32 height);
 
 
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
 
 //semaphore uploads
-void vulkan_texture_create_image_with_semaphore(Renderer* renderer, vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture, VkSemaphore* timeline_semaphore);
-void transition_image_layout_with_semaphore(Renderer
-                                            * renderer, vulkan_context* vulkan_context,
-                                            vulkan_command_buffer* command_buffer_context, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkSemaphore* timeline_semaphore);
-
+void vulkan_texture_create_image_with_semaphore(Renderer* renderer, Vulkan_Context* context,
+                                                Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture, VkSemaphore* timeline_semaphore, Vulkan_Command_Buffer*
+                                                single_use_command_buffer);
+void transition_image_layout_new(
+    Vulkan_Command_Buffer* command_buffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer buffer,
+                       VkImage image, u32 width, u32 height);
 /*TEXTURE IMAGE*/
 
 //

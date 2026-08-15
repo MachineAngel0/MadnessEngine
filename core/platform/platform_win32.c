@@ -556,7 +556,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
 }
 
-bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context)
 {
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 

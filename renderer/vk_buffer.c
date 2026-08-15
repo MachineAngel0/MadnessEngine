@@ -56,7 +56,7 @@ void buffer_system_frame_start(Renderer* renderer)
     current_frame_staging_buffer->current_offset = 0;
 }
 
-uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemoryPropertyFlags properties)
+uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(context->device.physical_device, &memProperties);
@@ -74,7 +74,7 @@ uint32_t find_memory_type(vulkan_context* context, uint32_t type_filter, VkMemor
 }
 
 
-bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
+bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
 {
     //create buffer
@@ -122,7 +122,7 @@ bool buffer_create(vulkan_context* vulkan_context, VkDeviceSize size, VkBufferUs
 }
 
 
-void buffer_copy(vulkan_context* vulkan_context,
+void buffer_copy(Vulkan_Context* vulkan_context,
                  VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     // Create a temporary command buffer for the copy operation
@@ -169,7 +169,7 @@ void buffer_copy(vulkan_context* vulkan_context,
 }
 
 
-void buffer_copy_region(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
+void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
                         VkBuffer srcBuffer,
                         VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 {
@@ -235,7 +235,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
-    case BUFFER_TYPE_GPU_STORAGE:
+    case BUFFER_TYPE_STORAGE_COMPUTE:
         buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
@@ -294,7 +294,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         case BUFFER_TYPE_INDEX:
             out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             break;
-        case BUFFER_TYPE_CPU_STORAGE:
+        case BUFFER_TYPE_STORAGE:
             out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
             break;
@@ -302,7 +302,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
             out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
             break;
-        case BUFFER_TYPE_GPU_STORAGE:
+        case BUFFER_TYPE_STORAGE_COMPUTE:
             /*might need a transfer source maybe??? but not really since we can just write into it*/
             out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                 VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
@@ -336,7 +336,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
         VkMemoryPropertyFlags mem_properties;
-        if (buffer_type == BUFFER_TYPE_GPU_STORAGE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
+        if (buffer_type == BUFFER_TYPE_STORAGE_COMPUTE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
             BUFFER_TYPE_UNIFORM)
         {
             mem_properties = gpu_properties;
@@ -352,7 +352,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
 
         //host visible should be mapped to a specific region of memory
-        if (buffer_type == BUFFER_TYPE_GPU_STORAGE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
+        if (buffer_type == BUFFER_TYPE_STORAGE_COMPUTE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
             BUFFER_TYPE_UNIFORM)
         {
             VK_CHECK(
@@ -362,7 +362,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
 
         switch (buffer_in_use->type)
         {
-        case BUFFER_TYPE_CPU_STORAGE:
+        case BUFFER_TYPE_STORAGE:
             update_storage_buffer_bindless_descriptor_set(renderer, renderer->descriptor_system,
                                                           current_handle, 0);
             break;
@@ -423,7 +423,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     case BUFFER_TYPE_INDEX:
         out_buffer_create_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         break;
-    case BUFFER_TYPE_CPU_STORAGE:
+    case BUFFER_TYPE_STORAGE:
         out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
@@ -431,7 +431,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
         out_buffer_create_info.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
         break;
-    case BUFFER_TYPE_GPU_STORAGE:
+    case BUFFER_TYPE_STORAGE_COMPUTE:
         /*might need a transfer source maybe??? but not really since we can just write into it*/
         out_buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
@@ -456,7 +456,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     VkMemoryPropertyFlags cpu_properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     VkMemoryPropertyFlags gpu_properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     VkMemoryPropertyFlags mem_properties;
-    if (buffer_type == BUFFER_TYPE_GPU_STORAGE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
+    if (buffer_type == BUFFER_TYPE_STORAGE_COMPUTE || buffer_type == BUFFER_TYPE_STAGING || buffer_type ==
         BUFFER_TYPE_UNIFORM)
     {
         mem_properties = gpu_properties;
@@ -472,7 +472,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
 
     //host visible should be mapped to a specific region of memory
-    if (buffer_type == BUFFER_TYPE_GPU_STORAGE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
+    if (buffer_type == BUFFER_TYPE_STORAGE_COMPUTE | buffer_type == BUFFER_TYPE_STAGING | buffer_type ==
         BUFFER_TYPE_UNIFORM)
     {
         VK_CHECK(
@@ -615,7 +615,7 @@ void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer
 
 
 void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
-                                     Buffer_Handle staging_buffer_handle, vulkan_command_buffer* command_buffer)
+                                     Buffer_Handle staging_buffer_handle, Vulkan_Command_Buffer* command_buffer)
 {
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
@@ -645,7 +645,7 @@ void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_ha
 
 void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_Handle buffer_handle,
                                                     Buffer_Handle staging_buffer_handle,
-                                                    vulkan_command_buffer* command_buffer, void* data, u64 data_size)
+                                                    Vulkan_Command_Buffer* command_buffer, void* data, u64 data_size)
 {
     if (data_size <= 0)
     {
@@ -694,7 +694,7 @@ void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_H
 
 
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                                   vulkan_command_buffer* command_buffer, void* data,
+                                                                   Vulkan_Command_Buffer* command_buffer, void* data,
                                                                    u64 data_size)
 {
     if (data_size <= 0)
@@ -749,7 +749,7 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
 
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer,
                                                                                Buffer_Handle buffer_handle,
-                                                                               vulkan_command_buffer* command_buffer,
+                                                                               Vulkan_Command_Buffer* command_buffer,
                                                                                void* data, u64 data_byte_size)
 {
     if (data_byte_size <= 0)

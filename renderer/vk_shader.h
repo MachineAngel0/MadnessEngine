@@ -3,13 +3,13 @@
 
 #include "vulkan_struct_types.h"
 
-VkShaderModule create_shader_module(const vulkan_context* context, const u8* shader_bytes, u64 shader_size);
+VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, u64 shader_size);
 
 
-void vulkan_default_shader_destroy(vulkan_context* context, Vulkan_Shader_Pipeline* pipeline,
+void vulkan_default_shader_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pipeline,
                                    VkDescriptorSetLayout* descriptor_set_layout);
 
-void vulkan_default_shader_pipeline_bind(vulkan_command_buffer* command_buffer, Vulkan_Shader_Pipeline* pipeline);
+void vulkan_default_shader_pipeline_bind(Vulkan_Command_Buffer* command_buffer, Vulkan_Shader_Pipeline* pipeline);
 
 
 bool mesh_pipeline_create(Renderer* renderer, Vulkan_Shader_Pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*

@@ -28,9 +28,9 @@
 bool get_vulkan_api_version(uint32_t* apiVersion, uint32_t* variant,
                             uint32_t* major, uint32_t* minor, uint32_t* patch);
 
-bool vulkan_instance_create(vulkan_context* vulkan_context);
+bool vulkan_instance_create(Vulkan_Context* vulkan_context);
 
-bool vulkan_instance_destroy(vulkan_context* vulkan_context);
+bool vulkan_instance_destroy(Vulkan_Context* vulkan_context);
 
 /*DEBUG MESSAGES/Validation Layers*/
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -40,17 +40,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 
 
 /*** VULKAN Device ***/
-bool vulkan_device_create(vulkan_context* vulkan_context);
-bool vulkan_device_destroy(vulkan_context* vulkan_context);
+bool vulkan_device_create(Vulkan_Context* vulkan_context);
+bool vulkan_device_destroy(Vulkan_Context* vulkan_context);
 
 /* SURFACE */
 // void create_surface(Vulkan_Context* vulkan_context, platform_state* platform);
 
 /* PHYSICAL DEVICE*/
-bool select_physical_device(vulkan_context* vulkan_context);
+bool select_physical_device(Vulkan_Context* vulkan_context);
 
 bool physical_device_meets_requirements(
-    vulkan_context* vulkan_context,
+    Vulkan_Context* vulkan_context,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,

@@ -19,17 +19,17 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
 
 
     out_mesh_renderer->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE, mesh_buffer_data_size);
+                                                                   BUFFER_TYPE_STORAGE, mesh_buffer_data_size);
     out_mesh_renderer->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_CPU_STORAGE, mesh_buffer_data_size);
+                                                                    BUFFER_TYPE_STORAGE, mesh_buffer_data_size);
     out_mesh_renderer->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                               BUFFER_TYPE_CPU_STORAGE,
+                                                               BUFFER_TYPE_STORAGE,
                                                                mesh_buffer_data_size);
     out_mesh_renderer->joint_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_CPU_STORAGE,
+                                                                  BUFFER_TYPE_STORAGE,
                                                                   mesh_buffer_data_size);
     out_mesh_renderer->weight_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_CPU_STORAGE,
+                                                                   BUFFER_TYPE_STORAGE,
                                                                    mesh_buffer_data_size);
 
 
@@ -53,7 +53,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
 
     //DRAW DATA
     out_mesh_renderer->skinned_matrix_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_CPU_STORAGE,
+                                                                    BUFFER_TYPE_STORAGE,
                                                                     mesh_buffer_data_size);
     out_mesh_renderer->skinned_matrix_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
         BUFFER_TYPE_STAGING,
@@ -63,7 +63,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
     u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4s);
 
     out_mesh_renderer->transform_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                      BUFFER_TYPE_CPU_STORAGE,
+                                                                      BUFFER_TYPE_STORAGE,
                                                                       transform_buffer_memory_size);
     out_mesh_renderer->transform_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                               BUFFER_TYPE_STAGING,
@@ -79,7 +79,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
 
 
 void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
-                                    vulkan_command_buffer* command_buffer)
+                                    Vulkan_Command_Buffer* command_buffer)
 {
     //update the transforms every frame
 
@@ -151,7 +151,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 }
 
 void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
-                                         Render_Packet* render_packet, vulkan_command_buffer* command_buffer)
+                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     //transform data
     vulkan_buffer_reset_offset(renderer, mesh_renderer->transform_buffer_handle);
@@ -174,7 +174,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer,
                                         Render_Packet* render_packet,
-                                        vulkan_command_buffer* command_buffer)
+                                        Vulkan_Command_Buffer* command_buffer)
 {
     //TODO: were going to assume we have already done culling,
     // but we would need to pass in another structure for actually culled data
@@ -375,7 +375,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 
 void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                              vulkan_command_buffer* command_buffer)
+                              Vulkan_Command_Buffer* command_buffer)
 {
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
@@ -464,7 +464,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
 
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer* mesh_renderer,
                                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                                              vulkan_command_buffer* command_buffer,
+                                              Vulkan_Command_Buffer* command_buffer,
                                               Vulkan_Shader_Pipeline* shader_pipeline)
 {
     MASSERT(shader_pipeline);

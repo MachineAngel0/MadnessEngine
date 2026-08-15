@@ -110,7 +110,7 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
 
     //create the ssbo's
     shader_batch->material_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     BUFFER_TYPE_STORAGE,
                                                                      shader_batch->material_stride *
                                                                      ssbo_init_amount);
     switch (shader_batch->mesh_type)
@@ -118,13 +118,13 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
     case Shader_Mesh_Type_Mesh:
 
         shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     BUFFER_TYPE_STORAGE,
                                                                      sizeof(Vulkan_Mesh_Draw) * ssbo_init_amount);
         break;
     case Shader_Mesh_Type_Skinned:
 
         shader_batch->draw_data_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_CPU_STORAGE,
+                                                                     BUFFER_TYPE_STORAGE,
                                                                      sizeof(Vulkan_Skinned_Draw) * ssbo_init_amount);
         break;
     }

@@ -26,7 +26,7 @@ bool get_vulkan_api_version(u32* apiVersion,
     return false;
 }
 
-bool vulkan_instance_create(vulkan_context* vulkan_context)
+bool vulkan_instance_create(Vulkan_Context* vulkan_context)
 {
     vulkan_context->allocator = 0;
 
@@ -229,7 +229,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
     return VK_FALSE;
 }
 
-bool vulkan_instance_destroy(vulkan_context* vulkan_context)
+bool vulkan_instance_destroy(Vulkan_Context* vulkan_context)
 {
     INFO("VULKAN DESTROYING DEBUGGER");
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
@@ -244,7 +244,7 @@ bool vulkan_instance_destroy(vulkan_context* vulkan_context)
 }
 
 
-bool vulkan_device_create(vulkan_context* vulkan_context)
+bool vulkan_device_create(Vulkan_Context* vulkan_context)
 {
     //query physical device
     if (!select_physical_device(vulkan_context))
@@ -530,7 +530,7 @@ bool vulkan_device_create(vulkan_context* vulkan_context)
     return true;
 }
 
-bool vulkan_device_destroy(vulkan_context* vulkan_context)
+bool vulkan_device_destroy(Vulkan_Context* vulkan_context)
 {
     INFO("Vulkan family queues reset")
     vulkan_context->device.graphics_queue = 0;
@@ -581,7 +581,7 @@ bool vulkan_device_destroy(vulkan_context* vulkan_context)
 }
 
 
-bool select_physical_device(vulkan_context* vulkan_context)
+bool select_physical_device(Vulkan_Context* vulkan_context)
 {
     //once for the count
     u32 physical_device_count = 0;
@@ -722,7 +722,7 @@ bool select_physical_device(vulkan_context* vulkan_context)
 }
 
 bool physical_device_meets_requirements(
-    vulkan_context* vulkan_context,
+    Vulkan_Context* vulkan_context,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,

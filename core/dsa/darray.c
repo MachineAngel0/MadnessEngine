@@ -781,15 +781,26 @@ void dynamic_array_pop(Dynamic_Array* array)
     array->num_items--;
 }
 
+
 void dynamic_array_remove_swap(Dynamic_Array* array, u32 index)
 {
     MASSERT(array)
     MASSERT(index < array->num_items);
-    if (array->num_items <= 0) return;
-
+    if (dynamic_array_is_empty(array))
+    {
+        WARN("ARRAY REMOVE SWAP: ARRAY IS EMPTY, NOTHING TO REMOVE");
+        return;
+    }
+    if (!dynamic_array_valid_index(array, index))
+    {
+        WARN("ARRAY REMOVE SWAP FAILED, INVALID INDEX");
+        return;
+    };
     //memcpy the last item into the removal spot
-    memcpy((u8*)array->data + (array->stride * index),
-           (u8*)array->data + (array->num_items - 1),
+    void* removal_spot = (u8*)array->data + (array->stride * index);
+    void* last_spot = (u8*)array->data + (array->stride * (array->num_items - 1));
+    memcpy(removal_spot,
+           last_spot,
            array->stride);
     //minus one cause num_items always points to a free spot/ or nothing if full
     array->num_items--;
@@ -814,7 +825,7 @@ void dynamic_array_remove_shift_left(Dynamic_Array* array, u32 index)
 
     //memcpy the last item into the removal spot
     memcpy((u8*)array->data + (array->stride * index),
-           (u8*)array->data + (array->stride * index + 1), copy_length * array->stride);
+           (u8*)array->data + ((array->stride * index) + 1), copy_length * array->stride);
 
 
     //minus one cause num_items always points to a free spot/ or nothing if full
@@ -855,6 +866,12 @@ u64 dynamic_array_get_byte_size(Dynamic_Array* array)
 bool dynamic_array_is_empty(Dynamic_Array* array)
 {
     return array->num_items == 0;
+}
+
+bool dynamic_array_valid_index(const Dynamic_Array* array, const u64 index)
+{
+    //return true if the index is in a valid range, of already set items
+    return index < array->num_items;
 }
 
 Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy)

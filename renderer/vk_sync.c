@@ -1,7 +1,7 @@
 ﻿#include "vk_sync.h"
 
 
-void sync_object_per_frame_init(Renderer* renderer, vulkan_context* context)
+void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context)
 {
     //memory
     context->queue_submit_fence = darray_create_reserve(VkFence, context->swapchain.image_count);
@@ -59,7 +59,7 @@ void sync_object_per_frame_init(Renderer* renderer, vulkan_context* context)
 }
 
 
-bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns)
+bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
 {
     // if (!fence->is_signaled)
     // {
@@ -131,7 +131,7 @@ void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semapho
     type_create_info.initialValue = 0;
 
     VkSemaphoreCreateInfo create_info = {0};
-    create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     create_info.flags = 0;
     create_info.pNext = &type_create_info; // setting as timeline
 

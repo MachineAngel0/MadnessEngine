@@ -190,6 +190,7 @@ u64 dynamic_array_get_byte_size(Dynamic_Array* array);
 
 
 bool dynamic_array_is_empty(Dynamic_Array* array);
+bool dynamic_array_valid_index(const Dynamic_Array* array, u64 index);
 
 
 Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy);

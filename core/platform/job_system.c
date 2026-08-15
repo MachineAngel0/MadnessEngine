@@ -381,6 +381,10 @@ Allocator* job_system_get_thread_allocator()
        }
 
     }
+
+    //should never be reached
+    MASSERT_FALSE()
+    return NULL;
 }
 
 

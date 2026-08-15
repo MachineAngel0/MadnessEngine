@@ -16,7 +16,6 @@
 #include "../core/dsa/darray.h"
 #include "hash_table.h"
 #include "input.h"
-#include "str.h"
 #include "../resource/resource_types.h"
 
 
@@ -67,15 +66,9 @@ typedef struct Vulkan_Texture
     // vk_image_type image_type;
 } Vulkan_Texture;
 
-typedef struct Vulkan_Texture_Pending_Upload
-{
-    Madness_Texture* madness_texture;
-    Vulkan_Texture* texture;
-    u64 timeline_semaphore_value;
-}Vulkan_Texture_Pending_Upload;
 
 
-typedef struct vulkan_renderpass
+typedef struct Vulkan_Renderpass
 {
     VkRenderPass handle;
     vec4s screen_pos;
@@ -84,16 +77,16 @@ typedef struct vulkan_renderpass
     f32 depth;
     u32 stencil;
 
-    vulkan_render_pass_state state;
-} vulkan_renderpass;
+    Vulkan_Render_Pass_State state;
+} Vulkan_Renderpass;
 
-typedef struct vulkan_framebuffer
+typedef struct Vulkan_Framebuffer
 {
     VkFramebuffer framebuffer_handle;
     u32 attachment_count;
     VkImageView* attachments;
-    vulkan_renderpass* renderpass;
-} vulkan_framebuffer;
+    Vulkan_Renderpass* renderpass;
+} Vulkan_Framebuffer;
 
 typedef struct vulkan_swapchain
 {
@@ -109,7 +102,7 @@ typedef struct vulkan_swapchain
     Vulkan_Texture depth_attachment;
 
     // framebuffers used for on-screen rendering.
-    vulkan_framebuffer* framebuffers;
+    Vulkan_Framebuffer* framebuffers;
 } vulkan_swapchain;
 
 
@@ -174,18 +167,29 @@ typedef struct vulkan_physical_device_queue_family_info
 } vulkan_physical_device_queue_family_info;
 
 
-typedef struct vulkan_command_buffer
+typedef struct Vulkan_Command_Buffer
 {
-    // VkCommandPool command_pool; // TODO:
+    // VkCommandPool command_pool;
     VkCommandBuffer handle;
-} vulkan_command_buffer;
+    // vulkan_command_buffer_type type;
+    // Vulkan_Command_Buffer_State state;
+    // Command_Buffer_Lifetime lifetime;
+} Vulkan_Command_Buffer;
 
-typedef struct vulkan_shader_stage
+typedef struct Vulkan_Texture_Pending_Upload
+{
+    Madness_Texture* madness_texture;
+    Vulkan_Texture* texture;
+    Vulkan_Command_Buffer* single_use_command_buffer;
+    u64 timeline_semaphore_value;
+}Vulkan_Texture_Pending_Upload;
+
+typedef struct Vulkan_Shader_Stage
 {
     VkShaderModuleCreateInfo create_info;
     VkShaderModule handle;
     VkPipelineShaderStageCreateInfo shader_stage_create_info;
-} vulkan_shader_stage;
+} Vulkan_Shader_Stage;
 
 
 typedef struct Vulkan_Buffer
@@ -199,11 +203,11 @@ typedef struct Vulkan_Buffer
     u64 current_offset;
     u64 capacity;
     Vulkan_Buffer_Type type;
-    u8* mapped_data;
+    u8* mapped_data; // optional
 } Vulkan_Buffer;
 
 
-typedef struct vulkan_shader_pipeline
+typedef struct Vulkan_Shader_Pipeline
 {
     VkPipelineLayout pipeline_layout;
     VkPipeline handle;
@@ -246,6 +250,7 @@ typedef struct Skinned_Render_Item
     u32 skinned_matrix_idx;
 
 } Skinned_Render_Item;
+
 
 
 
@@ -468,16 +473,16 @@ typedef struct vulkan_context
     bool recreating_swapchain;
 
     //renderpass
-    vulkan_renderpass main_renderpass;
+    Vulkan_Renderpass main_renderpass;
 
     //command buffers
     VkCommandPool graphics_command_pool;
-    vulkan_command_buffer* graphics_command_buffer; // darray
+    Vulkan_Command_Buffer* graphics_command_buffer; // darray
 
     VkCommandPool transfer_command_pool;
-    vulkan_command_buffer* transfer_command_buffer; // darray
+    Vulkan_Command_Buffer* transfer_command_buffer; // darray
     VkCommandPool compute_command_pool;
-    vulkan_command_buffer* compute_command_buffer; // darray
+    Vulkan_Command_Buffer* compute_command_buffer; // darray
 
 
     //Semaphores and Fences
@@ -491,7 +496,7 @@ typedef struct vulkan_context
     VkSemaphore* swapchain_acquire_semaphore;
     // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
-} vulkan_context;
+} Vulkan_Context;
 
 
 typedef struct Directional_Light
@@ -779,7 +784,7 @@ typedef struct renderer
     //ui draw info
 
     //TODO: get it out of the context and drop it here
-    vulkan_context context;
+    Vulkan_Context context;
 
     //TODO: TEMP
     VkBufferMemoryBarrier2 buffer_memory_barrier_batch_release[100];

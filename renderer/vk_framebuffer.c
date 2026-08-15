@@ -1,10 +1,10 @@
 ﻿#include "vk_framebuffer.h"
 
 
-void vulkan_framebuffer_create(vulkan_context* context, vulkan_renderpass* renderpass,
+void vulkan_framebuffer_create(Vulkan_Context* context, Vulkan_Renderpass* renderpass,
                                u32 width, u32 height,
                                u32 attachment_count, VkImageView* attachments,
-                               vulkan_framebuffer* out_framebuffer)
+                               Vulkan_Framebuffer* out_framebuffer)
 {
     // Take a copy of the attachments, renderpass and attachment count
     // TODO: ?? why is there a malloc here??
@@ -37,7 +37,7 @@ void vulkan_framebuffer_create(vulkan_context* context, vulkan_renderpass* rende
 }
 
 
-void vulkan_framebuffer_destroy(vulkan_context* context, vulkan_framebuffer* framebuffer)
+void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer)
 {
     vkDestroyFramebuffer(context->device.logical_device, framebuffer->framebuffer_handle, context->allocator);
 
@@ -52,7 +52,7 @@ void vulkan_framebuffer_destroy(vulkan_context* context, vulkan_framebuffer* fra
 }
 
 
-void regenerate_framebuffer(vulkan_context* context, vulkan_swapchain* swapchain, vulkan_renderpass* renderpass)
+void regenerate_framebuffer(Vulkan_Context* context, vulkan_swapchain* swapchain, Vulkan_Renderpass* renderpass)
 {
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {
