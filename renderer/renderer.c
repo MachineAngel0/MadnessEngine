@@ -51,7 +51,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     }
 
 
-
     event_register(EVENT_KEY_RELEASED, STRING("RENDERER"), renderer_on_key);
 
 
@@ -121,7 +120,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     if (vk_context->framebuffer_height != vk_context->device.swapchain_capabilities.capabilities.currentExtent.height)
     {
         vk_context->framebuffer_height = vk_context->device.swapchain_capabilities.capabilities.currentExtent.height;
-        vk_context->framebuffer_height_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.height;
+        vk_context->framebuffer_height_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.
+                                                         height;
     }
 
 
@@ -223,7 +223,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     buffer_system_frame_start(renderer);
 
 
-
     //TODO: move out to the editor
     if (input_key_released_unique(renderer->input_system, KEY_U))
     {
@@ -302,7 +301,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     shader_system_update(renderer, renderer->shader_system, render_packets);
 
 
-
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
 
 
@@ -375,7 +373,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
-    memory_barrier_transfer(renderer, graphics_command_buffer);
+    transfer_barrier_catch_all(renderer, graphics_command_buffer);
 
 
     // Dynamic state
@@ -434,9 +432,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
 
 
-
-
-
     //draw geometry into depth buffer
     mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
                                              renderer->shader_system->mesh_batch,
@@ -455,20 +450,19 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     image_insert_memory_barrier(
         graphics_command_buffer->handle, renderer->context.swapchain.depth_attachment.texture_image,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        VK_ACCESS_SHADER_READ_BIT,
+        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
 
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
 
         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, //want to sample in all sorts of shaders
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT| VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, //want to sample in all sorts of shaders
 
         (VkImageSubresourceRange){
             VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
         }
     );
     //Depth Prepass END //
-
 
     //Shadow Pass//
 
@@ -511,6 +505,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pDepthAttachment = &shadow_depth_attachment,
     };
 
+    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Shadow Pass");
     vkCmdBeginRendering(graphics_command_buffer->handle, &shadow_pass_rendering_info);
     // Dynamic state
     VkViewport shadow_map_viewport = {
@@ -538,6 +533,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     */
 
     vkCmdEndRendering(graphics_command_buffer->handle);
+    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
+
+
     //change shadow pass texture from attachment, to read only
     image_insert_memory_barrier(
         graphics_command_buffer->handle, renderer->shadowpass_texture.texture_image,
@@ -605,6 +603,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pColorAttachments = &color_attachment,
         .pDepthAttachment = &depth_attachment,
     };
+    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Lighting Pass");
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
 
@@ -640,6 +639,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Finish the current dynamic rendering section
     vkCmdEndRendering(graphics_command_buffer->handle);
+    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer );
 
     //COLOR PASS END//
 
@@ -653,6 +653,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 VK_PIPELINE_STAGE_2_NONE,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+
 
     // Lighint Pass End //
 

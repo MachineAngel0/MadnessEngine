@@ -67,7 +67,6 @@ const char* resources_struct_string_list[] = {
 	"Render_Packet", 
 	"Asset_Registry", 
 	"Asset_System", 
-	"Asset_System", 
 };
 
 void generate_runtime_structs_resources(Reflection_Registry* reflection_registry)
@@ -429,7 +428,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Texture, font_index)
 		},
 		{
-			.name = "bindless_slot_external",
+			.name = "bindless_slot_query",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Madness_Texture, bindless_slot_query)
@@ -2437,7 +2436,5 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Asset_System_Runtime_Struct);
-
-
 
 }

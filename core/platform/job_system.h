@@ -55,7 +55,7 @@ typedef struct /*alignas(64)*/ Job_Info
 } Job_Info;
 
 
-alignas(64) typedef struct Job_Result
+/*alignas(64)*/ typedef struct Job_Result
 {
     u8 job_thread_id; // thread this finished on
     fptr_job_complete completion_callback;

@@ -48,11 +48,6 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_sys
                                    Vulkan_Buffer_Type buffer_type, u64 data_size);
 
 
-//TODO: so there are instances in which a buffer is associated with its staging buffer, and having to manually handle both is really annoying
-Buffer_Handle vulkan_buffer_create_with_staging_buffer(Renderer* renderer, Buffer_System* buffer_system,
-                                                       Vulkan_Buffer_Type buffer_type, u64 data_size);
-
-
 void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffer, Vulkan_Buffer_Type buffer_type,
                                     u64 data_size);
 

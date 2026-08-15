@@ -53,8 +53,6 @@ typedef enum Vulkan_Command_Buffer_Type
 
 typedef enum Vulkan_Buffer_Type
 {
-    BUFFER_TYPE_INVALID,
-
     BUFFER_TYPE_VERTEX, // meant to only be used with vkCmdBindVertexBuffers
     BUFFER_TYPE_INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
 

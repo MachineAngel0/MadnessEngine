@@ -29,7 +29,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
                                                                 sizeof(Global_Ubo));
 
 
-    const u64 staging_buffer_size = MB(64);
+    const u64 staging_buffer_size = MB(512);
     for (u32 i = 0; i < out_buffer_system->frames_in_flight; i++)
     {
         Buffer_Handle temp_buffer_handle = out_buffer_system->global_ubo_handle;
@@ -247,6 +247,15 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         buffers_to_create = buffer_system->frames_in_flight;
         out_handle.is_per_frame = true;
         break;
+    case BUFFER_TYPE_VERTEX:
+        break;
+    case BUFFER_TYPE_INDEX:
+        break;
+    case BUFFER_TYPE_STORAGE:
+        break;
+    case BUFFER_TYPE_INDIRECT_HOST_VISIBLE:
+        break;
+
     }
 
     //create one for each frame in flight

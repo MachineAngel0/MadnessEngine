@@ -69,7 +69,7 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
 
 
 
-            mesh_inst->mesh_asset = (Madness_Mesh_Handle_Internal){.handle = 1};
+            mesh_inst->mesh_asset = (Madness_Mesh_Handle_Internal){.handle = i};
             scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
             mesh_inst->mesh_count = madness_mesh->mesh_count;
             mesh_inst->submesh_instances = allocator_heap_alloc(

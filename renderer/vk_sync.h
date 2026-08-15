@@ -178,7 +178,7 @@ void tranfer_graphics_memory_barrier_acquire(Renderer* renderer, vulkan_command_
 */
 
 
-void memory_barrier_transfer(Renderer* renderer, Vulkan_Command_Buffer* command_buffer)
+void transfer_barrier_catch_all(Renderer* renderer, Vulkan_Command_Buffer* command_buffer)
 {
     // If there is a semaphore signal + wait between this being submitted and
     // the vertex buffer being used, then skip this pipeline barrier.
@@ -216,7 +216,8 @@ void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaph
 
 void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value);
 
-bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore, const u64 compare_value);
+bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore,
+                                          const u64 compare_value);
 
 
 #endif

@@ -516,16 +516,34 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
                                  VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
                                  VkImageSubresourceRange subresourceRange)
 {
-    VkImageMemoryBarrier imageMemoryBarrier = {0};
-    imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    imageMemoryBarrier.srcAccessMask = srcAccessMask;
-    imageMemoryBarrier.dstAccessMask = dstAccessMask;
-    imageMemoryBarrier.oldLayout = oldImageLayout;
-    imageMemoryBarrier.newLayout = newImageLayout;
-    imageMemoryBarrier.image = image;
-    imageMemoryBarrier.subresourceRange = subresourceRange;
+    VkImageMemoryBarrier2 image_memory_barrier = {0};
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    image_memory_barrier.srcAccessMask = srcAccessMask;
+    image_memory_barrier.dstAccessMask = dstAccessMask;
+    image_memory_barrier.oldLayout = oldImageLayout;
+    image_memory_barrier.newLayout = newImageLayout;
+    image_memory_barrier.image = image;
+    image_memory_barrier.subresourceRange = subresourceRange;
+    image_memory_barrier.srcStageMask = srcStageMask;
+    image_memory_barrier.dstStageMask = dstStageMask;
+
+    VkDependencyInfo pDependencyInfo = {0};
+    pDependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    pDependencyInfo.imageMemoryBarrierCount = 1;
+    pDependencyInfo.pImageMemoryBarriers = &image_memory_barrier;
 
 
+    vkCmdPipelineBarrier2(cmdbuffer, &pDependencyInfo);
+
+    /*
+    *    VkImageMemoryBarrier image_memory_barrier = {0};
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.srcAccessMask = srcAccessMask;
+    image_memory_barrier.dstAccessMask = dstAccessMask;
+    image_memory_barrier.oldLayout = oldImageLayout;
+    image_memory_barrier.newLayout = newImageLayout;
+    image_memory_barrier.image = image;
+    image_memory_barrier.subresourceRange = subresourceRange;
     vkCmdPipelineBarrier(
         cmdbuffer,
         srcStageMask,
@@ -533,7 +551,7 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
         0,
         0, NULL,
         0, NULL,
-        1, &imageMemoryBarrier);
+        1, &image_memory_barrier);*/
 }
 
 void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, Vulkan_Texture* texture,

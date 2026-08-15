@@ -133,13 +133,15 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
         }
         INFO("All required validation layers are present.");
 
-        VkValidationFeatureEnableEXT enable_features[2] = {
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+        VkValidationFeatureEnableEXT enable_features[3] = {
+            //TODO: enable if you want extra info on the gpu but its very slow
+            // VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
+            // VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
         };
 
         validation_features_info.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        validation_features_info.enabledValidationFeatureCount = 2;
+        validation_features_info.enabledValidationFeatureCount = ARRAY_SIZE(enable_features);
         validation_features_info.pEnabledValidationFeatures = enable_features;
         validation_ext_enabled = true;
     }
@@ -154,13 +156,10 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
 
     create_info.pNext = 0;
 
-    //TODO: enable if you want extra info, its very slow
-    /*
-    if (validation_ext_enabled)
-    {
-        create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
-    }
-    */
+    // if (validation_ext_enabled)
+    // {
+    //     create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
+    // }
 
     /*
         VkResult vkCreateInstance(
@@ -211,7 +210,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 {
     switch (message_severity)
     {
-    default:
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         // M_ERROR("%d Validation Layer: Error %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
         M_ERROR("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
@@ -223,6 +221,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
         INFO("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
         break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
         TRACE("%s: %s", callback_data->pMessageIdName, callback_data->pMessage);
         break;
     }

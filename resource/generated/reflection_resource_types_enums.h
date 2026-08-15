@@ -19,6 +19,11 @@ const char* Texture_Format_enum_string[] = {
 	[Texture_Format_Default]= "Texture_Format_Default", 
 };
 
+const char* Texture_Filter_enum_string[] = {
+	[Texture_Filter_Nearest]= "Texture_Filter_Nearest", 
+	[Texture_Filter_Linear]= "Texture_Filter_Linear", 
+};
+
 const char* Shader_Mesh_Type_enum_string[] = {
 	[Shader_Mesh_Type_Mesh]= "Shader_Mesh_Type_Mesh", 
 	[Shader_Mesh_Type_Skinned]= "Shader_Mesh_Type_Skinned", 
@@ -88,6 +93,16 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
 	reflection_registry_add_enums(reflection_registry, Texture_Format_enum);
+
+	const Reflection_Runtime_Enum Texture_Filter_enum =
+	{
+		.name = "Texture_Filter",
+		.enum_names = Texture_Filter_enum_string,
+		.count = 2,
+		.type = Reflection_Enum_Type_Normal,
+		.bitflag_values = NULL, //filled in the function if applicable
+	};
+	reflection_registry_add_enums(reflection_registry, Texture_Filter_enum);
 
 	const Reflection_Runtime_Enum Shader_Mesh_Type_enum =
 	{

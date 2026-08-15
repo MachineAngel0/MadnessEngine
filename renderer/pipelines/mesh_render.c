@@ -83,6 +83,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
 {
     //update the transforms every frame
 
+    // if (renderer->context.current_frame != 0) { return; }
 
     ring_queue* mesh_render_queue = render_packet->mesh_queue;
     ring_queue* skinned_mesh_render_queue = render_packet->skinned_mesh_queue;
@@ -96,6 +97,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
         ring_dequeue(mesh_render_queue, submesh_upload_data);
 
         //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
+        /*
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
                                             submesh_upload_data->gpu_data->vertex,
                                             submesh_upload_data->submesh->vertex_bytes);
@@ -114,6 +116,37 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->tangent_staging_buffer_handle,
                                             submesh_upload_data->gpu_data->tangent,
                                             submesh_upload_data->submesh->tangent_bytes);
+                                            */
+
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, mesh_renderer->vertex_buffer_handle,
+            command_buffer,
+            &submesh_upload_data->gpu_data->vertex,
+            submesh_upload_data->submesh->vertex_bytes);
+
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, mesh_renderer->index_buffer_handle,
+            command_buffer,
+            submesh_upload_data->gpu_data->indices,
+            submesh_upload_data->submesh->indices_bytes);
+
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, mesh_renderer->normal_buffer_handle,
+            command_buffer,
+            submesh_upload_data->gpu_data->normal,
+            submesh_upload_data->submesh->normal_bytes);
+
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, mesh_renderer->uv_buffer_handle,
+            command_buffer,
+            submesh_upload_data->gpu_data->uv,
+            submesh_upload_data->submesh->uv_bytes);
+
+        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+            renderer, mesh_renderer->tangent_buffer_handle,
+            command_buffer,
+            submesh_upload_data->gpu_data->tangent,
+            submesh_upload_data->submesh->tangent_bytes);
 
         //TODO: free the data on the cpu
     }
@@ -138,16 +171,16 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
     }
 
 
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
-                                    mesh_renderer->vertex_staging_buffer_handle, command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->index_buffer_handle,
-                                    mesh_renderer->index_staging_buffer_handle, command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->normal_buffer_handle,
-                                    mesh_renderer->normal_staging_buffer_handle, command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle,
-                                    command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
-                                    mesh_renderer->tangent_staging_buffer_handle, command_buffer);
+    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
+    //                                 mesh_renderer->vertex_staging_buffer_handle, command_buffer);
+    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->index_buffer_handle,
+    //                                 mesh_renderer->index_staging_buffer_handle, command_buffer);
+    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->normal_buffer_handle,
+    //                                 mesh_renderer->normal_staging_buffer_handle, command_buffer);
+    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle,
+    //                                 command_buffer);
+    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
+    //                                 mesh_renderer->tangent_staging_buffer_handle, command_buffer);
 }
 
 void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
@@ -238,7 +271,6 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 .joint_idx = sub_mesh_instance->skinned_draw_data.joint_idx,
                 .weight_idx = sub_mesh_instance->skinned_draw_data.weight_idx,
                 .skinned_matrix_idx = sub_mesh_instance->skinned_draw_data.skinned_matrix_idx,
-
 
 
             };
