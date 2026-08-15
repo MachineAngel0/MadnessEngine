@@ -8,11 +8,11 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
 {
     Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->allocator, sizeof(Mesh_Renderer));
 
-    u64 mesh_buffer_data_size = MB(16);
+    u64 mesh_buffer_data_size = MB(64);
 
 
     out_mesh_renderer->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                   BUFFER_TYPE_VERTEX,
+                                                                   BUFFER_TYPE_STORAGE,
                                                                    mesh_buffer_data_size);
     out_mesh_renderer->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                   mesh_buffer_data_size);
