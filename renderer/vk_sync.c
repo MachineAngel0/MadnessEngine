@@ -121,3 +121,43 @@ void destroy_sempahore(Renderer* renderer, VkSemaphore* semaphore)
         vkDestroySemaphore(renderer->context.device.logical_device, semaphore[i], renderer->context.allocator);
     }
 }
+
+void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore)
+{
+    // SPEC: A timeline semaphore is still a semaphore, but it is of TIMELINE type rather than BINARY.
+    VkSemaphoreTypeCreateInfo type_create_info = {0};
+    type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    type_create_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    type_create_info.initialValue = 0;
+
+    VkSemaphoreCreateInfo create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    create_info.flags = 0;
+    create_info.pNext = &type_create_info; // setting as timeline
+
+
+    VK_CHECK(vkCreateSemaphore(renderer->context.device.logical_device, &create_info, NULL, timeline_semaphore));
+}
+
+void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore)
+{
+    vkDestroySemaphore(renderer->context.device.logical_device, *timeline_semaphore, NULL);
+}
+
+void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value)
+{
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.device.logical_device, *timeline_semaphore, out_counter_value);
+    VK_CHECK(result);
+
+}
+
+bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore,
+    const u64 compare_value)
+{
+    u64 out_counter_value =0;
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.device.logical_device, *timeline_semaphore, &out_counter_value);
+    VK_CHECK(result);
+
+    return compare_value <= out_counter_value;
+
+}

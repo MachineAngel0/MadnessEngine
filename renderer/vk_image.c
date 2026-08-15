@@ -117,148 +117,6 @@ void vulkan_texture_free(vulkan_context* context, Vulkan_Texture* image)
     }
 }
 
-void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture)
-{
-    out_texture->width = texture_data->madness_texture->width;
-    out_texture->height = texture_data->madness_texture->height;
-
-    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
-    void* pixels = texture_data->pixel_data;
-    u32 texWidth = texture_data->madness_texture->width;
-    u32 texHeight = texture_data->madness_texture->height;
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                  &stagingBufferMemory);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, imageSize);
-    vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
-
-
-    //create texture image
-    VkImageCreateInfo image_create_info = {0};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
-    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
-    image_create_info.extent.width = texWidth;
-    image_create_info.extent.height = texHeight;
-    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels = 4; // TODO: Support mip mapping
-    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
-    switch (texture_data->madness_texture->type)
-    {
-    case ASSET_TEXTURE:
-        image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
-        break;
-    case ASSET_FONT:
-        //msdfs are not color data
-        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        break;
-    default:
-        MASSERT_FALSE();
-        break;
-    }
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
-
-    VK_CHECK(
-        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
-            texture_image));
-
-
-    // Query memory requirements.
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
-
-    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memory_type == -1)
-    {
-        M_ERROR("Required memory type not found. Image not valid.");
-    }
-
-
-    // Allocate memory
-    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator,
-                                        &out_texture->texture_image_memory);
-    VK_CHECK(result1);
-    // Bind the memory
-    VkResult result2 = vkBindImageMemory(context->device.logical_device, out_texture->texture_image,
-                                         out_texture->texture_image_memory, 0);
-    VK_CHECK(result2)
-
-
-    transition_image_layout(context, command_buffer, out_texture->texture_image,
-                            image_create_info.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
-                      (u32)(texWidth), (u32)(texHeight));
-    transition_image_layout(context, command_buffer, out_texture->texture_image,
-                            image_create_info.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    // TODO: configurable memory offset.
-    // Create view
-    out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
-
-    VkSamplerCreateInfo sampler_info = {0};
-    switch (texture_data->madness_texture->type)
-    {
-    case ASSET_TEXTURE:
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_LINEAR;
-        sampler_info.minFilter = VK_FILTER_LINEAR;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.anisotropyEnable = VK_TRUE;
-        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
-        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        sampler_info.unnormalizedCoordinates = VK_FALSE;
-        sampler_info.compareEnable = VK_FALSE;
-        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sampler_info.mipLodBias = 0.0f;
-        sampler_info.minLod = 0.0f;
-        sampler_info.maxLod = 0.0f;
-        break;
-    case ASSET_FONT:
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_LINEAR;
-        sampler_info.minFilter = VK_FILTER_LINEAR;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.anisotropyEnable = VK_FALSE;
-        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
-        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        sampler_info.unnormalizedCoordinates = VK_FALSE;
-        sampler_info.compareEnable = VK_FALSE;
-        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        sampler_info.mipLodBias = 0.0f;
-        sampler_info.minLod = 0.0f;
-        sampler_info.maxLod = 0.0f;
-        break;
-    }
-
-
-    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
-}
 
 void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 height, VkFormat format,
                                      vulkan_command_buffer* command_buffer, Vulkan_Texture* out_texture)
@@ -555,6 +413,7 @@ void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buff
         FATAL("unsupported layout transition!");
     }
 
+
     vkCmdPipelineBarrier(
         commandBuffer.handle,
         sourceStage, destinationStage,
@@ -733,4 +592,280 @@ VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, Vk
         return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 
     return false;
+}
+
+
+void vulkan_texture_create_image_with_semaphore(Renderer* renderer, vulkan_context* context,
+                                                vulkan_command_buffer* command_buffer,
+                                                Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture,
+                                                VkSemaphore* timeline_semaphore)
+{
+    out_texture->width = texture_data->madness_texture->width;
+    out_texture->height = texture_data->madness_texture->height;
+
+    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
+    void* pixels = texture_data->pixel_data;
+    u32 texWidth = texture_data->madness_texture->width;
+    u32 texHeight = texture_data->madness_texture->height;
+
+    //create a staging buffer
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+                  &stagingBufferMemory);
+
+    //allocate memory
+    void* data;
+    vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, imageSize);
+    vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
+
+
+    //create texture image
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = texWidth;
+    image_create_info.extent.height = texHeight;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 4; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    switch (texture_data->madness_texture->type)
+    {
+    case ASSET_TEXTURE:
+        image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+        break;
+    case ASSET_FONT:
+        //msdfs are not color data
+        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        break;
+    default:
+        MASSERT_FALSE();
+        break;
+    }
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VK_CHECK(
+        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+            texture_image));
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VkResult result1 = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator,
+                                        &out_texture->texture_image_memory);
+    VK_CHECK(result1);
+    // Bind the memory
+    VkResult result2 = vkBindImageMemory(context->device.logical_device, out_texture->texture_image,
+                                         out_texture->texture_image_memory, 0);
+    VK_CHECK(result2)
+
+
+    transition_image_layout_with_semaphore(renderer, context, command_buffer, out_texture->texture_image,
+                                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                           NULL);
+    copyBufferToImage(context, command_buffer, stagingBuffer, out_texture->texture_image,
+                      (u32)(texWidth), (u32)(texHeight));
+    transition_image_layout_with_semaphore(renderer, context, command_buffer, out_texture->texture_image,
+                                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                           timeline_semaphore);
+
+    // TODO: configurable memory offset.
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(context, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
+
+    VkSamplerCreateInfo sampler_info = {0};
+    switch (texture_data->madness_texture->type)
+    {
+    case ASSET_TEXTURE:
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_LINEAR;
+        sampler_info.minFilter = VK_FILTER_LINEAR;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+        break;
+    case ASSET_FONT:
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_LINEAR;
+        sampler_info.minFilter = VK_FILTER_LINEAR;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+        break;
+    default:
+        MASSERT_FALSE()
+        break;
+    }
+
+
+    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+}
+
+void transition_image_layout_with_semaphore(Renderer* renderer,
+                                            vulkan_context* vulkan_context,
+                                            vulkan_command_buffer* command_buffer_context,
+                                            VkImage image,
+                                            VkImageLayout oldLayout, VkImageLayout newLayout,
+                                            VkSemaphore* timeline_semaphore)
+{
+    vulkan_command_buffer commandBuffer;
+    VkCommandPool pool = vulkan_context->graphics_command_pool;
+    vulkan_command_buffer* out_command_buffer = &commandBuffer;
+    memset(out_command_buffer, 0, sizeof(out_command_buffer));
+
+    VkCommandBufferAllocateInfo allocate_info = {0};
+    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocate_info.commandPool = pool;
+    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocate_info.commandBufferCount = 1;
+    allocate_info.pNext = 0;
+
+    VK_CHECK(
+        vkAllocateCommandBuffers(vulkan_context->device.logical_device, &allocate_info, &out_command_buffer->
+            handle));
+
+    vulkan_command_buffer* command_buffer = &commandBuffer;
+    VkCommandBufferBeginInfo begin_info = {0};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    // begin_info.pInheritanceInfo = NULL; //used if its a secondary command buffer
+    begin_info.flags = 0;
+    begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    VK_CHECK(vkBeginCommandBuffer(command_buffer->handle, &begin_info));
+
+
+    VkImageMemoryBarrier2 image_memory_barrier = {0};
+    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_memory_barrier.pNext = 0;
+    //The first two fields specify layout transition.
+    //It is possible to use VK_IMAGE_LAYOUT_UNDEFINED as oldLayout if you don't care about the existing contents of the image.
+    image_memory_barrier.oldLayout = oldLayout;
+    image_memory_barrier.newLayout = newLayout;
+    image_memory_barrier.image = image;
+    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+    image_memory_barrier.subresourceRange.levelCount = 1;
+    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+    image_memory_barrier.subresourceRange.layerCount = 1;
+
+
+    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        image_memory_barrier.srcAccessMask = 0;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else
+    {
+        FATAL("unsupported layout transition!");
+    }
+
+    //fill out  pipeline info
+    VkDependencyInfo dependency_info = {0};
+    dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency_info.pNext = NULL;
+    dependency_info.dependencyFlags = 0;
+    dependency_info.memoryBarrierCount = 0;
+    dependency_info.pMemoryBarriers = NULL;
+    dependency_info.bufferMemoryBarrierCount = 0;
+    dependency_info.pBufferMemoryBarriers = 0;
+    dependency_info.imageMemoryBarrierCount = 1;
+    dependency_info.pImageMemoryBarriers = &image_memory_barrier;
+
+    vkCmdPipelineBarrier2(commandBuffer.handle, &dependency_info);
+
+    VK_CHECK(vkEndCommandBuffer(command_buffer->handle));
+
+
+    VkCommandBufferSubmitInfo command_buffer_infos = {0};
+    command_buffer_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    command_buffer_infos.pNext = 0;
+    command_buffer_infos.deviceMask = 0;
+    command_buffer_infos.commandBuffer = command_buffer->handle;
+
+
+    VkSemaphoreSubmitInfo signal_semaphore_infos = {0};
+    signal_semaphore_infos.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signal_semaphore_infos.pNext = 0;
+    // pSignalSemaphoreInfos.deviceIndex;
+    signal_semaphore_infos.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    //value assumed to be accurate for the current texture upload
+    signal_semaphore_infos.value = renderer->texture_system->timeline_semaphore_texture_value;
+    if (timeline_semaphore)
+    {
+        signal_semaphore_infos.semaphore = *timeline_semaphore;
+    }
+
+    VkSubmitInfo2 submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pCommandBufferInfos = &command_buffer_infos;
+    submit_info.commandBufferInfoCount = 1;
+    if (timeline_semaphore)
+    {
+        submit_info.pSignalSemaphoreInfos = &signal_semaphore_infos;
+        submit_info.signalSemaphoreInfoCount = 1;
+    }
+
+    VkQueue queue = vulkan_context->device.graphics_queue;
+    VK_CHECK(vkQueueSubmit2(queue, 1, &submit_info, 0));
+
+    //wait for command buffer to finish then free
+    // VK_CHECK(vkQueueWaitIdle(queue));
+    //TODO: free or reset the vulkan buffer
+    // vulkan_command_buffer_free(vulkan_context, pool, command_buffer);
 }

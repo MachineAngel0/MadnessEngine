@@ -432,7 +432,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "bindless_slot_external",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Madness_Texture, bindless_slot_external)
+			.offset = offsetof(Madness_Texture, bindless_slot_query)
 		},
 		{
 			.name = "bindless_slot",

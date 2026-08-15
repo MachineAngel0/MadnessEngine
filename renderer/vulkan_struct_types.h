@@ -67,6 +67,13 @@ typedef struct Vulkan_Texture
     // vk_image_type image_type;
 } Vulkan_Texture;
 
+typedef struct Vulkan_Texture_Pending_Upload
+{
+    Madness_Texture* madness_texture;
+    Vulkan_Texture* texture;
+    u64 timeline_semaphore_value;
+}Vulkan_Texture_Pending_Upload;
+
 
 typedef struct vulkan_renderpass
 {
@@ -336,6 +343,14 @@ typedef struct Vulkan_Texture_System
 
     //since textures could be read this frame, we wait a frame to delete them
     RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
+
+
+
+    VkSemaphore timline_texture_upload_semaphore;
+    //textures who's uploads we are waiting on
+    ARRAY_TYPE(Vulkan_Texture_Pending_Upload)* texture_pending_array;
+    //u64 semaphore_singal_value = ++timeline_value; //use it like so
+    u64 timeline_semaphore_texture_value;
 
 } Vulkan_Texture_System;
 

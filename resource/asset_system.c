@@ -6,6 +6,9 @@
 #include "mesh_system.h"
 #include "sprite_system.h"
 
+#define MAX_TEXTURE_MEMORY_CPU GB(0.5)
+#define MAX_MESH_MEMORY_CPU GB(0.5)
+
 
 Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry)
 {
@@ -24,6 +27,12 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
 
+    //texture memory
+    asset_system->texture_allocator = memory_system_heap_allocator_create(
+        memory_system, MAX_TEXTURE_MEMORY_CPU, MEMORY_SUBSYSTEM_TEXTURE);
+    //texture memory
+    asset_system->mesh_allocator = memory_system_heap_allocator_create(
+        memory_system, MAX_MESH_MEMORY_CPU, MEMORY_SUBSYSTEM_MESH);
 
 
     //Asset Registry
@@ -169,7 +178,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 
         Madness_Texture_Runtime engine_texture = {0};
 
-        asset_texture_deserialize_heap(&engine_texture, fptr, asset_system->heap_allocator);
+        asset_texture_deserialize(&engine_texture, fptr, asset_system->texture_allocator);
 
         texture_system_upload_new_texture(asset_system, meta_data->hash, engine_texture.texture,
                                           engine_texture.pixel_data, &texture_handle, meta_data->engine_path);
@@ -229,7 +238,7 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
 
         Madness_Texture_Runtime engine_texture = {0};
 
-        asset_texture_deserialize_heap(&engine_texture, fptr, asset_system->heap_allocator);
+        asset_texture_deserialize(&engine_texture, fptr, asset_system->texture_allocator);
 
         texture_system_upload_new_texture(asset_system, meta_data->hash, engine_texture.texture,
                                           engine_texture.pixel_data, &texture_handle, meta_data->engine_path);
@@ -296,7 +305,7 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
             MASSERT(false);
         }
 
-        asset_font_deserialize_heap(&editor_texture, fptr, asset_system->heap_allocator);
+        asset_font_deserialize(&editor_texture, fptr, asset_system->texture_allocator);
 
         texture_system_upload_new_font(asset_system, meta_data->uuid, meta_data->hash, editor_texture.texture,
                                        editor_texture.font_texture,
@@ -352,7 +361,7 @@ Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uui
     if (editor)
     {
         Madness_Texture_Runtime runtime = {0};
-        asset_texture_deserialize_heap(&runtime, fptr, asset_system->heap_allocator);
+        asset_texture_deserialize(&runtime, fptr, asset_system->texture_allocator);
         texture_system_upload_new_texture(asset_system, meta_data->hash, runtime.texture, runtime.pixel_data,
                                           &out_handle, meta_data->engine_path);
     }
@@ -419,7 +428,7 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
         fptr = fopen(engine_asset_path, "rb");
 
 
-        asset_mesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
+        asset_mesh_deserialize(&runtime_mesh, fptr, asset_system->heap_allocator);
 
         mesh_system_load_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
                               out_meta_data->uuid, &mesh_handle);
@@ -468,7 +477,7 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
 
         fptr = fopen(engine_asset_path, "rb");
 
-        asset_skmesh_deserialize_heap(&runtime_mesh, fptr, asset_system->heap_allocator);
+        asset_skmesh_deserialize(&runtime_mesh, fptr, asset_system->heap_allocator);
 
         mesh_system_load_skinned_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
                                       out_meta_data->uuid);
@@ -522,7 +531,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
+        asset_material_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
         material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
     }
     else
@@ -569,7 +578,7 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_deserialize_heap(&runtime_material, fptr, asset_system->heap_allocator);
+        asset_material_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
         material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
     }
     else

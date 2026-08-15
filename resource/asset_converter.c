@@ -492,7 +492,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     MASSERT(result == cgltf_result_success)
 
 
-    Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
+     Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
                                                  sizeof(Madness_Mesh));
 
     madness_mesh->mesh_count = data->meshes_count;

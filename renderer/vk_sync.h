@@ -2,7 +2,6 @@
 #define VK_FENCES_H
 
 
-
 void sync_object_per_frame_init(Renderer* renderer, vulkan_context* context);
 
 bool vulkan_fence_wait(vulkan_context* context, VkFence* fence, u64 timeout_ns);
@@ -11,11 +10,13 @@ void create_semaphore(Renderer* renderer);
 
 void destroy_sempahore(Renderer* renderer, VkSemaphore* semaphore);
 
-void insert_memory_barrier2_test_function_do_not_use_yet(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
-                                 VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout,
-                                 VkImageLayout newImageLayout,
-                                 VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-                                 VkImageSubresourceRange subresourceRange)
+void insert_memory_barrier2_test_function_do_not_use_yet(VkCommandBuffer cmdbuffer, VkImage image,
+                                                         VkAccessFlags srcAccessMask,
+                                                         VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout,
+                                                         VkImageLayout newImageLayout,
+                                                         VkPipelineStageFlags srcStageMask,
+                                                         VkPipelineStageFlags dstStageMask,
+                                                         VkImageSubresourceRange subresourceRange)
 {
     //FUTURE:
     //NOTE: an example
@@ -177,7 +178,7 @@ void tranfer_graphics_memory_barrier_acquire(Renderer* renderer, vulkan_command_
 */
 
 
-void memory_barrier_transfer(Renderer* renderer,  vulkan_command_buffer* command_buffer)
+void memory_barrier_transfer(Renderer* renderer, vulkan_command_buffer* command_buffer)
 {
     // If there is a semaphore signal + wait between this being submitted and
     // the vertex buffer being used, then skip this pipeline barrier.
@@ -196,7 +197,7 @@ void memory_barrier_transfer(Renderer* renderer,  vulkan_command_buffer* command
     VkDependencyInfo dependencyInfo = {
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         // .pNext = ,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT ,
+        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
         .memoryBarrierCount = 1,
         .pMemoryBarriers = &memory_barrier,
         // .bufferMemoryBarrierCount = 1,
@@ -206,8 +207,16 @@ void memory_barrier_transfer(Renderer* renderer,  vulkan_command_buffer* command
     };
 
     vkCmdPipelineBarrier2(command_buffer->handle, &dependencyInfo);
-
 }
+
+
+void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore);
+
+void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore);
+
+void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value);
+
+bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore, const u64 compare_value);
 
 
 #endif

@@ -15,8 +15,7 @@ void vulkan_image_create(vulkan_context* context,
                          VkImageAspectFlags view_aspect_flags,
                          Vulkan_Texture* out_texture);
 
-void vulkan_texture_create_from_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
-                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture);
+
 
 void vulkan_texture_create_shadowmap(vulkan_context* context, u32 width, u32 height, VkFormat format,
     vulkan_command_buffer* command_buffer, Vulkan_Texture* out_texture);
@@ -32,8 +31,9 @@ void vulkan_texture_free(vulkan_context* context, Vulkan_Texture* image);
 void create_texture_image(vulkan_context* context, vulkan_command_buffer* command_buffer,
                           const char* filepath, Vulkan_Texture* out_texture);
 
+
 void transition_image_layout(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
-    VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 void copyBufferToImage(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context, VkBuffer buffer,
     VkImage image, u32 width, u32 height);
@@ -56,6 +56,13 @@ void create_texture_glyph(Renderer* renderer, vulkan_command_buffer* command_buf
 
 
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
+
+//semaphore uploads
+void vulkan_texture_create_image_with_semaphore(Renderer* renderer, vulkan_context* context, vulkan_command_buffer* command_buffer,
+                                      Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture, VkSemaphore* timeline_semaphore);
+void transition_image_layout_with_semaphore(Renderer
+                                            * renderer, vulkan_context* vulkan_context,
+                                            vulkan_command_buffer* command_buffer_context, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkSemaphore* timeline_semaphore);
 
 /*TEXTURE IMAGE*/
 

@@ -21,6 +21,7 @@ bool application_on_event(const Event_Type code, String sender, String listener_
 
 
 
+
 static Madness_Pulse_Application* app_internal;
 
 bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)

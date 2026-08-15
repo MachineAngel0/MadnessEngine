@@ -116,7 +116,6 @@ typedef struct Madness_Asset
     u64 reference_count;
     Asset_Type type;
     String* engine_path; // should just be a reference, mainly for debugging
-
 } Madness_Asset;
 
 //Renderpass || translucency || Blend || Mesh Type
@@ -183,12 +182,46 @@ typedef struct Animation_Handle
 
 ///////////////// Texture  //////////////////////
 
+/* TODO: replace asset type in madness texture
+typedef enum Texture_Type
+{
+    TEXTURE_TYPE_TEXTURE,
+    TEXTURE_TYPE_FONT,
+} Texture_Type;
+*/
+
 typedef enum Texture_Format
 {
     //TODO: when you figure it out properly
     Texture_Format_Default,
     // Texture_Format_Default,
 } Texture_Format;
+
+typedef enum Texture_Filter
+{
+    Texture_Filter_Nearest,
+    Texture_Filter_Linear,
+} Texture_Filter;
+
+//TODO: wrap and sampler
+/*
+typedef enum Texture_Wrap
+{
+    Texture_Wrap_Repeat,
+    Texture_Wrap_Mirror_Repeat,
+    Texture_Wrap_Clamp_Edge,
+    Texture_Wrap_Clamp_Border,
+    Texture_Wrap_Mirror_Clamp_To_Edge,
+} Texture_Wrap;
+
+typedef struct Texture_Sampler
+{
+    Texture_Filter mag;
+    Texture_Filter min;
+    Texture_Wrap u_wrap;
+    Texture_Wrap v_wrap;
+} Texture_Sampler;
+*/
 
 
 //Texture
@@ -203,10 +236,14 @@ typedef struct Madness_Texture
     // runtime only data
     u32 font_index;
     // what is queried when we get the bindless slot, so that we can use a temp texture until the actual texture loads
-    u32 bindless_slot_external;
+    u32 bindless_slot_query;
     // this is the actual bindless slot
     u32 bindless_slot;
     u32 generation;
+
+    //TODO:
+    //bool has_sampler;
+    // Texture_Sampler sampler;
 } Madness_Texture;
 
 typedef struct Texture_GPU_Upload
@@ -685,12 +722,15 @@ typedef struct Mesh_GPU_Upload
 {
     Madness_SubMesh* submesh;
     Madness_Mesh_GPU_Data* gpu_data;
+
+    //TODO: Heap_Allocator* mesh_memory_allocator; // ref
 } Mesh_GPU_Upload;
 
 typedef struct Skinned_Mesh_GPU_Upload
 {
     Madness_Skinned_SubMesh* skinned_submesh;
     Madness_SkMesh_GPU_Data* skinned_gpu_data;
+    //TODO: Heap_Allocator* mesh_memory_allocator; // ref
 } Skinned_Mesh_GPU_Upload;
 
 
@@ -774,13 +814,12 @@ typedef struct Texture_System
 
     u32 in_use_textures_count;
     u32 max_textures;
+
     RING_QUEUE_TYPE(u32)* available_texture_queue;
     RING_QUEUE_TYPE(u32)* available_font_queue;
 
     HASH_MAP_TYPE(u64, u32)* texture_hash_map;
 
-
-    Heap_Allocator* texture_memory_allocator; // TODO: can wait for a bit but needs to be done eventually
 
     Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
     u32 texture_asset_count;
@@ -855,8 +894,6 @@ typedef struct Mesh_System
     //TODO:
     //anything that couldn't be loaded in this frame
     RING_QUEUE_TYPE(const char*)* load_queue;
-
-
 
 
     Madness_Asset skinned_madness_asset[100];
@@ -979,6 +1016,15 @@ typedef struct Asset_System
     Heap_Allocator* heap_allocator;
     Frame_Allocator* frame_allocator;
     Allocator* allocator;
+
+
+    //half a gig should be good for now
+    //only specifically for pixel data
+    //TODO: also hope to god it doesn't fragment badly, otherwise we will need to defrag this
+    // alternative is to simply just wait until memory is available for use,
+    // or maybe a cache system to evict, but doesn't make sense, since we will literally need that thing in the world
+    Heap_Allocator* texture_allocator;
+    Heap_Allocator* mesh_allocator;
 
     Reflection_Registry* global_reflection_registry; // ref
 

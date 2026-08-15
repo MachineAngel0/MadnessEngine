@@ -3,8 +3,12 @@
 #include "asset_system.h"
 #include "shader_system.h"
 
+
+
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {
+
+
     //textures
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
@@ -85,7 +89,7 @@ bool texture_system_get_bindless_slot(Texture_System* texture_system, Texture_Ha
         return false;
     }
 
-    return texture_system->textures[handle.handle].bindless_slot_external;
+    return texture_system->textures[handle.handle].bindless_slot_query;
 }
 
 Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
@@ -159,7 +163,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     texture->type = texture_data.type;
 
     //update bindless and generation
-    texture->bindless_slot_external = 0;
+    texture->bindless_slot_query = 0;
     texture->generation++;
 
     //fill out the handle
@@ -170,7 +174,8 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
-    upload_texture.texture_memory_allocator = asset_system->heap_allocator; // TODO: replace with texture memory allocator
+    upload_texture.texture_memory_allocator = asset_system->heap_allocator;
+    // TODO: replace with texture memory allocator
     ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
 
@@ -231,7 +236,7 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     texture->font_index = free_font_index;
 
     //update bindless and generation
-    texture->bindless_slot_external = 0;
+    texture->bindless_slot_query = 0;
     texture->generation++;
 
     //fill out the handle
@@ -241,7 +246,8 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
-    upload_texture.texture_memory_allocator = asset_system->heap_allocator; // TODO: replace with texture memory allocator
+    upload_texture.texture_memory_allocator = asset_system->texture_allocator;
+    // TODO: replace with texture memory allocator
 
 
     //send to renderer for upload

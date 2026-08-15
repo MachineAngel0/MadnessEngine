@@ -20,6 +20,7 @@ typedef struct Allocator
     u64 page_size;
     bool uses_virtual_memory;
 */
+
 } Allocator;
 
 typedef Allocator Frame_Allocator;

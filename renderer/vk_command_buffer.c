@@ -82,6 +82,13 @@ void vulkan_command_buffer_free(vulkan_context* context, VkCommandPool pool, vul
     command_buffer->handle = 0;
 }
 
+void vulkan_command_buffer_reset(vulkan_command_buffer* command_buffer)
+{
+    //Flag: VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT -> returns memory back to the command pool, which we probably dont want
+    vkResetCommandBuffer(command_buffer->handle, 0);
+    command_buffer->handle = 0;
+}
+
 void vulkan_command_buffer_begin(vulkan_command_buffer* command_buffer, bool is_single_use, bool is_renderpass_continue,
                                  bool is_simultaneous_use)
 {
@@ -140,9 +147,9 @@ void vulkan_command_buffer_end_single_use(vulkan_context* context, VkCommandPool
     // submit_info.pWaitSemaphores = NULL;
     // submit_info.pWaitDstStageMask = 0;
 
-    //TODO: Fence
     VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, 0));
 
+    //TODO: Fence
     //wait for command buffer to finish then free
     VK_CHECK(vkQueueWaitIdle(queue));
     vulkan_command_buffer_free(context, pool, command_buffer);

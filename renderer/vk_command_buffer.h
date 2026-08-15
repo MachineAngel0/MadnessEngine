@@ -14,7 +14,7 @@ void vulkan_command_buffer_allocate(
     bool is_primary,
     vulkan_command_buffer* out_command_buffer);
 
-
+void vulkan_command_buffer_reset(vulkan_command_buffer* command_buffer);
 void vulkan_command_buffer_free(
     vulkan_context* context,
     VkCommandPool pool,
