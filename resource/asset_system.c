@@ -6,8 +6,6 @@
 #include "mesh_system.h"
 #include "sprite_system.h"
 
-#define MAX_TEXTURE_MEMORY_CPU GB(0.5)
-#define MAX_MESH_MEMORY_CPU GB(0.5)
 
 
 Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry)
@@ -400,6 +398,7 @@ Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUI
 
 Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path)
 {
+    //TODO: this could be a scratch allocator
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
 
     Madness_Mesh_Handle mesh_handle = {0};

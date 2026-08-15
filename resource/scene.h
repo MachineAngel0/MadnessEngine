@@ -4,7 +4,7 @@
 #include "resource_types.h"
 
 
-#define MAX_TRANSFORM_COUNT 1000
+
 
 Scene* scene_init(Memory_System* memory_system);
 

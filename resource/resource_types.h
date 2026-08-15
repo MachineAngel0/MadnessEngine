@@ -52,6 +52,31 @@
 
 
 #define MAX_ASSETS_STRINGS 5000u
+
+///////////////// RESOURCES COUNTS //////////////////////
+#define MAX_MESH_COUNT 1024u
+#define MAX_SKINNED_MESH_COUNT 1024u
+
+#define MAX_TRANSFORM_COUNT (MAX_MESH_COUNT + MAX_SKINNED_MESH_COUNT)
+
+//FONT/TEXT
+//NOTE: this should realy be 40, but looks nicer as 32, im doing something wierd cause its casuing text padding
+#define DEFAULT_FONT_CREATION_SIZE 32.0f
+#define GLYPH_LENGTH 96u
+#define GLYPH_START 32u
+#define GLYPH_END 128u
+
+#define MAX_MATERIAL_COUNT 100u
+
+#define MAX_SPRITE_COUNT 1024u
+
+#define MAX_TEXTURE_COUNT 1024u
+#define MAX_FONT_COUNT 16u
+
+#define MAX_TEXTURE_MEMORY_CPU GB(0.5)
+#define MAX_MESH_MEMORY_CPU GB(0.5)
+
+
 ///////////////// RESOURCES AND HANDLES //////////////////////
 
 #define INVALID_HANDLE 0
@@ -261,12 +286,6 @@ typedef struct Madness_Texture_Runtime
 } Madness_Texture_Runtime;
 
 
-//FONT/TEXT
-//NOTE: this should realy be 40, but looks nicer as 32, im doing something wierd cause its casuing text padding
-#define DEFAULT_FONT_CREATION_SIZE 32.0f
-#define GLYPH_LENGTH 96
-#define GLYPH_START 32
-#define GLYPH_END 128
 
 typedef struct Glyph
 {
@@ -545,43 +564,6 @@ typedef enum Index_Type
 } Index_Type;
 
 
-typedef struct Mesh_Indirect_Draw
-{
-    /*typedef struct VkDrawIndexedIndirectCommand {
-uint32_t    indexCount;
-uint32_t    instanceCount;
-uint32_t    firstIndex;
-int32_t     vertexOffset;
-uint32_t    firstInstance;
-} VkDrawIndexedIndirectCommand;*/
-
-
-    u32 vertex_count_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
-    u32 index_count; // u32 count
-
-    //TODO: another time, for when i want to do instancing, which might not be worth it
-    // uint32_t firstInstance; // 0
-    // uint32_t instanceCount; // 1
-} Mesh_Indirect_Draw;
-
-
-typedef struct Skinned_Draw_Data
-{
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 skinned_matrix_idx;
-    // u32 vertex_offset_count; //in vec3
-} Skinned_Draw_Data;
-
-typedef struct Madness_Skinned_Submesh_Instance
-{
-    //for the renderer
-    Mesh_Indirect_Draw mesh_indirect_draw;
-    Skinned_Draw_Data skinned_draw_data;
-    Material_Handle material_handle;
-    Transform_Handle parent_transform_handle;
-} Madness_Skinned_Submesh_Instance;
 
 
 typedef struct Madness_Animation
@@ -605,6 +587,14 @@ typedef struct Madness_Animation
     bool looping;
 } Madness_Animation;
 
+typedef struct Madness_Skinned_Submesh_Instance
+{
+    //for the renderer
+    u32 skinned_id;
+    Material_Handle material_handle;
+    Transform_Handle parent_transform_handle;
+} Madness_Skinned_Submesh_Instance;
+
 typedef struct Madness_Skinned_Mesh_Instance
 {
     u32 mesh_count;
@@ -620,8 +610,7 @@ typedef struct Madness_Skinned_Mesh_Instance
 
 typedef struct Madness_SubMesh_Instance
 {
-    //for the renderer
-    Mesh_Indirect_Draw mesh_indirect_draw;
+    u32 mesh_id;
     Material_Handle material_handle;
     Transform_Handle parent_transform_handle;
 } Madness_SubMesh_Instance;
@@ -663,16 +652,7 @@ typedef struct Madness_SubMesh
     u32 index_count;
     Index_Type index_type;
 
-    //Runtime Data and for Unloading the Mesh
-    //info for indirect draw
-    u32 vertex_count_offset; //in vec3
-    u32 index_offset; //uint32_t    firstIndex; // offset into the index buffer
 
-    u32 vertex_offset;
-    u32 tangent_offset;
-    u32 vertex_color_offset;
-    u32 normal_offset;
-    u32 uv_offset;
 } Madness_SubMesh;
 
 
@@ -720,10 +700,11 @@ typedef struct Madness_SkMesh_GPU_Data
 
 typedef struct Mesh_GPU_Upload
 {
+    u32 mesh_id;
     Madness_SubMesh* submesh;
     Madness_Mesh_GPU_Data* gpu_data;
 
-    //TODO: Heap_Allocator* mesh_memory_allocator; // ref
+    Heap_Allocator* mesh_memory_allocator; // ref
 } Mesh_GPU_Upload;
 
 typedef struct Skinned_Mesh_GPU_Upload
@@ -761,7 +742,6 @@ typedef struct Madness_SkMesh_Runtime
 ///////////////// Systems  //////////////////////
 
 
-#define MAX_MATERIAL_COUNT 100
 
 typedef struct Material_System
 {
@@ -781,7 +761,6 @@ typedef struct Material_System
 
 //SPRITE
 
-#define MAX_SPRITE_COUNT 1024
 
 typedef struct Sprite_System
 {
@@ -798,9 +777,6 @@ typedef struct Sprite_System
     ARRAY_TYPE(Sprite_Data)* sprites_frame_data;
 } Sprite_System;
 
-
-#define MAX_TEXTURE_COUNT 1024
-#define MAX_FONT_COUNT 16
 
 
 typedef struct Texture_System
@@ -850,8 +826,7 @@ typedef struct Scene
 
 typedef struct Mesh_System
 {
-#define MAX_MESH_COUNT 1000
-#define MAX_SKINNED_MESH_COUNT 1000
+
 
     //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
     // fragmentation would also be a concern, unless i pool size, or split the pool into many different pool sizes
@@ -872,19 +847,10 @@ typedef struct Mesh_System
     Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
+    //TODO: this only counts up rn, likely to change it later, probably just a pool
+    u32 mesh_ids;
+    u32 skinned_ids;
 
-    //total size of all mesh data
-    size_t vertex_byte_size;
-    size_t vertex_count_size;
-    size_t index_byte_size;
-    size_t index_count_size;
-    size_t normals_byte_size;
-    size_t tangent_byte_size;
-    size_t uv_byte_size;
-    size_t vertex_color_byte_size;
-
-    size_t joints_byte_size;
-    size_t weight_byte_size;
 
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;

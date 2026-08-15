@@ -36,10 +36,8 @@ const char* resources_struct_string_list[] = {
 	"Particle_Emitter", 
 	"Particle", 
 	"Particle_Mesh", 
-	"Mesh_Indirect_Draw", 
-	"Skinned_Draw_Data", 
-	"Madness_Skinned_Submesh_Instance", 
 	"Madness_Animation", 
+	"Madness_Skinned_Submesh_Instance", 
 	"Madness_Skinned_Mesh_Instance", 
 	"Madness_SubMesh_Instance", 
 	"Madness_Mesh_Instance", 
@@ -1061,108 +1059,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Particle_Mesh_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Mesh_Indirect_Draw_Fields[] =
-	{
-		{
-			.name = "vertex_count_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Mesh_Indirect_Draw, vertex_count_offset)
-		},
-		{
-			.name = "index_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Mesh_Indirect_Draw, index_offset)
-		},
-		{
-			.name = "index_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Mesh_Indirect_Draw, index_count)
-		},
-	};
-
-	 Reflection_Runtime_Struct Mesh_Indirect_Draw_Runtime_Struct =
-	{
-		.name = "Mesh_Indirect_Draw",
-		.fields = Mesh_Indirect_Draw_Fields,
-		.field_count = 3,
-		.struct_size = sizeof(Mesh_Indirect_Draw)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Mesh_Indirect_Draw_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Skinned_Draw_Data_Fields[] =
-	{
-		{
-			.name = "joint_idx",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Skinned_Draw_Data, joint_idx)
-		},
-		{
-			.name = "weight_idx",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Skinned_Draw_Data, weight_idx)
-		},
-		{
-			.name = "skinned_matrix_idx",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Skinned_Draw_Data, skinned_matrix_idx)
-		},
-	};
-
-	 Reflection_Runtime_Struct Skinned_Draw_Data_Runtime_Struct =
-	{
-		.name = "Skinned_Draw_Data",
-		.fields = Skinned_Draw_Data_Fields,
-		.field_count = 3,
-		.struct_size = sizeof(Skinned_Draw_Data)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Skinned_Draw_Data_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_Skinned_Submesh_Instance_Fields[] =
-	{
-		{
-			.name = "mesh_indirect_draw",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Mesh_Indirect_Draw",
-			.offset = offsetof(Madness_Skinned_Submesh_Instance, mesh_indirect_draw)
-		},
-		{
-			.name = "skinned_draw_data",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Skinned_Draw_Data",
-			.offset = offsetof(Madness_Skinned_Submesh_Instance, skinned_draw_data)
-		},
-		{
-			.name = "material_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Handle",
-			.offset = offsetof(Madness_Skinned_Submesh_Instance, material_handle)
-		},
-		{
-			.name = "parent_transform_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Transform_Handle",
-			.offset = offsetof(Madness_Skinned_Submesh_Instance, parent_transform_handle)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_Skinned_Submesh_Instance_Runtime_Struct =
-	{
-		.name = "Madness_Skinned_Submesh_Instance",
-		.fields = Madness_Skinned_Submesh_Instance_Fields,
-		.field_count = 4,
-		.struct_size = sizeof(Madness_Skinned_Submesh_Instance)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_Skinned_Submesh_Instance_Runtime_Struct);
-
 	Reflection_Runtime_Struct_Field Madness_Animation_Fields[] =
 	{
 		{
@@ -1225,6 +1121,38 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_Animation_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Madness_Skinned_Submesh_Instance_Fields[] =
+	{
+		{
+			.name = "skinned_id",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Skinned_Submesh_Instance, skinned_id)
+		},
+		{
+			.name = "material_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Madness_Skinned_Submesh_Instance, material_handle)
+		},
+		{
+			.name = "parent_transform_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Transform_Handle",
+			.offset = offsetof(Madness_Skinned_Submesh_Instance, parent_transform_handle)
+		},
+	};
+
+	 Reflection_Runtime_Struct Madness_Skinned_Submesh_Instance_Runtime_Struct =
+	{
+		.name = "Madness_Skinned_Submesh_Instance",
+		.fields = Madness_Skinned_Submesh_Instance_Fields,
+		.field_count = 3,
+		.struct_size = sizeof(Madness_Skinned_Submesh_Instance)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Madness_Skinned_Submesh_Instance_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Madness_Skinned_Mesh_Instance_Fields[] =
 	{
 		{
@@ -1278,10 +1206,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Madness_SubMesh_Instance_Fields[] =
 	{
 		{
-			.name = "mesh_indirect_draw",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Mesh_Indirect_Draw",
-			.offset = offsetof(Madness_SubMesh_Instance, mesh_indirect_draw)
+			.name = "mesh_id",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_SubMesh_Instance, mesh_id)
 		},
 		{
 			.name = "material_handle",
@@ -1451,55 +1379,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Index_Type",
 			.offset = offsetof(Madness_SubMesh, index_type)
 		},
-		{
-			.name = "vertex_count_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, vertex_count_offset)
-		},
-		{
-			.name = "index_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, index_offset)
-		},
-		{
-			.name = "vertex_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, vertex_offset)
-		},
-		{
-			.name = "tangent_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, tangent_offset)
-		},
-		{
-			.name = "vertex_color_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, vertex_color_offset)
-		},
-		{
-			.name = "normal_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, normal_offset)
-		},
-		{
-			.name = "uv_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, uv_offset)
-		},
 	};
 
 	 Reflection_Runtime_Struct Madness_SubMesh_Runtime_Struct =
 	{
 		.name = "Madness_SubMesh",
 		.fields = Madness_SubMesh_Fields,
-		.field_count = 16,
+		.field_count = 9,
 		.struct_size = sizeof(Madness_SubMesh)
 	};
 
@@ -2048,64 +1934,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Mesh_System, skinned_mesh_instance_count)
 		},
 		{
-			.name = "vertex_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, vertex_byte_size)
+			.name = "mesh_ids",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Mesh_System, mesh_ids)
 		},
 		{
-			.name = "vertex_count_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, vertex_count_size)
-		},
-		{
-			.name = "index_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, index_byte_size)
-		},
-		{
-			.name = "index_count_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, index_count_size)
-		},
-		{
-			.name = "normals_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, normals_byte_size)
-		},
-		{
-			.name = "tangent_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, tangent_byte_size)
-		},
-		{
-			.name = "uv_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, uv_byte_size)
-		},
-		{
-			.name = "vertex_color_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, vertex_color_byte_size)
-		},
-		{
-			.name = "joints_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, joints_byte_size)
-		},
-		{
-			.name = "weight_byte_size",
-			.type = REFLECTION_TYPE_SIZE_T,
-			.type_name = "size_t",
-			.offset = offsetof(Mesh_System, weight_byte_size)
+			.name = "skinned_ids",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Mesh_System, skinned_ids)
 		},
 		{
 			.name = "skinned_madness_asset",
@@ -2125,7 +1963,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Mesh_System",
 		.fields = Mesh_System_Fields,
-		.field_count = 20,
+		.field_count = 12,
 		.struct_size = sizeof(Mesh_System)
 	};
 

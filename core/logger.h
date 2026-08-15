@@ -17,7 +17,7 @@
 #define LOG_TRACE_ENABLED 1
 
 
-#ifdef DEBUG_BUILD
+#if RELEASE_BUILD
 #define LOG_DEBUG_ENABLED 0
 #define LOG_TRACE_ENABLED 0
 #endif

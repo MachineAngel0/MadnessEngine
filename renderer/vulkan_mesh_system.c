@@ -1,12 +1,12 @@
-﻿#include "mesh_render.h"
+﻿#include "vulkan_mesh_system.h"
 
 #include "vk_buffer.h"
 #include "vulkan_struct_types.h"
 
 
-Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
+Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
 {
-    Mesh_Renderer* out_mesh_renderer = allocator_alloc(&renderer->allocator, sizeof(Mesh_Renderer));
+    Vulkan_Mesh_System* out_mesh_renderer = allocator_alloc(&renderer->allocator, sizeof(Vulkan_Mesh_System));
 
     u64 mesh_buffer_data_size = MB(64);
 
@@ -78,7 +78,7 @@ Mesh_Renderer* mesh_renderer_init(Renderer* renderer)
 }
 
 
-void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_renderer, Render_Packet* render_packet,
+void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer, Render_Packet* render_packet,
                                     Vulkan_Command_Buffer* command_buffer)
 {
     //update the transforms every frame
@@ -96,8 +96,26 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
     {
         ring_dequeue(mesh_render_queue, submesh_upload_data);
 
+
+        Mesh_Render_Record* record = &mesh_renderer->mesh_render_record[submesh_upload_data->mesh_id];
+        record->is_uploaded = true; // TODO: change this for now we are just testing
+        record->is_in_use = true;
+        record->tangent_bytes = submesh_upload_data->submesh->tangent_bytes;
+        record->vertex_color_bytes = submesh_upload_data->submesh->vertex_color_bytes;
+        record->vertex_bytes = submesh_upload_data->submesh->vertex_bytes;
+        record->normal_bytes = submesh_upload_data->submesh->normal_bytes;
+        record->uv_bytes = submesh_upload_data->submesh->uv_bytes;
+        record->indices_bytes = submesh_upload_data->submesh->indices_bytes;
+        record->index_count = submesh_upload_data->submesh->index_count;
+        record->index_type = submesh_upload_data->submesh->index_type;
+
+        //TODO: TEMP CODE, need a free list for this
+        record->vertex_count_offset = mesh_renderer->vertex_offset_count;
+        record->index_offset_count = mesh_renderer->index_offset_count;
+        mesh_renderer->vertex_offset_count += submesh_upload_data->submesh->vertex_count;
+        mesh_renderer->index_offset_count += submesh_upload_data->submesh->index_count;
+
         //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
-        /*
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->vertex_staging_buffer_handle,
                                             submesh_upload_data->gpu_data->vertex,
                                             submesh_upload_data->submesh->vertex_bytes);
@@ -116,9 +134,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
         vulkan_buffer_data_copy_from_offset(renderer, mesh_renderer->tangent_staging_buffer_handle,
                                             submesh_upload_data->gpu_data->tangent,
                                             submesh_upload_data->submesh->tangent_bytes);
-                                            */
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+        /*vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
             renderer, mesh_renderer->vertex_buffer_handle,
             command_buffer,
             &submesh_upload_data->gpu_data->vertex,
@@ -146,7 +163,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
             renderer, mesh_renderer->tangent_buffer_handle,
             command_buffer,
             submesh_upload_data->gpu_data->tangent,
-            submesh_upload_data->submesh->tangent_bytes);
+            submesh_upload_data->submesh->tangent_bytes);*/
 
         //TODO: free the data on the cpu
     }
@@ -171,19 +188,19 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Mesh_Renderer* mesh_rend
     }
 
 
-    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
-    //                                 mesh_renderer->vertex_staging_buffer_handle, command_buffer);
-    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->index_buffer_handle,
-    //                                 mesh_renderer->index_staging_buffer_handle, command_buffer);
-    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->normal_buffer_handle,
-    //                                 mesh_renderer->normal_staging_buffer_handle, command_buffer);
-    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle,
-    //                                 command_buffer);
-    // vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
-    //                                 mesh_renderer->tangent_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->vertex_buffer_handle,
+                                    mesh_renderer->vertex_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->index_buffer_handle,
+                                    mesh_renderer->index_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->normal_buffer_handle,
+                                    mesh_renderer->normal_staging_buffer_handle, command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->uv_buffer_handle, mesh_renderer->uv_staging_buffer_handle,
+                                    command_buffer);
+    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_renderer->tangent_buffer_handle,
+                                    mesh_renderer->tangent_staging_buffer_handle, command_buffer);
 }
 
-void mesh_renderer_upload_per_frame_data(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                          Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     //transform data
@@ -223,6 +240,18 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                                                                 100 * sizeof(Skinned_Render_Item));
     u32 skinned_render_item_count = 0;
 
+
+    /*for (u32 record_idx = 0; record_idx < renderer->mesh_system->mesh_render_count; record_idx++)
+    {
+        Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[record_idx];
+
+        if (render_record->is_uploaded && render_record->is_in_use)
+        {
+            //add it to the draw list
+        }
+    }*/
+
+
     // Vulkan_Mesh_Draw draw_data = {
     // .transform_idx = sub_mesh_instance->parent_transform_handle.handle,
     // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
@@ -236,21 +265,31 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         for (u32 submesh_idx = 0; submesh_idx < mesh_instance->mesh_count; submesh_idx++)
         {
             Madness_SubMesh_Instance* sub_mesh_instance = &mesh_instance->submesh_instances[submesh_idx];
+            Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[sub_mesh_instance->mesh_id];
+
+            //check if its valid for uploading
+            if (!render_record->is_uploaded || !render_record->is_in_use)
+            {
+                continue;
+            }
 
             Mesh_Render_Item* render_inst = &render_items[render_item_count++];
             *render_inst = (Mesh_Render_Item){
                 .material_key = sub_mesh_instance->material_handle.material_id,
+                .mesh_id = sub_mesh_instance->mesh_id,
                 .mesh_handle = mesh_instance->mesh_asset.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.buffer_handle,
                 .transform_handle = mesh_instance->transform_handle.handle, // TODO: query the bindless index
-                .index_count = sub_mesh_instance->mesh_indirect_draw.index_count,
-                .index_offset = sub_mesh_instance->mesh_indirect_draw.index_offset,
-                .vertex_offset = sub_mesh_instance->mesh_indirect_draw.vertex_count_offset,
+                .index_count = render_record->index_count,
+                .index_offset = render_record->index_offset_count,
+                .vertex_offset = render_record->vertex_count_offset,
             };
         }
     }
+    // }
 
+    /*
     for (u32 i = 0; i < render_packet->draw_3d_data_packet.skinned_instances_count; i++)
     {
         Madness_Skinned_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.skinned_instances[i];
@@ -275,7 +314,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 
             };
         }
-    }
+    }*/
 
 
     //TODO/ OPTIMIZE : sort render items by material id,
@@ -341,7 +380,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     }
 
 
-    Vulkan_Skinned_Draw skinned_draw = {0};
+    /*Vulkan_Skinned_Draw skinned_draw = {0};
     for (u32 batch_idx = 0; batch_idx < renderer->shader_system->skinned_batch_count; batch_idx++)
     {
         Vulkan_Shader_Batch* current_batch = &renderer->shader_system->skinned_batch[batch_idx];
@@ -401,11 +440,11 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 current_batch->draw_count++;
             }
         }
-    }
+    }*/
 }
 
 
-void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                               Vulkan_Command_Buffer* command_buffer)
 {
@@ -494,7 +533,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Mesh_Renderer* mesh_renderer,
 }
 
 
-void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Mesh_Renderer* mesh_renderer,
+void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                               Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                                               Vulkan_Command_Buffer* command_buffer,
                                               Vulkan_Shader_Pipeline* shader_pipeline)

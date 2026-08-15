@@ -13,7 +13,7 @@
 #include "maths/math_lib.h"
 #include "pipelines/sprite_render.h"
 #include "../renderer/pipelines/ui_render.h"
-#include "../renderer/pipelines/mesh_render.h"
+#include "vulkan_mesh_system.h"
 #include "../renderer/pipelines/sprite_render.h"
 #include "../renderer/pipelines/particle_render.h"
 
@@ -175,7 +175,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     //System specific draws
     // Mesh System
-    renderer->mesh_renderer = mesh_renderer_init(renderer);
+    renderer->mesh_system = mesh_renderer_init(renderer);
 
     //Particle System
     renderer->particle_render = particle_renderer_init(renderer);
@@ -330,15 +330,15 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //global indexes
     //meshes
-    ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->vertex_buffer_handle);
-    ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->normal_buffer_handle);
-    ubo.tangent_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->tangent_buffer_handle);
-    ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->uv_buffer_handle);
-    ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->joint_buffer_handle);
-    ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->weight_buffer_handle);
+    ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->vertex_buffer_handle);
+    ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->normal_buffer_handle);
+    ubo.tangent_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->tangent_buffer_handle);
+    ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->uv_buffer_handle);
+    ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->joint_buffer_handle);
+    ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->weight_buffer_handle);
     ubo.skinned_matrix_buffer = vulkan_buffer_get_device_address(
-        renderer, renderer->mesh_renderer->skinned_matrix_buffer);
-    ubo.transform_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_renderer->transform_buffer_handle);
+        renderer, renderer->mesh_system->skinned_matrix_buffer);
+    ubo.transform_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->transform_buffer_handle);
 
 
     // Copy the current matrices to the current frame's uniform buffer.
@@ -361,8 +361,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 
 
-    mesh_renderer_upload_draw_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
-    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_renderer, render_packets, graphics_command_buffer);
+    mesh_renderer_upload_draw_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
+    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
     mesh_renderer_construct_batch_draw(renderer, render_packets, graphics_command_buffer);
 
 
@@ -433,12 +433,12 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //draw geometry into depth buffer
-    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
                                              renderer->shader_system->mesh_batch,
                                              renderer->shader_system->mesh_batch_count,
                                              graphics_command_buffer, &renderer->predepth_mesh_pipeline);
 
-    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
                                              renderer->shader_system->skinned_batch,
                                              renderer->shader_system->skinned_batch_count,
                                              graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
@@ -618,10 +618,10 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // SET 1 GLOBAL TEXTURES: Textures
     // SET 2 NOTHING RN:
 
-    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->mesh_batch, renderer->shader_system->mesh_batch_count,
                              graphics_command_buffer);
-    mesh_renderer_batch_draw(renderer, renderer->mesh_renderer,
+    mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
                              graphics_command_buffer);
 

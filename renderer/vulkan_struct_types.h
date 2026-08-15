@@ -67,7 +67,6 @@ typedef struct Vulkan_Texture
 } Vulkan_Texture;
 
 
-
 typedef struct Vulkan_Renderpass
 {
     VkRenderPass handle;
@@ -182,7 +181,7 @@ typedef struct Vulkan_Texture_Pending_Upload
     Vulkan_Texture* texture;
     Vulkan_Command_Buffer* single_use_command_buffer;
     u64 timeline_semaphore_value;
-}Vulkan_Texture_Pending_Upload;
+} Vulkan_Texture_Pending_Upload;
 
 typedef struct Vulkan_Shader_Stage
 {
@@ -217,6 +216,7 @@ typedef struct Vulkan_Shader_Pipeline
 typedef struct Mesh_Render_Item
 {
     u64 material_key;
+    u32 mesh_id;
     u32 mesh_handle;
     u32 submesh_handle;
     u32 material_handle;
@@ -248,11 +248,7 @@ typedef struct Skinned_Render_Item
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
-
 } Skinned_Render_Item;
-
-
-
 
 
 typedef struct Vulkan_SKMesh_Draw
@@ -277,7 +273,6 @@ typedef struct Vulkan_Shader_Batch
     Shader_Renderpass_Type renderpass_types;
 
 
-
     Material_ID material_id;
 
 
@@ -297,7 +292,7 @@ typedef struct Vulkan_Shader_Batch
 
     // u32 pc_size;
     // void* pc_data;
-}Vulkan_Shader_Batch;
+} Vulkan_Shader_Batch;
 
 
 #define AVAILABLE_TEXTURES 100
@@ -327,10 +322,7 @@ typedef struct Shader_System
     //the shader name is the lookup
     //we want the pointer to the shader batch,
     HASH_SET(Material_ID)* shader_batch_hash_set;
-
-
 } Shader_System;
-
 
 
 typedef struct Vulkan_Texture_System
@@ -350,13 +342,11 @@ typedef struct Vulkan_Texture_System
     RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
 
 
-
     VkSemaphore timline_texture_upload_semaphore;
     //textures who's uploads we are waiting on
     ARRAY_TYPE(Vulkan_Texture_Pending_Upload)* texture_pending_array;
     //u64 semaphore_singal_value = ++timeline_value; //use it like so
     u64 timeline_semaphore_texture_value;
-
 } Vulkan_Texture_System;
 
 typedef struct Buffer_System
@@ -572,7 +562,6 @@ typedef struct Light_System
 
     Buffer_Handle spot_light_storage_buffer_handle;
     Buffer_Handle spot_light_staging_buffer_handle;
-
 } Light_System;
 
 
@@ -618,11 +607,7 @@ typedef struct global_ubo
 
     //global transforms
     VkDeviceAddress transform_buffer;
-
-
 } Global_Ubo;
-
-
 
 
 typedef struct Descriptor_System
@@ -660,7 +645,6 @@ typedef struct vulkan_pipeline_cache
 } vulkan_pipeline_cache;
 
 
-
 typedef struct UI_Renderer
 {
     Buffer_Handle ui_vertex_buffer_handle;
@@ -672,7 +656,6 @@ typedef struct UI_Renderer
     Buffer_Handle ui_material_staging_ssbo_handle;
 
 
-
     u64 draw_count;
 
     UI_Render_Packet* madness_ui_render_packet;
@@ -682,7 +665,6 @@ typedef struct UI_Renderer
     UI_Render_Packet* insanity_ui_render_packet;
     Buffer_Handle insanity_ui_material_ssbo_handle;
     u64 insanity_ui_draw_count;
-
 } UI_Renderer_Backend;
 
 
@@ -707,7 +689,80 @@ typedef struct Sprite_Backend
 } Sprite_Renderer;
 
 
-typedef struct Mesh_Renderer
+typedef struct Mesh_Render_Record
+{
+    //passed in by the cpu mesh system
+    //size of data
+    u64 tangent_bytes;
+    u64 vertex_color_bytes;
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 uv_bytes;
+    u64 indices_bytes;
+
+
+    //data managed by the mesh system, to know where it is in the buffer and likely to change due to defragging
+    u64 tangent_bytes_offset;
+    u64 vertex_color_bytes_offset;
+    u64 vertex_bytes_offset;
+    u64 normal_bytes_offset;
+    u64 uv_bytes_offset;
+    u64 indices_bytes_offset;
+
+
+    //indirect draw data
+    u32 index_count; // how large is the data
+    u32 vertex_count_offset; //in vec3
+    u32 index_offset_count; //offset into the index buffer
+    Index_Type index_type;
+
+    bool is_uploaded;
+    bool is_in_use;
+} Mesh_Render_Record;
+
+
+typedef struct Skinned_Render_Record
+{
+    //passed in by the cpu mesh system
+    //size of data
+    u64 tangent_bytes;
+    u64 vertex_color_bytes;
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 uv_bytes;
+    u64 indices_bytes;
+
+    size_t joints_byte_size;
+    size_t weight_byte_size;
+
+    //everything below is managed by system
+    u64 tangent_bytes_offset;
+    u64 vertex_color_bytes_offset;
+    u64 vertex_bytes_offset;
+    u64 normal_bytes_offset;
+    u64 uv_bytes_offset;
+    u64 indices_bytes_offset;
+
+    size_t joints_byte_offset;
+    size_t weight_byte_offset;
+
+
+    //look up values into the skinned buffer, might not want to keep it here, we will see
+    u64 joint_idx;
+    u64 weight_idx;
+
+    //indirect draw data
+    u32 vertex_count_offset; //in vec3
+    u32 index_count; // how large is the data
+    u32 index_offset_count; //offset into the index buffer
+    Index_Type index_type;
+
+    bool is_uploaded;
+    bool is_in_use;
+} Skinned_Render_Record;
+
+
+typedef struct Vulkan_Mesh_System
 {
     Buffer_Handle vertex_buffer_handle;
     Buffer_Handle index_buffer_handle;
@@ -731,11 +786,17 @@ typedef struct Mesh_Renderer
     Buffer_Handle skinned_matrix_staging_buffer_handle;
 
 
-
     Buffer_Handle transform_buffer_handle;
     Buffer_Handle transform_staging_buffer_handle;
 
-} Mesh_Renderer;
+    //TODO: TEMP CODE, need a free list for this
+    u32 vertex_offset_count;
+    u32 index_offset_count;
+
+    Mesh_Render_Record mesh_render_record[MAX_MESH_COUNT];
+    u32 mesh_render_count;
+    // Skinned_Render_Record skinned_render_record[MAX_SKINNED_MESH_COUNT];
+} Vulkan_Mesh_System;
 
 typedef struct Particle_Render
 {
@@ -744,9 +805,7 @@ typedef struct Particle_Render
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;
     Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
-
 } Particle_Render;
-
 
 
 typedef struct renderer
@@ -764,7 +823,7 @@ typedef struct renderer
     //general resources taken from the resource system
     Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
-    Mesh_Renderer* mesh_renderer;
+    Vulkan_Mesh_System* mesh_system;
     Particle_Render* particle_render;
 
     //renderer specific
@@ -776,7 +835,6 @@ typedef struct renderer
 
     //draw systems
     UI_Renderer_Backend* ui_renderer;
-
 
 
     //mesh system
@@ -821,15 +879,7 @@ typedef struct renderer
     Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
     bool wireframe_mode;
-
 } Renderer;
-
-
-
-
-
-
-
 
 
 #endif //VULKAN_STRUCT_TYPES_H

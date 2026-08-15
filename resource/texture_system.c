@@ -174,8 +174,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
-    upload_texture.texture_memory_allocator = asset_system->heap_allocator;
-    // TODO: replace with texture memory allocator
+    upload_texture.texture_memory_allocator = asset_system->texture_allocator;
     ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
 

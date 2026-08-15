@@ -13,12 +13,6 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
     memset(out_mesh_system, 0, sizeof(Mesh_System));
 
 
-    out_mesh_system->vertex_byte_size = 0;
-    out_mesh_system->index_byte_size = 0;
-    out_mesh_system->normals_byte_size = 0;
-    out_mesh_system->tangent_byte_size = 0;
-    out_mesh_system->uv_byte_size = 0;
-
     out_mesh_system->mesh_ring_queue = ring_queue_create(sizeof(Mesh_GPU_Upload), MAX_MESH_COUNT);
     out_mesh_system->skinned_mesh_ring_queue = ring_queue_create(sizeof(Skinned_Mesh_GPU_Upload),
                                                                  MAX_SKINNED_MESH_COUNT);
@@ -29,6 +23,8 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
     out_mesh_system->mesh_instance_count = 0;
     out_mesh_system->skinned_mesh_instance_count = 0;
 
+    out_mesh_system->mesh_ids = 0;
+    out_mesh_system->skinned_ids = 0;
 
     INFO("MESH SYSTEM CREATED");
 
@@ -68,7 +64,6 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
                 mesh_instance_count++];
 
 
-
             mesh_inst->mesh_asset = (Madness_Mesh_Handle_Internal){.handle = i};
             scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
             mesh_inst->mesh_count = madness_mesh->mesh_count;
@@ -82,14 +77,6 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
                 //handles
                 submesh_inst->material_handle = (Material_Handle){0};
                 submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-
-                //indirect draw, gpu friendly format
-                submesh_inst->mesh_indirect_draw.vertex_count_offset
-                    = madness_mesh->mesh_data[mesh_idx].vertex_count_offset;
-                submesh_inst->mesh_indirect_draw.index_count
-                    = madness_mesh->mesh_data[mesh_idx].index_count;
-                submesh_inst->mesh_indirect_draw.index_offset
-                    = madness_mesh->mesh_data[mesh_idx].index_offset;
             }
 
             //loads in the material asset if needed, and adds material instance data to the material batch
@@ -127,14 +114,6 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
-    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
-    {
-        Mesh_GPU_Upload upload = {
-            .submesh = &mesh_asset->submeshes[mesh_idx],
-            .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx]
-        };
-        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
-    }
 
     //take a reference to the og asset
     Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->madness_mesh_count++];
@@ -145,30 +124,6 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     madness_mesh->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
     madness_mesh->generation++;
     madness_mesh->reference_count = 1;
-
-
-    //TODO: out into its own function
-    //find free space for the loaded in data
-    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
-    {
-        Madness_SubMesh* submesh = &madness_mesh->mesh_data[mesh_idx];
-        submesh->vertex_count_offset = mesh_system->vertex_count_size;
-        submesh->vertex_offset = mesh_system->vertex_byte_size;
-        submesh->uv_offset = mesh_system->uv_byte_size;
-        submesh->vertex_color_offset = mesh_system->vertex_color_byte_size;
-        submesh->tangent_offset = mesh_system->tangent_byte_size;
-        submesh->normal_offset = mesh_system->normals_byte_size;
-        submesh->index_offset = mesh_system->index_count_size;
-
-        mesh_system->vertex_count_size += submesh->vertex_bytes / sizeof(vec3s);
-        mesh_system->vertex_byte_size += submesh->vertex_bytes;
-        mesh_system->uv_byte_size += submesh->uv_bytes;
-        mesh_system->vertex_color_byte_size += submesh->vertex_color_bytes;
-        mesh_system->tangent_byte_size += submesh->tangent_bytes;
-        mesh_system->normals_byte_size += submesh->normal_bytes;
-        mesh_system->index_byte_size += submesh->indices_bytes;
-        mesh_system->index_count_size += submesh->index_count;
-    }
 
 
     //create the instance
@@ -187,17 +142,22 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     {
         Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
 
+        u32 cur_mesh_id = mesh_system->mesh_ids++;
+
         //handles
+        submesh_inst->mesh_id = cur_mesh_id;
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
 
-        //indirect draw, gpu friendly format
-        submesh_inst->mesh_indirect_draw.vertex_count_offset
-            = madness_mesh->mesh_data[mesh_idx].vertex_count_offset;
-        submesh_inst->mesh_indirect_draw.index_count
-            = madness_mesh->mesh_data[mesh_idx].index_count;
-        submesh_inst->mesh_indirect_draw.index_offset
-            = madness_mesh->mesh_data[mesh_idx].index_offset;
+        //send to the gpu
+        Mesh_GPU_Upload upload = {
+            .mesh_id = cur_mesh_id,
+            .submesh = &mesh_asset->submeshes[mesh_idx],
+            .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx],
+            .mesh_memory_allocator = asset_system->mesh_allocator,
+
+        };
+        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
     }
 
     //loads in the material asset if needed, and adds material instance data to the material batch
@@ -232,41 +192,6 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
     madness_mesh->skinned_mesh_data = skmesh_asset->skinned_submeshes;
     madness_mesh->animation_data = skmesh_asset->animation_data;
 
-    //TODO: out into its own function
-    //find free space for the loaded in data
-    for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
-    {
-        Madness_SubMesh* submesh = &madness_mesh->mesh_data[mesh_idx];
-        submesh->vertex_count_offset = mesh_system->vertex_count_size;
-        submesh->vertex_offset = mesh_system->vertex_byte_size;
-        submesh->uv_offset = mesh_system->uv_byte_size;
-        submesh->vertex_color_offset = mesh_system->vertex_color_byte_size;
-        submesh->tangent_offset = mesh_system->tangent_byte_size;
-        submesh->normal_offset = mesh_system->normals_byte_size;
-        submesh->index_offset = mesh_system->index_count_size;
-
-        mesh_system->vertex_count_size += submesh->vertex_bytes / sizeof(vec3s);
-        mesh_system->vertex_byte_size += submesh->vertex_bytes;
-        mesh_system->uv_byte_size += submesh->uv_bytes;
-        mesh_system->vertex_color_byte_size += submesh->vertex_color_bytes;
-        mesh_system->tangent_byte_size += submesh->tangent_bytes;
-        mesh_system->normals_byte_size += submesh->normal_bytes;
-        mesh_system->index_byte_size += submesh->indices_bytes;
-        mesh_system->index_count_size += submesh->index_count;
-
-
-        Madness_Skinned_SubMesh* skinned_submesh = &madness_mesh->skinned_mesh_data[mesh_idx];
-
-        skinned_submesh->joint_offset_bytes = mesh_system->joints_byte_size;
-        skinned_submesh->joint_offset_vec4 = mesh_system->joints_byte_size / sizeof(vec4s);
-        skinned_submesh->weight_offset_bytes = mesh_system->weight_byte_size;
-        skinned_submesh->weight_offset_vec4 = mesh_system->weight_byte_size / sizeof(vec4s);
-
-
-        mesh_system->joints_byte_size += skinned_submesh->joint_bytes;
-        mesh_system->weight_byte_size += skinned_submesh->weight_bytes;
-    }
-
 
     //create the instance
     //OPTIMIZE: submehses should really be a flat list so that the render can quickly extract data from it
@@ -290,25 +215,11 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
     for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
     {
         Madness_Skinned_Submesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
-        Madness_Skinned_SubMesh* skinned_submesh = &madness_mesh->skinned_mesh_data[mesh_idx];
 
         //handles
+        submesh_inst->skinned_id = mesh_system->skinned_ids++;
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-
-        //indirect draw, gpu friendly format
-        submesh_inst->mesh_indirect_draw.vertex_count_offset
-            = madness_mesh->mesh_data[mesh_idx].vertex_count_offset;
-        submesh_inst->mesh_indirect_draw.index_count
-            = madness_mesh->mesh_data[mesh_idx].index_count;
-        submesh_inst->mesh_indirect_draw.index_offset
-            = madness_mesh->mesh_data[mesh_idx].index_offset;
-
-        //skinned draw data
-
-        submesh_inst->skinned_draw_data.joint_idx = skinned_submesh->joint_offset_vec4;
-        submesh_inst->skinned_draw_data.weight_idx = skinned_submesh->weight_offset_vec4;
-        submesh_inst->skinned_draw_data.skinned_matrix_idx = mesh_inst->skinned_matrix_count_offset;
     }
 
 
