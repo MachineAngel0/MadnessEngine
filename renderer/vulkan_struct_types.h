@@ -147,6 +147,13 @@ typedef struct Vulkan_Command_Buffer
     VkCommandBuffer handle;
     Vulkan_Queue_Type queue_type;
     Vulkan_Command_Buffer_State state;
+
+    //implied to be timeline semaphores
+    //TODO: we can definelty just use a linked list with a pool allocator
+    VkSemaphoreSubmitInfo* wait_semaphores;
+    u32 wait_semaphore_count;
+    VkSemaphoreSubmitInfo* signal_semaphores;
+    u32 signal_semaphore_count;
 } Vulkan_Command_Buffer;
 
 typedef struct Vulkan_Texture_Pending_Upload
@@ -272,7 +279,7 @@ typedef struct Mesh_Gpu_Upload_Pending
 {
     u32 mesh_id;
     u64 timeline_semaphore_value;
-}Mesh_Gpu_Upload_Pending;
+} Mesh_Gpu_Upload_Pending;
 
 typedef struct Skinned_Render_Record
 {
@@ -377,7 +384,6 @@ typedef struct Shader_System
 } Shader_System;
 
 
-
 typedef struct vulkan_shader_default
 {
     Vulkan_Shader_Pipeline default_shader_pipeline;
@@ -422,8 +428,6 @@ typedef struct global_descriptor_sets
     vulkan_bindless_descriptors texture_descriptors;
     vulkan_bindless_descriptors storage_descriptors;
 } global_descriptor_sets;
-
-
 
 
 typedef struct Directional_Light
@@ -724,7 +728,6 @@ typedef struct Vulkan_Mesh_System
     ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* mesh_pending_array;
     VkSemaphore mesh_upload_timeline_semaphore;
     u64 upload_semaphore_value;
-
 } Vulkan_Mesh_System;
 
 typedef struct Particle_Render
@@ -756,7 +759,6 @@ typedef struct Vulkan_Command_Buffer_System
     VkQueue graphics_queue;
     VkQueue transfer_queue;
     VkQueue compute_queue;
-
 } Vulkan_Command_Buffer_System;
 
 
@@ -811,7 +813,6 @@ typedef struct vulkan_context
     VkFormat depth_format;
 
 
-
     //Swapchain
     vulkan_swapchain swapchain;
     bool recreating_swapchain;
@@ -820,7 +821,7 @@ typedef struct vulkan_context
     Vulkan_Renderpass main_renderpass;
 
     //command pool/buffer
-    //TODO: one pool per thread (per queue family but we got that covered)
+    //TODO: one pool per thread (per queue family (annoying for those on the same thread))
     VkCommandPool graphics_command_pool;
     VkCommandPool transfer_command_pool;
     VkCommandPool compute_command_pool;
@@ -830,17 +831,14 @@ typedef struct vulkan_context
     Vulkan_Command_Buffer* compute_command_buffer; // darray
 
 
-    //Semaphores and Fences
-    // VkSemaphore* image_available_semaphores; // darray
-    // VkSemaphore* queue_complete_semaphores; // darray
     u32 current_frame;
 
+    //ensures that the submit has finished before starting work on the image
     VkFence* queue_submit_fence;
-    VkCommandPool* primary_command_pool;
-    VkCommandBuffer* primary_command_buffer;
-    VkSemaphore* swapchain_acquire_semaphore;
     // semaphore that tells us when our next image is ready for usage/writing to
-    VkSemaphore* swapchain_release_semaphore; // semaphore that signals when we are allowed to sumbit our new buffers
+    VkSemaphore* swapchain_acquire_semaphore;
+    // semaphore that signals when we are allowed to sumbit our new buffers
+    VkSemaphore* swapchain_release_semaphore;
 } Vulkan_Context;
 
 
@@ -873,22 +871,8 @@ typedef struct Renderer
     UI_Renderer_Backend* ui_renderer;
 
 
-    //mesh system
-    //animation system
-    //ui draw info
-
     //TODO: get it out of the context and drop it here
     Vulkan_Context context;
-
-    //TODO: TEMP
-    VkBufferMemoryBarrier2 buffer_memory_barrier_batch_release[100];
-    u32 buffer_memory_barrier_batch_release_count;
-
-    VkBufferMemoryBarrier2 buffer_memory_barrier_batch_acquire[100];
-    u32 buffer_memory_barrier_batch_acquire_count;
-
-    VkSemaphore* transfer_signal_sempahores;
-    VkSemaphoreSubmitInfo transfer_sumbit_signal_semaphore;
 
 
     //pipelines

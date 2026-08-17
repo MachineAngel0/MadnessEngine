@@ -750,21 +750,15 @@ void renderer_shutdown(Renderer* renderer)
                        VK_NULL_HANDLE);
 
 
-        //per frame command buffers
-        vkFreeCommandBuffers(vk_context->logical_device, vk_context->primary_command_pool[i], 1,
-                             &vk_context->primary_command_buffer[i]);
+
     }
 
-    for (u8 i = 0; i < vk_context->swapchain.image_count; ++i)
-    {
-        vkDestroyCommandPool(vk_context->logical_device, vk_context->primary_command_pool[i], VK_NULL_HANDLE);
-    }
+
 
     darray_free(vk_context->swapchain_acquire_semaphore);
     darray_free(vk_context->swapchain_release_semaphore);
     darray_free(vk_context->queue_submit_fence);
-    darray_free(vk_context->primary_command_buffer);
-    darray_free(vk_context->primary_command_pool);
+
 
 
     // Command buffers
