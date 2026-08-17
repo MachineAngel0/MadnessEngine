@@ -39,13 +39,11 @@ void platform_config_use_defaults(Platform_Config* config)
 typedef struct Platform_State
 {
     void* internal_state;
-    Input_System* input_system; // just a pointer, does not own the memory
 } Platform_State;
 
 
 bool platform_startup(
     Platform_State* plat_state,
-    Input_System* input_system,
     Platform_Config platform_config);
 
 

@@ -1,6 +1,23 @@
 ﻿#include "vk_sync.h"
 
 
+void vulkan_fence_create(Renderer* renderer, VkFence* fence)
+{
+    VkFenceCreateInfo fence_create_info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT, // if needed we can pass this in as a param
+    };
+    VkResult fence_create_result = vkCreateFence(renderer->context.logical_device, &fence_create_info, NULL,
+                                                 fence);
+
+    VK_CHECK(fence_create_result)
+}
+
+void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags fenceCreateFlags)
+{
+    vkDestroyFence(renderer->context.logical_device, *fence, NULL);
+}
+
 void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context)
 {
     //memory
@@ -22,15 +39,15 @@ void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context)
             .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
         };
-        VK_CHECK(vkCreateFence(context->device.logical_device, &info, NULL, &context->queue_submit_fence[i]));
+        VK_CHECK(vkCreateFence(context->logical_device, &info, NULL, &context->queue_submit_fence[i]));
 
         VkCommandPoolCreateInfo cmd_pool_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-            .queueFamilyIndex = (uint32_t)context->device.graphics_queue_index
+            .queueFamilyIndex = (uint32_t)context->graphics_queue_index
         };
         VK_CHECK(
-            vkCreateCommandPool(context->device.logical_device, &cmd_pool_info, NULL, &context->primary_command_pool[i]
+            vkCreateCommandPool(context->logical_device, &cmd_pool_info, NULL, &context->primary_command_pool[i]
             ));
 
         VkCommandBufferAllocateInfo cmd_buf_info = {
@@ -40,23 +57,24 @@ void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context)
             .commandBufferCount = 1
         };
         VK_CHECK(
-            vkAllocateCommandBuffers(context->device.logical_device, &cmd_buf_info, &context->primary_command_buffer[i]
+            vkAllocateCommandBuffers(context->logical_device, &cmd_buf_info, &context->primary_command_buffer[i]
             ));
 
         VkSemaphoreCreateInfo semaphoreInfo = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
         };
         VK_CHECK(
-            vkCreateSemaphore(context->device.logical_device, &semaphoreInfo, NULL, &context->
+            vkCreateSemaphore(context->logical_device, &semaphoreInfo, NULL, &context->
                 swapchain_acquire_semaphore[i]));
         VK_CHECK(
-            vkCreateSemaphore(context->device.logical_device, &semaphoreInfo, NULL, &context->
+            vkCreateSemaphore(context->logical_device, &semaphoreInfo, NULL, &context->
                 swapchain_release_semaphore[i]));
         VK_CHECK(
-            vkCreateSemaphore(context->device.logical_device, &semaphoreInfo, NULL, &renderer->
+            vkCreateSemaphore(context->logical_device, &semaphoreInfo, NULL, &renderer->
                 transfer_signal_sempahores[i]));
     }
 }
+
 
 
 bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
@@ -64,7 +82,7 @@ bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
     // if (!fence->is_signaled)
     // {
     VkResult result = vkWaitForFences(
-        context->device.logical_device,
+        context->logical_device,
         1,
         fence,
         VK_TRUE,
@@ -73,7 +91,7 @@ bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
     switch (result)
     {
     case VK_SUCCESS:
-        VkResult fence_reset_result = vkResetFences(context->device.logical_device, 1, fence);
+        VkResult fence_reset_result = vkResetFences(context->logical_device, 1, fence);
         VK_CHECK(fence_reset_result);
 
         return true;
@@ -108,7 +126,7 @@ void create_semaphore(Renderer* renderer)
 
     for (int i = 0; i < renderer->context.swapchain.max_frames_in_flight; ++i)
     {
-        VkResult semaphore_result = vkCreateSemaphore(renderer->context.device.logical_device, &semaphoreInfo, NULL,
+        VkResult semaphore_result = vkCreateSemaphore(renderer->context.logical_device, &semaphoreInfo, NULL,
                                                       &semaphore[i]);
         VK_CHECK(semaphore_result);
     }
@@ -118,7 +136,7 @@ void destroy_sempahore(Renderer* renderer, VkSemaphore* semaphore)
 {
     for (int i = 0; i < renderer->context.swapchain.max_frames_in_flight; ++i)
     {
-        vkDestroySemaphore(renderer->context.device.logical_device, semaphore[i], renderer->context.allocator);
+        vkDestroySemaphore(renderer->context.logical_device, semaphore[i], renderer->context.allocator);
     }
 }
 
@@ -136,17 +154,17 @@ void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semapho
     create_info.pNext = &type_create_info; // setting as timeline
 
 
-    VK_CHECK(vkCreateSemaphore(renderer->context.device.logical_device, &create_info, NULL, timeline_semaphore));
+    VK_CHECK(vkCreateSemaphore(renderer->context.logical_device, &create_info, NULL, timeline_semaphore));
 }
 
 void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore)
 {
-    vkDestroySemaphore(renderer->context.device.logical_device, *timeline_semaphore, NULL);
+    vkDestroySemaphore(renderer->context.logical_device, *timeline_semaphore, NULL);
 }
 
 void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value)
 {
-    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.device.logical_device, *timeline_semaphore, out_counter_value);
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.logical_device, *timeline_semaphore, out_counter_value);
     VK_CHECK(result);
 
 }
@@ -155,7 +173,7 @@ bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSema
     const u64 compare_value)
 {
     u64 out_counter_value =0;
-    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.device.logical_device, *timeline_semaphore, &out_counter_value);
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.logical_device, *timeline_semaphore, &out_counter_value);
     VK_CHECK(result);
 
     return compare_value <= out_counter_value;

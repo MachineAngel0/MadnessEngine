@@ -18,9 +18,11 @@ typedef enum Vulkan_Render_Pass_State
 typedef enum Vulkan_Command_Buffer_State
 {
     VULKAN_COMMAND_BUFFER_STATE_NOT_ALLOCATED,
-    VULKAN_COMMAND_BUFFER_STATE_USABLE,
-    VULKAN_COMMAND_BUFFER_STATE_IN_USE,
+    VULKAN_COMMAND_BUFFER_STATE_USABLE, //just allocated or reset
+    VULKAN_COMMAND_BUFFER_STATE_BEGIN,
+    VULKAN_COMMAND_BUFFER_STATE_END,
     VULKAN_COMMAND_BUFFER_STATE_SUBMITTED,
+    VULKAN_COMMAND_BUFFER_STATE_IN_FLIGHT, // submitted but waiting on sync to reset/free
 } Vulkan_Command_Buffer_State;
 
 typedef enum Vulkan_Command_Buffer_Lifetime
@@ -43,12 +45,13 @@ typedef enum Vulkan_Command_Buffer_Level
 } Vulkan_Command_Buffer_Level;
 
 
-typedef enum Vulkan_Command_Buffer_Type
+typedef enum Vulkan_Queue_Type
 {
-    VULKAN_COMMAND_BUFFER_TYPE_GRAPHICS,
-    VULKAN_COMMAND_BUFFER_TYPE_TRANSFER,
-    VULKAN_COMMAND_BUFFER_TYPE_COMPUTE,
-} Vulkan_Command_Buffer_Type;
+    //TODO: technically they can be on the same queue, so probably a bitflag at some point
+    VULKAN_QUEUE_TYPE_GRAPHICS,
+    VULKAN_QUEUE_TYPE_TRANSFER,
+    VULKAN_QUEUE_TYPE_COMPUTE,
+} Vulkan_Queue_Type;
 
 
 typedef enum Vulkan_Buffer_Type

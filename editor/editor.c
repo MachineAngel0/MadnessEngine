@@ -43,12 +43,12 @@ bool editor_update(Editor* editor)
 {
     //do the ui and stuff
     //manage a bunch of ui state
-    if (input_key_released_unique(editor->renderer->input_system, KEY_E))
+    if (input_key_released_unique(KEY_E))
     {
         editor->state = (editor->state + 1) % EDITOR_UI_STATE_MAX;
     }
 
-    if (input_key_released_unique(editor->renderer->input_system, KEY_Q))
+    if (input_key_released_unique(KEY_Q))
     {
         if (editor->state == 0)
         {

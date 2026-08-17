@@ -43,7 +43,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     allocator_clear(&game->frame_allocator);
 
     //TODO: DEBUG CODE
-    if (input_key_released_unique(game->input_system, KEY_Q))
+    if (input_key_released_unique(KEY_Q))
     {
         game->game_state = (game->game_state + 1) % (Game_State_Enum_MAX);
     }

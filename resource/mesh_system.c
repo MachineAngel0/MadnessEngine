@@ -45,7 +45,7 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
 {
     Mesh_System* mesh_system = asset_system->mesh_system;
 
-
+    //TODO: this is wrong, i need the madness mesh to hold onto the submesh id's
     for (u32 i = 0; i < mesh_system->madness_mesh_count; i++)
     {
         //see if we have the mesh loaded
@@ -75,6 +75,7 @@ bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* ou
                 Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
 
                 //handles
+                submesh_inst->mesh_id = madness_mesh->submesh_ids[mesh_idx];
                 submesh_inst->material_handle = (Material_Handle){0};
                 submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
             }
@@ -119,6 +120,7 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
     Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->madness_mesh_count++];
     madness_mesh->mesh_count = mesh_asset->mesh_count;
     madness_mesh->mesh_data = mesh_asset->submeshes;
+    madness_mesh->submesh_ids = allocator_heap_alloc(asset_system->heap_allocator, sizeof(u32) * mesh_asset->mesh_count);
     madness_mesh->material_instance = mesh_asset->material_instance;
     madness_mesh->path_hash = hash;
     madness_mesh->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
@@ -140,10 +142,11 @@ void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mes
 
     for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
     {
-        Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
 
         u32 cur_mesh_id = mesh_system->mesh_ids++;
+        madness_mesh->submesh_ids[mesh_idx] = cur_mesh_id;
 
+        Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
         //handles
         submesh_inst->mesh_id = cur_mesh_id;
         submesh_inst->material_handle = (Material_Handle){0};

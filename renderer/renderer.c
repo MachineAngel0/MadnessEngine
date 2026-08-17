@@ -55,21 +55,21 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     //set up memory for the renderer
-    u64 renderer_system_mem_requirement = MB(512);
+    u64 allocator_renderer_mem_size = MB(256);
     u64 frame_arena_mem_size = MB(256);
-    u64 heap__mem_size = MB(256);
+    u64 heap_mem_size = MB(16);
 
 
-    void* renderer_system_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+    void* renderer_system_mem = memory_system_alloc(memory_system, allocator_renderer_mem_size,
                                                     MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->allocator, renderer_system_mem, renderer_system_mem_requirement);
+    allocator_init(&renderer->allocator, renderer_system_mem, allocator_renderer_mem_size);
 
-    void* frame_arena_mem = memory_system_alloc(memory_system, renderer_system_mem_requirement,
+    void* frame_arena_mem = memory_system_alloc(memory_system, allocator_renderer_mem_size,
                                                 MEMORY_SUBSYSTEM_RENDERER);
     allocator_init(&renderer->frame_allocator, frame_arena_mem, frame_arena_mem_size);
 
 
-    renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(4), MEMORY_SUBSYSTEM_RENDERER);
+    renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_mem_size, MEMORY_SUBSYSTEM_RENDERER);
 
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -112,25 +112,25 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
         return false;
     }
 
-    if (vk_context->framebuffer_width != vk_context->device.swapchain_capabilities.capabilities.currentExtent.width)
+    if (vk_context->framebuffer_width != vk_context->swapchain_capabilities.capabilities.currentExtent.width)
     {
-        vk_context->framebuffer_width = vk_context->device.swapchain_capabilities.capabilities.currentExtent.width;
-        vk_context->framebuffer_width_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.width;
+        vk_context->framebuffer_width = vk_context->swapchain_capabilities.capabilities.currentExtent.width;
+        vk_context->framebuffer_width_new = vk_context->swapchain_capabilities.capabilities.currentExtent.width;
     }
-    if (vk_context->framebuffer_height != vk_context->device.swapchain_capabilities.capabilities.currentExtent.height)
+    if (vk_context->framebuffer_height != vk_context->swapchain_capabilities.capabilities.currentExtent.height)
     {
-        vk_context->framebuffer_height = vk_context->device.swapchain_capabilities.capabilities.currentExtent.height;
-        vk_context->framebuffer_height_new = vk_context->device.swapchain_capabilities.capabilities.currentExtent.
+        vk_context->framebuffer_height = vk_context->swapchain_capabilities.capabilities.currentExtent.height;
+        vk_context->framebuffer_height_new = vk_context->swapchain_capabilities.capabilities.currentExtent.
                                                          height;
     }
 
 
     // Swapchain
     vulkan_swapchain_create(
+        renderer,
         vk_context,
         vk_context->framebuffer_width,
-        vk_context->framebuffer_height,
-        &vk_context->swapchain);
+        vk_context->framebuffer_height, &vk_context->swapchain);
     // Main Renderpass
     vulkan_renderpass_create(
         vk_context,
@@ -145,11 +145,14 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
 
     //SHADOW PASS TEXTURE
-    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.device.depth_format,
+    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.depth_format,
                                     renderer->context.graphics_command_buffer, &renderer->shadowpass_texture);
 
     // Create command buffers.
     vulkan_renderer_command_buffers_create(vk_context);
+
+    renderer->command_buffer_system = vulkan_command_buffer_system_init(renderer);
+
 
     //NOTE: semaphores must be per swapchain image
     sync_object_per_frame_init(renderer, vk_context);
@@ -224,7 +227,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //TODO: move out to the editor
-    if (input_key_released_unique(renderer->input_system, KEY_U))
+    if (input_key_released_unique(KEY_U))
     {
         renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
         FATAL("RENDER_MODE: %d", renderer->mode)
@@ -252,7 +255,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
             texture_flip = !texture_flip;
         }
     }
-    if (input_key_released_unique(renderer->input_system, KEY_I))
+    if (input_key_released_unique(KEY_I))
     {
         renderer->wireframe_mode = !renderer->wireframe_mode;
     }
@@ -284,12 +287,12 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
     u32 image_index = 0;
     if (!vulkan_swapchain_acquire_next_image_index(
+        renderer,
         vk_context,
         &vk_context->swapchain,
         UINT64_MAX,
         vk_context->swapchain_acquire_semaphore[vk_context->current_frame],
-        0,
-        &image_index))
+        0, &image_index))
     {
         //if it fails it could mean that the swapchain is recreating itself
         return;
@@ -354,7 +357,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     Vulkan_Command_Buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
         current_frame];
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
-    vulkan_command_buffer_begin(graphics_command_buffer, false, false, false);
+    vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
@@ -688,7 +691,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Submit to the graphics queue passing a wait fence
     VkResult result = vkQueueSubmit(
-        vk_context->device.graphics_queue,
+        vk_context->graphics_queue,
         1,
         &submit_info,
         vk_context->queue_submit_fence[vk_context->current_frame]);
@@ -698,11 +701,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
+        renderer,
         vk_context,
         &vk_context->swapchain,
-        vk_context->device.present_queue,
-        vk_context->swapchain_release_semaphore[image_index],
-        image_index);
+        vk_context->present_queue,
+        vk_context->swapchain_release_semaphore[image_index], image_index);
 
 
     // Increment (and loop) the frame index.
@@ -717,7 +720,7 @@ void renderer_shutdown(Renderer* renderer)
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
-    vkDeviceWaitIdle(vk_context->device.logical_device);
+    vkDeviceWaitIdle(vk_context->logical_device);
 
     // Destroy in the opposite order of creation.
 
@@ -734,27 +737,27 @@ void renderer_shutdown(Renderer* renderer)
         VkCommandBuffer* primary_command_buffer = VK_NULL_HANDLE;
 
         vkDestroySemaphore(
-            vk_context->device.logical_device,
+            vk_context->logical_device,
             vk_context->swapchain_acquire_semaphore[i],
             vk_context->allocator);
 
         vkDestroySemaphore(
-            vk_context->device.logical_device,
+            vk_context->logical_device,
             vk_context->swapchain_release_semaphore[i],
             vk_context->allocator);
 
-        vkDestroyFence(vk_context->device.logical_device, vk_context->queue_submit_fence[i],
+        vkDestroyFence(vk_context->logical_device, vk_context->queue_submit_fence[i],
                        VK_NULL_HANDLE);
 
 
         //per frame command buffers
-        vkFreeCommandBuffers(vk_context->device.logical_device, vk_context->primary_command_pool[i], 1,
+        vkFreeCommandBuffers(vk_context->logical_device, vk_context->primary_command_pool[i], 1,
                              &vk_context->primary_command_buffer[i]);
     }
 
     for (u8 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        vkDestroyCommandPool(vk_context->device.logical_device, vk_context->primary_command_pool[i], VK_NULL_HANDLE);
+        vkDestroyCommandPool(vk_context->logical_device, vk_context->primary_command_pool[i], VK_NULL_HANDLE);
     }
 
     darray_free(vk_context->swapchain_acquire_semaphore);
@@ -771,8 +774,8 @@ void renderer_shutdown(Renderer* renderer)
         {
             vulkan_command_buffer_free(
                 vk_context,
-                vk_context->graphics_command_pool,
-                &vk_context->graphics_command_buffer[i]);
+                &vk_context->graphics_command_buffer[i],
+                vk_context->graphics_command_pool);
             vk_context->graphics_command_buffer[i].handle = 0;
         }
     }
@@ -836,5 +839,5 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
     vk_context->framebuffer_width_new = width;
     vk_context->framebuffer_height_new = height;
 
-    recreate_swapchain(vk_context);
+    recreate_swapchain(renderer);
 }

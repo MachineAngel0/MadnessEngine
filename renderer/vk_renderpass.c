@@ -97,15 +97,15 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    VkResult create_image_result = vkCreateImage(context->device.logical_device, &image_create_info, context->allocator,
+    VkResult create_image_result = vkCreateImage(context->logical_device, &image_create_info, context->allocator,
                                                  &attachment->image);
     VK_CHECK(create_image_result);
 
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, attachment->image, &memory_requirements);
+    vkGetImageMemoryRequirements(context->logical_device, attachment->image, &memory_requirements);
 
     VkMemoryAllocateInfo memory_allocate_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    vkGetImageMemoryRequirements(context->device.logical_device, attachment->image, &memory_requirements);
+    vkGetImageMemoryRequirements(context->logical_device, attachment->image, &memory_requirements);
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = find_memory_type(context, memory_requirements.memoryTypeBits,
                                                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -114,10 +114,10 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         M_ERROR("Required memory type not found. Image not valid.");
     }
 
-    VkResult alloc_memory_result = vkAllocateMemory(context->device.logical_device, &memory_allocate_info,
+    VkResult alloc_memory_result = vkAllocateMemory(context->logical_device, &memory_allocate_info,
                                                     context->allocator, &attachment->memory);
     VK_CHECK(alloc_memory_result);
-    VkResult bind_image_memory_result = vkBindImageMemory(context->device.logical_device, attachment->image,
+    VkResult bind_image_memory_result = vkBindImageMemory(context->logical_device, attachment->image,
                                                           attachment->memory, 0);
     VK_CHECK(bind_image_memory_result);
 
@@ -132,7 +132,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         },
     };
     VK_CHECK(
-        vkCreateImageView(context->device.logical_device, &image_view_create_info, context->allocator, &attachment->view
+        vkCreateImageView(context->logical_device, &image_view_create_info, context->allocator, &attachment->view
         ));
 
 
@@ -161,7 +161,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     vkCmdPipelineBarrier2(temp_command_buffer.handle, &dependency_info);
 
     vulkan_command_buffer_end_and_submit_and_free_single_use(context, context->graphics_command_pool,
-                                         &temp_command_buffer, context->device.graphics_queue);
+                                         &temp_command_buffer, context->graphics_queue);
 
     return attachment_handle;
 }
@@ -211,7 +211,7 @@ void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_re
 
     // Depth attachment, if there is one
     VkAttachmentDescription depth_attachment = {0};
-    depth_attachment.format = context->device.depth_format;
+    depth_attachment.format = context->depth_format;
     depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -266,7 +266,7 @@ void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_re
     render_pass_create_info.flags = 0;
 
     VK_CHECK(vkCreateRenderPass(
-        context->device.logical_device,
+        context->logical_device,
         &render_pass_create_info,
         context->allocator,
         &out_renderpass->handle));
@@ -276,7 +276,7 @@ void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* rende
 {
     if (renderpass && renderpass->handle)
     {
-        vkDestroyRenderPass(context->device.logical_device, renderpass->handle, context->allocator);
+        vkDestroyRenderPass(context->logical_device, renderpass->handle, context->allocator);
         renderpass->handle = 0;
     }
 }

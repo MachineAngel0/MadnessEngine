@@ -29,7 +29,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device, &pipeline_layout_info,
                                                       NULL,
                                                       &out_pipeline->pipeline_layout);
     VK_CHECK(pipeline_result);
@@ -344,8 +344,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.device.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -368,7 +368,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
                                                          renderer->pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &out_pipeline->handle);
@@ -382,7 +382,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
 
     if (out_wire_frame_pipeline)
     {
-        VkResult wireframe_pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device,
+        VkResult wireframe_pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device,
                                                                     &pipeline_layout_info,
                                                                     NULL,
                                                                     &out_wire_frame_pipeline->pipeline_layout);
@@ -392,7 +392,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
 
         rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
 
-        VkResult wireframe_graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+        VkResult wireframe_graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
                                                                        renderer->pipeline_cache->handle, 1,
                                                                        &graphics_pipeline_info, NULL,
                                                                        &out_wire_frame_pipeline->handle);
@@ -410,8 +410,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.device.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
 
     return true;
 }
@@ -439,7 +439,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.device.logical_device, &pipeline_layout_info,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device, &pipeline_layout_info,
                                                       NULL,
                                                       &out_pipeline->pipeline_layout);
     VK_CHECK(pipeline_result);
@@ -584,8 +584,8 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 0; // set to 0 here as we are not using color info
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.device.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.device.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -608,7 +608,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.device.logical_device,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
                                                          renderer->pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &out_pipeline->handle);
@@ -620,7 +620,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     }
 
     file_read_data_free(&vert_data);
-    vkDestroyShaderModule(renderer->context.device.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
 
     return true;
 }
@@ -646,9 +646,9 @@ void vulkan_pipeline_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pi
         return;
     }
 
-    vkDestroyPipelineLayout(context->device.logical_device, pipeline->pipeline_layout, context->allocator);
+    vkDestroyPipelineLayout(context->logical_device, pipeline->pipeline_layout, context->allocator);
     pipeline->pipeline_layout = 0;
-    vkDestroyPipeline(context->device.logical_device, pipeline->handle, context->allocator);
+    vkDestroyPipeline(context->logical_device, pipeline->handle, context->allocator);
     pipeline->handle = 0;
 }
 
@@ -681,15 +681,15 @@ void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_ca
     //valid the pipeline header and pipeline info, if everything is fine we can read in the pipeline cache data
     if (pipeline_cache_prefix_header.magic != pipeline_cache_magic_number ||
         pipeline_cache_prefix_header.data_size < 0 ||
-        pipeline_cache_prefix_header.vendor_id != renderer->context.device.properties.vendorID ||
-        pipeline_cache_prefix_header.device_id != renderer->context.device.properties.deviceID ||
-        pipeline_cache_prefix_header.driver_version != renderer->context.device.properties.driverVersion ||
+        pipeline_cache_prefix_header.vendor_id != renderer->context.properties.vendorID ||
+        pipeline_cache_prefix_header.device_id != renderer->context.properties.deviceID ||
+        pipeline_cache_prefix_header.driver_version != renderer->context.properties.driverVersion ||
         pipeline_cache_prefix_header.driver_abi != sizeof(void*))
     {
         is_valid_cache_data = false;
     }
 
-    if (memcmp(pipeline_cache_prefix_header.uuid, renderer->context.device.properties.pipelineCacheUUID,
+    if (memcmp(pipeline_cache_prefix_header.uuid, renderer->context.properties.pipelineCacheUUID,
                sizeof(pipeline_cache_prefix_header.uuid)) != 0)
     {
         is_valid_cache_data = false;
@@ -738,7 +738,7 @@ vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
     pipeline_cache_create_info.pInitialData = pipeline_cache_data;
 
     VkResult result = vkCreatePipelineCache(
-        renderer->context.device.logical_device,
+        renderer->context.logical_device,
         &pipeline_cache_create_info,
         renderer->context.allocator,
         &pipeline_info->handle);
@@ -757,14 +757,14 @@ void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cac
     //must be called twice, once to get the data size, and second to get the data
     size_t data_size; // in bytes
     u8* data;
-    VkResult result = vkGetPipelineCacheData(renderer->context.device.logical_device, pipeline_cache->handle,
+    VkResult result = vkGetPipelineCacheData(renderer->context.logical_device, pipeline_cache->handle,
                                              &data_size,
                                              NULL);
     VK_CHECK(result)
 
     data = allocator_alloc(&renderer->frame_allocator, data_size);
 
-    VkResult result2 = vkGetPipelineCacheData(renderer->context.device.logical_device, pipeline_cache->handle,
+    VkResult result2 = vkGetPipelineCacheData(renderer->context.logical_device, pipeline_cache->handle,
                                               &data_size,
                                               data);
     VK_CHECK(result2)
@@ -774,11 +774,11 @@ void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cac
     pipeline_cache_file_header new_file_header;
     new_file_header.magic = pipeline_cache_magic_number;
     new_file_header.data_size = data_size;
-    new_file_header.device_id = renderer->context.device.properties.deviceID;
-    new_file_header.driver_version = renderer->context.device.properties.driverVersion;
+    new_file_header.device_id = renderer->context.properties.deviceID;
+    new_file_header.driver_version = renderer->context.properties.driverVersion;
     new_file_header.driver_abi = sizeof(void*);
-    new_file_header.vendor_id = renderer->context.device.properties.vendorID;
-    memcpy(new_file_header.uuid, renderer->context.device.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
+    new_file_header.vendor_id = renderer->context.properties.vendorID;
+    memcpy(new_file_header.uuid, renderer->context.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
 
     //write into the file
     FILE* fptr = fopen(pipeline_cache_file_path, "wb");

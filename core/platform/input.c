@@ -5,30 +5,24 @@
 #include "event.h"
 #include "platform.h"
 
-Input_System* input_init(Event_System* event_system, Memory_System* memory_system)
+Input_System* input_init(Memory_System* memory_system)
 {
 
-    Input_System* input_system = memory_system_alloc(memory_system, sizeof(Input_System), MEMORY_SUBSYSTEM_INPUT);
+    input_system = memory_system_alloc(memory_system, sizeof(Input_System), MEMORY_SUBSYSTEM_INPUT);
 
-    u64 input_system_mem_requirement = MB(1);
-    void* input_system_mem = memory_system_alloc(memory_system, input_system_mem_requirement, MEMORY_SUBSYSTEM_INPUT);
-
-
-    allocator_init(&input_system->input_system_arena, input_system_mem, input_system_mem_requirement);
 
 
     return input_system;
 }
 
-void input_shutdown(Input_System* input_system)
+void input_shutdown(void)
 {
     MASSERT(input_system);
     //TODO: if needed
     INFO("INPUT SYSTEM SHUTDOWN")
-    allocator_clear(&input_system->input_system_arena);
 }
 
-void input_update(Input_System* input_system)
+void input_update(void)
 {
     MASSERT(input_system);
     // Copy current states to previous states.
@@ -41,7 +35,7 @@ void input_update(Input_System* input_system)
 }
 
 
-void input_process_key(Input_System* input_system, keys key, bool pressed)
+void input_process_key(keys key, bool pressed)
 {
     MASSERT(input_system);
     // Only handle this if the state actually changed.
@@ -57,7 +51,7 @@ void input_process_key(Input_System* input_system, keys key, bool pressed)
     }
 }
 
-void input_process_mouse_move(Input_System* input_system, s16 x, s16 y)
+void input_process_mouse_move(s16 x, s16 y)
 {
     MASSERT(input_system);
     // Only process if actually different
@@ -78,7 +72,7 @@ void input_process_mouse_move(Input_System* input_system, s16 x, s16 y)
     }
 }
 
-void input_process_mouse_wheel(Input_System* input_system, s8 z_delta)
+void input_process_mouse_wheel(s8 z_delta)
 {
     MASSERT(input_system);
     // DEBUG("Z DELTA: %d", z_delta)
@@ -90,7 +84,7 @@ void input_process_mouse_wheel(Input_System* input_system, s8 z_delta)
     event_fire(EVENT_MOUSE_WHEEL, STRING("Input_System"), context);
 }
 
-void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed)
+void input_process_mouse_button(mouse_buttons button, bool pressed)
 {
     MASSERT(input_system);
 
@@ -111,62 +105,62 @@ void input_process_mouse_button(Input_System* input_system, mouse_buttons button
 //key related
 
 
-bool input_is_key_pressed(Input_System* input_system, uint8_t key)
+bool input_is_key_pressed(uint8_t key)
 {
     MASSERT(input_system);
     return input_system->keyboard_current.keys[key] == true;
 }
 
 //NOTE: this literally means the key isn't pressed, not that it was just released
-bool input_is_key_released(Input_System* input_system, uint8_t key)
+bool input_is_key_released(uint8_t key)
 {
     MASSERT(input_system);
     return input_system->keyboard_current.keys[key] == false;
 }
 
-bool input_was_key_pressed(Input_System* input_system, uint8_t key)
+bool input_was_key_pressed(uint8_t key)
 {
     MASSERT(input_system);
     return input_system->keyboard_previous.keys[key] == true;
 }
 
-bool input_was_key_released(Input_System* input_system, uint8_t key)
+bool input_was_key_released(uint8_t key)
 {
     MASSERT(input_system);
     return input_system->keyboard_previous.keys[key] == true;
 }
 
 //checking for a one time press
-bool input_key_pressed_unique(Input_System* input_system, uint8_t key)
+bool input_key_pressed_unique(uint8_t key)
 {
     MASSERT(input_system);
     //if is released this frame (aka false) and was pressed last frame
-    return input_is_key_pressed(input_system, key) &&
-        input_was_key_released(input_system, key);
+    return input_is_key_pressed(key) &&
+        input_was_key_released(key);
 }
 
 //checking for a one time release
-bool input_key_released_unique(Input_System* input_system, uint8_t key)
+bool input_key_released_unique(uint8_t key)
 {
     MASSERT(input_system);
-    return input_was_key_pressed(input_system, key) &&
-        input_is_key_released(input_system, key);
+    return input_was_key_pressed(key) &&
+        input_is_key_released(key);
 }
 
-char input_get_first_released_key(Input_System* input_system)
+char input_get_first_released_key(void)
 {
     for (int i = 0; i < MAX_KEY_COUNT; i++)
     {
-        if (input_key_released_unique(input_system, i))
+        if (input_key_released_unique(i))
         {
-            return input_key_to_char(input_system, i);
+            return input_key_to_char(i);
         }
     }
 
     return 0;
 }
 
-char input_key_to_char(Input_System* input_system, keys key)
+char input_key_to_char(keys key)
 {
     keys shift = input_system->keyboard_current.keys[KEY_LSHIFT];
     keys caps = input_system->keyboard_current.keys[KEY_CAPITAL];
@@ -237,21 +231,21 @@ char input_key_to_char(Input_System* input_system, keys key)
 
 
 //mouse related
-void input_get_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y)
+void input_get_mouse_pos(s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_current.x;
     *out_y = input_system->mouse_current.y;
 }
 
-void input_get_previous_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y)
+void input_get_previous_mouse_pos(s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_previous.x;
     *out_y = input_system->mouse_previous.y;
 }
 
-void input_get_mouse_change(Input_System* input_system, s16* out_x, s16* out_y)
+void input_get_mouse_change(s16* out_x, s16* out_y)
 {
     MASSERT(input_system);
     *out_x = input_system->mouse_current.x - input_system->mouse_previous.x;
@@ -259,7 +253,7 @@ void input_get_mouse_change(Input_System* input_system, s16* out_x, s16* out_y)
     // DEBUG("MOUSE CHANGE X: %d, MOUSE CHANGE Y: %d", *out_x, *out_y);
 }
 
-void input_set_cursor_pos(Input_System* input_system, int x, int y)
+void input_set_cursor_pos(int x, int y)
 {
     //TODO: have a check to make sure we are within the window coordinates
     //otherwise, this can set the position to anywhere it wants on the screen, even outside the window
@@ -267,31 +261,31 @@ void input_set_cursor_pos(Input_System* input_system, int x, int y)
 }
 
 
-bool input_is_mouse_button_pressed(Input_System* input_system, mouse_buttons key)
+bool input_is_mouse_button_pressed(mouse_buttons key)
 {
     MASSERT(input_system);
     return input_system->mouse_current.buttons[key] == true;
 }
 
-bool input_is_mouse_button_released(Input_System* input_system, mouse_buttons key)
+bool input_is_mouse_button_released(mouse_buttons key)
 {
     MASSERT(input_system);
     return input_system->mouse_current.buttons[key] == false;
 }
 
-bool input_was_mouse_button_pressed(Input_System* input_system, mouse_buttons key)
+bool input_was_mouse_button_pressed(mouse_buttons key)
 {
     MASSERT(input_system);
     return input_system->mouse_previous.buttons[key] == true;
 }
 
-bool input_was_mouse_button_released(Input_System* input_system, mouse_buttons key)
+bool input_was_mouse_button_released(mouse_buttons key)
 {
     MASSERT(input_system);
     return input_system->mouse_previous.buttons[key] == false;
 }
 
-bool input_is_mouse_button_pressed_unique(Input_System* input_system, mouse_buttons key)
+bool input_is_mouse_button_pressed_unique(mouse_buttons key)
 {
     //check that it was released last frame and pressed this frame
     return
@@ -299,7 +293,7 @@ bool input_is_mouse_button_pressed_unique(Input_System* input_system, mouse_butt
         input_system->mouse_current.buttons[key] == MOUSE_BUTTON_PRESSED;
 }
 
-bool input_is_mouse_button_released_unique(Input_System* input_system, mouse_buttons key)
+bool input_is_mouse_button_released_unique(mouse_buttons key)
 {
     //check that it was pressed last frame and released this frame
     return
@@ -307,28 +301,28 @@ bool input_is_mouse_button_released_unique(Input_System* input_system, mouse_but
         input_system->mouse_current.buttons[key] == MOUSE_BUTTON_RELEASED;
 }
 
-bool input_has_mouse_wheel_changed_this_frame(Input_System* input_system)
+bool input_has_mouse_wheel_changed_this_frame(void)
 {
     return input_system->mouse_current.mouse_wheel_delta != 0;
 }
 
-bool input_has_mouse_wheel_changed_last_frame(Input_System* input_system)
+bool input_has_mouse_wheel_changed_last_frame(void)
 {
     return input_system->mouse_previous.mouse_wheel_delta != 0;
 }
 
-void input_get_mouse_wheel_value(Input_System* input_system, s32* z_delta)
+void input_get_mouse_wheel_value(s32* z_delta)
 {
     MASSERT(input_system);
     *z_delta = input_system->mouse_previous.mouse_wheel_delta;
 }
 
-bool input_is_mouse_wheel_up(Input_System* input_system)
+bool input_is_mouse_wheel_up(void)
 {
     return input_system->mouse_previous.mouse_wheel_delta == MOUSE_WHEEL_UP;
 }
 
-bool input_is_mouse_wheel_down(Input_System* input_system)
+bool input_is_mouse_wheel_down(void)
 {
     return input_system->mouse_previous.mouse_wheel_delta == MOUSE_WHEEL_DOWN;
 }

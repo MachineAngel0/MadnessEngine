@@ -92,7 +92,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
-    application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
+    application_core->input_system = input_init(&application_core->memory_system);
 
     job_system_init(&application_core->memory_system);
 
@@ -103,7 +103,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //start the platform
     platform_startup(
         &application_core->plat_state,
-        application_core->input_system,
         platform_config);
 
 
@@ -189,7 +188,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         clock_update_frame_start(&application_core->clock);
         // clock_print_info(&application_core->clock);
 
-        input_update(application_core->input_system);
+        input_update();
         platform_pump_messages(&application_core->plat_state);
 
         //vulkan will crash if you minimize the window
@@ -213,7 +212,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
         //game and editor switch between
-        if (input_key_released_unique(application_core->input_system, KEY_TAB))
+        if (input_key_released_unique(KEY_TAB))
         {
             debug_game_mode = (debug_game_mode + 1) % (DEBUG_APP_STATE_MAX);
         }
@@ -284,7 +283,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 
-    input_shutdown(application_core->input_system);
+    input_shutdown();
     event_shutdown(&application_core->memory_system);
 
 

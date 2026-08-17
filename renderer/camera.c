@@ -1,7 +1,7 @@
 ﻿#include "camera.h"
 #include "math_lib.h"
 
-void camera_init(camera* out_camera)
+void camera_init(Camera* out_camera)
 {
     // memset(out_camera, 0, sizeof(camera));
 
@@ -39,7 +39,7 @@ void camera_init(camera* out_camera)
 
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, float deltaTime)
+void camera_process_keyboard(Camera* cam, Camera_Movement movement_direction, float deltaTime)
 {
     float velocity = cam->move_speed * deltaTime;
     float pitch = deg_to_rad(cam->pitch);
@@ -80,7 +80,7 @@ void camera_process_keyboard(camera* cam, Camera_Movement movement_direction, fl
 
 
 // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
+void camera_process_mouse_movement(Camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
 {
     cam->yaw -= x_offset * cam->rotation_speed * dt;
     cam->pitch += y_offset * cam->rotation_speed * dt;
@@ -97,7 +97,7 @@ void camera_process_mouse_movement(camera* cam, float dt, float x_offset, float 
 }
 
 // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-void camera_change_fov(camera* cam, float y_offset)
+void camera_change_fov(Camera* cam, float y_offset)
 {
     cam->fov -= y_offset;
     if (cam->fov < 1.0f)
@@ -108,31 +108,31 @@ void camera_change_fov(camera* cam, float y_offset)
 }
 
 
-void camera_update(Input_System* input_system, camera* cam, float dt)
+void camera_update(Input_System* input_system, Camera* cam, float dt)
 {
-    if (input_is_key_pressed(input_system, KEY_W))
+    if (input_is_key_pressed(KEY_W))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_FORWARD, dt);
     }
-    if (input_is_key_pressed(input_system, KEY_S))
+    if (input_is_key_pressed(KEY_S))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_BACKWARD, dt);
     }
-    if (input_is_key_pressed(input_system, KEY_A))
+    if (input_is_key_pressed(KEY_A))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_LEFT, dt);
     }
-    if (input_is_key_pressed(input_system, KEY_D))
+    if (input_is_key_pressed(KEY_D))
     {
         camera_process_keyboard(cam, CAMERA_MOVEMENT_RIGHT, dt);
     }
 
 
-    if (input_is_key_pressed(input_system, KEY_LSHIFT))
+    if (input_is_key_pressed(KEY_LSHIFT))
     {
         s16 x;
         s16 y;
-        input_get_mouse_change(input_system, &x, &y);
+        input_get_mouse_change(&x, &y);
         camera_process_mouse_movement(cam, dt, x, y, true);
     }
     else
@@ -152,7 +152,7 @@ void camera_update(Input_System* input_system, camera* cam, float dt)
     }*/
 }
 
-mat4s camera_get_view_matrix(camera* cam)
+mat4s camera_get_view_matrix(Camera* cam)
 {
     // glms_look()
     // mat4s temp_view = mat4_translation((vec3s){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
@@ -161,7 +161,7 @@ mat4s camera_get_view_matrix(camera* cam)
     return glms_mat4_identity();
 }
 
-vec4s camera_get_world_position(camera* cam)
+vec4s camera_get_world_position(Camera* cam)
 {
     // glms_look()
     // mat4s temp_view = mat4_translation((vec3s){cam->pos.x, cam->pos.y, cam->pos.z + 1.0f});
@@ -169,7 +169,7 @@ vec4s camera_get_world_position(camera* cam)
     return (vec4s){cam->pos.x, cam->pos.y, cam->pos.z, 1.0};
 }
 
-mat4s camera_get_fps_view_matrix(camera* cam)
+mat4s camera_get_fps_view_matrix(Camera* cam)
 {
     /*float pitch = deg_to_rad(cam->pitch);
     float yaw = deg_to_rad(cam->yaw);
@@ -226,7 +226,7 @@ mat4s camera_get_fps_view_matrix(camera* cam)
 }
 
 
-mat4s camera_get_projection(camera* cam, const float width, const float height)
+mat4s camera_get_projection(Camera* cam, const float width, const float height)
 {
     return glms_perspective(deg_to_rad(cam->fov), (float)(width / height), cam->znear, cam->zfar);
     // float fov = 1.5;

@@ -87,13 +87,13 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
                                 current_frame], 0, 0);
 
     PC_Particle pc_particle = {
-        .draw_material_buffer = get_buffer_device_address(renderer->context.device.logical_device,
+        .draw_material_buffer = get_buffer_device_address(renderer->context.logical_device,
                                                           vulkan_buffer_get(
                                                               renderer,
                                                               particle_render->
                                                               spherical_billboard_material_buffer_handle)->
                                                           handle),
-        .unused = get_buffer_device_address(renderer->context.device.logical_device,
+        .unused = get_buffer_device_address(renderer->context.logical_device,
                                             vulkan_buffer_get(
                                                 renderer, particle_render->spherical_billboard_material_buffer_handle)->
                                             handle),

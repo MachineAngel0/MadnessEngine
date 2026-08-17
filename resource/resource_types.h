@@ -660,6 +660,7 @@ typedef struct Madness_Mesh
 {
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
+    u32* submesh_ids;
     Material_Instance* material_instance;
     Material_Handle* material_handles;
 

@@ -45,7 +45,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
-    application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
+    application_core->input_system = input_init(&application_core->memory_system);
     application_core->asset_system = asset_system_init(&application_core->memory_system, TODO);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
@@ -91,7 +91,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
         //clear the render_packets then each system will add to it
 
-        input_update(application_core->input_system);
+        input_update();
         platform_pump_messages(&application_core->plat_state);
 
         //vulkan will crash if you minimize the window
@@ -133,7 +133,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
     asset_system_shutdown(application_core->asset_system, TODO);
 
-    input_shutdown(application_core->input_system);
+    input_shutdown();
     event_shutdown(application_core->event_system);
 
 

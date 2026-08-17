@@ -1,5 +1,6 @@
 ﻿#include "vulkan_texture_system.h"
 
+#include "vk_command_buffer.h"
 #include "vk_image.h"
 #include "vk_descriptors.h"
 
@@ -33,9 +34,23 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     Vulkan_Texture_System* texture_system = renderer->texture_system;
 
 
+    //free any textures not in use
+    Vulkan_Texture* texture;
+    while (!ring_queue_is_empty(texture_system->texture_deletion_queue))
+    {
+        ring_dequeue(texture_system->texture_deletion_queue, &texture);
+
+        MASSERT(texture);
+
+        vulkan_texture_free(&renderer->context, texture);
+    }
+
+
     //textures gpu upload we are waiting on, checked once a frame
     u64 i = 0;
 
+    //OPTIMIZE: since textures uploaded in the same frame have the same signal semaphore,
+    // it doesn't make sense to check each texture individual if its done, we can just check the batch
     while (i < texture_system->texture_pending_array->num_items)
     {
         Vulkan_Texture_Pending_Upload pending_upload =
@@ -45,17 +60,14 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
                 i);
 
         if (timeline_semaphore_query_and_compare(
-                renderer,
-                &texture_system->timline_texture_upload_semaphore,
-                pending_upload.timeline_semaphore_value))
+            renderer,
+            &texture_system->timline_texture_upload_semaphore,
+            pending_upload.timeline_semaphore_value))
         {
             pending_upload.madness_texture->bindless_slot_query =
                 pending_upload.madness_texture->bindless_slot;
 
-            vulkan_command_buffer_free(
-                &renderer->context,
-                renderer->context.graphics_command_pool,
-                pending_upload.single_use_command_buffer);
+            vulkan_command_buffer_reset(pending_upload.command_buffer);
 
             array_remove_swap(
                 texture_system->texture_pending_array,
@@ -70,32 +82,40 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     }
 
 
+    if (ring_queue_is_empty(packet->texture_upload_queue))
+    {
+        return;
+    }
 
-    //upload textures into the gpu
-    const u8 frame_upload_count_budget = 16; // textures we upload per frame
-    u8 current_upload_count = 0;
+    Vulkan_Command_Buffer* transfer_command_buffer = NULL;
+    vulkan_command_buffer_system_get_and_begin_cb(renderer->command_buffer_system,
+                                                  // VULKAN_COMMAND_BUFFER_QUEUE_TYPE_TRANSFER, &transfer_command_buffer);
+                                                  VULKAN_QUEUE_TYPE_GRAPHICS, &transfer_command_buffer);
+
+    u64 semaphore_signal_value = ++texture_system->timeline_semaphore_texture_value;
+    //were not handling this correctly, since the rest of this needs to know if the command buffer is valid
+
     Texture_GPU_Upload texture_upload;
 
-    while (!ring_queue_is_empty(packet->texture_upload_queue) && current_upload_count < frame_upload_count_budget)
+    while (!ring_queue_is_empty(packet->texture_upload_queue) && transfer_command_buffer)
     {
         ring_dequeue(packet->texture_upload_queue, &texture_upload);
 
-        u64 semaphore_signal_value = ++texture_system->timeline_semaphore_texture_value;
         Vulkan_Texture* vulkan_texture = &renderer->texture_system->textures[texture_upload.madness_texture->
             bindless_slot];
 
-        //TODO: might not want to use this, and instead just recycle the buffers, made just for texture uploads
+        /*//TODO: might not want to use this, and instead just recycle the buffers, made just for texture uploads
         Vulkan_Command_Buffer* single_use_cb = allocator_heap_alloc(renderer->heap_allocator,
-                                                                    sizeof(Vulkan_Command_Buffer));
+                                                                    sizeof(Vulkan_Command_Buffer));*/
+
 
         //create the texture
-        vulkan_texture_create_image_with_semaphore(renderer, &renderer->context, &texture_upload, vulkan_texture,
-                                                   &texture_system->timline_texture_upload_semaphore, single_use_cb);
+        vulkan_texture_create_image_new(renderer, &renderer->context, &texture_upload, vulkan_texture,
+                                        transfer_command_buffer);
         update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system,
                                                texture_upload.madness_texture->bindless_slot);
 
-        //update the bindless index
-        texture_upload.madness_texture->bindless_slot_query = texture_upload.madness_texture->bindless_slot;
+
 
 
         //unload texture data - safe to do so here, but we cant use it yet until the upload is complete
@@ -104,24 +124,34 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
         Vulkan_Texture_Pending_Upload new_pending_upload = {
             .madness_texture = texture_upload.madness_texture,
             .texture = vulkan_texture,
-            .single_use_command_buffer = single_use_cb,
+            .command_buffer = transfer_command_buffer,
             .timeline_semaphore_value = semaphore_signal_value,
         };
         array_push(texture_system->texture_pending_array, &new_pending_upload);
-
-        current_upload_count++;
     }
 
-    //free textures
-    Vulkan_Texture* texture;
-    while (!ring_queue_is_empty(texture_system->texture_deletion_queue))
-    {
-        ring_dequeue(texture_system->texture_deletion_queue, &texture);
+    vulkan_command_buffer_end(transfer_command_buffer);
+    //submit info
+    VkCommandBufferSubmitInfo cb_submit_info = vulkan_command_buffer_get_submit_info(transfer_command_buffer);
 
-        MASSERT(texture);
+    VkSemaphoreSubmitInfo signal_semaphore_infos = {0};
+    signal_semaphore_infos.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signal_semaphore_infos.pNext = 0;
+    // pSignalSemaphoreInfos.deviceIndex;
+    signal_semaphore_infos.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    //value assumed to be accurate for the current texture upload
+    signal_semaphore_infos.value = semaphore_signal_value;
+    signal_semaphore_infos.semaphore = texture_system->timline_texture_upload_semaphore;
 
-        vulkan_texture_free(&renderer->context, texture);
-    }
+    VkSubmitInfo2 submit_info = {0};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.pNext = NULL;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &cb_submit_info;
+    submit_info.signalSemaphoreInfoCount = 1;
+    submit_info.pSignalSemaphoreInfos = &signal_semaphore_infos;
+    // vkQueueSubmit2(renderer->context.device.transfer_queue, 1, &submit_info, NULL);
+    vkQueueSubmit2(renderer->context.graphics_queue, 1, &submit_info, NULL);
 }
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index)

@@ -140,11 +140,11 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
     insanity_ui->hot = -1;
 
-    insanity_ui->mouse_down = input_is_mouse_button_pressed(insanity_ui->input_system_reference, MOUSE_BUTTON_LEFT);
+    insanity_ui->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
     insanity_ui->mouse_released_unique = input_is_mouse_button_released_unique(
-        insanity_ui->input_system_reference, MOUSE_BUTTON_LEFT);
+        MOUSE_BUTTON_LEFT);
     //this can be 0 if invalid
-    insanity_ui->first_released_key = input_get_first_released_key(insanity_ui->input_system_reference);
+    insanity_ui->first_released_key = input_get_first_released_key();
 }
 
 
@@ -165,7 +165,7 @@ void insanity_ui_end(void)
     //printf("ACTIVE ID: %d, ACTIVE LAYER: %d\n", Madness_UI->active.ID, Madness_UI->active.layer);
 
 
-    if (input_is_mouse_button_released(insanity_ui->input_system_reference, MOUSE_BUTTON_LEFT))
+    if (input_is_mouse_button_released(MOUSE_BUTTON_LEFT))
     {
         insanity_ui->active = -1;
     }
@@ -173,10 +173,9 @@ void insanity_ui_end(void)
     //update mouse state
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
-    input_get_mouse_pos(insanity_ui->input_system_reference, &insanity_ui->mouse_pos_x, &insanity_ui->mouse_pos_y);
+    input_get_mouse_pos(&insanity_ui->mouse_pos_x, &insanity_ui->mouse_pos_y);
     //update mouse delta/change
-    input_get_mouse_change(insanity_ui->input_system_reference, &insanity_ui->mouse_delta_x,
-                           &insanity_ui->mouse_delta_y);
+    input_get_mouse_change(&insanity_ui->mouse_delta_x, &insanity_ui->mouse_delta_y);
 }
 
 
@@ -350,12 +349,12 @@ void insanity_ui_passes()
                 float val;
                 if (hash_table_get(insanity_ui->float_state, node->id, &val))
                 {
-                    if (input_is_mouse_wheel_up(insanity_ui->input_system_reference))
+                    if (input_is_mouse_wheel_up())
                     {
                         val += insanity_ui->increment_value_stack;
                         hash_table_set(insanity_ui->float_state, node->id, &val);
                     }
-                    if (input_is_mouse_wheel_down(insanity_ui->input_system_reference))
+                    if (input_is_mouse_wheel_down())
                     {
                         val -= insanity_ui->increment_value_stack;
                         hash_table_set(insanity_ui->float_state, node->id, &val);
@@ -370,7 +369,7 @@ void insanity_ui_passes()
                 String_Builder* builder;
                 if (hash_table_get(insanity_ui->text_box_state, node->id, &builder))
                 {
-                    if (input_key_released_unique(insanity_ui->input_system_reference, KEY_BACKSPACE))
+                    if (input_key_released_unique(KEY_BACKSPACE))
                     {
                         string_builder_decrement(builder);
                     }

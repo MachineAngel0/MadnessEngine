@@ -7,8 +7,8 @@ MAPI Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer);
 
 
 
-MAPI void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer, Render_Packet* render_packet,
-                                         Vulkan_Command_Buffer* command_buffer);
+MAPI void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system, Render_Packet* render_packet,
+                                         Vulkan_Command_Buffer* graphics_command_buffer);
 MAPI void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                               Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer);
 

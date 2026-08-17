@@ -6,6 +6,8 @@
 //TODO: look into unified image layouts
 // https://www.khronos.org/blog/so-long-image-layouts-simplifying-vulkan-synchronisation
 
+
+
 void vulkan_image_create(Vulkan_Context* context,
                          u32 width, u32 height,
                          VkFormat format, VkImageTiling tiling,
@@ -58,9 +60,12 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
 
 //semaphore uploads
-void vulkan_texture_create_image_with_semaphore(Renderer* renderer, Vulkan_Context* context,
-                                                Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture, VkSemaphore* timeline_semaphore, Vulkan_Command_Buffer*
-                                                single_use_command_buffer);
+void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
+                                     Texture_GPU_Upload* texture_data,
+                                     Vulkan_Texture* out_texture,
+                                     Vulkan_Command_Buffer* command_buffer);
+
+
 void transition_image_layout_new(
     Vulkan_Command_Buffer* command_buffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer buffer,

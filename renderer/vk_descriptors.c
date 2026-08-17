@@ -70,7 +70,7 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
     bindless_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
     // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
-    VkResult bindless_result = vkCreateDescriptorPool(renderer->context.device.logical_device, &bindless_pool_info,
+    VkResult bindless_result = vkCreateDescriptorPool(renderer->context.logical_device, &bindless_pool_info,
                                                       renderer->context.allocator,
                                                       &descriptor_system->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
@@ -95,13 +95,13 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
 
 void descriptor_pool_allocator_destroy(Renderer* renderer, Descriptor_System* descriptor_system)
 {
-    vkDestroyDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, NULL);
+    vkDestroyDescriptorPool(renderer->context.logical_device, descriptor_system->bindless_descriptor_pool, NULL);
 }
 
 void descriptor_pool_allocator_clear(Renderer* renderer, Descriptor_System* descriptor_system)
 {
     VK_CHECK(
-        vkResetDescriptorPool(renderer->context.device.logical_device, descriptor_system->bindless_descriptor_pool, 0));
+        vkResetDescriptorPool(renderer->context.logical_device, descriptor_system->bindless_descriptor_pool, 0));
 }
 
 
@@ -144,7 +144,7 @@ void descriptor_pool_alloc_bindless(Renderer* renderer, Descriptor_System* descr
     alloc_info.pSetLayouts = set_layout;
     alloc_info.pNext = &count_info;
 
-    VkResult alloc_result = vkAllocateDescriptorSets(renderer->context.device.logical_device, &alloc_info,
+    VkResult alloc_result = vkAllocateDescriptorSets(renderer->context.logical_device, &alloc_info,
                                                      out_descriptors);
 
     if (alloc_result == VK_ERROR_OUT_OF_POOL_MEMORY || alloc_result == VK_ERROR_FRAGMENTED_POOL)
@@ -193,7 +193,7 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
 
 
     VK_CHECK(
-        vkCreateDescriptorSetLayout(context->device.logical_device, &descriptor_layout_ci, 0, &shader_texture->
+        vkCreateDescriptorSetLayout(context->logical_device, &descriptor_layout_ci, 0, &shader_texture->
             descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -245,7 +245,7 @@ void createDescriptorsTexture_reflect_test(vulkan_context* context,
                 WARN("DESCRIPTOR SET CREATE: TYPE NOT YET SUPPORTED")
             }
         }
-        vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
+        vkUpdateDescriptorSets(context->logical_device, d_set_reflect_info->descriptor_set_count,
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
     }
@@ -308,7 +308,7 @@ void update_descriptors_texture_reflect_test(vulkan_context* context,
                 WARN("DESCRIPTOR SET CREATE: TYPE NOT YET SUPPORTED")
             }
         }
-        vkUpdateDescriptorSets(context->device.logical_device, d_set_reflect_info->descriptor_set_count,
+        vkUpdateDescriptorSets(context->logical_device, d_set_reflect_info->descriptor_set_count,
                                writeDescriptorSet, 0, 0);
         darray_free(writeDescriptorSet);
     }
@@ -358,7 +358,7 @@ void create_texture_bindless_descriptor_set(Renderer* renderer,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.logical_device, &layout_create_info, 0,
         &texture_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -419,7 +419,7 @@ void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.logical_device, &layout_create_info, 0,
         &uniform_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -480,7 +480,7 @@ void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
     layout_create_info.pNext = &extended_info;
 
 
-    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.device.logical_device, &layout_create_info, 0,
+    VK_CHECK(vkCreateDescriptorSetLayout(renderer->context.logical_device, &layout_create_info, 0,
         &storage_descriptors->descriptor_set_layout));
 
     // Where the descriptor set layout is the interface, the descriptor set points to actual data
@@ -530,7 +530,7 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
         write_descriptor_set.dstArrayElement = buffer_handle.handle; // starting element of the array
         write_descriptor_set.pBufferInfo = &bufferInfo;
         //
-        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
+        vkUpdateDescriptorSets(renderer->context.logical_device, 1,
                                &write_descriptor_set, 0, 0);
     }
 }
@@ -564,7 +564,7 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
         write_descriptor_set.dstArrayElement = bindless_location; // starting element of the array
         write_descriptor_set.pImageInfo = &image_info;
         //
-        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
+        vkUpdateDescriptorSets(renderer->context.logical_device, 1,
                                &write_descriptor_set, 0, 0);
     }
 }
@@ -601,7 +601,7 @@ void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
         write_descriptor_set.dstArrayElement = buffer_handle.handle; // starting element of the array
         write_descriptor_set.pBufferInfo = &bufferInfo;
         //
-        vkUpdateDescriptorSets(renderer->context.device.logical_device, 1,
+        vkUpdateDescriptorSets(renderer->context.logical_device, 1,
                                &write_descriptor_set, 0, 0);
     }
 }

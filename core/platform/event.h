@@ -145,8 +145,8 @@ typedef struct Event_System
 
 } Event_System;
 
-static Event_System* event_system;
 
+static Event_System* event_system;
 
 //TODO: event queue
 

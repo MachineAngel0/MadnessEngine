@@ -205,11 +205,11 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
     madness_ui->hot = -1;
 
-    madness_ui->mouse_down = input_is_mouse_button_pressed(madness_ui->input_system_reference, MOUSE_BUTTON_LEFT);
+    madness_ui->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
     madness_ui->mouse_released_unique = input_is_mouse_button_released_unique(
-        madness_ui->input_system_reference, MOUSE_BUTTON_LEFT);
+        MOUSE_BUTTON_LEFT);
     //this can be 0 if invalid
-    madness_ui->released_key = input_get_first_released_key(madness_ui->input_system_reference);
+    madness_ui->released_key = input_get_first_released_key();
 
     if (madness_ui->nuke_pop_up == true)
     {
@@ -308,7 +308,7 @@ void madness_ui_end(void)
     //TODO: clear anything whos state relies on a click
 
 
-    if (input_is_mouse_button_released(madness_ui->input_system_reference, MOUSE_BUTTON_LEFT))
+    if (input_is_mouse_button_released(MOUSE_BUTTON_LEFT))
     {
         madness_ui->active = -1;
     }
@@ -316,9 +316,9 @@ void madness_ui_end(void)
     //update mouse state
     // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
     //update mouse pos
-    input_get_mouse_pos(madness_ui->input_system_reference, &madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
+    input_get_mouse_pos(&madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
     //update mouse delta/change
-    input_get_mouse_change(madness_ui->input_system_reference, &madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
+    input_get_mouse_change(&madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
 }
 
 UI_Render_Packet madness_ui_get_ui_render_data(void)
@@ -1036,13 +1036,13 @@ void madness_ui_window_end(void)
         {
             slider_bar->color = madness_ui->editor_style.hovered_color;
             //handle window scrolling
-            if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+            if (input_is_mouse_wheel_up())
             {
                 state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset - 0.1, 0, 1);
                 state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
                 state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
-            if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+            if (input_is_mouse_wheel_down())
             {
                 // state.scroll_offset += 10;
                 state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset + 0.1, 0, 1);
@@ -1639,11 +1639,11 @@ void madness_ui_slider_scroll(String id, float* slider_val, float min, float max
     {
         slider_node->color = madness_ui->editor_style.hovered_color;
 
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *slider_val += 0.1;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *slider_val -= 0.1;
         }
@@ -1975,7 +1975,7 @@ bool madness_ui_u8(String text, u8* i, u32 increment_value)
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             if (mouse_change_x > 0)
             {
@@ -1994,12 +1994,12 @@ bool madness_ui_u8(String text, u8* i, u32 increment_value)
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *i -= increment_value;
             has_changed = true;
@@ -2060,7 +2060,7 @@ bool madness_ui_u16(String text, u16* i, u32 increment_value)
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             if (mouse_change_x > 0)
             {
@@ -2079,12 +2079,12 @@ bool madness_ui_u16(String text, u16* i, u32 increment_value)
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *i -= increment_value;
             has_changed = true;
@@ -2145,7 +2145,7 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             if (mouse_change_x > 0)
             {
@@ -2164,12 +2164,12 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *i -= increment_value;
             has_changed = true;
@@ -2230,7 +2230,7 @@ bool madness_ui_u64(String text, u64* i, u64 increment_value)
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             if (mouse_change_x > 0)
             {
@@ -2249,12 +2249,12 @@ bool madness_ui_u64(String text, u64* i, u64 increment_value)
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *i -= increment_value;
             has_changed = true;
@@ -2315,7 +2315,7 @@ bool madness_ui_s32(String text, s32* i, u32 increment_value)
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             if (mouse_change_x > 0)
             {
@@ -2334,12 +2334,12 @@ bool madness_ui_s32(String text, s32* i, u32 increment_value)
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *i -= increment_value;
             has_changed = true;
@@ -2411,7 +2411,7 @@ void madness_ui_text_box(String id)
         text_box->color = madness_ui->editor_style.layout_accent_color;
 
         //check for any keypressed and update the text
-        if (input_key_released_unique(madness_ui->input_system_reference, KEY_BACKSPACE))
+        if (input_key_released_unique(KEY_BACKSPACE))
         {
             string_builder_decrement(string_state->active_menu_item);
         }
@@ -2562,7 +2562,7 @@ bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, fl
             s16 mouse_change_x;
             s16 mouse_change_y;
 
-            input_get_mouse_change(madness_ui->input_system_reference, &mouse_change_x, &mouse_change_y);
+            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
 
             //we dont want to increment by the full value every single frame
             float increment_smoother_value = 8.f;
@@ -2584,12 +2584,12 @@ bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, fl
     else if (is_hot(node->hash_id))
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_up())
         {
             *f += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down(madness_ui->input_system_reference))
+        if (input_is_mouse_wheel_down())
         {
             *f -= increment_value;
             has_changed = true;

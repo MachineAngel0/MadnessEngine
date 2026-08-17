@@ -33,16 +33,11 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
 bool platform_startup(
     Platform_State* plat_state,
-    Input_System* input_system_reference,
     Platform_Config platform_config)
 {
     plat_state->internal_state = malloc(sizeof(windows_internal_state));
     windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
 
-    if (input_system_reference)
-    {
-        plat_state->input_system = input_system_reference;
-    }
 
     state->h_instance = GetModuleHandleA(0);
 
@@ -236,7 +231,6 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 
-    Input_System* input_system = plat_state->input_system;
 
     switch (msg)
     {
@@ -301,7 +295,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             //     key = KEY_SEMICOLON;
             // }
 
-            input_process_key(input_system, key, pressed);
+            input_process_key(key, pressed);
         }
         // Return 0 to prevent default window behaviour for some keypresses, such as alt.
         return 0;
@@ -311,7 +305,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             s32 x_position = GET_X_LPARAM(l_param);
             s32 y_position = GET_Y_LPARAM(l_param);
 
-            input_process_mouse_move(input_system, x_position, y_position);
+            input_process_mouse_move(x_position, y_position);
         }
         break;
     case WM_MOUSEWHEEL:
@@ -321,7 +315,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
             {
                 // Flatten the input to an OS-independent (-1, 1)
                 z_delta = (z_delta < 0) ? -1 : 1;
-                input_process_mouse_wheel(input_system, z_delta);
+                input_process_mouse_wheel(z_delta);
             }
         }
         break;
@@ -353,7 +347,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
             if (mouse_button != MOUSE_BUTTON_MAX_BUTTONS)
             {
-                input_process_mouse_button(input_system, mouse_button, pressed);
+                input_process_mouse_button(mouse_button, pressed);
             }
             break;
         }

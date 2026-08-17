@@ -31,13 +31,13 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(context->logical_device, &image_create_info, context->allocator, &out_texture->
             texture_image));
 
 
     // Query memory requirements.
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+    vkGetImageMemoryRequirements(context->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
     s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, memory_flags);
@@ -52,14 +52,14 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->
+        vkAllocateMemory(context->logical_device, &memory_allocate_info, context->allocator, &out_texture->
             texture_image_memory
         ));
 
 
     // Bind the memory
     VK_CHECK(
-        vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory,
+        vkBindImageMemory(context->logical_device, out_texture->texture_image, out_texture->texture_image_memory,
             0));
     // TODO: configurable memory offset.
 
@@ -87,7 +87,7 @@ void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
     view_create_info.subresourceRange.layerCount = 1;
 
     VK_CHECK(
-        vkCreateImageView(context->device.logical_device, &view_create_info, context->allocator, &texture->
+        vkCreateImageView(context->logical_device, &view_create_info, context->allocator, &texture->
             texture_image_view));
 }
 
@@ -96,24 +96,24 @@ void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image)
 {
     if (image->texture_image_view)
     {
-        vkDestroyImageView(context->device.logical_device, image->texture_image_view, context->allocator);
+        vkDestroyImageView(context->logical_device, image->texture_image_view, context->allocator);
         image->texture_image_view = 0;
     }
 
     if (image->texture_image_memory)
     {
-        vkFreeMemory(context->device.logical_device, image->texture_image_memory, context->allocator);
+        vkFreeMemory(context->logical_device, image->texture_image_memory, context->allocator);
         image->texture_image_memory = 0;
     }
 
     if (image->texture_image)
     {
-        vkDestroyImage(context->device.logical_device, image->texture_image, context->allocator);
+        vkDestroyImage(context->logical_device, image->texture_image, context->allocator);
         image->texture_image = 0;
     }
     if (image->texture_sampler)
     {
-        vkDestroySampler(context->device.logical_device, image->texture_sampler, context->allocator);
+        vkDestroySampler(context->logical_device, image->texture_sampler, context->allocator);
     }
 }
 
@@ -162,13 +162,13 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(context->logical_device, &image_create_info, context->allocator, &out_texture->
             texture_image));
 
 
     // Query memory requirements.
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+    vkGetImageMemoryRequirements(context->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
     s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
@@ -184,13 +184,13 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator, &out_texture->
+        vkAllocateMemory(context->logical_device, &memory_allocate_info, context->allocator, &out_texture->
             texture_image_memory
         ));
 
     // Bind the memory
     VK_CHECK(
-        vkBindImageMemory(context->device.logical_device, out_texture->texture_image, out_texture->texture_image_memory,
+        vkBindImageMemory(context->logical_device, out_texture->texture_image, out_texture->texture_image_memory,
             0));
     // TODO: configurable memory offset.
 
@@ -198,7 +198,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     out_texture->texture_image_view = 0;
     vulkan_image_view_create(context, format, view_aspect_flags, out_texture);
 
-    VkFilter shadowmap_filter = formatIsFilterable(context->device.physical_device, format, VK_IMAGE_TILING_OPTIMAL)
+    VkFilter shadowmap_filter = formatIsFilterable(context->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
                                     ? VK_FILTER_LINEAR
                                     : VK_FILTER_NEAREST;
 
@@ -211,7 +211,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+    sampler_info.maxAnisotropy = context->properties.limits.maxSamplerAnisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable = VK_FALSE; // not in use
@@ -220,7 +220,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     sampler_info.minLod = 0.0f;
     sampler_info.maxLod = 1.0f; // has to be set
 
-    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+    VK_CHECK(vkCreateSampler(context->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
 }
 
 
@@ -252,9 +252,9 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
 
     //allocate memory
     void* data;
-    vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    vkMapMemory(context->logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
     memcpy(data, pixels, imageSize);
-    vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
+    vkUnmapMemory(context->logical_device, stagingBufferMemory);
     //free texture
     stbi_image_free(pixels);
 
@@ -275,13 +275,13 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(context->logical_device, &image_create_info, context->allocator, &out_texture->
             texture_image));
 
 
     // Query memory requirements.
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
+    vkGetImageMemoryRequirements(context->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
     s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
@@ -296,11 +296,11 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator,
+    VkResult result1 = vkAllocateMemory(context->logical_device, &memory_allocate_info, context->allocator,
                                         &out_texture->texture_image_memory);
     VK_CHECK(result1);
     // Bind the memory
-    VkResult result2 = vkBindImageMemory(context->device.logical_device, out_texture->texture_image,
+    VkResult result2 = vkBindImageMemory(context->logical_device, out_texture->texture_image,
                                          out_texture->texture_image_memory, 0);
     VK_CHECK(result2)
 
@@ -327,7 +327,7 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
+    sampler_info.maxAnisotropy = context->properties.limits.maxSamplerAnisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable = VK_FALSE;
@@ -337,7 +337,7 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     sampler_info.minLod = 0.0f;
     sampler_info.maxLod = 0.0f;
 
-    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+    VK_CHECK(vkCreateSampler(context->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
 }
 
 
@@ -360,7 +360,7 @@ void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buff
     allocate_info.pNext = 0;
 
     VK_CHECK(
-        vkAllocateCommandBuffers(vulkan_context->device.logical_device, &allocate_info, &out_command_buffer->
+        vkAllocateCommandBuffers(vulkan_context->logical_device, &allocate_info, &out_command_buffer->
             handle));
 
     Vulkan_Command_Buffer* command_buffer = &commandBuffer;
@@ -423,7 +423,7 @@ void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buff
         1, &image_memory_barrier
     );
 
-    VkQueue queue = vulkan_context->device.graphics_queue;
+    VkQueue queue = vulkan_context->graphics_queue;
     VK_CHECK(vkEndCommandBuffer(command_buffer->handle));
 
     VkSubmitInfo submit_info = {0};
@@ -435,7 +435,7 @@ void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buff
 
     //wait for command buffer to finish then free
     VK_CHECK(vkQueueWaitIdle(queue));
-    vulkan_command_buffer_free(vulkan_context, pool, command_buffer);
+    vulkan_command_buffer_free(vulkan_context, command_buffer, pool);
 }
 
 
@@ -474,7 +474,7 @@ void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
     vulkan_command_buffer_end_and_submit_and_free_single_use(vulkan_context,
                                                              vulkan_context->graphics_command_pool,
                                                              &commandBuffer,
-                                                             vulkan_context->device.graphics_queue);
+                                                             vulkan_context->graphics_queue);
 }
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
@@ -496,7 +496,7 @@ void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
     samplerInfo.anisotropyEnable = VK_TRUE;
     //get maxAnisotropy
     VkPhysicalDeviceProperties properties = {0};
-    vkGetPhysicalDeviceProperties(renderer->context.device.physical_device, &properties);
+    vkGetPhysicalDeviceProperties(renderer->context.physical_device, &properties);
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
@@ -507,7 +507,7 @@ void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    VK_CHECK(vkCreateSampler(renderer->context.device.logical_device, &samplerInfo, NULL, &texture->texture_sampler));
+    VK_CHECK(vkCreateSampler(renderer->context.logical_device, &samplerInfo, NULL, &texture->texture_sampler));
 }
 
 void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
@@ -577,9 +577,9 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
 
     //allocate memory
     void* data;
-    vkMapMemory(renderer->context.device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    vkMapMemory(renderer->context.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
     memcpy(data, pixel_data, imageSize);
-    vkUnmapMemory(renderer->context.device.logical_device, stagingBufferMemory);
+    vkUnmapMemory(renderer->context.logical_device, stagingBufferMemory);
 
     //create texture image
     vulkan_image_create(&renderer->context, width, height, VK_FORMAT_R8G8B8A8_SRGB,
@@ -615,191 +615,6 @@ VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, Vk
     return false;
 }
 
-
-void vulkan_texture_create_image_with_semaphore(Renderer* renderer, Vulkan_Context* context,
-                                                Texture_GPU_Upload* texture_data, Vulkan_Texture* out_texture,
-                                                VkSemaphore* timeline_semaphore, Vulkan_Command_Buffer* single_use_command_buffer)
-{
-    out_texture->width = texture_data->madness_texture->width;
-    out_texture->height = texture_data->madness_texture->height;
-
-    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
-    void* pixels = texture_data->pixel_data;
-    u32 texWidth = texture_data->madness_texture->width;
-    u32 texHeight = texture_data->madness_texture->height;
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                  &stagingBufferMemory);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(context->device.logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, imageSize);
-    vkUnmapMemory(context->device.logical_device, stagingBufferMemory);
-
-
-    //create texture image
-    VkImageCreateInfo image_create_info = {0};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
-    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
-    image_create_info.extent.width = texWidth;
-    image_create_info.extent.height = texHeight;
-    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels = 4; // TODO: Support mip mapping
-    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
-    switch (texture_data->madness_texture->type)
-    {
-    case ASSET_TEXTURE:
-        image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
-        break;
-    case ASSET_FONT:
-        //msdfs are not color data
-        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        break;
-    default:
-        MASSERT_FALSE();
-        break;
-    }
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
-
-    VK_CHECK(
-        vkCreateImage(context->device.logical_device, &image_create_info, context->allocator, &out_texture->
-            texture_image));
-
-
-    // Query memory requirements.
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->device.logical_device, out_texture->texture_image, &memory_requirements);
-
-    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memory_type == -1)
-    {
-        M_ERROR("Required memory type not found. Image not valid.");
-    }
-
-
-    // Allocate memory
-    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(context->device.logical_device, &memory_allocate_info, context->allocator,
-                                        &out_texture->texture_image_memory);
-    VK_CHECK(result1);
-    // Bind the memory
-    VkResult result2 = vkBindImageMemory(context->device.logical_device, out_texture->texture_image,
-                                         out_texture->texture_image_memory, 0);
-    VK_CHECK(result2)
-
-
-
-    vulkan_command_buffer_allocate_and_begin_single_use(context, context->graphics_command_pool,
-                                                        single_use_command_buffer);
-
-    transition_image_layout_new(single_use_command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    buffer_to_image_copy_new(single_use_command_buffer, stagingBuffer, out_texture->texture_image,
-                             texWidth, texHeight);
-    transition_image_layout_new(single_use_command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-
-    VkCommandBufferSubmitInfo command_buffer_infos = {0};
-    command_buffer_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-    command_buffer_infos.pNext = 0;
-    command_buffer_infos.deviceMask = 0;
-    command_buffer_infos.commandBuffer = single_use_command_buffer->handle;
-
-
-    VkSemaphoreSubmitInfo signal_semaphore_infos = {0};
-    signal_semaphore_infos.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signal_semaphore_infos.pNext = 0;
-    // pSignalSemaphoreInfos.deviceIndex;
-    signal_semaphore_infos.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-    //value assumed to be accurate for the current texture upload
-    signal_semaphore_infos.value = renderer->texture_system->timeline_semaphore_texture_value;
-    if (timeline_semaphore)
-    {
-        signal_semaphore_infos.semaphore = *timeline_semaphore;
-    }
-
-    VkSubmitInfo2 submit_info = {0};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    submit_info.pCommandBufferInfos = &command_buffer_infos;
-    submit_info.commandBufferInfoCount = 1;
-    if (timeline_semaphore)
-    {
-        submit_info.pSignalSemaphoreInfos = &signal_semaphore_infos;
-        submit_info.signalSemaphoreInfoCount = 1;
-    }
-
-    vulkan_command_buffer_end_and_submit_single_use(single_use_command_buffer, context->device.graphics_queue,
-                                                    &submit_info);
-
-
-    // TODO: configurable memory offset.
-    // Create view
-    out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
-
-    // Create Sampler
-    VkSamplerCreateInfo sampler_info = {0};
-    switch (texture_data->madness_texture->type)
-    {
-    case ASSET_TEXTURE:
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_LINEAR;
-        sampler_info.minFilter = VK_FILTER_LINEAR;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_info.anisotropyEnable = VK_TRUE;
-        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
-        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        sampler_info.unnormalizedCoordinates = VK_FALSE;
-        sampler_info.compareEnable = VK_FALSE;
-        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sampler_info.mipLodBias = 0.0f;
-        sampler_info.minLod = 0.0f;
-        sampler_info.maxLod = 0.0f;
-        break;
-    case ASSET_FONT:
-        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_info.magFilter = VK_FILTER_LINEAR;
-        sampler_info.minFilter = VK_FILTER_LINEAR;
-        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler_info.anisotropyEnable = VK_FALSE;
-        sampler_info.maxAnisotropy = context->device.properties.limits.maxSamplerAnisotropy;
-        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        sampler_info.unnormalizedCoordinates = VK_FALSE;
-        sampler_info.compareEnable = VK_FALSE;
-        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        sampler_info.mipLodBias = 0.0f;
-        sampler_info.minLod = 0.0f;
-        sampler_info.maxLod = 0.0f;
-        break;
-    default:
-        MASSERT_FALSE()
-        break;
-    }
-
-
-    VK_CHECK(vkCreateSampler(context->device.logical_device, &sampler_info, 0, &out_texture->texture_sampler));
-}
 
 void transition_image_layout_new(Vulkan_Command_Buffer* command_buffer,
                                  VkImage image,
@@ -889,4 +704,154 @@ void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer bu
         1,
         &region
     );
+}
+
+
+void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
+                                     Texture_GPU_Upload* texture_data,
+                                     Vulkan_Texture* out_texture,
+                                     Vulkan_Command_Buffer* command_buffer)
+{
+    out_texture->width = texture_data->madness_texture->width;
+    out_texture->height = texture_data->madness_texture->height;
+
+    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
+    void* pixels = texture_data->pixel_data;
+    u32 texWidth = texture_data->madness_texture->width;
+    u32 texHeight = texture_data->madness_texture->height;
+
+    //create a staging buffer
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+                  &stagingBufferMemory);
+
+    //allocate memory
+    void* data;
+    vkMapMemory(context->logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, imageSize);
+    vkUnmapMemory(context->logical_device, stagingBufferMemory);
+
+
+    //create texture image
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = texWidth;
+    image_create_info.extent.height = texHeight;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 4; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    switch (texture_data->madness_texture->type)
+    {
+    case ASSET_TEXTURE:
+        image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+        break;
+    case ASSET_FONT:
+        //msdfs are not color data
+        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        break;
+    default:
+        MASSERT_FALSE();
+        break;
+    }
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VK_CHECK(
+        vkCreateImage(context->logical_device, &image_create_info, context->allocator, &out_texture->
+            texture_image));
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(context->logical_device, out_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VkResult result1 = vkAllocateMemory(context->logical_device, &memory_allocate_info, context->allocator,
+                                        &out_texture->texture_image_memory);
+    VK_CHECK(result1);
+    // Bind the memory
+    VkResult result2 = vkBindImageMemory(context->logical_device, out_texture->texture_image,
+                                         out_texture->texture_image_memory, 0);
+    VK_CHECK(result2)
+
+
+    transition_image_layout_new(command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    buffer_to_image_copy_new(command_buffer, stagingBuffer, out_texture->texture_image,
+                             texWidth, texHeight);
+    transition_image_layout_new(command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+
+    // TODO: configurable memory offset.
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(context, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
+
+    // Create Sampler
+    VkSamplerCreateInfo sampler_info = {0};
+    switch (texture_data->madness_texture->type)
+    {
+    case ASSET_TEXTURE:
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_LINEAR;
+        sampler_info.minFilter = VK_FILTER_LINEAR;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = context->properties.limits.maxSamplerAnisotropy;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+        break;
+    case ASSET_FONT:
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_LINEAR;
+        sampler_info.minFilter = VK_FILTER_LINEAR;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler_info.anisotropyEnable = VK_FALSE;
+        sampler_info.maxAnisotropy = context->properties.limits.maxSamplerAnisotropy;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_info.mipLodBias = 0.0f;
+        sampler_info.minLod = 0.0f;
+        sampler_info.maxLod = 0.0f;
+        break;
+    default:
+        MASSERT_FALSE()
+        break;
+    }
+
+
+    VK_CHECK(vkCreateSampler(context->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
 }

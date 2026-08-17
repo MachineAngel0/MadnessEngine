@@ -193,85 +193,84 @@ typedef struct Input_System
     mouse_state mouse_previous;
 
 
-    Allocator input_system_arena;
-
 } Input_System;
 
+static Input_System* input_system;
 
-MAPI Input_System* input_init(Event_System* event_system, Memory_System* memory_system);
+MAPI Input_System* input_init(Memory_System* memory_system);
 
-MAPI void input_shutdown(Input_System* input_system);
+MAPI void input_shutdown(void);
 
-MAPI void input_update(Input_System* input_system);
+MAPI void input_update(void);
 
-MAPI void input_process_key(Input_System* input_system, keys key, bool pressed);
+MAPI void input_process_key(keys key, bool pressed);
 
-MAPI void input_process_mouse_move(Input_System* input_system, s16 x, s16 y);
+MAPI void input_process_mouse_move(s16 x, s16 y);
 
-MAPI void input_process_mouse_wheel(Input_System* input_system, s8 z_delta);
+MAPI void input_process_mouse_wheel(s8 z_delta);
 
-MAPI void input_process_mouse_button(Input_System* input_system, mouse_buttons button, bool pressed);
+MAPI void input_process_mouse_button(mouse_buttons button, bool pressed);
 
 
 //key related
 
 
-MAPI bool input_is_key_pressed(Input_System* input_system, uint8_t key);
+MAPI bool input_is_key_pressed(uint8_t key);
 
 //NOTE: this literally means the key isn't pressed, not that it was just released
-MAPI bool input_is_key_released(Input_System* input_system, uint8_t key);
+MAPI bool input_is_key_released(uint8_t key);
 
-MAPI bool input_was_key_pressed(Input_System* input_system, uint8_t key);
+MAPI bool input_was_key_pressed(uint8_t key);
 
-MAPI bool input_was_key_released(Input_System* input_system, uint8_t key);
+MAPI bool input_was_key_released(uint8_t key);
 
 //checking for a one time press
-MAPI bool input_key_pressed_unique(Input_System* input_system, uint8_t key);
+MAPI bool input_key_pressed_unique(uint8_t key);
 
 //checking for a one time release
-MAPI bool input_key_released_unique(Input_System* input_system, uint8_t key);
+MAPI bool input_key_released_unique(uint8_t key);
 
 //
-char input_get_first_released_key(Input_System* input_system);
-char input_key_to_char(Input_System* input_system, keys key);
+char input_get_first_released_key(void);
+char input_key_to_char(keys key);
 
 
 //mouse related
 
 // mouse position
-MAPI void input_get_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y);
+MAPI void input_get_mouse_pos(s16* out_x, s16* out_y);
 
-MAPI void input_get_previous_mouse_pos(Input_System* input_system, s16* out_x, s16* out_y);
+MAPI void input_get_previous_mouse_pos(s16* out_x, s16* out_y);
 
-MAPI void input_get_mouse_change(Input_System* input_system, s16* out_x, s16* out_y);
+MAPI void input_get_mouse_change(s16* out_x, s16* out_y);
 
-MAPI void input_set_cursor_pos(Input_System* input_system, int x, int y);
+MAPI void input_set_cursor_pos(int x, int y);
 
 
 
 //mouse buttons
-MAPI bool input_is_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
+MAPI bool input_is_mouse_button_pressed(mouse_buttons key);
 
-MAPI bool input_is_mouse_button_released(Input_System* input_system, mouse_buttons key);
+MAPI bool input_is_mouse_button_released(mouse_buttons key);
 
-MAPI bool input_was_mouse_button_pressed(Input_System* input_system, mouse_buttons key);
+MAPI bool input_was_mouse_button_pressed(mouse_buttons key);
 
-MAPI bool input_was_mouse_button_released(Input_System* input_system, mouse_buttons key);
+MAPI bool input_was_mouse_button_released(mouse_buttons key);
 
 //meaning these happened only once
-MAPI bool input_is_mouse_button_pressed_unique(Input_System* input_system, mouse_buttons key);
-MAPI bool input_is_mouse_button_released_unique(Input_System* input_system, mouse_buttons key);
+MAPI bool input_is_mouse_button_pressed_unique(mouse_buttons key);
+MAPI bool input_is_mouse_button_released_unique(mouse_buttons key);
 
 
 // mouse wheel
-MAPI bool input_has_mouse_wheel_changed_this_frame(Input_System* input_system);
-bool input_has_mouse_wheel_changed_last_frame(Input_System* input_system);
+MAPI bool input_has_mouse_wheel_changed_this_frame(void);
+bool input_has_mouse_wheel_changed_last_frame(void);
 
-MAPI void input_get_mouse_wheel_value(Input_System* input_system, s32* z_delta);
+MAPI void input_get_mouse_wheel_value(s32* z_delta);
 
-MAPI bool input_is_mouse_wheel_up(Input_System* input_system);
+MAPI bool input_is_mouse_wheel_up(void);
 
-MAPI bool input_is_mouse_wheel_down(Input_System* input_system);
+MAPI bool input_is_mouse_wheel_down(void);
 
 
 #endif //INPUT_H

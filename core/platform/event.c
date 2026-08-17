@@ -1,6 +1,8 @@
 ﻿#include "event.h"
 #include "logger.h"
 
+
+
 Event_System* event_init(Memory_System* memory_system)
 {
     event_system = memory_system_alloc(memory_system, sizeof(Event_System), MEMORY_SUBSYSTEM_EVENT);

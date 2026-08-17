@@ -46,7 +46,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     // Initialize subsystems.
     application_core->event_system = event_init(&application_core->memory_system);
-    application_core->input_system = input_init(application_core->event_system, &application_core->memory_system);
+    application_core->input_system = input_init(&application_core->memory_system);
     application_core->asset_system = asset_system_init(&application_core->memory_system, TODO);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
@@ -120,7 +120,7 @@ bool editor_app_run(Editor_Application* editor_app)
         clock_print_info(&application_core->clock);
 
 
-        input_update(application_core->input_system);
+        input_update();
         platform_pump_messages(&application_core->plat_state);
 
         //vulkan will crash if you minimize the window
@@ -176,7 +176,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 
-    input_shutdown(application_core->input_system);
+    input_shutdown();
     event_shutdown(application_core->event_system);
 
 
