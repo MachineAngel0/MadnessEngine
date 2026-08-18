@@ -38,6 +38,9 @@ typedef enum Vulkan_Command_Buffer_Lifetime
     // VULKAN_COMMAND_BUFFER_LIFETIME_TRANSIENT,
 } Vulkan_Command_Buffer_Lifetime;
 
+
+
+
 typedef enum Vulkan_Command_Buffer_Level
 {
     VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -78,6 +81,11 @@ typedef enum Vulkan_Buffer_Type
     BUFFER_TYPE_UNIFORM,
 } Vulkan_Buffer_Type;
 
+typedef enum Vulkan_Semaphore_Submit_Type
+{
+    VULKAN_SEMAPHORE_SUBMIT_TYPE_WAIT,
+    VULKAN_SEMAPHORE_SUBMIT_TYPE_SIGNAL,
+} Vulkan_Semaphore_Submit_Type;
 
 typedef enum Render_Mode
 {

@@ -69,7 +69,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     allocator_init(&renderer->frame_allocator, frame_arena_mem, frame_arena_mem_size);
 
 
-    renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_mem_size, MEMORY_SUBSYSTEM_RENDERER);
+    renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_mem_size,
+                                                                   MEMORY_SUBSYSTEM_RENDERER);
 
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
@@ -94,11 +95,15 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->mode = RENDER_MODE_NONE;
 
     //create the instance
-    vulkan_instance_create(vk_context);
-
+    if (!vulkan_instance_create(vk_context))
+    {
+        M_ERROR("Failed to create vulkan instance!");
+        return false;
+    }
     // get surface from the platform layer, needed before device creation
     if (!platform_create_vulkan_surface(platform_state, vk_context))
     {
+        M_ERROR("Failed to find vulkan surface from platform!");
         return false;
     }
 
@@ -108,9 +113,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Device creation
     if (!vulkan_device_create(vk_context))
     {
-        M_ERROR("Failed to create device!");
+        M_ERROR("Failed to create vulkan device!");
         return false;
     }
+
 
     if (vk_context->framebuffer_width != vk_context->swapchain_capabilities.capabilities.currentExtent.width)
     {
@@ -151,7 +157,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Create command buffers.
     vulkan_renderer_command_buffers_create(vk_context);
 
-    renderer->command_buffer_system = vulkan_command_buffer_system_init(renderer);
+    renderer->queue_system = vulkan_queue_system_init(renderer);
 
 
     //NOTE: semaphores must be per swapchain image
@@ -210,8 +216,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 }
 
 
-static bool texture_flip = false;
-
 void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packets)
 {
     MASSERT(renderer);
@@ -222,43 +226,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     Vulkan_Context* vk_context = &renderer->context;
 
-    allocator_clear(&renderer->frame_allocator);
-    buffer_system_frame_start(renderer);
 
-
-    //TODO: move out to the editor
-    if (input_key_released_unique(KEY_U))
-    {
-        renderer->mode = (renderer->mode + 1) % RENDER_MODE_MAX;
-        FATAL("RENDER_MODE: %d", renderer->mode)
-        if (texture_flip)
-        {
-            /* TODO:
-            create_texture_image(&vk_context, vk_context.graphics_command_buffer,
-                                 "../renderer/texture/test_texture.jpg",
-                                 &vk_context.shader_texture.texture_test_object);
-            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool,
-                                                    &vk_context.shader_texture);
-            */
-
-            texture_flip = !texture_flip;
-        }
-        else
-        {
-            /*
-            create_texture_image(&vk_context, vk_context.graphics_command_buffer,
-                                 "../renderer/texture/error_texture.png",
-                                 &vk_context.shader_texture.texture_test_object);
-            update_descriptors_texture_reflect_test(&vk_context, &vk_context.global_descriptor_pool,
-                                                    &vk_context.shader_texture);
-            */
-            texture_flip = !texture_flip;
-        }
-    }
-    if (input_key_released_unique(KEY_I))
-    {
-        renderer->wireframe_mode = !renderer->wireframe_mode;
-    }
 
 
     /*
@@ -269,10 +237,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
       Submit the recorded command buffer
       Present the swap chain image
       */
+
     //semaphore orders queue operations (waiting happens on the GPU),
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
-    // Wait for the execution of the current frame to complete. The fence being free will allow this one to move on.
+    // Wait for the execution of the current frame to complete on the cpu. The fence being free will allow this one to move on.
     if (!vulkan_fence_wait(
         vk_context,
         &vk_context->queue_submit_fence[vk_context->current_frame],
@@ -281,6 +250,10 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         WARN("In-flight fence wait failure!");
         return;
     }
+
+    //TODO: replace the wait above
+    // void vulkan_queue_wait_on_frame_graphics(Renderer* renderer, u32 current_frame)
+
 
     /* Acquire an image from the swap chain */
     // Pass along the semaphore that should signaled when this completes.
@@ -298,9 +271,13 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         return;
     }
 
+    allocator_clear(&renderer->frame_allocator);
 
     //free textures and any other texture/shader updated
+    buffer_system_frame_start(renderer);
+
     vulkan_texture_system_update(renderer, render_packets);
+
     shader_system_update(renderer, renderer->shader_system, render_packets);
 
 
@@ -459,7 +436,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
 
         VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT| VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, //want to sample in all sorts of shaders
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+        //want to sample in all sorts of shaders
 
         (VkImageSubresourceRange){
             VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
@@ -606,7 +584,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pColorAttachments = &color_attachment,
         .pDepthAttachment = &depth_attachment,
     };
-    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Lighting Pass");
+    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Color Pass");
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
 
@@ -642,7 +620,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Finish the current dynamic rendering section
     vkCmdEndRendering(graphics_command_buffer->handle);
-    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer );
+    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
 
     //COLOR PASS END//
 
@@ -688,7 +666,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
     VkPipelineStageFlags flags[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit_info.pWaitDstStageMask = flags;
-
     // Submit to the graphics queue passing a wait fence
     VkResult result = vkQueueSubmit(
         vk_context->graphics_queue,
@@ -748,17 +725,12 @@ void renderer_shutdown(Renderer* renderer)
 
         vkDestroyFence(vk_context->logical_device, vk_context->queue_submit_fence[i],
                        VK_NULL_HANDLE);
-
-
-
     }
-
 
 
     darray_free(vk_context->swapchain_acquire_semaphore);
     darray_free(vk_context->swapchain_release_semaphore);
     darray_free(vk_context->queue_submit_fence);
-
 
 
     // Command buffers

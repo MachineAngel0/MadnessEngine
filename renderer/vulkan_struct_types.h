@@ -144,16 +144,15 @@ typedef struct vulkan_physical_device_queue_family_info
 typedef struct Vulkan_Command_Buffer
 {
     // VkCommandPool command_pool;
+    u32 id;
     VkCommandBuffer handle;
     Vulkan_Queue_Type queue_type;
     Vulkan_Command_Buffer_State state;
 
-    //implied to be timeline semaphores
-    //TODO: we can definelty just use a linked list with a pool allocator
-    VkSemaphoreSubmitInfo* wait_semaphores;
-    u32 wait_semaphore_count;
-    VkSemaphoreSubmitInfo* signal_semaphores;
-    u32 signal_semaphore_count;
+
+    //one per thread for nice work distribution, same threading access rules, dont share resources
+    VkCommandBuffer* secondary_buffers;
+    u32 secondary_count;
 } Vulkan_Command_Buffer;
 
 typedef struct Vulkan_Texture_Pending_Upload
@@ -739,27 +738,157 @@ typedef struct Particle_Render
     Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
 } Particle_Render;
 
+typedef struct Vulkan_Render_Thread
+{
+    //contains info for one thread
+
+    //SPEC: one command pool per queue per thread
+    //command buffers are only usable on the thread the pool spawned them from
+    VkCommandPool pool;
+    Vulkan_Command_Buffer command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
+} Vulkan_Render_Thread;
+
+
+typedef struct Vulkan_Queue_Ownership_Operation
+{
+    Vulkan_Queue_Type from;
+    Vulkan_Queue_Type to;
+
+    VkDependencyInfo from_dependency_info;
+    VkDependencyInfo to_dependency_info;
+
+    VkSemaphoreSubmitInfo from_signal;
+    VkSemaphoreSubmitInfo to_wait;
+} Vulkan_Queue_Ownership_Operation;
+
+
+typedef struct Vulkan_Transfer_Queue
+{
+    VkCommandPool pool;
+
+    //these are aync resources flushed per frame
+    //one command buffer per frame batch
+    Vulkan_Command_Buffer command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
+
+    const VkSemaphoreSubmitInfo* pSignalSemaphoreInfos;
+    uint32_t signalSemaphoreInfoCount;
+
+    //ones we want to send to other systems
+    const VkSemaphoreSubmitInfo* wait_semaphore_to_graphics_transfer;
+    uint32_t waitSemaphoreInfoCount;
+
+    const VkSemaphoreSubmitInfo* wait_semaphore_to_compute_transfer;
+} Vulkan_Transfer_Queue;
+
+typedef struct Vulkan_Compute_Queue
+{
+    VkCommandPool pool;
+
+    //frame data
+    Vulkan_Command_Buffer* compute_frame_command_buffer;
+    u8 compute_frame_command_buffer_count;
+
+    VkFence* compute_frame_fence;
+    u8 compute_frame_fence_count;
+
+    VkSemaphoreSubmitInfo* compute_frame_signal_semaphore;
+    uint32_t compute_frame_signal_semaphore_count;
+    VkSemaphoreSubmitInfo* compute_frame_wait_semaphore;
+    uint32_t compute_frame_wait_semaphore_count;
+
+
+    /* NOTE: not gonna support this rn because i dont need it
+    //aync commands
+    Vulkan_Command_Buffer async_command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
+
+    const VkSemaphoreSubmitInfo* pSignalSemaphoreInfos;
+    uint32_t signalSemaphoreInfoCount;
+
+    //transfer operations
+    const VkSemaphoreSubmitInfo* compute_frame_signal_semaphore;
+    uint32_t wait_graphics_transfer;
+    const VkSemaphoreSubmitInfo* compute_frame_wait_semaphore;
+    uint32_t wait_transfer_transfer;*/
+} Vulkan_Compute_Queue;
+
+
+typedef struct Vulkan_Graphics_Queue
+{
+    //SPEC: Only a single thread can be submitting to a given queue at any time.
+    //so either a dedicated thread or a sync point for flushing the built up commands
+
+    //SPEC: one command pool per queue family per thread
+
+    Vulkan_Queue_Type type;
+    VkCommandPool pool;
+    VkFence* frame_submit_fence;
+    u32 frame_submit_fence_count;
+
+    //one per frame in flight
+    Vulkan_Command_Buffer* graphics_command_buffer;
+    u32 graphics_command_buffer_count;
+
+    u32 semaphore_count;//one per swapchain image
+    VkSemaphore* swapchain_wait_semaphore;
+    VkSemaphore* swapchain_signal_semaphore;
+
+
+    //example: if the transfer and graphics are the same then, we simple dont do the transfer queue operations
+    //might not be a bad idea to have something like this, helps synchronization
+    // enum upload_intent{};
+
+    //TODO: we can definelty just use a linked list with a pool allocator
+    VkSemaphoreSubmitInfo* wait_semaphore_info;
+    uint32_t wait_semaphore_info_count;
+    VkSemaphoreSubmitInfo* signal_semaphore_info;
+    uint32_t signal_semaphore_info_count;
+
+    //above creates the submit info,
+    //but it makes sense that the command buffers hold onto the info,
+    //and queue just gather them up
+    // VkSubmitInfo2 submit_info;
+} Vulkan_Graphics_Queue;
+
+
 typedef struct Vulkan_Command_Buffer_System
 {
-    //ideally want at least a referance to these
-    // VkCommandPool graphics_command_pool;
-    // VkCommandPool transfer_command_pool;
-    // VkCommandPool compute_command_pool;
+    // really good resource on command buffers and multithreading
+    // https://docs.vulkan.org/samples/latest/samples/performance/command_buffer_usage/README.html
 
-    //NOTE: we query for max available, but not guaranteed to be allocated,
-    //so we use the count to know how many got allocated
-    Vulkan_Command_Buffer graphics_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
-    Vulkan_Command_Buffer transfer_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
-    Vulkan_Command_Buffer compute_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
 
-    u32 graphics_command_buffer_count;
-    u32 transfer_command_buffer_count;
-    u32 compute_command_buffer_count;
+    //SPEC:
+    // To record command buffers concurrently, the framework needs to manage resource pools per frame and per thread.
+    // According to the Vulkan Spec:
+    // A command pool must not be used concurrently in multiple threads.
+    // The application must not allocate and/or free descriptor sets from the same pool in multiple threads simultaneously.
+
+
+    // SPEC:
+    // Resetting a command pool recycles all of the resources from all of the command buffers allocated from the command pool back to the command pool. All command buffers that have been allocated from the command pool are put in the initial state.
+    // Any primary command buffer allocated from another VkCommandPool that is in the recording or executable state and has a secondary command buffer allocated from commandPool recorded into it, becomes invalid.
+    //NOTE: basically for our per frame data, we should reset the pool,
+    // but that also means our secondary level command buffers need to be reallocated
+
+    //NOTE: we have two distinct categories, per frame and sync
+    //both are submitted at the end of the frame, but the buffer lifetimes are different
+    //per frame buffers are guaranteed to be accessible that frame
+
 
     VkQueue graphics_queue;
+    VkCommandPool graphics_pool;
+    Vulkan_Graphics_Queue graphics_render_queue;
+    Vulkan_Command_Buffer graphics_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
+    u32 graphics_command_buffer_count;
+
+
     VkQueue transfer_queue;
+    Vulkan_Transfer_Queue transfer_render_queue;
+
+    Vulkan_Compute_Queue comptute_render_queue;
+    Vulkan_Command_Buffer compute_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
+    u32 compute_command_buffer_count;
     VkQueue compute_queue;
-} Vulkan_Command_Buffer_System;
+} Vulkan_Queue_System;
 
 
 typedef struct vulkan_context
@@ -834,6 +963,7 @@ typedef struct vulkan_context
     u32 current_frame;
 
     //ensures that the submit has finished before starting work on the image
+    //this is also the per frame sync point
     VkFence* queue_submit_fence;
     // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_acquire_semaphore;
@@ -860,7 +990,7 @@ typedef struct Renderer
     Particle_Render* particle_render;
 
     //renderer specific
-    Vulkan_Command_Buffer_System* command_buffer_system;
+    Vulkan_Queue_System* queue_system;
     Buffer_System* buffer_system;
     Vulkan_Texture_System* texture_system;
     Light_System* light_system;

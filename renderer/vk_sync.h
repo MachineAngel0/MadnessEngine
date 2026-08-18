@@ -6,6 +6,7 @@
 void vulkan_fence_create(Renderer* renderer, VkFence* fence);
 void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags fenceCreateFlags);
 bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns);
+bool vulkan_fence_reset(Renderer* renderer, VkFence* fence);
 
 //semaphores
 //binary semaphore
@@ -23,58 +24,13 @@ bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSema
 void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context);
 
 //sketching out queue transfer stuff
-void queue_ownership_transfer(Renderer* renderer, Vulkan_Queue_Type from_queue, Vulkan_Command_Buffer* from_buffer,
-                              Vulkan_Queue_Type to, Vulkan_Command_Buffer* to_buffer)
-{
-    //all queue transfers need a release from the source queue and acquire from the destination queue
 
-    //TODO: rn just pretend that the dependency information is filled out
-
-    VkSemaphoreSubmitInfo signal = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .value = 0, // TODO: semaphore value, we add it when we submit our queue
-        .stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
-    };
+/*void queue_ownership_transfer_texture(Renderer* renderer, Vulkan_Queue_Type from_queue, Vulkan_Command_Buffer* from_buffer,
+                              Vulkan_Queue_Type to, Vulkan_Command_Buffer* to_buffer);
+void queue_ownership_transfer_mesh(Renderer* renderer, Vulkan_Queue_Type from_queue, Vulkan_Command_Buffer* from_buffer,
+                              Vulkan_Queue_Type to, Vulkan_Command_Buffer* to_buffer);*/
 
 
-    VkDependencyInfo from_dependency_info = {0};
-    from_dependency_info.sType;
-    from_dependency_info.pNext;
-    from_dependency_info.dependencyFlags;
-    from_dependency_info.memoryBarrierCount;
-    from_dependency_info.pMemoryBarriers;
-    from_dependency_info.bufferMemoryBarrierCount;
-    from_dependency_info.pBufferMemoryBarriers;
-    from_dependency_info.imageMemoryBarrierCount;
-    from_dependency_info.pImageMemoryBarriers;
-
-    vkCmdPipelineBarrier2(from_buffer->handle, &from_dependency_info);
-
-    VkSemaphoreSubmitInfo wait = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-        .value = 0, // TODO: semaphore value, we add it when we submit our queue
-        .stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
-    };
-
-
-    VkDependencyInfo to_dependency_info = {0};
-    to_dependency_info.sType;
-    to_dependency_info.pNext;
-    to_dependency_info.dependencyFlags;
-    to_dependency_info.memoryBarrierCount;
-    to_dependency_info.pMemoryBarriers;
-    to_dependency_info.bufferMemoryBarrierCount;
-    to_dependency_info.pBufferMemoryBarriers;
-    to_dependency_info.imageMemoryBarrierCount;
-    to_dependency_info.pImageMemoryBarriers;
-
-    vkCmdPipelineBarrier2(to_buffer->handle, &to_dependency_info);
-
-    //NOTE: eventually we submit both to their respective queue's
-    // vkQueueSubmit2()
-    // vkQueueSubmit2()
-
-}
 
 
 /*

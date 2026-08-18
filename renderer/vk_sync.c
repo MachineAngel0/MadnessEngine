@@ -90,6 +90,11 @@ bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
     return false;
 }
 
+bool vulkan_fence_reset(Renderer* renderer, VkFence* fence)
+{
+    vkResetFences(renderer->context.logical_device, 1, fence);
+}
+
 void binary_semaphore_create(Renderer* renderer, VkSemaphore* semaphore)
 {
     VkSemaphoreCreateInfo semaphoreInfo = {

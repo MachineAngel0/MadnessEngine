@@ -88,7 +88,7 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     }
 
     Vulkan_Command_Buffer* transfer_command_buffer = NULL;
-    vulkan_command_buffer_system_get_and_begin_cb(renderer->command_buffer_system,
+    vulkan_queue_system_get_and_begin_cb(renderer->queue_system,
                                                   // VULKAN_COMMAND_BUFFER_QUEUE_TYPE_TRANSFER, &transfer_command_buffer);
                                                   VULKAN_QUEUE_TYPE_GRAPHICS, &transfer_command_buffer);
 
@@ -134,22 +134,25 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     //submit info
     VkCommandBufferSubmitInfo cb_submit_info = vulkan_command_buffer_get_submit_info(transfer_command_buffer);
 
-    VkSemaphoreSubmitInfo signal_semaphore_infos = {0};
-    signal_semaphore_infos.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signal_semaphore_infos.pNext = 0;
+    VkSemaphoreSubmitInfo signal_semaphore_info = {0};
+    signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signal_semaphore_info.pNext = 0;
     // pSignalSemaphoreInfos.deviceIndex;
-    signal_semaphore_infos.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
     //value assumed to be accurate for the current texture upload
-    signal_semaphore_infos.value = semaphore_signal_value;
-    signal_semaphore_infos.semaphore = texture_system->timline_texture_upload_semaphore;
+    signal_semaphore_info.value = semaphore_signal_value;
+    signal_semaphore_info.semaphore = texture_system->timline_texture_upload_semaphore;
 
+    vulkan_command_buffer_add_semaphore(transfer_command_buffer, signal_semaphore_info, VULKAN_SEMAPHORE_SUBMIT_TYPE_SIGNAL);
+
+    //TODO: submissions handled at the end of the frame
     VkSubmitInfo2 submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     submit_info.pNext = NULL;
     submit_info.commandBufferInfoCount = 1;
     submit_info.pCommandBufferInfos = &cb_submit_info;
     submit_info.signalSemaphoreInfoCount = 1;
-    submit_info.pSignalSemaphoreInfos = &signal_semaphore_infos;
+    submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
     // vkQueueSubmit2(renderer->context.device.transfer_queue, 1, &submit_info, NULL);
     vkQueueSubmit2(renderer->context.graphics_queue, 1, &submit_info, NULL);
 }

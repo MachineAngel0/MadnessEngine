@@ -2,10 +2,10 @@
 #include <string.h>
 
 
-Vulkan_Command_Buffer_System* vulkan_command_buffer_system_init(Renderer* renderer)
+Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
 {
-    Vulkan_Command_Buffer_System* cb_system = allocator_alloc(&renderer->allocator,
-                                                              sizeof(Vulkan_Command_Buffer_System));
+    Vulkan_Queue_System* cb_system = allocator_alloc(&renderer->allocator,
+                                                              sizeof(Vulkan_Queue_System));
 
     //create the command buffers and see how many we get available from the pool, from our intended max
     cb_system->graphics_command_buffer_count = MAX_VULKAN_COMMAND_BUFFERS;
@@ -25,68 +25,27 @@ Vulkan_Command_Buffer_System* vulkan_command_buffer_system_init(Renderer* render
     }
 
 
-    cb_system->transfer_command_buffer_count = MAX_VULKAN_COMMAND_BUFFERS;
-    for (u32 i = 0; i < cb_system->transfer_command_buffer_count; i++)
-    {
-        Vulkan_Command_Buffer* cb = &cb_system->transfer_command_buffers[i];
-        if (!vulkan_command_buffer_allocate(&renderer->context, cb,
-                                            VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                            renderer->context.transfer_command_pool))
-        {
-            cb->handle = 0;
-            cb_system->transfer_command_buffer_count = i - 1;
-            break;
-        }
-        cb->state = VULKAN_COMMAND_BUFFER_STATE_USABLE;
-        cb->queue_type = VULKAN_QUEUE_TYPE_TRANSFER;
-    }
-
-    cb_system->compute_command_buffer_count = MAX_VULKAN_COMMAND_BUFFERS;
-    for (u32 i = 0; i < cb_system->compute_command_buffer_count; i++)
-    {
-        Vulkan_Command_Buffer* cb = &cb_system->compute_command_buffers[i];
-        if (!vulkan_command_buffer_allocate(&renderer->context, cb,
-                                            VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                            renderer->context.compute_command_pool))
-        {
-            cb->handle = 0;
-            cb_system->compute_command_buffer_count = i - 1;
-            break;
-        }
-        cb->state = VULKAN_COMMAND_BUFFER_STATE_USABLE;
-        cb->queue_type = VULKAN_QUEUE_TYPE_COMPUTE;
-    }
 
     return cb_system;
 }
 
-bool vulkan_command_buffer_system_deinit(Renderer* renderer, Vulkan_Command_Buffer_System* cb_system)
+bool vulkan_queue_system_deinit(Renderer* renderer, Vulkan_Queue_System* queue_system)
 {
     vkDeviceWaitIdle(renderer->context.logical_device);
 
-    for (u32 i = 0; i < cb_system->graphics_command_buffer_count; i++)
+    for (u32 i = 0; i < queue_system->graphics_command_buffer_count; i++)
     {
-        vulkan_command_buffer_free(&renderer->context, &cb_system->graphics_command_buffers[i],
+        vulkan_command_buffer_free(&renderer->context, &queue_system->graphics_command_buffers[i],
                                    renderer->context.graphics_command_pool);
     }
 
 
-    for (u32 i = 0; i < cb_system->transfer_command_buffer_count; i++)
-    {
-        vulkan_command_buffer_free(&renderer->context, &cb_system->transfer_command_buffers[i],
-                                   renderer->context.transfer_command_pool);
-    }
 
-    for (u32 i = 0; i < cb_system->compute_command_buffer_count; i++)
-    {
-        vulkan_command_buffer_free(&renderer->context, &cb_system->compute_command_buffers[i],
-                                   renderer->context.compute_command_pool);
-    }
 
     return true;
 }
 
-bool vulkan_command_buffer_system_get_cb(Vulkan_Command_Buffer_System* system, Vulkan_Queue_Type type,
+bool vulkan_queue_system_get_cb(Vulkan_Queue_System* system, Vulkan_Queue_Type type,
                                          Vulkan_Command_Buffer** out_cb)
 {
     switch (type)
@@ -104,26 +63,11 @@ bool vulkan_command_buffer_system_get_cb(Vulkan_Command_Buffer_System* system, V
 
         break;
     case VULKAN_QUEUE_TYPE_TRANSFER:
-        for (u32 i = 0; i < system->transfer_command_buffer_count; i++)
-        {
-            if ((system->transfer_command_buffers[i].state == VULKAN_COMMAND_BUFFER_STATE_USABLE))
-            {
-                *out_cb = &system->transfer_command_buffers[i];
-                return true;
-            }
-        }
+        MASSERT(false)
 
         break;
     case VULKAN_QUEUE_TYPE_COMPUTE:
-        for (u32 i = 0; i < system->compute_command_buffer_count; i++)
-        {
-            if ((system->compute_command_buffers[i].state == VULKAN_COMMAND_BUFFER_STATE_USABLE))
-            {
-                *out_cb = &system->compute_command_buffers[i];
-                return true;
-            }
-        }
-
+        MASSERT(false)
         break;
     }
 
@@ -132,11 +76,11 @@ bool vulkan_command_buffer_system_get_cb(Vulkan_Command_Buffer_System* system, V
     return false;
 }
 
-bool vulkan_command_buffer_system_get_and_begin_cb(Vulkan_Command_Buffer_System* system,
+bool vulkan_queue_system_get_and_begin_cb(Vulkan_Queue_System* system,
                                                    Vulkan_Queue_Type type,
                                                    Vulkan_Command_Buffer** out_cb)
 {
-    if (!vulkan_command_buffer_system_get_cb(system, type, out_cb))
+    if (!vulkan_queue_system_get_cb(system, type, out_cb))
     {
         return false;
     }
@@ -144,6 +88,13 @@ bool vulkan_command_buffer_system_get_and_begin_cb(Vulkan_Command_Buffer_System*
     vulkan_command_buffer_begin(*out_cb);
 
     return true;
+}
+
+bool vulkan_command_buffer_add_semaphore(Vulkan_Command_Buffer* cb, VkSemaphoreSubmitInfo submit_info,
+    Vulkan_Semaphore_Submit_Type submit_type)
+{
+    //TODO:
+    MASSERT_FALSE();
 }
 
 void vulkan_renderer_command_buffers_create(Vulkan_Context* vk_context)
@@ -432,7 +383,9 @@ void vulkan_command_buffer_begin_debug_label(Renderer* renderer, Vulkan_Command_
                                              const char* name)
 {
     VkDebugUtilsLabelEXT debug_label = {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, .pNext = NULL, .pLabelName = name,
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        .pNext = NULL,
+        .pLabelName = name,
         .color = {1.0, 0.0, 0.0, 1.0}
     };
     renderer->context.debug_label_start(command_buffer->handle, &debug_label);
