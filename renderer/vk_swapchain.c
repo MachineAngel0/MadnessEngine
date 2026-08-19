@@ -6,7 +6,7 @@
 #include "vk_image.h"
 #include "vk_framebuffer.h"
 
-void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, vulkan_swapchain* swapchain_out)
+void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, Vulkan_Swapchain* swapchain_out)
 {
 
 
@@ -193,7 +193,7 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
     INFO("SWAPCHAIN CREATED");
 }
 
-void vulkan_swapchain_destroy(Vulkan_Context* context, vulkan_swapchain* swapchain)
+void vulkan_swapchain_destroy(Vulkan_Context* context, Vulkan_Swapchain* swapchain)
 {
     vkDeviceWaitIdle(context->logical_device);
     vulkan_texture_free(context, &swapchain->depth_attachment);
@@ -207,14 +207,14 @@ void vulkan_swapchain_destroy(Vulkan_Context* context, vulkan_swapchain* swapcha
     INFO("SWAPCHAIN DESTROYED");
 }
 
-void vulkan_swapchain_recreate(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, vulkan_swapchain* swapchain)
+void vulkan_swapchain_recreate(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, Vulkan_Swapchain* swapchain)
 {
     //destroy the old and create the new
     vulkan_swapchain_destroy(context, swapchain);
     vulkan_swapchain_create(renderer, context, width, height, swapchain);
 }
 
-bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Context* context, vulkan_swapchain* swapchain,
+bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Context* context, Vulkan_Swapchain* swapchain,
                                                u64 timeout_ns, VkSemaphore image_available_semaphore,
                                                VkFence fence_out, u32* out_image_index)
 {
@@ -236,7 +236,7 @@ bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Contex
 }
 
 void vulkan_swapchain_present_image(Renderer* renderer, Vulkan_Context* context,
-                                    vulkan_swapchain* swapchain, VkQueue present_queue,
+                                    Vulkan_Swapchain* swapchain, VkQueue present_queue,
                                     VkSemaphore render_complete_semaphore, u32 present_image_index)
 {
     VkPresentInfoKHR present_info = {0};
@@ -295,11 +295,15 @@ bool recreate_swapchain(Renderer* renderer)
 
 
     // cleanup swapchain
+
+    /*NOTE:  idk why this is here in the old code?
     for (u32 i = 0; i < renderer->context.swapchain.image_count; ++i)
     {
         vulkan_command_buffer_free(&renderer->context, &renderer->context.graphics_command_buffer[i],
                                    renderer->context.graphics_command_pool);
     }
+    vulkan_renderer_command_buffers_create(&renderer->context);
+    */
 
     // Framebuffers.
     for (u32 i = 0; i < renderer->context.swapchain.image_count; ++i)
@@ -315,7 +319,6 @@ bool recreate_swapchain(Renderer* renderer)
     regenerate_framebuffer(&renderer->context, &renderer->context.swapchain, &renderer->context.main_renderpass);
 
 
-    vulkan_renderer_command_buffers_create(&renderer->context);
 
     // Clear the recreating flag.
     renderer->context.recreating_swapchain = false;

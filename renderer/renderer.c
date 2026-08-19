@@ -110,6 +110,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
     vk_context->is_init = true;
 
+    vulkan_device_create2(vk_context);
     // Device creation
     if (!vulkan_device_create(vk_context))
     {
@@ -152,16 +153,13 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     //SHADOW PASS TEXTURE
     vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.depth_format,
-                                    renderer->context.graphics_command_buffer, &renderer->shadowpass_texture);
+                                     &renderer->shadowpass_texture);
 
     // Create command buffers.
-    vulkan_renderer_command_buffers_create(vk_context);
-
     renderer->queue_system = vulkan_queue_system_init(renderer);
 
 
     //NOTE: semaphores must be per swapchain image
-    sync_object_per_frame_init(renderer, vk_context);
     vk_context->current_frame = 0;
 
 
@@ -192,7 +190,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Sprite Backend
     renderer->sprite_renderer = sprite_render_init(renderer);
     // UI Backend
-    renderer->ui_renderer = ui_render_init(renderer, renderer->context.graphics_command_buffer);
+    renderer->ui_renderer = ui_render_init(renderer);
 
 
     //Pipelines
@@ -227,11 +225,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     Vulkan_Context* vk_context = &renderer->context;
 
 
-
-
     /*
       At a high level, rendering a frame in Vulkan consists of a common set of steps:
-      Wait for the previous frame to finish
+      Wait for the frame we are on to finish
       Acquire an image from the swap chain
       Record a command buffer which draws the scene onto that image
       Submit the recorded command buffer
@@ -242,21 +238,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
     // Wait for the execution of the current frame to complete on the cpu. The fence being free will allow this one to move on.
-    if (!vulkan_fence_wait(
-        vk_context,
-        &vk_context->queue_submit_fence[vk_context->current_frame],
-        UINT64_MAX))
-    {
-        WARN("In-flight fence wait failure!");
-        return;
-    }
-
-    //TODO: replace the wait above
-    // void vulkan_queue_wait_on_frame_graphics(Renderer* renderer, u32 current_frame)
+    vulkan_queue_system_graphics_fence_wait(renderer, renderer->context.current_frame);
 
 
     /* Acquire an image from the swap chain */
-    // Pass along the semaphore that should signaled when this completes.
+    // Pass along the semaphore that should signal when this completes.
     // This same semaphore will later be waited on by the queue submission to ensure this image is available.
     u32 image_index = 0;
     if (!vulkan_swapchain_acquire_next_image_index(
@@ -264,7 +250,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         vk_context,
         &vk_context->swapchain,
         UINT64_MAX,
-        vk_context->swapchain_acquire_semaphore[vk_context->current_frame],
+        renderer->queue_system->graphics_render_queue.swapchain_wait_semaphore[image_index],
         0, &image_index))
     {
         //if it fails it could mean that the swapchain is recreating itself
@@ -272,6 +258,14 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     }
 
     allocator_clear(&renderer->frame_allocator);
+
+    // Begin recording commands.
+    Vulkan_Command_Buffer* graphics_command_buffer = &renderer->queue_system->graphics_render_queue.
+                                                                graphics_command_buffer[vk_context->current_frame];
+
+    vkResetCommandBuffer(graphics_command_buffer->handle, 0);
+    vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
+
 
     //free textures and any other texture/shader updated
     buffer_system_frame_start(renderer);
@@ -329,12 +323,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
            sizeof(Global_Ubo));
 
 
-    // Begin recording commands.
-    //TODO: might have to change to primary command buffer
-    Vulkan_Command_Buffer* graphics_command_buffer = &vk_context->graphics_command_buffer[vk_context->
-        current_frame];
-    vkResetCommandBuffer(graphics_command_buffer->handle, 0);
-    vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
+
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
@@ -649,32 +638,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //End DRAW COMMAND
     vulkan_command_buffer_end(graphics_command_buffer);
 
-    // Submit the queue and wait for the operation to complete.
-    // Begin queue submission
-    VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    // Command buffer(s) to be executed.
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &graphics_command_buffer->handle;
-    // Semaphore to wait upon before the submitted command buffer starts executing
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &vk_context->swapchain_release_semaphore[image_index];
-    // Semaphore to be signaled when command buffers have completed
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &vk_context->swapchain_acquire_semaphore[vk_context->current_frame];
-    // Each semaphore waits on the corresponding pipeline stage to complete. 1:1 ratio.
-    // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT prevents subsequent colour attachment
-    // writes from executing until the semaphore signals (i.e. one frame is presented at a time)
-    VkPipelineStageFlags flags[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submit_info.pWaitDstStageMask = flags;
-    // Submit to the graphics queue passing a wait fence
-    VkResult result = vkQueueSubmit(
-        vk_context->graphics_queue,
-        1,
-        &submit_info,
-        vk_context->queue_submit_fence[vk_context->current_frame]);
-    VK_CHECK(result);
 
-    // End queue submission
+    vulkan_queue_graphics_frame_submit(renderer, vk_context->current_frame, image_index);
+
 
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
@@ -682,7 +648,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         vk_context,
         &vk_context->swapchain,
         vk_context->present_queue,
-        vk_context->swapchain_release_semaphore[image_index], image_index);
+        renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[image_index],
+        image_index);
+
 
 
     // Increment (and loop) the frame index.
@@ -707,46 +675,8 @@ void renderer_shutdown(Renderer* renderer)
     //                               &vk_context.default_shader_descriptor_set_layout);
 
 
-    // Sync objects
-    for (u8 i = 0; i < vk_context->swapchain.image_count; ++i)
-    {
-        VkCommandPool* primary_command_pool = VK_NULL_HANDLE;
-        VkCommandBuffer* primary_command_buffer = VK_NULL_HANDLE;
-
-        vkDestroySemaphore(
-            vk_context->logical_device,
-            vk_context->swapchain_acquire_semaphore[i],
-            vk_context->allocator);
-
-        vkDestroySemaphore(
-            vk_context->logical_device,
-            vk_context->swapchain_release_semaphore[i],
-            vk_context->allocator);
-
-        vkDestroyFence(vk_context->logical_device, vk_context->queue_submit_fence[i],
-                       VK_NULL_HANDLE);
-    }
-
-
-    darray_free(vk_context->swapchain_acquire_semaphore);
-    darray_free(vk_context->swapchain_release_semaphore);
-    darray_free(vk_context->queue_submit_fence);
-
-
     // Command buffers
-    for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
-    {
-        if (vk_context->graphics_command_buffer[i].handle)
-        {
-            vulkan_command_buffer_free(
-                vk_context,
-                &vk_context->graphics_command_buffer[i],
-                vk_context->graphics_command_pool);
-            vk_context->graphics_command_buffer[i].handle = 0;
-        }
-    }
-    darray_free(vk_context->graphics_command_buffer);
-    vk_context->graphics_command_buffer = 0;
+
 
     // Destroy framebuffers
     for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)

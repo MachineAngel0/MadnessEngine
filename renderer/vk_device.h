@@ -43,6 +43,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 bool vulkan_device_create(Vulkan_Context* vulkan_context);
 bool vulkan_device_destroy(Vulkan_Context* vulkan_context);
 
+
+bool vulkan_device_create2(Vulkan_Context* vulkan_context);
+
+
 /* SURFACE */
 // void create_surface(Vulkan_Context* vulkan_context, platform_state* platform);
 
@@ -55,7 +59,7 @@ bool physical_device_meets_requirements(
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,
     const VkPhysicalDeviceFeatures* features,
-    const vulkan_physical_device_requirements* requirements,
+    const Vulkan_Physical_Device_Requirements* requirements,
     vulkan_physical_device_queue_family_info* out_queue_info,
     vulkan_swapchain_capabilities_info* out_swapchain_support);
 

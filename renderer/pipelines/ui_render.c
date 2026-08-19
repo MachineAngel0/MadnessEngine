@@ -1,7 +1,7 @@
 ﻿#include "ui_render.h"
 
 
-UI_Renderer_Backend* ui_render_init(Renderer* renderer, Vulkan_Command_Buffer* command_buffer)
+UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 {
     UI_Renderer_Backend* ui_renderer = allocator_alloc(&renderer->allocator, sizeof(UI_Renderer_Backend));
 

@@ -63,6 +63,7 @@ typedef struct Vulkan_Texture
 
     u32 width;
     u32 height;
+    VkDeviceSize image_size;
 
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
@@ -90,7 +91,7 @@ typedef struct Vulkan_Framebuffer
     Vulkan_Renderpass* renderpass;
 } Vulkan_Framebuffer;
 
-typedef struct vulkan_swapchain
+typedef struct Vulkan_Swapchain
 {
     //also contains VKformat
     VkSurfaceFormatKHR surface_format;
@@ -105,7 +106,7 @@ typedef struct vulkan_swapchain
 
     // framebuffers used for on-screen rendering.
     Vulkan_Framebuffer* framebuffers;
-} vulkan_swapchain;
+} Vulkan_Swapchain;
 
 
 typedef struct vulkan_swapchain_support_info
@@ -130,7 +131,8 @@ typedef struct vulkan_physical_device_requirements
 
     bool sampler_anisotropy;
     bool discrete_gpu;
-} vulkan_physical_device_requirements;
+    u32 score;
+} Vulkan_Physical_Device_Requirements;
 
 typedef struct vulkan_physical_device_queue_family_info
 {
@@ -151,8 +153,8 @@ typedef struct Vulkan_Command_Buffer
 
 
     //one per thread for nice work distribution, same threading access rules, dont share resources
-    VkCommandBuffer* secondary_buffers;
-    u32 secondary_count;
+    // VkCommandBuffer* secondary_buffers;
+    // u32 secondary_count;
 } Vulkan_Command_Buffer;
 
 typedef struct Vulkan_Texture_Pending_Upload
@@ -582,7 +584,7 @@ typedef struct Vulkan_Texture_System
     RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
 
 
-    VkSemaphore timline_texture_upload_semaphore;
+    VkSemaphore timeline_texture_upload_semaphore;
     //textures who's uploads we are waiting on
     ARRAY_TYPE(Vulkan_Texture_Pending_Upload)* texture_pending_array;
     //u64 semaphore_singal_value = ++timeline_value; //use it like so
@@ -767,37 +769,45 @@ typedef struct Vulkan_Transfer_Queue
     VkCommandPool pool;
 
     //these are aync resources flushed per frame
-    //one command buffer per frame batch
+    //one command buffer is given out per frame, if any work, of any kind, is needed to be done
     Vulkan_Command_Buffer command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
+    u32 command_buffer_count;
 
-    const VkSemaphoreSubmitInfo* pSignalSemaphoreInfos;
-    uint32_t signalSemaphoreInfoCount;
+    VkSemaphoreSubmitInfo signal_semaphore_info[100];
+    uint32_t signal_semaphore_info_count;
 
+    VkSemaphoreSubmitInfo wait_semaphore_info[100];
+    uint32_t wait_semaphore_info_count;
+
+    /* TODO:
     //ones we want to send to other systems
-    const VkSemaphoreSubmitInfo* wait_semaphore_to_graphics_transfer;
+    VkSemaphoreSubmitInfo* wait_semaphore_to_graphics_transfer;
     uint32_t waitSemaphoreInfoCount;
 
-    const VkSemaphoreSubmitInfo* wait_semaphore_to_compute_transfer;
+    VkSemaphoreSubmitInfo* wait_semaphore_to_compute_transfer;
+    uint32_t waitSemaphoreInfoCount_compute;
+    */
 } Vulkan_Transfer_Queue;
 
 typedef struct Vulkan_Compute_Queue
 {
     VkCommandPool pool;
 
-    //frame data
-    Vulkan_Command_Buffer* compute_frame_command_buffer;
-    u8 compute_frame_command_buffer_count;
+    //per frame
+    Vulkan_Command_Buffer* command_buffer;
+    u8 command_buffer_count;
 
     VkFence* compute_frame_fence;
     u8 compute_frame_fence_count;
 
-    VkSemaphoreSubmitInfo* compute_frame_signal_semaphore;
-    uint32_t compute_frame_signal_semaphore_count;
-    VkSemaphoreSubmitInfo* compute_frame_wait_semaphore;
-    uint32_t compute_frame_wait_semaphore_count;
+    VkSemaphoreSubmitInfo signal_semaphore[100];
+    u32 signal_semaphore_count;
+    VkSemaphoreSubmitInfo wait_semaphore[100];
+    u32 wait_semaphore_count;
 
 
-    /* NOTE: not gonna support this rn because i dont need it
+
+    /* NOTE: not gonna support async rn because i dont need it
     //aync commands
     Vulkan_Command_Buffer async_command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
 
@@ -828,7 +838,8 @@ typedef struct Vulkan_Graphics_Queue
     Vulkan_Command_Buffer* graphics_command_buffer;
     u32 graphics_command_buffer_count;
 
-    u32 semaphore_count;//one per swapchain image
+    //one per swapchain image
+    u32 swapchain_semaphore_count;
     VkSemaphore* swapchain_wait_semaphore;
     VkSemaphore* swapchain_signal_semaphore;
 
@@ -838,19 +849,24 @@ typedef struct Vulkan_Graphics_Queue
     // enum upload_intent{};
 
     //TODO: we can definelty just use a linked list with a pool allocator
-    VkSemaphoreSubmitInfo* wait_semaphore_info;
-    uint32_t wait_semaphore_info_count;
-    VkSemaphoreSubmitInfo* signal_semaphore_info;
-    uint32_t signal_semaphore_info_count;
+    VkSemaphoreSubmitInfo wait_semaphore_info[100];
+    u32 wait_semaphore_info_count;
+    VkSemaphoreSubmitInfo signal_semaphore_info[100];
+    u32 signal_semaphore_info_count;
 
     //above creates the submit info,
     //but it makes sense that the command buffers hold onto the info,
     //and queue just gather them up
     // VkSubmitInfo2 submit_info;
+
+
+
+
+
 } Vulkan_Graphics_Queue;
 
 
-typedef struct Vulkan_Command_Buffer_System
+typedef struct Vulkan_Queue_System
 {
     // really good resource on command buffers and multithreading
     // https://docs.vulkan.org/samples/latest/samples/performance/command_buffer_usage/README.html
@@ -877,17 +893,23 @@ typedef struct Vulkan_Command_Buffer_System
     VkQueue graphics_queue;
     VkCommandPool graphics_pool;
     Vulkan_Graphics_Queue graphics_render_queue;
-    Vulkan_Command_Buffer graphics_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
-    u32 graphics_command_buffer_count;
 
 
     VkQueue transfer_queue;
+    VkCommandPool transfer_pool;
     Vulkan_Transfer_Queue transfer_render_queue;
 
     Vulkan_Compute_Queue comptute_render_queue;
     Vulkan_Command_Buffer compute_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
     u32 compute_command_buffer_count;
     VkQueue compute_queue;
+
+
+    ring_queue* queue_ownership_change_transfer_to_graphics;
+    ring_queue* queue_ownership_change_transfer_to_compute;
+    ring_queue* queue_ownership_change_compute_to_graphics;
+
+
 } Vulkan_Queue_System;
 
 
@@ -932,18 +954,20 @@ typedef struct vulkan_context
     VkQueue compute_queue;
 
     VkPhysicalDeviceProperties properties;
+    VkPhysicalDeviceProperties2 properties2;
     // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
     // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
 
     VkPhysicalDeviceFeatures features;
     VkPhysicalDeviceMemoryProperties memory;
+    VkPhysicalDeviceMemoryProperties2 memory2;
     VkQueueFamilyProperties* queue_families;
 
     VkFormat depth_format;
 
 
     //Swapchain
-    vulkan_swapchain swapchain;
+    Vulkan_Swapchain swapchain;
     bool recreating_swapchain;
 
     //renderpass
@@ -955,20 +979,18 @@ typedef struct vulkan_context
     VkCommandPool transfer_command_pool;
     VkCommandPool compute_command_pool;
 
-    Vulkan_Command_Buffer* graphics_command_buffer; // darray
-    Vulkan_Command_Buffer* transfer_command_buffer; // darray
-    Vulkan_Command_Buffer* compute_command_buffer; // darray
+
 
 
     u32 current_frame;
 
-    //ensures that the submit has finished before starting work on the image
+    /*//ensures that the submit has finished before starting work on the image
     //this is also the per frame sync point
     VkFence* queue_submit_fence;
     // semaphore that tells us when our next image is ready for usage/writing to
     VkSemaphore* swapchain_acquire_semaphore;
     // semaphore that signals when we are allowed to sumbit our new buffers
-    VkSemaphore* swapchain_release_semaphore;
+    VkSemaphore* swapchain_release_semaphore;*/
 } Vulkan_Context;
 
 

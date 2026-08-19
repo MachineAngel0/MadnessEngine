@@ -580,10 +580,11 @@ bool vulkan_device_destroy(Vulkan_Context* vulkan_context)
     return true;
 }
 
-
-bool select_physical_device(Vulkan_Context* vulkan_context)
+bool vulkan_device_create2(Vulkan_Context* vulkan_context)
 {
     //once for the count
+    //twice for the devices
+
     u32 physical_device_count = 0;
     VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
     if (physical_device_count == 0)
@@ -591,22 +592,158 @@ bool select_physical_device(Vulkan_Context* vulkan_context)
         FATAL("No devices which support Vulkan were found.");
         return false;
     }
-
-    //twice for the devices
     VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
     VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
+
+    // TODO: These requirements should probably be driven by engine configuration.
+
+    Vulkan_Physical_Device_Requirements requirements;
+    requirements.graphics = true;
+    requirements.present = true;
+    requirements.transfer = true;
+    requirements.compute = true;
+    requirements.sampler_anisotropy = true;
+
+    vulkan_context->properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    vulkan_context->memory2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+
+    //scan of each device
+    for (u32 i = 0; i < physical_device_count; i++)
+    {
+        vkGetPhysicalDeviceProperties2(physical_devices[i], &vulkan_context->properties2);
+        vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->features);
+        // vkGetPhysicalDeviceFeatures2(physical_devices[i], &vulkan_context->features);
+        vkGetPhysicalDeviceMemoryProperties2(physical_devices[i], &vulkan_context->memory2);
+        INFO("device info: '%s'.", &vulkan_context->properties.deviceName);
+        // GPU type, etc.
+        switch (vulkan_context->properties.deviceType)
+        {
+        default:
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+            INFO("GPU type is Unknown.");
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            INFO("GPU type is Integrated.");
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            INFO("GPU type is Discrete.");
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+            INFO("GPU type is Virtual.");
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:
+            INFO("GPU type is CPU.");
+            break;
+        }
+        INFO(
+            "GPU Driver version: %d.%d.%d",
+            VK_VERSION_MAJOR(vulkan_context->properties2.properties.driverVersion),
+            VK_VERSION_MINOR(vulkan_context->properties2.properties.driverVersion),
+            VK_VERSION_PATCH(vulkan_context->properties2.properties.driverVersion));
+
+        // Vulkan API version.
+        INFO(
+            "Vulkan API version: %d.%d.%d",
+            VK_VERSION_MAJOR(vulkan_context->properties2.properties.apiVersion),
+            VK_VERSION_MINOR(vulkan_context->properties2.properties.apiVersion),
+            VK_VERSION_PATCH(vulkan_context->properties2.properties.apiVersion));
+
+        // Memory information
+        for (u32 j = 0; j < vulkan_context->memory2.memoryProperties.memoryHeapCount; ++j)
+        {
+            f32 memory_size_gib = (((f32)vulkan_context->memory2.memoryProperties.memoryHeaps[j].size) / GB(1));
+            if (vulkan_context->memory2.memoryProperties.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+            {
+                INFO("Local GPU memory: %.2f GB", memory_size_gib);
+            }
+            else
+            {
+                INFO("Shared System memory: %.2f GB", memory_size_gib);
+            }
+        }
+
+        u32 queue_family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, 0);
+        vulkan_context->queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count,
+                                                 vulkan_context->queue_families);
+        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        {
+            DEBUG("QUEUE INDEX: %d", queue_index);
+            // Graphics queue?
+            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                INFO("SUPPORTS GRAPHICS")
+            }
+            else
+            {
+                INFO("NO COMPUTE SUPPORT")
+            }
+
+            // Compute queue?
+            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_COMPUTE_BIT)
+            {
+                INFO("SUPPORTS COMPUTE")
+            }
+            else
+            {
+                INFO("NO COMPUTE SUPPORT")
+            }
+
+            // Transfer queue?
+            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                INFO("SUPPORTS TRANSFER")
+            }
+            else
+            {
+                INFO("NO TRANSFER SUPPORT")
+            }
+
+            // Present queue?
+            VkBool32 supports_present = VK_FALSE;
+            VK_CHECK(
+                vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], queue_index, vulkan_context->surface, &
+                    supports_present));
+            if (supports_present)
+            {
+                INFO("SUPPORTS PRESENT")
+            }
+            else
+            {
+                INFO("NO PRESENT SUPPORT")
+            }
+        }
+    }
+}
+
+
+bool select_physical_device(Vulkan_Context* vulkan_context)
+{
+    //once for the count
+    //twice for the devices
+
+    u32 physical_device_count = 0;
+    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
+    if (physical_device_count == 0)
+    {
+        FATAL("No devices which support Vulkan were found.");
+        return false;
+    }
+    VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
+    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
+
+
     for (u32 i = 0; i < physical_device_count; ++i)
     {
         vkGetPhysicalDeviceProperties(physical_devices[i], &vulkan_context->properties);
-
         vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->features);
         // vkGetPhysicalDeviceFeatures2(physical_devices[i], &vulkan_context->features);
-
         vkGetPhysicalDeviceMemoryProperties(physical_devices[i], &vulkan_context->memory);
 
         // TODO: These requirements should probably be driven by engine
         // configuration.
-        vulkan_physical_device_requirements requirements = {0};
+        Vulkan_Physical_Device_Requirements requirements = {0};
         requirements.graphics = true;
         requirements.present = true;
         requirements.transfer = true;
@@ -628,11 +765,7 @@ bool select_physical_device(Vulkan_Context* vulkan_context)
         {
             MASSERT_MSG(false, "PHYSICAL DEVICE TYPE IS NOT SUPPORTED. IS NOT DISCRETE OR INTEGRATED")
         }
-        /*#if MPLATFORM_LINUX
-            requirements.discrete_gpu = false;
-        #else
-            requirements.discrete_gpu = true;
-        #endif*/
+
 
         requirements.device_extension_names = darray_create(const char*);
         darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -727,7 +860,7 @@ bool physical_device_meets_requirements(
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,
     const VkPhysicalDeviceFeatures* features,
-    const vulkan_physical_device_requirements* requirements,
+    const Vulkan_Physical_Device_Requirements* requirements,
     vulkan_physical_device_queue_family_info* out_queue_info,
     vulkan_swapchain_capabilities_info* out_swapchain_support)
 {
@@ -968,7 +1101,7 @@ bool vulkan_device_detect_depth_format(Renderer* renderer)
             renderer->context.depth_format = candidates[i];
             return true;
         }
-         if ((format_properties.optimalTilingFeatures & flags) == flags)
+        if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
             renderer->context.depth_format = candidates[i];
             return true;

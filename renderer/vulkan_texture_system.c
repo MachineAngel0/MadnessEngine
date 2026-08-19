@@ -18,7 +18,7 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
     texture_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
 
-    timeline_semaphore_create(renderer, &texture_system->timline_texture_upload_semaphore);
+    timeline_semaphore_create(renderer, &texture_system->timeline_texture_upload_semaphore);
     //OPTIMIZE: definetly dont need this much memory for this
     texture_system->texture_pending_array = array_create(Vulkan_Texture_Pending_Upload, MAX_TEXTURE_COUNT,
                                                          &renderer->allocator);
@@ -61,7 +61,7 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
         if (timeline_semaphore_query_and_compare(
             renderer,
-            &texture_system->timline_texture_upload_semaphore,
+            &texture_system->timeline_texture_upload_semaphore,
             pending_upload.timeline_semaphore_value))
         {
             pending_upload.madness_texture->bindless_slot_query =
@@ -88,15 +88,20 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     }
 
     Vulkan_Command_Buffer* transfer_command_buffer = NULL;
-    vulkan_queue_system_get_and_begin_cb(renderer->queue_system,
-                                                  // VULKAN_COMMAND_BUFFER_QUEUE_TYPE_TRANSFER, &transfer_command_buffer);
-                                                  VULKAN_QUEUE_TYPE_GRAPHICS, &transfer_command_buffer);
+    if (!vulkan_queue_system_get_cb(renderer, VULKAN_QUEUE_TYPE_TRANSFER, &transfer_command_buffer))
+    {
+        return;
+    }
+    Vulkan_Command_Buffer* graphics_command_buffer = NULL;
+    vulkan_queue_system_get_cb(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, &graphics_command_buffer);
+
 
     u64 semaphore_signal_value = ++texture_system->timeline_semaphore_texture_value;
     //were not handling this correctly, since the rest of this needs to know if the command buffer is valid
 
     Texture_GPU_Upload texture_upload;
 
+    //NOTE: each texture needs its own image memory barrier
     while (!ring_queue_is_empty(packet->texture_upload_queue) && transfer_command_buffer)
     {
         ring_dequeue(packet->texture_upload_queue, &texture_upload);
@@ -110,12 +115,37 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
 
         //create the texture
-        vulkan_texture_create_image_new(renderer, &renderer->context, &texture_upload, vulkan_texture,
-                                        transfer_command_buffer);
+        vulkan_texture_create_image_new(renderer, &renderer->context, &texture_upload, vulkan_texture);
+        //update the heap
         update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system,
                                                texture_upload.madness_texture->bindless_slot);
 
+        initial_image_layout_transition(transfer_command_buffer, vulkan_texture->texture_image);
 
+        //from here we need to get the texture into gpu memory using a staging buffer,
+        //and if we have a dedicated transfer qeueu, the second image layout will need to create two memory barriers
+
+        //create a staging buffer
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        buffer_create(&renderer->context, vulkan_texture->image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+                      &stagingBufferMemory);
+
+        //allocate memory
+        void* data;
+        vkMapMemory(renderer->context.logical_device, stagingBufferMemory, 0,
+                    texture_upload.madness_texture->pixels_size, 0, &data);
+        memcpy(data, texture_upload.pixel_data, texture_upload.madness_texture->pixels_size);
+        vkUnmapMemory(renderer->context.logical_device, stagingBufferMemory);
+
+
+        buffer_to_image_copy_new(transfer_command_buffer, stagingBuffer, vulkan_texture->texture_image,
+                                 texture_upload.madness_texture->width, texture_upload.madness_texture->height);
+
+        second_image_layout_transition(renderer, graphics_command_buffer, vulkan_texture->texture_image,
+                                     VULKAN_QUEUE_TYPE_TRANSFER,
+                                     VULKAN_QUEUE_TYPE_GRAPHICS);
 
 
         //unload texture data - safe to do so here, but we cant use it yet until the upload is complete
@@ -132,29 +162,27 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
     vulkan_command_buffer_end(transfer_command_buffer);
     //submit info
-    VkCommandBufferSubmitInfo cb_submit_info = vulkan_command_buffer_get_submit_info(transfer_command_buffer);
-
     VkSemaphoreSubmitInfo signal_semaphore_info = {0};
     signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     signal_semaphore_info.pNext = 0;
     // pSignalSemaphoreInfos.deviceIndex;
-    signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
     //value assumed to be accurate for the current texture upload
     signal_semaphore_info.value = semaphore_signal_value;
-    signal_semaphore_info.semaphore = texture_system->timline_texture_upload_semaphore;
+    signal_semaphore_info.semaphore = texture_system->timeline_texture_upload_semaphore;
 
-    vulkan_command_buffer_add_semaphore(transfer_command_buffer, signal_semaphore_info, VULKAN_SEMAPHORE_SUBMIT_TYPE_SIGNAL);
+    //only need this is we do a queue ownership transfer
+    VkSemaphoreSubmitInfo wait_semaphore_info = {0};
+    wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    wait_semaphore_info.pNext = 0;
+    wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    wait_semaphore_info.value = semaphore_signal_value;
+    wait_semaphore_info.semaphore = texture_system->timeline_texture_upload_semaphore;
 
-    //TODO: submissions handled at the end of the frame
-    VkSubmitInfo2 submit_info = {0};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    submit_info.pNext = NULL;
-    submit_info.commandBufferInfoCount = 1;
-    submit_info.pCommandBufferInfos = &cb_submit_info;
-    submit_info.signalSemaphoreInfoCount = 1;
-    submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
-    // vkQueueSubmit2(renderer->context.device.transfer_queue, 1, &submit_info, NULL);
-    vkQueueSubmit2(renderer->context.graphics_queue, 1, &submit_info, NULL);
+    //TODO: handle the case if transfer and graphics are not the same queue
+    vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
+    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
+
 }
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index)
@@ -182,7 +210,9 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
 
     //create the texture
     Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(&renderer->context, renderer->context.graphics_command_buffer, filepath, out_texture);
+    create_texture_image(&renderer->context,
+                         &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->context.
+                             current_frame], filepath, out_texture);
 
     //increment index for next usage
     system->available_texture_indexes++;

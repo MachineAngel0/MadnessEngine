@@ -21,8 +21,7 @@ typedef enum Vulkan_Command_Buffer_State
     VULKAN_COMMAND_BUFFER_STATE_USABLE, //just allocated or reset
     VULKAN_COMMAND_BUFFER_STATE_BEGIN,
     VULKAN_COMMAND_BUFFER_STATE_END,
-    VULKAN_COMMAND_BUFFER_STATE_SUBMITTED,
-    VULKAN_COMMAND_BUFFER_STATE_IN_FLIGHT, // submitted but waiting on sync to reset/free
+    VULKAN_COMMAND_BUFFER_STATE_SUBMITTED, // waiting on synch to reset/free
 } Vulkan_Command_Buffer_State;
 
 typedef enum Vulkan_Command_Buffer_Lifetime
@@ -81,11 +80,7 @@ typedef enum Vulkan_Buffer_Type
     BUFFER_TYPE_UNIFORM,
 } Vulkan_Buffer_Type;
 
-typedef enum Vulkan_Semaphore_Submit_Type
-{
-    VULKAN_SEMAPHORE_SUBMIT_TYPE_WAIT,
-    VULKAN_SEMAPHORE_SUBMIT_TYPE_SIGNAL,
-} Vulkan_Semaphore_Submit_Type;
+
 
 typedef enum Render_Mode
 {

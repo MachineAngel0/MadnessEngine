@@ -119,7 +119,7 @@ void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image)
 
 
 void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-                                     Vulkan_Command_Buffer* command_buffer, Vulkan_Texture* out_texture)
+                                     Vulkan_Texture* out_texture)
 {
     out_texture->width = width;
     out_texture->height = width;
@@ -616,18 +616,16 @@ VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, Vk
 }
 
 
-void transition_image_layout_new(Vulkan_Command_Buffer* command_buffer,
-                                 VkImage image,
-                                 VkImageLayout oldLayout,
-                                 VkImageLayout newLayout)
+void initial_image_layout_transition(Vulkan_Command_Buffer* command_buffer,
+                                     VkImage image)
 {
     VkImageMemoryBarrier2 image_memory_barrier = {0};
     image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     image_memory_barrier.pNext = 0;
     //The first two fields specify layout transition.
     //It is possible to use VK_IMAGE_LAYOUT_UNDEFINED as oldLayout if you don't care about the existing contents of the image.
-    image_memory_barrier.oldLayout = oldLayout;
-    image_memory_barrier.newLayout = newLayout;
+    image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_memory_barrier.image = image;
     image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -638,27 +636,12 @@ void transition_image_layout_new(Vulkan_Command_Buffer* command_buffer,
     image_memory_barrier.subresourceRange.layerCount = 1;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
+    image_memory_barrier.srcAccessMask = 0;
+    image_memory_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        image_memory_barrier.srcAccessMask = 0;
-        image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-        image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else
-    {
-        FATAL("unsupported layout transition!");
-    }
 
     //fill out  pipeline info
     VkDependencyInfo dependency_info = {0};
@@ -673,6 +656,136 @@ void transition_image_layout_new(Vulkan_Command_Buffer* command_buffer,
     dependency_info.pImageMemoryBarriers = &image_memory_barrier;
 
     vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+}
+
+void second_image_layout_transition(Renderer* renderer,
+                                    Vulkan_Command_Buffer* command_buffer,
+                                    VkImage image,
+                                    Vulkan_Queue_Type source_queue, Vulkan_Queue_Type destination_queue)
+{
+    //this much match if we need a release and acquire
+    VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    VkImageLayout newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    if (vulkan_is_same_queue_family(renderer, source_queue, destination_queue))
+    {
+        VkImageMemoryBarrier2 image_memory_barrier = {0};
+        image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        image_memory_barrier.pNext = 0;
+
+        image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        image_memory_barrier.oldLayout = oldLayout;
+        image_memory_barrier.newLayout = newLayout;
+        image_memory_barrier.image = image;
+
+        image_memory_barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+
+        image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+
+        image_memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_memory_barrier.subresourceRange.baseMipLevel = 0;
+        image_memory_barrier.subresourceRange.levelCount = 1;
+        image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+        image_memory_barrier.subresourceRange.layerCount = 1;
+        image_memory_barrier.subresourceRange.layerCount = 1;
+
+        //fill out  pipeline info
+        VkDependencyInfo dependency_info = {0};
+        dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dependency_info.pNext = NULL;
+        dependency_info.dependencyFlags = 0;
+        dependency_info.memoryBarrierCount = 0;
+        dependency_info.pMemoryBarriers = NULL;
+        dependency_info.bufferMemoryBarrierCount = 0;
+        dependency_info.pBufferMemoryBarriers = 0;
+        dependency_info.imageMemoryBarrierCount = 1;
+        dependency_info.pImageMemoryBarriers = &image_memory_barrier;
+
+        vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+        return;
+    }
+
+    //different queues
+    //releasing from the transfer queue
+    VkImageMemoryBarrier2 image_release_barrier = {0};
+    image_release_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    image_release_barrier.pNext = 0;
+    image_release_barrier.srcQueueFamilyIndex = vulkan_get_queue_family_index(renderer, source_queue);
+    image_release_barrier.dstQueueFamilyIndex = vulkan_get_queue_family_index(renderer, destination_queue);
+
+    image_release_barrier.image = image;
+    image_release_barrier.oldLayout = oldLayout;
+    image_release_barrier.newLayout = newLayout;
+
+    image_release_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    image_release_barrier.dstAccessMask = VK_ACCESS_2_NONE;
+
+    image_release_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    image_release_barrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+
+    image_release_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_release_barrier.subresourceRange.baseMipLevel = 0;
+    image_release_barrier.subresourceRange.levelCount = 1;
+    image_release_barrier.subresourceRange.baseArrayLayer = 0;
+    image_release_barrier.subresourceRange.layerCount = 1;
+    image_release_barrier.subresourceRange.layerCount = 1;
+
+
+    VkDependencyInfo release_dependency_info = {0};
+    release_dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    release_dependency_info.pNext = NULL;
+    release_dependency_info.dependencyFlags = 0;
+    release_dependency_info.memoryBarrierCount = 0;
+    release_dependency_info.pMemoryBarriers = NULL;
+    release_dependency_info.bufferMemoryBarrierCount = 0;
+    release_dependency_info.pBufferMemoryBarriers = 0;
+    release_dependency_info.imageMemoryBarrierCount = 1;
+    release_dependency_info.pImageMemoryBarriers = &image_release_barrier;
+
+    vkCmdPipelineBarrier2(command_buffer->handle, &release_dependency_info);
+
+
+    //acquiring from the transfer queue and then transitioning the image
+    VkImageMemoryBarrier2 image_acquire_barrier = {0};
+    image_release_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+
+    image_acquire_barrier.srcQueueFamilyIndex = vulkan_get_queue_family_index(renderer, source_queue);
+    image_acquire_barrier.dstQueueFamilyIndex = vulkan_get_queue_family_index(renderer, destination_queue);
+
+    image_release_barrier.image = image;
+    image_release_barrier.oldLayout = oldLayout;
+    image_release_barrier.newLayout = newLayout;
+
+    image_release_barrier.srcAccessMask = VK_ACCESS_2_NONE;
+    image_release_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+
+    image_release_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+    image_release_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+
+    image_release_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_release_barrier.subresourceRange.baseMipLevel = 0;
+    image_release_barrier.subresourceRange.levelCount = 1;
+    image_release_barrier.subresourceRange.baseArrayLayer = 0;
+    image_release_barrier.subresourceRange.layerCount = 1;
+    image_release_barrier.subresourceRange.layerCount = 1;
+
+
+    VkDependencyInfo acquire_dependency_info = {0};
+    acquire_dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    acquire_dependency_info.pNext = NULL;
+    acquire_dependency_info.dependencyFlags = 0;
+    acquire_dependency_info.memoryBarrierCount = 0;
+    acquire_dependency_info.pMemoryBarriers = NULL;
+    acquire_dependency_info.bufferMemoryBarrierCount = 0;
+    acquire_dependency_info.pBufferMemoryBarriers = 0;
+    acquire_dependency_info.imageMemoryBarrierCount = 1;
+    acquire_dependency_info.pImageMemoryBarriers = &image_acquire_barrier;
+
+    vkCmdPipelineBarrier2(command_buffer->handle, &release_dependency_info);
 }
 
 
@@ -709,37 +822,19 @@ void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer bu
 
 void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
                                      Texture_GPU_Upload* texture_data,
-                                     Vulkan_Texture* out_texture,
-                                     Vulkan_Command_Buffer* command_buffer)
+                                     Vulkan_Texture* out_texture)
 {
     out_texture->width = texture_data->madness_texture->width;
     out_texture->height = texture_data->madness_texture->height;
-
-    VkDeviceSize imageSize = texture_data->madness_texture->pixels_size;
-    void* pixels = texture_data->pixel_data;
-    u32 texWidth = texture_data->madness_texture->width;
-    u32 texHeight = texture_data->madness_texture->height;
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                  &stagingBufferMemory);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(context->logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, imageSize);
-    vkUnmapMemory(context->logical_device, stagingBufferMemory);
+    out_texture->image_size = texture_data->madness_texture->pixels_size;
 
 
     //create texture image
     VkImageCreateInfo image_create_info = {0};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
     image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
-    image_create_info.extent.width = texWidth;
-    image_create_info.extent.height = texHeight;
+    image_create_info.extent.width = out_texture->width;
+    image_create_info.extent.height = out_texture->height;
     image_create_info.extent.depth = 1; // TODO: Support configurable depth.
     image_create_info.mipLevels = 4; // TODO: Support mip mapping
     image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
@@ -792,14 +887,6 @@ void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context
     VkResult result2 = vkBindImageMemory(context->logical_device, out_texture->texture_image,
                                          out_texture->texture_image_memory, 0);
     VK_CHECK(result2)
-
-
-    transition_image_layout_new(command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    buffer_to_image_copy_new(command_buffer, stagingBuffer, out_texture->texture_image,
-                             texWidth, texHeight);
-    transition_image_layout_new(command_buffer, out_texture->texture_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 
     // TODO: configurable memory offset.

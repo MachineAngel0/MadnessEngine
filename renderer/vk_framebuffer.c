@@ -52,7 +52,7 @@ void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* fra
 }
 
 
-void regenerate_framebuffer(Vulkan_Context* context, vulkan_swapchain* swapchain, Vulkan_Renderpass* renderpass)
+void regenerate_framebuffer(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Vulkan_Renderpass* renderpass)
 {
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {

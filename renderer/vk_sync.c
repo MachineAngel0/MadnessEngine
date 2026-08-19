@@ -18,38 +18,6 @@ void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags
     vkDestroyFence(renderer->context.logical_device, *fence, NULL);
 }
 
-void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context)
-{
-    //memory
-    context->queue_submit_fence = darray_create_reserve(VkFence, context->swapchain.image_count);
-
-    //NOTE: in the vulkan example, they are creating the semaphores on the fly during the frame if its null for that frame
-    context->swapchain_acquire_semaphore = darray_create_reserve(VkSemaphore, context->swapchain.image_count);
-    context->swapchain_release_semaphore = darray_create_reserve(VkSemaphore, context->swapchain.image_count);
-
-
-    //create
-    for (size_t i = 0; i < context->swapchain.image_count; i++)
-    {
-        VkFenceCreateInfo info = {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-        };
-        VK_CHECK(vkCreateFence(context->logical_device, &info, NULL, &context->queue_submit_fence[i]));
-
-
-        VkSemaphoreCreateInfo semaphoreInfo = {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
-        };
-        VK_CHECK(
-            vkCreateSemaphore(context->logical_device, &semaphoreInfo, NULL, &context->
-                swapchain_acquire_semaphore[i]));
-        VK_CHECK(
-            vkCreateSemaphore(context->logical_device, &semaphoreInfo, NULL, &context->
-                swapchain_release_semaphore[i]));
-    }
-}
-
 
 bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
 {

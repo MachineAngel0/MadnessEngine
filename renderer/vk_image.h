@@ -20,7 +20,7 @@ void vulkan_image_create(Vulkan_Context* context,
 
 
 void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-    Vulkan_Command_Buffer* command_buffer, Vulkan_Texture* out_texture);
+    Vulkan_Texture* out_texture);
 
 
 void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
@@ -59,15 +59,19 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
 
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
 
-//semaphore uploads
+//does not handle any image transitions or synchronization
 void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
                                      Texture_GPU_Upload* texture_data,
-                                     Vulkan_Texture* out_texture,
-                                     Vulkan_Command_Buffer* command_buffer);
+                                     Vulkan_Texture* out_texture);
 
 
-void transition_image_layout_new(
-    Vulkan_Command_Buffer* command_buffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+void initial_image_layout_transition(Vulkan_Command_Buffer* command_buffer,
+                                 VkImage image);
+
+void second_image_layout_transition(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
+                                 VkImage image,
+                                 Vulkan_Queue_Type source_queue,
+                                 Vulkan_Queue_Type destination_queue);
 void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer buffer,
                        VkImage image, u32 width, u32 height);
 /*TEXTURE IMAGE*/

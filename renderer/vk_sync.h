@@ -20,8 +20,7 @@ void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphor
 bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore,
                                           const u64 compare_value);
 
-//
-void sync_object_per_frame_init(Renderer* renderer, Vulkan_Context* context);
+
 
 //sketching out queue transfer stuff
 

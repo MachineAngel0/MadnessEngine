@@ -19,6 +19,6 @@ void vulkan_framebuffer_create(
 void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer);
 
 //used by the renderer
-void regenerate_framebuffer(Vulkan_Context* context, vulkan_swapchain* swapchain, Vulkan_Renderpass* renderpass);
+void regenerate_framebuffer(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Vulkan_Renderpass* renderpass);
 
 #endif
