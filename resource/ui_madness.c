@@ -1,4 +1,4 @@
-﻿#include "../resource/ui_madness.h"
+﻿#include "ui_madness.h"
 
 #include "logger.h"
 #include "stack.h"
@@ -2471,10 +2471,9 @@ void madness_ui_file_picker(String id)
     }
     MASSERT(string_state);
 
-
     if (madness_ui_button(id))
     {
-        char path[MAX_PATH];
+        char path[MADNESS_MAX_PATH];
         if (platform_open_file_dialogue(path, "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine"))
         {
             printf("Selected: %s\n", path);
@@ -2483,7 +2482,7 @@ void madness_ui_file_picker(String id)
         }
         else
         {
-            wprintf(L"FILE PICKER ERROR.\n");
+            // wprintf(L"FILE PICKER ERROR.\n");
         }
     }
 

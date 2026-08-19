@@ -129,6 +129,11 @@ bool platform_file_write_async();
 
 bool platform_file_copy(const char* source_file, char* destination_file);
 
+bool platform_create_file(const char* file_path);
+bool platform_create_directory(const char* directory_path);
+bool platform_does_file_exist(const char* file_path);
+bool platform_does_directory_exist(const char* path);
+
 
 
 // RENDERER

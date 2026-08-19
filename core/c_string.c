@@ -1,6 +1,10 @@
 ﻿#include "c_string.h"
 #include "defines.h"
-
+#include "logger.h"
+#include "asserts.h"
+#include "string.h"
+#include <stdint.h>
+#include "allocator.h"
 
 // Returns the length of the given string.
 u64 c_string_length(const char* str)

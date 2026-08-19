@@ -1,6 +1,7 @@
 ﻿#include "str.h"
 
 #include "allocator_malloc.h"
+#include "allocator.h"
 #include "c_string.h"
 
 

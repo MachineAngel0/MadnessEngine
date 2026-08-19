@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "defines.h"
-
+#include "platform.h"
 
 //NEW API
 
@@ -90,9 +90,11 @@ bool filesystem_does_file_exists(const char* file_path);
 bool filesystem_does_directory_exists(const char* directory_path);
 
 
-bool platform_create_directory(const char* directory_path);
+bool filsystem_create_file(const char* file_path);
+bool filsystem_create_directory(const char* file_path);
+bool filesystem_create_directory_recursive(const char* directory_path);
 bool platform_create_directory_recursive(const char* directory_path);
-bool platform_create_file(const char* file_path);
+
 
 bool filesystem_scan_directory(const char* directory_path);
 bool filesystem_scan_directory_recursive(const char* directory_path);

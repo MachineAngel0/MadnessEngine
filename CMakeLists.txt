@@ -57,6 +57,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
         #        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
     endif ()
     find_package(X11 REQUIRED)
+    find_package(PkgConfig REQUIRED)
 
 endif ()
 

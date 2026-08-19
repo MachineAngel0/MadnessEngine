@@ -14,6 +14,7 @@
 #include "../resource/mesh_system.h"
 #include "../resource/particle_system.h"
 #include "../resource/animation_system.h"
+#include "job_system.h"
 
 
 bool application_on_resized(const Event_Type code, String sender, String listener_inst, Event_Data context);

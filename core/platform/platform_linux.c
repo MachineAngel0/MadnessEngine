@@ -5,6 +5,10 @@
 #if MPLATFORM_LINUX
 
 
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <xcb/xcb.h>
 #include <X11/keysym.h>
 #include <X11/XKBlib.h>  // sudo apt-get install libx11-dev
@@ -57,15 +61,22 @@ static Platform_State* linux_plat_state;
 
 bool platform_startup(
     Platform_State* plat_state,
-    Input_System* input_system,
-    Event_System* event_system,
-    Platform_Config* platform_config)
+    Platform_Config platform_config)
 {
-    //set pointers needed by the platform
-    MASSERT(event_system);
-    MASSERT(input_system);
-    plat_state->event_system = event_system;
-    plat_state->input_system = input_system;
+    const char* session = getenv("XDG_SESSION_TYPE");
+    if (session && strcmp(session, "wayland") == 0)
+    {
+        INFO("USING WAYLAND")
+    }
+    else if (session && strcmp(session, "x11") == 0)
+    {
+        INFO("USING x11")
+    }
+    else
+    {
+        FATAL("UNDEFINED LINUX BACKEND TYPE");
+    }
+
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(Linux_Internal_State));
     memset(plat_state->internal_state, 0, (sizeof(Linux_Internal_State)));
@@ -128,10 +139,10 @@ bool platform_startup(
         XCB_COPY_FROM_PARENT, // depth
         state->window,
         state->screen->root, // parent
-        platform_config->start_pos_x, //x
-        platform_config->start_pos_y, //y
-        platform_config->start_width, //width
-        platform_config->start_height, //height
+        platform_config.start_pos_x, //x
+        platform_config.start_pos_y, //y
+        platform_config.start_width, //width
+        platform_config.start_height, //height
         0, // No border
         XCB_WINDOW_CLASS_INPUT_OUTPUT, //class
         state->screen->root_visual,
@@ -155,8 +166,8 @@ bool platform_startup(
         XCB_ATOM_WM_NAME,
         XCB_ATOM_STRING,
         8, // data should be viewed 8 bits at a time
-        strlen(platform_config->name),
-        platform_config->name);
+        strlen(platform_config.name),
+        platform_config.name);
 
     // Tell the server to notify when the window manager
     // attempts to destroy the window.
@@ -251,7 +262,7 @@ bool platform_pump_messages(Platform_State* plat_state)
                 xcb_keycode_t code = kb_event->detail;
                 KeySym key_sym = XkbKeycodeToKeysym(state->display, (KeyCode)code, 0, code & ShiftMask ? 1 : 0);
                 keys key = translate_keycode(key_sym);
-                input_process_key(plat_state->input_system, key, pressed);
+                input_process_key(key, pressed);
             }
             break;
         case XCB_BUTTON_PRESS:
@@ -274,12 +285,12 @@ bool platform_pump_messages(Platform_State* plat_state)
                     button = MOUSE_BUTTON_RIGHT;
                     break;
                 }
-                input_process_mouse_button(plat_state->input_system, button, pressed);
+                input_process_mouse_button(button, pressed);
             }
             break;
         case XCB_MOTION_NOTIFY:
             xcb_motion_notify_event_t* move_event = (xcb_motion_notify_event_t*)event;
-            input_process_mouse_move(plat_state->input_system, move_event->event_x, move_event->event_y);
+            input_process_mouse_move(move_event->event_x, move_event->event_y);
             break;
 
         case XCB_CONFIGURE_NOTIFY:
@@ -289,7 +300,7 @@ bool platform_pump_messages(Platform_State* plat_state)
                 Event_Data context;
                 context.data.event_data_window_resize.width = (u16)resize_event->width;
                 context.data.event_data_window_resize.height = (u16)resize_event->height;
-                event_fire(plat_state->event_system, EVENT_APP_RESIZE, STRING("LINUXPLATFORM"), context);
+                event_fire(EVENT_APP_RESIZE, STRING("LINUXPLATFORM"), context);
             }
 
         case XCB_CLIENT_MESSAGE:
@@ -311,6 +322,86 @@ bool platform_pump_messages(Platform_State* plat_state)
         free(event);
     }
     return !quit_flagged;
+}
+
+bool platform_audio_init(Platform_State* plat_state, int32_t buffer_size, int32_t samples_per_second)
+{
+}
+
+bool platform_audio_shutdown(Platform_State* plat_state)
+{
+}
+
+void* platform_reserve_memory(u64 size, bool aligned)
+{
+}
+
+bool platform_load_dynamic_library_from_handle(DLL_HANDLE handle, const char* file_name)
+{
+}
+
+File_Watch_Handle platform_register_directory_watch(const char* directory_name)
+{
+}
+
+bool platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
+{
+}
+
+bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
+{
+}
+
+bool platform_update_directory(File_Watch_Handle directory_watch_handle)
+{
+}
+
+bool platform_poll_directory_changes(File_Watch_Handle directory_watch_handle, File_Watch_Event* out_event)
+{
+}
+
+bool platform_is_directory_empty(const char* directory_path)
+{
+}
+
+bool platform_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan)
+{
+}
+
+bool platform_file_open(Madness_File_Platform* file, const char* path, File_Modes file_modes, Allocator* allocator)
+{
+}
+
+bool platform_file_close(Madness_File_Platform* file)
+{
+}
+
+bool platform_file_read(Madness_File_Platform* file)
+{
+}
+
+bool platform_file_write(Madness_File_Platform* file)
+{
+}
+
+bool platform_file_read_async()
+{
+}
+
+bool platform_file_write_async()
+{
+}
+
+void platform_get_cursor_pos(int* out_x, int* out_y)
+{
+}
+
+void platform_windows_resize(Platform_State* platform_state, int width, int height)
+{
+}
+
+void platform_copy_to_clipboard(const char* c_string)
+{
 }
 
 void* platform_allocate(u64 size, bool aligned)
@@ -444,7 +535,7 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
 File_Watch_Handle platform_register_file_watch(const char* file_name)
 {
     UNIMPLEMENTED();
-    return (File_Watch_Handle){.handle = 0, .file_name = ""};
+    return (File_Watch_Handle){.handle = 0};
 }
 
 bool platform_has_filed_changed(File_Watch_Handle file_watch_handle)
@@ -467,6 +558,102 @@ bool platform_file_copy(const char* source_file, char* new_file)
     */
 }
 
+bool platform_create_file(const char* file_path)
+{
+    // O_WRONLY writing only
+    // O_CREAT creates it, O_EXCL forces it to fail if it already exists
+    // 0644 sets default read/write permissions for the file
+    int fd = open(file_path, O_WRONLY | O_CREAT | O_EXCL, 0644);
+
+    if (fd == -1)
+    {
+        if (errno == EEXIST)
+        {
+            INFO("PLATFORM CREATE FILE: File already exists. No action taken.\n");
+            return true;
+        }
+        else
+        {
+            M_ERROR("PLATFORM CREATE FILE: Error opening file");
+            return false;
+        }
+    }
+
+    close(fd);
+    return true;
+}
+
+bool platform_create_directory(const char* directory_path)
+{
+    // 0777 grants read, write, and execute permissions to everyone (modified by umask)
+    if (mkdir(directory_path, 0777) == -1)
+    {
+        if (errno == EEXIST)
+        {
+            INFO("PLATFORM CREATE DIRECTORY: '%s' already exists.", directory_path);
+            return true;
+        }
+        else
+        {
+            // Something else went wrong
+            // https://linux.die.net/man/2/mkdir for error codes
+            // perror("Failed to create directory");
+            M_ERROR("PLATFORM CREATE DIRECTORY: Error creating directory");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool platform_does_file_exist(const char* file_path)
+{
+    // you can use access() or stat()
+    struct stat buffer;
+
+    if (stat(file_path, &buffer) != 0)
+    {
+        DEBUG("PLATFORM FILE EXISTS: [%s] does not exist.", file_path)
+        return false;
+    }
+    if (S_ISDIR(buffer.st_mode))
+    {
+        DEBUG("PLATFORM FILE EXISTS: [%s] path is a directory not a file.", file_path)
+        return false;
+    }
+    if (S_ISREG(buffer.st_mode))
+    {
+        return true;
+    }
+
+    FATAL("PLATFORM FILE EXISTS: unintended code reached");
+    return false;
+}
+
+bool platform_does_directory_exist(const char* path)
+{
+    // you can use access() or stat()
+    struct stat buffer;
+
+    if (stat(path, &buffer) != 0)
+    {
+        DEBUG("PLATFORM DIRECTORY EXISTS: [%s] does not exist.", path)
+        return false;
+    }
+    if (S_ISDIR(buffer.st_mode))
+    {
+        return true;
+    }
+    if (S_ISREG(buffer.st_mode))
+    {
+        DEBUG("PLATFORM DIRECTORY EXISTS: [%s] path is a file not a diretory.", path)
+        return false;
+    }
+
+    FATAL("PLATFORM FILE EXISTS: unintended code reached");
+    return false;
+}
+
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
 {
@@ -474,12 +661,13 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 }
 
 // Surface creation for Vulkan
-bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context)
 {
     // Simply cold-cast to the known type.
     Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
 
-    VkXcbSurfaceCreateInfoKHR create_info = {VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
+    VkXcbSurfaceCreateInfoKHR create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     create_info.connection = state->connection;
     create_info.window = state->window;
 

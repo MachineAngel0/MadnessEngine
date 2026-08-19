@@ -208,6 +208,65 @@ bool filesystem_create_file(const char* file_path)
     return false;
 }
 
+bool filesystem_does_file_exists(const char* file_path)
+{
+    return platform_does_file_exist(file_path);
+}
+
+bool filesystem_does_directory_exists(const char* directory_path)
+{
+    return platform_does_directory_exist(directory_path);
+}
+
+bool filsystem_create_directory(const char* file_path)
+{
+    return platform_create_directory(file_path);
+}
+
+bool filesystem_create_directory_recursive(const char* directory_path)
+{
+    if (directory_path == NULL || directory_path[0] == '\0')
+    {
+        return false;
+    }
+
+    size_t len = strlen(directory_path);
+    char buffer[4096];
+    if (len >= sizeof(buffer))
+    {
+        return false;
+    }
+    memcpy(buffer, directory_path, len + 1);
+
+    size_t start = 0;
+
+    // Skip drive letter prefix on Windows-style paths, e.g. "C:\" or "C:/"
+    if (len >= 2 && buffer[1] == ':')
+    {
+        start = 2;
+    }
+
+    for (size_t i = start; i < len; i += 1)
+    {
+        if (buffer[i] == '/' || buffer[i] == '\\')
+        {
+            if (i == 0) { continue; }  // leading separator, nothing to create yet
+
+            char saved = buffer[i];
+            buffer[i] = '\0';
+
+            if (!platform_create_directory(buffer))
+            {
+                return false;
+            }
+
+            buffer[i] = saved;
+        }
+    }
+
+    return platform_create_directory(buffer);
+}
+
 
 Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
                                       const char* relative_asset_path)

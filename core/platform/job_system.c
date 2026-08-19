@@ -1,6 +1,6 @@
 ﻿#include "job_system.h"
 #include "thread_madness.h"
-
+#include "logger.h"
 
 static Job_System* job_system;
 
@@ -32,7 +32,7 @@ u32 job_thread_run(void* data)
 
 
         //wait until a job is available
-        if (!semaphore_wait(&job_system->general_work_semaphore, INFINITE))
+        if (!semaphore_wait(&job_system->general_work_semaphore, UINT64_MAX))
         {
             M_ERROR("Failed waiting on job semaphore");
             break;
@@ -91,7 +91,7 @@ u32 job_thread_run_resource(void* data)
 
 
         //wait until a job is available
-        if (!semaphore_wait(&job_system->general_resource_semaphore, INFINITE))
+        if (!semaphore_wait(&job_system->general_resource_semaphore, UINT64_MAX))
         {
             M_ERROR("Failed waiting on job semaphore");
             break;
@@ -170,6 +170,18 @@ bool job_system_init(Memory_System* memory_system)
         FATAL("OS ERROR CANNOT CREATE SEMAPHORE");
         MASSERT_FALSE()
     }
+    if (!mutex_create(&job_system->general_resource_mutex))
+    {
+        FATAL("OS ERROR CANNOT CREATE MUTEX");
+        MASSERT_FALSE()
+    }
+    if (!semaphore_create(&job_system->general_resource_semaphore, 1024, 0))
+    {
+        FATAL("OS ERROR CANNOT CREATE SEMAPHORE");
+        MASSERT_FALSE()
+    }
+
+
 
 
     //large amount can lower it later

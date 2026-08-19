@@ -608,8 +608,11 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
     vulkan_context->memory2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
 
     //scan of each device
+    DEBUG("Number of Physical Devices: %d", physical_device_count);
+
     for (u32 i = 0; i < physical_device_count; i++)
     {
+        DEBUG("Physical Devices# 1: %d", i);
         vkGetPhysicalDeviceProperties2(physical_devices[i], &vulkan_context->properties2);
         vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->features);
         // vkGetPhysicalDeviceFeatures2(physical_devices[i], &vulkan_context->features);
@@ -619,9 +622,6 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
         switch (vulkan_context->properties.deviceType)
         {
         default:
-        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-            INFO("GPU type is Unknown.");
-            break;
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
             INFO("GPU type is Integrated.");
             break;
@@ -633,6 +633,9 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
             break;
         case VK_PHYSICAL_DEVICE_TYPE_CPU:
             INFO("GPU type is CPU.");
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+            INFO("GPU type is Unknown.");
             break;
         }
         INFO(
@@ -715,6 +718,10 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
             }
         }
     }
+
+
+
+
 }
 
 

@@ -57,7 +57,9 @@ void asset_converter_create_directory_for_engine_asset(String_Builder* str_build
     string_builder_strip_extension(str_builder_output_path);
     string_builder_strip_path_from_end(str_builder_output_path);
     string_builder_print(str_builder_output_path);
-    platform_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
+
+    //TODO: test
+    filesystem_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
 }
 
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
