@@ -959,6 +959,7 @@ typedef struct vulkan_context
     // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
 
     VkPhysicalDeviceFeatures features;
+    VkPhysicalDeviceFeatures2 features2;
     VkPhysicalDeviceMemoryProperties memory;
     VkPhysicalDeviceMemoryProperties2 memory2;
     VkQueueFamilyProperties* queue_families;

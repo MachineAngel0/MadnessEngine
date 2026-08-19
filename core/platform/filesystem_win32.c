@@ -454,7 +454,7 @@ bool platform_has_directory_changed(File_Watch_Handle directory_watch_handle)
 }
 
 
-bool filesystem_does_file_exists(const char* file_path)
+bool platform_does_file_exist(const char* file_path)
 {
     DWORD attrib = GetFileAttributesA(file_path);
 
@@ -462,7 +462,7 @@ bool filesystem_does_file_exists(const char* file_path)
     return (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-bool filesystem_does_directory_exists(const char* directory_path)
+bool platform_does_directory_exist(const char* directory_path)
 {
     DWORD dwAttrib = GetFileAttributesA(directory_path);
 

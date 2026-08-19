@@ -232,6 +232,7 @@ bool semaphore_signal(Madness_Semaphore* semaphore)
 {
     if (!semaphore || !semaphore->data)
     {
+        MASSERT_FALSE()
         return false;
     }
     // W: release/Increment
@@ -250,6 +251,7 @@ bool semaphore_wait(Madness_Semaphore* semaphore, u64 timeout_ms)
 {
     if (!semaphore || !semaphore->data)
     {
+        MASSERT_FALSE()
         return false;
     }
 

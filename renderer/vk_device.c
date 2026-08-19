@@ -582,6 +582,13 @@ bool vulkan_device_destroy(Vulkan_Context* vulkan_context)
 
 bool vulkan_device_create2(Vulkan_Context* vulkan_context)
 {
+    //process for physical device
+    // scan all our physical devices and get all of them which support our requirements
+    // from there scan throught and try to get a dedicated queue family for graphics, tranfer, and compute, the most gets the highest score and we selected that one
+    // and in general set all the information needed
+
+
+
     //once for the count
     //twice for the devices
 
@@ -597,7 +604,7 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
 
     // TODO: These requirements should probably be driven by engine configuration.
 
-    Vulkan_Physical_Device_Requirements requirements;
+    Vulkan_Physical_Device_Requirements requirements = {0};
     requirements.graphics = true;
     requirements.present = true;
     requirements.transfer = true;
@@ -606,20 +613,24 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
 
     vulkan_context->properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     vulkan_context->memory2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+    vulkan_context->features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
-    //scan of each device
+    //scan each device and return a list of all the ones that supports everything we want
+    //
+
     DEBUG("Number of Physical Devices: %d", physical_device_count);
 
     for (u32 i = 0; i < physical_device_count; i++)
     {
         DEBUG("Physical Devices# 1: %d", i);
-        vkGetPhysicalDeviceProperties2(physical_devices[i], &vulkan_context->properties2);
-        vkGetPhysicalDeviceFeatures(physical_devices[i], &vulkan_context->features);
-        // vkGetPhysicalDeviceFeatures2(physical_devices[i], &vulkan_context->features);
-        vkGetPhysicalDeviceMemoryProperties2(physical_devices[i], &vulkan_context->memory2);
-        INFO("device info: '%s'.", &vulkan_context->properties.deviceName);
+        VkPhysicalDevice current_device = physical_devices[i];
+
+        vkGetPhysicalDeviceProperties2(current_device, &vulkan_context->properties2);
+        vkGetPhysicalDeviceFeatures2(current_device, &vulkan_context->features2);
+        vkGetPhysicalDeviceMemoryProperties2(current_device, &vulkan_context->memory2);
+        INFO("device info: '%s'.", &vulkan_context->properties2.properties.deviceName);
         // GPU type, etc.
-        switch (vulkan_context->properties.deviceType)
+        switch (vulkan_context->properties2.properties.deviceType)
         {
         default:
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
@@ -665,6 +676,16 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
             }
         }
 
+        //check for sampler anisotropy
+        if (vulkan_context->features2.features.samplerAnisotropy)
+        {
+            INFO("DEVICE SUPPORTS SAMPLER ANISOTRPY")
+        }
+        else
+        {
+            INFO("DEVICE DOES NOT SUPPORT SAMPLER ANISOTRPY")
+        }
+
         u32 queue_family_count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, 0);
         vulkan_context->queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
@@ -680,7 +701,7 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
             }
             else
             {
-                INFO("NO COMPUTE SUPPORT")
+                INFO("NO Graphics SUPPORT")
             }
 
             // Compute queue?
@@ -716,6 +737,67 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
             {
                 INFO("NO PRESENT SUPPORT")
             }
+
+            //scan for device extensions we need
+            u32 available_extension_count = 0;
+            VkExtensionProperties* available_extensions = 0;
+            VK_CHECK(vkEnumerateDeviceExtensionProperties( current_device, 0,
+                &available_extension_count, 0));
+            available_extensions = darray_create_reserve(VkExtensionProperties, available_extension_count);
+            VK_CHECK(vkEnumerateDeviceExtensionProperties(
+                current_device,
+                0,
+                &available_extension_count,
+                available_extensions));
+
+            requirements.device_extension_names = darray_create(const char*);
+            darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+            u32 required_extension_count = darray_get_size(requirements.device_extension_names);
+            for (u32 ext_index = 0; ext_index < required_extension_count; ++ext_index)
+            {
+                bool found = false;
+                for (u32 j = 0; j < available_extension_count; ++j)
+                {
+                    if (strcmp(requirements.device_extension_names[ext_index],
+                               available_extensions[j].extensionName) == 0)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    INFO("Required extension not found: '%s', skipping device.",
+                         requirements.device_extension_names[ext_index]);
+                    darray_free(available_extensions);
+                    return false;
+                }
+            }
+
+
+
+            // Query swapchain support.
+            vulkan_device_query_swapchain_support(
+                current_device,
+                vulkan_context->surface,
+                &vulkan_context->swapchain_capabilities);
+
+            if (vulkan_context->swapchain_capabilities.format_count < 1 || vulkan_context->swapchain_capabilities.present_mode_count < 1)
+            {
+                if (vulkan_context->swapchain_capabilities.formats)
+                {
+                    free(vulkan_context->swapchain_capabilities.formats);
+                }
+                if (vulkan_context->swapchain_capabilities.present_modes)
+                {
+                    free(vulkan_context->swapchain_capabilities.present_modes);
+                }
+                INFO("Required swapchain support not present, skipping device.");
+                return false;
+            }
+
+
         }
     }
 
