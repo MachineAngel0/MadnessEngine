@@ -674,7 +674,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
     VkResult result = vkCreateXcbSurfaceKHR(
         renderer->instance,
         &create_info,
-        renderer->allocator,
+        renderer->vulkan_allocator,
         &state->surface);
     if (result != VK_SUCCESS)
     {
@@ -682,7 +682,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
         return false;
     }
 
-    vulkan_context->surface = state->surface;
+    renderer->surface = state->surface;
     return true;
 }
 

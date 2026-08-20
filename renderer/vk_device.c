@@ -626,21 +626,21 @@ bool vulkan_device_create2(Renderer* renderer)
     renderer->present_queue_index = selected_device_heuristic.present_queue;
 
     vulkan_device_query_swapchain_support(renderer->physical_device, renderer->surface,
-                                           &renderer->swapchain_capabilities);
+                                          &renderer->swapchain_capabilities);
 
     vulkan_physical_device_get_supported_features(renderer->physical_device, &renderer->features2);
 
     renderer->properties2 = (VkPhysicalDeviceProperties2){
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = 0,
-        .properties = 0
+        .properties = {0},
     };
     vkGetPhysicalDeviceProperties2(renderer->physical_device, &renderer->properties2);
 
     renderer->physical_device_memory = (VkPhysicalDeviceMemoryProperties2){
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
         .pNext = 0,
-        .memoryProperties = 0
+        .memoryProperties = {0},
     };
     vkGetPhysicalDeviceMemoryProperties2(renderer->physical_device, &renderer->physical_device_memory);
 
@@ -769,7 +769,7 @@ bool vulkan_device_create2(Renderer* renderer)
         .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
-        .bufferDeviceAddressMultiDevice = VK_TRUE,
+        // .bufferDeviceAddressMultiDevice = VK_TRUE,
         .drawIndirectCount = VK_TRUE,
         .timelineSemaphore = VK_TRUE,
         .separateDepthStencilLayouts = VK_TRUE,
@@ -815,11 +815,12 @@ bool vulkan_device_create2(Renderer* renderer)
 
 
     // Create the device.
-    VK_CHECK(vkCreateDevice(
+    VkResult device_create_result = vkCreateDevice(
         renderer->physical_device,
         &device_create_info,
         renderer->vulkan_allocator,
-        &renderer->logical_device));
+        &renderer->logical_device);
+    VK_CHECK(device_create_result);
 
     INFO("Logical device created.");
 
@@ -954,7 +955,6 @@ bool vulkan_device_destroy2(Renderer* renderer)
      */
 
     return true;
-
 }
 
 
@@ -1315,7 +1315,6 @@ bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, 
     //device meets all our requirements
     return true;
 }
-
 
 
 void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
