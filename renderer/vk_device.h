@@ -28,9 +28,9 @@
 bool get_vulkan_api_version(uint32_t* apiVersion, uint32_t* variant,
                             uint32_t* major, uint32_t* minor, uint32_t* patch);
 
-bool vulkan_instance_create(Vulkan_Context* vulkan_context);
+bool vulkan_instance_create(Vulkan_Context* vulkan_context, Renderer* renderer);
 
-bool vulkan_instance_destroy(Vulkan_Context* vulkan_context);
+bool vulkan_instance_destroy(Vulkan_Context* vulkan_context, Renderer* renderer);
 
 /*DEBUG MESSAGES/Validation Layers*/
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -64,7 +64,7 @@ void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic*
 void vulkan_device_query_swapchain_support(
     VkPhysicalDevice physical_device,
     VkSurfaceKHR surface,
-    vulkan_swapchain_capabilities_info* out_support_info);
+    Vulkan_Swapchain_Capabilities_Info* out_support_info);
 
 /*get depth format from device*/
 bool vulkan_device_detect_depth_stencil_format(Renderer* renderer);

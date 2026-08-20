@@ -52,7 +52,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
 void buffer_system_frame_start(Renderer* renderer)
 {
     //rn just clears the staging buffer
-    u32 current_frame = renderer->context.current_frame;
+    u32 current_frame = renderer->current_frame;
 
     //TODO: gotta schedule this with the queue submit
     /*vulkan_fence_wait(&renderer->context,
@@ -96,7 +96,7 @@ bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUs
     //bufferInfo.flags;
 
     VK_CHECK(
-        vkCreateBuffer(renderer->logical_device, &buffer_create_info, vulkan_context->allocator, buffer));
+        vkCreateBuffer(renderer->logical_device, &buffer_create_info, renderer->vulkan_allocator, buffer));
 
     //finding memory size needed for the buffer
     VkMemoryRequirements memory_requirements;
@@ -338,7 +338,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
 
 
         // Create a host-visible buffer to copy the vertex data to (staging buffer)
-        VkResult buffer_result = vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator,
+        VkResult buffer_result = vkCreateBuffer(device, &out_buffer_create_info, renderer->vulkan_allocator,
                                                 &buffer_in_use->handle);
         VK_CHECK(buffer_result)
         vkGetBufferMemoryRequirements(device, buffer_in_use->handle, &memReqs);
@@ -364,7 +364,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
                                                     mem_properties, renderer);
 
-        VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &buffer_in_use->memory));
+        VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->vulkan_allocator, &buffer_in_use->memory));
         VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
 
         //host visible should be mapped to a specific region of memory
@@ -463,7 +463,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     }
 
     // Create a host-visible buffer to copy the vertex data to (staging buffer)
-    VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->context.allocator, &out_buffer->handle));
+    VK_CHECK(vkCreateBuffer(device, &out_buffer_create_info, renderer->vulkan_allocator, &out_buffer->handle));
     vkGetBufferMemoryRequirements(device, out_buffer->handle, &memReqs);
     memAlloc.allocationSize = memReqs.size;
 
@@ -484,7 +484,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
                                                 mem_properties, renderer);
 
-    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &out_buffer->memory));
+    VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->vulkan_allocator, &out_buffer->memory));
     VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
 
     //host visible should be mapped to a specific region of memory
@@ -511,7 +511,7 @@ Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle
     //get the index plus the current frame number
     if (buffer_handle.is_per_frame)
     {
-        return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->context.current_frame];
+        return &renderer->buffer_system->buffers[buffer_handle.handle + renderer->current_frame];
     }
     return &renderer->buffer_system->buffers[buffer_handle.handle];
 }
@@ -612,7 +612,7 @@ void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffe
     VkFenceCreateInfo fenceCI = {0};
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     VkFence fence;
-    VK_CHECK(vkCreateFence(device, &fenceCI, renderer->context.allocator, &fence));
+    VK_CHECK(vkCreateFence(device, &fenceCI, renderer->vulkan_allocator, &fence));
     // Submit copies to the queue
     VK_CHECK(vkQueueSubmit(renderer->graphics_queue, 1, &submitInfo, fence));
     // Wait for the fence to signal that command buffer has finished executing
@@ -721,8 +721,7 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->context.
-        current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->current_frame];
 
 
     //make sure its a staging buffer
@@ -776,8 +775,7 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(R
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->context.
-        current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->current_frame];
 
 
     //make sure its a staging buffer

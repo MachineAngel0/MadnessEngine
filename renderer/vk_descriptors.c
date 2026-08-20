@@ -71,7 +71,7 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
     // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
     VkResult bindless_result = vkCreateDescriptorPool(renderer->logical_device, &bindless_pool_info,
-                                                      renderer->context.allocator,
+                                                      renderer->vulkan_allocator,
                                                       &descriptor_system->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
 
@@ -384,8 +384,8 @@ void create_bindless_uniform_buffer_descriptor_set(Renderer* renderer,
                                                    vulkan_bindless_descriptors* uniform_descriptors)
 {
     uniform_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
-    uniform_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
+        VkDescriptorSet, renderer->max_frames_in_flight);
+    uniform_descriptors->descriptor_set_count = (u32)renderer->max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.
@@ -445,8 +445,8 @@ void create_bindless_storage_buffer_descriptor_set(Renderer* renderer,
                                                    vulkan_bindless_descriptors* storage_descriptors)
 {
     storage_descriptors->descriptor_sets = darray_create_reserve(
-        VkDescriptorSet, renderer->context.swapchain.max_frames_in_flight);
-    storage_descriptors->descriptor_set_count = (u32)renderer->context.swapchain.max_frames_in_flight;
+        VkDescriptorSet, renderer->max_frames_in_flight);
+    storage_descriptors->descriptor_set_count = (u32)renderer->max_frames_in_flight;
 
     // Descriptor set layouts define the interface between our application and the shader
     // Basically connects the different shader stages to descriptors for binding uniform buffers, image samplers, etc.

@@ -77,7 +77,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     camera_init(&renderer->main_camera);
-    vk_context->is_init = false;
+    renderer->is_init = false;
     // vulkan_context vulkan_context;
 
     //get the size for the default window from the app config
@@ -95,20 +95,20 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->mode = RENDER_MODE_NONE;
 
     //create the instance
-    if (!vulkan_instance_create(vk_context))
+    if (!vulkan_instance_create(vk_context, renderer))
     {
         M_ERROR("Failed to create vulkan instance!");
         return false;
     }
     // get surface from the platform layer, needed before device creation
-    if (!platform_create_vulkan_surface(platform_state, vk_context))
+    if (!platform_create_vulkan_surface(platform_state, vk_context, renderer))
     {
         M_ERROR("Failed to find vulkan surface from platform!");
         return false;
     }
 
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
-    vk_context->is_init = true;
+    renderer->is_init = true;
 
 
     // Device creation
@@ -132,6 +132,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     }
 
 
+    //NOTE: semaphores must be per swapchain image, fence is per frame in flight
+    renderer->current_frame = 0;
+    renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT;
+
     // Swapchain
     vulkan_swapchain_create(
         renderer,
@@ -152,15 +156,12 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass, renderer);
 
     //SHADOW PASS TEXTURE
-    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.depth_format,
+    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->depth_format,
                                     &renderer->shadowpass_texture, renderer);
 
     // Create command buffers.
     renderer->queue_system = vulkan_queue_system_init(renderer);
 
-
-    //NOTE: semaphores must be per swapchain image
-    vk_context->current_frame = 0;
 
 
     // Create Descriptor Pool
@@ -169,7 +170,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     //BUFFER SYSTEM
     renderer->buffer_system = buffer_system_init(renderer,
-                                                 renderer->context.swapchain.max_frames_in_flight);
+                                                 renderer->max_frames_in_flight);
 
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
@@ -238,7 +239,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
     // Wait for the execution of the current frame to complete on the cpu. The fence being free will allow this one to move on.
-    vulkan_queue_system_graphics_fence_wait(renderer, renderer->context.current_frame);
+    vulkan_queue_system_graphics_fence_wait(renderer, renderer->current_frame);
 
 
     /* Acquire an image from the swap chain */
@@ -261,7 +262,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Begin recording commands.
     Vulkan_Command_Buffer* graphics_command_buffer = &renderer->queue_system->graphics_render_queue.
-                                                                graphics_command_buffer[vk_context->current_frame];
+                                                                graphics_command_buffer[renderer->current_frame];
 
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
     vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
@@ -637,7 +638,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vulkan_command_buffer_end(graphics_command_buffer);
 
 
-    vulkan_queue_graphics_frame_submit(renderer, vk_context->current_frame, image_index);
+    vulkan_queue_graphics_frame_submit(renderer, renderer->current_frame, image_index);
 
 
     // Give the image back to the swapchain.
@@ -651,7 +652,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     // Increment (and loop) the frame index.
-    vk_context->current_frame = (vk_context->current_frame + 1) % vk_context->swapchain.max_frames_in_flight;
+    renderer->current_frame = (renderer->current_frame + 1) % renderer->max_frames_in_flight;
 }
 
 
@@ -693,21 +694,21 @@ void renderer_shutdown(Renderer* renderer)
     DEBUG("Destroying Vulkan surface...");
     if (vk_context->surface)
     {
-        vkDestroySurfaceKHR(vk_context->instance, vk_context->surface, vk_context->allocator);
+        vkDestroySurfaceKHR(renderer->instance, vk_context->surface, renderer->vulkan_allocator);
         vk_context->surface = 0;
     }
 
     DEBUG("Destroying Vulkan debugger...");
-    if (vk_context->debug_messenger)
+    if (renderer->debug_messenger)
     {
         PFN_vkDestroyDebugUtilsMessengerEXT func =
             (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-                vk_context->instance, "vkDestroyDebugUtilsMessengerEXT");
-        func(vk_context->instance, vk_context->debug_messenger, vk_context->allocator);
+                renderer->instance, "vkDestroyDebugUtilsMessengerEXT");
+        func(renderer->instance, renderer->debug_messenger, renderer->vulkan_allocator);
     }
 
     DEBUG("Destroying Vulkan instance...");
-    vkDestroyInstance(vk_context->instance, vk_context->allocator);
+    vkDestroyInstance(renderer->instance, renderer->vulkan_allocator);
 
 
     INFO("RENDERER SHUTDOWN");
@@ -721,7 +722,7 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
     Vulkan_Context* vk_context = &renderer->context;
 
 
-    if (!vk_context->is_init)
+    if (!renderer->is_init)
     {
         INFO("cant resize window yet, not initialized");
         return;

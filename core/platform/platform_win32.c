@@ -550,7 +550,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
 }
 
-bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context, Renderer* renderer)
 {
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 
@@ -562,8 +562,8 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* 
     create_info.hinstance = state->h_instance;
     create_info.hwnd = state->hwnd;
 
-    VkResult result = vkCreateWin32SurfaceKHR(vulkan_context->instance, &create_info,
-                                              vulkan_context->allocator, &state->surface);
+    VkResult result = vkCreateWin32SurfaceKHR(renderer->instance, &create_info,
+                                              renderer->vulkan_allocator, &state->surface);
     if (result != VK_SUCCESS)
     {
         FATAL("Vulkan surface creation failed.");

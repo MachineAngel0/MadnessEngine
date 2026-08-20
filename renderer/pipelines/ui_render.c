@@ -113,8 +113,8 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -124,8 +124,8 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
 
     PC_UI pc_ui = {
         renderer->buffer_system->global_ubo_handle.handle,

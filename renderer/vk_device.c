@@ -25,9 +25,9 @@ bool get_vulkan_api_version(u32* apiVersion,
     return false;
 }
 
-bool vulkan_instance_create(Vulkan_Context* vulkan_context)
+bool vulkan_instance_create(Vulkan_Context* vulkan_context, Renderer* renderer)
 {
-    vulkan_context->allocator = 0;
+    renderer->vulkan_allocator = 0;
 
     u32 apiVersion;
     u32 variant;
@@ -173,7 +173,7 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
         const VkAllocationCallbacks*                pAllocator,
         VkInstance*                                 pInstance);
    */
-    VK_CHECK(vkCreateInstance(&create_info, vulkan_context->allocator, &vulkan_context->instance));
+    VK_CHECK(vkCreateInstance(&create_info, renderer->vulkan_allocator, &renderer->instance));
 
     //create the debugger
     if (app_is_debug_build())
@@ -195,11 +195,11 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
 
         //loading the function pointer
         PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-            vulkan_context->instance, "vkCreateDebugUtilsMessengerEXT");
+            renderer->instance, "vkCreateDebugUtilsMessengerEXT");
         MASSERT_MSG(func, "Failed to create debug messenger!");
         {
             //SAME THING: func == vkCreateDebugUtilsMessengerEXT
-            VK_CHECK(func(vulkan_context->instance, &debug_create_info, NULL, &vulkan_context->debug_messenger));
+            VK_CHECK(func(renderer->instance, &debug_create_info, NULL, &renderer->debug_messenger));
         }
         DEBUG("VULKAN DEBUGGER CREATED");
     }
@@ -236,16 +236,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
     return VK_FALSE;
 }
 
-bool vulkan_instance_destroy(Vulkan_Context* vulkan_context)
+bool vulkan_instance_destroy(Vulkan_Context* vulkan_context, Renderer* renderer)
 {
     INFO("VULKAN DESTROYING DEBUGGER");
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        vulkan_context->instance, "vkDestroyDebugUtilsMessengerEXT");
+        renderer->instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != NULL)
     {
-        func(vulkan_context->instance, vulkan_context->debug_messenger, vulkan_context->allocator);
+        func(renderer->instance, renderer->debug_messenger, renderer->vulkan_allocator);
     }
-    vkDestroyInstance(vulkan_context->instance, vulkan_context->allocator);
+    vkDestroyInstance(renderer->instance, renderer->vulkan_allocator);
     INFO("VULKAN INSTANCED DESTROYED");
     return true;
 }
@@ -478,7 +478,7 @@ bool vulkan_device_create2(Renderer* renderer)
     //
 
     u32 physical_device_count = 0;
-    vkEnumeratePhysicalDevices(renderer->context.instance, &physical_device_count, NULL);
+    vkEnumeratePhysicalDevices(renderer->instance, &physical_device_count, NULL);
     if (physical_device_count == 0)
     {
         FATAL("No devices which support Vulkan were found.");
@@ -486,7 +486,7 @@ bool vulkan_device_create2(Renderer* renderer)
     }
     //keep this allocated until the renderer free's it
     VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
-    VK_CHECK(vkEnumeratePhysicalDevices(renderer->context.instance, &physical_device_count, physical_devices));
+    VK_CHECK(vkEnumeratePhysicalDevices(renderer->instance, &physical_device_count, physical_devices));
 
 
     ARRAY_TYPE(VkPhysicalDevice)* valid_physical_device = array_create(Vulkan_Physical_Device_Suitable,
@@ -1316,7 +1316,7 @@ bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, 
 
 
 void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkSurfaceKHR surface,
-                                           vulkan_swapchain_capabilities_info* out_support_info)
+                                           Vulkan_Swapchain_Capabilities_Info* out_support_info)
 {
     // Surface capabilities
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -1385,12 +1385,12 @@ bool vulkan_device_detect_depth_format(Renderer* renderer)
 
         if ((format_properties.linearTilingFeatures & flags) == flags)
         {
-            renderer->context.depth_format = candidates[i];
+            renderer->depth_format = candidates[i];
             return true;
         }
         if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
-            renderer->context.depth_format = candidates[i];
+            renderer->depth_format = candidates[i];
             return true;
         }
     }
@@ -1419,12 +1419,12 @@ bool vulkan_device_detect_depth_stencil_format(Renderer* renderer)
 
         if ((format_properties.linearTilingFeatures & flags) == flags)
         {
-            renderer->context.depth_format = candidates[i];
+            renderer->depth_format = candidates[i];
             return true;
         }
         else if ((format_properties.optimalTilingFeatures & flags) == flags)
         {
-            renderer->context.depth_format = candidates[i];
+            renderer->depth_format = candidates[i];
             return true;
         }
     }

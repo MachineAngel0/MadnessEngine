@@ -220,8 +220,8 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
 
     //used to send info to the vertex/fragment shader, like in uniform buffers, to change shader behavior
@@ -498,8 +498,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -759,8 +759,8 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
 
     //used to send info to the vertex/fragment shader, like in uniform buffers, to change shader behavior

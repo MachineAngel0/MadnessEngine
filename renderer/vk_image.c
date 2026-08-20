@@ -31,7 +31,7 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
             texture_image));
 
 
@@ -52,7 +52,7 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, context->allocator, &out_texture->
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator, &out_texture->
             texture_image_memory
         ));
 
@@ -87,7 +87,7 @@ void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
     view_create_info.subresourceRange.layerCount = 1;
 
     VK_CHECK(
-        vkCreateImageView(renderer->logical_device, &view_create_info, context->allocator, &texture->
+        vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vulkan_allocator, &texture->
             texture_image_view));
 }
 
@@ -96,24 +96,24 @@ void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image, Rendere
 {
     if (image->texture_image_view)
     {
-        vkDestroyImageView(renderer->logical_device, image->texture_image_view, context->allocator);
+        vkDestroyImageView(renderer->logical_device, image->texture_image_view, renderer->vulkan_allocator);
         image->texture_image_view = 0;
     }
 
     if (image->texture_image_memory)
     {
-        vkFreeMemory(renderer->logical_device, image->texture_image_memory, context->allocator);
+        vkFreeMemory(renderer->logical_device, image->texture_image_memory, renderer->vulkan_allocator);
         image->texture_image_memory = 0;
     }
 
     if (image->texture_image)
     {
-        vkDestroyImage(renderer->logical_device, image->texture_image, context->allocator);
+        vkDestroyImage(renderer->logical_device, image->texture_image, renderer->vulkan_allocator);
         image->texture_image = 0;
     }
     if (image->texture_sampler)
     {
-        vkDestroySampler(renderer->logical_device, image->texture_sampler, context->allocator);
+        vkDestroySampler(renderer->logical_device, image->texture_sampler, renderer->vulkan_allocator);
     }
 }
 
@@ -161,7 +161,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
-    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info, context->allocator,
+    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator,
                                                  &out_texture->texture_image);
     VK_CHECK(image_create_result);
 
@@ -184,7 +184,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, context->allocator, &out_texture->
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator, &out_texture->
             texture_image_memory
         ));
 
@@ -275,7 +275,7 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
             texture_image));
 
 
@@ -296,7 +296,7 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, context->allocator,
+    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator,
                                         &out_texture->texture_image_memory);
     VK_CHECK(result1);
     // Bind the memory
@@ -862,7 +862,7 @@ void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, context->allocator, &out_texture->
+        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
             texture_image));
 
 
@@ -883,7 +883,7 @@ void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context
     VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, context->allocator,
+    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator,
                                         &out_texture->texture_image_memory);
     VK_CHECK(result1);
     // Bind the memory

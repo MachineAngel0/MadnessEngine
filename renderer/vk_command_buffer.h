@@ -96,6 +96,10 @@ s32 vulkan_get_queue_family_index(Renderer* renderer,
     case VULKAN_QUEUE_TYPE_COMPUTE:
         return renderer->compute_queue_index;
     }
+
+    MASSERT_FALSE();
+    return -1;
+
 }
 
 bool vulkan_is_same_queue_family(Renderer* renderer,

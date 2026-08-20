@@ -344,8 +344,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -584,8 +584,8 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 0; // set to 0 here as we are not using color info
     pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
-    pipeline_rendering_create_info.depthAttachmentFormat = renderer->context.depth_format;
-    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->context.depth_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
+    pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
 
     VkGraphicsPipelineCreateInfo graphics_pipeline_info = {0};
@@ -646,9 +646,9 @@ void vulkan_pipeline_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pi
         return;
     }
 
-    vkDestroyPipelineLayout(renderer->logical_device, pipeline->pipeline_layout, context->allocator);
+    vkDestroyPipelineLayout(renderer->logical_device, pipeline->pipeline_layout, renderer->vulkan_allocator);
     pipeline->pipeline_layout = 0;
-    vkDestroyPipeline(renderer->logical_device, pipeline->handle, context->allocator);
+    vkDestroyPipeline(renderer->logical_device, pipeline->handle, renderer->vulkan_allocator);
     pipeline->handle = 0;
 }
 
@@ -740,7 +740,7 @@ vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
     VkResult result = vkCreatePipelineCache(
         renderer->logical_device,
         &pipeline_cache_create_info,
-        renderer->context.allocator,
+        renderer->vulkan_allocator,
         &pipeline_info->handle);
 
     VK_CHECK(result)

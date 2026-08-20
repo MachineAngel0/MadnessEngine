@@ -95,7 +95,6 @@ typedef struct Vulkan_Swapchain
 {
     //also contains VKformat
     VkSurfaceFormatKHR surface_format;
-    u8 max_frames_in_flight;
     VkSwapchainKHR swapchain_handle;
 
     u32 image_count;
@@ -113,16 +112,17 @@ typedef struct vulkan_swapchain_support_info
 {
     VkSurfaceCapabilitiesKHR capabilities;
     u32 format_count;
-    VkSurfaceFormatKHR* formats;
+    VkSurfaceFormatKHR* formats; //darray
     u32 present_mode_count;
-    VkPresentModeKHR* present_modes;
-} vulkan_swapchain_capabilities_info;
+    VkPresentModeKHR* present_modes; //darray
+} Vulkan_Swapchain_Capabilities_Info;
 
 
-typedef struct Vulkan_Physical_Device_Suitable{
+typedef struct Vulkan_Physical_Device_Suitable
+{
     VkPhysicalDevice physical_device;
     u32 physical_device_index;
-}Vulkan_Physical_Device_Suitable;
+} Vulkan_Physical_Device_Suitable;
 
 
 typedef struct Vulkan_Physical_Device_Heuristic
@@ -139,7 +139,7 @@ typedef struct Vulkan_Physical_Device_Heuristic
     s32 present_queue;
 
     s32 score;
-}Vulkan_Physical_Device_Heuristic;
+} Vulkan_Physical_Device_Heuristic;
 
 
 typedef struct vulkan_physical_device_requirements
@@ -829,7 +829,6 @@ typedef struct Vulkan_Compute_Queue
     u32 wait_semaphore_count;
 
 
-
     /* NOTE: not gonna support async rn because i dont need it
     //aync commands
     Vulkan_Command_Buffer async_command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
@@ -881,11 +880,6 @@ typedef struct Vulkan_Graphics_Queue
     //but it makes sense that the command buffers hold onto the info,
     //and queue just gather them up
     // VkSubmitInfo2 submit_info;
-
-
-
-
-
 } Vulkan_Graphics_Queue;
 
 
@@ -931,24 +925,11 @@ typedef struct Vulkan_Queue_System
     ring_queue* queue_ownership_change_transfer_to_graphics;
     ring_queue* queue_ownership_change_transfer_to_compute;
     ring_queue* queue_ownership_change_compute_to_graphics;
-
-
 } Vulkan_Queue_System;
 
 
 typedef struct vulkan_context
 {
-    bool is_init;
-
-    //Instance
-    VkInstance instance;
-
-    //Validation Layer
-    VkAllocationCallbacks* allocator;
-    VkDebugUtilsMessengerEXT debug_messenger;
-
-
-
     //Surface
     VkSurfaceKHR surface;
     // The framebuffer's current width and height.
@@ -959,16 +940,11 @@ typedef struct vulkan_context
     u32 framebuffer_height_new;
 
 
-    vulkan_swapchain_capabilities_info swapchain_capabilities;
+    Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
 
 
     // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
     // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
-
-
-    VkFormat depth_format;
-
-
 
 
     //Swapchain
@@ -979,9 +955,6 @@ typedef struct vulkan_context
     Vulkan_Renderpass main_renderpass;
 
 
-
-
-    u32 current_frame;
 
     /*//ensures that the submit has finished before starting work on the image
     //this is also the per frame sync point
@@ -995,6 +968,9 @@ typedef struct vulkan_context
 
 typedef struct Renderer
 {
+    bool is_init;
+
+
     Camera main_camera;
     Render_Mode mode;
 
@@ -1026,8 +1002,6 @@ typedef struct Renderer
     Vulkan_Context context;
 
 
-
-
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;
 
@@ -1054,7 +1028,16 @@ typedef struct Renderer
     bool wireframe_mode;
 
 
-    ////// Device and Instance //////
+    ////// Instance and Device //////
+
+
+    //Instance
+    VkInstance instance;
+
+    //Validation Layer
+    VkAllocationCallbacks* vulkan_allocator;
+    VkDebugUtilsMessengerEXT debug_messenger;
+
 
     //device
     VkPhysicalDevice physical_device;
@@ -1088,10 +1071,11 @@ typedef struct Renderer
     PFN_vkCmdBeginDebugUtilsLabelEXT debug_label_start;
     PFN_vkCmdEndDebugUtilsLabelEXT debug_label_end;
 
-
-    //Validation Layer
-    VkAllocationCallbacks* vulkan_allocator;
-    // VkDebugUtilsMessengerEXT debug_messenger;
+    //Swapchain
+    VkFormat depth_format;
+#define VULKAN_MAX_FRAMES_IN_FLIGHT 2
+    u8 max_frames_in_flight;
+    u32 current_frame;
 
 
 

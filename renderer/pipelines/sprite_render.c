@@ -2,7 +2,6 @@
 #include "vk_buffer.h"
 
 
-
 Sprite_Renderer* sprite_render_init(Renderer* renderer)
 {
     Sprite_Renderer* sprite_backend = allocator_alloc(&renderer->allocator, sizeof(Sprite_Renderer));
@@ -112,8 +111,8 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
 
     //textures
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -123,8 +122,8 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
 
 
     //grab material_handle
@@ -174,5 +173,3 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
         }
     }
 }
-
-

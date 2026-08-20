@@ -97,7 +97,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info, context->allocator,
+    VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator,
                                                  &attachment->image);
     VK_CHECK(create_image_result);
 
@@ -115,7 +115,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     }
 
     VkResult alloc_memory_result = vkAllocateMemory(renderer->logical_device, &memory_allocate_info,
-                                                    context->allocator, &attachment->memory);
+                                                    renderer->vulkan_allocator, &attachment->memory);
     VK_CHECK(alloc_memory_result);
     VkResult bind_image_memory_result = vkBindImageMemory(renderer->logical_device, attachment->image,
                                                           attachment->memory, 0);
@@ -132,7 +132,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         },
     };
     VK_CHECK(
-        vkCreateImageView(renderer->logical_device, &image_view_create_info, context->allocator, &attachment->view
+        vkCreateImageView(renderer->logical_device, &image_view_create_info, renderer->vulkan_allocator, &attachment->view
         ));
 
 
@@ -211,7 +211,7 @@ void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_re
 
     // Depth attachment, if there is one
     VkAttachmentDescription depth_attachment = {0};
-    depth_attachment.format = context->depth_format;
+    depth_attachment.format = renderer->depth_format;
     depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -268,7 +268,7 @@ void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_re
     VK_CHECK(vkCreateRenderPass(
         renderer->logical_device,
         &render_pass_create_info,
-        context->allocator,
+        renderer->vulkan_allocator,
         &out_renderpass->handle));
 }
 
@@ -276,7 +276,7 @@ void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* rende
 {
     if (renderpass && renderpass->handle)
     {
-        vkDestroyRenderPass(renderer->logical_device, renderpass->handle, context->allocator);
+        vkDestroyRenderPass(renderer->logical_device, renderpass->handle, renderer->vulkan_allocator);
         renderpass->handle = 0;
     }
 }

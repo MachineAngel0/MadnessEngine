@@ -144,8 +144,8 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
                                  texture_upload.madness_texture->width, texture_upload.madness_texture->height);
 
         second_image_layout_transition(renderer, graphics_command_buffer, vulkan_texture->texture_image,
-                                     VULKAN_QUEUE_TYPE_TRANSFER,
-                                     VULKAN_QUEUE_TYPE_GRAPHICS);
+                                       VULKAN_QUEUE_TYPE_TRANSFER,
+                                       VULKAN_QUEUE_TYPE_GRAPHICS);
 
 
         //unload texture data - safe to do so here, but we cant use it yet until the upload is complete
@@ -182,7 +182,6 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     //TODO: handle the case if transfer and graphics are not the same queue
     vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
     vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
-
 }
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index)
@@ -211,7 +210,7 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
     //create the texture
     Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
     create_texture_image(&renderer->context,
-                         &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->context.
+                         &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->
                              current_frame], filepath, out_texture, renderer);
 
     //increment index for next usage

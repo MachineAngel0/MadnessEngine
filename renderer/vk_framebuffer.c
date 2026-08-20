@@ -32,14 +32,14 @@ void vulkan_framebuffer_create(Vulkan_Context* context, Vulkan_Renderpass* rende
     VK_CHECK(vkCreateFramebuffer(
         renderer->logical_device,
         &framebuffer_create_info,
-        context->allocator,
+        renderer->vulkan_allocator,
         &out_framebuffer->framebuffer_handle));
 }
 
 
 void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer, Renderer* renderer)
 {
-    vkDestroyFramebuffer(renderer->logical_device, framebuffer->framebuffer_handle, context->allocator);
+    vkDestroyFramebuffer(renderer->logical_device, framebuffer->framebuffer_handle, renderer->vulkan_allocator);
 
     if (framebuffer->attachments)
     {

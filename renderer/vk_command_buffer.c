@@ -13,7 +13,7 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     queue_system->graphics_pool = renderer->graphics_command_pool;
     Vulkan_Graphics_Queue* graphics_render_queue = &queue_system->graphics_render_queue;
 
-    u8 frames_in_flight = renderer->context.swapchain.max_frames_in_flight;
+    u8 frames_in_flight = renderer->max_frames_in_flight;
     u8 swapchain_image_count = renderer->context.swapchain.image_count;
 
 
@@ -228,7 +228,7 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
     switch (type)
     {
     case VULKAN_QUEUE_TYPE_GRAPHICS:
-        *out_cb = &system->graphics_render_queue.graphics_command_buffer[renderer->context.current_frame];
+        *out_cb = &system->graphics_render_queue.graphics_command_buffer[renderer->current_frame];
         return true;
         break;
     case VULKAN_QUEUE_TYPE_TRANSFER:
@@ -254,7 +254,7 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
         break;
     case VULKAN_QUEUE_TYPE_COMPUTE:
         MASSERT_FALSE()
-        *out_cb = &system->comptute_render_queue.command_buffer[renderer->context.current_frame];
+        *out_cb = &system->comptute_render_queue.command_buffer[renderer->current_frame];
         break;
     }
 
@@ -266,7 +266,7 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
 bool vulkan_queue_system_get_primary_command_buffer(Renderer* renderer, Vulkan_Queue_Type type,
                                                     Vulkan_Command_Buffer** out_cb)
 {
-    *out_cb = &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->context.current_frame];
+    *out_cb = &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->current_frame];
     return true;
 }
 
@@ -307,17 +307,23 @@ bool vulkan_queue_add_wait_semaphore(Renderer* renderer, Vulkan_Queue_Type queue
         queue_system->graphics_render_queue.wait_semaphore_info[queue_system->graphics_render_queue.
                                                                               wait_semaphore_info_count++] =
             submit_info;
+        return true;
         break;
     case VULKAN_QUEUE_TYPE_TRANSFER:
         queue_system->transfer_render_queue.wait_semaphore_info[queue_system->transfer_render_queue.
                                                                               wait_semaphore_info_count++] =
             submit_info;
+        return true;
         break;
     case VULKAN_QUEUE_TYPE_COMPUTE:
         queue_system->comptute_render_queue.wait_semaphore[queue_system->comptute_render_queue.
                                                                          wait_semaphore_count++] = submit_info;
+        return true;
         break;
     }
+
+    MASSERT_FALSE()
+    return false;
 }
 
 
@@ -336,6 +342,8 @@ bool vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
     dependency_info.pImageMemoryBarriers = &image_memory_barrier;
 
     vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+
+    return true;
 }
 
 
@@ -503,7 +511,7 @@ void vulkan_command_buffer_submit(Vulkan_Context* context, Vulkan_Command_Buffer
     VkFenceCreateInfo fenceCI = {0};
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     VkFence fence;
-    VK_CHECK(vkCreateFence(renderer->logical_device, &fenceCI, context->allocator, &fence));
+    VK_CHECK(vkCreateFence(renderer->logical_device, &fenceCI, renderer->vulkan_allocator, &fence));
     // Submit copies to the queue
     VK_CHECK(vkQueueSubmit(queue, 1, &submitInfo, fence));
     // Wait for the fence to signal that command buffer has finished executing
@@ -549,7 +557,7 @@ void vulkan_command_buffer_submit_binary_semaphore(Vulkan_Context* context,
     VkFenceCreateInfo fenceCI = {0};
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     VkFence fence;
-    VK_CHECK(vkCreateFence(renderer->logical_device, &fenceCI, context->allocator, &fence));
+    VK_CHECK(vkCreateFence(renderer->logical_device, &fenceCI, renderer->vulkan_allocator, &fence));
 
     // Submit copies to the queue
     vkQueueSubmit2(queue, 1, &submitInfo, fence);

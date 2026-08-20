@@ -537,7 +537,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         //uniform
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 0, 1,
-                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
                                     current_frame], 0, 0);
         //texturess
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -547,7 +547,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         //storage buffers
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 2, 1,
-                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
                                     current_frame], 0, 0);
 
         // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
@@ -619,7 +619,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         //uniform
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 0, 1,
-                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->context.
+                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
                                     current_frame], 0, 0);
         //texturess
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -629,7 +629,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         //storage buffers
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 2, 1,
-                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->context.
+                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
                                     current_frame], 0, 0);
 
         // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
