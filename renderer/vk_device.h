@@ -44,7 +44,18 @@ bool vulkan_device_create(Vulkan_Context* vulkan_context);
 bool vulkan_device_destroy(Vulkan_Context* vulkan_context);
 
 
-bool vulkan_device_create2(Vulkan_Context* vulkan_context);
+bool vulkan_device_create2(Renderer* renderer);
+void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surface, Allocator* allocator);
+bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, VkSurfaceKHR surface, Scratch_Allocator* scratch);
+void vulkan_physical_device_get_supported_features(VkPhysicalDevice current_device, VkPhysicalDeviceFeatures2* out_features);
+
+
+void vulkan_physical_device_find_transfer_queue(Vulkan_Physical_Device_Heuristic* device_heuristic,
+                                                u32 queue_family_count, Array* queue_families);
+void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic* device_heuristic, u32 queue_family_count, Array* queue_families);
+
+
+
 
 
 /* SURFACE */

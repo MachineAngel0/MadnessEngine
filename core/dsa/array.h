@@ -32,7 +32,16 @@ void array_free(Array* array);
 void array_clear(Array* array);
 void array_zero(Array* array);
 
+
 void array_push(Array* array, const void* new_data);
+//lets us use non stack values
+#define array_push_macro(array, value)                          \
+{                                                          \
+__typeof__(value) temp_value = value;         \
+array_push(array, &temp_value); \
+}
+
+
 void array_pop(Array* array);
 
 //Ex: array_push_c_array(array, (type* test [] ={ data, data,} ), ARRAY_SIZE(test))
@@ -65,44 +74,49 @@ void array_set(Array* array, const void* data, const u64 pos);
 
 #ifndef NDEBUG
 
-    Array* _array_create_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
-    void* _array_get_debug(Array* array, const u64 index, const char* type_name);
-    // Array* _array_set_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
+Array* _array_create_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
+void* _array_get_debug(Array* array, const u64 index, const char* type_name);
+// Array* _array_set_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name);
 
 
-    #define array_create(type, capacity, allocator)\
+#define array_create(type, capacity, allocator)\
         _array_create_debug(sizeof(type), capacity, allocator, #type)
 
-    #define array_get(arr, type, index)\
+#define array_get(arr, type, index)\
         (*(type*)_array_get_debug(arr, index, #type))
 
-    #define array_top(arr, type)\
+#define array_top(arr, type)\
         (*(type*)_array_get_debug(arr, arr->num_items-1, #type))
 
-    #define array_top_free(arr, type)\
+#define array_top_free(arr, type)\
         (*(type*)_array_get_debug(arr, arr->num_items,#type))
 
 #else
-    #define array_create(type, capacity, allocator)\
+#define array_create(type, capacity, allocator)\
         _array_create(sizeof(type), capacity, allocator)
 
-    #define array_top(arr, type)\
+#define array_top(arr, type)\
         (*(type*)_array_get(arr, arr->num_items-1))
 
-    #define array_get(arr, type, index)\
+#define array_get(arr, type, index)\
         (*(type*)_array_get(arr, index))
 
-    #define array_top_free(arr, type)\
+#define array_top_free(arr, type)\
         (*(type*)_array_get(arr, arr->num_items))
 
 #endif
 
 
-
-
 //TODO: TEST
 // fills entire array
+/**
+ * @brief fills up array with data up to the number of items currently in the array
+ */
 void array_fill(const Array* array, const void* data);
+/**
+ * @brief fills up array with data up to the capacity of the array, also changes the number of items to be the capacity value
+ */
+void array_fill_up_to_capacity(Array* array, const void* data);
 
 //TODO: TEST
 // fills on a range array

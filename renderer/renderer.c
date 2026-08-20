@@ -110,7 +110,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
     vk_context->is_init = true;
 
-    vulkan_device_create2(vk_context);
+    vulkan_device_create2(renderer);
     // Device creation
     if (!vulkan_device_create(vk_context))
     {

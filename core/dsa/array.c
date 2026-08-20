@@ -204,6 +204,16 @@ void array_fill(const Array* array, const void* data)
     }
 }
 
+void array_fill_up_to_capacity(Array* array, const void* data)
+{
+    array->num_items = array->capacity;
+    for (u64 i = 0; i < array->num_items; i++)
+    {
+        u8* dest = (u8*)array->data + (array->stride * i);
+        memcpy(dest, data, array->stride);
+    }
+}
+
 //TODO: TEST
 // fills on a range array
 void array_fill_range(Array* array, u64 start, u64 end, void* data)

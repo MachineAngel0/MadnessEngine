@@ -119,6 +119,29 @@ typedef struct vulkan_swapchain_support_info
 } vulkan_swapchain_capabilities_info;
 
 
+typedef struct Vulkan_Physical_Device_Suitable{
+    VkPhysicalDevice physical_device;
+    u32 physical_device_index;
+}Vulkan_Physical_Device_Suitable;
+
+
+typedef struct Vulkan_Physical_Device_Heuristic
+{
+    bool dedicated_transfer;
+    s32 transfer_queue_index;
+
+    bool dedicated_compute;
+    s32 compute_queue_index;
+
+    bool dedicated_transfer_compute_sharing;
+
+    s32 graphics_queue;
+    s32 present_queue;
+
+    s32 score;
+}Vulkan_Physical_Device_Heuristic;
+
+
 typedef struct vulkan_physical_device_requirements
 {
     bool graphics;
@@ -131,7 +154,7 @@ typedef struct vulkan_physical_device_requirements
 
     bool sampler_anisotropy;
     bool discrete_gpu;
-    u32 score;
+    bool integrated_gpu;
 } Vulkan_Physical_Device_Requirements;
 
 typedef struct vulkan_physical_device_queue_family_info
@@ -954,17 +977,16 @@ typedef struct vulkan_context
     VkQueue compute_queue;
 
     VkPhysicalDeviceProperties properties;
-    VkPhysicalDeviceProperties2 properties2;
     // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
     // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
 
     VkPhysicalDeviceFeatures features;
-    VkPhysicalDeviceFeatures2 features2;
     VkPhysicalDeviceMemoryProperties memory;
-    VkPhysicalDeviceMemoryProperties2 memory2;
     VkQueueFamilyProperties* queue_families;
 
     VkFormat depth_format;
+
+
 
 
     //Swapchain
@@ -1012,7 +1034,7 @@ typedef struct Renderer
     Vulkan_Mesh_System* mesh_system;
     Particle_Render* particle_render;
 
-    //renderer specific
+    //renderer systems
     Vulkan_Queue_System* queue_system;
     Buffer_System* buffer_system;
     Vulkan_Texture_System* texture_system;
@@ -1026,6 +1048,8 @@ typedef struct Renderer
 
     //TODO: get it out of the context and drop it here
     Vulkan_Context context;
+
+
 
 
     //pipelines
@@ -1052,6 +1076,49 @@ typedef struct Renderer
     Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
     bool wireframe_mode;
+
+
+    ////// Device and Instance //////
+
+    //device
+    VkPhysicalDevice physical_device;
+    u32 physical_device_index;
+
+    VkPhysicalDeviceFeatures2 features2;
+    VkPhysicalDeviceProperties2 properties2;
+    VkPhysicalDeviceMemoryProperties2 physical_device_memory;
+
+    ARRAY_TYPE(VkQueueFamilyProperties)* queue_family_properties;
+    // Vulkan_Physical_Device_Heuristic device_heuristic; // copy
+
+    s32 transfer_queue_index;
+    s32 compute_queue_index;
+    s32 graphics_queue_index;
+    s32 present_queue_index;
+
+    VkDevice logical_device;
+
+    VkQueue transfer_queue;
+    VkQueue compute_queue;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
+
+
+    VkCommandPool graphics_command_pool;
+    VkCommandPool transfer_command_pool;
+    VkCommandPool compute_command_pool;
+
+    // debug labels loaded functions
+    PFN_vkCmdBeginDebugUtilsLabelEXT debug_label_start;
+    PFN_vkCmdEndDebugUtilsLabelEXT debug_label_end;
+
+
+    //Validation Layer
+    VkAllocationCallbacks* vulkan_allocator;
+    // VkDebugUtilsMessengerEXT debug_messenger;
+
+
+
 } Renderer;
 
 

@@ -1,6 +1,6 @@
 ﻿#include "vk_device.h"
-#include "../core/dsa/array.h"
-#include "platform/platform.h"
+#include "array.h"
+#include "platform.h"
 #include "hash_set.h"
 #include "math_lib.h"
 
@@ -41,6 +41,13 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
     }
 
 
+    if (minor < 4)
+    {
+        FATAL("Device must support vulkan 1.4 minimum");
+        return false;
+    }
+
+
     VkApplicationInfo application_info = {};
     application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     application_info.pApplicationName = "MadnessEngine";
@@ -48,7 +55,7 @@ bool vulkan_instance_create(Vulkan_Context* vulkan_context)
     application_info.pEngineName = "MadnessEngine";
     application_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     //application_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
-    //application_info.apiVersion = VK_API_VERSION_1_4;
+    // application_info.apiVersion = VK_API_VERSION_1_4; // we explicitly rn want 1.4, might move down to 1.3
     application_info.apiVersion = VK_MAKE_API_VERSION(0, major, minor, patch);
 
 
@@ -429,7 +436,7 @@ bool vulkan_device_create(Vulkan_Context* vulkan_context)
         .pNext = &enable_device_features2,
         .queueCreateInfoCount = index_count,
         .pQueueCreateInfos = queue_create_infos,
-        .pEnabledFeatures = NULL, // do not use is pNext is used
+        .pEnabledFeatures = NULL, // do not use if pNext is used
         .enabledExtensionCount = ARRAY_SIZE(extension_names),
         .ppEnabledExtensionNames = extension_names,
         // Deprecated
@@ -580,7 +587,222 @@ bool vulkan_device_destroy(Vulkan_Context* vulkan_context)
     return true;
 }
 
-bool vulkan_device_create2(Vulkan_Context* vulkan_context)
+void vulkan_physical_device_find_transfer_queue(Vulkan_Physical_Device_Heuristic* device_heuristic,
+                                                u32 queue_family_count, Array* queue_families)
+{
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+
+
+        VkQueueFlags flags = queue_family_properties.queueFlags;
+
+        bool graphics = (flags & VK_QUEUE_GRAPHICS_BIT);
+        bool compute = (flags & VK_QUEUE_COMPUTE_BIT);
+        bool transfer = (flags & VK_QUEUE_TRANSFER_BIT);
+
+
+        if (transfer && !compute && !graphics)
+        {
+            device_heuristic->dedicated_transfer = true;
+            device_heuristic->transfer_queue_index = queue_index;
+            return;
+        }
+    }
+
+    //second best options is a transfer queue with no graphics, but compute is fine
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+        VkQueueFlags flags = queue_family_properties.queueFlags;
+
+        bool graphics = (flags & VK_QUEUE_GRAPHICS_BIT);
+        bool compute = (flags & VK_QUEUE_COMPUTE_BIT);
+        bool transfer = (flags & VK_QUEUE_TRANSFER_BIT);
+
+
+        if (transfer && compute && !graphics)
+        {
+            device_heuristic->dedicated_transfer_compute_sharing = true;
+            device_heuristic->dedicated_transfer = false;
+            device_heuristic->dedicated_compute = false;
+            device_heuristic->transfer_queue_index = queue_index;
+            device_heuristic->compute_queue_index = queue_index;
+            return;
+        }
+    }
+
+
+    //if we dont find a dedicated transfer, we fall back to the first available
+    if (device_heuristic->dedicated_transfer == false)
+    {
+        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        {
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                        queue_index);
+
+            if (queue_family_properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                device_heuristic->transfer_queue_index = queue_index;
+                return;
+            }
+        }
+    }
+}
+
+void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic* device_heuristic,
+                                               u32 queue_family_count,
+                                               Array* queue_families)
+{
+    //find a dedicated compute queue (without graphics). Doesn't matter if it shares an index with the transfer queue
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+
+
+        VkQueueFlags flags = queue_family_properties.queueFlags;
+
+        bool graphics = (flags & VK_QUEUE_GRAPHICS_BIT);
+        bool compute = (flags & VK_QUEUE_COMPUTE_BIT);
+        // bool transfer = (flags & VK_QUEUE_TRANSFER_BIT);
+
+
+        if (compute && !graphics)
+        {
+            if (queue_index == device_heuristic->transfer_queue_index)
+            {
+                device_heuristic->dedicated_transfer_compute_sharing = true;
+                device_heuristic->dedicated_transfer = false;
+                device_heuristic->dedicated_compute = false;
+            }
+            else
+            {
+                device_heuristic->dedicated_compute = true;
+            }
+            device_heuristic->compute_queue_index = queue_index;
+
+
+            return;
+        }
+    }
+
+    //there are instances where the queue lives on a seperate index from the initial transfer queue, and does not have a transfer queue
+    if (device_heuristic->dedicated_transfer && !device_heuristic->dedicated_compute)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    device_heuristic->transfer_queue_index);
+        //try to share with transfer but not graphics
+        if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT &&
+            !(queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+        {
+            device_heuristic->dedicated_transfer_compute_sharing = true;
+            device_heuristic->dedicated_transfer = false;
+            device_heuristic->dedicated_compute = false;
+            device_heuristic->compute_queue_index = device_heuristic->transfer_queue_index;
+            return;
+        }
+    }
+
+
+    // fall back to the first available
+    if (!device_heuristic->dedicated_compute && !device_heuristic->dedicated_transfer_compute_sharing)
+    {
+        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        {
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                        queue_index);
+
+            if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+            {
+                device_heuristic->compute_queue_index = queue_index;
+                return;
+            }
+        }
+    }
+}
+
+void vulkan_physical_device_find_graphics_and_present_queue(Renderer* renderer,
+                                                            Vulkan_Physical_Device_Heuristic* device_heuristic,
+                                                            VkPhysicalDevice current_device,
+                                                            u32 queue_family_count,
+                                                            Array* queue_families)
+{
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+
+
+        //skip any dedicated queues
+        if ((device_heuristic->dedicated_transfer || device_heuristic->dedicated_transfer_compute_sharing) &&
+            device_heuristic->transfer_queue_index == queue_index)
+        {
+            continue;
+        }
+
+        //skip any dedicated queues
+        if ((device_heuristic->dedicated_compute || device_heuristic->dedicated_transfer_compute_sharing) &&
+            device_heuristic->compute_queue_index == queue_index)
+        {
+            continue;
+        }
+
+
+        // try to find a queue with graphics and present
+        VkBool32 supports_present = VK_FALSE;
+        VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(
+            current_device, queue_index, renderer->context.surface,
+            &supports_present);
+        VK_CHECK(present_result)
+
+        if ((queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_present == VK_TRUE)
+        {
+            device_heuristic->graphics_queue = queue_index;
+            device_heuristic->present_queue = queue_index;
+            return;
+        }
+    }
+
+    //if we don't find a queue family for graphics and present, use the first available
+    if (device_heuristic->graphics_queue == UINT32_MAX)
+    {
+        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        {
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                        queue_index);
+
+            if (queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                device_heuristic->graphics_queue = queue_index;
+                break;
+            }
+        }
+    }
+
+    if (device_heuristic->present_queue != UINT32_MAX)
+    {
+        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        {
+            // try to find a queue with graphics and present
+            VkBool32 supports_present = VK_FALSE;
+            VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(
+                current_device, queue_index, renderer->context.surface,
+                &supports_present);
+            VK_CHECK(present_result)
+
+            if (supports_present == VK_TRUE)
+            {
+                device_heuristic->present_queue = queue_index;
+                break;
+            }
+        }
+    }
+}
+
+bool vulkan_device_create2(Renderer* renderer)
 {
     //process for physical device
     // scan all our physical devices and get all of them which support our requirements
@@ -588,19 +810,26 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
     // and in general set all the information needed
 
 
-
     //once for the count
     //twice for the devices
+    //
 
     u32 physical_device_count = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, NULL));
+    vkEnumeratePhysicalDevices(renderer->context.instance, &physical_device_count, NULL);
     if (physical_device_count == 0)
     {
         FATAL("No devices which support Vulkan were found.");
         return false;
     }
+    //keep this allocated until the renderer free's it
     VkPhysicalDevice* physical_devices = darray_create_reserve(VkPhysicalDevice, physical_device_count);
-    VK_CHECK(vkEnumeratePhysicalDevices(vulkan_context->instance, &physical_device_count, physical_devices));
+    VK_CHECK(vkEnumeratePhysicalDevices(renderer->context.instance, &physical_device_count, physical_devices));
+
+
+    ARRAY_TYPE(VkPhysicalDevice)* valid_physical_device = array_create(Vulkan_Physical_Device_Suitable,
+                                                                       physical_device_count,
+                                                                       &renderer->allocator); // TODO: scratch alloc
+
 
     // TODO: These requirements should probably be driven by engine configuration.
 
@@ -611,201 +840,731 @@ bool vulkan_device_create2(Vulkan_Context* vulkan_context)
     requirements.compute = true;
     requirements.sampler_anisotropy = true;
 
-    vulkan_context->properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-    vulkan_context->memory2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
-    vulkan_context->features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 
     //scan each device and return a list of all the ones that supports everything we want
-    //
 
     DEBUG("Number of Physical Devices: %d", physical_device_count);
 
-    for (u32 i = 0; i < physical_device_count; i++)
+    for (u32 device_idx = 0; device_idx < physical_device_count; device_idx++)
     {
-        DEBUG("Physical Devices# 1: %d", i);
-        VkPhysicalDevice current_device = physical_devices[i];
+        DEBUG("Physical Devices# 1: %d", device_idx);
+        VkPhysicalDevice current_device = physical_devices[device_idx];
 
-        vkGetPhysicalDeviceProperties2(current_device, &vulkan_context->properties2);
-        vkGetPhysicalDeviceFeatures2(current_device, &vulkan_context->features2);
-        vkGetPhysicalDeviceMemoryProperties2(current_device, &vulkan_context->memory2);
-        INFO("device info: '%s'.", &vulkan_context->properties2.properties.deviceName);
-        // GPU type, etc.
-        switch (vulkan_context->properties2.properties.deviceType)
+
+        vulkan_device_print_info(current_device, renderer->context.surface, &renderer->allocator);
+
+        Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
+        if (vulkan_physical_device_meets_requirements(current_device, renderer->context.surface, &scratch))
         {
-        default:
-        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            INFO("GPU type is Integrated.");
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            INFO("GPU type is Discrete.");
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-            INFO("GPU type is Virtual.");
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            INFO("GPU type is CPU.");
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-            INFO("GPU type is Unknown.");
-            break;
+            Vulkan_Physical_Device_Suitable temp = {
+                .physical_device = current_device,
+                .physical_device_index = device_idx,
+            };
+            array_push(valid_physical_device, &temp);
         }
-        INFO(
-            "GPU Driver version: %d.%d.%d",
-            VK_VERSION_MAJOR(vulkan_context->properties2.properties.driverVersion),
-            VK_VERSION_MINOR(vulkan_context->properties2.properties.driverVersion),
-            VK_VERSION_PATCH(vulkan_context->properties2.properties.driverVersion));
+        scratch_allocator_end(scratch);
+    }
 
-        // Vulkan API version.
-        INFO(
-            "Vulkan API version: %d.%d.%d",
-            VK_VERSION_MAJOR(vulkan_context->properties2.properties.apiVersion),
-            VK_VERSION_MINOR(vulkan_context->properties2.properties.apiVersion),
-            VK_VERSION_PATCH(vulkan_context->properties2.properties.apiVersion));
+    if (array_is_empty(valid_physical_device))
+    {
+        FATAL("NO VULKAN DEVICE WHICH MEETS OUR REQUIREMENTS");
+        return false;
+    }
 
-        // Memory information
-        for (u32 j = 0; j < vulkan_context->memory2.memoryProperties.memoryHeapCount; ++j)
+
+    // at this point we score our devices
+    ARRAY_TYPE(Vulkan_Physical_Device_Heuristic)* heuristic_selection = array_create(Vulkan_Physical_Device_Heuristic,
+        valid_physical_device->num_items,
+        &renderer->allocator);
+    Vulkan_Physical_Device_Heuristic default_heuristic = {
+        .dedicated_transfer = false,
+        .transfer_queue_index = INT32_MAX,
+        .dedicated_compute = false,
+        .compute_queue_index = INT32_MAX,
+        .graphics_queue = INT32_MAX,
+        .present_queue = INT32_MAX,
+        .score = 0,
+    };
+    array_fill_up_to_capacity(heuristic_selection, &default_heuristic);
+
+
+    Vulkan_Physical_Device_Heuristic selected_device_heuristic = {0};
+    VkPhysicalDevice best_device = {0};
+    s32 best_score = -1;
+    u32 device_index = -1;
+
+
+    for (u32 physical_device_idx = 0; physical_device_idx < valid_physical_device->num_items; physical_device_idx++)
+    {
+        Vulkan_Physical_Device_Suitable physical_device_suitable = array_get(
+            valid_physical_device, Vulkan_Physical_Device_Suitable, physical_device_idx);
+        VkPhysicalDevice current_device = physical_device_suitable.physical_device;
+        Vulkan_Physical_Device_Heuristic device_heuristic = array_get(heuristic_selection,
+                                                                      Vulkan_Physical_Device_Heuristic,
+                                                                      physical_device_idx);
+
+        u32 queue_family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count, 0);
+        ARRAY_TYPE(VkQueueFamilyProperties)* queue_families = array_create(
+            VkQueueFamilyProperties, queue_family_count, &renderer->allocator);
+        vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count,
+                                                 queue_families->data);
+        queue_families->num_items = queue_family_count;
+
+
+        //find a transfer queue
+        vulkan_physical_device_find_transfer_queue(&device_heuristic, queue_family_count,
+                                                   queue_families);
+        //find a compute queue
+        vulkan_physical_device_find_compute_queue(&device_heuristic, queue_family_count, queue_families);
+
+        //find a graphics queue with present support, that doesn't conflict with dedicated transfer and compute queues
+        vulkan_physical_device_find_graphics_and_present_queue(renderer, &device_heuristic, current_device,
+                                                               queue_family_count,
+                                                               queue_families);
+        //score our heuristic
+        if (device_heuristic.dedicated_transfer)
         {
-            f32 memory_size_gib = (((f32)vulkan_context->memory2.memoryProperties.memoryHeaps[j].size) / GB(1));
-            if (vulkan_context->memory2.memoryProperties.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
-            {
-                INFO("Local GPU memory: %.2f GB", memory_size_gib);
-            }
-            else
-            {
-                INFO("Shared System memory: %.2f GB", memory_size_gib);
-            }
+            device_heuristic.score++;
+        }
+        if (device_heuristic.dedicated_compute)
+        {
+            device_heuristic.score++;
+        }
+        if (device_heuristic.dedicated_transfer_compute_sharing)
+        {
+            device_heuristic.score += 2;
         }
 
-        //check for sampler anisotropy
-        if (vulkan_context->features2.features.samplerAnisotropy)
+        //see if its our new best device
+        DEBUG("device score: %d, best score: %d",
+              device_heuristic.score,
+              best_score);
+        if (device_heuristic.score > best_score)
         {
-            INFO("DEVICE SUPPORTS SAMPLER ANISOTRPY")
+            best_device = current_device;
+            device_index = physical_device_suitable.physical_device_index;
+            best_score = device_heuristic.score;
+            selected_device_heuristic = device_heuristic;
+        }
+    }
+
+    DEBUG("selected physical device index: %d  score: %d",
+          best_score,
+          device_index);
+
+    // renderer->device_heuristic = selected_device_heuristic;
+    renderer->physical_device = best_device;
+    renderer->physical_device_index = device_index;
+
+    renderer->transfer_queue_index = selected_device_heuristic.transfer_queue_index;
+    renderer->compute_queue_index = selected_device_heuristic.compute_queue_index;
+    renderer->graphics_queue_index = selected_device_heuristic.graphics_queue;
+    renderer->present_queue_index = selected_device_heuristic.present_queue;
+
+    //TODO:
+    // vulkan_physical_device_set_info()
+
+    vulkan_physical_device_get_supported_features(renderer->physical_device, &renderer->features2);
+    renderer->physical_device_memory = (VkPhysicalDeviceMemoryProperties2){
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
+        .pNext = 0,
+        .memoryProperties = 0
+    };
+    vkGetPhysicalDeviceMemoryProperties2(renderer->physical_device, &renderer->physical_device_memory);
+
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(renderer->physical_device, &queue_family_count, 0);
+    renderer->queue_family_properties = array_create(
+        VkQueueFamilyProperties, queue_family_count, &renderer->allocator);
+    vkGetPhysicalDeviceQueueFamilyProperties(renderer->physical_device, &queue_family_count,
+                                             renderer->queue_family_properties->data);
+    renderer->queue_family_properties->num_items = queue_family_count;
+
+    //after we find our device call this on the device
+    // vulkan_device_query_swapchain_support(selected_device, renderer->context.surface,
+    // renderer->context.swapchain_capabilities);
+
+
+    //get device queue info for each unique queue family
+    hash_set* indices = hash_set_init(sizeof(s32), 10);
+    s32* index_array = darray_create_reserve(s32, 10);
+    if (hash_set_insert(indices, &renderer->graphics_queue_index))
+    {
+        darray_push(index_array, renderer->graphics_queue_index);
+    }
+    if (hash_set_insert(indices, &renderer->present_queue_index))
+    {
+        darray_push(index_array, renderer->present_queue_index);
+    }
+    if (hash_set_insert(indices, &renderer->compute_queue_index))
+    {
+        darray_push(index_array, renderer->compute_queue_index);
+    }
+    if (hash_set_insert(indices, &renderer->transfer_queue_index))
+    {
+        darray_push(index_array, renderer->transfer_queue_index);
+    }
+
+    u64 index_count = hash_set_get_size(indices);
+    u64 index_array_size = darray_get_size(index_array);
+
+
+    f32 default_queue_priority = 1.0f;
+    //get device queue info for each unique queue family
+    VkDeviceQueueCreateInfo* queue_create_infos = darray_create_reserve(VkDeviceQueueCreateInfo, index_array_size);
+    for (u64 i = 0; i < index_array_size; ++i)
+    {
+        VkQueueFamilyProperties family_properties = array_get(renderer->queue_family_properties,
+                                                              VkQueueFamilyProperties, index_array[i]);
+
+        queue_create_infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queue_create_infos[i].queueFamilyIndex = index_array[i];
+        queue_create_infos[i].queueCount = 1;
+
+        //OPTIMIZE: having more than one queue count means litereally having something like
+        // VKQueue graphics1
+        // VKQueue graphics2
+        // which can be submitted to seperatly
+        // but this can also mean
+        // VKQueue graphics1
+        // VKQueue transfer1
+        // rn these are the same queue in the family, but they can be different queues in the same family
+        /*
+        queue_create_infos[i].queueCount = clamp_int(queue_create_infos[i].queueCount,
+                                                     1, family_properties.queueCount);
+        */
+
+        queue_create_infos[i].pQueuePriorities = &default_queue_priority;
+        queue_create_infos[i].flags = 0;
+        queue_create_infos[i].pNext = 0;
+    }
+
+
+    //TODO: we need to be checking all these when we query for our physical device
+
+    //device extensions
+    const char* extension_names[] = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        // VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME // not supported
+        VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, //promoted in 1.2
+        // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, // doesnt work
+        //for buffer device addressing
+        // VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME, // doesnt work on my hardware
+        // VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_KHR_SHADER_RELAXED_EXTENDED_INSTRUCTION_EXTENSION_NAME,
+    };
+
+
+    // VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
+    // .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+    // };
+    VkPhysicalDeviceVulkan14Features enable_vulkan14_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+        .dynamicRenderingLocalRead = VK_TRUE,
+    };
+
+    VkPhysicalDeviceVulkan13Features enable_vulkan13_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+        .pNext = &enable_vulkan14_features,
+    };
+    VkPhysicalDeviceVulkan12Features enable_vulkan12_features =
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .scalarBlockLayout = VK_TRUE,
+        .descriptorIndexing = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .bufferDeviceAddress = VK_TRUE,
+        .bufferDeviceAddressMultiDevice = VK_TRUE,
+        .drawIndirectCount = VK_TRUE,
+        .timelineSemaphore = VK_TRUE,
+        .pNext = &enable_vulkan13_features,
+    };
+    VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &enable_vulkan12_features,
+    };
+
+    // Request device features.
+    // TODO: should be config driven
+    VkPhysicalDeviceFeatures device_features = {
+        .samplerAnisotropy = VK_TRUE,
+        .multiDrawIndirect = VK_TRUE,
+    };
+
+    VkPhysicalDeviceFeatures2 enable_device_features2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &enable_vulkan11_features,
+        .features = device_features,
+    };
+
+    VkDeviceCreateInfo device_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &enable_device_features2,
+        .queueCreateInfoCount = index_array_size,
+        .pQueueCreateInfos = queue_create_infos,
+        .pEnabledFeatures = NULL, // do not use if pNext is used
+        .enabledExtensionCount = ARRAY_SIZE(extension_names),
+        .ppEnabledExtensionNames = extension_names,
+        // Deprecated
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = 0,
+    };
+
+
+    // Create the device.
+    VK_CHECK(vkCreateDevice(
+        renderer->physical_device,
+        &device_create_info,
+        renderer->vulkan_allocator,
+        &renderer->logical_device));
+
+    INFO("Logical device created.");
+
+    // some commmand buffer debug label stuff
+    if (app_is_debug_build())
+    {
+        renderer->debug_label_start = (PFN_vkCmdBeginDebugUtilsLabelEXT)
+            vkGetDeviceProcAddr(
+                renderer->logical_device, "vkCmdBeginDebugUtilsLabelEXT");
+        renderer->debug_label_end = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(
+            renderer->logical_device, "vkCmdEndDebugUtilsLabelEXT");
+
+        MASSERT(renderer->debug_label_start);
+        MASSERT(renderer->debug_label_end);
+    }
+    // Get queues.
+    vkGetDeviceQueue(
+        renderer->logical_device,
+        renderer->graphics_queue_index,
+        0,
+        &renderer->graphics_queue);
+
+    vkGetDeviceQueue(
+        renderer->logical_device,
+        renderer->compute_queue_index,
+        0,
+        &renderer->compute_queue);
+
+    vkGetDeviceQueue(
+        renderer->logical_device,
+        renderer->present_queue_index,
+        0,
+        &renderer->present_queue);
+
+    vkGetDeviceQueue(
+        renderer->logical_device,
+        renderer->transfer_queue_index,
+        0,
+        &renderer->transfer_queue);
+
+    INFO("Queues obtained.");
+
+    //each command pool is tied to its queue family
+
+    //create the command pool for the graphics queue
+    VkCommandPoolCreateInfo pool_create_info = {0};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = renderer->graphics_queue_index;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(renderer->logical_device,
+        &pool_create_info, renderer->vulkan_allocator,
+        &renderer->graphics_command_pool));
+
+    INFO("GRAPHICS COMMAND POOL CREATED.");
+
+    //create the command pool for the graphics queue
+    VkCommandPoolCreateInfo transfer_pool_create_info = {0};
+    transfer_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    transfer_pool_create_info.queueFamilyIndex = renderer->transfer_queue_index;
+    transfer_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(renderer->logical_device,
+        &transfer_pool_create_info, renderer->vulkan_allocator,
+        &renderer->transfer_command_pool));
+
+    INFO("TRANSFER COMMAND POOL CREATED.");
+
+    //create the command pool for the graphics queue
+    VkCommandPoolCreateInfo compute_create_info = {0};
+    compute_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    compute_create_info.queueFamilyIndex = renderer->compute_queue_index;
+    compute_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VK_CHECK(vkCreateCommandPool(renderer->logical_device,
+        &compute_create_info, renderer->vulkan_allocator,
+        &renderer->compute_command_pool));
+
+    INFO("COMPUTE COMMAND POOL CREATED.");
+
+    vkDeviceWaitIdle(renderer->logical_device);
+}
+
+
+void vulkan_physical_device_get_supported_features(VkPhysicalDevice current_device,
+                                                   VkPhysicalDeviceFeatures2* out_features)
+{
+    //query device chain
+    VkPhysicalDeviceVulkan14Features supported_vulkan14 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+    };
+
+    VkPhysicalDeviceVulkan13Features supported_vulkan13 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &supported_vulkan14,
+    };
+
+    VkPhysicalDeviceVulkan12Features supported_vulkan12 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &supported_vulkan13,
+    };
+
+    VkPhysicalDeviceVulkan11Features supported_vulkan11 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &supported_vulkan12,
+    };
+
+    *out_features = (VkPhysicalDeviceFeatures2){
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &supported_vulkan11,
+    };
+
+    vkGetPhysicalDeviceFeatures2(
+        current_device,
+        out_features);
+}
+
+void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surface, Allocator* allocator)
+{
+    Scratch_Allocator scratch = scratch_allocator_begin(allocator);
+
+
+    VkPhysicalDeviceProperties2 physical_device_properties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = 0,
+        .properties = 0
+    };
+    physical_device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+
+
+    VkPhysicalDeviceMemoryProperties2 physical_device_memory_properties = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
+        .pNext = 0,
+        .memoryProperties = 0
+    };
+
+    vkGetPhysicalDeviceProperties2(current_device, &physical_device_properties);
+    vkGetPhysicalDeviceMemoryProperties2(current_device, &physical_device_memory_properties);
+
+    VkPhysicalDeviceFeatures2 features2 = {0};
+    vulkan_physical_device_get_supported_features(current_device, &features2);
+
+
+    INFO("device info: '%s'.", &physical_device_properties.properties.deviceName);
+    // GPU type
+    switch (physical_device_properties.properties.deviceType)
+    {
+    default:
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+        INFO("GPU type is Integrated.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+        INFO("GPU type is Discrete.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+        INFO("GPU type is Virtual.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+        INFO("GPU type is CPU.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+        INFO("GPU type is Unknown.");
+        break;
+    }
+    INFO(
+        "GPU Driver version: %d.%d.%d",
+        VK_VERSION_MAJOR(physical_device_properties.properties.driverVersion),
+        VK_VERSION_MINOR(physical_device_properties.properties.driverVersion),
+        VK_VERSION_PATCH(physical_device_properties.properties.driverVersion));
+
+    // Vulkan API version.
+    INFO(
+        "Vulkan API version: %d.%d.%d",
+        VK_VERSION_MAJOR(physical_device_properties.properties.apiVersion),
+        VK_VERSION_MINOR(physical_device_properties.properties.apiVersion),
+        VK_VERSION_PATCH(physical_device_properties.properties.apiVersion));
+
+    // Memory information
+    for (u32 j = 0; j < physical_device_memory_properties.memoryProperties.memoryHeapCount; ++j)
+    {
+        f32 memory_size_gib = (((f32)physical_device_memory_properties.memoryProperties.memoryHeaps[j].size) / GB(1));
+        if (physical_device_memory_properties.memoryProperties.memoryHeaps[j].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+        {
+            INFO("Local GPU memory: %.2f GB", memory_size_gib);
         }
         else
         {
-            INFO("DEVICE DOES NOT SUPPORT SAMPLER ANISOTRPY")
+            INFO("Shared System memory: %.2f GB", memory_size_gib);
+        }
+    }
+
+    //check for sampler anisotropy
+    if (features2.features.samplerAnisotropy)
+    {
+        INFO("DEVICE SUPPORTS SAMPLER ANISOTRPY")
+    }
+    else
+    {
+        INFO("DEVICE DOES NOT SUPPORT SAMPLER ANISOTRPY")
+    }
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count, 0);
+    ARRAY_TYPE(VkQueueFamilyProperties)* queue_families = array_create(
+        VkQueueFamilyProperties, queue_family_count, scratch.allocator);
+    vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count,
+                                             queue_families->data);
+    queue_families->num_items = queue_family_count;
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+
+        DEBUG("QUEUE INDEX: %d", queue_index);
+        // Graphics queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            INFO("SUPPORTS GRAPHICS")
+        }
+        else
+        {
+            INFO("NO Graphics SUPPORT")
         }
 
-        u32 queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, 0);
-        vulkan_context->queue_families = darray_create_reserve(VkQueueFamilyProperties, queue_family_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count,
-                                                 vulkan_context->queue_families);
-        for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+        // Compute queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
         {
-            DEBUG("QUEUE INDEX: %d", queue_index);
-            // Graphics queue?
-            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                INFO("SUPPORTS GRAPHICS")
-            }
-            else
-            {
-                INFO("NO Graphics SUPPORT")
-            }
+            INFO("SUPPORTS COMPUTE")
+        }
+        else
+        {
+            INFO("NO COMPUTE SUPPORT")
+        }
 
-            // Compute queue?
-            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_COMPUTE_BIT)
-            {
-                INFO("SUPPORTS COMPUTE")
-            }
-            else
-            {
-                INFO("NO COMPUTE SUPPORT")
-            }
+        // Transfer queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
+        {
+            INFO("SUPPORTS TRANSFER")
+        }
+        else
+        {
+            INFO("NO TRANSFER SUPPORT")
+        }
 
-            // Transfer queue?
-            if (vulkan_context->queue_families[queue_index].queueFlags & VK_QUEUE_TRANSFER_BIT)
-            {
-                INFO("SUPPORTS TRANSFER")
-            }
-            else
-            {
-                INFO("NO TRANSFER SUPPORT")
-            }
+        // Present queue?
+        VkBool32 supports_present = VK_FALSE;
+        VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, queue_index, surface,
+                                                                       &supports_present);
+        VK_CHECK(present_result)
 
-            // Present queue?
-            VkBool32 supports_present = VK_FALSE;
-            VK_CHECK(
-                vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], queue_index, vulkan_context->surface, &
-                    supports_present));
-            if (supports_present)
-            {
-                INFO("SUPPORTS PRESENT")
-            }
-            else
-            {
-                INFO("NO PRESENT SUPPORT")
-            }
-
-            //scan for device extensions we need
-            u32 available_extension_count = 0;
-            VkExtensionProperties* available_extensions = 0;
-            VK_CHECK(vkEnumerateDeviceExtensionProperties( current_device, 0,
-                &available_extension_count, 0));
-            available_extensions = darray_create_reserve(VkExtensionProperties, available_extension_count);
-            VK_CHECK(vkEnumerateDeviceExtensionProperties(
-                current_device,
-                0,
-                &available_extension_count,
-                available_extensions));
-
-            requirements.device_extension_names = darray_create(const char*);
-            darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-            u32 required_extension_count = darray_get_size(requirements.device_extension_names);
-            for (u32 ext_index = 0; ext_index < required_extension_count; ++ext_index)
-            {
-                bool found = false;
-                for (u32 j = 0; j < available_extension_count; ++j)
-                {
-                    if (strcmp(requirements.device_extension_names[ext_index],
-                               available_extensions[j].extensionName) == 0)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    INFO("Required extension not found: '%s', skipping device.",
-                         requirements.device_extension_names[ext_index]);
-                    darray_free(available_extensions);
-                    return false;
-                }
-            }
-
-
-
-            // Query swapchain support.
-            vulkan_device_query_swapchain_support(
-                current_device,
-                vulkan_context->surface,
-                &vulkan_context->swapchain_capabilities);
-
-            if (vulkan_context->swapchain_capabilities.format_count < 1 || vulkan_context->swapchain_capabilities.present_mode_count < 1)
-            {
-                if (vulkan_context->swapchain_capabilities.formats)
-                {
-                    free(vulkan_context->swapchain_capabilities.formats);
-                }
-                if (vulkan_context->swapchain_capabilities.present_modes)
-                {
-                    free(vulkan_context->swapchain_capabilities.present_modes);
-                }
-                INFO("Required swapchain support not present, skipping device.");
-                return false;
-            }
-
-
+        if (supports_present)
+        {
+            INFO("SUPPORTS PRESENT")
+        }
+        else
+        {
+            INFO("NO PRESENT SUPPORT")
         }
     }
 
 
+    //list all device extensions
+    u32 available_extension_count = 0;
+    VK_CHECK(vkEnumerateDeviceExtensionProperties( current_device, 0,
+        &available_extension_count, 0));
+
+    ARRAY_TYPE(VkExtensionProperties)* available_extensions = array_create(
+        VkExtensionProperties, available_extension_count, scratch.allocator);
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(
+        current_device,
+        0,
+        &available_extension_count,
+        available_extensions->data));
+    available_extensions->num_items = available_extension_count;
+
+    DEBUG("Device Extensions");
+    for (u32 ext_index = 0; ext_index < available_extension_count; ++ext_index)
+    {
+        VkExtensionProperties ext_property = array_get(available_extensions, VkExtensionProperties, ext_index);
+        INFO("Extensions: %s", ext_property.extensionName);
+    }
 
 
+    scratch_allocator_end(scratch);
 }
 
+bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, VkSurfaceKHR surface,
+                                               Scratch_Allocator* scratch)
+{
+    Vulkan_Physical_Device_Requirements requirements = {0};
+    // requirements.device_extension_names = darray_create(const char*);
+    // darray_push(requirements.device_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+
+    // device_met_requirements.discrete_gpu;
+    // device_met_requirements.integrated_gpu;
+
+
+    VkPhysicalDeviceProperties2 physical_device_properties = {0};
+    physical_device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+
+    VkPhysicalDeviceFeatures2 physical_device_features = {0};
+    physical_device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
+    VkPhysicalDeviceMemoryProperties2 physical_device_memory_properties = {0};
+    physical_device_memory_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+
+    vkGetPhysicalDeviceProperties2(current_device, &physical_device_properties);
+    vkGetPhysicalDeviceFeatures2(current_device, &physical_device_features);
+    vkGetPhysicalDeviceMemoryProperties2(current_device, &physical_device_memory_properties);
+
+    // GPU type
+    switch (physical_device_properties.properties.deviceType)
+    {
+    default:
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+        INFO("GPU type is Integrated.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+        INFO("GPU type is Discrete.");
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+        INFO("GPU type is Virtual.");
+        return false;
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+        INFO("GPU type is CPU.");
+        return false;
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+        INFO("GPU type is Unknown.");
+        return false;
+        break;
+    }
+
+
+    //check for sampler anisotropy
+    if (!physical_device_features.features.samplerAnisotropy)
+    {
+        M_ERROR("DEVICE DOES NOT SUPPORT SAMPLER ANISOTRPY")
+        return false;
+    }
+
+    u32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count, 0);
+    ARRAY_TYPE(VkQueueFamilyProperties)* queue_families = array_create(
+        VkQueueFamilyProperties, queue_family_count, scratch->allocator);
+    vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count,
+                                             queue_families->data);
+    queue_families->num_items = queue_family_count;
+    for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
+    {
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
+                                                                    queue_index);
+
+        DEBUG("QUEUE INDEX: %d", queue_index);
+        // Graphics queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            requirements.graphics = true;
+        }
+        // Compute queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+        {
+            requirements.compute = true;
+        }
+
+        // Transfer queue?
+        if (queue_family_properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
+        {
+            requirements.transfer = true;
+        }
+
+        // Present queue?
+        VkBool32 supports_present = VK_FALSE;
+        VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(current_device, queue_index, surface,
+                                                                       &supports_present);
+        VK_CHECK(present_result)
+
+        if (supports_present)
+        {
+            requirements.present = true;
+        }
+    }
+
+    if (!requirements.present ||
+        !requirements.graphics ||
+        !requirements.compute ||
+        !requirements.transfer)
+    {
+        return false;
+    }
+
+
+    //list all device extensions
+    u32 available_extension_count = 0;
+    VK_CHECK(vkEnumerateDeviceExtensionProperties( current_device, 0,
+        &available_extension_count, 0));
+
+    //array for the requirements we want, add to them if we need more
+    ARRAY_TYPE(const char*)* required_extension_names = array_create(const char*, available_extension_count,
+                                                                     scratch->allocator);
+    array_push_macro(required_extension_names, &VK_KHR_SWAPCHAIN_EXTENSION_NAME); // dont use the regular push version
+
+    //for the extensions we have
+    ARRAY_TYPE(VkExtensionProperties)* available_extensions = array_create(
+        VkExtensionProperties, available_extension_count, scratch->allocator);
+    VK_CHECK(vkEnumerateDeviceExtensionProperties(
+        current_device,
+        0,
+        &available_extension_count,
+        available_extensions->data));
+    available_extensions->num_items = available_extension_count;
+
+    //check if our required extensions are on this device
+    for (u32 required_index = 0; required_index < required_extension_names->num_items; ++required_index)
+    {
+        bool found = false;
+        const char* required_ext_name = array_get(required_extension_names, const char*, required_index);
+
+        for (u32 ext_index = 0; ext_index < available_extension_count; ++ext_index)
+        {
+            VkExtensionProperties ext_property = array_get(available_extensions, VkExtensionProperties, ext_index);
+
+            if (strcmp(ext_property.extensionName, required_ext_name) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            return false;
+        }
+    }
+
+
+    //device meets all our requirements
+    return true;
+}
 
 bool select_physical_device(Vulkan_Context* vulkan_context)
 {
@@ -1084,7 +1843,8 @@ bool physical_device_meets_requirements(
                     bool found = false;
                     for (u32 j = 0; j < available_extension_count; ++j)
                     {
-                        if (strcmp(requirements->device_extension_names[i], available_extensions[j].extensionName) == 0)
+                        if (strcmp(requirements->device_extension_names[i],
+                                   available_extensions[j].extensionName) == 0)
                         {
                             found = true;
                             break;
@@ -1137,7 +1897,8 @@ void vulkan_device_query_swapchain_support(VkPhysicalDevice physical_device, VkS
     if (out_support_info->format_count != 0)
     {
         out_support_info->formats = darray_create_reserve(VkSurfaceFormatKHR,
-                                                          sizeof(VkSurfaceFormatKHR) * out_support_info->format_count);
+                                                          sizeof(VkSurfaceFormatKHR) * out_support_info->
+                                                          format_count);
         VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
             physical_device,
             surface,
