@@ -4,7 +4,7 @@
 void vulkan_framebuffer_create(Vulkan_Context* context, Vulkan_Renderpass* renderpass,
                                u32 width, u32 height,
                                u32 attachment_count, VkImageView* attachments,
-                               Vulkan_Framebuffer* out_framebuffer)
+                               Vulkan_Framebuffer* out_framebuffer, Renderer* renderer)
 {
     // Take a copy of the attachments, renderpass and attachment count
     // TODO: ?? why is there a malloc here??
@@ -30,16 +30,16 @@ void vulkan_framebuffer_create(Vulkan_Context* context, Vulkan_Renderpass* rende
 
 
     VK_CHECK(vkCreateFramebuffer(
-        context->logical_device,
+        renderer->logical_device,
         &framebuffer_create_info,
         context->allocator,
         &out_framebuffer->framebuffer_handle));
 }
 
 
-void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer)
+void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* framebuffer, Renderer* renderer)
 {
-    vkDestroyFramebuffer(context->logical_device, framebuffer->framebuffer_handle, context->allocator);
+    vkDestroyFramebuffer(renderer->logical_device, framebuffer->framebuffer_handle, context->allocator);
 
     if (framebuffer->attachments)
     {
@@ -52,7 +52,7 @@ void vulkan_framebuffer_destroy(Vulkan_Context* context, Vulkan_Framebuffer* fra
 }
 
 
-void regenerate_framebuffer(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Vulkan_Renderpass* renderpass)
+void regenerate_framebuffer(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Vulkan_Renderpass* renderpass, Renderer* renderer)
 {
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {
@@ -69,7 +69,7 @@ void regenerate_framebuffer(Vulkan_Context* context, Vulkan_Swapchain* swapchain
             context->framebuffer_height,
             attachment_count,
             attachments,
-            &context->swapchain.framebuffers[i]);
+            &context->swapchain.framebuffers[i], renderer);
     }
 
     INFO("FRAMEBUFFERS REGENERATED")

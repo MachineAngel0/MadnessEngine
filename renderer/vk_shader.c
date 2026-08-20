@@ -1,7 +1,7 @@
 ﻿#include "vk_shader.h"
 
 
-VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, const u64 shader_size)
+VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, const u64 shader_size, Renderer* renderer)
 {
     VkShaderModuleCreateInfo shader_module_create_info = {0};
     //shader_module_create_info.flags = 0;
@@ -11,7 +11,7 @@ VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* sha
     shader_module_create_info.pCode = (uint32_t*)shader_bytes;
 
     VkShaderModule shader_module;
-    if (vkCreateShaderModule(context->logical_device, &shader_module_create_info, NULL, &shader_module) !=
+    if (vkCreateShaderModule(renderer->logical_device, &shader_module_create_info, NULL, &shader_module) !=
         VK_SUCCESS)
     {
         FATAL("failed to create vertex shader module!");
@@ -46,7 +46,7 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     pipeline_layout_info.pPushConstantRanges = push_constant;
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device, &pipeline_layout_info,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->logical_device, &pipeline_layout_info,
                                                       NULL,
                                                       &ui_pipeline->pipeline_layout);
     VK_CHECK(pipeline_result);
@@ -66,8 +66,8 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
 
 
     //create the shader stage info
@@ -246,7 +246,7 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->logical_device,
                                                          pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &ui_pipeline->handle);
@@ -259,8 +259,8 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, vert_shader_module, NULL);
 
     return true;
 
@@ -268,8 +268,8 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, vert_shader_module, NULL);
     return true;
 }
 
@@ -298,7 +298,7 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device, &pipeline_layout_info,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->logical_device, &pipeline_layout_info,
                                                       NULL,
                                                       &text_pipeline->pipeline_layout);
     VK_CHECK(pipeline_result);
@@ -318,8 +318,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
 
     //create the shader stage info
     VkPipelineShaderStageCreateInfo vert_shader_stage_info = {0};
@@ -522,7 +522,7 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->logical_device,
                                                          pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &text_pipeline->handle);
@@ -536,8 +536,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, vert_shader_module, NULL);
 
     return true;
 }
@@ -567,7 +567,7 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
 
 
     //pipeline layout is the only thing the graphics pipeline needs, the descriptor sets can be created separately
-    VkResult pipeline_result = vkCreatePipelineLayout(renderer->context.logical_device, &pipeline_layout_info,
+    VkResult pipeline_result = vkCreatePipelineLayout(renderer->logical_device, &pipeline_layout_info,
                                                       NULL,
                                                       &sprite_pipeline->pipeline_layout);
     VK_CHECK(pipeline_result);
@@ -587,8 +587,8 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size);
+    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
+    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
 
 
     //create the shader stage info
@@ -785,7 +785,7 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     graphics_pipeline_info.pNext = &pipeline_rendering_create_info;
 
 
-    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->context.logical_device,
+    VkResult graphics_result = vkCreateGraphicsPipelines(renderer->logical_device,
                                                          pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &sprite_pipeline->handle);
@@ -798,8 +798,8 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, vert_shader_module, NULL);
 
     return true;
 
@@ -807,8 +807,8 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
     //TODO: might want move out into the shader destroy
-    vkDestroyShaderModule(renderer->context.logical_device, fragment_shader_module, NULL);
-    vkDestroyShaderModule(renderer->context.logical_device, vert_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, fragment_shader_module, NULL);
+    vkDestroyShaderModule(renderer->logical_device, vert_shader_module, NULL);
     return true;
 }
 

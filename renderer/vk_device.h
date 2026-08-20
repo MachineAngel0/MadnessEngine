@@ -40,11 +40,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
 
 
 /*** VULKAN Device ***/
-bool vulkan_device_create(Vulkan_Context* vulkan_context);
-bool vulkan_device_destroy(Vulkan_Context* vulkan_context);
 
 
 bool vulkan_device_create2(Renderer* renderer);
+bool vulkan_device_destroy2(Renderer* renderer);
 void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surface, Allocator* allocator);
 bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, VkSurfaceKHR surface, Scratch_Allocator* scratch);
 void vulkan_physical_device_get_supported_features(VkPhysicalDevice current_device, VkPhysicalDeviceFeatures2* out_features);
@@ -60,19 +59,6 @@ void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic*
 
 /* SURFACE */
 // void create_surface(Vulkan_Context* vulkan_context, platform_state* platform);
-
-/* PHYSICAL DEVICE*/
-bool select_physical_device(Vulkan_Context* vulkan_context);
-
-bool physical_device_meets_requirements(
-    Vulkan_Context* vulkan_context,
-    VkPhysicalDevice device,
-    VkSurfaceKHR surface,
-    const VkPhysicalDeviceProperties* properties,
-    const VkPhysicalDeviceFeatures* features,
-    const Vulkan_Physical_Device_Requirements* requirements,
-    vulkan_physical_device_queue_family_info* out_queue_info,
-    vulkan_swapchain_capabilities_info* out_swapchain_support);
 
 
 void vulkan_device_query_swapchain_support(

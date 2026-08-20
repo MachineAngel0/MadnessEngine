@@ -155,7 +155,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     );
 
     //we use one for the draw count since we are instancing the sprites
-    if (renderer->context.features.multiDrawIndirect)
+    if (renderer->features2.features.multiDrawIndirect)
     {
         vkCmdDrawIndexedIndirect(command_buffer->handle,
                                  sprite_indirect_buffer->handle, 0,

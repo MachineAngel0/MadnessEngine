@@ -569,7 +569,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 
 
-        if (renderer->context.features.multiDrawIndirect)
+        if (renderer->features2.features.multiDrawIndirect)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      indirect_buffer->handle, 0,
@@ -651,7 +651,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 
 
-        if (renderer->context.features.multiDrawIndirect)
+        if (renderer->features2.features.multiDrawIndirect)
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      indirect_buffer->handle, 0,

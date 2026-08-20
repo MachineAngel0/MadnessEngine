@@ -1,24 +1,24 @@
 ﻿#include "vk_renderpass.h"
 
 
-void vulkan_renderpass_create_new(Vulkan_Context* context)
+void vulkan_renderpass_create_new(Vulkan_Context* context, Renderer* renderer)
 {
     Render_Graph render_graph = {0};
 
     Attachment_Handle depth_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
                                                                          VK_FORMAT_R16G16B16A16_SFLOAT,
                                                                          context->framebuffer_width,
-                                                                         context->framebuffer_height);
+                                                                         context->framebuffer_height, renderer);
 
     Attachment_Handle normal_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
                                                                           VK_FORMAT_R16G16B16A16_SFLOAT,
                                                                           context->framebuffer_width,
-                                                                          context->framebuffer_height);
+                                                                          context->framebuffer_height, renderer);
 
     Attachment_Handle color_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
                                                                          VK_FORMAT_R8G8B8A8_UNORM,
                                                                          context->framebuffer_width,
-                                                                         context->framebuffer_height);
+                                                                         context->framebuffer_height, renderer);
 }
 
 void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer)
@@ -47,7 +47,7 @@ void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Com
 
 
 Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
-                                           VkFormat format, u32 width, u32 height)
+                                           VkFormat format, u32 width, u32 height, Renderer* renderer)
 {
     Attachment* attachment = &render_graph->attachments[render_graph->attachments_count++];
     Attachment_Handle attachment_handle = {render_graph->attachments_count - 1};
@@ -97,27 +97,27 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    VkResult create_image_result = vkCreateImage(context->logical_device, &image_create_info, context->allocator,
+    VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info, context->allocator,
                                                  &attachment->image);
     VK_CHECK(create_image_result);
 
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(context->logical_device, attachment->image, &memory_requirements);
+    vkGetImageMemoryRequirements(renderer->logical_device, attachment->image, &memory_requirements);
 
     VkMemoryAllocateInfo memory_allocate_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    vkGetImageMemoryRequirements(context->logical_device, attachment->image, &memory_requirements);
+    vkGetImageMemoryRequirements(renderer->logical_device, attachment->image, &memory_requirements);
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+                                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderer);
     if (memory_allocate_info.memoryTypeIndex == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
     }
 
-    VkResult alloc_memory_result = vkAllocateMemory(context->logical_device, &memory_allocate_info,
+    VkResult alloc_memory_result = vkAllocateMemory(renderer->logical_device, &memory_allocate_info,
                                                     context->allocator, &attachment->memory);
     VK_CHECK(alloc_memory_result);
-    VkResult bind_image_memory_result = vkBindImageMemory(context->logical_device, attachment->image,
+    VkResult bind_image_memory_result = vkBindImageMemory(renderer->logical_device, attachment->image,
                                                           attachment->memory, 0);
     VK_CHECK(bind_image_memory_result);
 
@@ -132,7 +132,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         },
     };
     VK_CHECK(
-        vkCreateImageView(context->logical_device, &image_view_create_info, context->allocator, &attachment->view
+        vkCreateImageView(renderer->logical_device, &image_view_create_info, context->allocator, &attachment->view
         ));
 
 
@@ -140,7 +140,7 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     // We use a new layout introduced by this extension that makes writes to images visible via input attachments
     Vulkan_Command_Buffer temp_command_buffer;
     vulkan_command_buffer_allocate_and_begin_single_use(context,
-                                                        context->graphics_command_pool, &temp_command_buffer);
+                                                        renderer->graphics_command_pool, &temp_command_buffer, renderer);
 
 
     VkImageMemoryBarrier2 image_memory_barrier = {
@@ -160,15 +160,15 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     };
     vkCmdPipelineBarrier2(temp_command_buffer.handle, &dependency_info);
 
-    vulkan_command_buffer_end_and_submit_and_free_single_use(context, context->graphics_command_pool,
-                                         &temp_command_buffer, context->graphics_queue);
+    vulkan_command_buffer_end_and_submit_and_free_single_use(context, renderer->graphics_command_pool,
+                                                             &temp_command_buffer, renderer->graphics_queue, renderer);
 
     return attachment_handle;
 }
 
 void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_renderpass, vec4s screen_pos,
                               vec4s clear_color,
-                              f32 depth, u32 stencil)
+                              f32 depth, u32 stencil, Renderer* renderer)
 {
      glm_vec4_copy(screen_pos.raw, out_renderpass->screen_pos.raw);
      glm_vec4_copy(clear_color.raw, out_renderpass->clear_color.raw);
@@ -266,17 +266,17 @@ void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_re
     render_pass_create_info.flags = 0;
 
     VK_CHECK(vkCreateRenderPass(
-        context->logical_device,
+        renderer->logical_device,
         &render_pass_create_info,
         context->allocator,
         &out_renderpass->handle));
 }
 
-void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass)
+void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass, Renderer* renderer)
 {
     if (renderpass && renderpass->handle)
     {
-        vkDestroyRenderPass(context->logical_device, renderpass->handle, context->allocator);
+        vkDestroyRenderPass(renderer->logical_device, renderpass->handle, context->allocator);
         renderpass->handle = 0;
     }
 }

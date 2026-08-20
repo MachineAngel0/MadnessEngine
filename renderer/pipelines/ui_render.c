@@ -32,8 +32,8 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
     //UI Render
 
     Vulkan_Command_Buffer temp_command_buffer = {0};
-    vulkan_command_buffer_allocate_and_begin_single_use(&renderer->context, renderer->context.graphics_command_pool,
-                                                        &temp_command_buffer);
+    vulkan_command_buffer_allocate_and_begin_single_use(&renderer->context, renderer->graphics_command_pool,
+                                                        &temp_command_buffer, renderer);
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                                    ui_renderer->ui_vertex_buffer_handle,
                                                    ui_renderer->ui_vertex_staging_buffer_handle, &temp_command_buffer,
@@ -46,9 +46,9 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
                                                    default_sprite_indices,
                                                    sizeof(u16) * 6);
     vulkan_command_buffer_end_and_submit_and_free_single_use(&renderer->context,
-                                                             renderer->context.graphics_command_pool,
+                                                             renderer->graphics_command_pool,
                                                              &temp_command_buffer,
-                                                             renderer->context.graphics_queue);
+                                                             renderer->graphics_queue, renderer);
 
 
     //insanity ui
@@ -129,7 +129,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 
     PC_UI pc_ui = {
         renderer->buffer_system->global_ubo_handle.handle,
-        get_buffer_device_address(renderer->context.logical_device,
+        get_buffer_device_address(renderer->logical_device,
                                   vulkan_buffer_get(renderer, ui_renderer->ui_material_ssbo_handle)->handle),
     };
 
@@ -189,7 +189,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 
     PC_UI pc_insanity_ui = {
         renderer->buffer_system->global_ubo_handle.handle,
-        get_buffer_device_address(renderer->context.logical_device,
+        get_buffer_device_address(renderer->logical_device,
                                   vulkan_buffer_get(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->handle),
     };
 

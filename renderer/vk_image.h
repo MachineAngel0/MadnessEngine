@@ -15,30 +15,30 @@ void vulkan_image_create(Vulkan_Context* context,
                          VkMemoryPropertyFlags memory_flags,
                          b32 create_view,
                          VkImageAspectFlags view_aspect_flags,
-                         Vulkan_Texture* out_texture);
+                         Vulkan_Texture* out_texture, Renderer* renderer);
 
 
 
 void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-    Vulkan_Texture* out_texture);
+                                     Vulkan_Texture* out_texture, Renderer* renderer);
 
 
 void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
-                              VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
+                              VkImageAspectFlags aspect_flags, Vulkan_Texture* texture, Renderer* renderer);
 
-void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image);
+void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image, Renderer* renderer);
 
 
 
 void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer,
-                          const char* filepath, Vulkan_Texture* out_texture);
+                          const char* filepath, Vulkan_Texture* out_texture, Renderer* renderer);
 
 
 void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
-                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, Renderer* renderer);
 
 void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
-                       VkImage image, u32 width, u32 height);
+                       VkImage image, u32 width, u32 height, Renderer* renderer);
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture);
 

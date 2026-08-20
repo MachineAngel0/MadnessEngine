@@ -7,7 +7,7 @@ void vulkan_fence_create(Renderer* renderer, VkFence* fence)
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT, // if needed we can pass this in as a param
     };
-    VkResult fence_create_result = vkCreateFence(renderer->context.logical_device, &fence_create_info, NULL,
+    VkResult fence_create_result = vkCreateFence(renderer->logical_device, &fence_create_info, NULL,
                                                  fence);
 
     VK_CHECK(fence_create_result)
@@ -15,16 +15,16 @@ void vulkan_fence_create(Renderer* renderer, VkFence* fence)
 
 void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags fenceCreateFlags)
 {
-    vkDestroyFence(renderer->context.logical_device, *fence, NULL);
+    vkDestroyFence(renderer->logical_device, *fence, NULL);
 }
 
 
-bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
+bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns, Renderer* renderer)
 {
     // if (!fence->is_signaled)
     // {
     VkResult result = vkWaitForFences(
-        context->logical_device,
+        renderer->logical_device,
         1,
         fence,
         VK_TRUE,
@@ -33,7 +33,7 @@ bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
     switch (result)
     {
     case VK_SUCCESS:
-        VkResult fence_reset_result = vkResetFences(context->logical_device, 1, fence);
+        VkResult fence_reset_result = vkResetFences(renderer->logical_device, 1, fence);
         VK_CHECK(fence_reset_result);
 
         return true;
@@ -60,7 +60,11 @@ bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns)
 
 bool vulkan_fence_reset(Renderer* renderer, VkFence* fence)
 {
-    vkResetFences(renderer->context.logical_device, 1, fence);
+    VkResult reset_result = vkResetFences(renderer->logical_device, 1, fence);
+    VK_CHECK(reset_result);
+
+    return true;
+
 }
 
 void binary_semaphore_create(Renderer* renderer, VkSemaphore* semaphore)
@@ -71,14 +75,14 @@ void binary_semaphore_create(Renderer* renderer, VkSemaphore* semaphore)
         .pNext = 0,
     };
 
-    VkResult semaphore_result = vkCreateSemaphore(renderer->context.logical_device, &semaphoreInfo, NULL,
+    VkResult semaphore_result = vkCreateSemaphore(renderer->logical_device, &semaphoreInfo, NULL,
                                                   semaphore);
     VK_CHECK(semaphore_result);
 }
 
 void binary_semaphore_destroy(Renderer* renderer, VkSemaphore* semaphore)
 {
-    vkDestroySemaphore(renderer->context.logical_device, *semaphore, NULL);
+    vkDestroySemaphore(renderer->logical_device, *semaphore, NULL);
 }
 
 void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore)
@@ -95,17 +99,17 @@ void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semapho
     create_info.pNext = &type_create_info; // setting as timeline
 
 
-    VK_CHECK(vkCreateSemaphore(renderer->context.logical_device, &create_info, NULL, timeline_semaphore));
+    VK_CHECK(vkCreateSemaphore(renderer->logical_device, &create_info, NULL, timeline_semaphore));
 }
 
 void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore)
 {
-    vkDestroySemaphore(renderer->context.logical_device, *timeline_semaphore, NULL);
+    vkDestroySemaphore(renderer->logical_device, *timeline_semaphore, NULL);
 }
 
 void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value)
 {
-    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.logical_device, *timeline_semaphore,
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->logical_device, *timeline_semaphore,
                                                        out_counter_value);
     VK_CHECK(result);
 }
@@ -114,7 +118,7 @@ bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSema
                                           const u64 compare_value)
 {
     u64 out_counter_value = 0;
-    const VkResult result = vkGetSemaphoreCounterValue(renderer->context.logical_device, *timeline_semaphore,
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->logical_device, *timeline_semaphore,
                                                        &out_counter_value);
     VK_CHECK(result);
 

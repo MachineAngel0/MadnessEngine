@@ -110,9 +110,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     //allow the window to resize at this point. NOTE: might want to move this to the end of init
     vk_context->is_init = true;
 
-    vulkan_device_create2(renderer);
+
     // Device creation
-    if (!vulkan_device_create(vk_context))
+    if (!vulkan_device_create2(renderer))
     {
         M_ERROR("Failed to create vulkan device!");
         return false;
@@ -143,17 +143,17 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
         vk_context,
         &vk_context->main_renderpass,
         (vec4s){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
-        (vec4s){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0);
+        (vec4s){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0, renderer);
 
-    vulkan_renderpass_create_new(vk_context);
+    vulkan_renderpass_create_new(vk_context, renderer);
 
     // Swapchain framebuffers.
     vk_context->swapchain.framebuffers = darray_create_reserve(Vulkan_Framebuffer, vk_context->swapchain.image_count);
-    regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass);
+    regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass, renderer);
 
     //SHADOW PASS TEXTURE
     vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->context.depth_format,
-                                     &renderer->shadowpass_texture);
+                                    &renderer->shadowpass_texture, renderer);
 
     // Create command buffers.
     renderer->queue_system = vulkan_queue_system_init(renderer);
@@ -321,8 +321,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                                   renderer->buffer_system->global_ubo_handle);
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(Global_Ubo));
-
-
 
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
@@ -647,10 +645,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         vk_context,
         &vk_context->swapchain,
-        vk_context->present_queue,
+        renderer->present_queue,
         renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[image_index],
         image_index);
-
 
 
     // Increment (and loop) the frame index.
@@ -665,7 +662,7 @@ void renderer_shutdown(Renderer* renderer)
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
-    vkDeviceWaitIdle(vk_context->logical_device);
+    vkDeviceWaitIdle(renderer->logical_device);
 
     // Destroy in the opposite order of creation.
 
@@ -681,17 +678,17 @@ void renderer_shutdown(Renderer* renderer)
     // Destroy framebuffers
     for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
     {
-        vulkan_framebuffer_destroy(vk_context, &vk_context->swapchain.framebuffers[i]);
+        vulkan_framebuffer_destroy(vk_context, &vk_context->swapchain.framebuffers[i], renderer);
     }
 
     // Renderpass
-    vulkan_renderpass_destroy(vk_context, &vk_context->main_renderpass);
+    vulkan_renderpass_destroy(vk_context, &vk_context->main_renderpass, renderer);
 
     // Swapchain
-    vulkan_swapchain_destroy(vk_context, &vk_context->swapchain);
+    vulkan_swapchain_destroy(vk_context, &vk_context->swapchain, renderer);
 
     DEBUG("Destroying Vulkan device...");
-    vulkan_device_destroy(vk_context);
+    vulkan_device_destroy2(renderer);
 
     DEBUG("Destroying Vulkan surface...");
     if (vk_context->surface)

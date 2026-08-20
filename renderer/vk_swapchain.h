@@ -7,7 +7,7 @@
 
 void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, Vulkan_Swapchain* swapchain_out);
 
-void vulkan_swapchain_destroy(Vulkan_Context* context, Vulkan_Swapchain* swapchain);
+void vulkan_swapchain_destroy(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Renderer* renderer);
 
 void vulkan_swapchain_recreate(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height, Vulkan_Swapchain* swapchain);
 

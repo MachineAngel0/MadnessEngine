@@ -64,10 +64,10 @@ void buffer_system_frame_start(Renderer* renderer)
     current_frame_staging_buffer->current_offset = 0;
 }
 
-uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties)
+uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties, Renderer* renderer)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(context->physical_device, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(renderer->physical_device, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
     {
@@ -83,7 +83,7 @@ uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemor
 
 
 bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
-                   VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
+                   VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory, Renderer* renderer)
 {
     //create buffer
     VkBufferCreateInfo buffer_create_info = {
@@ -96,11 +96,11 @@ bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUs
     //bufferInfo.flags;
 
     VK_CHECK(
-        vkCreateBuffer(vulkan_context->logical_device, &buffer_create_info, vulkan_context->allocator, buffer));
+        vkCreateBuffer(renderer->logical_device, &buffer_create_info, vulkan_context->allocator, buffer));
 
     //finding memory size needed for the buffer
     VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(vulkan_context->logical_device, *buffer, &memory_requirements);
+    vkGetBufferMemoryRequirements(renderer->logical_device, *buffer, &memory_requirements);
 
     //  NOTE:
     //  It should be noted that in a real world application,
@@ -120,28 +120,28 @@ bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUs
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memory_requirements.size,
         .memoryTypeIndex = find_memory_type(vulkan_context, memory_requirements.memoryTypeBits,
-                                            properties),
+                                            properties, renderer),
     };
-    VK_CHECK(vkAllocateMemory(vulkan_context->logical_device, &memory_allocate_info, NULL, bufferMemory));
+    VK_CHECK(vkAllocateMemory(renderer->logical_device, &memory_allocate_info, NULL, bufferMemory));
 
-    VK_CHECK(vkBindBufferMemory(vulkan_context->logical_device, *buffer, *bufferMemory, 0));
+    VK_CHECK(vkBindBufferMemory(renderer->logical_device, *buffer, *bufferMemory, 0));
 
     return true;
 }
 
 
 void buffer_copy(Vulkan_Context* vulkan_context,
-                 VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+                 VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, Renderer* renderer)
 {
     // Create a temporary command buffer for the copy operation
     VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
     command_buffer_allocation_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocation_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_allocation_info.commandPool = vulkan_context->graphics_command_pool; //TODO: likely to change
+    command_buffer_allocation_info.commandPool = renderer->graphics_command_pool; //TODO: likely to change
     command_buffer_allocation_info.commandBufferCount = 1;
 
     VkCommandBuffer temp_command_buffer;
-    VK_CHECK(vkAllocateCommandBuffers(vulkan_context->logical_device, &command_buffer_allocation_info,
+    VK_CHECK(vkAllocateCommandBuffers(renderer->logical_device, &command_buffer_allocation_info,
         &temp_command_buffer));
 
     // Begin recording the command buffer
@@ -168,28 +168,28 @@ void buffer_copy(Vulkan_Context* vulkan_context,
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &temp_command_buffer;
 
-    VK_CHECK(vkQueueSubmit(vulkan_context->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_CHECK(vkQueueWaitIdle(vulkan_context->graphics_queue));
+    VK_CHECK(vkQueueSubmit(renderer->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_CHECK(vkQueueWaitIdle(renderer->graphics_queue));
 
     // Clean up the temporary command buffer
-    vkFreeCommandBuffers(vulkan_context->logical_device, vulkan_context->graphics_command_pool, 1,
+    vkFreeCommandBuffers(renderer->logical_device, renderer->graphics_command_pool, 1,
                          &temp_command_buffer);
 }
 
 
 void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
                         VkBuffer srcBuffer,
-                        VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+                        VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset, Renderer* renderer)
 {
     // Create a temporary command buffer for the copy operation
     VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
     command_buffer_allocation_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     command_buffer_allocation_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_allocation_info.commandPool = vulkan_context->graphics_command_pool; //TODO: likely to change
+    command_buffer_allocation_info.commandPool = renderer->graphics_command_pool; //TODO: likely to change
     command_buffer_allocation_info.commandBufferCount = 1;
 
     VkCommandBuffer temp_command_buffer;
-    vkAllocateCommandBuffers(vulkan_context->logical_device, &command_buffer_allocation_info,
+    vkAllocateCommandBuffers(renderer->logical_device, &command_buffer_allocation_info,
                              &temp_command_buffer);
 
     // Begin recording the command buffer
@@ -216,11 +216,11 @@ void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* c
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &temp_command_buffer;
 
-    vkQueueSubmit(vulkan_context->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(vulkan_context->graphics_queue);
+    vkQueueSubmit(renderer->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
+    vkQueueWaitIdle(renderer->graphics_queue);
 
     // Clean up the temporary command buffer
-    vkFreeCommandBuffers(vulkan_context->logical_device, vulkan_context->graphics_command_pool, 1,
+    vkFreeCommandBuffers(renderer->logical_device, renderer->graphics_command_pool, 1,
                          &temp_command_buffer);
 }
 
@@ -279,7 +279,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         buffer_in_use->current_offset = 0;
         buffer_in_use->type = buffer_type;
 
-        VkDevice device = renderer->context.logical_device;
+        VkDevice device = renderer->logical_device;
 
 
         //for Buffer device addressing
@@ -362,7 +362,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
             mem_properties = cpu_properties;
         }
         memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
-                                                    mem_properties);
+                                                    mem_properties, renderer);
 
         VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &buffer_in_use->memory));
         VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
@@ -408,7 +408,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     out_buffer->current_offset = 0;
     out_buffer->type = buffer_type;
 
-    VkDevice device = renderer->context.logical_device;
+    VkDevice device = renderer->logical_device;
 
 
     //for Buffer device addressing
@@ -482,7 +482,7 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
         mem_properties = cpu_properties;
     }
     memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
-                                                mem_properties);
+                                                mem_properties, renderer);
 
     VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->context.allocator, &out_buffer->memory));
     VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));
@@ -501,8 +501,8 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
 
 bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer)
 {
-    vkFreeMemory(renderer->context.logical_device, vk_buffer->memory, NULL);
-    vkDestroyBuffer(renderer->context.logical_device, vk_buffer->handle, NULL);
+    vkFreeMemory(renderer->logical_device, vk_buffer->memory, NULL);
+    vkDestroyBuffer(renderer->logical_device, vk_buffer->handle, NULL);
     return true;
 }
 
@@ -518,7 +518,7 @@ Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle
 
 VkDeviceAddress vulkan_buffer_get_device_address(Renderer* renderer, Buffer_Handle buffer_handle)
 {
-    return get_buffer_device_address(renderer->context.logical_device,
+    return get_buffer_device_address(renderer->logical_device,
                                      vulkan_buffer_get(renderer, buffer_handle)->handle);
 }
 
@@ -568,7 +568,7 @@ void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffe
         return;
     }
 
-    VkDevice device = renderer->context.logical_device;
+    VkDevice device = renderer->logical_device;
 
 
     // Flush the mapped memory to make it visible to the GPU
@@ -586,7 +586,7 @@ void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffe
 
     VkCommandBufferAllocateInfo cmdBufAllocateInfo = {0};
     cmdBufAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdBufAllocateInfo.commandPool = renderer->context.graphics_command_pool;
+    cmdBufAllocateInfo.commandPool = renderer->graphics_command_pool;
     cmdBufAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmdBufAllocateInfo.commandBufferCount = 1;
     VK_CHECK(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
@@ -614,11 +614,11 @@ void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffe
     VkFence fence;
     VK_CHECK(vkCreateFence(device, &fenceCI, renderer->context.allocator, &fence));
     // Submit copies to the queue
-    VK_CHECK(vkQueueSubmit(renderer->context.graphics_queue, 1, &submitInfo, fence));
+    VK_CHECK(vkQueueSubmit(renderer->graphics_queue, 1, &submitInfo, fence));
     // Wait for the fence to signal that command buffer has finished executing
     VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
     vkDestroyFence(device, fence, 0);
-    vkFreeCommandBuffers(device, renderer->context.graphics_command_pool, 1, &copyCmd);
+    vkFreeCommandBuffers(device, renderer->graphics_command_pool, 1, &copyCmd);
 }
 
 void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,

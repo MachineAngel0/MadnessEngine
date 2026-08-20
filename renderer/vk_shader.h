@@ -3,7 +3,7 @@
 
 #include "vulkan_struct_types.h"
 
-VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, u64 shader_size);
+VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, u64 shader_size, Renderer* renderer);
 
 
 void vulkan_default_shader_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pipeline,

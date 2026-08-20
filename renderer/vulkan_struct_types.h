@@ -947,9 +947,7 @@ typedef struct vulkan_context
     VkAllocationCallbacks* allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
 
-    // debug labels loaded functions
-    PFN_vkCmdBeginDebugUtilsLabelEXT debug_label_start;
-    PFN_vkCmdEndDebugUtilsLabelEXT debug_label_end;
+
 
     //Surface
     VkSurfaceKHR surface;
@@ -960,29 +958,13 @@ typedef struct vulkan_context
     u32 framebuffer_width_new;
     u32 framebuffer_height_new;
 
-    //Device
-    VkPhysicalDevice physical_device;
-    VkDevice logical_device;
+
     vulkan_swapchain_capabilities_info swapchain_capabilities;
 
-    s32 graphics_queue_index;
-    s32 present_queue_index;
-    s32 transfer_queue_index;
-    s32 compute_queue_index;
 
-    //family queues
-    VkQueue graphics_queue;
-    VkQueue present_queue;
-    VkQueue transfer_queue;
-    VkQueue compute_queue;
-
-    VkPhysicalDeviceProperties properties;
     // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
     // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
 
-    VkPhysicalDeviceFeatures features;
-    VkPhysicalDeviceMemoryProperties memory;
-    VkQueueFamilyProperties* queue_families;
 
     VkFormat depth_format;
 
@@ -995,12 +977,6 @@ typedef struct vulkan_context
 
     //renderpass
     Vulkan_Renderpass main_renderpass;
-
-    //command pool/buffer
-    //TODO: one pool per thread (per queue family (annoying for those on the same thread))
-    VkCommandPool graphics_command_pool;
-    VkCommandPool transfer_command_pool;
-    VkCommandPool compute_command_pool;
 
 
 

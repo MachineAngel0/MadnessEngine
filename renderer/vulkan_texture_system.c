@@ -42,7 +42,7 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
         MASSERT(texture);
 
-        vulkan_texture_free(&renderer->context, texture);
+        vulkan_texture_free(&renderer->context, texture, renderer);
     }
 
 
@@ -130,14 +130,14 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
         VkDeviceMemory stagingBufferMemory;
         buffer_create(&renderer->context, vulkan_texture->image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                      &stagingBufferMemory);
+                      &stagingBufferMemory, renderer);
 
         //allocate memory
         void* data;
-        vkMapMemory(renderer->context.logical_device, stagingBufferMemory, 0,
+        vkMapMemory(renderer->logical_device, stagingBufferMemory, 0,
                     texture_upload.madness_texture->pixels_size, 0, &data);
         memcpy(data, texture_upload.pixel_data, texture_upload.madness_texture->pixels_size);
-        vkUnmapMemory(renderer->context.logical_device, stagingBufferMemory);
+        vkUnmapMemory(renderer->logical_device, stagingBufferMemory);
 
 
         buffer_to_image_copy_new(transfer_command_buffer, stagingBuffer, vulkan_texture->texture_image,
@@ -212,7 +212,7 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
     Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
     create_texture_image(&renderer->context,
                          &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->context.
-                             current_frame], filepath, out_texture);
+                             current_frame], filepath, out_texture, renderer);
 
     //increment index for next usage
     system->available_texture_indexes++;
