@@ -1,7 +1,7 @@
 ﻿#include "vk_shader.h"
 
 
-VkShaderModule create_shader_module(const Vulkan_Context* context, const u8* shader_bytes, const u64 shader_size, Renderer* renderer)
+VkShaderModule create_shader_module(Renderer* renderer, const u8* shader_bytes, const u64 shader_size)
 {
     VkShaderModuleCreateInfo shader_module_create_info = {0};
     //shader_module_create_info.flags = 0;
@@ -66,8 +66,8 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
+    VkShaderModule vert_shader_module = create_shader_module(renderer, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(renderer, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -219,7 +219,7 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->swapchain.surface_format.format;
     pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
     pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
@@ -318,8 +318,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
+    VkShaderModule vert_shader_module = create_shader_module(renderer, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(renderer, frag_data.data, frag_data.size);
 
     //create the shader stage info
     VkPipelineShaderStageCreateInfo vert_shader_stage_info = {0};
@@ -497,7 +497,7 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->swapchain.surface_format.format;
     pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
     pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
@@ -587,8 +587,8 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
+    VkShaderModule vert_shader_module = create_shader_module(renderer, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(renderer, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -758,7 +758,7 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->swapchain.surface_format.format;
     pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
     pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 

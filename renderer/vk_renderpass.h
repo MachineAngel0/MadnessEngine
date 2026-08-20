@@ -134,26 +134,17 @@ typedef struct Render_Graph
 //post -> most likely just the color
 //UI -> color, load op
 
-void vulkan_renderpass_create_new(Vulkan_Context* context, Renderer* renderer);
+void vulkan_renderpass_create_new(Renderer* renderer);
 
 
-Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
-                                           VkFormat format, u32 width, u32 height, Renderer* renderer);
+Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* render_graph,
+                                           Vulkan_Attachment_Type type, VkFormat format, u32 width, u32 height);
 
 //TODO: implement this function properly when needed
-void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer);
+void vulkan_renderpass_insert_memory_barrier(Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
 
 //OLD API
 
-void vulkan_renderpass_create(
-    Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
-    vec4s screen_pos, vec4s clear_color,
-    f32 depth,
-    u32 stencil, Renderer* renderer);
-
-
-void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass, Renderer* renderer);
 
 
 void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);

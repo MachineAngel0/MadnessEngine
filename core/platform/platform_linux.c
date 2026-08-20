@@ -661,7 +661,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
 }
 
 // Surface creation for Vulkan
-bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context)
+bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer)
 {
     // Simply cold-cast to the known type.
     Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
@@ -672,9 +672,9 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* 
     create_info.window = state->window;
 
     VkResult result = vkCreateXcbSurfaceKHR(
-        vulkan_context->instance,
+        renderer->instance,
         &create_info,
-        vulkan_context->allocator,
+        renderer->allocator,
         &state->surface);
     if (result != VK_SUCCESS)
     {

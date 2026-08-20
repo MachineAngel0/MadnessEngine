@@ -42,7 +42,7 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
         MASSERT(texture);
 
-        vulkan_texture_free(&renderer->context, texture, renderer);
+        vulkan_texture_free(renderer, texture);
     }
 
 
@@ -115,7 +115,7 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
 
         //create the texture
-        vulkan_texture_create_image_new(renderer, &renderer->context, &texture_upload, vulkan_texture);
+        vulkan_texture_create_image_new(renderer, &texture_upload, vulkan_texture);
         //update the heap
         update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system,
                                                texture_upload.madness_texture->bindless_slot);
@@ -128,9 +128,9 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
         //create a staging buffer
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
-        buffer_create(&renderer->context, vulkan_texture->image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                      &stagingBufferMemory, renderer);
+        buffer_create(vulkan_texture->image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                      &stagingBuffer, &stagingBufferMemory,
+                      renderer);
 
         //allocate memory
         void* data;
@@ -209,9 +209,9 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
 
     //create the texture
     Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(&renderer->context,
+    create_texture_image(renderer,
                          &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->
-                             current_frame], filepath, out_texture, renderer);
+                             current_frame], filepath, out_texture);
 
     //increment index for next usage
     system->available_texture_indexes++;

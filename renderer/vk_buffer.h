@@ -21,20 +21,20 @@ Buffer_System* buffer_system_free(Renderer* renderer);
 void buffer_system_frame_start(Renderer* renderer);
 
 
-uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties, Renderer* renderer);
+uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 // Get device address of a buffer
 VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
 
 //TODO: used in texture image, replace with a storage buffer call or retrieve
-bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
+bool buffer_create(VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory, Renderer* renderer);
 
 
-void buffer_copy(Vulkan_Context* vulkan_context, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, Renderer* renderer);
-void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
-                        VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
-                        VkDeviceSize srcOffset, VkDeviceSize dstOffset, Renderer* renderer);
+void buffer_copy(Renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void buffer_copy_region(Renderer* renderer,
+                        Vulkan_Command_Buffer* command_buffer_context, VkBuffer srcBuffer, VkBuffer dstBuffer,
+                        VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset);
 
 //new API
 

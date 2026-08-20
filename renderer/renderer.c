@@ -4,7 +4,6 @@
 #include "shader_system.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
-#include "vk_framebuffer.h"
 #include "vk_image.h"
 #include "vk_pipeline.h"
 #include "vk_renderpass.h"
@@ -41,7 +40,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
     memset(renderer, 0, sizeof(Renderer));
-    Vulkan_Context* vk_context = &renderer->context;
 
 
     //grab the input system if its valid
@@ -82,26 +80,26 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     //get the size for the default window from the app config
     //if these aren't set we use 800/600 for default
-    vk_context->framebuffer_width = (platform_config.start_width != 0)
+    renderer->framebuffer_width = (platform_config.start_width != 0)
                                         ? platform_config.start_width
                                         : 600;
-    vk_context->framebuffer_height = (platform_config.start_height != 0)
+    renderer->framebuffer_height = (platform_config.start_height != 0)
                                          ? platform_config.start_height
                                          : 600;
     //set this as well
-    vk_context->framebuffer_width_new = vk_context->framebuffer_width;
-    vk_context->framebuffer_height_new = vk_context->framebuffer_height;
+    renderer->framebuffer_width_new = renderer->framebuffer_width;
+    renderer->framebuffer_height_new = renderer->framebuffer_height;
 
     renderer->mode = RENDER_MODE_NONE;
 
     //create the instance
-    if (!vulkan_instance_create(vk_context, renderer))
+    if (!vulkan_instance_create(renderer))
     {
         M_ERROR("Failed to create vulkan instance!");
         return false;
     }
     // get surface from the platform layer, needed before device creation
-    if (!platform_create_vulkan_surface(platform_state, vk_context, renderer))
+    if (!platform_create_vulkan_surface(platform_state, renderer))
     {
         M_ERROR("Failed to find vulkan surface from platform!");
         return false;
@@ -119,15 +117,15 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     }
 
 
-    if (vk_context->framebuffer_width != vk_context->swapchain_capabilities.capabilities.currentExtent.width)
+    if (renderer->framebuffer_width != renderer->swapchain_capabilities.capabilities.currentExtent.width)
     {
-        vk_context->framebuffer_width = vk_context->swapchain_capabilities.capabilities.currentExtent.width;
-        vk_context->framebuffer_width_new = vk_context->swapchain_capabilities.capabilities.currentExtent.width;
+        renderer->framebuffer_width = renderer->swapchain_capabilities.capabilities.currentExtent.width;
+        renderer->framebuffer_width_new = renderer->swapchain_capabilities.capabilities.currentExtent.width;
     }
-    if (vk_context->framebuffer_height != vk_context->swapchain_capabilities.capabilities.currentExtent.height)
+    if (renderer->framebuffer_height != renderer->swapchain_capabilities.capabilities.currentExtent.height)
     {
-        vk_context->framebuffer_height = vk_context->swapchain_capabilities.capabilities.currentExtent.height;
-        vk_context->framebuffer_height_new = vk_context->swapchain_capabilities.capabilities.currentExtent.
+        renderer->framebuffer_height = renderer->swapchain_capabilities.capabilities.currentExtent.height;
+        renderer->framebuffer_height_new = renderer->swapchain_capabilities.capabilities.currentExtent.
                                                          height;
     }
 
@@ -139,25 +137,15 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Swapchain
     vulkan_swapchain_create(
         renderer,
-        vk_context,
-        vk_context->framebuffer_width,
-        vk_context->framebuffer_height, &vk_context->swapchain);
-    // Main Renderpass
-    vulkan_renderpass_create(
-        vk_context,
-        &vk_context->main_renderpass,
-        (vec4s){.x = 0.f, .y = 0.f, .z = vk_context->framebuffer_width, .w = vk_context->framebuffer_height},
-        (vec4s){.x = 0.f, .y = 0.f, .z = 0.2f, .w = 1.0f}, 1.0f, 0, renderer);
+        renderer->framebuffer_width,
+        renderer->framebuffer_height,
+        &renderer->swapchain);
 
-    vulkan_renderpass_create_new(vk_context, renderer);
-
-    // Swapchain framebuffers.
-    vk_context->swapchain.framebuffers = darray_create_reserve(Vulkan_Framebuffer, vk_context->swapchain.image_count);
-    regenerate_framebuffer(vk_context, &vk_context->swapchain, &vk_context->main_renderpass, renderer);
+    vulkan_renderpass_create_new(renderer);
 
     //SHADOW PASS TEXTURE
-    vulkan_texture_create_shadowmap(&renderer->context, 1024, 1024, renderer->depth_format,
-                                    &renderer->shadowpass_texture, renderer);
+    vulkan_texture_create_shadowmap(renderer, 1024, 1024, renderer->depth_format,
+                                    &renderer->shadowpass_texture);
 
     // Create command buffers.
     renderer->queue_system = vulkan_queue_system_init(renderer);
@@ -223,7 +211,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // this includes, command buffers, sync objects, and cpu side uniform buffers
     // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,
 
-    Vulkan_Context* vk_context = &renderer->context;
 
 
     /*
@@ -248,11 +235,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     u32 image_index = 0;
     if (!vulkan_swapchain_acquire_next_image_index(
         renderer,
-        vk_context,
-        &vk_context->swapchain,
+        &renderer->swapchain,
         UINT64_MAX,
         renderer->queue_system->graphics_render_queue.swapchain_wait_semaphore[image_index],
-        0, &image_index))
+        0,
+        &image_index))
     {
         //if it fails it could mean that the swapchain is recreating itself
         return;
@@ -286,8 +273,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // ubo.view = camera_get_view_matrix(&main_camera);
     ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
     // Perspective
-    ubo.proj = camera_get_projection(&renderer->main_camera, vk_context->framebuffer_width,
-                                     vk_context->framebuffer_height);
+    ubo.proj = camera_get_projection(&renderer->main_camera, renderer->framebuffer_width,
+                                     renderer->framebuffer_height);
 
 
     ubo.directional_lights_address = vulkan_buffer_get_device_address(
@@ -299,7 +286,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer, renderer->light_system->spot_light_storage_buffer_handle);
     ubo.spot_lights_count = renderer->light_system->spot_light_count;
     ubo.camera_position = camera_get_world_position(&renderer->main_camera);
-    ubo.screen_dimensions = (vec2s){renderer->context.framebuffer_width, renderer->context.framebuffer_height};
+    ubo.screen_dimensions = (vec2s){renderer->framebuffer_width, renderer->framebuffer_height};
     ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;
 
@@ -346,21 +333,21 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Dynamic state
     VkViewport default_viewport = {
-        0.0f, 0.0f, (f32)vk_context->framebuffer_width, (f32)vk_context->framebuffer_height, 0.0f, 1.0f
+        0.0f, 0.0f, (f32)renderer->framebuffer_width, (f32)renderer->framebuffer_height, 0.0f, 1.0f
     };
 
 
     // Scissor
     VkRect2D default_scissor = {
         .offset = {.x = 0, .y = 0},
-        .extent = {.width = vk_context->framebuffer_width, .height = vk_context->framebuffer_height},
+        .extent = {.width = renderer->framebuffer_width, .height = renderer->framebuffer_height},
     };
 
     //Depth Prepass//
     vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Depth Prepass");
 
     image_insert_memory_barrier(graphics_command_buffer->handle,
-                                vk_context->swapchain.depth_attachment.texture_image,
+                                renderer->swapchain.depth_attachment.texture_image,
                                 VK_ACCESS_NONE,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -376,7 +363,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     VkRenderingAttachmentInfo predepth_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
+        .imageView = renderer->swapchain.depth_attachment.texture_image_view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the depth data
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE, // dont care after rendering
@@ -387,7 +374,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = {0, 0},
-            .extent = {vk_context->framebuffer_width, vk_context->framebuffer_height}
+            .extent = {renderer->framebuffer_width, renderer->framebuffer_height}
         },
         .layerCount = 1,
         .colorAttachmentCount = 0,
@@ -416,7 +403,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //transition to be read by the later stages
     image_insert_memory_barrier(
-        graphics_command_buffer->handle, renderer->context.swapchain.depth_attachment.texture_image,
+        graphics_command_buffer->handle, renderer->swapchain.depth_attachment.texture_image,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
 
@@ -532,7 +519,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(graphics_command_buffer->handle,
-                                vk_context->swapchain.images[image_index], 0,
+                                renderer->swapchain.images[image_index], 0,
                                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -545,7 +532,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // Set up the rendering attachment info
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = vk_context->swapchain.image_views[image_index],
+        .imageView = renderer->swapchain.image_views[image_index],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the image
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //keep for presenting
@@ -554,7 +541,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     VkRenderingAttachmentInfo depth_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = vk_context->swapchain.depth_attachment.texture_image_view,
+        .imageView = renderer->swapchain.depth_attachment.texture_image_view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD, // load the depth from the predepth apss
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE, //TODO: keep if we have later passes
@@ -565,7 +552,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = {0, 0},
-            .extent = {vk_context->framebuffer_width, vk_context->framebuffer_height}
+            .extent = {renderer->framebuffer_width, renderer->framebuffer_height}
         },
         .layerCount = 1,
         .colorAttachmentCount = 1,
@@ -614,7 +601,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(graphics_command_buffer->handle,
-                                vk_context->swapchain.images[image_index],
+                                renderer->swapchain.images[image_index],
                                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 0,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -644,8 +631,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
         renderer,
-        vk_context,
-        &vk_context->swapchain,
+        &renderer->swapchain,
         renderer->present_queue,
         renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[image_index],
         image_index);
@@ -658,7 +644,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 void renderer_shutdown(Renderer* renderer)
 {
-    Vulkan_Context* vk_context = &renderer->context;
+
 
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
@@ -676,26 +662,19 @@ void renderer_shutdown(Renderer* renderer)
     // Command buffers
 
 
-    // Destroy framebuffers
-    for (u32 i = 0; i < vk_context->swapchain.image_count; ++i)
-    {
-        vulkan_framebuffer_destroy(vk_context, &vk_context->swapchain.framebuffers[i], renderer);
-    }
 
-    // Renderpass
-    vulkan_renderpass_destroy(vk_context, &vk_context->main_renderpass, renderer);
 
     // Swapchain
-    vulkan_swapchain_destroy(vk_context, &vk_context->swapchain, renderer);
+    vulkan_swapchain_destroy(renderer, &renderer->swapchain);
 
     DEBUG("Destroying Vulkan device...");
     vulkan_device_destroy2(renderer);
 
     DEBUG("Destroying Vulkan surface...");
-    if (vk_context->surface)
+    if (renderer->surface)
     {
-        vkDestroySurfaceKHR(renderer->instance, vk_context->surface, renderer->vulkan_allocator);
-        vk_context->surface = 0;
+        vkDestroySurfaceKHR(renderer->instance, renderer->surface, renderer->vulkan_allocator);
+        renderer->surface = 0;
     }
 
     DEBUG("Destroying Vulkan debugger...");
@@ -719,7 +698,6 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 {
     // vulkan_context vk_context = renderer_internal.vulkan_context;
     if (!renderer) return;
-    Vulkan_Context* vk_context = &renderer->context;
 
 
     if (!renderer->is_init)
@@ -730,8 +708,8 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
 
     //NOTE: doesn't actually resize anything here, just flags the renderer for a resize
     INFO("VULKAN RENDERER RESIZE HAS BEEN CALLED: new width: %d, height: %d", width, height);
-    vk_context->framebuffer_width_new = width;
-    vk_context->framebuffer_height_new = height;
+    renderer->framebuffer_width_new = width;
+    renderer->framebuffer_height_new = height;
 
     recreate_swapchain(renderer);
 }

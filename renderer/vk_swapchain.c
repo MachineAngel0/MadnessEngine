@@ -4,9 +4,8 @@
 #include "vk_command_buffer.h"
 #include "vk_device.h"
 #include "vk_image.h"
-#include "vk_framebuffer.h"
 
-void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height,
+void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
                              Vulkan_Swapchain* swapchain_out)
 {
     VkExtent2D swapchain_extent = {width, height};
@@ -15,9 +14,9 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
     //choose a swap surface format, that suits our needs
     bool found = false;
 
-    for (u32 i = 0; i < context->swapchain_capabilities.format_count; i++)
+    for (u32 i = 0; i < renderer->swapchain_capabilities.format_count; i++)
     {
-        VkSurfaceFormatKHR current_surface_format = context->swapchain_capabilities.formats[i];
+        VkSurfaceFormatKHR current_surface_format = renderer->swapchain_capabilities.formats[i];
         //Preferred formats
         //NOTE: very unlikely to not have these format, but we can always create a second loop to find another ideal format
         if (current_surface_format.format == VK_FORMAT_R8G8B8A8_UNORM &&
@@ -33,14 +32,14 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
     if (!found)
     {
         M_ERROR("NO IDEAL SWAPCHAIN FORMAT FOUND, PICKING FIRST AVAILABLE");
-        swapchain_out->surface_format = context->swapchain_capabilities.formats[0];
+        swapchain_out->surface_format = renderer->swapchain_capabilities.formats[0];
     }
 
     //best to use mailbox mode (best for games) or fifo(basically vsync) (is always supported)
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (u32 i = 0; i < context->swapchain_capabilities.present_mode_count; i++)
+    for (u32 i = 0; i < renderer->swapchain_capabilities.present_mode_count; i++)
     {
-        VkPresentModeKHR current_present_mode = context->swapchain_capabilities.present_modes[i];
+        VkPresentModeKHR current_present_mode = renderer->swapchain_capabilities.present_modes[i];
         if (current_present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
         {
             present_mode = current_present_mode;
@@ -49,38 +48,38 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
     }
 
     //requery swapchain support, needed if a device was changed or resolution was changed
-    vulkan_device_query_swapchain_support(renderer->physical_device, context->surface,
-                                          &context->swapchain_capabilities);
+    vulkan_device_query_swapchain_support(renderer->physical_device, renderer->surface,
+                                          &renderer->swapchain_capabilities);
 
     //set the swapchain extend, in the event anything happens
-    if (context->swapchain_capabilities.capabilities.currentExtent.width != UINT32_MAX)
+    if (renderer->swapchain_capabilities.capabilities.currentExtent.width != UINT32_MAX)
     {
-        swapchain_extent = context->swapchain_capabilities.capabilities.currentExtent;
+        swapchain_extent = renderer->swapchain_capabilities.capabilities.currentExtent;
     }
-    VkExtent2D min = context->swapchain_capabilities.capabilities.minImageExtent;
-    VkExtent2D max = context->swapchain_capabilities.capabilities.maxImageExtent;
+    VkExtent2D min = renderer->swapchain_capabilities.capabilities.minImageExtent;
+    VkExtent2D max = renderer->swapchain_capabilities.capabilities.maxImageExtent;
 
     swapchain_extent.width = clamp_int(swapchain_extent.width, min.width, max.width);
     swapchain_extent.height = clamp_int(swapchain_extent.height, min.height, max.height);
 
     //TODO: we should have a clamp here to choose the smallest frame counts possible
-    u32 image_count = context->swapchain_capabilities.capabilities.minImageCount;
+    u32 image_count = renderer->swapchain_capabilities.capabilities.minImageCount;
     //NOTE: specs says if max image count is = 0, that means unlimited amount of images
     // we cant do the sceond check or we will get get 0-1 which wraps around to 255
-    if (context->swapchain_capabilities.capabilities.maxImageCount > 0)
+    if (renderer->swapchain_capabilities.capabilities.maxImageCount > 0)
     {
         // in the event our image count is for some reason greater than the max allowed
-        if (context->swapchain_capabilities.capabilities.minImageCount > 0 && image_count >
-            context->swapchain_capabilities.capabilities.maxImageCount)
+        if (renderer->swapchain_capabilities.capabilities.minImageCount > 0 && image_count >
+            renderer->swapchain_capabilities.capabilities.maxImageCount)
         {
-            image_count = context->swapchain_capabilities.capabilities.maxImageCount;
+            image_count = renderer->swapchain_capabilities.capabilities.maxImageCount;
         }
     }
 
 
     VkSwapchainCreateInfoKHR swapchain_create_info = {0};
     swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_create_info.surface = context->surface;
+    swapchain_create_info.surface = renderer->surface;
     // swapchain_create_info.preTransform = ; // queried from surface capabiltiies
     swapchain_create_info.minImageCount = image_count;
     swapchain_create_info.imageFormat = swapchain_out->surface_format.format;
@@ -110,7 +109,7 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
     }
 
     //portrait vs landscape
-    swapchain_create_info.preTransform = context->swapchain_capabilities.capabilities.currentTransform;
+    swapchain_create_info.preTransform = renderer->swapchain_capabilities.capabilities.currentTransform;
     //compositing with the operating system, wont ever need this
     swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapchain_create_info.presentMode = present_mode;
@@ -175,7 +174,7 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
 
     // Create depth image and its view.
     vulkan_image_create(
-        context,
+        renderer,
         swapchain_extent.width,
         swapchain_extent.height,
         renderer->depth_format,
@@ -184,15 +183,15 @@ void vulkan_swapchain_create(Renderer* renderer, Vulkan_Context* context, u32 wi
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         true,
         VK_IMAGE_ASPECT_DEPTH_BIT,
-        &swapchain_out->depth_attachment, renderer);
+        &swapchain_out->depth_attachment);
 
     INFO("SWAPCHAIN CREATED");
 }
 
-void vulkan_swapchain_destroy(Vulkan_Context* context, Vulkan_Swapchain* swapchain, Renderer* renderer)
+void vulkan_swapchain_destroy(Renderer* renderer, Vulkan_Swapchain* swapchain)
 {
     vkDeviceWaitIdle(renderer->logical_device);
-    vulkan_texture_free(context, &swapchain->depth_attachment, renderer);
+    vulkan_texture_free(renderer, &swapchain->depth_attachment);
     // Only destroy the views, not the images, since those are owned by the swapchain and are thus
     // destroyed when it is.
     for (u32 i = 0; i < swapchain->image_count; ++i)
@@ -203,15 +202,15 @@ void vulkan_swapchain_destroy(Vulkan_Context* context, Vulkan_Swapchain* swapcha
     INFO("SWAPCHAIN DESTROYED");
 }
 
-void vulkan_swapchain_recreate(Renderer* renderer, Vulkan_Context* context, u32 width, u32 height,
+void vulkan_swapchain_recreate(Renderer* renderer, u32 width, u32 height,
                                Vulkan_Swapchain* swapchain)
 {
     //destroy the old and create the new
-    vulkan_swapchain_destroy(context, swapchain, renderer);
-    vulkan_swapchain_create(renderer, context, width, height, swapchain);
+    vulkan_swapchain_destroy(renderer, swapchain);
+    vulkan_swapchain_create(renderer, width, height, swapchain);
 }
 
-bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Context* context, Vulkan_Swapchain* swapchain,
+bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Swapchain* swapchain,
                                                u64 timeout_ns, VkSemaphore image_available_semaphore,
                                                VkFence fence_out, u32* out_image_index)
 {
@@ -220,8 +219,7 @@ bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Contex
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        vulkan_swapchain_recreate(renderer, context, context->framebuffer_width, context->framebuffer_height,
-                                  swapchain);
+        vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
         return false;
     }
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -233,7 +231,7 @@ bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Contex
     return true;
 }
 
-void vulkan_swapchain_present_image(Renderer* renderer, Vulkan_Context* context,
+void vulkan_swapchain_present_image(Renderer* renderer,
                                     Vulkan_Swapchain* swapchain, VkQueue present_queue,
                                     VkSemaphore render_complete_semaphore, u32 present_image_index)
 {
@@ -250,8 +248,7 @@ void vulkan_swapchain_present_image(Renderer* renderer, Vulkan_Context* context,
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        vulkan_swapchain_recreate(renderer, context, context->framebuffer_width, context->framebuffer_height,
-                                  swapchain);
+        vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
     }
     else if (result != VK_SUCCESS)
     {
@@ -262,14 +259,14 @@ void vulkan_swapchain_present_image(Renderer* renderer, Vulkan_Context* context,
 bool recreate_swapchain(Renderer* renderer)
 {
     // If already being recreated, do not try again.
-    if (renderer->context.recreating_swapchain)
+    if (renderer->recreating_swapchain)
     {
         DEBUG("recreate_swapchain called when already recreating. Booting.");
         return false;
     }
 
     // Mark as recreating if the dimensions are valid.
-    renderer->context.recreating_swapchain = true;
+    renderer->recreating_swapchain = true;
 
     // Wait for any operations to complete.
     vkDeviceWaitIdle(renderer->logical_device);
@@ -278,19 +275,18 @@ bool recreate_swapchain(Renderer* renderer)
     // Requery support
     vulkan_device_query_swapchain_support(
         renderer->physical_device,
-        renderer->context.surface,
-        &renderer->context.swapchain_capabilities);
+        renderer->surface,
+        &renderer->swapchain_capabilities);
     vulkan_device_detect_depth_stencil_format(renderer);
 
     vulkan_swapchain_recreate(renderer,
-                              &renderer->context, renderer->context.framebuffer_width_new,
-                              renderer->context.framebuffer_height_new, &renderer->context.swapchain);
+                              renderer->framebuffer_width_new, renderer->framebuffer_height_new,
+                              &renderer->swapchain);
 
     // Sync the framebuffer size with the new sizes.
-    renderer->context.framebuffer_width = renderer->context.framebuffer_width_new;
-    renderer->context.framebuffer_height = renderer->context.framebuffer_height_new;
-    renderer->context.main_renderpass.screen_pos.z = renderer->context.framebuffer_width;
-    renderer->context.main_renderpass.screen_pos.w = renderer->context.framebuffer_height;
+    renderer->framebuffer_width = renderer->framebuffer_width_new;
+    renderer->framebuffer_height = renderer->framebuffer_height_new;
+
 
 
     // cleanup swapchain
@@ -304,23 +300,11 @@ bool recreate_swapchain(Renderer* renderer)
     vulkan_renderer_command_buffers_create(&renderer->context);
     */
 
-    // Framebuffers.
-    for (u32 i = 0; i < renderer->context.swapchain.image_count; ++i)
-    {
-        vulkan_framebuffer_destroy(&renderer->context, &renderer->context.swapchain.framebuffers[i], renderer);
-    }
 
-    renderer->context.main_renderpass.screen_pos.x = 0;
-    renderer->context.main_renderpass.screen_pos.y = 0;
-    renderer->context.main_renderpass.screen_pos.z = renderer->context.framebuffer_width;
-    renderer->context.main_renderpass.screen_pos.w = renderer->context.framebuffer_height;
-
-    regenerate_framebuffer(&renderer->context, &renderer->context.swapchain, &renderer->context.main_renderpass,
-                           renderer);
 
 
     // Clear the recreating flag.
-    renderer->context.recreating_swapchain = false;
+    renderer->recreating_swapchain = false;
 
     return true;
 }

@@ -550,7 +550,7 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
     darray_push(*extension_name_array, &"VK_KHR_win32_surface");
 }
 
-bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context, Renderer* renderer)
+bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer)
 {
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 
@@ -571,10 +571,11 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* 
     }
 
 
-    vulkan_context->surface = state->surface;
-    if (vulkan_context->surface == VK_NULL_HANDLE)
+    renderer->surface = state->surface;
+    if (renderer->surface == VK_NULL_HANDLE)
     {
         FATAL("Vulkan surface handle is null!");
+        return false;
     }
 
     INFO("Vulkan surface handle has been aqcuired from the platform layer!");

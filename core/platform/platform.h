@@ -139,7 +139,7 @@ bool platform_does_directory_exist(const char* path);
 // RENDERER
 void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
-bool platform_create_vulkan_surface(Platform_State* plat_state, Vulkan_Context* vulkan_context, Renderer* renderer);
+bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer);
 
 void platform_get_window_size(s32* width, s32* height);
 void platform_get_window_pos(s32* x, s32* y);

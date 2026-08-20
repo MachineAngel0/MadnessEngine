@@ -5,7 +5,7 @@
 //fence
 void vulkan_fence_create(Renderer* renderer, VkFence* fence);
 void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags fenceCreateFlags);
-bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns, Renderer* renderer);
+bool vulkan_fence_wait(Renderer* renderer, VkFence* fence, u64 timeout_ns);
 bool vulkan_fence_reset(Renderer* renderer, VkFence* fence);
 
 //semaphores

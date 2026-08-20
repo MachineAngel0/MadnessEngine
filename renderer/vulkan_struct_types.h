@@ -71,25 +71,6 @@ typedef struct Vulkan_Texture
 } Vulkan_Texture;
 
 
-typedef struct Vulkan_Renderpass
-{
-    VkRenderPass handle;
-    vec4s screen_pos;
-    vec4s clear_color;
-
-    f32 depth;
-    u32 stencil;
-
-    Vulkan_Render_Pass_State state;
-} Vulkan_Renderpass;
-
-typedef struct Vulkan_Framebuffer
-{
-    VkFramebuffer framebuffer_handle;
-    u32 attachment_count;
-    VkImageView* attachments;
-    Vulkan_Renderpass* renderpass;
-} Vulkan_Framebuffer;
 
 typedef struct Vulkan_Swapchain
 {
@@ -103,8 +84,7 @@ typedef struct Vulkan_Swapchain
 
     Vulkan_Texture depth_attachment;
 
-    // framebuffers used for on-screen rendering.
-    Vulkan_Framebuffer* framebuffers;
+
 } Vulkan_Swapchain;
 
 
@@ -928,44 +908,6 @@ typedef struct Vulkan_Queue_System
 } Vulkan_Queue_System;
 
 
-typedef struct vulkan_context
-{
-    //Surface
-    VkSurfaceKHR surface;
-    // The framebuffer's current width and height.
-    u32 framebuffer_width;
-    u32 framebuffer_height;
-    //value holders for our framebuffer values
-    u32 framebuffer_width_new;
-    u32 framebuffer_height_new;
-
-
-    Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
-
-
-    // context->device.properties.limits. // gets device limits like max maxDescriptorSetSampledImages,
-    // maxMemoryAllocationCount, maxPerStageDescriptorSampledImages
-
-
-    //Swapchain
-    Vulkan_Swapchain swapchain;
-    bool recreating_swapchain;
-
-    //renderpass
-    Vulkan_Renderpass main_renderpass;
-
-
-
-    /*//ensures that the submit has finished before starting work on the image
-    //this is also the per frame sync point
-    VkFence* queue_submit_fence;
-    // semaphore that tells us when our next image is ready for usage/writing to
-    VkSemaphore* swapchain_acquire_semaphore;
-    // semaphore that signals when we are allowed to sumbit our new buffers
-    VkSemaphore* swapchain_release_semaphore;*/
-} Vulkan_Context;
-
-
 typedef struct Renderer
 {
     bool is_init;
@@ -996,10 +938,6 @@ typedef struct Renderer
 
     //draw systems
     UI_Renderer_Backend* ui_renderer;
-
-
-    //TODO: get it out of the context and drop it here
-    Vulkan_Context context;
 
 
     //pipelines
@@ -1071,13 +1009,25 @@ typedef struct Renderer
     PFN_vkCmdBeginDebugUtilsLabelEXT debug_label_start;
     PFN_vkCmdEndDebugUtilsLabelEXT debug_label_end;
 
-    //Swapchain
+    ////// Swapchain and Surface //////
+
     VkFormat depth_format;
 #define VULKAN_MAX_FRAMES_IN_FLIGHT 2
     u8 max_frames_in_flight;
     u32 current_frame;
 
+    //Surface
+    VkSurfaceKHR surface;
+    // The framebuffer's current width and height.
+    u32 framebuffer_width;
+    u32 framebuffer_height;
+    //temp values holder for our framebuffer values, checked once a frame if changed
+    u32 framebuffer_width_new;
+    u32 framebuffer_height_new;
 
+    Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
+    Vulkan_Swapchain swapchain;
+    bool recreating_swapchain;
 
 } Renderer;
 

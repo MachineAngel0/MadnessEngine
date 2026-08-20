@@ -19,7 +19,7 @@ void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags
 }
 
 
-bool vulkan_fence_wait(Vulkan_Context* context, VkFence* fence, u64 timeout_ns, Renderer* renderer)
+bool vulkan_fence_wait(Renderer* renderer, VkFence* fence, u64 timeout_ns)
 {
     // if (!fence->is_signaled)
     // {

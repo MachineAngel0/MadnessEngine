@@ -64,7 +64,7 @@ void buffer_system_frame_start(Renderer* renderer)
     current_frame_staging_buffer->current_offset = 0;
 }
 
-uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemoryPropertyFlags properties, Renderer* renderer)
+uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(renderer->physical_device, &memProperties);
@@ -82,7 +82,7 @@ uint32_t find_memory_type(Vulkan_Context* context, uint32_t type_filter, VkMemor
 }
 
 
-bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUsageFlags usage,
+bool buffer_create(VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory, Renderer* renderer)
 {
     //create buffer
@@ -119,8 +119,8 @@ bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUs
     VkMemoryAllocateInfo memory_allocate_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memory_requirements.size,
-        .memoryTypeIndex = find_memory_type(vulkan_context, memory_requirements.memoryTypeBits,
-                                            properties, renderer),
+        .memoryTypeIndex = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                            properties),
     };
     VK_CHECK(vkAllocateMemory(renderer->logical_device, &memory_allocate_info, NULL, bufferMemory));
 
@@ -130,8 +130,8 @@ bool buffer_create(Vulkan_Context* vulkan_context, VkDeviceSize size, VkBufferUs
 }
 
 
-void buffer_copy(Vulkan_Context* vulkan_context,
-                 VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, Renderer* renderer)
+void buffer_copy(
+    Renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
     // Create a temporary command buffer for the copy operation
     VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
@@ -177,9 +177,9 @@ void buffer_copy(Vulkan_Context* vulkan_context,
 }
 
 
-void buffer_copy_region(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
-                        VkBuffer srcBuffer,
-                        VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset, Renderer* renderer)
+void buffer_copy_region(Renderer* renderer,
+                        Vulkan_Command_Buffer* command_buffer_context,
+                        VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 {
     // Create a temporary command buffer for the copy operation
     VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
@@ -361,8 +361,8 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer,
         {
             mem_properties = cpu_properties;
         }
-        memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
-                                                    mem_properties, renderer);
+        memAlloc.memoryTypeIndex = find_memory_type(renderer, memReqs.memoryTypeBits,
+                                                    mem_properties);
 
         VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->vulkan_allocator, &buffer_in_use->memory));
         VK_CHECK(vkBindBufferMemory(device, buffer_in_use->handle, buffer_in_use->memory, 0));
@@ -481,8 +481,8 @@ void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffe
     {
         mem_properties = cpu_properties;
     }
-    memAlloc.memoryTypeIndex = find_memory_type(&renderer->context, memReqs.memoryTypeBits,
-                                                mem_properties, renderer);
+    memAlloc.memoryTypeIndex = find_memory_type(renderer, memReqs.memoryTypeBits,
+                                                mem_properties);
 
     VK_CHECK(vkAllocateMemory(device, &memAlloc, renderer->vulkan_allocator, &out_buffer->memory));
     VK_CHECK(vkBindBufferMemory(device, out_buffer->handle, out_buffer->memory, 0));

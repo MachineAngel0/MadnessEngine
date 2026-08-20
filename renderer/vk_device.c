@@ -25,7 +25,7 @@ bool get_vulkan_api_version(u32* apiVersion,
     return false;
 }
 
-bool vulkan_instance_create(Vulkan_Context* vulkan_context, Renderer* renderer)
+bool vulkan_instance_create(Renderer* renderer)
 {
     renderer->vulkan_allocator = 0;
 
@@ -236,7 +236,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlag
     return VK_FALSE;
 }
 
-bool vulkan_instance_destroy(Vulkan_Context* vulkan_context, Renderer* renderer)
+bool vulkan_instance_destroy(Renderer* renderer)
 {
     INFO("VULKAN DESTROYING DEBUGGER");
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
@@ -417,7 +417,7 @@ void vulkan_physical_device_find_graphics_and_present_queue(Renderer* renderer,
         // try to find a queue with graphics and present
         VkBool32 supports_present = VK_FALSE;
         VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            current_device, queue_index, renderer->context.surface,
+            current_device, queue_index, renderer->surface,
             &supports_present);
         VK_CHECK(present_result)
 
@@ -452,7 +452,7 @@ void vulkan_physical_device_find_graphics_and_present_queue(Renderer* renderer,
             // try to find a queue with graphics and present
             VkBool32 supports_present = VK_FALSE;
             VkResult present_result = vkGetPhysicalDeviceSurfaceSupportKHR(
-                current_device, queue_index, renderer->context.surface,
+                current_device, queue_index, renderer->surface,
                 &supports_present);
             VK_CHECK(present_result)
 
@@ -514,10 +514,10 @@ bool vulkan_device_create2(Renderer* renderer)
         VkPhysicalDevice current_device = physical_devices[device_idx];
 
 
-        vulkan_device_print_info(current_device, renderer->context.surface, &renderer->allocator);
+        vulkan_device_print_info(current_device, renderer->surface, &renderer->allocator);
 
         Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
-        if (vulkan_physical_device_meets_requirements(current_device, renderer->context.surface, &scratch))
+        if (vulkan_physical_device_meets_requirements(current_device, renderer->surface, &scratch))
         {
             Vulkan_Physical_Device_Suitable temp = {
                 .physical_device = current_device,
@@ -625,8 +625,8 @@ bool vulkan_device_create2(Renderer* renderer)
     renderer->graphics_queue_index = selected_device_heuristic.graphics_queue;
     renderer->present_queue_index = selected_device_heuristic.present_queue;
 
-    vulkan_device_query_swapchain_support(renderer->physical_device, renderer->context.surface,
-                                           &renderer->context.swapchain_capabilities);
+    vulkan_device_query_swapchain_support(renderer->physical_device, renderer->surface,
+                                           &renderer->swapchain_capabilities);
 
     vulkan_physical_device_get_supported_features(renderer->physical_device, &renderer->features2);
 
@@ -775,6 +775,7 @@ bool vulkan_device_create2(Renderer* renderer)
         .separateDepthStencilLayouts = VK_TRUE,
         .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
         .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
         .descriptorBindingVariableDescriptorCount = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
@@ -782,6 +783,7 @@ bool vulkan_device_create2(Renderer* renderer)
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
         .pNext = &enable_vulkan12_features,
+        .shaderDrawParameters = VK_TRUE,
     };
 
     // Request device features.
@@ -789,6 +791,7 @@ bool vulkan_device_create2(Renderer* renderer)
     VkPhysicalDeviceFeatures device_features = {
         .samplerAnisotropy = VK_TRUE,
         .multiDrawIndirect = VK_TRUE,
+        .fillModeNonSolid = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures2 enable_device_features2 = {

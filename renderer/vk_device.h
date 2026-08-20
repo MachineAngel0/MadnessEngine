@@ -28,9 +28,9 @@
 bool get_vulkan_api_version(uint32_t* apiVersion, uint32_t* variant,
                             uint32_t* major, uint32_t* minor, uint32_t* patch);
 
-bool vulkan_instance_create(Vulkan_Context* vulkan_context, Renderer* renderer);
+bool vulkan_instance_create(Renderer* renderer);
 
-bool vulkan_instance_destroy(Vulkan_Context* vulkan_context, Renderer* renderer);
+bool vulkan_instance_destroy(Renderer* renderer);
 
 /*DEBUG MESSAGES/Validation Layers*/
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,

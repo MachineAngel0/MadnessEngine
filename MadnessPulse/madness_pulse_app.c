@@ -206,10 +206,10 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         // job_system_test();
 
 
-        madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
-                         renderer_plugin->renderer->context.framebuffer_height_new);
-        insanity_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new,
-                          renderer_plugin->renderer->context.framebuffer_height_new);
+        madness_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
+                         renderer_plugin->renderer->framebuffer_height_new);
+        insanity_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
+                          renderer_plugin->renderer->framebuffer_height_new);
 
 
         //game and editor switch between

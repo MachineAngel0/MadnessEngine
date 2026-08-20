@@ -65,8 +65,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
-    VkShaderModule fragment_shader_module = create_shader_module(&renderer->context, frag_data.data, frag_data.size, renderer);
+    VkShaderModule vert_shader_module = create_shader_module(renderer, vert_data.data, vert_data.size);
+    VkShaderModule fragment_shader_module = create_shader_module(renderer, frag_data.data, frag_data.size);
 
 
     //create the shader stage info
@@ -343,7 +343,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->swapchain.surface_format.format;
     pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
     pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
@@ -462,7 +462,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     }
 
 
-    VkShaderModule vert_shader_module = create_shader_module(&renderer->context, vert_data.data, vert_data.size, renderer);
+    VkShaderModule vert_shader_module = create_shader_module(renderer, vert_data.data, vert_data.size);
 
 
     //create the shader stage info
@@ -583,7 +583,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info = {0};
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 0; // set to 0 here as we are not using color info
-    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->context.swapchain.surface_format.format;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &renderer->swapchain.surface_format.format;
     pipeline_rendering_create_info.depthAttachmentFormat = renderer->depth_format;
     pipeline_rendering_create_info.stencilAttachmentFormat = renderer->depth_format;
 
@@ -626,7 +626,7 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
 }
 
 
-void vulkan_pipeline_destroy(Vulkan_Context* context, Vulkan_Shader_Pipeline* pipeline, Renderer* renderer)
+void vulkan_pipeline_destroy(Renderer* renderer, Vulkan_Shader_Pipeline* pipeline)
 {
     if (!pipeline)
     {

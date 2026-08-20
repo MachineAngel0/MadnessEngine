@@ -8,37 +8,37 @@
 
 
 
-void vulkan_image_create(Vulkan_Context* context,
-                         u32 width, u32 height,
-                         VkFormat format, VkImageTiling tiling,
-                         VkImageUsageFlags usage,
-                         VkMemoryPropertyFlags memory_flags,
-                         b32 create_view,
-                         VkImageAspectFlags view_aspect_flags,
-                         Vulkan_Texture* out_texture, Renderer* renderer);
+void vulkan_image_create(
+    Renderer* renderer, u32 width,
+    u32 height, VkFormat format,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage,
+    VkMemoryPropertyFlags memory_flags,
+    b32 create_view,
+    VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture);
 
 
 
-void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-                                     Vulkan_Texture* out_texture, Renderer* renderer);
+void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* out_texture);
 
 
-void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
-                              VkImageAspectFlags aspect_flags, Vulkan_Texture* texture, Renderer* renderer);
+void vulkan_image_view_create(Renderer* renderer,
+                              VkFormat format, VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
 
-void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image, Renderer* renderer);
-
-
-
-void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer,
-                          const char* filepath, Vulkan_Texture* out_texture, Renderer* renderer);
+void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image);
 
 
-void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
+
+void create_texture_image(Renderer* renderer,
+                          Vulkan_Command_Buffer* command_buffer, const char* filepath, Vulkan_Texture* out_texture);
+
+
+void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
                              VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, Renderer* renderer);
 
-void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
-                       VkImage image, u32 width, u32 height, Renderer* renderer);
+void copyBufferToImage(Renderer* renderer,
+                       VkBuffer buffer, VkImage image, u32 width, u32 height);
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture);
 
@@ -60,7 +60,7 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
 
 //does not handle any image transitions or synchronization
-void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
+void vulkan_texture_create_image_new(Renderer* renderer,
                                      Texture_GPU_Upload* texture_data,
                                      Vulkan_Texture* out_texture);
 

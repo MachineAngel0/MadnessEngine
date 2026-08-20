@@ -14,7 +14,7 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     Vulkan_Graphics_Queue* graphics_render_queue = &queue_system->graphics_render_queue;
 
     u8 frames_in_flight = renderer->max_frames_in_flight;
-    u8 swapchain_image_count = renderer->context.swapchain.image_count;
+    u8 swapchain_image_count = renderer->swapchain.image_count;
 
 
     graphics_render_queue->frame_submit_fence = allocator_alloc(
@@ -43,9 +43,9 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
         vulkan_fence_create(renderer, &queue_system->graphics_render_queue.frame_submit_fence[i]);
 
         //command buffers
-        vulkan_command_buffer_allocate(&renderer->context,
-                                       &queue_system->graphics_render_queue.graphics_command_buffer[i],
-                                       VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY, queue_system->graphics_pool, renderer);
+        vulkan_command_buffer_allocate(&queue_system->graphics_render_queue.graphics_command_buffer[i],
+                                       VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                       queue_system->graphics_pool, renderer);
     }
 
     //swapchain semaphore, which are per swapchain image
@@ -60,9 +60,9 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     for (u32 i = 0; i < transfer_render_queue->command_buffer_count; i++)
     {
         Vulkan_Command_Buffer* cb = &transfer_render_queue->command_buffer[i];
-        if (!vulkan_command_buffer_allocate(&renderer->context, cb,
-                                            VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                            renderer->graphics_command_pool, renderer))
+        if (!vulkan_command_buffer_allocate(cb, VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                            renderer->graphics_command_pool,
+                                            renderer))
         {
             cb->handle = 0;
             transfer_render_queue->command_buffer_count = i - 1;
@@ -88,9 +88,9 @@ void vulkan_queue_system_graphics_fence_wait(Renderer* renderer, u32 current_fra
 {
     Vulkan_Queue_System* queue_system = renderer->queue_system;
     if (!vulkan_fence_wait(
-        &renderer->context,
+        renderer,
         &queue_system->graphics_render_queue.frame_submit_fence[current_frame],
-        UINT64_MAX, renderer))
+        UINT64_MAX))
     {
         WARN("GRAPHICS START FRAME: In-flight fence wait failure!");
         return;
@@ -347,7 +347,7 @@ bool vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
 }
 
 
-bool vulkan_command_buffer_allocate(Vulkan_Context* context, Vulkan_Command_Buffer* out_command_buffer,
+bool vulkan_command_buffer_allocate(Vulkan_Command_Buffer* out_command_buffer,
                                     Vulkan_Command_Buffer_Level cb_level,
                                     VkCommandPool pool, Renderer* renderer)
 {
@@ -387,8 +387,8 @@ bool vulkan_command_buffer_allocate(Vulkan_Context* context, Vulkan_Command_Buff
     return true;
 }
 
-void vulkan_command_buffer_free(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer, VkCommandPool pool,
-                                Renderer* renderer)
+void vulkan_command_buffer_free(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
+                                VkCommandPool pool)
 {
     vkFreeCommandBuffers(renderer->logical_device, pool, 1, &command_buffer->handle);
     command_buffer->handle = 0;
@@ -466,17 +466,17 @@ void vulkan_command_buffer_end(Vulkan_Command_Buffer* command_buffer)
 }
 
 
-void vulkan_command_buffer_allocate_and_begin_single_use(Vulkan_Context* context, VkCommandPool pool,
-                                                         Vulkan_Command_Buffer* out_command_buffer, Renderer* renderer)
+void vulkan_command_buffer_allocate_and_begin_single_use(Renderer* renderer,
+                                                         VkCommandPool pool, Vulkan_Command_Buffer* out_command_buffer)
 {
-    vulkan_command_buffer_allocate(context, out_command_buffer, VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY, pool, renderer);
+    vulkan_command_buffer_allocate(out_command_buffer, VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY, pool, renderer);
     vulkan_command_buffer_begin_old(out_command_buffer, true, false, false);
 }
 
 
-void vulkan_command_buffer_end_and_submit_and_free_single_use(Vulkan_Context* context, VkCommandPool pool,
-                                                              Vulkan_Command_Buffer* command_buffer, VkQueue queue,
-                                                              Renderer* renderer)
+void vulkan_command_buffer_end_and_submit_and_free_single_use(Renderer* renderer,
+                                                              VkCommandPool pool, Vulkan_Command_Buffer* command_buffer,
+                                                              VkQueue queue)
 {
     vulkan_command_buffer_end(command_buffer);
 
@@ -494,12 +494,12 @@ void vulkan_command_buffer_end_and_submit_and_free_single_use(Vulkan_Context* co
     VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, 0));
 
     VK_CHECK(vkQueueWaitIdle(queue));
-    vulkan_command_buffer_free(context, command_buffer, pool, renderer);
+    vulkan_command_buffer_free(renderer, command_buffer, pool);
 }
 
 
-void vulkan_command_buffer_submit(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer, VkQueue queue,
-                                  Renderer* renderer)
+void vulkan_command_buffer_submit(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
+                                  VkQueue queue)
 {
     // Submit the command buffer to the queue to finish the copy
     VkSubmitInfo submitInfo = {0};
@@ -520,11 +520,11 @@ void vulkan_command_buffer_submit(Vulkan_Context* context, Vulkan_Command_Buffer
 }
 
 
-void vulkan_command_buffer_submit_binary_semaphore(Vulkan_Context* context,
+void vulkan_command_buffer_submit_binary_semaphore(Renderer* renderer,
                                                    Vulkan_Command_Buffer* command_buffer,
                                                    VkQueue queue,
                                                    VkSemaphoreSubmitInfo* wait_semaphore,
-                                                   VkSemaphoreSubmitInfo* signal_semaphore, Renderer* renderer)
+                                                   VkSemaphoreSubmitInfo* signal_semaphore)
 {
     VkCommandBufferSubmitInfo command_buffer_submit_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,

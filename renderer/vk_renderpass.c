@@ -1,27 +1,28 @@
 ﻿#include "vk_renderpass.h"
 
 
-void vulkan_renderpass_create_new(Vulkan_Context* context, Renderer* renderer)
+void vulkan_renderpass_create_new(Renderer* renderer)
 {
     Render_Graph render_graph = {0};
 
-    Attachment_Handle depth_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
+    Attachment_Handle depth_attachment_handle = vulkan_create_attachment(renderer, &render_graph, Attachment_Type_Color,
                                                                          VK_FORMAT_R16G16B16A16_SFLOAT,
-                                                                         context->framebuffer_width,
-                                                                         context->framebuffer_height, renderer);
+                                                                         renderer->framebuffer_width,
+                                                                         renderer->framebuffer_height);
 
-    Attachment_Handle normal_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
-                                                                          VK_FORMAT_R16G16B16A16_SFLOAT,
-                                                                          context->framebuffer_width,
-                                                                          context->framebuffer_height, renderer);
+    Attachment_Handle normal_attachment_handle = vulkan_create_attachment(
+        renderer, &render_graph, Attachment_Type_Color,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        renderer->framebuffer_width,
+        renderer->framebuffer_height);
 
-    Attachment_Handle color_attachment_handle = vulkan_create_attachment(context, &render_graph, Attachment_Type_Color,
+    Attachment_Handle color_attachment_handle = vulkan_create_attachment(renderer, &render_graph, Attachment_Type_Color,
                                                                          VK_FORMAT_R8G8B8A8_UNORM,
-                                                                         context->framebuffer_width,
-                                                                         context->framebuffer_height, renderer);
+                                                                         renderer->framebuffer_width,
+                                                                         renderer->framebuffer_height);
 }
 
-void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer)
+void vulkan_renderpass_insert_memory_barrier(Renderer* renderer, Vulkan_Command_Buffer* command_buffer)
 {
     // A new feature of the dynamic rendering local read extension is the ability to use pipeline barriers in the dynamic render pass
     // to allow framebuffer-local dependencies (i.e. read-after-write) between draw calls using the "by region" flag
@@ -46,8 +47,8 @@ void vulkan_renderpass_insert_memory_barrier(Vulkan_Context* context, Vulkan_Com
 }
 
 
-Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph* render_graph, Vulkan_Attachment_Type type,
-                                           VkFormat format, u32 width, u32 height, Renderer* renderer)
+Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* render_graph,
+                                           Vulkan_Attachment_Type type, VkFormat format, u32 width, u32 height)
 {
     Attachment* attachment = &render_graph->attachments[render_graph->attachments_count++];
     Attachment_Handle attachment_handle = {render_graph->attachments_count - 1};
@@ -97,7 +98,8 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator,
+    VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info,
+                                                 renderer->vulkan_allocator,
                                                  &attachment->image);
     VK_CHECK(create_image_result);
 
@@ -107,8 +109,8 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     VkMemoryAllocateInfo memory_allocate_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     vkGetImageMemoryRequirements(renderer->logical_device, attachment->image, &memory_requirements);
     memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderer);
+    memory_allocate_info.memoryTypeIndex = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_allocate_info.memoryTypeIndex == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -132,15 +134,16 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
         },
     };
     VK_CHECK(
-        vkCreateImageView(renderer->logical_device, &image_view_create_info, renderer->vulkan_allocator, &attachment->view
+        vkCreateImageView(renderer->logical_device, &image_view_create_info, renderer->vulkan_allocator, &attachment->
+            view
         ));
 
 
     // Without render passes and their implicit layout transitions, we need to explicitly transition the attachments
     // We use a new layout introduced by this extension that makes writes to images visible via input attachments
     Vulkan_Command_Buffer temp_command_buffer;
-    vulkan_command_buffer_allocate_and_begin_single_use(context,
-                                                        renderer->graphics_command_pool, &temp_command_buffer, renderer);
+    vulkan_command_buffer_allocate_and_begin_single_use(renderer,
+                                                        renderer->graphics_command_pool, &temp_command_buffer);
 
 
     VkImageMemoryBarrier2 image_memory_barrier = {
@@ -160,132 +163,18 @@ Attachment_Handle vulkan_create_attachment(Vulkan_Context* context, Render_Graph
     };
     vkCmdPipelineBarrier2(temp_command_buffer.handle, &dependency_info);
 
-    vulkan_command_buffer_end_and_submit_and_free_single_use(context, renderer->graphics_command_pool,
-                                                             &temp_command_buffer, renderer->graphics_queue, renderer);
+    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer, renderer->graphics_command_pool,
+                                                             &temp_command_buffer, renderer->graphics_queue);
 
     return attachment_handle;
 }
 
-void vulkan_renderpass_create(Vulkan_Context* context, Vulkan_Renderpass* out_renderpass, vec4s screen_pos,
-                              vec4s clear_color,
-                              f32 depth, u32 stencil, Renderer* renderer)
-{
-     glm_vec4_copy(screen_pos.raw, out_renderpass->screen_pos.raw);
-     glm_vec4_copy(clear_color.raw, out_renderpass->clear_color.raw);
-    out_renderpass->depth = depth;
-    out_renderpass->stencil = stencil;
-
-
-    // Main subpass
-    VkSubpassDescription subpass = {0};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-    // Attachments TODO: make this configurable.
-    //TODO: free
-    u32 attachment_description_count = 2;
-    VkAttachmentDescription* attachment_descriptions = malloc(
-        sizeof(VkAttachmentDescription) * attachment_description_count);
-
-    // Color attachment
-    VkAttachmentDescription color_attachment = {0};
-    color_attachment.format = context->swapchain.surface_format.format; // TODO: configurable
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    // Do not expect any particular layout before render pass starts.
-
-
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Transitioned to after the render pass
-    color_attachment.flags = 0;
-    attachment_descriptions[0] = color_attachment;
-
-    VkAttachmentReference color_attachment_reference = {0};
-    color_attachment_reference.attachment = 0; // Attachment description array index
-    color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_reference;
-
-
-    // Depth attachment, if there is one
-    VkAttachmentDescription depth_attachment = {0};
-    depth_attachment.format = renderer->depth_format;
-    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachment_descriptions[1] = depth_attachment;
-
-
-    // Depth attachment reference
-    VkAttachmentReference depth_attachment_reference = {0};
-    depth_attachment_reference.attachment = 1;
-    depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-
-    // TODO: other attachment types (input, resolve, preserve)
-    // Depth stencil data.
-    subpass.pDepthStencilAttachment = &depth_attachment_reference;
-
-    // Input from a shader
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = 0;
-
-    // Attachments used for multisampling colour attachments
-    subpass.pResolveAttachments = 0;
-
-    // Attachments not used in this subpass, but must be preserved for the next.
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = 0;
-
-    // Render pass dependencies. TODO: make this configurable.
-    VkSubpassDependency dependency = {0};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependency.dependencyFlags = 0;
-
-
-    // Render pass create.
-    VkRenderPassCreateInfo render_pass_create_info = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    render_pass_create_info.attachmentCount = attachment_description_count;
-    render_pass_create_info.pAttachments = attachment_descriptions;
-    render_pass_create_info.subpassCount = 1;
-    render_pass_create_info.pSubpasses = &subpass;
-    render_pass_create_info.dependencyCount = 1;
-    render_pass_create_info.pDependencies = &dependency;
-    render_pass_create_info.pNext = 0;
-    render_pass_create_info.flags = 0;
-
-    VK_CHECK(vkCreateRenderPass(
-        renderer->logical_device,
-        &render_pass_create_info,
-        renderer->vulkan_allocator,
-        &out_renderpass->handle));
-}
-
-void vulkan_renderpass_destroy(Vulkan_Context* context, Vulkan_Renderpass* renderpass, Renderer* renderer)
-{
-    if (renderpass && renderpass->handle)
-    {
-        vkDestroyRenderPass(renderer->logical_device, renderpass->handle, renderer->vulkan_allocator);
-        renderpass->handle = 0;
-    }
-}
 
 void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame)
 {
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(command_buffer->handle,
-                                renderer->context.swapchain.images[current_frame],
+                                renderer->swapchain.images[current_frame],
                                 0,
                                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -295,7 +184,7 @@ void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}
     );
     image_insert_memory_barrier(command_buffer->handle,
-                                renderer->context.swapchain.depth_attachment.texture_image,
+                                renderer->swapchain.depth_attachment.texture_image,
                                 0,
                                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -320,7 +209,7 @@ void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_
     // Set up the rendering attachment info
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = renderer->context.swapchain.image_views[current_frame],
+        .imageView = renderer->swapchain.image_views[current_frame],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -331,7 +220,7 @@ void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = {0, 0},
-            .extent = {renderer->context.framebuffer_width, renderer->context.framebuffer_height}
+            .extent = {renderer->framebuffer_width, renderer->framebuffer_height}
         },
         .layerCount = 1,
         .colorAttachmentCount = 1,
@@ -361,7 +250,7 @@ void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* comma
 
 
     image_insert_memory_barrier(command_buffer->handle,
-                                renderer->context.swapchain.images[current_frame],
+                                renderer->swapchain.images[current_frame],
                                 0,
                                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 VK_IMAGE_LAYOUT_UNDEFINED,
@@ -384,7 +273,7 @@ void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* comma
     // Set up the rendering attachment info
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = renderer->context.swapchain.image_views[current_frame],
+        .imageView = renderer->swapchain.image_views[current_frame],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -396,7 +285,7 @@ void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* comma
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = {0, 0},
-            .extent = {renderer->context.framebuffer_width, renderer->context.framebuffer_height}
+            .extent = {renderer->framebuffer_width, renderer->framebuffer_height}
         },
         .layerCount = 1,
         .colorAttachmentCount = 1,
@@ -414,7 +303,7 @@ void vulkan_renderpass_UI_end(Renderer* renderer, Vulkan_Command_Buffer* command
 
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(command_buffer->handle,
-                                renderer->context.swapchain.images[current_frame], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                renderer->swapchain.images[current_frame], VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                                 0,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,

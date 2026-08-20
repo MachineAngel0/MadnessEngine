@@ -32,8 +32,8 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
     //UI Render
 
     Vulkan_Command_Buffer temp_command_buffer = {0};
-    vulkan_command_buffer_allocate_and_begin_single_use(&renderer->context, renderer->graphics_command_pool,
-                                                        &temp_command_buffer, renderer);
+    vulkan_command_buffer_allocate_and_begin_single_use(renderer, renderer->graphics_command_pool,
+                                                        &temp_command_buffer);
     vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
                                                    ui_renderer->ui_vertex_buffer_handle,
                                                    ui_renderer->ui_vertex_staging_buffer_handle, &temp_command_buffer,
@@ -45,10 +45,10 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
                                                    ui_renderer->ui_index_staging_buffer_handle, &temp_command_buffer,
                                                    default_sprite_indices,
                                                    sizeof(u16) * 6);
-    vulkan_command_buffer_end_and_submit_and_free_single_use(&renderer->context,
+    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer,
                                                              renderer->graphics_command_pool,
                                                              &temp_command_buffer,
-                                                             renderer->graphics_queue, renderer);
+                                                             renderer->graphics_queue);
 
 
     //insanity ui

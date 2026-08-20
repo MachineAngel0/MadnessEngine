@@ -4,10 +4,10 @@
 #include "vk_command_buffer.h"
 
 
-void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-                         VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_flags,
-                         b32 create_view,
-                         VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture, Renderer* renderer)
+void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
+                         VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+                         VkMemoryPropertyFlags memory_flags,
+                         b32 create_view, VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture)
 {
     //copy params
     out_texture->width = width;
@@ -40,7 +40,7 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits, memory_flags, renderer);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits, memory_flags);
     if (memory_type == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -67,13 +67,13 @@ void vulkan_image_create(Vulkan_Context* context, u32 width, u32 height, VkForma
     if (create_view)
     {
         out_texture->texture_image_view = 0;
-        vulkan_image_view_create(context, format, view_aspect_flags, out_texture, renderer);
+        vulkan_image_view_create(renderer, format, view_aspect_flags, out_texture);
     }
 }
 
 
-void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
-                              VkImageAspectFlags aspect_flags, Vulkan_Texture* texture, Renderer* renderer)
+void vulkan_image_view_create(Renderer* renderer,
+                              VkFormat format, VkImageAspectFlags aspect_flags, Vulkan_Texture* texture)
 {
     VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     view_create_info.image = texture->texture_image;
@@ -92,7 +92,7 @@ void vulkan_image_view_create(Vulkan_Context* context, VkFormat format,
 }
 
 
-void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image, Renderer* renderer)
+void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image)
 {
     if (image->texture_image_view)
     {
@@ -118,8 +118,8 @@ void vulkan_texture_free(Vulkan_Context* context, Vulkan_Texture* image, Rendere
 }
 
 
-void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 height, VkFormat format,
-                                     Vulkan_Texture* out_texture, Renderer* renderer)
+void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* out_texture)
 {
     out_texture->width = width;
     out_texture->height = width;
@@ -171,8 +171,8 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
     vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderer);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_type == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -196,7 +196,7 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
 
     // Create view
     out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, format, view_aspect_flags, out_texture, renderer);
+    vulkan_image_view_create(renderer, format, view_aspect_flags, out_texture);
 
     VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
                                     ? VK_FILTER_LINEAR
@@ -224,8 +224,8 @@ void vulkan_texture_create_shadowmap(Vulkan_Context* context, u32 width, u32 hei
 }
 
 
-void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* command_buffer,
-                          const char* filepath, Vulkan_Texture* out_texture, Renderer* renderer)
+void create_texture_image(Renderer* renderer,
+                          Vulkan_Command_Buffer* command_buffer, const char* filepath, Vulkan_Texture* out_texture)
 {
     //TODO: remove the image loading, and get the textures to upload from the queue
     //load the texture
@@ -246,9 +246,9 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     //create a staging buffer
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    buffer_create(context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                  &stagingBufferMemory, renderer);
+    buffer_create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  &stagingBuffer, &stagingBufferMemory,
+                  renderer);
 
     //allocate memory
     void* data;
@@ -284,8 +284,8 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderer);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_type == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -305,19 +305,18 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
     VK_CHECK(result2)
 
 
-    transition_image_layout(context, command_buffer, out_texture->texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    transition_image_layout(command_buffer, out_texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, renderer);
+    copyBufferToImage(renderer, stagingBuffer, out_texture->texture_image, (uint32_t)(texWidth),
+                      (uint32_t)(texHeight));
+    transition_image_layout(command_buffer, out_texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                             renderer);
-    copyBufferToImage(context, stagingBuffer, out_texture->texture_image, (uint32_t)(texWidth),
-                      (uint32_t)(texHeight), renderer);
-    transition_image_layout(context, command_buffer, out_texture->texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, renderer);
 
     // TODO: configurable memory offset.
     // Create view
     out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, out_texture, renderer);
+    vulkan_image_view_create(renderer, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
 
 
     VkSamplerCreateInfo sampler_info = {0};
@@ -342,7 +341,7 @@ void create_texture_image(Vulkan_Context* context, Vulkan_Command_Buffer* comman
 }
 
 
-void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buffer* command_buffer_context,
+void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
                              VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
                              Renderer* renderer)
 {
@@ -437,17 +436,17 @@ void transition_image_layout(Vulkan_Context* vulkan_context, Vulkan_Command_Buff
 
     //wait for command buffer to finish then free
     VK_CHECK(vkQueueWaitIdle(queue));
-    vulkan_command_buffer_free(vulkan_context, command_buffer, pool, renderer);
+    vulkan_command_buffer_free(renderer, command_buffer, pool);
 }
 
 
-void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
-                       VkImage image, u32 width, u32 height, Renderer* renderer)
+void copyBufferToImage(Renderer* renderer,
+                       VkBuffer buffer, VkImage image, u32 width, u32 height)
 {
     Vulkan_Command_Buffer commandBuffer = {0};
-    vulkan_command_buffer_allocate_and_begin_single_use(vulkan_context,
+    vulkan_command_buffer_allocate_and_begin_single_use(renderer,
                                                         renderer->graphics_command_pool,
-                                                        &commandBuffer, renderer);
+                                                        &commandBuffer);
     VkBufferImageCopy region = {0};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -473,10 +472,10 @@ void copyBufferToImage(Vulkan_Context* vulkan_context, VkBuffer buffer,
         1,
         &region
     );
-    vulkan_command_buffer_end_and_submit_and_free_single_use(vulkan_context,
+    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer,
                                                              renderer->graphics_command_pool,
                                                              &commandBuffer,
-                                                             renderer->graphics_queue, renderer);
+                                                             renderer->graphics_queue);
 }
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
@@ -573,9 +572,9 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     //TODO: free the buffer
-    buffer_create(&renderer->context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
-                  &stagingBufferMemory, renderer);
+    buffer_create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                  &stagingBuffer, &stagingBufferMemory,
+                  renderer);
 
     //allocate memory
     void* data;
@@ -584,21 +583,20 @@ void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buf
     vkUnmapMemory(renderer->logical_device, stagingBufferMemory);
 
     //create texture image
-    vulkan_image_create(&renderer->context, width, height, VK_FORMAT_R8G8B8A8_SRGB,
+    vulkan_image_create(renderer, width, height, VK_FORMAT_R8G8B8A8_SRGB,
                         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                        false, VK_IMAGE_ASPECT_COLOR_BIT, texture, renderer);
+                        false, VK_IMAGE_ASPECT_COLOR_BIT, texture);
 
-    transition_image_layout(&renderer->context, command_buffer, texture->texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    transition_image_layout(command_buffer, texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, renderer);
+    copyBufferToImage(renderer, stagingBuffer, texture->texture_image, width,
+                      height);
+    transition_image_layout(command_buffer, texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                             renderer);
-    copyBufferToImage(&renderer->context, stagingBuffer, texture->texture_image, width,
-                      height, renderer);
-    transition_image_layout(&renderer->context, command_buffer, texture->texture_image,
-                            VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, renderer);
 
-    vulkan_image_view_create(&renderer->context, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, texture, renderer);
+    vulkan_image_view_create(renderer, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, texture);
     create_texture_sampler(renderer, texture);
 }
 
@@ -823,7 +821,7 @@ void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer bu
 }
 
 
-void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context,
+void vulkan_texture_create_image_new(Renderer* renderer,
                                      Texture_GPU_Upload* texture_data,
                                      Vulkan_Texture* out_texture)
 {
@@ -871,8 +869,8 @@ void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context
     vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
 
     // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(context, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, renderer);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memory_type == -1)
     {
         M_ERROR("Required memory type not found. Image not valid.");
@@ -895,7 +893,7 @@ void vulkan_texture_create_image_new(Renderer* renderer, Vulkan_Context* context
     // TODO: configurable memory offset.
     // Create view
     out_texture->texture_image_view = 0;
-    vulkan_image_view_create(context, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture, renderer);
+    vulkan_image_view_create(renderer, image_create_info.format, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
 
     // Create Sampler
     VkSamplerCreateInfo sampler_info = {0};
