@@ -83,7 +83,7 @@ bool ring_dequeue(ring_queue* q, void* out_data)
     return true;
 }
 
-bool ring_dequeue_fast(ring_queue* q)
+bool ring_dequeue_discard(ring_queue* q)
 {
     if (q->num_items == 0)
     {

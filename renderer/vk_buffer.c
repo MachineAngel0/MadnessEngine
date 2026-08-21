@@ -30,7 +30,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     buffer_system->staging_buffer_fence = allocator_alloc(&renderer->allocator,
                                                           sizeof(VkFence) * frames_in_flight);
 
-    const u64 staging_buffer_size = MB(512);
+    const u64 staging_buffer_size = MB(256);
     for (u32 i = 0; i < buffer_system->frames_in_flight; i++)
     {
         Buffer_Handle temp_buffer_handle = buffer_system->global_ubo_handle;

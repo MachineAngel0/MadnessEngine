@@ -47,7 +47,6 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
                                        VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
                                        queue_system->graphics_pool, renderer);
 
-        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
 
     }
 
@@ -55,6 +54,7 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     for (size_t i = 0; i < swapchain_image_count; i++)
     {
         binary_semaphore_create(renderer, &graphics_render_queue->swapchain_signal_semaphore[i]);
+        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
     }
 
     //command buffers
@@ -168,7 +168,7 @@ void vulkan_queue_graphics_frame_submit(Renderer* renderer, u32 current_frame, u
 
     VkSemaphoreSubmitInfo swapchain_signal_semaphore = {0};
     swapchain_signal_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_signal_semaphore.semaphore = graphics_queue->swapchain_signal_semaphore[image_index];
+    swapchain_signal_semaphore.semaphore = graphics_queue->swapchain_signal_semaphore[current_frame];
     swapchain_signal_semaphore.value = 0; // not needed for binary semaphores
     swapchain_signal_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 

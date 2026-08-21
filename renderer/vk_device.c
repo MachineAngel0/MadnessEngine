@@ -1064,6 +1064,25 @@ void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surf
             INFO("Shared System memory: %.2f GB", memory_size_gib);
         }
     }
+    for (u32 j = 0; j < physical_device_memory_properties.memoryProperties.memoryTypeCount; ++j)
+    {
+        VkMemoryType memory_type = physical_device_memory_properties.memoryProperties.memoryTypes[j];
+        DEBUG("MEMORY HEAP INDEX: %d", memory_type.heapIndex)
+
+        if (memory_type.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        {
+            INFO("MEMORY TYPE: DEVICE LOCAL")
+        }
+        if (memory_type.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+        {
+            INFO("MEMORY TYPE: HOST VISIBLE")
+        }
+        if (memory_type.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        {
+            INFO("MEMORY TYPE: HOST COHERENT")
+        }
+    }
+
 
     //check for sampler anisotropy
     if (features2.features.samplerAnisotropy)

@@ -1,0 +1,5 @@
+#scheme a test
+uint32_type[u32][1]:
+- 321
+bool_type[bool][1]:
+- true

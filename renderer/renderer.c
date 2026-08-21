@@ -632,7 +632,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         &renderer->swapchain,
         renderer->present_queue,
-        renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[image_index],
+        renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[renderer->current_frame],
         image_index);
 
 

@@ -13,9 +13,9 @@ void vulkan_fence_create(Renderer* renderer, VkFence* fence)
     VK_CHECK(fence_create_result)
 }
 
-void vulkan_fence_destroy(Renderer* renderer, VkFence* fence, VkFenceCreateFlags fenceCreateFlags)
+void vulkan_fence_destroy(Renderer* renderer, VkFence* fence)
 {
-    vkDestroyFence(renderer->logical_device, *fence, NULL);
+    vkDestroyFence(renderer->logical_device, *fence, renderer->vulkan_allocator);
 }
 
 

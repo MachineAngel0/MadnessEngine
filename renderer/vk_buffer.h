@@ -93,4 +93,12 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
 bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer, Buffer_Handle buffer_handle,
                                                     Vulkan_Command_Buffer* command_buffer, void* data, u64 data_byte_size);
 
+
+//IDEAL API-
+// have one large block for each system or type of memory resource,
+// buffer_create() ->
+// staging_buffer_get(alloc_size) // find a range of staging buffer memory that is usable for our upload
+
+
+
 #endif //VK_BUFFER_H
