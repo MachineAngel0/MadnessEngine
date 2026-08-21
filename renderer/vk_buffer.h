@@ -18,7 +18,7 @@
 Buffer_System* buffer_system_init(Renderer* renderer, u32 frames_in_flight);
 Buffer_System* buffer_system_free(Renderer* renderer);
 
-void buffer_system_frame_start(Renderer* renderer);
+void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame);
 
 
 uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryPropertyFlags properties);
@@ -31,10 +31,6 @@ bool buffer_create(VkDeviceSize size, VkBufferUsageFlags usage,
                    VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory, Renderer* renderer);
 
 
-void buffer_copy(Renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-void buffer_copy_region(Renderer* renderer,
-                        Vulkan_Command_Buffer* command_buffer_context, VkBuffer srcBuffer, VkBuffer dstBuffer,
-                        VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset);
 
 //new API
 

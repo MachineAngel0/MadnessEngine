@@ -13,7 +13,7 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
 
 
     texture_system->available_texture_indexes = 0;
-    texture_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
+    // texture_system->texture_file_to_handle = HASH_TABLE_CREATE(Texture_Handle, AVAILABLE_TEXTURES * 2);
     memset(texture_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
     texture_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
@@ -189,38 +189,6 @@ Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* 
     return &system->textures[bindless_index];
 }
 
-
-Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan_Texture_System* system,
-                                                      char const* filepath)
-{
-    if (hash_table_contains(system->texture_file_to_handle, filepath))
-    {
-        Texture_Handle* handle;
-        hash_table_get(system->texture_file_to_handle, filepath, &handle);
-        return *handle;
-    }
-
-
-    //get an available index
-    Texture_Handle out_texture_handle;
-    out_texture_handle.handle = system->available_texture_indexes;
-    //add to hash table
-    hash_table_insert(system->texture_file_to_handle, filepath, &out_texture_handle);
-
-    //create the texture
-    Vulkan_Texture* out_texture = &system->textures[out_texture_handle.handle];
-    create_texture_image(renderer,
-                         &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->
-                             current_frame], filepath, out_texture);
-
-    //increment index for next usage
-    system->available_texture_indexes++;
-
-    //TODO: batch this upload once a frame
-    update_texture_bindless_descriptor_set(renderer, renderer->descriptor_system, out_texture_handle.handle);
-
-    return out_texture_handle;
-}
 
 bool vulkan_texture_system_free(Renderer* renderer, Texture_Handle handle)
 {

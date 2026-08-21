@@ -13,10 +13,8 @@
 #include "pipelines/sprite_render.h"
 #include "../renderer/pipelines/ui_render.h"
 #include "vulkan_mesh_system.h"
-#include "../renderer/pipelines/sprite_render.h"
 #include "../renderer/pipelines/particle_render.h"
 
-//finally works, TODO: whatever the fuck the renderer needs from other applications
 bool renderer_on_key(const Event_Type code, String sender, String listener_inst, Event_Data context)
 {
     /*
@@ -237,7 +235,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         &renderer->swapchain,
         UINT64_MAX,
-        renderer->queue_system->graphics_render_queue.swapchain_wait_semaphore[image_index],
+        renderer->queue_system->graphics_render_queue.swapchain_wait_semaphore[renderer->current_frame],
         0,
         &image_index))
     {
@@ -252,11 +250,12 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                                                 graphics_command_buffer[renderer->current_frame];
 
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
-    vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
+    vulkan_command_buffer_begin(graphics_command_buffer);
+    // vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
 
 
     //free textures and any other texture/shader updated
-    buffer_system_frame_start(renderer);
+    buffer_system_frame_start(renderer->buffer_system, renderer->current_frame);
 
     vulkan_texture_system_update(renderer, render_packets);
 

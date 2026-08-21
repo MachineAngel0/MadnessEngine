@@ -580,7 +580,7 @@ typedef struct Vulkan_Texture_System
     // u32 renderpass_texture_indexes;
 
 
-    hash_table* texture_file_to_handle;
+    // hash_table* texture_file_to_handle; //TODO:
     // hash_table* texture_file_to_usage_count; or // hash_table* handle_to_usage_count
 
     //since textures could be read this frame, we wait a frame to delete them
@@ -604,7 +604,7 @@ typedef struct Buffer_System
     Buffer_Handle global_ubo_handle;
 
     //per frame buffer
-    Vulkan_Buffer* per_frame_cpu_to_gpu_staging_buffers; // this should be for data uploads like vertex, skinned etc
+    Vulkan_Buffer* per_frame_staging_buffers; // this should be for data uploads like vertex, skinned etc
     VkFence* staging_buffer_fence; // one per frame
     // this should be for things that are neccessary to happen every frame, like the indirect, draw, and material buffers
     // Vulkan_Buffer* per_frame_staging_buffer_pool;
@@ -1015,6 +1015,9 @@ typedef struct Renderer
 #define VULKAN_MAX_FRAMES_IN_FLIGHT 2
     u8 max_frames_in_flight;
     u32 current_frame;
+
+
+
 
     //Surface
     VkSurfaceKHR surface;

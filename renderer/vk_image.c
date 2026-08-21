@@ -224,121 +224,6 @@ void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
 }
 
 
-void create_texture_image(Renderer* renderer,
-                          Vulkan_Command_Buffer* command_buffer, const char* filepath, Vulkan_Texture* out_texture)
-{
-    //TODO: remove the image loading, and get the textures to upload from the queue
-    //load the texture
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load(filepath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    VkDeviceSize imageSize = texWidth * texHeight * 4; // 4 stride rgba
-
-    MASSERT_MSG(pixels, "FAILED TO LOAD TEXTURE");
-
-
-    if (!pixels)
-    {
-        WARN("CREATE TEXTURE IMAGE: failed to load texture image!");
-        return;
-    }
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    buffer_create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                  &stagingBuffer, &stagingBufferMemory,
-                  renderer);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(renderer->logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, imageSize);
-    vkUnmapMemory(renderer->logical_device, stagingBufferMemory);
-    //free texture
-    stbi_image_free(pixels);
-
-    //create texture image
-    VkImageCreateInfo image_create_info = {0};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO; // might need to be an image in the future
-    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
-    image_create_info.extent.width = texWidth;
-    image_create_info.extent.height = texHeight;
-    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels = 4; // TODO: Support mip mapping
-    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
-    image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
-    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
-
-    VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
-            texture_image));
-
-
-    // Query memory requirements.
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
-
-    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memory_type == -1)
-    {
-        M_ERROR("Required memory type not found. Image not valid.");
-    }
-
-
-    // Allocate memory
-    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator,
-                                        &out_texture->texture_image_memory);
-    VK_CHECK(result1);
-    // Bind the memory
-    VkResult result2 = vkBindImageMemory(renderer->logical_device, out_texture->texture_image,
-                                         out_texture->texture_image_memory, 0);
-    VK_CHECK(result2)
-
-
-    transition_image_layout(command_buffer, out_texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, renderer);
-    copyBufferToImage(renderer, stagingBuffer, out_texture->texture_image, (uint32_t)(texWidth),
-                      (uint32_t)(texHeight));
-    transition_image_layout(command_buffer, out_texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            renderer);
-
-    // TODO: configurable memory offset.
-    // Create view
-    out_texture->texture_image_view = 0;
-    vulkan_image_view_create(renderer, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, out_texture);
-
-
-    VkSamplerCreateInfo sampler_info = {0};
-    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = VK_FILTER_LINEAR;
-    sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = renderer->properties2.properties.limits.maxSamplerAnisotropy;
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_info.unnormalizedCoordinates = VK_FALSE;
-    sampler_info.compareEnable = VK_FALSE;
-    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_info.mipLodBias = 0.0f;
-    sampler_info.minLod = 0.0f;
-    sampler_info.maxLod = 0.0f;
-
-    VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
-}
 
 
 void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
@@ -555,51 +440,6 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
         1, &image_memory_barrier);*/
 }
 
-void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, Vulkan_Texture* texture,
-                          const unsigned char* pixel_data, u32 width, u32 height)
-{
-    //text_system.glyph_textures[text_system.glyphs[glyph]] = texture;
-    printf("IMAGE SIZE: width %d height  %d \n", width, height);
-    VkDeviceSize imageSize = width * height * 4; // 4 stride rgba
-
-    MASSERT(pixel_data);
-
-    //create a staging buffer
-    // vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, imageSize);
-
-
-    //create a staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    //TODO: free the buffer
-    buffer_create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                  &stagingBuffer, &stagingBufferMemory,
-                  renderer);
-
-    //allocate memory
-    void* data;
-    vkMapMemory(renderer->logical_device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixel_data, imageSize);
-    vkUnmapMemory(renderer->logical_device, stagingBufferMemory);
-
-    //create texture image
-    vulkan_image_create(renderer, width, height, VK_FORMAT_R8G8B8A8_SRGB,
-                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                        false, VK_IMAGE_ASPECT_COLOR_BIT, texture);
-
-    transition_image_layout(command_buffer, texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-                            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, renderer);
-    copyBufferToImage(renderer, stagingBuffer, texture->texture_image, width,
-                      height);
-    transition_image_layout(command_buffer, texture->texture_image, VK_FORMAT_R8G8B8A8_SRGB,
-                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            renderer);
-
-    vulkan_image_view_create(renderer, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, texture);
-    create_texture_sampler(renderer, texture);
-}
-
 
 // Returns if a given format support LINEAR filtering
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling)
@@ -608,10 +448,10 @@ VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, Vk
     vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProps);
 
     if (tiling == VK_IMAGE_TILING_OPTIMAL)
-        return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+        {return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;}
 
     if (tiling == VK_IMAGE_TILING_LINEAR)
-        return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+        {return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;}
 
     return false;
 }

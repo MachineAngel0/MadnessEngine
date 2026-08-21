@@ -20,7 +20,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
                                              buffer_system->buffers_size * sizeof(Vulkan_Buffer));
 
 
-    buffer_system->per_frame_cpu_to_gpu_staging_buffers = allocator_alloc(&renderer->allocator,
+    buffer_system->per_frame_staging_buffers = allocator_alloc(&renderer->allocator,
                                                                           buffer_system->frames_in_flight
                                                                           * sizeof(Vulkan_Buffer));
 
@@ -39,7 +39,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
             renderer, renderer->descriptor_system, temp_buffer_handle, 0);
 
         //create our global staging buffer
-        _vulkan_buffer_create_internal(renderer, &buffer_system->per_frame_cpu_to_gpu_staging_buffers[i],
+        _vulkan_buffer_create_internal(renderer, &buffer_system->per_frame_staging_buffers[i],
                                        BUFFER_TYPE_STAGING,
                                        staging_buffer_size);
 
@@ -49,17 +49,10 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     return buffer_system;
 }
 
-void buffer_system_frame_start(Renderer* renderer)
+void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame)
 {
     //rn just clears the staging buffer
-    u32 current_frame = renderer->current_frame;
-
-    //TODO: gotta schedule this with the queue submit
-    /*vulkan_fence_wait(&renderer->context,
-                      &renderer->buffer_system->staging_buffer_fence[current_frame],
-                      INFINITE);*/
-
-    Vulkan_Buffer* current_frame_staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[
+    Vulkan_Buffer* current_frame_staging_buffer = &buffer_system->per_frame_staging_buffers[
         current_frame];
     current_frame_staging_buffer->current_offset = 0;
 }
@@ -127,101 +120,6 @@ bool buffer_create(VkDeviceSize size, VkBufferUsageFlags usage,
     VK_CHECK(vkBindBufferMemory(renderer->logical_device, *buffer, *bufferMemory, 0));
 
     return true;
-}
-
-
-void buffer_copy(
-    Renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-    // Create a temporary command buffer for the copy operation
-    VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
-    command_buffer_allocation_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocation_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_allocation_info.commandPool = renderer->graphics_command_pool; //TODO: likely to change
-    command_buffer_allocation_info.commandBufferCount = 1;
-
-    VkCommandBuffer temp_command_buffer;
-    VK_CHECK(vkAllocateCommandBuffers(renderer->logical_device, &command_buffer_allocation_info,
-        &temp_command_buffer));
-
-    // Begin recording the command buffer
-    VkCommandBufferBeginInfo command_buffer_begin_info = {0};
-    command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    VK_CHECK(vkBeginCommandBuffer(temp_command_buffer, &command_buffer_begin_info));
-
-    // Set up the copy region with specified offsets and size
-    VkBufferCopy copy_region = {0};
-    copy_region.srcOffset = 0;
-    copy_region.dstOffset = 0;
-    copy_region.size = size;
-
-    // Record the copy command
-    vkCmdCopyBuffer(temp_command_buffer, srcBuffer, dstBuffer, 1, &copy_region);
-
-    VK_CHECK(vkEndCommandBuffer(temp_command_buffer));
-
-    // Submit the command buffer and wait for completion
-    VkSubmitInfo submit_info = {0};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &temp_command_buffer;
-
-    VK_CHECK(vkQueueSubmit(renderer->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_CHECK(vkQueueWaitIdle(renderer->graphics_queue));
-
-    // Clean up the temporary command buffer
-    vkFreeCommandBuffers(renderer->logical_device, renderer->graphics_command_pool, 1,
-                         &temp_command_buffer);
-}
-
-
-void buffer_copy_region(Renderer* renderer,
-                        Vulkan_Command_Buffer* command_buffer_context,
-                        VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
-{
-    // Create a temporary command buffer for the copy operation
-    VkCommandBufferAllocateInfo command_buffer_allocation_info = {0};
-    command_buffer_allocation_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    command_buffer_allocation_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    command_buffer_allocation_info.commandPool = renderer->graphics_command_pool; //TODO: likely to change
-    command_buffer_allocation_info.commandBufferCount = 1;
-
-    VkCommandBuffer temp_command_buffer;
-    vkAllocateCommandBuffers(renderer->logical_device, &command_buffer_allocation_info,
-                             &temp_command_buffer);
-
-    // Begin recording the command buffer
-    VkCommandBufferBeginInfo command_buffer_begin_info = {0};
-    command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(temp_command_buffer, &command_buffer_begin_info);
-
-    // Set up the copy region with specified offsets and size
-    VkBufferCopy copy_region = {0};
-    copy_region.srcOffset = srcOffset;
-    copy_region.dstOffset = dstOffset;
-    copy_region.size = size;
-
-    // Record the copy command
-    vkCmdCopyBuffer(temp_command_buffer, srcBuffer, dstBuffer, 1, &copy_region);
-
-    vkEndCommandBuffer(temp_command_buffer);
-
-    // Submit the command buffer and wait for completion
-    VkSubmitInfo submit_info = {0};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &temp_command_buffer;
-
-    vkQueueSubmit(renderer->graphics_queue, 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(renderer->graphics_queue);
-
-    // Clean up the temporary command buffer
-    vkFreeCommandBuffers(renderer->logical_device, renderer->graphics_command_pool, 1,
-                         &temp_command_buffer);
 }
 
 
@@ -721,7 +619,7 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* ren
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_staging_buffers[renderer->current_frame];
 
 
     //make sure its a staging buffer
@@ -775,7 +673,7 @@ bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(R
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_cpu_to_gpu_staging_buffers[renderer->current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_staging_buffers[renderer->current_frame];
 
 
     //make sure its a staging buffer

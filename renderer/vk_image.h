@@ -29,11 +29,6 @@ void vulkan_image_view_create(Renderer* renderer,
 void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image);
 
 
-
-void create_texture_image(Renderer* renderer,
-                          Vulkan_Command_Buffer* command_buffer, const char* filepath, Vulkan_Texture* out_texture);
-
-
 void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
                              VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, Renderer* renderer);
 
@@ -53,8 +48,6 @@ void image_insert_memory_barrier(
     VkPipelineStageFlags dstStageMask,
     VkImageSubresourceRange subresourceRange);
 
-void create_texture_glyph(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
-                          Vulkan_Texture* texture, const unsigned char* pixel_data, u32 width, u32 height);
 
 
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);

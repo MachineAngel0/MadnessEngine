@@ -46,12 +46,14 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
         vulkan_command_buffer_allocate(&queue_system->graphics_render_queue.graphics_command_buffer[i],
                                        VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
                                        queue_system->graphics_pool, renderer);
+
+        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
+
     }
 
     //swapchain semaphore, which are per swapchain image
     for (size_t i = 0; i < swapchain_image_count; i++)
     {
-        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
         binary_semaphore_create(renderer, &graphics_render_queue->swapchain_signal_semaphore[i]);
     }
 
@@ -130,8 +132,7 @@ void vulkan_queue_graphics_frame_submit(Renderer* renderer, u32 current_frame, u
     }
 
 
-    u32 ready_wait_semaphores = 0;
-    u32 ready_signal = 0;
+
 
 
     allocator_alloc(scratch.allocator, ready_commands_buffers);
@@ -155,13 +156,24 @@ void vulkan_queue_graphics_frame_submit(Renderer* renderer, u32 current_frame, u
     //GRAPHICS
 
     Vulkan_Graphics_Queue* graphics_queue = &renderer->queue_system->graphics_render_queue;
-
-
     Vulkan_Command_Buffer* graphics_cb = &graphics_queue->graphics_command_buffer[current_frame];
-
-
     VkCommandBufferSubmitInfo cb_submit_info = vulkan_command_buffer_get_submit_info(graphics_cb);
 
+    //easiest way of adding the swapchain semaphores
+    VkSemaphoreSubmitInfo swapchain_wait_semaphore = {0};
+    swapchain_wait_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    swapchain_wait_semaphore.semaphore = graphics_queue->swapchain_wait_semaphore[current_frame];
+    swapchain_wait_semaphore.value = 0; // not needed for binary semaphores
+    swapchain_wait_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    VkSemaphoreSubmitInfo swapchain_signal_semaphore = {0};
+    swapchain_signal_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    swapchain_signal_semaphore.semaphore = graphics_queue->swapchain_signal_semaphore[image_index];
+    swapchain_signal_semaphore.value = 0; // not needed for binary semaphores
+    swapchain_signal_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, swapchain_wait_semaphore);
+    vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, swapchain_signal_semaphore);
 
     VkSubmitInfo2 submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -175,35 +187,7 @@ void vulkan_queue_graphics_frame_submit(Renderer* renderer, u32 current_frame, u
     submit_info.pSignalSemaphoreInfos = graphics_queue->signal_semaphore_info;
 
 
-    VkSemaphoreSubmitInfo swapchain_wait_semaphore = {0};
-    swapchain_wait_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_wait_semaphore.semaphore = graphics_queue->swapchain_wait_semaphore[image_index];
-    swapchain_wait_semaphore.value = 0; // not needed for binary semaphores
-    swapchain_wait_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    VkSemaphoreSubmitInfo swapchain_signal_semaphore = {0};
-    swapchain_signal_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_signal_semaphore.semaphore = graphics_queue->swapchain_signal_semaphore[image_index];
-    swapchain_wait_semaphore.value = 0; // not needed for binary semaphores
-
-    VkSubmitInfo2 swapchain_submit_info = {0};
-    swapchain_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    swapchain_submit_info.pNext = 0;
-    swapchain_submit_info.flags = 0;
-    swapchain_submit_info.commandBufferInfoCount = 1;
-    swapchain_submit_info.pCommandBufferInfos = &cb_submit_info;
-    swapchain_submit_info.waitSemaphoreInfoCount = 1;
-    swapchain_submit_info.pWaitSemaphoreInfos = &swapchain_wait_semaphore;
-    swapchain_submit_info.signalSemaphoreInfoCount = 1;
-    swapchain_submit_info.pSignalSemaphoreInfos = &swapchain_signal_semaphore;
-
-    VkSubmitInfo2 final_submit[] = {
-        submit_info,
-        swapchain_submit_info
-    };
-
-
-    VkResult graphics_result = vkQueueSubmit2(queue_system->graphics_queue, ARRAY_SIZE(final_submit), final_submit,
+    VkResult graphics_result = vkQueueSubmit2(queue_system->graphics_queue, 1, &submit_info,
                                               graphics_queue->frame_submit_fence[current_frame]);
 
     VK_CHECK(graphics_result);
@@ -219,6 +203,18 @@ void vulkan_queue_graphics_frame_submit(Renderer* renderer, u32 current_frame, u
         renderer->context.present_queue,
         renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[image_index],
         image_index);*/
+
+    //reset semaphore counts
+
+    graphics_queue->wait_semaphore_info_count = 0;
+    graphics_queue->signal_semaphore_info_count= 0;
+
+    transfer_queue->signal_semaphore_info_count= 0;
+    transfer_queue->wait_semaphore_info_count= 0;
+
+    queue_system->comptute_render_queue.signal_semaphore_count = 0;
+    queue_system->comptute_render_queue.wait_semaphore_count = 0;
+
 }
 
 bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
@@ -279,7 +275,7 @@ bool vulkan_queue_add_signal_semaphore(Renderer* renderer, Vulkan_Queue_Type que
     {
     case VULKAN_QUEUE_TYPE_GRAPHICS:
         queue_system->graphics_render_queue.signal_semaphore_info[queue_system->graphics_render_queue.
-            wait_semaphore_info_count++] = submit_info;
+            signal_semaphore_info_count++] = submit_info;
         return true;
         break;
     case VULKAN_QUEUE_TYPE_TRANSFER:
