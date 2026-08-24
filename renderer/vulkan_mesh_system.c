@@ -373,7 +373,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
             .offset = 0,
             .size = transform_buffer->current_offset,
         };
-        vulkan_command_add_submit_buffer_barrier(command_buffer, transform_buffer_barrier);
+        vulkan_command_add_buffer_barrier(command_buffer, transform_buffer_barrier);
     }
 
 
@@ -403,8 +403,11 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
             .offset = 0,
             .size = skinned_buffer->current_offset,
         };
-        vulkan_command_add_submit_buffer_barrier(command_buffer, skinned_buffer_barrier);
+        vulkan_command_add_buffer_barrier(command_buffer, skinned_buffer_barrier);
     }
+
+    vulkan_command_flush_barriers(command_buffer);
+
 }
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer,

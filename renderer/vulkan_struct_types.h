@@ -148,6 +148,9 @@ typedef struct vulkan_physical_device_queue_family_info
     u32 transfer_family_index;
 } vulkan_physical_device_queue_family_info;
 
+#define VULKAN_COMMAND_BUFFER_IMAGE_BARRIER_MAX_COUNT 64
+#define VULKAN_COMMAND_BUFFER_BUFFER_BARRIER_MAX_COUNT 64
+#define VULKAN_COMMAND_BUFFER_MEMORY_BARRIER_MAX_COUNT 8
 
 typedef struct Vulkan_Command_Buffer
 {
@@ -161,13 +164,17 @@ typedef struct Vulkan_Command_Buffer
     // VkCommandBuffer* secondary_buffers;
     // u32 secondary_count;
 
-    //TODO:
-    VkBufferMemoryBarrier2 buffer_barrier[100];
-    u32 buffer_barrier_count;
-    VkImageMemoryBarrier2 image_barrier[100];
+    //TODO: size for something decent, and if full just flush the barriers
+    // you could do pool allocation or dynamic sizing, but probably not needed
+    VkImageMemoryBarrier2 image_barrier[VULKAN_COMMAND_BUFFER_IMAGE_BARRIER_MAX_COUNT];
     u32 image_barrier_count;
-    VkBufferMemoryBarrier2 memory_barrier2[100];
+    u32 image_barrier_count_max;
+    VkBufferMemoryBarrier2 buffer_barrier[VULKAN_COMMAND_BUFFER_BUFFER_BARRIER_MAX_COUNT];
+    u32 buffer_barrier_count;
+    u32 buffer_barrier_count_max;
+    VkMemoryBarrier2 memory_barrier[VULKAN_COMMAND_BUFFER_MEMORY_BARRIER_MAX_COUNT];
     u32 memory_barrier_count;
+    u32 memory_barrier_count_max;
 } Vulkan_Command_Buffer;
 
 typedef struct Vulkan_Texture_Pending_Upload

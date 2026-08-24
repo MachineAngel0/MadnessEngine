@@ -76,7 +76,6 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
                                                particle_packet.particle_count);
 
 
-    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     Vulkan_Buffer* particle_material_buffer = vulkan_buffer_get_frame(
         renderer, particle_render->spherical_billboard_material_buffer_handle);
@@ -97,6 +96,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
     };
 
     vulkan_command_add_submit_buffer_barrier(command_buffer, particle_barrier);
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     scratch_allocator_end(scratch);
 }

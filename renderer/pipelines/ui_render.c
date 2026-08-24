@@ -108,8 +108,9 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
         .size = VK_WHOLE_SIZE,
     };
 
-    vulkan_command_add_submit_buffer_barrier(command_buffer, madness_barrier);
-    vulkan_command_add_submit_buffer_barrier(command_buffer, insanity_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, madness_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, insanity_barrier);
+    vulkan_command_flush_barriers(command_buffer);
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 

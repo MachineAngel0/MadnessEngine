@@ -52,6 +52,7 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
                                        VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
                                        queue_system->graphics_pool, renderer);
 
+
         binary_semaphore_create(renderer, &graphics_render_queue->swapchain_signal_semaphore[i]);
         binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
     }
@@ -411,8 +412,8 @@ bool vulkan_queue_add_wait_semaphore(Renderer* renderer, Vulkan_Queue_Type queue
 }
 
 
-bool vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
-                                      VkImageMemoryBarrier2 image_memory_barrier)
+void vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
+                                             VkImageMemoryBarrier2 image_memory_barrier)
 {
     VkDependencyInfo dependency_info = {0};
     dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -426,12 +427,10 @@ bool vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buff
     dependency_info.pImageMemoryBarriers = &image_memory_barrier;
 
     vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
-
-    return true;
 }
 
-bool vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
-                                       VkBufferMemoryBarrier2 buffer_memory_barrier)
+void vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+                                              VkBufferMemoryBarrier2 buffer_memory_barrier)
 {
     VkDependencyInfo dependency_info = {0};
     dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -444,9 +443,87 @@ bool vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buf
     dependency_info.imageMemoryBarrierCount = 0;
     dependency_info.pImageMemoryBarriers = NULL;
 
-    //TODO: remove this and add a flush command and flush at frame end
+
+    vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+}
+
+void vulkan_command_add_submit_memory_barrier(Vulkan_Command_Buffer* command_buffer,
+                                              VkMemoryBarrier2 memory_barrier)
+{
+    VkDependencyInfo dependency_info = {0};
+    dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency_info.pNext = NULL;
+    dependency_info.dependencyFlags = 0;
+    dependency_info.memoryBarrierCount = 1;
+    dependency_info.pMemoryBarriers = &memory_barrier;
+    dependency_info.bufferMemoryBarrierCount = 0;
+    dependency_info.pBufferMemoryBarriers = NULL;
+    dependency_info.imageMemoryBarrierCount = 0;
+    dependency_info.pImageMemoryBarriers = NULL;
+
+    vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+}
+
+
+void vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
+                                      VkImageMemoryBarrier2 image_memory_barrier)
+{
+    if (command_buffer->image_barrier_count >= command_buffer->image_barrier_count_max)
+    {
+        INFO("vulkan_command_add_image_barrier: max reached flushing buffer")
+        vulkan_command_flush_barriers(command_buffer);
+    }
+    command_buffer->image_barrier[command_buffer->image_barrier_count++] = image_memory_barrier;
+}
+
+void vulkan_command_add_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+                                       VkBufferMemoryBarrier2 buffer_memory_barrier)
+{
+    if (command_buffer->buffer_barrier_count >= command_buffer->buffer_barrier_count_max)
+    {
+        INFO("vulkan_command_add_buffer_barrier: max reached flushing buffer")
+        vulkan_command_flush_barriers(command_buffer);
+    }
+    command_buffer->buffer_barrier[command_buffer->buffer_barrier_count++] = buffer_memory_barrier;
+}
+
+void vulkan_command_add_memory_barrier(Vulkan_Command_Buffer* command_buffer,
+                                       VkMemoryBarrier2 memory_barrier)
+{
+    if (command_buffer->memory_barrier_count >= command_buffer->memory_barrier_count_max)
+    {
+        INFO("vulkan_command_add_memory_barrier: max reached flushing buffer")
+        vulkan_command_flush_barriers(command_buffer);
+    }
+    command_buffer->memory_barrier[command_buffer->memory_barrier_count++] = memory_barrier;
+}
+
+bool vulkan_command_flush_barriers(Vulkan_Command_Buffer* command_buffer)
+{
+    if (command_buffer->memory_barrier_count == 0 &&
+        command_buffer->buffer_barrier_count == 0 &&
+        command_buffer->image_barrier_count == 0)
+    {
+        INFO("vulkan_command_flush_barriers: nothing from buffer to flush")
+        return false;
+    }
+
+    VkDependencyInfo dependency_info = {0};
+    dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency_info.pNext = NULL;
+    dependency_info.dependencyFlags = 0;
+    dependency_info.memoryBarrierCount = command_buffer->memory_barrier_count;
+    dependency_info.pMemoryBarriers = command_buffer->memory_barrier;
+    dependency_info.bufferMemoryBarrierCount = command_buffer->buffer_barrier_count;
+    dependency_info.pBufferMemoryBarriers = command_buffer->buffer_barrier;
+    dependency_info.imageMemoryBarrierCount = command_buffer->image_barrier_count;
+    dependency_info.pImageMemoryBarriers = command_buffer->image_barrier;
+
     vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
 
+    command_buffer->memory_barrier_count = 0;
+    command_buffer->buffer_barrier_count = 0;
+    command_buffer->image_barrier_count = 0;
     return true;
 }
 
@@ -487,6 +564,17 @@ bool vulkan_command_buffer_allocate(Vulkan_Command_Buffer* out_command_buffer,
     {
         return false;
     }
+
+
+    out_command_buffer->image_barrier_count_max = VULKAN_COMMAND_BUFFER_IMAGE_BARRIER_MAX_COUNT;
+    out_command_buffer->image_barrier_count = 0;
+
+    out_command_buffer->buffer_barrier_count_max = VULKAN_COMMAND_BUFFER_BUFFER_BARRIER_MAX_COUNT;
+    out_command_buffer->buffer_barrier_count = 0;
+
+    out_command_buffer->memory_barrier_count_max = VULKAN_COMMAND_BUFFER_MEMORY_BARRIER_MAX_COUNT;
+    out_command_buffer->memory_barrier_count = 0;
+
 
     return true;
 }

@@ -104,6 +104,60 @@ void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_
                                        light_system->spot_lights,
                                        sizeof(Spot_Light) * light_system->spot_light_count);
 
+    VkBufferMemoryBarrier2 directional_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->directional_light_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+    VkBufferMemoryBarrier2 point_light_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->point_light_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+    VkBufferMemoryBarrier2 spot_light_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->spot_light_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+
+    vulkan_command_add_buffer_barrier(command_buffer, directional_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, point_light_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, spot_light_barrier);
+    vulkan_command_flush_barriers(command_buffer);
+
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
 

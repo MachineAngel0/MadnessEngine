@@ -45,11 +45,25 @@ bool vulkan_queue_add_signal_semaphore(Renderer* renderer, Vulkan_Queue_Type que
 bool vulkan_queue_add_wait_semaphore(Renderer* renderer, Vulkan_Queue_Type queue_type,
                                      VkSemaphoreSubmitInfo submit_info);
 
-//TODO: one for add and submit, and one for batching the submit
-bool vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
-                                      VkImageMemoryBarrier2 image_memory_barrier);
-bool vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
-                                       VkBufferMemoryBarrier2 buffer_memory_barrier);
+/**
+ * @note: will be submitted automically, is possible use the non submit variant and flush at some point
+ */
+void vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
+                                             VkImageMemoryBarrier2 image_memory_barrier);
+void vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+                                              VkBufferMemoryBarrier2 buffer_memory_barrier);
+void vulkan_command_add_submit_memory_barrier(Vulkan_Command_Buffer* command_buffer,
+                                              VkMemoryBarrier2 memory_barrier);
+
+/**
+ * @note: either flushed manually or will be automatically at the end of the frame
+ */
+void vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
+                                             VkImageMemoryBarrier2 image_memory_barrier);
+void vulkan_command_add_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+                                              VkBufferMemoryBarrier2 buffer_memory_barrier);
+void vulkan_command_add_memory_barrier(Vulkan_Command_Buffer* command_buffer,
+                                       VkMemoryBarrier2 memory_barrier);
 bool vulkan_command_flush_barriers(Vulkan_Command_Buffer* command_buffer);
 
 
