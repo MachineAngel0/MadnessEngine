@@ -5,6 +5,7 @@
 #include "../core/allocators/heap_allocator.c"
 #include "../core/allocators/pool_allocator.c"
 #include "../core/allocators/tagged_frame_allocator.c"
+#include "../core/allocators/free_list.c"
 //CORE - DSA
 #include "../core/dsa/array.c"
 #include "../core/dsa/b_tree_red_black.c"

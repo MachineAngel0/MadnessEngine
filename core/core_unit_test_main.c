@@ -2,6 +2,7 @@
 #include "heap_allocator.h"
 #include "allocator_malloc.h"
 #include "darray.h"
+#include "free_list.h"
 
 int main(void)
 {
@@ -17,6 +18,8 @@ int main(void)
     allocator_malloc_test();
     //TODO:
     // pool_allocator_test();
+
+    freelist_test();
 
     array_test();
     free_list_array_test();

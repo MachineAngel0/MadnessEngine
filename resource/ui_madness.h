@@ -29,8 +29,9 @@
 
 typedef struct PC_UI
 {
-    u32 ubo_buffer_idx;
     VkDeviceAddress material_bda;
+    u32 padding1;
+    u32 padding2;
 } PC_UI;
 
 typedef struct Material_2D_Param_Data

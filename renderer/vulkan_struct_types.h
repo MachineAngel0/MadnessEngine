@@ -38,9 +38,12 @@ typedef struct Pipeline_Handle
 typedef struct Buffer_Handle
 {
     u32 handle;
-    bool is_per_frame;
 } Buffer_Handle;
 
+typedef struct Buffer_Per_Frame_Handle
+{
+    u32 handle;
+} Buffer_Frame_Handle;
 
 typedef struct Staging_Buffer_Handle
 {
@@ -68,8 +71,10 @@ typedef struct Vulkan_Texture
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
     // vk_image_type image_type;
-} Vulkan_Texture;
 
+
+
+} Vulkan_Texture;
 
 
 typedef struct Vulkan_Swapchain
@@ -83,8 +88,6 @@ typedef struct Vulkan_Swapchain
     VkImageView* image_views;
 
     Vulkan_Texture depth_attachment;
-
-
 } Vulkan_Swapchain;
 
 
@@ -154,18 +157,26 @@ typedef struct Vulkan_Command_Buffer
     Vulkan_Queue_Type queue_type;
     Vulkan_Command_Buffer_State state;
 
-
     //one per thread for nice work distribution, same threading access rules, dont share resources
     // VkCommandBuffer* secondary_buffers;
     // u32 secondary_count;
+
+    //TODO:
+    VkBufferMemoryBarrier2 buffer_barrier[100];
+    u32 buffer_barrier_count;
+    VkImageMemoryBarrier2 image_barrier[100];
+    u32 image_barrier_count;
+    VkBufferMemoryBarrier2 memory_barrier2[100];
+    u32 memory_barrier_count;
 } Vulkan_Command_Buffer;
 
 typedef struct Vulkan_Texture_Pending_Upload
 {
     Madness_Texture* madness_texture;
-    Vulkan_Texture* texture;
+    Vulkan_Texture* vulkan_texture;
     Vulkan_Command_Buffer* command_buffer;
     u64 timeline_semaphore_value;
+    u64 bindless_index;
 } Vulkan_Texture_Pending_Upload;
 
 typedef struct Vulkan_Shader_Stage
@@ -189,6 +200,16 @@ typedef struct Vulkan_Buffer
     Vulkan_Buffer_Type type;
     u8* mapped_data; // optional
 } Vulkan_Buffer;
+
+
+typedef struct Vulkan_Transfer_Buffer_Pending_Upload
+{
+    VkDeviceSize staging_offset;
+    VkDeviceSize size;
+    u64 semaphore_wait_value;
+}Vulkan_Staging_Buffer_Pending_Upload;
+
+
 
 
 typedef struct Vulkan_Shader_Pipeline
@@ -274,16 +295,40 @@ typedef struct Mesh_Render_Record
     u32 index_offset_count; //offset into the index buffer
     Index_Type index_type;
 
+    u32 mesh_id;
+
+
+    //when this hits zero the asset is ready for usage
+    u8 pending_uploads;
+
     bool is_uploaded;
-    bool is_in_use;
+    bool is_in_use; // NOTE: IDK WHY THIS IS HERE, im guessing for when we want to delete the asset
 } Mesh_Render_Record;
+
+typedef struct Mesh_Unfinished_Upload
+{
+    u32 mesh_id;
+    Vulkan_Mesh_Data_Type type;
+    Buffer_Handle buffer_handle;
+    u64 bytes;
+    void* data;
+} Mesh_Unfinished_Upload;
+
 
 
 typedef struct Mesh_Gpu_Upload_Pending
 {
     u32 mesh_id;
+    Vulkan_Mesh_Data_Type type;
     u64 timeline_semaphore_value;
 } Mesh_Gpu_Upload_Pending;
+
+typedef struct Skinned_Gpu_Upload_Pending
+{
+    u32 skinned_id;
+    u64 timeline_semaphore_value;
+} Skinned_Gpu_Upload_Pending;
+
 
 typedef struct Skinned_Render_Record
 {
@@ -342,11 +387,11 @@ typedef struct Vulkan_Shader_Batch
     Vulkan_Shader_Pipeline pipeline;
     Vulkan_Shader_Pipeline wireframe_pipeline;
 
-    Buffer_Handle indirect_draw_buffer_handle;
+    Buffer_Frame_Handle indirect_draw_buffer_handle;
     u32 draw_count;
 
-    Buffer_Handle draw_data_buffer_handle;
-    Buffer_Handle material_data_buffer_handle;
+    Buffer_Frame_Handle draw_data_buffer_handle;
+    Buffer_Frame_Handle material_data_buffer_handle;
     u32 material_stride;
 
     PC_General pc_data;
@@ -499,14 +544,11 @@ typedef struct Light_System
     u32 spot_light_count;
 
 
-    Buffer_Handle directional_light_storage_buffer_handle;
-    Buffer_Handle directional_light_staging_buffer_handle;
+    Buffer_Frame_Handle directional_light_ssbo_handle;
+    Buffer_Frame_Handle point_light_ssbo_handle;
+    Buffer_Frame_Handle spot_light_ssbo_handle;
 
-    Buffer_Handle point_light_storage_buffer_handle;
-    Buffer_Handle point_light_staging_buffer_handle;
 
-    Buffer_Handle spot_light_storage_buffer_handle;
-    Buffer_Handle spot_light_staging_buffer_handle;
 } Light_System;
 
 
@@ -572,6 +614,10 @@ typedef struct Descriptor_System
 
 typedef struct Vulkan_Texture_System
 {
+
+    Vulkan_Texture default_texture;
+    Vulkan_Texture error_texture;
+
     Vulkan_Texture textures[MAX_TEXTURE_COUNT];
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
@@ -587,39 +633,60 @@ typedef struct Vulkan_Texture_System
     RING_QUEUE_TYPE(Vulkan_Texture)* texture_deletion_queue;
 
 
-    VkSemaphore timeline_texture_upload_semaphore;
     //textures who's uploads we are waiting on
     ARRAY_TYPE(Vulkan_Texture_Pending_Upload)* texture_pending_array;
-    //u64 semaphore_singal_value = ++timeline_value; //use it like so
-    u64 timeline_semaphore_texture_value;
 } Vulkan_Texture_System;
 
 typedef struct Buffer_System
 {
     u32 frames_in_flight;
 
-    //NOTE: buffers are handles to the first instance of them, multiple are created for each frame in flight
-    // but when we get them from the system, they are offset by the current frame
+    //one for each frame in flight
+    Vulkan_Buffer* global_ubo;
+    u32 global_ubo_buffer_size;
+    u32 global_ubo_count;
 
-    Buffer_Handle global_ubo_handle;
+    //per frame staging buffer
+    //NOTE: both the frame staging and per frame buffers buffers are reset every frame to the start,
+    // so that data uploads start from the beggining, and prevents the user from forgetting to reset the offset to 0
+    Vulkan_Buffer* per_frame_staging_buffers;
+    u32 frame_staging_buffers_size;
+    u32 frame_staging_buffer_count;
 
-    //per frame buffer
-    Vulkan_Buffer* per_frame_staging_buffers; // this should be for data uploads like vertex, skinned etc
-    VkFence* staging_buffer_fence; // one per frame
-    // this should be for things that are neccessary to happen every frame, like the indirect, draw, and material buffers
-    // Vulkan_Buffer* per_frame_staging_buffer_pool;
+    //general per frame buffers, things like draw, transform, etc
+    Vulkan_Buffer* per_frame_buffers;
+    u32 frame_buffers_memory_usage;
+    u32 frame_buffer_current_count;
+    u32 frame_buffer_max_count;
 
-    //an array of them
-    Vulkan_Buffer* buffers;
-    u32 buffers_size; // total we have to be given out
+
+    //array
+    Vulkan_Buffer* static_buffers;
+    u32 buffers_size; // total we have to be given out, nice for tracking mem usage
     u32 buffer_current_count; // current amount given out
-    //add a linked list in later for buffers we free
 
-    //we can have a one to one mapping from buffers -> staging buffers
-    //given how we might use this, it would be ok to have holes in the array
-    //TODO: freelist instead of keeping a count, and we might want to differentiate these by size
-    //ASSUMPTION: staging buffers are per frame, and if i ever exceed a frames staging upload limit, just increase the size
-    Buffer_Handle staging_buffer_handle;
+    /*
+    struct buffer_resize_request
+    {
+        Buffer_Handle old_buffer_handle;
+        u32 old_size;
+        Buffer_Handle new_buffer_handle;
+        u32 new_size;
+        u64 semaphore_wait_value;
+    };*/
+    // used for async resource uploads
+    // we have one large buffer and we simply just make sure the ranges in use are not given out,
+    // until the semaphores are finished
+    Vulkan_Buffer upload_staging_buffer;
+    ARRAY_TYPE(Vulkan_Transfer_Buffer_Pending_Upload)* staging_upload_pending_array;
+    Free_List* upload_staging_free_list;
+
+
+
+    VkSemaphore timeline_transfer_upload_semaphore;
+
+
+
 
     //TODO: queries for size
     /*
@@ -654,12 +721,7 @@ typedef struct UI_Renderer
 {
     Buffer_Handle ui_vertex_buffer_handle;
     Buffer_Handle ui_index_buffer_handle;
-    Buffer_Handle ui_material_ssbo_handle;
-
-    Buffer_Handle ui_vertex_staging_buffer_handle;
-    Buffer_Handle ui_index_staging_buffer_handle;
-    Buffer_Handle ui_material_staging_ssbo_handle;
-
+    Buffer_Frame_Handle ui_material_ssbo_handle;
 
     u64 draw_count;
 
@@ -668,7 +730,7 @@ typedef struct UI_Renderer
 
     //insanity ui
     UI_Render_Packet* insanity_ui_render_packet;
-    Buffer_Handle insanity_ui_material_ssbo_handle;
+    Buffer_Frame_Handle insanity_ui_material_ssbo_handle;
     u64 insanity_ui_draw_count;
 } UI_Renderer_Backend;
 
@@ -681,13 +743,8 @@ typedef struct Sprite_Backend
 
     Buffer_Handle sprite_vertex_buffer;
     Buffer_Handle sprite_index_buffer;
-    Buffer_Handle sprite_indirect_buffer;
-    Buffer_Handle sprite_instance_ssbo_buffer;
-
-    Buffer_Handle sprite_vertex_staging_buffer;
-    Buffer_Handle sprite_index_staging_buffer;
-    Buffer_Handle sprite_instance_staging_buffer;
-    Buffer_Handle sprite_indirect_staging_buffer;
+    Buffer_Frame_Handle sprite_indirect_buffer;
+    Buffer_Frame_Handle sprite_instance_ssbo_buffer;
 
 
     u64 draw_count;
@@ -707,19 +764,10 @@ typedef struct Vulkan_Mesh_System
     Buffer_Handle weight_buffer_handle;
 
 
-    Buffer_Handle vertex_staging_buffer_handle;
-    Buffer_Handle index_staging_buffer_handle;
-    Buffer_Handle indirect_staging_buffer_handle;
-    Buffer_Handle normal_staging_buffer_handle;
-    Buffer_Handle tangent_staging_buffer_handle;
-    Buffer_Handle uv_staging_buffer_handle;
 
-    Buffer_Handle skinned_matrix_buffer;
-    Buffer_Handle skinned_matrix_staging_buffer_handle;
-
-
-    Buffer_Handle transform_buffer_handle;
-    Buffer_Handle transform_staging_buffer_handle;
+    //per frame
+    Buffer_Frame_Handle skinned_matrix_buffer;
+    Buffer_Frame_Handle transform_buffer_handle;
 
     //TODO: TEMP CODE, need a free list for this
     u32 vertex_offset_count;
@@ -729,14 +777,23 @@ typedef struct Vulkan_Mesh_System
     u32 mesh_render_count;
     // Skinned_Render_Record skinned_render_record[MAX_SKINNED_MESH_COUNT];
 
-    ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* mesh_pending_array;
+    //for uploads we still need to make, but haven't been able to ex: not enough staging memory rn
+    ARRAY_TYPE(Mesh_Unfinished_Upload)* mesh_pending_upload_array;
+    //for uploads, we are waiting on to finish
+    ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* mesh_submitted_upload_array;
     VkSemaphore mesh_upload_timeline_semaphore;
-    u64 upload_semaphore_value;
+    u64 mesh_upload_semaphore_value;
+
+
+    ARRAY_TYPE(Skinned_Gpu_Upload_Pending)* skinned_pending_array;
+    VkSemaphore skinned_upload_timeline_semaphore;
+    u64 skinned_upload_semaphore_value;
+
 } Vulkan_Mesh_System;
 
 typedef struct Particle_Render
 {
-    Buffer_Handle spherical_billboard_material_buffer_handle;
+    Buffer_Frame_Handle spherical_billboard_material_buffer_handle;
     u32 draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;
@@ -753,19 +810,12 @@ typedef struct Vulkan_Render_Thread
     Vulkan_Command_Buffer command_buffer[MAX_VULKAN_COMMAND_BUFFERS];
 } Vulkan_Render_Thread;
 
-
-typedef struct Vulkan_Queue_Ownership_Operation
+typedef struct Transfer_Command_Buffer_In_Flight
 {
-    Vulkan_Queue_Type from;
-    Vulkan_Queue_Type to;
-
-    VkDependencyInfo from_dependency_info;
-    VkDependencyInfo to_dependency_info;
-
-    VkSemaphoreSubmitInfo from_signal;
-    VkSemaphoreSubmitInfo to_wait;
-} Vulkan_Queue_Ownership_Operation;
-
+    Vulkan_Command_Buffer* command_buffer;
+    VkSemaphore timeline_semaphore;
+    u64 semaphore_value;
+}Transfer_Command_Buffer_In_Flight;
 
 typedef struct Vulkan_Transfer_Queue
 {
@@ -781,6 +831,11 @@ typedef struct Vulkan_Transfer_Queue
 
     VkSemaphoreSubmitInfo wait_semaphore_info[100];
     uint32_t wait_semaphore_info_count;
+
+    bool semaphore_incremented_this_frame;
+    VkSemaphore timeline_semaphore;
+    u64 semaphore_value;
+    ARRAY_TYPE(Transfer_Command_Buffer_In_Flight)* transfer_command_buffer_in_flight;
 
     /* TODO:
     //ones we want to send to other systems
@@ -800,8 +855,6 @@ typedef struct Vulkan_Compute_Queue
     Vulkan_Command_Buffer* command_buffer;
     u8 command_buffer_count;
 
-    VkFence* compute_frame_fence;
-    u8 compute_frame_fence_count;
 
     VkSemaphoreSubmitInfo signal_semaphore[100];
     u32 signal_semaphore_count;
@@ -889,24 +942,31 @@ typedef struct Vulkan_Queue_System
 
     VkQueue graphics_queue;
     VkCommandPool graphics_pool;
+    s32 graphics_queue_index;
     Vulkan_Graphics_Queue graphics_render_queue;
 
 
     VkQueue transfer_queue;
     VkCommandPool transfer_pool;
+    s32 transfer_queue_index;
     Vulkan_Transfer_Queue transfer_render_queue;
 
-    Vulkan_Compute_Queue comptute_render_queue;
-    Vulkan_Command_Buffer compute_command_buffers[MAX_VULKAN_COMMAND_BUFFERS];
-    u32 compute_command_buffer_count;
+    Vulkan_Compute_Queue compute_render_queue;
     VkQueue compute_queue;
-
+    VkCommandPool compute_pool;
+    s32 compute_queue_index;
 
     ring_queue* queue_ownership_change_transfer_to_graphics;
     ring_queue* queue_ownership_change_transfer_to_compute;
     ring_queue* queue_ownership_change_compute_to_graphics;
 } Vulkan_Queue_System;
 
+
+typedef struct Vulkan_CPU_Allocator
+{
+    bool init;
+    // VkAllocationCallbacks allocation_callbacks;
+} Vulkan_CPU_Allocator;
 
 typedef struct Renderer
 {
@@ -973,7 +1033,8 @@ typedef struct Renderer
     VkInstance instance;
 
     //Validation Layer
-    VkAllocationCallbacks* vulkan_allocator;
+    VkAllocationCallbacks* vk_allocator_callback;
+    // Vulkan_Allocator* vulkan_allocator;
     VkDebugUtilsMessengerEXT debug_messenger;
 
 
@@ -1017,8 +1078,6 @@ typedef struct Renderer
     u32 current_frame;
 
 
-
-
     //Surface
     VkSurfaceKHR surface;
     // The framebuffer's current width and height.
@@ -1031,7 +1090,6 @@ typedef struct Renderer
     Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
     Vulkan_Swapchain swapchain;
     bool recreating_swapchain;
-
 } Renderer;
 
 

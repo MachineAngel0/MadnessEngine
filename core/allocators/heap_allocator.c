@@ -3,34 +3,35 @@
 #include "asserts.h"
 
 
-void allocator_heap_free_all(Heap_Allocator* fl)
+void allocator_heap_free_all(Heap_Allocator* ha)
 {
-    fl->head = fl->data;
-    fl->head->free = true;
-    fl->head->block_size = fl->capacity - sizeof(Heap_Block);
-    fl->head->next = NULL;
-    fl->head->prev = NULL;
-
-    // fl->free_cache_head = NULL;
-    // fl->free_cache_tail = NULL;
+    ha->head = ha->data;
+    ha->head->is_free = true;
+    ha->head->block_size = ha->capacity - sizeof(Heap_Block);
+    ha->head->next = NULL;
+    ha->head->prev = NULL;
+    ha->allocation_calls = 0;
+    ha->free_calls = 0;
+    //  ha->free_cache_head = NULL;
+    // ha->free_cache_tail = NULL;
 }
 
-void allocator_heap_init(Heap_Allocator* fl, void* backing_memory, const size_t memory_size)
+void allocator_heap_init(Heap_Allocator* ha, void* backing_memory, const size_t memory_size)
 {
-    MASSERT(fl)
+    MASSERT(ha)
     MASSERT(backing_memory)
     MASSERT(memory_size > 0)
 
 
-    fl->data = backing_memory;
-    fl->capacity = memory_size;
-    fl->used = 0;
+    ha->data = backing_memory;
+    ha->capacity = memory_size;
+    ha->used = 0;
 
-    fl->head = fl->data;
-    fl->head->free = true;
-    fl->head->block_size = memory_size - sizeof(Heap_Block);
-    fl->head->next = NULL;
-    fl->head->prev = NULL;
+    ha->head = ha->data;
+    ha->head->is_free = true;
+    ha->head->block_size = memory_size - sizeof(Heap_Block);
+    ha->head->next = NULL;
+    ha->head->prev = NULL;
 }
 
 void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t alignment)
@@ -48,7 +49,7 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t align
     //check to see if we have enough memory
     while (current)
     {
-        if (current->free && current->block_size > size + sizeof(Heap_Block))
+        if ((current->is_free == true) && current->block_size > size + sizeof(Heap_Block))
         {
             break;
         }
@@ -65,10 +66,10 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t align
     new_block->prev = current;
     new_block->next = NULL;
     new_block->block_size = current->block_size - sizeof(Heap_Block) - size;
-    new_block->free = true;
+    new_block->is_free = true;
 
 
-    current->free = false;
+    current->is_free = false;
     current->block_size = size;
     current->next = new_block;
 
@@ -77,22 +78,24 @@ void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t align
 
     /*void* out_data = (void*)((u8*)current + sizeof(Heap_Block));
     memset(out_data,0,current->block_size);*/
+    ha->allocation_calls++;
+
     return (void*)((u8*)current + sizeof(Heap_Block));
 }
 
-void* allocator_heap_alloc(Heap_Allocator* fl, const size_t size)
+void* allocator_heap_alloc(Heap_Allocator* ha, const size_t size)
 {
-    return allocator_heap_alloc_aligned(fl, size,DEFAULT_ALIGNMENT);
+    return allocator_heap_alloc_aligned(ha, size,DEFAULT_ALIGNMENT);
 }
 
-void allocator_heap_free(Heap_Allocator* fl, void* ptr)
+void allocator_heap_free(Heap_Allocator* ha, void* ptr)
 {
     Heap_Block* free_block = (Heap_Block*)((u8*)ptr - sizeof(Heap_Block));
-    free_block->free = true;
-    fl->used -= free_block->block_size + sizeof(Heap_Block);
+    free_block->is_free = true;
+    ha->used -= free_block->block_size + sizeof(Heap_Block);
 
 
-    if (free_block->prev && free_block->prev->free)
+    if (free_block->prev && (free_block->prev->is_free == true))
     {
         free_block->prev->block_size += free_block->block_size;
         // [prev] [current] [next]
@@ -103,7 +106,7 @@ void allocator_heap_free(Heap_Allocator* fl, void* ptr)
         free_block->prev = NULL;
     }
 
-    if (free_block->next && free_block->next->free)
+    if (free_block->next && (free_block->next->is_free == true))
     {
         Heap_Block* next_block = free_block->next;
         free_block->block_size += free_block->next->block_size;
@@ -115,20 +118,22 @@ void allocator_heap_free(Heap_Allocator* fl, void* ptr)
         next_block->next = NULL;
         next_block->prev = NULL;
     }
+    ha->free_calls++;
+
 }
 
-void allocator_heap_debug_print(Heap_Allocator* fl)
+void allocator_heap_debug_print(Heap_Allocator* ha)
 {
-    Heap_Block* current = fl->head;
+    Heap_Block* current = ha->head;
     u64 block_number = 0;
     while (current)
     {
-        INFO("Current block [%llu]: size: %llu, free: %d", block_number++, current->block_size, current->free);
+        INFO("Current block [%llu]: size: %llu, free: %d", block_number++, current->block_size, current->is_free);
         current = current->next;
     }
 
     /*
-    current = fl->free_cache;
+    current = ha->free_cache;
 
     while (current)
     {
@@ -141,42 +146,42 @@ void allocator_heap_test(void)
 {
     TEST_START("FREE LIST ALLOCATOR");
 
-    Heap_Allocator* fl = malloc(sizeof(Heap_Allocator));
+    Heap_Allocator* ha = malloc(sizeof(Heap_Allocator));
     u64 memory_amount = MB(1);
     void* backing_memory = malloc(memory_amount);
-    allocator_heap_init(fl, backing_memory, memory_amount);
-    allocator_heap_debug_print(fl);
+    allocator_heap_init(ha, backing_memory, memory_amount);
+    allocator_heap_debug_print(ha);
 
 
-    s32* i = allocator_heap_alloc(fl, sizeof(s32));
+    s32* i = allocator_heap_alloc(ha, sizeof(s32));
     *i = 4;
-    s32* i2 = allocator_heap_alloc(fl, sizeof(s32));
-    s64* i3 = allocator_heap_alloc(fl, sizeof(s64));
-    f32* f = allocator_heap_alloc(fl, sizeof(f32));
-    allocator_heap_debug_print(fl);
+    s32* i2 = allocator_heap_alloc(ha, sizeof(s32));
+    s64* i3 = allocator_heap_alloc(ha, sizeof(s64));
+    f32* f = allocator_heap_alloc(ha, sizeof(f32));
+    allocator_heap_debug_print(ha);
 
 
-    allocator_heap_free(fl, i);
-    allocator_heap_free(fl, i2);
-    allocator_heap_debug_print(fl);
-    s32* i4 = allocator_heap_alloc(fl, sizeof(s32));
-    allocator_heap_debug_print(fl);
+    allocator_heap_free(ha, i);
+    allocator_heap_free(ha, i2);
+    allocator_heap_debug_print(ha);
+    s32* i4 = allocator_heap_alloc(ha, sizeof(s32));
+    allocator_heap_debug_print(ha);
 
     s32 array_s[100];
 
 
-    s32* array_boi = allocator_heap_alloc(fl, sizeof(s32) * 100);
+    s32* array_boi = allocator_heap_alloc(ha, sizeof(s32) * 100);
     array_boi[99] = 1;
-    allocator_heap_debug_print(fl);
-    allocator_heap_free(fl, array_boi);
-    allocator_heap_debug_print(fl);
+    allocator_heap_debug_print(ha);
+    allocator_heap_free(ha, array_boi);
+    allocator_heap_debug_print(ha);
 
 
-    allocator_heap_free_all(fl);
-    allocator_heap_debug_print(fl);
+    allocator_heap_free_all(ha);
+    allocator_heap_debug_print(ha);
 
     free(backing_memory);
-    free(fl);
+    free(ha);
 
     TEST_END("FREE LIST ALLOCATOR");
 }

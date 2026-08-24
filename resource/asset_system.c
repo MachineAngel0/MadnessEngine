@@ -1,11 +1,9 @@
 ﻿#include "asset_system.h"
 
 #include "animation_system.h"
-#include "asset_serialization.h"
 #include "material_system.h"
 #include "mesh_system.h"
 #include "sprite_system.h"
-
 
 
 Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry)
@@ -398,11 +396,11 @@ Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUI
 
 Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path)
 {
-    //TODO: this could be a scratch allocator
-    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, scratch.allocator);
 
     Madness_Mesh_Handle mesh_handle = {0};
-    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
+    Asset_MetaData* out_meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_MetaData));
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
@@ -442,6 +440,8 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
         // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
     }
     fclose(fptr);
+
+    scratch_allocator_end(scratch);
 
     return mesh_handle;
 }

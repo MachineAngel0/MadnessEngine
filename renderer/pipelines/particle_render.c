@@ -11,9 +11,9 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
     u64 mesh_buffer_data_size = MB(16);
 
 
-    particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create(
+    particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE,
+        BUFFER_TYPE_STORAGE_GPU,
         mesh_buffer_data_size);
 
     //default blend for now
@@ -40,10 +40,12 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
-    vulkan_buffer_reset_offset(renderer, particle_render->spherical_billboard_material_buffer_handle);
+    vulkan_buffer_frame_reset(renderer, particle_render->spherical_billboard_material_buffer_handle);
 
+    vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "PARTICLE SSBO UPDATE");
 
     //update the particle buffer every frame
+    //OPTIMIZE: make particles material shader friendly, but obv it can wait
     Material_Spherical_Billboard billboard_spherical_material;
     particle_render->draw_count = render_packet->particle_packet.particle_count;
     for (u32 i = 0; i < render_packet->particle_packet.particle_count; i++)
@@ -58,12 +60,35 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         // render_packet->particle_packet.particles[i].tex_size;
         // render_packet->particle_packet.particles[i].tex_offset;
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+        vulkan_buffer_frame_staging_upload(
             renderer, particle_render->spherical_billboard_material_buffer_handle,
             command_buffer,
             &billboard_spherical_material,
             sizeof(Material_Spherical_Billboard));
     }
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
+    Vulkan_Buffer* particle_material_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->spherical_billboard_material_buffer_handle);
+
+    VkBufferMemoryBarrier2 particle_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = particle_material_buffer->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
 }
 
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,
@@ -88,13 +113,13 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
 
     PC_Particle pc_particle = {
         .draw_material_buffer = get_buffer_device_address(renderer->logical_device,
-                                                          vulkan_buffer_get(
+                                                          vulkan_buffer_get_frame(
                                                               renderer,
                                                               particle_render->
                                                               spherical_billboard_material_buffer_handle)->
                                                           handle),
         .unused = get_buffer_device_address(renderer->logical_device,
-                                            vulkan_buffer_get(
+                                            vulkan_buffer_get_frame(
                                                 renderer, particle_render->spherical_billboard_material_buffer_handle)->
                                             handle),
     };

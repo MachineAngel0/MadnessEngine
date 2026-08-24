@@ -12,96 +12,127 @@ Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
 
 
     mesh_system->vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                             BUFFER_TYPE_STORAGE,
+                                                             BUFFER_TYPE_STORAGE_GPU,
                                                              mesh_buffer_data_size);
     mesh_system->index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                             mesh_buffer_data_size);
 
 
     mesh_system->normal_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                             BUFFER_TYPE_STORAGE, mesh_buffer_data_size);
+                                                             BUFFER_TYPE_STORAGE_GPU, mesh_buffer_data_size);
     mesh_system->tangent_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                              BUFFER_TYPE_STORAGE, mesh_buffer_data_size);
+                                                              BUFFER_TYPE_STORAGE_GPU, mesh_buffer_data_size);
     mesh_system->uv_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                         BUFFER_TYPE_STORAGE,
+                                                         BUFFER_TYPE_STORAGE_GPU,
                                                          mesh_buffer_data_size);
     mesh_system->joint_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                            BUFFER_TYPE_STORAGE,
+                                                            BUFFER_TYPE_STORAGE_GPU,
                                                             mesh_buffer_data_size);
     mesh_system->weight_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                             BUFFER_TYPE_STORAGE,
+                                                             BUFFER_TYPE_STORAGE_GPU,
                                                              mesh_buffer_data_size);
 
 
-    mesh_system->vertex_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        mesh_buffer_data_size);
-    mesh_system->index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_STAGING,
-                                                                    mesh_buffer_data_size);
-    mesh_system->indirect_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING,
-                                                                       mesh_buffer_data_size);
-    mesh_system->normal_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STAGING, mesh_buffer_data_size);
-    mesh_system->tangent_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                      BUFFER_TYPE_STAGING, mesh_buffer_data_size);
-    mesh_system->uv_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_STAGING,
-                                                                 mesh_buffer_data_size);
-
-
     //DRAW DATA
-    mesh_system->skinned_matrix_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                              BUFFER_TYPE_STORAGE,
-                                                              mesh_buffer_data_size);
-    mesh_system->skinned_matrix_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_STAGING,
-                                                                             mesh_buffer_data_size);
-
+    mesh_system->skinned_matrix_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                    BUFFER_TYPE_STORAGE_GPU,
+                                                                    mesh_buffer_data_size);
 
     u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4s);
 
-    mesh_system->transform_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_STORAGE,
-                                                                transform_buffer_memory_size);
-    mesh_system->transform_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        transform_buffer_memory_size);
+    mesh_system->transform_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                      BUFFER_TYPE_STORAGE_GPU,
+                                                                      transform_buffer_memory_size);
+
 
     //
-    mesh_system->mesh_pending_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
+    mesh_system->mesh_submitted_upload_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
+    mesh_system->mesh_pending_upload_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
     timeline_semaphore_create(renderer, &mesh_system->mesh_upload_timeline_semaphore);
-    mesh_system->upload_semaphore_value = 0;
+    mesh_system->mesh_upload_semaphore_value = 0;
 
 
     return mesh_system;
 }
 
 
+bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system,
+                             Vulkan_Command_Buffer* transfer_command_buffer,
+                             Buffer_Handle handle,
+                             Vulkan_Mesh_Data_Type type,
+                             void* data,
+                             u64 data_byte_size,
+                             u32 mesh_id,
+                             u64 mesh_upload_semaphore_value,
+                             Mesh_Render_Record* record, bool is_initial_submit)
+{
+    if (is_initial_submit)
+    {
+        record->pending_uploads += 1;
+    }
+
+    if (vulkan_buffer_transfer_upload(renderer,
+                                      transfer_command_buffer,
+                                      handle,
+                                      data,
+                                      data_byte_size, mesh_upload_semaphore_value))
+    {
+        //successful upload
+        Mesh_Gpu_Upload_Pending mesh_pending =
+        {
+            .mesh_id = mesh_id,
+            .type = type,
+            .timeline_semaphore_value = mesh_upload_semaphore_value,
+        };
+        array_push(mesh_system->mesh_submitted_upload_array, &mesh_pending);
+        return true;
+    }
+    else
+    {
+        //not enough memory, will try again next frame
+        Mesh_Unfinished_Upload unfinished_upload = {
+            .mesh_id = mesh_id,
+            .type = type,
+            .buffer_handle = handle,
+            .bytes = data_byte_size,
+            .data = data,
+        };
+
+        array_push(mesh_system->mesh_pending_upload_array, &unfinished_upload);
+        return false;
+    }
+}
+
 void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system, Render_Packet* render_packet,
                                     Vulkan_Command_Buffer* graphics_command_buffer)
 {
+    // return;
     //
-    //textures gpu upload we are waiting on, checked once a frame
+    //mesh gpu uploads we are waiting on, checked once a frame
     u64 i = 0;
 
-    while (i < mesh_system->mesh_pending_array->num_items)
+    while (i < mesh_system->mesh_submitted_upload_array->num_items)
     {
         Mesh_Gpu_Upload_Pending pending_upload =
             array_get(
-                mesh_system->mesh_pending_array,
+                mesh_system->mesh_submitted_upload_array,
                 Mesh_Gpu_Upload_Pending,
                 i);
 
         if (timeline_semaphore_query_and_compare(
             renderer,
-            &mesh_system->mesh_upload_timeline_semaphore,
+            vulkan_queue_system_get_transfer_semaphore(renderer),
             pending_upload.timeline_semaphore_value))
         {
-            mesh_system->mesh_render_record[pending_upload.mesh_id].is_uploaded = true;
+            Mesh_Render_Record* mesh_record = &mesh_system->mesh_render_record[pending_upload.mesh_id];
+            mesh_record->pending_uploads--;
+            if (mesh_record->pending_uploads == 0)
+            {
+                mesh_record->is_uploaded = true;
+            }
+
             array_remove_swap(
-                mesh_system->mesh_pending_array,
+                mesh_system->mesh_submitted_upload_array,
                 i);
 
             // Don't increment i.
@@ -113,171 +144,258 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
     }
 
 
-    //TODO: remove eventually when synchronization is correct
-    // if (renderer->context.current_frame != 0) { return; }
+    if ( mesh_system->mesh_pending_upload_array->num_items == 0 && ring_queue_is_empty(render_packet->mesh_queue))
+    {
+        return;
+    }
+
+
+
+    //TODO: we still want to flush our queues
+    Vulkan_Command_Buffer* transfer_command_buffer = NULL;
+    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer))
+    {
+        return;
+    }
+
+
+    u64 mesh_upload_semaphore_value = ++mesh_system->mesh_upload_semaphore_value;
+
+    //things we werent able to upload yet
+    u64 unfinished_idx = 0;
+    while ( unfinished_idx < mesh_system->mesh_pending_upload_array->num_items)
+    {
+        Mesh_Unfinished_Upload unfinished_upload =
+            array_get(
+                mesh_system->mesh_pending_upload_array,
+                Mesh_Unfinished_Upload,
+                unfinished_idx);
+
+
+        Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.mesh_id];
+
+        //if upload successful remove it from the array
+        if (mesh_system_upload_data(renderer,
+                                    mesh_system,
+                                    transfer_command_buffer,
+                                    unfinished_upload.buffer_handle,
+                                    unfinished_upload.type,
+                                    unfinished_upload.data,
+                                    unfinished_upload.bytes,
+                                    unfinished_upload.mesh_id,
+                                    mesh_upload_semaphore_value,
+                                    record, false))
+        {
+            // Don't increment i.
+            // The swapped-in element now occupies index i.
+            array_remove_swap(
+                mesh_system->mesh_pending_upload_array,
+                unfinished_idx);
+            continue;
+        }
+        //upload could not be done
+        unfinished_idx++;
+    }
+
 
     ring_queue* mesh_render_queue = render_packet->mesh_queue;
     ring_queue* skinned_mesh_render_queue = render_packet->skinned_mesh_queue;
 
-    Mesh_GPU_Upload* submesh_upload_data = allocator_alloc(&renderer->frame_allocator, sizeof(Mesh_GPU_Upload));
-
-    /*Vulkan_Command_Buffer* transfer_command_buffer = NULL;
-    vulkan_command_buffer_system_get_and_begin_cb(renderer->command_buffer_system,
-                                                  VULKAN_COMMAND_BUFFER_QUEUE_TYPE_TRANSFER,
-                                                  &transfer_command_buffer);*/
 
     //NOTE: rn it copies from an offset, which is fine for now,
     // but when the system needs to be more dynamic, its going to need a rewrite, especially the buffer system function calls
-    while (!ring_queue_is_empty(mesh_render_queue) /*&& transfer_command_buffer*/)
-    {
-        ring_dequeue(mesh_render_queue, submesh_upload_data);
 
-        Mesh_Render_Record* record = &mesh_system->mesh_render_record[submesh_upload_data->mesh_id];
-        record->is_uploaded = true; // TODO: change this for now we are just testing, should be false
+    //TODO: add memory barriers
+    Mesh_GPU_Upload submesh_upload_data = {0};
+
+
+    while (!ring_queue_is_empty(mesh_render_queue))
+    {
+        ring_dequeue(mesh_render_queue, &submesh_upload_data);
+
+        Mesh_Render_Record* record = &mesh_system->mesh_render_record[submesh_upload_data.mesh_id];
+        record->mesh_id = submesh_upload_data.mesh_id; // TODO: change this for now we are just testing, should be false
+        record->is_uploaded = false; // TODO: change this for now we are just testing, should be false
         record->is_in_use = true;
-        record->tangent_bytes = submesh_upload_data->submesh->tangent_bytes;
-        record->vertex_color_bytes = submesh_upload_data->submesh->vertex_color_bytes;
-        record->vertex_bytes = submesh_upload_data->submesh->vertex_bytes;
-        record->normal_bytes = submesh_upload_data->submesh->normal_bytes;
-        record->uv_bytes = submesh_upload_data->submesh->uv_bytes;
-        record->indices_bytes = submesh_upload_data->submesh->indices_bytes;
-        record->index_count = submesh_upload_data->submesh->index_count;
-        record->index_type = submesh_upload_data->submesh->index_type;
+        record->tangent_bytes = submesh_upload_data.submesh->tangent_bytes;
+        record->vertex_color_bytes = submesh_upload_data.submesh->vertex_color_bytes;
+        record->vertex_bytes = submesh_upload_data.submesh->vertex_bytes;
+        record->normal_bytes = submesh_upload_data.submesh->normal_bytes;
+        record->uv_bytes = submesh_upload_data.submesh->uv_bytes;
+        record->indices_bytes = submesh_upload_data.submesh->indices_bytes;
+        record->index_count = submesh_upload_data.submesh->index_count;
+        record->index_type = submesh_upload_data.submesh->index_type;
+
 
         //TODO: TEMP CODE, need a free list for this
         record->vertex_count_offset = mesh_system->vertex_offset_count;
         record->index_offset_count = mesh_system->index_offset_count;
-        mesh_system->vertex_offset_count += submesh_upload_data->submesh->vertex_count;
-        mesh_system->index_offset_count += submesh_upload_data->submesh->index_count;
-
-        //this could be optimized later, by using flat arrays for all the submeshes and just doing a memcpy
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_system->vertex_staging_buffer_handle,
-                                            submesh_upload_data->gpu_data->vertex,
-                                            submesh_upload_data->submesh->vertex_bytes);
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_system->index_staging_buffer_handle,
-                                            submesh_upload_data->gpu_data->indices,
-                                            submesh_upload_data->submesh->indices_bytes);
-
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_system->normal_staging_buffer_handle,
-                                            submesh_upload_data->gpu_data->normal,
-                                            submesh_upload_data->submesh->normal_bytes);
-
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_system->uv_staging_buffer_handle,
-                                            submesh_upload_data->gpu_data->uv,
-                                            submesh_upload_data->submesh->uv_bytes);
-
-        vulkan_buffer_data_copy_from_offset(renderer, mesh_system->tangent_staging_buffer_handle,
-                                            submesh_upload_data->gpu_data->tangent,
-                                            submesh_upload_data->submesh->tangent_bytes);
+        mesh_system->vertex_offset_count += submesh_upload_data.submesh->vertex_count;
+        mesh_system->index_offset_count += submesh_upload_data.submesh->index_count;
 
 
-        /*vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->vertex_buffer_handle,
-            transfer_command_buffer,
-            &submesh_upload_data->gpu_data->vertex,
-            submesh_upload_data->submesh->vertex_bytes);
+        mesh_system_upload_data(renderer,
+                                mesh_system,
+                                transfer_command_buffer,
+                                mesh_system->vertex_buffer_handle,
+                                VERTEX,
+                                submesh_upload_data.gpu_data->vertex,
+                                submesh_upload_data.submesh->vertex_bytes,
+                                submesh_upload_data.mesh_id,
+                                mesh_upload_semaphore_value,
+                                record, true);
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->index_buffer_handle,
-            transfer_command_buffer,
-            submesh_upload_data->gpu_data->indices,
-            submesh_upload_data->submesh->indices_bytes);
+        mesh_system_upload_data(renderer,
+                                mesh_system,
+                                transfer_command_buffer,
+                                mesh_system->index_buffer_handle,
+                                INDEX,
+                                submesh_upload_data.gpu_data->indices,
+                                submesh_upload_data.submesh->indices_bytes,
+                                submesh_upload_data.mesh_id,
+                                mesh_upload_semaphore_value,
+                                record, true);
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->normal_buffer_handle,
-            transfer_command_buffer,
-            submesh_upload_data->gpu_data->normal,
-            submesh_upload_data->submesh->normal_bytes);
+        mesh_system_upload_data(renderer,
+                                mesh_system,
+                                transfer_command_buffer,
+                                mesh_system->normal_buffer_handle,
+                                NORMAL,
+                                submesh_upload_data.gpu_data->normal,
+                                submesh_upload_data.submesh->normal_bytes,
+                                submesh_upload_data.mesh_id,
+                                mesh_upload_semaphore_value,
+                                record, true);
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->uv_buffer_handle,
-            transfer_command_buffer,
-            submesh_upload_data->gpu_data->uv,
-            submesh_upload_data->submesh->uv_bytes);
+        mesh_system_upload_data(renderer,
+                                mesh_system,
+                                transfer_command_buffer,
+                                mesh_system->uv_buffer_handle,
+                                TANGENT,
+                                submesh_upload_data.gpu_data->uv,
+                                submesh_upload_data.submesh->uv_bytes,
+                                submesh_upload_data.mesh_id,
+                                mesh_upload_semaphore_value,
+                                record, true);
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->tangent_buffer_handle,
-            transfer_command_buffer,
-            submesh_upload_data->gpu_data->tangent,
-            submesh_upload_data->submesh->tangent_bytes);
-
-        Mesh_Gpu_Upload_Pending mesh_pending =
-        {
-            .mesh_id = submesh_upload_data->mesh_id,
-            .timeline_semaphore_value = semaphore_value,
-        };
-
-        array_push(mesh_system->mesh_pending_array, &mesh_pending);*/
+        mesh_system_upload_data(renderer,
+                                mesh_system,
+                                transfer_command_buffer,
+                                mesh_system->tangent_buffer_handle,
+                                TANGENT,
+                                submesh_upload_data.gpu_data->tangent,
+                                submesh_upload_data.submesh->tangent_bytes,
+                                submesh_upload_data.mesh_id,
+                                mesh_upload_semaphore_value,
+                                record, true);
     }
+
 
     //skinned data
-
+    /*u64 skinned_semaphore_value = ++mesh_system->skinned_upload_semaphore_value;
     Skinned_Mesh_GPU_Upload skinned_mesh_upload_data = {0};
-
     while (!ring_queue_is_empty(skinned_mesh_render_queue))
     {
-        ring_dequeue(skinned_mesh_render_queue, &skinned_mesh_upload_data);
+        MASSERT(false); // TODO:
+        ring_queue_peek(skinned_mesh_render_queue, &skinned_mesh_upload_data);
+
+        u64 skinned_memory_request = skinned_mesh_upload_data.skinned_submesh->joint_bytes + skinned_mesh_upload_data.
+            skinned_submesh->weight_bytes;
+        u64 staging_offset = 0;
+        if (!vulkan_buffer_upload_data_request(renderer, skinned_memory_request, &staging_offset))
+        {
+            //we cant service the request, move on
+            break;
+        }
 
 
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+        vulkan_buffer_staging_transfer_queue_upload(
             renderer, mesh_system->joint_buffer_handle,
-            graphics_command_buffer, skinned_mesh_upload_data.skinned_gpu_data->joints,
+            transfer_command_buffer,
+            skinned_mesh_upload_data.skinned_gpu_data->joints,
             skinned_mesh_upload_data.skinned_submesh->joint_bytes);
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+        vulkan_buffer_staging_transfer_queue_upload(
             renderer, mesh_system->weight_buffer_handle,
-            graphics_command_buffer, skinned_mesh_upload_data.skinned_gpu_data->weights,
+            transfer_command_buffer,
+            skinned_mesh_upload_data.skinned_gpu_data->weights,
             skinned_mesh_upload_data.skinned_submesh->weight_bytes);
 
-        /*
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->joint_buffer_handle,
-            transfer_command_buffer, skinned_mesh_upload_data.skinned_gpu_data->joints,
-            skinned_mesh_upload_data.skinned_submesh->joint_bytes);
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
-            renderer, mesh_system->weight_buffer_handle,
-            transfer_command_buffer, skinned_mesh_upload_data.skinned_gpu_data->weights,
-            skinned_mesh_upload_data.skinned_submesh->weight_bytes);*/
-    }
+
+        Skinned_Gpu_Upload_Pending skinned_pending =
+        {
+            .skinned_id = skinned_mesh_upload_data.skinned_id,
+            .timeline_semaphore_value = skinned_semaphore_value,
+        };
+        array_push(mesh_system->skinned_pending_array, &skinned_pending);
 
 
-    //we want to do a submit here of the
-
-
-    // vulkan_command_buffer_submit_new(renderer->context, )
-
-
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_system->vertex_buffer_handle,
-                                    mesh_system->vertex_staging_buffer_handle, graphics_command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_system->index_buffer_handle,
-                                    mesh_system->index_staging_buffer_handle, graphics_command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_system->normal_buffer_handle,
-                                    mesh_system->normal_staging_buffer_handle, graphics_command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_system->uv_buffer_handle, mesh_system->uv_staging_buffer_handle,
-                                    graphics_command_buffer);
-    vulkan_buffer_cpu_to_gpu_upload(renderer, mesh_system->tangent_buffer_handle,
-                                    mesh_system->tangent_staging_buffer_handle, graphics_command_buffer);
+        //remove from our queue since we have already proccessed it
+        ring_dequeue_discard(skinned_mesh_render_queue);
+    }*/
 }
 
 void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                          Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     //transform data
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->transform_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->transform_staging_buffer_handle);
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->transform_buffer_handle,
-                                                   mesh_renderer->transform_staging_buffer_handle, command_buffer,
-                                                   render_packet->draw_3d_data_packet.world_space_matrix_array,
-                                                   sizeof(mat4s) * render_packet->draw_3d_data_packet.
-                                                   world_space_matrix_count);
+    vulkan_buffer_frame_reset(renderer, mesh_renderer->transform_buffer_handle);
+    if (vulkan_buffer_frame_staging_upload(
+        renderer, mesh_renderer->transform_buffer_handle,
+        command_buffer, render_packet->draw_3d_data_packet.world_space_matrix_array,
+        sizeof(mat4s) * render_packet->draw_3d_data_packet.
+                                       world_space_matrix_count))
+    {
+        Vulkan_Buffer* transform_buffer = vulkan_buffer_get_frame(renderer, mesh_renderer->transform_buffer_handle);
+        VkBufferMemoryBarrier2 transform_buffer_barrier = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+            //barrier so that we finish our transfer before our shaders read the data
+            .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+            .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+            .buffer = transform_buffer->handle,
+            .offset = 0,
+            .size = transform_buffer->current_offset,
+        };
+        vulkan_command_add_buffer_barrier(command_buffer, transform_buffer_barrier);
+    }
+
 
     //skinned matrix
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_buffer);
-    vulkan_buffer_reset_offset(renderer, mesh_renderer->skinned_matrix_staging_buffer_handle);
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, mesh_renderer->skinned_matrix_buffer,
-                                                   mesh_renderer->skinned_matrix_staging_buffer_handle, command_buffer,
-                                                   render_packet->draw_3d_data_packet.skinned_matrix->data,
-                                                   array_get_byte_size(
-                                                       render_packet->draw_3d_data_packet.skinned_matrix));
+    vulkan_buffer_frame_reset(renderer, mesh_renderer->skinned_matrix_buffer);
+    if (vulkan_buffer_frame_staging_upload(renderer, mesh_renderer->skinned_matrix_buffer,
+                                           command_buffer,
+                                           render_packet->draw_3d_data_packet.skinned_matrix->data,
+                                           array_get_byte_size(render_packet->draw_3d_data_packet.skinned_matrix)))
+    {
+        //successful data uploads need a barrier
+        Vulkan_Buffer* skinned_buffer = vulkan_buffer_get_frame(renderer, mesh_renderer->skinned_matrix_buffer);
+        VkBufferMemoryBarrier2 skinned_buffer_barrier = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+            .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+            .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+            .buffer = skinned_buffer->handle,
+            .offset = 0,
+            .size = skinned_buffer->current_offset,
+        };
+        vulkan_command_add_buffer_barrier(command_buffer, skinned_buffer_barrier);
+    }
 }
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer,
@@ -315,8 +433,9 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
     // };
 
-    //TODO: realizing now that visibility work load doens't need to happen in the renderer,
-    // it can be an intemediate step that generates the info needed for the render packet
+    //TODO: realizing now that visibility work load doenst need to happen in the renderer,
+    // it can be an intermediate step that generates the info needed for the render packet,
+    // unless you do gpu compute culling then that shit happens in the renderer
     for (u32 i = 0; i < render_packet->draw_3d_data_packet.mesh_instances_count; i++)
     {
         Madness_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.mesh_instances[i];
@@ -331,6 +450,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 continue;
             }
 
+            //TODO: check if material upload is valid yet, when we get around to that
             Mesh_Render_Item* render_inst = &render_items[render_item_count++];
             *render_inst = (Mesh_Render_Item){
                 .material_key = sub_mesh_instance->material_handle.material_id,
@@ -338,7 +458,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 .mesh_handle = mesh_instance->mesh_asset.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.buffer_handle,
-                .transform_handle = mesh_instance->transform_handle.handle, // TODO: query the bindless index
+                .transform_handle = mesh_instance->transform_handle.handle,
                 .index_count = render_record->index_count,
                 .index_offset = render_record->index_offset_count,
                 .vertex_offset = render_record->vertex_count_offset,
@@ -385,15 +505,15 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         Vulkan_Shader_Batch* current_batch = &renderer->shader_system->mesh_batch[batch_idx];
         current_batch->draw_count = 0;
 
-        vulkan_buffer_reset_offset(renderer, current_batch->material_data_buffer_handle);
-        vulkan_buffer_reset_offset(renderer, current_batch->draw_data_buffer_handle);
-        vulkan_buffer_reset_offset(renderer, current_batch->indirect_draw_buffer_handle);
+        vulkan_buffer_frame_reset(renderer, current_batch->material_data_buffer_handle);
+        vulkan_buffer_frame_reset(renderer, current_batch->draw_data_buffer_handle);
+        vulkan_buffer_frame_reset(renderer, current_batch->indirect_draw_buffer_handle);
 
 
         //TODO/ OPTIMIZE: we can upload only whats needed per frame, instead of the whole thing,
         // but who knows if individual uploads would be slower?
         // honestly, just depends on the performance, should profile
-        vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+        vulkan_buffer_frame_staging_upload(
             renderer, current_batch->material_data_buffer_handle,
             command_buffer,
             current_batch->material_batch_reference->material_data->data,
@@ -418,14 +538,14 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                 };
 
 
-                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                vulkan_buffer_frame_staging_upload(
                     renderer, current_batch->draw_data_buffer_handle,
                     command_buffer,
                     &mesh_draw,
                     sizeof(Vulkan_Mesh_Draw));
 
 
-                vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(
+                vulkan_buffer_frame_staging_upload(
                     renderer, current_batch->indirect_draw_buffer_handle,
                     command_buffer,
                     &indirect_draw,
@@ -512,7 +632,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
     {
         Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
 
-        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, draw_data->indirect_draw_buffer_handle);
+        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, draw_data->indirect_draw_buffer_handle);
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
         //check if we are using wireframe_mode
@@ -556,6 +676,11 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
                              VK_INDEX_TYPE_UINT16);
 
+
+        draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
+            renderer, draw_data->draw_data_buffer_handle);
+        draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
+            renderer, draw_data->material_data_buffer_handle);
 
         VkPushConstantsInfo push_constant_info = {0};
         push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
@@ -606,7 +731,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
 
 
-        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get(renderer, draw_data->indirect_draw_buffer_handle);
+        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, draw_data->indirect_draw_buffer_handle);
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
         //figure out the shadow pass type we are using
@@ -637,6 +762,11 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
 
         vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
                              VK_INDEX_TYPE_UINT16);
+
+        draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
+            renderer, draw_data->draw_data_buffer_handle);
+        draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
+            renderer, draw_data->material_data_buffer_handle);
 
 
         VkPushConstantsInfo push_constant_info = {0};

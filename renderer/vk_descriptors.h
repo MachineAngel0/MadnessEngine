@@ -78,6 +78,10 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Buffer_Handle buffer_handle,
                                                    u32 binding_index);
 
+void update_uniform_buffer_bindless_descriptor_set_explicit(Renderer* renderer,
+                                                            Descriptor_System* descriptor_system,
+                                                            Vulkan_Buffer* buffer,
+                                                            u32 binding_index);
 
 void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,

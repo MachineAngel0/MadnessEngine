@@ -563,7 +563,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
     create_info.hwnd = state->hwnd;
 
     VkResult result = vkCreateWin32SurfaceKHR(renderer->instance, &create_info,
-                                              renderer->vulkan_allocator, &state->surface);
+                                              renderer->vk_allocator_callback, &state->surface);
     if (result != VK_SUCCESS)
     {
         FATAL("Vulkan surface creation failed.");

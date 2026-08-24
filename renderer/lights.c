@@ -3,8 +3,6 @@
 #include "vk_buffer.h"
 
 
-
-
 Light_System* light_system_init(Renderer* renderer)
 {
     Light_System* out_light_system = allocator_alloc(&renderer->allocator, sizeof(Light_System));
@@ -35,7 +33,7 @@ Light_System* light_system_init(Renderer* renderer)
     }
 
     for (u32 spot_light_idx = 0; spot_light_idx < out_light_system->directional_light_count;
-     spot_light_idx++)
+         spot_light_idx++)
     {
         spot_light_init(&out_light_system->spot_lights[spot_light_idx]);
     }
@@ -48,31 +46,17 @@ Light_System* light_system_init(Renderer* renderer)
 
 
     //TODO: allocate larger sizes for the buffers
-    out_light_system->directional_light_storage_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
+    out_light_system->directional_light_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
         sizeof(Directional_Light) * out_light_system->directional_light_count);
 
-    out_light_system->point_light_storage_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
+    out_light_system->point_light_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
         sizeof(Point_Light) * out_light_system->point_light_count);
 
-    out_light_system->spot_light_storage_buffer_handle = vulkan_buffer_create(
-    renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE,
-    sizeof(Spot_Light) * out_light_system->point_light_count);
-
-
-    out_light_system->directional_light_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        sizeof(Directional_Light) * out_light_system->directional_light_count);
-
-    out_light_system->point_light_staging_buffer_handle = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-        sizeof(Point_Light) * out_light_system->point_light_count);
-
-    out_light_system->spot_light_staging_buffer_handle = vulkan_buffer_create(
-    renderer, renderer->buffer_system, BUFFER_TYPE_STAGING,
-    sizeof(Spot_Light) * out_light_system->point_light_count);
-
+    out_light_system->spot_light_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
+        sizeof(Spot_Light) * out_light_system->point_light_count);
 
 
     // vulkan_buffer_data_copy_and_upload(renderer,
@@ -94,39 +78,37 @@ Light_System* light_system_init(Renderer* renderer)
 
 void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer)
 {
-    //TODO: probably shouldn't be reuploading every frame
-
-    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, light_system->point_light_staging_buffer_handle);
-
-    vulkan_buffer_reset_offset(renderer, light_system->directional_light_storage_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, light_system->directional_light_staging_buffer_handle);
+    vulkan_buffer_frame_reset(renderer, light_system->point_light_ssbo_handle);
+    vulkan_buffer_frame_reset(renderer, light_system->directional_light_ssbo_handle);
+    vulkan_buffer_frame_reset(renderer, light_system->spot_light_ssbo_handle);
 
 
-    vulkan_buffer_reset_offset(renderer, light_system->spot_light_storage_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, light_system->spot_light_staging_buffer_handle);
+    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "Light SSBO Upload",
+                                                  (float[4]){0.0, 0.0, 1.0, 1.0});
+
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->directional_light_ssbo_handle,
+                                       command_buffer,
+                                       light_system->directional_lights,
+                                       sizeof(Directional_Light) * light_system->directional_light_count);
+
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->point_light_ssbo_handle,
+                                       command_buffer,
+                                       light_system->point_lights,
+                                       sizeof(Point_Light) * light_system->point_light_count);
+
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->spot_light_ssbo_handle,
+                                       command_buffer,
+                                       light_system->spot_lights,
+                                       sizeof(Spot_Light) * light_system->spot_light_count);
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
 
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   light_system->directional_light_storage_buffer_handle,
-                                                   light_system->directional_light_staging_buffer_handle,
-                                                   command_buffer,
-                                                   light_system->directional_lights,
-                                                   sizeof(Directional_Light) * light_system->directional_light_count);
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   light_system->point_light_storage_buffer_handle,
-                                                   light_system->point_light_staging_buffer_handle, command_buffer,
-                                                   light_system->point_lights,
-                                                   sizeof(Point_Light) * light_system->point_light_count);
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                               light_system->spot_light_storage_buffer_handle,
-                                               light_system->spot_light_staging_buffer_handle, command_buffer,
-                                               light_system->spot_lights,
-                                               sizeof(Spot_Light) * light_system->spot_light_count);
-
-
+    //TODO: shadow calculations
+    /*
     float near_plane = 1.0f, far_plane = 7.5f;
     for (u32 i = 0; i < light_system->spot_light_count; i++)
     {
@@ -138,8 +120,7 @@ void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_
         mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
 
     }
-
-
+    */
 
 
     /*
@@ -149,11 +130,6 @@ void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_
                                                light_system->spot_lights,
                                                sizeof(Spot_Light) * light_system->spot_light_count);
     */
-
-
-
-
-
 }
 
 

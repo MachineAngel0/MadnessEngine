@@ -426,22 +426,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Texture, font_index)
 		},
 		{
-			.name = "bindless_slot_query",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Texture, bindless_slot_query)
-		},
-		{
-			.name = "bindless_slot",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Texture, bindless_slot)
-		},
-		{
 			.name = "generation",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Madness_Texture, generation)
+		},
+		{
+			.name = "texture_load_state",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Asset_Load_State",
+			.offset = offsetof(Madness_Texture, texture_load_state)
 		},
 	};
 
@@ -449,7 +443,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Madness_Texture",
 		.fields = Madness_Texture_Fields,
-		.field_count = 10,
+		.field_count = 9,
 		.struct_size = sizeof(Madness_Texture)
 	};
 
@@ -469,13 +463,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u8",
 			.offset = offsetof(Texture_GPU_Upload, pixel_data)
 		},
+		{
+			.name = "texture_index",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Texture_GPU_Upload, texture_index)
+		},
 	};
 
 	 Reflection_Runtime_Struct Texture_GPU_Upload_Runtime_Struct =
 	{
 		.name = "Texture_GPU_Upload",
 		.fields = Texture_GPU_Upload_Fields,
-		.field_count = 2,
+		.field_count = 3,
 		.struct_size = sizeof(Texture_GPU_Upload)
 	};
 
@@ -1406,6 +1406,12 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Mesh, mesh_data)
 		},
 		{
+			.name = "submesh_ids",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Mesh, submesh_ids)
+		},
+		{
 			.name = "material_instance",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Material_Instance",
@@ -1447,7 +1453,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Madness_Mesh",
 		.fields = Madness_Mesh_Fields,
-		.field_count = 8,
+		.field_count = 9,
 		.struct_size = sizeof(Madness_Mesh)
 	};
 
@@ -1570,6 +1576,12 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Mesh_GPU_Upload_Fields[] =
 	{
 		{
+			.name = "mesh_id",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Mesh_GPU_Upload, mesh_id)
+		},
+		{
 			.name = "submesh",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_SubMesh",
@@ -1587,7 +1599,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Mesh_GPU_Upload",
 		.fields = Mesh_GPU_Upload_Fields,
-		.field_count = 2,
+		.field_count = 3,
 		.struct_size = sizeof(Mesh_GPU_Upload)
 	};
 

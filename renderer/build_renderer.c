@@ -6,6 +6,7 @@
 #include "renderer.c"
 #include "spv_reflect.c"
 
+#include "vulkan_allocator.c"
 #include "camera.c"
 #include "lights.c"
 #include "shader_system.c"

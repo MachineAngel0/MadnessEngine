@@ -17,7 +17,7 @@ void binary_semaphore_destroy(Renderer* renderer, VkSemaphore* semaphore);
 void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore);
 void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore);
 void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value);
-bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore,
+bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore timeline_semaphore,
                                           const u64 compare_value);
 
 
@@ -175,25 +175,27 @@ void transfer_barrier_catch_all(Renderer* renderer, Vulkan_Command_Buffer* comma
     // ideally batch all copies before this.
     VkMemoryBarrier2 memory_barrier = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-        .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        .srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT |
+                         VK_ACCESS_2_MEMORY_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        .dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT |
+                         VK_ACCESS_2_MEMORY_WRITE_BIT,
     };
 
-    VkDependencyInfo dependencyInfo = {
+    VkDependencyInfo dependency_info = {
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        // .pNext = ,
-        .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        .dependencyFlags = 0,
+
         .memoryBarrierCount = 1,
         .pMemoryBarriers = &memory_barrier,
-        // .bufferMemoryBarrierCount = 1,
-        // .pBufferMemoryBarriers = &memory_barrier,
-        // .imageMemoryBarrierCount = ,
-        // .pImageMemoryBarriers =
     };
 
-    vkCmdPipelineBarrier2(command_buffer->handle, &dependencyInfo);
+    vkCmdPipelineBarrier2(
+        command_buffer->handle,
+        &dependency_info);
 }
 
 

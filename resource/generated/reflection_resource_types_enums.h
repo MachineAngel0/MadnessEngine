@@ -15,6 +15,12 @@ const char* Asset_Type_enum_string[] = {
 	[ASSET_TYPE_MAX]= "ASSET_TYPE_MAX", 
 };
 
+const char* Asset_Load_State_enum_string[] = {
+	[ASSET_LOAD_STATE_UNLOADED]= "ASSET_LOAD_STATE_UNLOADED", 
+	[ASSET_LOAD_STATE_QUEUED]= "ASSET_LOAD_STATE_QUEUED", 
+	[ASSET_LOAD_STATE_LOADED]= "ASSET_LOAD_STATE_LOADED", 
+};
+
 const char* Texture_Format_enum_string[] = {
 	[Texture_Format_Default]= "Texture_Format_Default", 
 };
@@ -83,6 +89,16 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
 	reflection_registry_add_enums(reflection_registry, Asset_Type_enum);
+
+	const Reflection_Runtime_Enum Asset_Load_State_enum =
+	{
+		.name = "Asset_Load_State",
+		.enum_names = Asset_Load_State_enum_string,
+		.count = 3,
+		.type = Reflection_Enum_Type_Normal,
+		.bitflag_values = NULL, //filled in the function if applicable
+	};
+	reflection_registry_add_enums(reflection_registry, Asset_Load_State_enum);
 
 	const Reflection_Runtime_Enum Texture_Format_enum =
 	{

@@ -1,8 +1,7 @@
-﻿#ifndef RESOURCE_SYSTEM_H
-#define RESOURCE_SYSTEM_H
+﻿#ifndef ASSET_SYSTEM_H
+#define ASSET_SYSTEM_H
 
 #include <stdbool.h>
-
 #include "asset_converter.h"
 #include "asset_registry.h"
 #include "asset_serialization.h"

@@ -114,6 +114,7 @@ layout(buffer_reference, scalar) readonly buffer Sprite_Index{
 
 
 layout(push_constant, scalar) uniform PushConstant_2D{
-    uint ubo_buffer_idx;
     UI_Instance_Buffer material_buffer;
+    uint padding1;
+    uint padding2;
 }PC_2D;

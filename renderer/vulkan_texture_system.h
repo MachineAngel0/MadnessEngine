@@ -16,4 +16,6 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
 
 bool vulkan_texture_system_free(Renderer* renderer, Texture_Handle handle);
 
+
+
 #endif //VULKAN_TEXTURE_SYSTEM_H

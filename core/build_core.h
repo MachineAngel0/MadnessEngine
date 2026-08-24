@@ -26,6 +26,7 @@
 #include "../core/allocators/allocator_malloc.h"
 #include "../core/allocators/allocator_segregated_list.h"
 #include "../core/allocators/tagged_frame_allocator.h"
+#include "../core/allocators/free_list.h"
 //CORE - DSA
 #include "../core/dsa/array.h"
 #include "../core/dsa/b_tree_red_black.h"

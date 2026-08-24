@@ -27,8 +27,6 @@ bool get_vulkan_api_version(u32* apiVersion,
 
 bool vulkan_instance_create(Renderer* renderer)
 {
-    renderer->vulkan_allocator = 0;
-
     u32 apiVersion;
     u32 variant;
     u32 major;
@@ -139,7 +137,7 @@ bool vulkan_instance_create(Renderer* renderer)
         }
         INFO("All required validation layers are present.");
 
-        VkValidationFeatureEnableEXT enable_features[3] = {
+        VkValidationFeatureEnableEXT enable_features[] = {
             //TODO: enable if you want extra info on the gpu but its very slow
             // VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT,
             // VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
@@ -152,6 +150,7 @@ bool vulkan_instance_create(Renderer* renderer)
         validation_ext_enabled = true;
     }
 
+
     VkInstanceCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &application_info;
@@ -159,21 +158,14 @@ bool vulkan_instance_create(Renderer* renderer)
     create_info.ppEnabledExtensionNames = extensions_names_array;
     create_info.enabledLayerCount = validation_layers_count;
     create_info.ppEnabledLayerNames = validation_layers_names;
-
     create_info.pNext = 0;
+    if (validation_ext_enabled)
+    {
+        create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
+    }
 
-    // if (validation_ext_enabled)
-    // {
-    //     create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&validation_features_info;
-    // }
 
-    /*
-        VkResult vkCreateInstance(
-        const VkInstanceCreateInfo*                 pCreateInfo,
-        const VkAllocationCallbacks*                pAllocator,
-        VkInstance*                                 pInstance);
-   */
-    VK_CHECK(vkCreateInstance(&create_info, renderer->vulkan_allocator, &renderer->instance));
+    VK_CHECK(vkCreateInstance(&create_info, renderer->vk_allocator_callback, &renderer->instance));
 
     //create the debugger
     if (app_is_debug_build())
@@ -243,9 +235,9 @@ bool vulkan_instance_destroy(Renderer* renderer)
         renderer->instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != NULL)
     {
-        func(renderer->instance, renderer->debug_messenger, renderer->vulkan_allocator);
+        func(renderer->instance, renderer->debug_messenger, renderer->vk_allocator_callback);
     }
-    vkDestroyInstance(renderer->instance, renderer->vulkan_allocator);
+    vkDestroyInstance(renderer->instance, renderer->vk_allocator_callback);
     INFO("VULKAN INSTANCED DESTROYED");
     return true;
 }
@@ -800,6 +792,7 @@ bool vulkan_device_create2(Renderer* renderer)
         .features = device_features,
     };
 
+
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &enable_device_features2,
@@ -818,7 +811,7 @@ bool vulkan_device_create2(Renderer* renderer)
     VkResult device_create_result = vkCreateDevice(
         renderer->physical_device,
         &device_create_info,
-        renderer->vulkan_allocator,
+        renderer->vk_allocator_callback,
         &renderer->logical_device);
     VK_CHECK(device_create_result);
 
@@ -871,7 +864,7 @@ bool vulkan_device_create2(Renderer* renderer)
     pool_create_info.queueFamilyIndex = renderer->graphics_queue_index;
     pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(renderer->logical_device,
-        &pool_create_info, renderer->vulkan_allocator,
+        &pool_create_info, renderer->vk_allocator_callback,
         &renderer->graphics_command_pool));
 
     INFO("GRAPHICS COMMAND POOL CREATED.");
@@ -882,7 +875,7 @@ bool vulkan_device_create2(Renderer* renderer)
     transfer_pool_create_info.queueFamilyIndex = renderer->transfer_queue_index;
     transfer_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(renderer->logical_device,
-        &transfer_pool_create_info, renderer->vulkan_allocator,
+        &transfer_pool_create_info, renderer->vk_allocator_callback,
         &renderer->transfer_command_pool));
 
     INFO("TRANSFER COMMAND POOL CREATED.");
@@ -893,7 +886,7 @@ bool vulkan_device_create2(Renderer* renderer)
     compute_create_info.queueFamilyIndex = renderer->compute_queue_index;
     compute_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(renderer->logical_device,
-        &compute_create_info, renderer->vulkan_allocator,
+        &compute_create_info, renderer->vk_allocator_callback,
         &renderer->compute_command_pool));
 
     INFO("COMPUTE COMMAND POOL CREATED.");

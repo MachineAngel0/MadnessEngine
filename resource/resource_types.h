@@ -117,6 +117,15 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
 };
 
 
+typedef enum Asset_Load_State
+{
+    ASSET_LOAD_STATE_UNLOADED,
+    ASSET_LOAD_STATE_QUEUED,
+    ASSET_LOAD_STATE_LOADED,
+}Asset_Load_State;
+
+
+
 typedef struct Asset_MetaData
 {
     //meta data for our editor/debug builds
@@ -261,11 +270,9 @@ typedef struct Madness_Texture
     // runtime only data
     u32 font_index;
     // what is queried when we get the bindless slot, so that we can use a temp texture until the actual texture loads
-    u32 bindless_slot_query;
-    // this is the actual bindless slot
-    u32 bindless_slot;
     u32 generation;
 
+    Asset_Load_State texture_load_state;
     //TODO:
     //bool has_sampler;
     // Texture_Sampler sampler;
@@ -276,6 +283,7 @@ typedef struct Texture_GPU_Upload
     Madness_Texture* madness_texture;
     u8* pixel_data;
     Heap_Allocator* texture_memory_allocator;
+    u32 texture_index;
 } Texture_GPU_Upload;
 
 typedef struct Madness_Texture_Runtime
@@ -725,7 +733,6 @@ typedef struct Madness_Mesh_Runtime
     Material_Instance* material_instance;
 } Madness_Mesh_Runtime;
 
-
 typedef struct Madness_SkMesh_Runtime
 {
     u32 version;
@@ -1012,4 +1019,9 @@ typedef struct Asset_System
     Asset_Registry* asset_registry;
 } Asset_System;
 
+
+
+
+
 #endif //RESOURCE_TYPES_H
+

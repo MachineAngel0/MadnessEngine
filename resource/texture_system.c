@@ -4,11 +4,8 @@
 #include "shader_system.h"
 
 
-
 bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system)
 {
-
-
     //textures
     texture_system->in_use_textures_count = 0;
     texture_system->max_textures = MAX_TEXTURE_COUNT;
@@ -20,7 +17,6 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
     for (u32 i = 0; i < MAX_TEXTURE_COUNT; i++)
     {
-        texture_system->textures[i].bindless_slot = i;
         ring_enqueue(texture_system->available_texture_queue, &i);
     }
 
@@ -81,16 +77,7 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
     return true;
 }
 
-bool texture_system_get_bindless_slot(Texture_System* texture_system, Texture_Handle handle, u32* out_slot)
-{
-    if (texture_system->textures[handle.handle].generation != handle.generation)
-    {
-        *out_slot = 1;
-        return false;
-    }
 
-    return texture_system->textures[handle.handle].bindless_slot_query;
-}
 
 Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
                                              const char* filepath)
@@ -118,6 +105,11 @@ bool texture_system_get_font(Texture_System* texture_system, const Texture_Handl
 
     *out_font = texture_system->font_textures[texture->font_index];
     return true;
+}
+
+bool texture_system_is_loaded(Texture_System* texture_system, Texture_Handle handle)
+{
+    return (texture_system->textures[handle.handle].texture_load_state == ASSET_LOAD_STATE_LOADED);
 }
 
 
@@ -155,15 +147,16 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     texture_system->in_use_textures_count++;
     //set texture data
     Madness_Texture* texture = &texture_system->textures[free_index];
+    MASSERT(texture->texture_load_state == ASSET_LOAD_STATE_UNLOADED);
+
     texture->width = texture_data.width;
     texture->height = texture_data.height;
     texture->channels = texture_data.channels;
     texture->format = texture_data.format;
     texture->pixels_size = texture_data.pixels_size;
     texture->type = texture_data.type;
-
-    //update bindless and generation
-    texture->bindless_slot_query = 0;
+    texture->texture_load_state = ASSET_LOAD_STATE_QUEUED;
+    //update generation
     texture->generation++;
 
     //fill out the handle
@@ -175,6 +168,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
     upload_texture.texture_memory_allocator = asset_system->texture_allocator;
+    upload_texture.texture_index = free_index;
     ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
 
@@ -235,7 +229,6 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     texture->font_index = free_font_index;
 
     //update bindless and generation
-    texture->bindless_slot_query = 0;
     texture->generation++;
 
     //fill out the handle
@@ -246,6 +239,7 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
     upload_texture.texture_memory_allocator = asset_system->texture_allocator;
+    upload_texture.texture_index = free_index;
     // TODO: replace with texture memory allocator
 
 

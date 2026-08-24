@@ -99,7 +99,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
     };
 
     VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info,
-                                                 renderer->vulkan_allocator,
+                                                 renderer->vk_allocator_callback,
                                                  &attachment->image);
     VK_CHECK(create_image_result);
 
@@ -117,7 +117,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
     }
 
     VkResult alloc_memory_result = vkAllocateMemory(renderer->logical_device, &memory_allocate_info,
-                                                    renderer->vulkan_allocator, &attachment->memory);
+                                                    renderer->vk_allocator_callback, &attachment->memory);
     VK_CHECK(alloc_memory_result);
     VkResult bind_image_memory_result = vkBindImageMemory(renderer->logical_device, attachment->image,
                                                           attachment->memory, 0);
@@ -134,7 +134,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
         },
     };
     VK_CHECK(
-        vkCreateImageView(renderer->logical_device, &image_view_create_info, renderer->vulkan_allocator, &attachment->
+        vkCreateImageView(renderer->logical_device, &image_view_create_info, renderer->vk_allocator_callback, &attachment->
             view
         ));
 
@@ -142,7 +142,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
     // Without render passes and their implicit layout transitions, we need to explicitly transition the attachments
     // We use a new layout introduced by this extension that makes writes to images visible via input attachments
     Vulkan_Command_Buffer temp_command_buffer;
-    vulkan_command_buffer_allocate_and_begin_single_use(renderer,
+    vulkan_command_buffer_begin_single_use(renderer,
                                                         renderer->graphics_command_pool, &temp_command_buffer);
 
 
@@ -163,7 +163,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
     };
     vkCmdPipelineBarrier2(temp_command_buffer.handle, &dependency_info);
 
-    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer, renderer->graphics_command_pool,
+    vulkan_command_buffer_end_single_use(renderer, renderer->graphics_command_pool,
                                                              &temp_command_buffer, renderer->graphics_queue);
 
     return attachment_handle;

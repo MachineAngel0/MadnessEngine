@@ -11,6 +11,7 @@
 #include "spv_reflect.h"
 
 
+#include "vulkan_allocator.h"
 #include "camera.h"
 #include "lights.h"
 #include "shader_system.h"

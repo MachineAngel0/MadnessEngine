@@ -31,7 +31,7 @@ void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
+        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vk_allocator_callback, &out_texture->
             texture_image));
 
 
@@ -52,7 +52,7 @@ void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator, &out_texture->
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture->
             texture_image_memory
         ));
 
@@ -87,7 +87,7 @@ void vulkan_image_view_create(Renderer* renderer,
     view_create_info.subresourceRange.layerCount = 1;
 
     VK_CHECK(
-        vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vulkan_allocator, &texture->
+        vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vk_allocator_callback, &texture->
             texture_image_view));
 }
 
@@ -96,24 +96,24 @@ void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image)
 {
     if (image->texture_image_view)
     {
-        vkDestroyImageView(renderer->logical_device, image->texture_image_view, renderer->vulkan_allocator);
+        vkDestroyImageView(renderer->logical_device, image->texture_image_view, renderer->vk_allocator_callback);
         image->texture_image_view = 0;
     }
 
     if (image->texture_image_memory)
     {
-        vkFreeMemory(renderer->logical_device, image->texture_image_memory, renderer->vulkan_allocator);
+        vkFreeMemory(renderer->logical_device, image->texture_image_memory, renderer->vk_allocator_callback);
         image->texture_image_memory = 0;
     }
 
     if (image->texture_image)
     {
-        vkDestroyImage(renderer->logical_device, image->texture_image, renderer->vulkan_allocator);
+        vkDestroyImage(renderer->logical_device, image->texture_image, renderer->vk_allocator_callback);
         image->texture_image = 0;
     }
     if (image->texture_sampler)
     {
-        vkDestroySampler(renderer->logical_device, image->texture_sampler, renderer->vulkan_allocator);
+        vkDestroySampler(renderer->logical_device, image->texture_sampler, renderer->vk_allocator_callback);
     }
 }
 
@@ -161,7 +161,7 @@ void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
-    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator,
+    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vk_allocator_callback,
                                                  &out_texture->texture_image);
     VK_CHECK(image_create_result);
 
@@ -184,7 +184,7 @@ void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator, &out_texture->
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture->
             texture_image_memory
         ));
 
@@ -329,7 +329,7 @@ void copyBufferToImage(Renderer* renderer,
                        VkBuffer buffer, VkImage image, u32 width, u32 height)
 {
     Vulkan_Command_Buffer commandBuffer = {0};
-    vulkan_command_buffer_allocate_and_begin_single_use(renderer,
+    vulkan_command_buffer_begin_single_use(renderer,
                                                         renderer->graphics_command_pool,
                                                         &commandBuffer);
     VkBufferImageCopy region = {0};
@@ -357,7 +357,7 @@ void copyBufferToImage(Renderer* renderer,
         1,
         &region
     );
-    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer,
+    vulkan_command_buffer_end_single_use(renderer,
                                                              renderer->graphics_command_pool,
                                                              &commandBuffer,
                                                              renderer->graphics_queue);
@@ -477,10 +477,10 @@ void initial_image_layout_transition(Vulkan_Command_Buffer* command_buffer,
     image_memory_barrier.subresourceRange.layerCount = 1;
     image_memory_barrier.subresourceRange.layerCount = 1;
 
-    image_memory_barrier.srcAccessMask = 0;
+    image_memory_barrier.srcAccessMask = VK_ACCESS_2_NONE;
     image_memory_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 
-    image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
     image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
 
@@ -500,9 +500,9 @@ void initial_image_layout_transition(Vulkan_Command_Buffer* command_buffer,
 }
 
 void second_image_layout_transition(Renderer* renderer,
-                                    Vulkan_Command_Buffer* command_buffer,
-                                    VkImage image,
-                                    Vulkan_Queue_Type source_queue, Vulkan_Queue_Type destination_queue)
+                                    Vulkan_Command_Buffer* source_command_buffer,
+                                    Vulkan_Command_Buffer* destination_command_buffer,
+                                    VkImage image, Vulkan_Queue_Type source_queue, Vulkan_Queue_Type destination_queue)
 {
     //this much match if we need a release and acquire
     VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -522,7 +522,7 @@ void second_image_layout_transition(Renderer* renderer,
         image_memory_barrier.image = image;
 
         image_memory_barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-        image_memory_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+        image_memory_barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
 
         image_memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
         image_memory_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
@@ -546,7 +546,7 @@ void second_image_layout_transition(Renderer* renderer,
         dependency_info.imageMemoryBarrierCount = 1;
         dependency_info.pImageMemoryBarriers = &image_memory_barrier;
 
-        vkCmdPipelineBarrier2(command_buffer->handle, &dependency_info);
+        vkCmdPipelineBarrier2(source_command_buffer->handle, &dependency_info);
         return;
     }
 
@@ -587,32 +587,32 @@ void second_image_layout_transition(Renderer* renderer,
     release_dependency_info.imageMemoryBarrierCount = 1;
     release_dependency_info.pImageMemoryBarriers = &image_release_barrier;
 
-    vkCmdPipelineBarrier2(command_buffer->handle, &release_dependency_info);
+    vkCmdPipelineBarrier2(source_command_buffer->handle, &release_dependency_info);
 
 
     //acquiring from the transfer queue and then transitioning the image
     VkImageMemoryBarrier2 image_acquire_barrier = {0};
-    image_release_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    image_acquire_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 
     image_acquire_barrier.srcQueueFamilyIndex = vulkan_get_queue_family_index(renderer, source_queue);
     image_acquire_barrier.dstQueueFamilyIndex = vulkan_get_queue_family_index(renderer, destination_queue);
 
-    image_release_barrier.image = image;
-    image_release_barrier.oldLayout = oldLayout;
-    image_release_barrier.newLayout = newLayout;
+    image_acquire_barrier.image = image;
+    image_acquire_barrier.oldLayout = oldLayout;
+    image_acquire_barrier.newLayout = newLayout;
 
-    image_release_barrier.srcAccessMask = VK_ACCESS_2_NONE;
-    image_release_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    image_acquire_barrier.srcAccessMask = VK_ACCESS_2_NONE;
+    image_acquire_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
 
-    image_release_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
-    image_release_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    image_acquire_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+    image_acquire_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-    image_release_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    image_release_barrier.subresourceRange.baseMipLevel = 0;
-    image_release_barrier.subresourceRange.levelCount = 1;
-    image_release_barrier.subresourceRange.baseArrayLayer = 0;
-    image_release_barrier.subresourceRange.layerCount = 1;
-    image_release_barrier.subresourceRange.layerCount = 1;
+    image_acquire_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_acquire_barrier.subresourceRange.baseMipLevel = 0;
+    image_acquire_barrier.subresourceRange.levelCount = 1;
+    image_acquire_barrier.subresourceRange.baseArrayLayer = 0;
+    image_acquire_barrier.subresourceRange.layerCount = 1;
+    image_acquire_barrier.subresourceRange.layerCount = 1;
 
 
     VkDependencyInfo acquire_dependency_info = {0};
@@ -626,11 +626,11 @@ void second_image_layout_transition(Renderer* renderer,
     acquire_dependency_info.imageMemoryBarrierCount = 1;
     acquire_dependency_info.pImageMemoryBarriers = &image_acquire_barrier;
 
-    vkCmdPipelineBarrier2(command_buffer->handle, &release_dependency_info);
+    vkCmdPipelineBarrier2(destination_command_buffer->handle, &acquire_dependency_info);
 }
 
 
-void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer buffer,
+void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, Vulkan_Buffer* staging_buffer,
                               VkImage image, u32 width, u32 height)
 {
     VkBufferImageCopy region = {0};
@@ -650,14 +650,27 @@ void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer bu
         1
     };
 
+
     vkCmdCopyBufferToImage(
         command_buffer->handle,
-        buffer,
+        staging_buffer->handle,
         image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1,
         &region
     );
+}
+
+void vulkan_image_create_startup(Renderer* renderer, Texture_GPU_Upload* texture_upload, Vulkan_Texture* out_texture)
+{
+    Vulkan_Command_Buffer temp_command_buffer;
+    vulkan_command_buffer_begin_single_use(renderer, renderer->graphics_command_pool, &temp_command_buffer);
+
+
+
+
+    vulkan_command_buffer_end_single_use(renderer, renderer->graphics_command_pool, &temp_command_buffer, renderer->graphics_queue);
+    vkQueueWaitIdle(renderer->graphics_queue);
 }
 
 
@@ -700,7 +713,7 @@ void vulkan_texture_create_image_new(Renderer* renderer,
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
 
     VK_CHECK(
-        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vulkan_allocator, &out_texture->
+        vkCreateImage(renderer->logical_device, &image_create_info, renderer->vk_allocator_callback, &out_texture->
             texture_image));
 
 
@@ -721,7 +734,7 @@ void vulkan_texture_create_image_new(Renderer* renderer,
     VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vulkan_allocator,
+    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback,
                                         &out_texture->texture_image_memory);
     VK_CHECK(result1);
     // Bind the memory

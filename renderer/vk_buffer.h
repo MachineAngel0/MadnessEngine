@@ -3,102 +3,68 @@
 
 #include "vulkan_struct_types.h"
 
-//TODO: at some point it would make sense to allocate something between 32-128mb of vertex buffers
-// at any one time and keep a bunch of them allocated in some sort of free list ready to be used or make them on the fly
-
-
-/*
- * what do we need to do with buffers rn
- * vertex buffer, index, storage -> push onto the buffer   local->host
- * indirect buffer -> upload every frame local->host -> per frame
- * uniform -> frequent updates -> host visible -> per frame data
- * staging buffers -> host visible, get reset every frame
- */
-
 Buffer_System* buffer_system_init(Renderer* renderer, u32 frames_in_flight);
 Buffer_System* buffer_system_free(Renderer* renderer);
 
 void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame);
+void buffer_system_frame_end(Buffer_System* buffer_system, u32 current_frame);
 
 
-uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryPropertyFlags properties);
-
-// Get device address of a buffer
-VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
-
-//TODO: used in texture image, replace with a storage buffer call or retrieve
-bool buffer_create(VkDeviceSize size, VkBufferUsageFlags usage,
-                   VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory, Renderer* renderer);
-
-
-
-//new API
-
-
-//NOTE: since basically every buffer needs a staging buffer (except uniform), might as well create them upfront without asking, unless otherwise specified
-// and it would be fine if we have holes in our arrays staging buffers array, since we only need to access them by index, not by looping
-
-//TODO: create an interface for single and double buffered thangs
-
-Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system,
-                                   Vulkan_Buffer_Type buffer_type, u64 data_size);
-
-
-void _vulkan_buffer_create_internal(Renderer* renderer, Vulkan_Buffer* out_buffer, Vulkan_Buffer_Type buffer_type,
-                                    u64 data_size);
+void _vulkan_buffer_create_internal_new(Renderer* renderer, Vulkan_Buffer_Type buffer_type, u64 buffer_size,
+                                        Vulkan_Buffer* buffer_to_create);
+void _vulkan_buffer_destroy_internal(Renderer* renderer, Vulkan_Buffer* buffer);
 
 bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer);
 
+
+Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system, Vulkan_Buffer_Type buffer_type,
+                                   u64 buffer_size);
+Buffer_Frame_Handle vulkan_buffer_create_frame(Renderer* renderer, Buffer_System* buffer_system,
+                                               Vulkan_Buffer_Type buffer_type,
+                                               u64 buffer_size);
+
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
+Vulkan_Buffer* vulkan_buffer_get_frame(Renderer* renderer,
+                                       Buffer_Frame_Handle frame_buffer_handle);
 
+void vulkan_buffer_reset(Renderer* renderer, Buffer_Handle buffer_handle);
+void vulkan_buffer_frame_reset(Renderer* renderer, Buffer_Frame_Handle frame_buffer_handle);
+
+
+//TODO: for uploads we need at startup, will cause a queue wait idle
+bool vulkan_buffer_startup_uploads(Renderer* renderer, Buffer_Handle buffer_handle,
+                                   void* data, u64 data_byte_size);
+/**
+ * @note: buffer barriers are handled externally, and not inside this function
+ * @note: if zero is passed in as size, false is returned, do not use a barrier in this case
+ */
+bool vulkan_buffer_frame_staging_upload(Renderer* renderer,
+                                        Buffer_Frame_Handle buffer_handle,
+                                        Vulkan_Command_Buffer* command_buffer,
+                                        void* data, u64 data_byte_size);
+
+
+
+
+/**
+ * @note: buffer barriers are handled externally, and not inside this function
+ *
+ */
+//ask for a region of memory, and the buffer manager will see if the request will go through, giving back a start_offset
+bool vulkan_buffer_upload_data_request(Renderer* renderer, u64 memory_request_size, u64* out_start_offset);
+bool vulkan_buffer_transfer_upload(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, Buffer_Handle handle,
+                                   void* data, u64 data_size, u64 semaphore_value);
+
+
+//Utility
+uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryPropertyFlags properties);
+void vulkan_buffer_staging_copy_range(Vulkan_Command_Buffer* command_buffer,
+                              Vulkan_Buffer* buffer, Vulkan_Buffer* staging_buffer, void* data, u64 data_size,
+                              u64 staging_offset, u64 buffer_offset);
+
+// Get device address of a buffer
+VkDeviceAddress get_buffer_device_address(VkDevice device, VkBuffer buffer);
+VkDeviceAddress vulkan_buffer_get_frame_device_address(Renderer* renderer, Buffer_Frame_Handle buffer_handle);
 VkDeviceAddress vulkan_buffer_get_device_address(Renderer* renderer, Buffer_Handle buffer_handle);
-
-
-void vulkan_buffer_reset_offset(Renderer* renderer, Buffer_Handle buffer_handle);
-
-//clears the buffer when you get it
-Vulkan_Buffer* vulkan_buffer_get_clear(Renderer* renderer, Buffer_Handle buffer_handle);
-
-
-//copies data (like vertex or index data) into a staging buffer
-void vulkan_buffer_data_copy_from_offset(Renderer* renderer, Buffer_Handle staging_buffer_handle,
-                                         void* data, u64 data_size);
-
-
-//copies data from a staging buffer into a device local buffer for gpu usage
-void vulkan_buffer_upload(Renderer* renderer, Buffer_Handle buffer_handle, Buffer_Handle staging_buffer_handle);
-
-//copy data into a staging buffer and immediatelyy upload it into a local buffer
-//best used if there is only a single upload into the staging buffer
-//dont use if there are a lot of data copies into the staging buffer, copies into the device local can be slow if done many times
-void vulkan_buffer_data_copy_and_upload(Renderer* renderer, Buffer_Handle buffer_handle,
-                                        Buffer_Handle staging_buffer_handle,
-                                        void* data, u64 data_size);
-
-
-void vulkan_buffer_cpu_to_gpu_upload(Renderer* renderer, Buffer_Handle buffer_handle,
-                                          Buffer_Handle staging_buffer_handle, Vulkan_Command_Buffer* command_buffer);
-void vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(Renderer* renderer, Buffer_Handle buffer_handle,
-                                           Buffer_Handle staging_buffer_handle, Vulkan_Command_Buffer* command_buffer,
-                                           void* data, u64 data_size);
-
-/* TODO: dont need rn but could use later
-//for inserting data into a specific memory region of the buffer
-void vulkan_buffer_data_insert_specify_offset(vulkan_context* vulkan_context, vulkan_command_buffer* command_buffer_context,
-                               vulkan_buffer* buffer, vulkan_buffer* staging_buffer, void* data, u64 data_size, u64 offset);
-*/
-
-bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                    Vulkan_Command_Buffer* command_buffer, void* data, u64 data_size);
-bool vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging_from_offset(Renderer* renderer, Buffer_Handle buffer_handle,
-                                                    Vulkan_Command_Buffer* command_buffer, void* data, u64 data_byte_size);
-
-
-//IDEAL API-
-// have one large block for each system or type of memory resource,
-// buffer_create() ->
-// staging_buffer_get(alloc_size) // find a range of staging buffer memory that is usable for our upload
-
-
 
 #endif //VK_BUFFER_H

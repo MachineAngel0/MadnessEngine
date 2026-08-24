@@ -239,6 +239,14 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
 void madness_ui_end(void)
 {
+
+    /*
+    if (texture_system_is_loaded(madness_ui->asset_system->texture_system, madness_ui->default_font_handle))
+    {
+        return;
+    }
+    */
+
     //add the deffered draw list
     for (u32 i = 0; i < madness_ui->pop_up_ui_nodes->num_items; i++)
     {

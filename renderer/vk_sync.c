@@ -15,7 +15,7 @@ void vulkan_fence_create(Renderer* renderer, VkFence* fence)
 
 void vulkan_fence_destroy(Renderer* renderer, VkFence* fence)
 {
-    vkDestroyFence(renderer->logical_device, *fence, renderer->vulkan_allocator);
+    vkDestroyFence(renderer->logical_device, *fence, renderer->vk_allocator_callback);
 }
 
 
@@ -114,11 +114,11 @@ void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphor
     VK_CHECK(result);
 }
 
-bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore* timeline_semaphore,
+bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore timeline_semaphore,
                                           const u64 compare_value)
 {
     u64 out_counter_value = 0;
-    const VkResult result = vkGetSemaphoreCounterValue(renderer->logical_device, *timeline_semaphore,
+    const VkResult result = vkGetSemaphoreCounterValue(renderer->logical_device, timeline_semaphore,
                                                        &out_counter_value);
     VK_CHECK(result);
 

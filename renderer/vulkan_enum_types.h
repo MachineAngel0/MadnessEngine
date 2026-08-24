@@ -21,7 +21,7 @@ typedef enum Vulkan_Command_Buffer_State
     VULKAN_COMMAND_BUFFER_STATE_USABLE, //just allocated or reset
     VULKAN_COMMAND_BUFFER_STATE_BEGIN,
     VULKAN_COMMAND_BUFFER_STATE_END,
-    VULKAN_COMMAND_BUFFER_STATE_SUBMITTED, // waiting on synch to reset/free
+    VULKAN_COMMAND_BUFFER_STATE_SUBMITTED, // waiting on sync to reset/free
 } Vulkan_Command_Buffer_State;
 
 typedef enum Vulkan_Command_Buffer_Lifetime
@@ -62,7 +62,7 @@ typedef enum Vulkan_Buffer_Type
     BUFFER_TYPE_INDEX, // meant to only be used as part of a vkCmdBindIndexBuffer or  vkCmdBindIndexBuffer2
 
     //create this if the storage is bieng used large data, buffers in descriptor sets, or for bda poitners
-    BUFFER_TYPE_STORAGE,
+    BUFFER_TYPE_STORAGE_GPU,
 
     // meant to used as part of a vkCmdDrawIndirect, vkCmdDrawIndexedIndirect, vkCmdDrawMeshTasksIndirectNV, vkCmdDrawMeshTasksIndirectCountNV, vkCmdDrawMeshTasksIndirectEXT, vkCmdDrawMeshTasksIndirectCountEXT,
     BUFFER_TYPE_INDIRECT,
@@ -74,12 +74,24 @@ typedef enum Vulkan_Buffer_Type
 
     //NOTE: TYPES BELOW ARE BUFFERS MEANT TO BE USED UPDATABLE WITHOUT A STAING BUFFER
 
-    //create this if the storage is used for compute or if the data is relatively small and updates every frame, or static/rarely gets updated
-    BUFFER_TYPE_STORAGE_COMPUTE,
+    //create this if the storage is used for  or if the data is relatively small and updates every frame, or static/rarely gets updated
+    BUFFER_TYPE_STORAGE_CPU,
     BUFFER_TYPE_STAGING,
     BUFFER_TYPE_UNIFORM,
 } Vulkan_Buffer_Type;
 
+
+typedef enum Vulkan_Mesh_Data_Type
+{
+    VERTEX,
+    INDEX,
+    TANGENT,
+    VERTEX_COLOR,
+    NORMAL,
+    UV,
+    WEIGHT,
+    JOINT,
+} Vulkan_Mesh_Data_Type;
 
 
 typedef enum Render_Mode

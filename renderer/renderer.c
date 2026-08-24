@@ -79,16 +79,20 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     //get the size for the default window from the app config
     //if these aren't set we use 800/600 for default
     renderer->framebuffer_width = (platform_config.start_width != 0)
-                                        ? platform_config.start_width
-                                        : 600;
+                                      ? platform_config.start_width
+                                      : 600;
     renderer->framebuffer_height = (platform_config.start_height != 0)
-                                         ? platform_config.start_height
-                                         : 600;
+                                       ? platform_config.start_height
+                                       : 600;
     //set this as well
     renderer->framebuffer_width_new = renderer->framebuffer_width;
     renderer->framebuffer_height_new = renderer->framebuffer_height;
 
     renderer->mode = RENDER_MODE_NONE;
+
+    //TODO: dont really need rn and its only for host (cpu) memory
+    // renderer->vk_allocator_callback = allocator_alloc(&renderer->allocator, sizeof(VkAllocationCallbacks));
+    // vulkan_allocator_init(renderer);
 
     //create the instance
     if (!vulkan_instance_create(renderer))
@@ -124,7 +128,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     {
         renderer->framebuffer_height = renderer->swapchain_capabilities.capabilities.currentExtent.height;
         renderer->framebuffer_height_new = renderer->swapchain_capabilities.capabilities.currentExtent.
-                                                         height;
+                                                     height;
     }
 
 
@@ -147,7 +151,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     // Create command buffers.
     renderer->queue_system = vulkan_queue_system_init(renderer);
-
 
 
     // Create Descriptor Pool
@@ -210,7 +213,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // things that should not are, storage buffers, textures, descriptor sets, pipelines, render passes,
 
 
-
     /*
       At a high level, rendering a frame in Vulkan consists of a common set of steps:
       Wait for the frame we are on to finish
@@ -222,6 +224,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //semaphore orders queue operations (waiting happens on the GPU),
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
+
 
     // Wait for the execution of the current frame to complete on the cpu. The fence being free will allow this one to move on.
     vulkan_queue_system_graphics_fence_wait(renderer, renderer->current_frame);
@@ -245,6 +248,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     allocator_clear(&renderer->frame_allocator);
 
+
     // Begin recording commands.
     Vulkan_Command_Buffer* graphics_command_buffer = &renderer->queue_system->graphics_render_queue.
                                                                 graphics_command_buffer[renderer->current_frame];
@@ -252,6 +256,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
     vulkan_command_buffer_begin(graphics_command_buffer);
     // vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
+
+    vulkan_queue_frame_begin(renderer, renderer->current_frame);
 
 
     //free textures and any other texture/shader updated
@@ -276,13 +282,13 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                      renderer->framebuffer_height);
 
 
-    ubo.directional_lights_address = vulkan_buffer_get_device_address(
-        renderer, renderer->light_system->directional_light_storage_buffer_handle);;
-    ubo.point_lights_address = vulkan_buffer_get_device_address(
-        renderer, renderer->light_system->point_light_storage_buffer_handle);
+    ubo.directional_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->directional_light_ssbo_handle);;
+    ubo.point_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->point_light_ssbo_handle);
     ubo.point_lights_count = renderer->light_system->point_light_count;
-    ubo.spot_lights_address = vulkan_buffer_get_device_address(
-        renderer, renderer->light_system->spot_light_storage_buffer_handle);
+    ubo.spot_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->spot_light_ssbo_handle);
     ubo.spot_lights_count = renderer->light_system->spot_light_count;
     ubo.camera_position = camera_get_world_position(&renderer->main_camera);
     ubo.screen_dimensions = (vec2s){renderer->framebuffer_width, renderer->framebuffer_height};
@@ -297,22 +303,22 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->uv_buffer_handle);
     ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->joint_buffer_handle);
     ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->weight_buffer_handle);
-    ubo.skinned_matrix_buffer = vulkan_buffer_get_device_address(
+    ubo.skinned_matrix_buffer = vulkan_buffer_get_frame_device_address(
         renderer, renderer->mesh_system->skinned_matrix_buffer);
-    ubo.transform_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->transform_buffer_handle);
+    ubo.transform_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->mesh_system->transform_buffer_handle);
 
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    Vulkan_Buffer* ubo_buffer = vulkan_buffer_get(renderer,
-                                                  renderer->buffer_system->global_ubo_handle);
+    Vulkan_Buffer* ubo_buffer = &renderer->buffer_system->global_ubo[renderer->current_frame];
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(Global_Ubo));
 
 
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
-    ui_renderer_madness_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
 
 
     mesh_renderer_upload_draw_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
@@ -343,7 +349,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     };
 
     //Depth Prepass//
-    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Depth Prepass");
+    vulkan_command_buffer_debug_label_begin(renderer, graphics_command_buffer, "Depth Prepass");
 
     image_insert_memory_barrier(graphics_command_buffer->handle,
                                 renderer->swapchain.depth_attachment.texture_image,
@@ -398,7 +404,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                              graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);
 
     vkCmdEndRendering(graphics_command_buffer->handle);
-    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
+    vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
     //transition to be read by the later stages
     image_insert_memory_barrier(
@@ -460,7 +466,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pDepthAttachment = &shadow_depth_attachment,
     };
 
-    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Shadow Pass");
+    vulkan_command_buffer_debug_label_begin(renderer, graphics_command_buffer, "Shadow Pass");
     vkCmdBeginRendering(graphics_command_buffer->handle, &shadow_pass_rendering_info);
     // Dynamic state
     VkViewport shadow_map_viewport = {
@@ -488,7 +494,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     */
 
     vkCmdEndRendering(graphics_command_buffer->handle);
-    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
+    vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
 
     //change shadow pass texture from attachment, to read only
@@ -558,7 +564,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .pColorAttachments = &color_attachment,
         .pDepthAttachment = &depth_attachment,
     };
-    vulkan_command_buffer_begin_debug_label(renderer, graphics_command_buffer, "Color Pass");
+    vulkan_command_buffer_debug_label_begin(renderer, graphics_command_buffer, "Color Pass");
     vkCmdBeginRendering(graphics_command_buffer->handle, &rendering_info);
 
 
@@ -594,7 +600,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Finish the current dynamic rendering section
     vkCmdEndRendering(graphics_command_buffer->handle);
-    vulkan_command_buffer_end_debug_label(renderer, graphics_command_buffer);
+    vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
     //COLOR PASS END//
 
@@ -624,8 +630,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vulkan_command_buffer_end(graphics_command_buffer);
 
 
-    vulkan_queue_graphics_frame_submit(renderer, renderer->current_frame, image_index);
-
+    vulkan_queue_frame_end(renderer, renderer->current_frame, image_index);
 
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
@@ -643,8 +648,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 void renderer_shutdown(Renderer* renderer)
 {
-
-
     // vulkan_context vk_context = renderer_internal.vulkan_context;
 
 
@@ -661,8 +664,6 @@ void renderer_shutdown(Renderer* renderer)
     // Command buffers
 
 
-
-
     // Swapchain
     vulkan_swapchain_destroy(renderer, &renderer->swapchain);
 
@@ -672,7 +673,7 @@ void renderer_shutdown(Renderer* renderer)
     DEBUG("Destroying Vulkan surface...");
     if (renderer->surface)
     {
-        vkDestroySurfaceKHR(renderer->instance, renderer->surface, renderer->vulkan_allocator);
+        vkDestroySurfaceKHR(renderer->instance, renderer->surface, renderer->vk_allocator_callback);
         renderer->surface = 0;
     }
 
@@ -682,11 +683,11 @@ void renderer_shutdown(Renderer* renderer)
         PFN_vkDestroyDebugUtilsMessengerEXT func =
             (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
                 renderer->instance, "vkDestroyDebugUtilsMessengerEXT");
-        func(renderer->instance, renderer->debug_messenger, renderer->vulkan_allocator);
+        func(renderer->instance, renderer->debug_messenger, renderer->vk_allocator_callback);
     }
 
     DEBUG("Destroying Vulkan instance...");
-    vkDestroyInstance(renderer->instance, renderer->vulkan_allocator);
+    vkDestroyInstance(renderer->instance, renderer->vk_allocator_callback);
 
 
     INFO("RENDERER SHUTDOWN");

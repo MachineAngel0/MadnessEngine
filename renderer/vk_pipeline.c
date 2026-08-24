@@ -646,9 +646,9 @@ void vulkan_pipeline_destroy(Renderer* renderer, Vulkan_Shader_Pipeline* pipelin
         return;
     }
 
-    vkDestroyPipelineLayout(renderer->logical_device, pipeline->pipeline_layout, renderer->vulkan_allocator);
+    vkDestroyPipelineLayout(renderer->logical_device, pipeline->pipeline_layout, renderer->vk_allocator_callback);
     pipeline->pipeline_layout = 0;
-    vkDestroyPipeline(renderer->logical_device, pipeline->handle, renderer->vulkan_allocator);
+    vkDestroyPipeline(renderer->logical_device, pipeline->handle, renderer->vk_allocator_callback);
     pipeline->handle = 0;
 }
 
@@ -740,7 +740,7 @@ vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
     VkResult result = vkCreatePipelineCache(
         renderer->logical_device,
         &pipeline_cache_create_info,
-        renderer->vulkan_allocator,
+        renderer->vk_allocator_callback,
         &pipeline_info->handle);
 
     VK_CHECK(result)

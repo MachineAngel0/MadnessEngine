@@ -71,7 +71,7 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
     // |VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT // if we every want to call vkFreeDescriptorSets,
 
     VkResult bindless_result = vkCreateDescriptorPool(renderer->logical_device, &bindless_pool_info,
-                                                      renderer->vulkan_allocator,
+                                                      renderer->vk_allocator_callback,
                                                       &descriptor_system->bindless_descriptor_pool);
     VK_CHECK(bindless_result);
 
@@ -535,6 +535,38 @@ void update_uniform_buffer_bindless_descriptor_set(Renderer* renderer,
     }
 }
 
+void update_uniform_buffer_bindless_descriptor_set_explicit(Renderer* renderer, Descriptor_System* descriptor_system,
+    Vulkan_Buffer* buffer, u32 binding_index)
+{
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_UNIFORM,
+                "update_uniform_buffer_bindless_descriptor_set: NOT A UNIFORM BUFFER TYPE PASSED IN");
+
+    // The buffer's information is passed using a descriptor info structure
+    VkDescriptorBufferInfo bufferInfo = {0}; // for uniform buffer
+    bufferInfo.buffer = buffer->handle;
+    bufferInfo.range = buffer->capacity; // use capacity here as we usually wish to update the whole whing
+    // bufferInfo.range = VK_WHOLE_SIZE; // this does functionally the same thing
+    bufferInfo.offset = 0;
+
+    for (u32 j = 0; j < descriptor_system->uniform_descriptors.descriptor_set_count; j++)
+    {
+        VkWriteDescriptorSet write_descriptor_set = {0};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = descriptor_system->uniform_descriptors.descriptor_sets[j];
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write_descriptor_set.dstBinding = 0;
+        // write_descriptor_set.descriptorCount = max_bindless_resources;
+        write_descriptor_set.descriptorCount = 1;
+        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
+        write_descriptor_set.dstArrayElement = 0; // starting element of the array
+        write_descriptor_set.pBufferInfo = &bufferInfo;
+        //
+        vkUpdateDescriptorSets(renderer->logical_device, 1,
+                               &write_descriptor_set, 0, 0);
+    }
+
+}
+
 
 void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
@@ -577,7 +609,7 @@ void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
     Vulkan_Buffer* buffer = vulkan_buffer_get(renderer, buffer_handle);
 
 
-    MASSERT_MSG(buffer->type == BUFFER_TYPE_STORAGE,
+    MASSERT_MSG(buffer->type == BUFFER_TYPE_STORAGE_GPU,
                 "update_storage_buffer_bindless_descriptor_set: NOT A CPU_STORAGE BUFFER TYPE PASSED IN");
 
 

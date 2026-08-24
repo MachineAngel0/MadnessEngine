@@ -4,6 +4,7 @@
 #include "vk_command_buffer.h"
 #include "vk_device.h"
 #include "vk_image.h"
+#include "math_lib.h"
 
 void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
                              Vulkan_Swapchain* swapchain_out)
@@ -117,7 +118,7 @@ void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
     swapchain_create_info.oldSwapchain = 0; // TODO: pass in the old swapchin
 
     VkResult swapchain_create_result = vkCreateSwapchainKHR(renderer->logical_device, &swapchain_create_info,
-                                                            renderer->vulkan_allocator,
+                                                            renderer->vk_allocator_callback,
                                                             &swapchain_out->swapchain_handle);
     VK_CHECK(swapchain_create_result)
 
@@ -161,7 +162,7 @@ void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
         view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
         VK_CHECK(
-            vkCreateImageView(renderer->logical_device, &view_info, renderer->vulkan_allocator, &swapchain_out->
+            vkCreateImageView(renderer->logical_device, &view_info, renderer->vk_allocator_callback, &swapchain_out->
                 image_views[i]));
     }
 
@@ -196,9 +197,9 @@ void vulkan_swapchain_destroy(Renderer* renderer, Vulkan_Swapchain* swapchain)
     // destroyed when it is.
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {
-        vkDestroyImageView(renderer->logical_device, swapchain->image_views[i], renderer->vulkan_allocator);
+        vkDestroyImageView(renderer->logical_device, swapchain->image_views[i], renderer->vk_allocator_callback);
     }
-    vkDestroySwapchainKHR(renderer->logical_device, swapchain->swapchain_handle, renderer->vulkan_allocator);
+    vkDestroySwapchainKHR(renderer->logical_device, swapchain->swapchain_handle, renderer->vk_allocator_callback);
     INFO("SWAPCHAIN DESTROYED");
 }
 

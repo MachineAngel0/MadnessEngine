@@ -1,5 +1,8 @@
 ﻿#include "ui_render.h"
 
+#include "vk_buffer.h"
+#include "vk_command_buffer.h"
+
 
 UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 {
@@ -13,78 +16,103 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
     ui_renderer->ui_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
                                                                BUFFER_TYPE_INDEX, ui_buffer_sizes);
 
-    ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_STORAGE,
-                                                                ui_buffer_sizes);
-
-    ui_renderer->ui_vertex_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING, ui_buffer_sizes);
-    ui_renderer->ui_index_staging_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING, ui_buffer_sizes);
+    ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                      BUFFER_TYPE_STORAGE_GPU,
+                                                                      ui_buffer_sizes);
+    /*ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                      BUFFER_TYPE_STORAGE_GPU, ui_buffer_sizes);*/
 
 
-    ui_renderer->ui_material_staging_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING,
-                                                                        ui_buffer_sizes);
-
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_vertex_staging_buffer_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_index_staging_buffer_handle);
     //UI Render
+    vulkan_buffer_startup_uploads(renderer,
+                                  ui_renderer->ui_vertex_buffer_handle,
+                                  default_sprite,
+                                  sizeof(Sprite) * 4);
 
-    Vulkan_Command_Buffer temp_command_buffer = {0};
-    vulkan_command_buffer_allocate_and_begin_single_use(renderer, renderer->graphics_command_pool,
-                                                        &temp_command_buffer);
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->ui_vertex_buffer_handle,
-                                                   ui_renderer->ui_vertex_staging_buffer_handle, &temp_command_buffer,
-                                                   default_sprite,
-                                                   sizeof(Sprite) * 4);
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->ui_index_buffer_handle,
-                                                   ui_renderer->ui_index_staging_buffer_handle, &temp_command_buffer,
-                                                   default_sprite_indices,
-                                                   sizeof(u16) * 6);
-    vulkan_command_buffer_end_and_submit_and_free_single_use(renderer,
-                                                             renderer->graphics_command_pool,
-                                                             &temp_command_buffer,
-                                                             renderer->graphics_queue);
+    vulkan_buffer_startup_uploads(renderer,
+                                  ui_renderer->ui_index_buffer_handle,
+                                  default_sprite_indices,
+                                  sizeof(u16) * 6);
 
 
     //insanity ui
-    ui_renderer->insanity_ui_material_ssbo_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                         BUFFER_TYPE_STORAGE,
-                                                                         ui_buffer_sizes);
+    ui_renderer->insanity_ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                               BUFFER_TYPE_STORAGE_GPU,
+                                                                               ui_buffer_sizes);
 
     return ui_renderer;
 }
 
 
-void ui_renderer_madness_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                                          Render_Packet* render_packet,
-                                          Vulkan_Command_Buffer* command_buffer)
+void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
+                                  Render_Packet* render_packet,
+                                  Vulkan_Command_Buffer* command_buffer)
 {
     ui_renderer->madness_ui_render_packet = &render_packet->ui_data_packet.madness_ui_render_packet;
     ui_renderer->insanity_ui_render_packet = &render_packet->ui_data_packet.insanity_ui_render_packet;
 
     // reset material buffer
-    vulkan_buffer_reset_offset(renderer, ui_renderer->ui_material_staging_ssbo_handle);
-    vulkan_buffer_reset_offset(renderer, ui_renderer->insanity_ui_material_ssbo_handle);
+    vulkan_buffer_frame_reset(renderer, ui_renderer->ui_material_ssbo_handle);
+    vulkan_buffer_frame_reset(renderer, ui_renderer->insanity_ui_material_ssbo_handle);
+
+    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "Material SSBO UPLOAD",
+                                                  (float[4]){1.0, 0.0, 1.0, 1.0});
+
 
     // ui material data
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer,
-                                                   ui_renderer->ui_material_ssbo_handle,
-                                                   ui_renderer->ui_material_staging_ssbo_handle, command_buffer,
-                                                   ui_renderer->madness_ui_render_packet->ui_material_data,
-                                                   ui_renderer->madness_ui_render_packet->ui_material_bytes);
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       ui_renderer->ui_material_ssbo_handle,
+                                       command_buffer,
+                                       ui_renderer->madness_ui_render_packet->ui_material_data,
+                                       ui_renderer->madness_ui_render_packet->ui_material_bytes);
 
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer,
-                                                                  ui_renderer->insanity_ui_material_ssbo_handle,
-                                                                  command_buffer,
-                                                                  ui_renderer->insanity_ui_render_packet->
-                                                                               ui_material_data,
-                                                                  ui_renderer->insanity_ui_render_packet->
-                                                                               ui_material_bytes);
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       ui_renderer->insanity_ui_material_ssbo_handle,
+                                       command_buffer,
+                                       ui_renderer->insanity_ui_render_packet->ui_material_data,
+                                       ui_renderer->insanity_ui_render_packet->ui_material_bytes);
+
+    Vulkan_Buffer* madness_material_buffer = vulkan_buffer_get_frame(renderer, ui_renderer->ui_material_ssbo_handle);
+    Vulkan_Buffer* insanity_material_buffer = vulkan_buffer_get_frame(
+        renderer, ui_renderer->insanity_ui_material_ssbo_handle);
+
+    VkBufferMemoryBarrier2 madness_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = madness_material_buffer->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+    VkBufferMemoryBarrier2 insanity_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = insanity_material_buffer->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+    vulkan_command_add_buffer_barrier(command_buffer, madness_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, insanity_barrier);
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
 
     //need one per draw call
     /*VkDrawIndexedIndirectCommand indirect_draw_ui = {0};
@@ -128,9 +156,12 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
                             0, 0);
 
     PC_UI pc_ui = {
-        renderer->buffer_system->global_ubo_handle.handle,
+        .material_bda =
         get_buffer_device_address(renderer->logical_device,
-                                  vulkan_buffer_get(renderer, ui_renderer->ui_material_ssbo_handle)->handle),
+                                  vulkan_buffer_get_frame(renderer, ui_renderer->ui_material_ssbo_handle)->handle),
+        .padding1 = 0,
+.padding2 = 0,
+
     };
 
 
@@ -188,9 +219,13 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 
 
     PC_UI pc_insanity_ui = {
-        renderer->buffer_system->global_ubo_handle.handle,
-        get_buffer_device_address(renderer->logical_device,
-                                  vulkan_buffer_get(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->handle),
+        .material_bda = get_buffer_device_address(renderer->logical_device,
+                                                  vulkan_buffer_get_frame(
+                                                      renderer, ui_renderer->insanity_ui_material_ssbo_handle)->
+                                                  handle),
+        .padding1 = 0,
+        .padding2 = 0,
+
     };
 
 
@@ -207,7 +242,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
                       renderer->ui_pipeline.handle);
     vkCmdPushConstants2(command_buffer->handle, &insanity_pc_info);
 
-    //two pipelines are slower than one, and much much faster if I use instancing for them
+    //two pipelines are slower than one, and much faster if I use instancing for them
 
     //draw
     for (u32 i = 0; i < ui_renderer->insanity_ui_render_packet->draw_command_count; i++)

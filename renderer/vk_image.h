@@ -1,11 +1,9 @@
 ﻿#ifndef TEXTURE_H
 #define TEXTURE_H
-#include "vk_buffer.h"
 #include "vulkan_enum_types.h"
 
 //TODO: look into unified image layouts
 // https://www.khronos.org/blog/so-long-image-layouts-simplifying-vulkan-synchronisation
-
 
 
 void vulkan_image_create(
@@ -16,7 +14,6 @@ void vulkan_image_create(
     VkMemoryPropertyFlags memory_flags,
     b32 create_view,
     VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture);
-
 
 
 void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
@@ -30,7 +27,8 @@ void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image);
 
 
 void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
-                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, Renderer* renderer);
+                             VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout,
+                             Renderer* renderer);
 
 void copyBufferToImage(Renderer* renderer,
                        VkBuffer buffer, VkImage image, u32 width, u32 height);
@@ -49,7 +47,6 @@ void image_insert_memory_barrier(
     VkImageSubresourceRange subresourceRange);
 
 
-
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);
 
 //does not handle any image transitions or synchronization
@@ -59,14 +56,21 @@ void vulkan_texture_create_image_new(Renderer* renderer,
 
 
 void initial_image_layout_transition(Vulkan_Command_Buffer* command_buffer,
-                                 VkImage image);
+                                     VkImage image);
 
-void second_image_layout_transition(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
-                                 VkImage image,
-                                 Vulkan_Queue_Type source_queue,
-                                 Vulkan_Queue_Type destination_queue);
-void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, VkBuffer buffer,
-                       VkImage image, u32 width, u32 height);
+void second_image_layout_transition(Renderer* renderer, Vulkan_Command_Buffer* source_command_buffer,
+                                    Vulkan_Command_Buffer* destination_command_buffer,
+                                    VkImage image,
+                                    Vulkan_Queue_Type source_queue, Vulkan_Queue_Type destination_queue);
+void buffer_to_image_copy_new(Vulkan_Command_Buffer* command_buffer, Vulkan_Buffer* staging_buffer,
+                              VkImage image, u32 width, u32 height);
+
+
+void vulkan_image_create_startup(
+    Renderer* renderer,
+    Texture_GPU_Upload* texture_upload,
+    Vulkan_Texture* out_texture);
+
 /*TEXTURE IMAGE*/
 
 //

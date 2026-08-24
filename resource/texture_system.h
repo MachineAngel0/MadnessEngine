@@ -34,9 +34,12 @@ MAPI bool texture_system_unload_texture(Asset_System* asset_system, Texture_Hand
 
 MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle,
                                      Madness_Texture* out_texture);
-MAPI bool texture_system_get_bindless_slot(Texture_System* texture_system, Texture_Handle handle,
-                                     u32* out_slot);
+
 MAPI bool texture_system_get_font(Texture_System* texture_system, Texture_Handle handle, Madness_Font* out_font);
+
+//TODO: probably want to use paths as well
+MAPI bool texture_system_is_loaded(Texture_System* texture_system, Texture_Handle handle);
+
 
 
 #endif //TEXTURE_SYSTEM_H

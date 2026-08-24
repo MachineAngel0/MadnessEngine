@@ -28,4 +28,4 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
                                             Vulkan_Command_Buffer* command_buffer, Vulkan_Shader_Pipeline* shader_pipeline);
 
 
-#endif //MESH_RENDER_H
+#endif //VULKAN_MESH_SYSTEM_H

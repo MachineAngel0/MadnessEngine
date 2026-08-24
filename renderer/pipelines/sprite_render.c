@@ -8,29 +8,40 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer)
     //TODO: move out the memory capacity to the function params or get from sprite system/resource system
     u64 buffer_memory_size = MB(1);
 
+
+    sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                             BUFFER_TYPE_STORAGE_GPU,
+                                                                             buffer_memory_size);
+
+    sprite_backend->sprite_indirect_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                        BUFFER_TYPE_INDIRECT, buffer_memory_size);
+
+    //only needs to happen once
+    Sprite sprites[4];
+    memcpy(sprites, default_sprite, sizeof(default_sprite));
+    u16 sprite_indices[6];
+    memcpy(sprite_indices, default_sprite_indices, sizeof(default_sprite_indices));
+
     sprite_backend->index_type = VK_INDEX_TYPE_UINT16;
 
-    sprite_backend->sprite_vertex_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_VERTEX,
-                                                                buffer_memory_size);
+    sprite_backend->sprite_vertex_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
+                                                                    BUFFER_TYPE_VERTEX,
+                                                                    sizeof(default_sprite));
 
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                               buffer_memory_size);
-    sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STORAGE,
-                                                                       buffer_memory_size);
+                                                                   sizeof(default_sprite_indices));
 
-    sprite_backend->sprite_indirect_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                  BUFFER_TYPE_INDIRECT, buffer_memory_size);
 
-    //staging
-    sprite_backend->sprite_vertex_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_STAGING, buffer_memory_size);
-    sprite_backend->sprite_index_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                       BUFFER_TYPE_STAGING, buffer_memory_size);
-    sprite_backend->sprite_instance_staging_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                          BUFFER_TYPE_STAGING, buffer_memory_size);
-    sprite_backend->sprite_indirect_staging_buffer = vulkan_buffer_create(
-        renderer, renderer->buffer_system, BUFFER_TYPE_STAGING, buffer_memory_size);
+    vulkan_buffer_startup_uploads(renderer, sprite_backend->sprite_vertex_buffer,
+                                  sprites,
+                                  sizeof(Sprite) * 4);
+
+    vulkan_buffer_startup_uploads(renderer, sprite_backend->sprite_index_buffer,
+                                  sprite_indices,
+                                  sizeof(u16) * 6);
+
+
+
 
     return sprite_backend;
 }
@@ -43,34 +54,24 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     MASSERT(sprite_backend)
     MASSERT(sprite_render_packet)
 
-    vulkan_buffer_reset_offset(renderer, sprite_backend->sprite_vertex_staging_buffer);
-    vulkan_buffer_reset_offset(renderer, sprite_backend->sprite_index_staging_buffer);
-    vulkan_buffer_reset_offset(renderer, sprite_backend->sprite_instance_staging_buffer);
-    vulkan_buffer_reset_offset(renderer, sprite_backend->sprite_indirect_staging_buffer);
+    vulkan_buffer_frame_reset(renderer, sprite_backend->sprite_indirect_buffer);
+    vulkan_buffer_frame_reset(renderer, sprite_backend->sprite_instance_ssbo_buffer);
 
 
     sprite_backend->draw_count = sprite_render_packet->sprite_data->num_items + sprite_render_packet->
         sprite_data_transient->num_items;
 
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_vertex_buffer,
-                                                   sprite_backend->sprite_vertex_staging_buffer, command_buffer,
-                                                   &sprite_render_packet->sprite_data->data, sizeof(Sprite) * 4);
-
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_index_buffer,
-                                                   sprite_backend->sprite_index_staging_buffer, command_buffer,
-                                                   sprite_render_packet->sprite_indices,
-                                                   sizeof(u16) * 6);
 
     //one for normal sprite data and one for transient data
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                                   sprite_backend->sprite_instance_staging_buffer, command_buffer,
-                                                   sprite_render_packet->sprite_data->data,
-                                                   array_get_byte_size(sprite_render_packet->sprite_data));
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                                   sprite_backend->sprite_instance_staging_buffer, command_buffer,
-                                                   sprite_render_packet->sprite_data_transient->data,
-                                                   array_get_byte_size(
-                                                       sprite_render_packet->sprite_data_transient));
+    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
+                                      command_buffer,
+                                       sprite_render_packet->sprite_data->data,
+                                       array_get_byte_size(sprite_render_packet->sprite_data));
+    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
+                                        command_buffer,
+                                       sprite_render_packet->sprite_data_transient->data,
+                                       array_get_byte_size(
+                                           sprite_render_packet->sprite_data_transient));
 
     //generate indirect draw data
     //basically just a bunch of instances with indexes into the instance data buffer
@@ -86,8 +87,8 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     sprite_indirect_draw.instanceCount = sprite_count;
 
 
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch(renderer, sprite_backend->sprite_indirect_buffer,
-                                                   sprite_backend->sprite_indirect_staging_buffer, command_buffer,
+    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_indirect_buffer,
+                                                    command_buffer,
                                                    &sprite_indirect_draw,
                                                    sizeof(VkDrawIndexedIndirectCommand));
 }
@@ -103,7 +104,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
 
     Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_vertex_buffer);
     Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_index_buffer);
-    Vulkan_Buffer* sprite_indirect_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_indirect_buffer);
+    Vulkan_Buffer* sprite_indirect_buffer = vulkan_buffer_get_frame(renderer, sprite_backend->sprite_indirect_buffer);
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->sprite_pipeline.handle);
@@ -128,7 +129,6 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
 
     //grab material_handle
     PC_UI pc_2d_ui = {
-        renderer->buffer_system->global_ubo_handle.handle,
         sprite_backend->sprite_instance_ssbo_buffer.handle,
     };
 

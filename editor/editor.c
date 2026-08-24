@@ -116,7 +116,6 @@ void editor_ui(Editor* editor)
     switch (editor->state)
     {
     case EDITOR_UI_STATE_MAX:
-        MASSERT(false);
         break;
     case EDITOR_UI_STATE_DEBUG:
         editor_ui_debug(editor);
