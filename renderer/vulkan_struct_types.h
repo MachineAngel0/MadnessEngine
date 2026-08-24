@@ -206,6 +206,7 @@ typedef struct Vulkan_Transfer_Buffer_Pending_Upload
 {
     VkDeviceSize staging_offset;
     VkDeviceSize size;
+    // VkSemaphore semaphore;
     u64 semaphore_wait_value;
 }Vulkan_Staging_Buffer_Pending_Upload;
 
@@ -678,7 +679,7 @@ typedef struct Buffer_System
     // we have one large buffer and we simply just make sure the ranges in use are not given out,
     // until the semaphores are finished
     Vulkan_Buffer upload_staging_buffer;
-    ARRAY_TYPE(Vulkan_Transfer_Buffer_Pending_Upload)* staging_upload_pending_array;
+    ARRAY_TYPE(Vulkan_Staging_Buffer_Pending_Upload)* staging_upload_pending_array;
     Free_List* upload_staging_free_list;
 
 

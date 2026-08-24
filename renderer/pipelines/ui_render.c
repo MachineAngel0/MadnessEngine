@@ -108,8 +108,8 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
         .size = VK_WHOLE_SIZE,
     };
 
-    vulkan_command_add_buffer_barrier(command_buffer, madness_barrier);
-    vulkan_command_add_buffer_barrier(command_buffer, insanity_barrier);
+    vulkan_command_add_submit_buffer_barrier(command_buffer, madness_barrier);
+    vulkan_command_add_submit_buffer_barrier(command_buffer, insanity_barrier);
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
@@ -160,7 +160,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
         get_buffer_device_address(renderer->logical_device,
                                   vulkan_buffer_get_frame(renderer, ui_renderer->ui_material_ssbo_handle)->handle),
         .padding1 = 0,
-.padding2 = 0,
+        .padding2 = 0,
 
     };
 

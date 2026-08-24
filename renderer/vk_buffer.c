@@ -68,7 +68,7 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
     return buffer_system;
 }
 
-void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame)
+void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system, u32 current_frame)
 {
     //rn just clears the staging buffer
     Vulkan_Buffer* current_frame_staging_buffer = &buffer_system->per_frame_staging_buffers[
@@ -79,6 +79,35 @@ void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame)
     {
         buffer_system->per_frame_buffers->current_offset = 0;
     }
+
+    //TODO:
+    ARRAY_TYPE(Vulkan_Transfer_Buffer_Pending_Upload)* staging_upload_pending_array;
+
+    u32 array_idx = 0;
+    while (array_idx < buffer_system->staging_upload_pending_array->num_items)
+    {
+        Vulkan_Staging_Buffer_Pending_Upload pending_upload =
+            array_get(
+                buffer_system->staging_upload_pending_array,
+                Vulkan_Staging_Buffer_Pending_Upload,
+                array_idx);
+
+        if (timeline_semaphore_query_and_compare(
+            renderer,
+            vulkan_queue_system_get_transfer_semaphore(renderer),
+            pending_upload.semaphore_wait_value))
+        {
+            free_list_free(buffer_system->upload_staging_free_list, pending_upload.staging_offset, pending_upload.size);
+
+            array_remove_swap(buffer_system->staging_upload_pending_array, array_idx);
+            // Don't increment i.
+            // The swapped-in element now occupies index i.
+            continue;
+        }
+
+        array_idx++;
+    }
+
 }
 
 void buffer_system_frame_end(Buffer_System* buffer_system, u32 current_frame)
@@ -245,7 +274,7 @@ bool vulkan_buffer_transfer_upload(Renderer* renderer, Vulkan_Command_Buffer* co
     u64 staging_buffer_offset = 0;
     if (!vulkan_buffer_upload_data_request(renderer, data_size, &staging_buffer_offset))
     {
-        INFO("vulkan_buffer_transfer_upload: not enought memory to satify request");
+        INFO("vulkan_buffer_transfer_upload: not enough memory to satisfy request");
         return false;
     }
 

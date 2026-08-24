@@ -40,32 +40,41 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
+    Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
     vulkan_buffer_frame_reset(renderer, particle_render->spherical_billboard_material_buffer_handle);
 
     vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "PARTICLE SSBO UPDATE");
 
     //update the particle buffer every frame
     //OPTIMIZE: make particles material shader friendly, but obv it can wait
-    Material_Spherical_Billboard billboard_spherical_material;
     particle_render->draw_count = render_packet->particle_packet.particle_count;
+
+
+    Material_Spherical_Billboard* mat_array = allocator_alloc(scratch.allocator,
+                                                              sizeof(Material_Spherical_Billboard) * render_packet->
+                                                              particle_packet.particle_count);
+
+
     for (u32 i = 0; i < render_packet->particle_packet.particle_count; i++)
     {
-        billboard_spherical_material.point = render_packet->particle_packet.particles[i].position;
-        billboard_spherical_material.rotation = render_packet->particle_packet.particles[i].rotation;
-        billboard_spherical_material.size = render_packet->particle_packet.particles[i].scale;
-        billboard_spherical_material.texture_idx = render_packet->particle_packet.particles[i].texture_handle.handle;
+        mat_array[i].point = render_packet->particle_packet.particles[i].position;
+        mat_array[i].rotation = render_packet->particle_packet.particles[i].rotation;
+        mat_array[i].size = render_packet->particle_packet.particles[i].scale;
+        mat_array[i].texture_idx = render_packet->particle_packet.particles[i].texture_handle.handle;
 
         // TODO:
         // billboard_spherical_material.color
         // render_packet->particle_packet.particles[i].tex_size;
         // render_packet->particle_packet.particles[i].tex_offset;
-
-        vulkan_buffer_frame_staging_upload(
-            renderer, particle_render->spherical_billboard_material_buffer_handle,
-            command_buffer,
-            &billboard_spherical_material,
-            sizeof(Material_Spherical_Billboard));
     }
+
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->spherical_billboard_material_buffer_handle,
+        command_buffer,
+        mat_array,
+        sizeof(Material_Spherical_Billboard) * render_packet->
+                                               particle_packet.particle_count);
+
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
@@ -77,8 +86,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 
-        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
-        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -88,7 +96,9 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         .size = VK_WHOLE_SIZE,
     };
 
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    vulkan_command_add_submit_buffer_barrier(command_buffer, particle_barrier);
+
+    scratch_allocator_end(scratch);
 }
 
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,

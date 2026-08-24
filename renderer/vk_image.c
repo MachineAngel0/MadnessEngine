@@ -420,24 +420,6 @@ void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAcc
 
 
     vkCmdPipelineBarrier2(cmdbuffer, &pDependencyInfo);
-
-    /*
-    *    VkImageMemoryBarrier image_memory_barrier = {0};
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.srcAccessMask = srcAccessMask;
-    image_memory_barrier.dstAccessMask = dstAccessMask;
-    image_memory_barrier.oldLayout = oldImageLayout;
-    image_memory_barrier.newLayout = newImageLayout;
-    image_memory_barrier.image = image;
-    image_memory_barrier.subresourceRange = subresourceRange;
-    vkCmdPipelineBarrier(
-        cmdbuffer,
-        srcStageMask,
-        dstStageMask,
-        0,
-        0, NULL,
-        0, NULL,
-        1, &image_memory_barrier);*/
 }
 
 

@@ -261,7 +261,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //free textures and any other texture/shader updated
-    buffer_system_frame_start(renderer->buffer_system, renderer->current_frame);
+    buffer_system_frame_start(renderer, renderer->buffer_system, renderer->current_frame);
 
     vulkan_texture_system_update(renderer, render_packets);
 

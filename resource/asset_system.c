@@ -19,9 +19,12 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
                                                                        MEMORY_SUBSYSTEM_RESOURCE);
 
-
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
+
+    //really not using this for much rn
+    asset_system->allocator = memory_system_allocator_create(memory_system, KB(16),
+                                                               MEMORY_SUBSYSTEM_RESOURCE);
 
     //texture memory
     asset_system->texture_allocator = memory_system_heap_allocator_create(

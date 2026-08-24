@@ -47,7 +47,7 @@ Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
 
     //
     mesh_system->mesh_submitted_upload_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
-    mesh_system->mesh_pending_upload_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
+    mesh_system->mesh_pending_upload_array = array_create(Mesh_Unfinished_Upload, 1024, &renderer->allocator);
     timeline_semaphore_create(renderer, &mesh_system->mesh_upload_timeline_semaphore);
     mesh_system->mesh_upload_semaphore_value = 0;
 
@@ -66,6 +66,13 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
                              u64 mesh_upload_semaphore_value,
                              Mesh_Render_Record* record, bool is_initial_submit)
 {
+
+    if (data_byte_size == 0)
+    {
+        WARN("mesh_system_upload_data: passed in 0 data size, for type %d", type);
+        return true;
+    }
+
     if (is_initial_submit)
     {
         record->pending_uploads += 1;
@@ -89,16 +96,20 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
     }
     else
     {
-        //not enough memory, will try again next frame
-        Mesh_Unfinished_Upload unfinished_upload = {
-            .mesh_id = mesh_id,
-            .type = type,
-            .buffer_handle = handle,
-            .bytes = data_byte_size,
-            .data = data,
-        };
+        //we dont want to add this again, if its already an unfinished upload
+        if (is_initial_submit)
+        {
+            //not enough memory, will try again next frame
+            Mesh_Unfinished_Upload unfinished_upload = {
+                .mesh_id = mesh_id,
+                .type = type,
+                .buffer_handle = handle,
+                .bytes = data_byte_size,
+                .data = data,
+            };
 
-        array_push(mesh_system->mesh_pending_upload_array, &unfinished_upload);
+            array_push(mesh_system->mesh_pending_upload_array, &unfinished_upload);
+        }
         return false;
     }
 }
@@ -144,11 +155,10 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
     }
 
 
-    if ( mesh_system->mesh_pending_upload_array->num_items == 0 && ring_queue_is_empty(render_packet->mesh_queue))
+    if (mesh_system->mesh_pending_upload_array->num_items == 0 && ring_queue_is_empty(render_packet->mesh_queue))
     {
         return;
     }
-
 
 
     //TODO: we still want to flush our queues
@@ -163,7 +173,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
 
     //things we werent able to upload yet
     u64 unfinished_idx = 0;
-    while ( unfinished_idx < mesh_system->mesh_pending_upload_array->num_items)
+    while (unfinished_idx < mesh_system->mesh_pending_upload_array->num_items)
     {
         Mesh_Unfinished_Upload unfinished_upload =
             array_get(
@@ -233,7 +243,6 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         mesh_system->vertex_offset_count += submesh_upload_data.submesh->vertex_count;
         mesh_system->index_offset_count += submesh_upload_data.submesh->index_count;
 
-
         mesh_system_upload_data(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
@@ -271,7 +280,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->uv_buffer_handle,
-                                TANGENT,
+                                UV,
                                 submesh_upload_data.gpu_data->uv,
                                 submesh_upload_data.submesh->uv_bytes,
                                 submesh_upload_data.mesh_id,
@@ -364,7 +373,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
             .offset = 0,
             .size = transform_buffer->current_offset,
         };
-        vulkan_command_add_buffer_barrier(command_buffer, transform_buffer_barrier);
+        vulkan_command_add_submit_buffer_barrier(command_buffer, transform_buffer_barrier);
     }
 
 
@@ -394,7 +403,7 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
             .offset = 0,
             .size = skinned_buffer->current_offset,
         };
-        vulkan_command_add_buffer_barrier(command_buffer, skinned_buffer_barrier);
+        vulkan_command_add_submit_buffer_barrier(command_buffer, skinned_buffer_barrier);
     }
 }
 

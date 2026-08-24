@@ -159,8 +159,6 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
     }
 
 
-
-
     VkSubmitInfo2 transfer_submit_info = {0};
     transfer_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
     transfer_submit_info.pNext = 0;
@@ -413,7 +411,7 @@ bool vulkan_queue_add_wait_semaphore(Renderer* renderer, Vulkan_Queue_Type queue
 }
 
 
-bool vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
+bool vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
                                       VkImageMemoryBarrier2 image_memory_barrier)
 {
     VkDependencyInfo dependency_info = {0};
@@ -432,7 +430,7 @@ bool vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
     return true;
 }
 
-bool vulkan_command_add_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+bool vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
                                        VkBufferMemoryBarrier2 buffer_memory_barrier)
 {
     VkDependencyInfo dependency_info = {0};
@@ -557,7 +555,7 @@ void vulkan_command_buffer_end_single_use(Renderer* renderer,
 {
     vulkan_command_buffer_end(command_buffer);
 
-    VkSubmitInfo submit_info = {};
+    VkSubmitInfo submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &command_buffer->handle;
@@ -621,6 +619,55 @@ void vulkan_command_buffer_submit_binary_semaphore(Renderer* renderer,
     vkDestroyFence(renderer->logical_device, fence, 0);
 }
 
+s32 vulkan_get_queue_family_index(Renderer* renderer, Vulkan_Queue_Type queue1)
+{
+    switch (queue1)
+    {
+    case VULKAN_QUEUE_TYPE_GRAPHICS:
+        return renderer->graphics_queue_index;
+    case VULKAN_QUEUE_TYPE_TRANSFER:
+        return renderer->transfer_queue_index;
+    case VULKAN_QUEUE_TYPE_COMPUTE:
+        return renderer->compute_queue_index;
+    }
+
+    MASSERT_FALSE();
+    return -1;
+}
+
+bool vulkan_is_same_queue_family(Renderer* renderer, Vulkan_Queue_Type queue1, Vulkan_Queue_Type queue2)
+{
+    s32 queue1_index = -1;
+    s32 queue2_index = -1;
+    switch (queue1)
+    {
+    case VULKAN_QUEUE_TYPE_GRAPHICS:
+        queue1_index = renderer->graphics_queue_index;
+        break;
+    case VULKAN_QUEUE_TYPE_TRANSFER:
+        queue1_index = renderer->transfer_queue_index;
+        break;
+    case VULKAN_QUEUE_TYPE_COMPUTE:
+        queue1_index = renderer->compute_queue_index;
+        break;
+    }
+
+    switch (queue2)
+    {
+    case VULKAN_QUEUE_TYPE_GRAPHICS:
+        queue2_index = renderer->graphics_queue_index;
+        break;
+    case VULKAN_QUEUE_TYPE_TRANSFER:
+        queue2_index = renderer->transfer_queue_index;
+        break;
+    case VULKAN_QUEUE_TYPE_COMPUTE:
+        queue2_index = renderer->compute_queue_index;
+        break;
+    }
+
+    return queue1_index == queue2_index;
+}
+
 VkCommandBufferSubmitInfo vulkan_command_buffer_get_submit_info(Vulkan_Command_Buffer* command_buffer)
 {
     return (VkCommandBufferSubmitInfo){
@@ -645,7 +692,7 @@ void vulkan_command_buffer_debug_label_begin(Renderer* renderer, Vulkan_Command_
 }
 
 void vulkan_command_buffer_debug_label_color_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
-                                             const char* name, float color[4])
+                                                   const char* name, float color[4])
 {
     VkDebugUtilsLabelEXT debug_label = {
         .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,

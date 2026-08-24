@@ -6,7 +6,7 @@
 Buffer_System* buffer_system_init(Renderer* renderer, u32 frames_in_flight);
 Buffer_System* buffer_system_free(Renderer* renderer);
 
-void buffer_system_frame_start(Buffer_System* buffer_system, u32 current_frame);
+void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system, u32 current_frame);
 void buffer_system_frame_end(Buffer_System* buffer_system, u32 current_frame);
 
 

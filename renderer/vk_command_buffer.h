@@ -45,12 +45,12 @@ bool vulkan_queue_add_signal_semaphore(Renderer* renderer, Vulkan_Queue_Type que
 bool vulkan_queue_add_wait_semaphore(Renderer* renderer, Vulkan_Queue_Type queue_type,
                                      VkSemaphoreSubmitInfo submit_info);
 
-//TODO: these should really get batched up and submitted at the end
-bool vulkan_command_flush_barriers(Vulkan_Command_Buffer* command_buffer);
-bool vulkan_command_add_image_barrier(Vulkan_Command_Buffer* command_buffer,
+//TODO: one for add and submit, and one for batching the submit
+bool vulkan_command_add_submit_image_barrier(Vulkan_Command_Buffer* command_buffer,
                                       VkImageMemoryBarrier2 image_memory_barrier);
-bool vulkan_command_add_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
+bool vulkan_command_add_submit_buffer_barrier(Vulkan_Command_Buffer* command_buffer,
                                        VkBufferMemoryBarrier2 buffer_memory_barrier);
+bool vulkan_command_flush_barriers(Vulkan_Command_Buffer* command_buffer);
 
 
 //ideally suppose to check semaphore to make buffers reusable
@@ -93,57 +93,17 @@ void vulkan_command_buffer_submit_generic(Renderer* renderer,
                                           VkSemaphoreSubmitInfo* signal_semaphore);
 
 s32 vulkan_get_queue_family_index(Renderer* renderer,
-                                  Vulkan_Queue_Type queue1)
-{
-    switch (queue1)
-    {
-    case VULKAN_QUEUE_TYPE_GRAPHICS:
-        return renderer->graphics_queue_index;
-    case VULKAN_QUEUE_TYPE_TRANSFER:
-        return renderer->transfer_queue_index;
-    case VULKAN_QUEUE_TYPE_COMPUTE:
-        return renderer->compute_queue_index;
-    }
-
-    MASSERT_FALSE();
-    return -1;
-}
+                                  Vulkan_Queue_Type queue1);
 
 bool vulkan_is_same_queue_family(Renderer* renderer,
                                  Vulkan_Queue_Type queue1,
-                                 Vulkan_Queue_Type queue2)
-{
-    s32 queue1_index = -1;
-    s32 queue2_index = -1;
-    switch (queue1)
-    {
-    case VULKAN_QUEUE_TYPE_GRAPHICS:
-        queue1_index = renderer->graphics_queue_index;
-        break;
-    case VULKAN_QUEUE_TYPE_TRANSFER:
-        queue1_index = renderer->transfer_queue_index;
-        break;
-    case VULKAN_QUEUE_TYPE_COMPUTE:
-        queue1_index = renderer->compute_queue_index;
-        break;
-    }
+                                 Vulkan_Queue_Type queue2);
 
-    switch (queue2)
-    {
-    case VULKAN_QUEUE_TYPE_GRAPHICS:
-        queue2_index = renderer->graphics_queue_index;
-        break;
-    case VULKAN_QUEUE_TYPE_TRANSFER:
-        queue2_index = renderer->transfer_queue_index;
-        break;
-    case VULKAN_QUEUE_TYPE_COMPUTE:
-        queue2_index = renderer->compute_queue_index;
-        break;
-    }
 
-    return queue1_index == queue2_index;
-}
 
+
+
+/*
 void vulkan_queue_add_ownership_transfer(Renderer* renderer,
                                          Vulkan_Queue_Type from_queue,
                                          Vulkan_Queue_Type to_queue,
@@ -167,8 +127,10 @@ void vulkan_queue_add_ownership_transfer(Renderer* renderer,
 
     vulkan_queue_add_wait_semaphore(renderer, to_queue, wait);
 }
+*/
 
 
+/*
 void queue_ownership_transfer(Renderer* renderer, Vulkan_Queue_Type from_queue, Vulkan_Command_Buffer* from_buffer,
                               Vulkan_Queue_Type to, Vulkan_Command_Buffer* to_buffer)
 {
@@ -219,6 +181,7 @@ void queue_ownership_transfer(Renderer* renderer, Vulkan_Queue_Type from_queue, 
     //NOTE: eventually we submit both to their respective queue's
     // vkQueueSubmit2()
 }
+*/
 
 
 //NOTE: use this only for startup code, this causes a queuewaitidle
