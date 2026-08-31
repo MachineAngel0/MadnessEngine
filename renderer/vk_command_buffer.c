@@ -504,7 +504,7 @@ bool vulkan_command_flush_barriers(Vulkan_Command_Buffer* command_buffer)
         command_buffer->buffer_barrier_count == 0 &&
         command_buffer->image_barrier_count == 0)
     {
-        INFO("vulkan_command_flush_barriers: nothing from buffer to flush")
+        // INFO("vulkan_command_flush_barriers: nothing from buffer to flush")
         return false;
     }
 

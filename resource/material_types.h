@@ -86,7 +86,7 @@ typedef struct Material_Spherical_Billboard
     u32 texture_idx;
     vec2s size; //also a radius
     vec2s rotation;
-    // vec4 color; //tint basically
+    vec4s color; //tint basically
     // vec2s tex_offset;
     // vec2s tex_size;
 } Material_Spherical_Billboard;

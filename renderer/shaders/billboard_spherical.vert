@@ -11,12 +11,13 @@
 
 
 
+
 struct Spherical_Billboard{
     vec3 position;
     uint texture_idx;
     vec2 size;//also a radius
     vec2 rotation;// should be one rotation in radians
-//    vec4 color; //tint basically
+    vec4 color; //tint basically
 };
 
 layout(buffer_reference, scalar) readonly buffer Spherical_Billboard_Buffer{
@@ -50,7 +51,7 @@ vec2(0.0, 0.0)// bottom-left
 int indices[6] = int[6](0, 1, 2, 2, 3, 0);
 
 
-layout(location = 0) out vec3 out_color;
+layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out flat uint out_texture_idx;
 
@@ -63,7 +64,7 @@ void main() {
     Spherical_Billboard billboard_data = pc.material_buffer.data[instance_idx];
     out_texture_idx = billboard_data.texture_idx;
 
-    out_color = vec3(1.0, 0, 0);
+    out_color = billboard_data.color;
 
     float half_size_x = billboard_data.size.x * 0.5;
     float half_size_y = billboard_data.size.y * 0.5;

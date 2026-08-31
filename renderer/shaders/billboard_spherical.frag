@@ -12,7 +12,7 @@ struct Spherical_Billboard{
     uint texture_idx;
     vec2 size;//also a radius
     vec2 rotation;
-//    vec4 color; //tint basically
+    vec4 color; //tint basically
 };
 
 layout(buffer_reference, scalar) readonly buffer Spherical_Billboard_Buffer{
@@ -26,7 +26,7 @@ struct PC_Particle{
 
 
 
-layout(location = 0) in vec3 in_color;
+layout(location = 0) in vec4 in_color;
 layout(location = 1) in vec2 in_uv;
 layout(location = 2) in flat uint in_texture_idx;
 
@@ -62,7 +62,7 @@ void main() {
 //        texture_result.a *= alpha;
 
 
-    texture_result *= vec4(in_color, 1.0);
+    texture_result *= vec4(in_color);
 
 
     outColor = texture_result;

@@ -802,6 +802,7 @@ typedef struct Vulkan_Mesh_System
 typedef struct Particle_Render
 {
     Buffer_Frame_Handle spherical_billboard_material_buffer_handle;
+    Buffer_Frame_Handle particle_render_data_buffer_handle;
     u32 draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;

@@ -304,13 +304,19 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "vec2s",
 			.offset = offsetof(Material_Spherical_Billboard, rotation)
 		},
+		{
+			.name = "color",
+			.type = REFLECTION_TYPE_VEC4,
+			.type_name = "vec4s",
+			.offset = offsetof(Material_Spherical_Billboard, color)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_Spherical_Billboard_Runtime_Struct =
 	{
 		.name = "Material_Spherical_Billboard",
 		.fields = Material_Spherical_Billboard_Fields,
-		.field_count = 4,
+		.field_count = 5,
 		.struct_size = sizeof(Material_Spherical_Billboard)
 	};
 

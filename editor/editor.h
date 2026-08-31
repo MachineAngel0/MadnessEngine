@@ -2,13 +2,14 @@
 #define MADNESSENGINE_EDITOR_H
 #include <stdbool.h>
 
-#include "../resource/ui_madness.h"
+#include "ui_madness.h"
 #include "memory/memory_system.h"
 
 typedef enum Editor_UI_State
 {
     EDITOR_UI_STATE_DEBUG,
     EDITOR_UI_STATE_ENGINE_STATS,
+    EDITOR_UI_STATE_PARTICLE,
     EDITOR_UI_STATE_MATERIAL_CREATION,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
     EDITOR_UI_STATE_SCENE,
@@ -87,6 +88,7 @@ void editor_ui_stats(Editor* editor);
 void editor_ui_animation(Editor* editor);
 void editor_material_asset_view(Editor* editor);
 void editor_mesh_view(Editor* editor);
+void editor_particle_view(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

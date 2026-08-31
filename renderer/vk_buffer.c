@@ -194,7 +194,7 @@ bool vulkan_buffer_frame_staging_upload(Renderer* renderer, Buffer_Frame_Handle 
 {
     if (data_byte_size <= 0)
     {
-        TRACE("vulkan_buffer_frame_staging_upload: 0 data size passed in")
+        // TRACE("vulkan_buffer_frame_staging_upload: 0 data size passed in")
         return false;
     }
 

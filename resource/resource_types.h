@@ -122,8 +122,7 @@ typedef enum Asset_Load_State
     ASSET_LOAD_STATE_UNLOADED,
     ASSET_LOAD_STATE_QUEUED,
     ASSET_LOAD_STATE_LOADED,
-}Asset_Load_State;
-
+} Asset_Load_State;
 
 
 typedef struct Asset_MetaData
@@ -292,7 +291,6 @@ typedef struct Madness_Texture_Runtime
     Madness_Texture texture;
     u8* pixel_data;
 } Madness_Texture_Runtime;
-
 
 
 typedef struct Glyph
@@ -466,6 +464,52 @@ typedef struct Material_Batch
 
 ///////////////// Particle  //////////////////////
 
+typedef struct Particle
+{
+    //render data
+    f32* pos_x;
+    f32* pos_y;
+    f32* pos_z;
+    vec2s* rotation;
+    vec2s* scale;
+
+    vec4s* color;
+
+    Texture_Handle* texture_handle; // TODO: change to a u32 and leave the handle on the emitter
+    vec2s* tex_offset;
+    vec2s* tex_size;
+
+    //non render data
+    f32* life_left;
+    f32* vel_x;
+    f32* vel_y;
+    f32* vel_z;
+
+} Particle;
+
+typedef struct Particle_Mesh
+{
+    //render data
+    f32* pos_x;
+    f32* pos_y;
+    f32* pos_z;
+
+    f32* rot_x;
+    f32* rot_y;
+    f32* rot_z;
+
+    f32* scale_x;
+    f32* scale_y;
+    f32* scale_z;
+
+    Texture_Handle* texture_handle;
+    vec2s* tex_offset;
+    vec2s* tex_size;
+
+    //not render data
+    f32* lifetime_left;
+    Madness_Mesh_Handle* mesh_handle;
+} Particle_Mesh;
 
 typedef struct Particle_Animation_vec3
 {
@@ -525,42 +569,24 @@ typedef struct Particle_Animation_float
 //start simple, then we can use the complex_version
 typedef struct Particle_Emitter
 {
-    bool nothingl;
+    f32 emission_rate;
+    f32 spawn_trigger;
+
+    vec4s particle_color;
+    vec3s particle_velocity;
+    vec3s particle_position;
+
+    f32 particle_lifetime;
+
+    Material_Instance* material_instance;
+
+
+    bool infinite;
+    bool is_visible;
+
+    DYNAMIC_ARRAY_TYPE(u32)* particle;
 } Particle_Emitter;
 
-
-typedef struct Particle
-{
-    vec3s position;
-    vec2s rotation;
-    vec2s scale;
-
-    float life_left;
-    vec3s velocity;
-
-
-    //draw data?
-    //Texture
-    Texture_Handle texture_handle;
-    vec2s tex_offset;
-    vec2s tex_size;
-} Particle;
-
-typedef struct Particle_Mesh
-{
-    vec3 position;
-    vec3s rotation;
-    vec3s scale;
-
-    float lifetime_left;
-
-
-    //draw data?
-    //Texture
-    Madness_Mesh_Handle Mesh;
-    Texture_Handle Textures;
-    vec2s tex_offset;
-} Particle_Mesh;
 
 
 ///////////////// MESH  //////////////////////
@@ -570,8 +596,6 @@ typedef enum Index_Type
     INDEX_TYPE_U16,
     INDEX_TYPE_U32,
 } Index_Type;
-
-
 
 
 typedef struct Madness_Animation
@@ -659,8 +683,6 @@ typedef struct Madness_SubMesh
     u32 vertex_count; // this is also the count for basically every field except the index
     u32 index_count;
     Index_Type index_type;
-
-
 } Madness_SubMesh;
 
 
@@ -750,7 +772,6 @@ typedef struct Madness_SkMesh_Runtime
 ///////////////// Systems  //////////////////////
 
 
-
 typedef struct Material_System
 {
     Reflection_Registry* reflection_registry;
@@ -784,7 +805,6 @@ typedef struct Sprite_System
     Free_List_ARRAY_TYPE(Sprite_Data)* sprites_data;
     ARRAY_TYPE(Sprite_Data)* sprites_frame_data;
 } Sprite_System;
-
 
 
 typedef struct Texture_System
@@ -834,8 +854,6 @@ typedef struct Scene
 
 typedef struct Mesh_System
 {
-
-
     //TODO: at some point im gonna need a free list cpu side, if i am to dynamically remove and add meshes,
     // fragmentation would also be a concern, unless i pool size, or split the pool into many different pool sizes
 
@@ -896,11 +914,23 @@ typedef struct Particle_System
     //animation data
 
     //vertex/index buffer
+    Particle_Emitter* emitters;
+    u32 emitter_count;
+    u32 emitter_count_max;
 
-    Particle* particles;
+    //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
+    //NOTE: for multithreading, we can have each thread manage their own particles pools,
+    // each emitter/system(up to me how fine grain i want to be) belongs to a thread and only updated on that thread
+    Particle particles;
     u32 particles_count;
 
-    //each emitter manages a range of particles in a flat list
+    u32* dead_particles;
+    u32 dead_particles_available;
+    u32 dead_particles_count;
+
+    //TODO: might want to look into ways to use a pool allocator
+    Heap_Allocator* heap_allocator;
+
 } Particle_System;
 
 
@@ -920,10 +950,6 @@ typedef struct Render_Packet_3D
 
     Madness_Skinned_Mesh_Instance* skinned_instances;
     u32 skinned_instances_count;
-
-    //TODO:
-    // Madness_SkMesh_Instance* skinned_instances;
-    // u32 skinned_instances_count;
 
 
     mat4s* world_space_matrix_array;
@@ -952,6 +978,9 @@ typedef struct Render_Packet_Particle
 {
     Particle* particles;
     u32 particle_count;
+
+    Particle_Emitter* emitters;
+    u32 emitter_count;
 } Render_Packet_Particle;
 
 typedef struct Render_Packet
@@ -1020,8 +1049,4 @@ typedef struct Asset_System
 } Asset_System;
 
 
-
-
-
 #endif //RESOURCE_TYPES_H
-

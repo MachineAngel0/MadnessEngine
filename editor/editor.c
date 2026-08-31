@@ -29,7 +29,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_SCENE;
+    editor->state = EDITOR_UI_STATE_PARTICLE;;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -195,6 +195,9 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_MESH_VIEWER:
         editor_mesh_view(editor);
+        break;
+    case EDITOR_UI_STATE_PARTICLE:
+        editor_particle_view(editor);
         break;
     }
 }
@@ -612,6 +615,30 @@ void editor_mesh_view(Editor* editor)
 
     madness_ui_window_begin(STRING("Mesh View"));
     {
+    }
+    madness_ui_window_end();
+}
+
+void editor_particle_view(Editor* editor)
+{
+    Particle_System* particle_system = editor->asset_system->particle_system;
+
+    madness_ui_window_begin(STRING("Particle View"));
+    {
+        Particle_Emitter* emitter = &particle_system->emitters[0];
+
+        madness_ui_float(STRING("EMISSION RATE"), &emitter->emission_rate, 1.0f);
+        // emitter->spawn_trigger;
+        // emitter->particle_color;
+        // emitter->particle_velocity;
+        // emitter->particle_position;
+        // emitter->particle_lifetime;
+        // emitter->chunk_size;
+        // emitter->chunk_start;
+        // emitter->particles_alive;
+        // emitter->particles_spawned_from_chunk;
+        // emitter->loop;
+        // emitter->is_visible;
     }
     madness_ui_window_end();
 }

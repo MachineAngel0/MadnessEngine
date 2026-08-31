@@ -8,13 +8,20 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 {
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 
-    u64 mesh_buffer_data_size = MB(16);
+    u64 particle_material_buffer_data_size = MB(16);
 
 
     particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        mesh_buffer_data_size);
+        particle_material_buffer_data_size);
+
+
+    particle_renderer->particle_render_data_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        particle_material_buffer_data_size);
+
 
     //default blend for now
     vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
@@ -54,14 +61,19 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
                                                               sizeof(Material_Spherical_Billboard) * render_packet->
                                                               particle_packet.particle_count);
 
-
-    for (u32 i = 0; i < render_packet->particle_packet.particle_count; i++)
+    Render_Packet_Particle* render_packet_particle = &render_packet->particle_packet;
+    Particle* particle = render_packet->particle_packet.particles;
+    for (u32 i = 0; i < render_packet_particle->particle_count; i++)
     {
-        mat_array[i].point = render_packet->particle_packet.particles[i].position;
-        mat_array[i].rotation = render_packet->particle_packet.particles[i].rotation;
-        mat_array[i].size = render_packet->particle_packet.particles[i].scale;
-        mat_array[i].texture_idx = render_packet->particle_packet.particles[i].texture_handle.handle;
-
+        mat_array[i].point = (vec3s){
+            .x = particle->pos_x[i],
+            .y = particle->pos_y[i],
+            .z = particle->pos_z[i]
+        };
+        mat_array[i].rotation = particle->rotation[i];
+        mat_array[i].size = particle->scale[i];
+        mat_array[i].texture_idx = particle->texture_handle[i].handle;
+        mat_array[i].color = particle->color[i];
         // TODO:
         // billboard_spherical_material.color
         // render_packet->particle_packet.particles[i].tex_size;
@@ -72,9 +84,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         renderer, particle_render->spherical_billboard_material_buffer_handle,
         command_buffer,
         mat_array,
-        sizeof(Material_Spherical_Billboard) * render_packet->
-                                               particle_packet.particle_count);
-
+        sizeof(Material_Spherical_Billboard) * render_packet->particle_packet.particle_count);
 
 
     Vulkan_Buffer* particle_material_buffer = vulkan_buffer_get_frame(
@@ -97,6 +107,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
 
     vulkan_command_add_submit_buffer_barrier(command_buffer, particle_barrier);
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
 
     scratch_allocator_end(scratch);
 }
@@ -152,4 +163,5 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     vkCmdDraw(command_buffer->handle, 6,
               particle_render->draw_count, 0,
               0);
+
 }
