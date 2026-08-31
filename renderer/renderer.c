@@ -1,5 +1,6 @@
 ﻿#include "renderer.h"
 #include "camera.h"
+#include "debug_draw.h"
 #include "lights.h"
 #include "shader_system.h"
 #include "vk_command_buffer.h"
@@ -181,6 +182,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     renderer->sprite_renderer = sprite_render_init(renderer);
     // UI Backend
     renderer->ui_renderer = ui_render_init(renderer);
+
+
+    //debug draw utility
+    debug_draw_system_init(renderer, memory_system);
 
 
     //Pipelines
@@ -588,6 +593,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
+    debug_system_upload_and_draw(renderer);
+
+
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
 
     // VkRect2D pScissors;
@@ -652,6 +660,12 @@ void renderer_shutdown(Renderer* renderer)
 
 
     vkDeviceWaitIdle(renderer->logical_device);
+
+
+
+    debug_draw_system_deinit();
+
+
 
     // Destroy in the opposite order of creation.
 

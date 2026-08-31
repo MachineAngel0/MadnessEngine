@@ -470,8 +470,12 @@ typedef struct Particle
     f32* pos_x;
     f32* pos_y;
     f32* pos_z;
-    vec2s* rotation;
-    vec2s* scale;
+
+    f32* rot_x;
+    f32* rot_y;
+
+    f32* scale_x;
+    f32* scale_y;
 
     vec4s* color;
 
@@ -579,6 +583,7 @@ typedef struct Particle_Emitter
     f32 particle_lifetime;
 
     Material_Instance* material_instance;
+    Texture_Handle texture_handle; // TODO: temp
 
 
     bool infinite;

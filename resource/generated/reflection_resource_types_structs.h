@@ -864,16 +864,28 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle, pos_z)
 		},
 		{
-			.name = "rotation",
-			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Particle, rotation)
+			.name = "rot_x",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, rot_x)
 		},
 		{
-			.name = "scale",
-			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Particle, scale)
+			.name = "rot_y",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, rot_y)
+		},
+		{
+			.name = "scale_x",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, scale_x)
+		},
+		{
+			.name = "scale_y",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, scale_y)
 		},
 		{
 			.name = "color",
@@ -929,7 +941,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle",
 		.fields = Particle_Fields,
-		.field_count = 13,
+		.field_count = 15,
 		.struct_size = sizeof(Particle)
 	};
 
@@ -2311,13 +2323,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Render_Packet_Particle, particle_count)
 		},
+		{
+			.name = "emitters",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter",
+			.offset = offsetof(Render_Packet_Particle, emitters)
+		},
+		{
+			.name = "emitter_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Render_Packet_Particle, emitter_count)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Particle_Runtime_Struct =
 	{
 		.name = "Render_Packet_Particle",
 		.fields = Render_Packet_Particle_Fields,
-		.field_count = 2,
+		.field_count = 4,
 		.struct_size = sizeof(Render_Packet_Particle)
 	};
 

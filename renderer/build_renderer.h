@@ -10,6 +10,7 @@
 #include "vulkan_struct_types.h"
 #include "spv_reflect.h"
 
+#include "debug_draw.h"
 
 #include "vulkan_allocator.h"
 #include "camera.h"

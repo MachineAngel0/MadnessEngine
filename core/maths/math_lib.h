@@ -81,6 +81,9 @@ static const vec4s COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4s COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
 static const vec4s COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
 static const vec4s COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
+static const vec4s COLOR_YELLOW_V4 = {1.0f, 1.0f, 0.0f, 1.0f};
+static const vec4s COLOR_MAGENTA_V4 = {1.0f, 0.0f, 1.0f, 1.0f};
+static const vec4s COLOR_CYAN_V4 = {0.0f, 1.0f, 1.0f, 1.0f};
 
 
 

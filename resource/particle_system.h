@@ -45,12 +45,20 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
     ps->particles.pos_z = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
                                               MEMORY_SUBSYSTEM_PARTICLE);
 
-    ps->particles.rotation = memory_system_alloc(memory_system, sizeof(vec2s) * ps->particles_count,
+    ps->particles.rot_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
                                                  MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.scale = memory_system_alloc(memory_system, sizeof(vec2s) * ps->particles_count,
+    ps->particles.rot_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
+                                             MEMORY_SUBSYSTEM_PARTICLE);
+
+
+    ps->particles.scale_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
                                               MEMORY_SUBSYSTEM_PARTICLE);
+    ps->particles.scale_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
+                                              MEMORY_SUBSYSTEM_PARTICLE);
+
     ps->particles.color = memory_system_alloc(memory_system, sizeof(vec4s) * ps->particles_count,
                                               MEMORY_SUBSYSTEM_PARTICLE);
+
     ps->particles.texture_handle = memory_system_alloc(memory_system, sizeof(Texture_Handle) * ps->particles_count,
                                                        MEMORY_SUBSYSTEM_PARTICLE);
     ps->particles.tex_offset = memory_system_alloc(memory_system, sizeof(vec2s) * ps->particles_count,
@@ -73,7 +81,8 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
     for (u32 i = 0; i < ps->particles_count; i++)
     {
         ps->particles.texture_handle[i] = handle;
-        ps->particles.scale[i] = (vec2s){10.0f, 10.0f};
+        ps->particles.scale_x[i] =  10.0f;
+        ps->particles.scale_y[i] = 10.0f;
         ps->particles.vel_x[i] = rand_range_f(-10, 10);
         ps->particles.vel_y[i] = rand_range_f(-10, 10);
         ps->particles.vel_z[i] = rand_range_f(-10, 10);
@@ -195,7 +204,7 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
 void particle_system_emitter_spawn(Particle_System* ps, Particle_Emitter* emitter)
 {
     emitter->emission_rate = 1;
-    emitter->particle_lifetime = 10.0f;
+    emitter->particle_lifetime = 1.0f;
     emitter->particle = dynamic_array_create(u32, 256, ps->heap_allocator);
 }
 

@@ -6,6 +6,7 @@
 
 
 #include "shader_includes/test_uniform.glsl"
+//#include "shader_includes/particle.glsl"
 
 //https://www.flipcode.com/archives/Billboarding-Excerpt_From_iReal-Time_Renderingi_2E.shtml
 
@@ -24,27 +25,25 @@ layout(buffer_reference, scalar) readonly buffer Spherical_Billboard_Buffer{
     Spherical_Billboard data[];
 };
 
-struct PC_Particle{
-    Spherical_Billboard_Buffer material_buffer;
-    Spherical_Billboard_Buffer unused;
-};
+
 
 layout(push_constant, scalar) uniform PC_PARTICLE{
-    PC_Particle pc;
-};
+    Spherical_Billboard_Buffer material_buffer;
+    Spherical_Billboard_Buffer unused;
+}pc;
 
 const vec2 corners[4] = vec2[](
-vec2(-1.0, -1.0), // top left
-vec2(1.0, -1.0), // top right
-vec2(1.0, 1.0), // bottom right
-vec2(-1.0, 1.0)// bottom left
+        vec2(-1.0, -1.0), // top left
+        vec2(1.0, -1.0), // top right
+        vec2(1.0, 1.0), // bottom right
+        vec2(-1.0, 1.0)// bottom left
 );
 
 const vec2 uvs[4] = vec2[](
-vec2(0.0, 1.0), // top-left
-vec2(1.0, 1.0), // top-right
-vec2(1.0, 0.0), // bottom-right
-vec2(0.0, 0.0)// bottom-left
+        vec2(0.0, 1.0), // top-left
+        vec2(1.0, 1.0), // top-right
+        vec2(1.0, 0.0), // bottom-right
+        vec2(0.0, 0.0)// bottom-left
 );
 
 //we are manually generating the index and vertex data, since its always the same just with offsets and positions
@@ -78,7 +77,7 @@ void main() {
 
 
     //    vec3 cameraRight = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
-    vec3 world_up    = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
+    vec3 world_up = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
 
     vec3 to_camera = normalize(ubo.camera_position.xyz - billboard_data.position.xyz);
 

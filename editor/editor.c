@@ -619,6 +619,7 @@ void editor_mesh_view(Editor* editor)
     madness_ui_window_end();
 }
 
+
 void editor_particle_view(Editor* editor)
 {
     Particle_System* particle_system = editor->asset_system->particle_system;
@@ -628,17 +629,17 @@ void editor_particle_view(Editor* editor)
         Particle_Emitter* emitter = &particle_system->emitters[0];
 
         madness_ui_float(STRING("EMISSION RATE"), &emitter->emission_rate, 1.0f);
-        // emitter->spawn_trigger;
-        // emitter->particle_color;
+        madness_ui_float(STRING("spawn_trigger"), &emitter->spawn_trigger, 1.0f);
+        madness_ui_vec4(STRING("particle_color"), &emitter->particle_color, 1.0f);
         // emitter->particle_velocity;
         // emitter->particle_position;
-        // emitter->particle_lifetime;
-        // emitter->chunk_size;
-        // emitter->chunk_start;
+        madness_ui_float(STRING("particle_lifetime"), &emitter->particle_lifetime, 1.0f);
         // emitter->particles_alive;
         // emitter->particles_spawned_from_chunk;
         // emitter->loop;
         // emitter->is_visible;
+
+
     }
     madness_ui_window_end();
 }

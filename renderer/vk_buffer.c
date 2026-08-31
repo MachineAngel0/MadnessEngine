@@ -77,7 +77,7 @@ void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system,
 
     for (u32 i = 0; i < buffer_system->frame_buffer_current_count; i++)
     {
-        buffer_system->per_frame_buffers->current_offset = 0;
+        buffer_system->per_frame_buffers[i].current_offset = 0;
     }
 
     //TODO:

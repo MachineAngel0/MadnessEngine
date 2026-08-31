@@ -8,7 +8,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 {
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 
-    u64 particle_material_buffer_data_size = MB(16);
+    u64 particle_material_buffer_data_size = sizeof(Material_Spherical_Billboard) * PARTICLE_COUNT;
 
 
     particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create_frame(
@@ -17,10 +17,43 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
         particle_material_buffer_data_size);
 
 
-    particle_renderer->particle_render_data_buffer_handle = vulkan_buffer_create_frame(
+    particle_renderer->particle_pos_x_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        particle_material_buffer_data_size);
+        sizeof(f32) * PARTICLE_COUNT);
+    particle_renderer->particle_pos_y_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+    particle_renderer->particle_pos_z_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+
+
+    particle_renderer->particle_rot_x_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+    particle_renderer->particle_rot_y_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+
+    particle_renderer->particle_scale_x_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+    particle_renderer->particle_scale_y_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(f32) * PARTICLE_COUNT);
+
+
+    particle_renderer->particle_color_buffer_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system,
+        BUFFER_TYPE_STORAGE_GPU,
+        sizeof(vec4) * PARTICLE_COUNT);
 
 
     //default blend for now
@@ -70,8 +103,8 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
             .y = particle->pos_y[i],
             .z = particle->pos_z[i]
         };
-        mat_array[i].rotation = particle->rotation[i];
-        mat_array[i].size = particle->scale[i];
+        mat_array[i].rotation = (vec2s){.x = particle->rot_x[i], .y = particle->rot_y[i]};
+        mat_array[i].size = (vec2s){.x = particle->scale_x[i], .y = particle->scale_y[i]};
         mat_array[i].texture_idx = particle->texture_handle[i].handle;
         mat_array[i].color = particle->color[i];
         // TODO:
@@ -86,9 +119,73 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         mat_array,
         sizeof(Material_Spherical_Billboard) * render_packet->particle_packet.particle_count);
 
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_pos_x_buffer_handle,
+        command_buffer,
+        particle->pos_x,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_pos_y_buffer_handle,
+        command_buffer,
+        particle->pos_y,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_pos_z_buffer_handle,
+        command_buffer,
+        particle->pos_z,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
 
-    Vulkan_Buffer* particle_material_buffer = vulkan_buffer_get_frame(
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_rot_x_buffer_handle,
+        command_buffer,
+        particle->rot_x,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_rot_y_buffer_handle,
+        command_buffer,
+        particle->rot_y,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_scale_x_buffer_handle,
+        command_buffer,
+        particle->scale_x,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_scale_y_buffer_handle,
+        command_buffer,
+        particle->scale_y,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+
+    vulkan_buffer_frame_staging_upload(
+        renderer, particle_render->particle_color_buffer_handle,
+        command_buffer,
+        particle->color,
+        sizeof(f32) * render_packet->particle_packet.particle_count);
+
+
+    Vulkan_Buffer* spherical_material_buffer = vulkan_buffer_get_frame(
         renderer, particle_render->spherical_billboard_material_buffer_handle);
+
+    Vulkan_Buffer* pos_x_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_pos_x_buffer_handle);
+    Vulkan_Buffer* pos_y_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_pos_y_buffer_handle);
+    Vulkan_Buffer* pos_z_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_pos_z_buffer_handle);
+
+    Vulkan_Buffer* rot_x_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_rot_x_buffer_handle);
+    Vulkan_Buffer* rot_y_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_rot_y_buffer_handle);
+
+    Vulkan_Buffer* scale_x_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_scale_x_buffer_handle);
+    Vulkan_Buffer* scale_y_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_scale_y_buffer_handle);
+
+    Vulkan_Buffer* color_buffer = vulkan_buffer_get_frame(
+        renderer, particle_render->particle_color_buffer_handle);
 
     VkBufferMemoryBarrier2 particle_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
@@ -100,14 +197,40 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
-        .buffer = particle_material_buffer->handle,
+        .buffer = spherical_material_buffer->handle,
         .offset = 0,
         .size = VK_WHOLE_SIZE,
     };
 
-    vulkan_command_add_submit_buffer_barrier(command_buffer, particle_barrier);
-    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
 
+
+    particle_barrier.buffer = pos_x_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    particle_barrier.buffer = pos_y_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    particle_barrier.buffer = pos_z_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+
+    particle_barrier.buffer = rot_x_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    particle_barrier.buffer = rot_y_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+
+    particle_barrier.buffer = scale_x_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    particle_barrier.buffer = scale_y_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+
+    particle_barrier.buffer = color_buffer->handle;
+    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+
+
+
+
+    vulkan_command_flush_barriers(command_buffer);
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     scratch_allocator_end(scratch);
 }
@@ -163,5 +286,6 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     vkCmdDraw(command_buffer->handle, 6,
               particle_render->draw_count, 0,
               0);
+
 
 }

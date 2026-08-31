@@ -184,7 +184,9 @@ void dynamic_array_remove_shift_left(Dynamic_Array* array, u32 index);
 void* _dynamic_array_get(Dynamic_Array* array, u32 index);
 void dynamic_array_set(Dynamic_Array* array, void* data, u32 index);
 
-
+/**
+ * @brief: set the num items in the array to 0
+ */
 void dynamic_array_clear(Dynamic_Array* array);
 void dynamic_array_zero(Dynamic_Array* array);
 
