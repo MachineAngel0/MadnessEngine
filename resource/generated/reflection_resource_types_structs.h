@@ -36,6 +36,7 @@ const char* resources_struct_string_list[] = {
 	"Particle_Animation_vec2", 
 	"Particle_Animation_float", 
 	"Particle_Emitter", 
+	"Particle_Effect", 
 	"Madness_Animation", 
 	"Madness_Skinned_Submesh_Instance", 
 	"Madness_Skinned_Mesh_Instance", 
@@ -935,13 +936,31 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "f32",
 			.offset = offsetof(Particle, vel_z)
 		},
+		{
+			.name = "gravity_x",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, gravity_x)
+		},
+		{
+			.name = "gravity_y",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, gravity_y)
+		},
+		{
+			.name = "gravity_z",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle, gravity_z)
+		},
 	};
 
 	 Reflection_Runtime_Struct Particle_Runtime_Struct =
 	{
 		.name = "Particle",
 		.fields = Particle_Fields,
-		.field_count = 15,
+		.field_count = 18,
 		.struct_size = sizeof(Particle)
 	};
 
@@ -1138,16 +1157,58 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Emitter, spawn_trigger)
 		},
 		{
+			.name = "particle_lifetime",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle_Emitter, particle_lifetime)
+		},
+		{
+			.name = "particle_lifetime_variance",
+			.type = REFLECTION_TYPE_F32,
+			.type_name = "f32",
+			.offset = offsetof(Particle_Emitter, particle_lifetime_variance)
+		},
+		{
 			.name = "particle_color",
 			.type = REFLECTION_TYPE_VEC4,
 			.type_name = "vec4s",
 			.offset = offsetof(Particle_Emitter, particle_color)
 		},
 		{
-			.name = "particle_velocity",
+			.name = "scale",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, particle_velocity)
+			.offset = offsetof(Particle_Emitter, scale)
+		},
+		{
+			.name = "scale_variance",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, scale_variance)
+		},
+		{
+			.name = "rotation",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, rotation)
+		},
+		{
+			.name = "velocity",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, velocity)
+		},
+		{
+			.name = "velocity_variance",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, velocity_variance)
+		},
+		{
+			.name = "gravity",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, gravity)
 		},
 		{
 			.name = "particle_position",
@@ -1156,28 +1217,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Emitter, particle_position)
 		},
 		{
-			.name = "particle_lifetime",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle_Emitter, particle_lifetime)
-		},
-		{
 			.name = "material_instance",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Material_Instance",
 			.offset = offsetof(Particle_Emitter, material_instance)
-		},
-		{
-			.name = "infinite",
-			.type = REFLECTION_TYPE_BOOL,
-			.type_name = "bool",
-			.offset = offsetof(Particle_Emitter, infinite)
-		},
-		{
-			.name = "is_visible",
-			.type = REFLECTION_TYPE_BOOL,
-			.type_name = "bool",
-			.offset = offsetof(Particle_Emitter, is_visible)
 		},
 	};
 
@@ -1185,11 +1228,67 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_Emitter",
 		.fields = Particle_Emitter_Fields,
-		.field_count = 9,
+		.field_count = 13,
 		.struct_size = sizeof(Particle_Emitter)
 	};
 
 	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Particle_Effect_Fields[] =
+	{
+		{
+			.name = "emitters",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter",
+			.offset = offsetof(Particle_Effect, emitters)
+		},
+		{
+			.name = "emitter_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Effect, emitter_count)
+		},
+		{
+			.name = "emitters_start",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Effect, emitters_start)
+		},
+		{
+			.name = "emitters_end",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Effect, emitters_end)
+		},
+		{
+			.name = "name",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Particle_Effect, name)
+		},
+		{
+			.name = "infinite",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Particle_Effect, infinite)
+		},
+		{
+			.name = "is_visible",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Particle_Effect, is_visible)
+		},
+	};
+
+	 Reflection_Runtime_Struct Particle_Effect_Runtime_Struct =
+	{
+		.name = "Particle_Effect",
+		.fields = Particle_Effect_Fields,
+		.field_count = 7,
+		.struct_size = sizeof(Particle_Effect)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Particle_Effect_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Animation_Fields[] =
 	{
@@ -2148,6 +2247,30 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Particle_System_Fields[] =
 	{
 		{
+			.name = "particle_effects",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Effect",
+			.offset = offsetof(Particle_System, particle_effects)
+		},
+		{
+			.name = "particle_effects_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, particle_effects_count)
+		},
+		{
+			.name = "particle_effects_count_max",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, particle_effects_count_max)
+		},
+		{
+			.name = "available_particle_effects_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, available_particle_effects_count)
+		},
+		{
 			.name = "emitters",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Particle_Emitter",
@@ -2164,6 +2287,12 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Particle_System, emitter_count_max)
+		},
+		{
+			.name = "available_emitters_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, available_emitters_count)
 		},
 		{
 			.name = "particles",
@@ -2201,7 +2330,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_System",
 		.fields = Particle_System_Fields,
-		.field_count = 8,
+		.field_count = 13,
 		.struct_size = sizeof(Particle_System)
 	};
 

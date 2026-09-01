@@ -630,15 +630,25 @@ void editor_particle_view(Editor* editor)
 
         madness_ui_float(STRING("EMISSION RATE"), &emitter->emission_rate, 1.0f);
         madness_ui_float(STRING("spawn_trigger"), &emitter->spawn_trigger, 1.0f);
-        madness_ui_vec4(STRING("particle_color"), &emitter->particle_color, 1.0f);
-        // emitter->particle_velocity;
-        // emitter->particle_position;
-        madness_ui_float(STRING("particle_lifetime"), &emitter->particle_lifetime, 1.0f);
-        // emitter->particles_alive;
-        // emitter->particles_spawned_from_chunk;
-        // emitter->loop;
-        // emitter->is_visible;
+        madness_ui_float(STRING("particle lifetime"), &emitter->particle_lifetime, 1.0f);
+        madness_ui_float(STRING("particle lifetime variance"), &emitter->particle_lifetime_variance, 1.0f);
 
+        madness_ui_vec4(STRING("particle_color"), &emitter->particle_color, 1.0f);
+
+        madness_ui_vec3(STRING("particle_velocity"), &emitter->velocity, 1.0f);
+        madness_ui_vec3(STRING("velocity_variance"), &emitter->velocity_variance, 1.0f);
+        madness_ui_vec3(STRING("particle gravity"), &emitter->gravity, 1.0f);
+
+        const vec3s origin = GLMS_VEC3_ZERO;
+        const float axis_length = 10.0f;
+
+        const vec3s x_axis = {axis_length, 0.0f, 0.0f};
+        const vec3s y_axis = {0.0f, axis_length, 0.0f};
+        const vec3s z_axis = {0.0f, 0.0f, axis_length};
+
+        debug_draw_line(origin, x_axis, (vec4s){1.0f, 0.0f, 0.0f, 1.0f});
+        debug_draw_line(origin, y_axis, (vec4s){0.0f, 1.0f, 0.0f, 1.0f});
+        debug_draw_line(origin, z_axis, (vec4s){0.0f, 0.0f, 1.0f, 1.0f});
 
     }
     madness_ui_window_end();

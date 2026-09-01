@@ -8,6 +8,7 @@
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 // #define CGLM_FORCE_LEFT_HANDED
 
+//Note: glm is right handed and -Z going towards the screen
 #include <cglm/cglm.h>
 #include <cglm/struct.h>
 

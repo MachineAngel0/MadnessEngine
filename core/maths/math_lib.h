@@ -7,7 +7,7 @@
 
 
 
-
+//outdated:
 //NOTE: Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
 // Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)

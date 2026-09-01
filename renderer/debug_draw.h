@@ -70,9 +70,9 @@ void debug_draw_capsule(const vec3s base, const vec3s tip,
                         float radius, const vec4s color);
 
 
-void debug_system_create_vulkan_shader(Renderer* renderer, Vulkan_Shader_Pipeline* out_pipeline);
 
-void debug_system_upload_and_draw(Renderer* renderer);
+void debug_system_upload_frame_data(Renderer* renderer);
+void debug_system_draw(Renderer* renderer);
 
 
 /* TODO: support these at another time, the ones above are generally more essential

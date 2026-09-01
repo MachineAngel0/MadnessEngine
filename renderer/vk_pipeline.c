@@ -114,10 +114,10 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
-    // rasterizer.cullMode = VK_CULL_MODE_NONE; // temp for debugging
+    // rasterizer.cullMode = VK_CULL_MODE_NONE; // NOTE: temp for debugging
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    // rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
+    // rasterizer.frontFace = VK_FRONT_FALlCE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.lineWidth = 1.0f;
@@ -504,8 +504,8 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     // rasterizer.cullMode = VK_CULL_MODE_NONE; // temp for debugging
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    // rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
+    // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.lineWidth = 1.0f;

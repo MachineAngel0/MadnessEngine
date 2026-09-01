@@ -27,8 +27,10 @@ void camera_init(Camera* out_camera)
     out_camera->projection = glms_mat4_identity();
     out_camera->view= glms_mat4_identity();
 
-    out_camera->pitch = 90.0f;
-    out_camera->yaw = 180.0f;
+    // out_camera->pitch = 90.0f;
+    // out_camera->yaw = 180.0f;
+    out_camera->pitch = 0.0f;
+    out_camera->yaw = 0.0f;
 
     // camera_update_view_matrix(out_camera);
 
@@ -53,6 +55,8 @@ void camera_process_keyboard(Camera* cam, Camera_Movement movement_direction, fl
     // Standard FPS forward vector (left-handed)
     vec3s forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
     forward = glms_vec3_normalize(forward);
+
+
 
     vec3s right = glms_vec3_normalize(glms_vec3_cross(GLMS_YUP, forward ));
 
@@ -83,7 +87,7 @@ void camera_process_keyboard(Camera* cam, Camera_Movement movement_direction, fl
 void camera_process_mouse_movement(Camera* cam, float dt, float x_offset, float y_offset, bool constrain_pitch)
 {
     cam->yaw -= x_offset * cam->rotation_speed * dt;
-    cam->pitch += y_offset * cam->rotation_speed * dt;
+    cam->pitch -= y_offset * cam->rotation_speed * dt;
 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
     if (constrain_pitch)
@@ -91,7 +95,12 @@ void camera_process_mouse_movement(Camera* cam, float dt, float x_offset, float 
         cam->pitch = clamp_float(cam->pitch, -89.0f, 89.0f);
     }
 
-    cam->yaw = clamp_float(cam->yaw, 0.1f, 360.0f);
+    // Don't clamp yaw; wrap it instead if desired.
+    if (cam->yaw >= 360.0f)
+        cam->yaw -= 360.0f;
+
+    if (cam->yaw < 0.0f)
+        cam->yaw += 360.0f;
 
     // DEBUG("PITCH: %f, YAW: %f", cam->pitch, cam->yaw);
 }
@@ -142,14 +151,14 @@ void camera_update(Input_System* input_system, Camera* cam, float dt)
     }
 
 
-    /*if (input_key_released_unique(input_system, KEY_Q))
+    if (input_key_released_unique(KEY_Z))
     {
         camera_change_fov(cam, -10.0f);
     }
-    if (input_key_released_unique(input_system, KEY_E))
+    if (input_key_released_unique(KEY_X))
     {
         camera_change_fov(cam, 10.0f);
-    }*/
+    }
 }
 
 mat4s camera_get_view_matrix(Camera* cam)
@@ -214,13 +223,16 @@ mat4s camera_get_fps_view_matrix(Camera* cam)
 
     // Standard FPS forward vector (left-handed)
     vec3s forward = {cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw};
+
+
     forward = glms_vec3_normalize(forward);
 
-    vec3s world_up = (vec3s){0.0f, 1.0f, 0.0f}; // GLM_YUP cast to vec3s
+
+    // vec3s world_up = (vec3s){0.0f, 1.0f, 0.0f}; // GLM_YUP cast to vec3s
 
     vec3s target = glms_vec3_add(cam->pos, forward);
 
-    return glms_lookat(cam->pos, target, world_up);
+    return glms_lookat(cam->pos, target, GLMS_YUP);
 
 
 }
@@ -228,7 +240,9 @@ mat4s camera_get_fps_view_matrix(Camera* cam)
 
 mat4s camera_get_projection(Camera* cam, const float width, const float height)
 {
-    return glms_perspective(deg_to_rad(cam->fov), (float)(width / height), cam->znear, cam->zfar);
+    mat4s projection =  glms_perspective(deg_to_rad(cam->fov), (float)(width / height), cam->znear, cam->zfar);
+    projection.raw[1][1] *= -1.0f;
+    return projection;
     // float fov = 1.5;
     // return mat4_orthographic(-10 * fov, 10 * fov, -10 * fov, 10 * fov, cam->znear, cam->zfar);
 }

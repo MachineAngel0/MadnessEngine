@@ -13,6 +13,8 @@ void vulkan_default_shader_destroy(Renderer* renderer,
 void vulkan_default_shader_pipeline_bind(Vulkan_Command_Buffer* command_buffer, Vulkan_Shader_Pipeline* pipeline);
 
 
+
+
 bool mesh_pipeline_create(Renderer* renderer, Vulkan_Shader_Pipeline* mesh_indirect_pipeline, vulkan_pipeline_cache*
                           pipeline_cache);
 
@@ -26,6 +28,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
                         vulkan_pipeline_cache* pipeline_cache);
 bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pipeline,
                           vulkan_pipeline_cache* pipeline_cache);
+
+bool debug_system_create_vulkan_shader(Renderer* renderer, Vulkan_Shader_Pipeline* out_pipeline);
 
 
 #endif

@@ -488,6 +488,11 @@ typedef struct Particle
     f32* vel_x;
     f32* vel_y;
     f32* vel_z;
+    f32* gravity_x;
+    f32* gravity_y;
+    f32* gravity_z;
+    // f32* drag;
+
 
 } Particle;
 
@@ -573,26 +578,61 @@ typedef struct Particle_Animation_float
 //start simple, then we can use the complex_version
 typedef struct Particle_Emitter
 {
+    //lifetime
     f32 emission_rate;
     f32 spawn_trigger;
+    f32 particle_lifetime;
+    f32 particle_lifetime_variance;
 
+
+    //properties
     vec4s particle_color;
-    vec3s particle_velocity;
+
+    vec3s scale;
+    vec3s scale_variance;
+    vec3s rotation;
+
+
+    vec3s velocity;
+    vec3s velocity_variance;
+
+    vec3s gravity;
+
+
+    // offset from where the emitter is location in relation to its particle effect, might move to the effects
     vec3s particle_position;
 
-    f32 particle_lifetime;
 
-    Material_Instance* material_instance;
-    Texture_Handle texture_handle; // TODO: temp
 
+    Material_Instance material_instance;
+
+
+
+    // u32 Maximum_Particles; // it would be good to have a limit for many reasons
+    DYNAMIC_ARRAY_TYPE(u32)* particle;
+} Particle_Emitter;
+
+typedef struct Particle_Effect{
+    //the thing that manages the Particle_Emitters and their lifetimes
+
+    //NOTE: for more particle emitter types you can use a union
+
+    //TODO: temp count for testing, switch to a dynamic array later if needed, or just max size them
+    //manage the emitters, when they start and stop
+    Particle_Emitter* emitters[4];
+    u32 emitter_count;
+
+    u32 emitters_start[4];
+    u32 emitters_end[4];
+
+    Transform transform;
+
+    String* name;
 
     bool infinite;
     bool is_visible;
 
-    DYNAMIC_ARRAY_TYPE(u32)* particle;
-} Particle_Emitter;
-
-
+} Particle_Effect;
 
 ///////////////// MESH  //////////////////////
 
@@ -913,15 +953,24 @@ typedef struct Animation_System
 
 typedef struct Particle_System
 {
-    //memory, arena, frame_arena
 
-    //individual particles
-    //animation data
+    //TODO: change the available effects and emitters to dynamic arrays to save on memory
 
-    //vertex/index buffer
+
+    Particle_Effect* particle_effects;
+    u32 particle_effects_count;
+    u32 particle_effects_count_max;
+
+    Particle_Effect** available_particle_effects;
+    u32 available_particle_effects_count;
+
+
     Particle_Emitter* emitters;
     u32 emitter_count;
     u32 emitter_count_max;
+
+    Particle_Emitter** available_emitters;
+    u32 available_emitters_count;
 
     //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
     //NOTE: for multithreading, we can have each thread manage their own particles pools,
@@ -933,8 +982,13 @@ typedef struct Particle_System
     u32 dead_particles_available;
     u32 dead_particles_count;
 
+
+
+
     //TODO: might want to look into ways to use a pool allocator
     Heap_Allocator* heap_allocator;
+
+
 
 } Particle_System;
 

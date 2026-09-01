@@ -300,7 +300,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     ubo.time = platform_get_absolute_time();
     ubo.render_mode = renderer->mode;
 
-    //global indexes
+    //global bda's
     //meshes
     ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->vertex_buffer_handle);
     ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->normal_buffer_handle);
@@ -334,18 +334,25 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
                                        render_packets, graphics_command_buffer);
 
+    debug_system_upload_frame_data(renderer);
+
+
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
-
+    //NOTE: buffer copies not allowed in a render pass
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     transfer_barrier_catch_all(renderer, graphics_command_buffer);
 
 
     // Dynamic state
     VkViewport default_viewport = {
-        0.0f, 0.0f, (f32)renderer->framebuffer_width, (f32)renderer->framebuffer_height, 0.0f, 1.0f
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (f32)renderer->framebuffer_width,
+        .height = (f32)renderer->framebuffer_height,
+        .minDepth = 0.0f,
+        .maxDepth =1.0f,
     };
-
 
     // Scissor
     VkRect2D default_scissor = {
@@ -593,7 +600,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
-    debug_system_upload_and_draw(renderer);
+    debug_system_draw(renderer);
 
 
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);

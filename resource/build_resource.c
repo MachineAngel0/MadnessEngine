@@ -8,6 +8,9 @@
 #include "shader_creation_system.c"
 #include "animation_system.c"
 
+#include "particle_system.c"
+
+
 #include "asset_registry.c"
 #include "asset_serialization.c"
 #include "asset_converter.c"
