@@ -10,6 +10,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_DEBUG,
     EDITOR_UI_STATE_ENGINE_STATS,
     EDITOR_UI_STATE_PARTICLE,
+    EDITOR_UI_STATE_RENDERER,
     EDITOR_UI_STATE_MATERIAL_CREATION,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
     EDITOR_UI_STATE_SCENE,
@@ -55,6 +56,9 @@ typedef struct Editor
     //scene
     Asset_List_Scan* scene_list;
 
+    //particles
+    Asset_List_Scan* particle_effect_list;
+    Asset_List_Scan* particle_emitter_list;
 
 
 } Editor;
@@ -89,6 +93,7 @@ void editor_ui_animation(Editor* editor);
 void editor_material_asset_view(Editor* editor);
 void editor_mesh_view(Editor* editor);
 void editor_particle_view(Editor* editor);
+void editor_render_view(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

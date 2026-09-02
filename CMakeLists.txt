@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.31)
-project(MadnessEngine C)
+project(MadnessEngine C CXX) #cxx so that tracy works
 
 set(CMAKE_C_STANDARD 11) #i like alignas() so its staying as 11, 99 if I really want the portability
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -27,6 +27,8 @@ set(MADNESS_BUILD_TARGETS
 
 
 )
+
+
 
 
 # COMPILER FLAGS #
@@ -98,6 +100,7 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
 
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy)
 
 
 add_executable(Madness_Reflection
@@ -168,12 +171,22 @@ add_executable(MadnessEngine
 
 #libstdc
 
-target_sources(MadnessEngine_renderer PRIVATE
-)
+target_sources(MadnessEngine_renderer PRIVATE)
+
+
+# set options before add_subdirectory
+# available options : TRACY_ENABLE , TRACY_LTO , TRACY_ON_DEMAND , TRACY_NO_BROADCAST , TRACY_NO_CODE_TRANSFER , ...
+#NOTE: these are set within clions toolchain gui
+#option ( TRACY_ENABLE " " ON )
+#option ( TRACY_ON_DEMAND " " ON)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy)
+
+
 
 if (WIN32)
     SET(MADNESS_WIN_LIBS
             Vulkan::Vulkan
+            Tracy::TracyClient
             Xinput
             winmm
             ole32
@@ -186,10 +199,13 @@ endif ()
 if (UNIX)
     SET(MADNESS_UNIX_LIBS
             Vulkan::Vulkan
+            Tracy::TracyClient
             X11
             X11-xcb
             xcb
             m #linux math library
+            libpthread # required for tracy
+            libdl # required for tracy
     )
     foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
         target_link_libraries(${tgt} PRIVATE ${MADNESS_UNIX_LIBS})
@@ -215,6 +231,8 @@ foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
     )
 endforeach ()
 
+set(CMAKE_CXX_FLAGS_PROFILING "${CMAKE_CXX_FLAGS_RELEASE} -PROFILE" CACHE STRING "")
+set(CMAKE_C_FLAGS_PROFILING "${CMAKE_C_FLAGS_RELEASE} -PROFILE" CACHE STRING "")
 
 # pretty sure the above does not work, if you want to check if we are in debug, refer to the examples below
 #ifndef NDEBUG

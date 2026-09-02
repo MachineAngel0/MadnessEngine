@@ -74,6 +74,10 @@ void animation_add_data(Asset_System* asset_system, Madness_Skinned_Mesh* madnes
 
 void animation_system_update(Animation_System* animation_system, float delta_time)
 {
+
+    PROFILE_ZONE(animation_system_update)
+
+
     //update and interpolate the local transformations for the playing animations
     //create the local matrix
     // joint1 =  local parent * local joint
@@ -242,6 +246,10 @@ void animation_system_update(Animation_System* animation_system, float delta_tim
             array_push(animation_system->skinned_matrix_array, &madness_anim->gpu_matrix[final_idx]);
         }
     }
+
+
+    PROFILE_ZONE_END(animation_system_update)
+
 }
 
 

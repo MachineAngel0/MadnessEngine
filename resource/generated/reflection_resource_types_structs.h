@@ -35,6 +35,8 @@ const char* resources_struct_string_list[] = {
 	"Particle_Animation_vec3", 
 	"Particle_Animation_vec2", 
 	"Particle_Animation_float", 
+	"Particle_Emitter_Data", 
+	"Particle_Emitter_Runtime", 
 	"Particle_Emitter", 
 	"Particle_Effect", 
 	"Madness_Animation", 
@@ -207,10 +209,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Material_Handle_Fields[] =
 	{
 		{
-			.name = "buffer_handle",
+			.name = "material_index",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_Handle, buffer_handle)
+			.offset = offsetof(Material_Handle, material_index)
 		},
 	};
 
@@ -1142,85 +1144,137 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Particle_Animation_float_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Particle_Emitter_Fields[] =
+	Reflection_Runtime_Struct_Field Particle_Emitter_Data_Fields[] =
 	{
 		{
 			.name = "emission_rate",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "f32",
-			.offset = offsetof(Particle_Emitter, emission_rate)
+			.offset = offsetof(Particle_Emitter_Data, emission_rate)
 		},
 		{
 			.name = "spawn_trigger",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "f32",
-			.offset = offsetof(Particle_Emitter, spawn_trigger)
+			.offset = offsetof(Particle_Emitter_Data, spawn_trigger)
 		},
 		{
 			.name = "particle_lifetime",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "f32",
-			.offset = offsetof(Particle_Emitter, particle_lifetime)
+			.offset = offsetof(Particle_Emitter_Data, particle_lifetime)
 		},
 		{
 			.name = "particle_lifetime_variance",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "f32",
-			.offset = offsetof(Particle_Emitter, particle_lifetime_variance)
+			.offset = offsetof(Particle_Emitter_Data, particle_lifetime_variance)
 		},
 		{
 			.name = "particle_color",
 			.type = REFLECTION_TYPE_VEC4,
 			.type_name = "vec4s",
-			.offset = offsetof(Particle_Emitter, particle_color)
+			.offset = offsetof(Particle_Emitter_Data, particle_color)
+		},
+		{
+			.name = "position_variance",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter_Data, position_variance)
 		},
 		{
 			.name = "scale",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, scale)
+			.offset = offsetof(Particle_Emitter_Data, scale)
 		},
 		{
 			.name = "scale_variance",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, scale_variance)
+			.offset = offsetof(Particle_Emitter_Data, scale_variance)
 		},
 		{
 			.name = "rotation",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, rotation)
+			.offset = offsetof(Particle_Emitter_Data, rotation)
 		},
 		{
 			.name = "velocity",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, velocity)
+			.offset = offsetof(Particle_Emitter_Data, velocity)
 		},
 		{
 			.name = "velocity_variance",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, velocity_variance)
+			.offset = offsetof(Particle_Emitter_Data, velocity_variance)
 		},
 		{
 			.name = "gravity",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, gravity)
-		},
-		{
-			.name = "particle_position",
-			.type = REFLECTION_TYPE_VEC3,
-			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter, particle_position)
+			.offset = offsetof(Particle_Emitter_Data, gravity)
 		},
 		{
 			.name = "material_instance",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Material_Instance",
-			.offset = offsetof(Particle_Emitter, material_instance)
+			.offset = offsetof(Particle_Emitter_Data, material_instance)
+		},
+	};
+
+	 Reflection_Runtime_Struct Particle_Emitter_Data_Runtime_Struct =
+	{
+		.name = "Particle_Emitter_Data",
+		.fields = Particle_Emitter_Data_Fields,
+		.field_count = 13,
+		.struct_size = sizeof(Particle_Emitter_Data)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Data_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Particle_Emitter_Runtime_Fields[] =
+	{
+		{
+			.name = "material_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Particle_Emitter_Runtime, material_handle)
+		},
+		{
+			.name = "position",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter_Runtime, position)
+		},
+	};
+
+	 Reflection_Runtime_Struct Particle_Emitter_Runtime_Runtime_Struct =
+	{
+		.name = "Particle_Emitter_Runtime",
+		.fields = Particle_Emitter_Runtime_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Particle_Emitter_Runtime)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Runtime_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Particle_Emitter_Fields[] =
+	{
+		{
+			.name = "data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter_Data",
+			.offset = offsetof(Particle_Emitter, data)
+		},
+		{
+			.name = "runtime_data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter_Runtime",
+			.offset = offsetof(Particle_Emitter, runtime_data)
 		},
 	};
 
@@ -1228,7 +1282,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_Emitter",
 		.fields = Particle_Emitter_Fields,
-		.field_count = 13,
+		.field_count = 2,
 		.struct_size = sizeof(Particle_Emitter)
 	};
 
@@ -1261,6 +1315,24 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Effect, emitters_end)
 		},
 		{
+			.name = "effect_current_time",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Effect, effect_current_time)
+		},
+		{
+			.name = "effect_length",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Effect, effect_length)
+		},
+		{
+			.name = "emitter_position",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Effect, emitter_position)
+		},
+		{
 			.name = "name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
@@ -1284,7 +1356,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_Effect",
 		.fields = Particle_Effect_Fields,
-		.field_count = 7,
+		.field_count = 10,
 		.struct_size = sizeof(Particle_Effect)
 	};
 

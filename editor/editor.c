@@ -41,6 +41,9 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
 bool editor_update(Editor* editor)
 {
+    PROFILE_ZONE(editor_update)
+
+
     //do the ui and stuff
     //manage a bunch of ui state
     if (input_key_released_unique(KEY_E))
@@ -61,6 +64,8 @@ bool editor_update(Editor* editor)
     }
 
     editor_ui(editor);
+
+    PROFILE_ZONE_END(editor_update)
 
     return true;
 }
@@ -98,6 +103,16 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
                              "../z_assets_engine/scene");
 
 
+    //scenes
+    editor->particle_effect_list =
+        asset_lists_generate(memory_system,
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/particle/particle_effect");
+    editor->particle_emitter_list =
+        asset_lists_generate(memory_system,
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/particle/particle_emitter");
+
     madness_ui_add_asset_list(editor->texture_list, ASSET_TEXTURE);
     madness_ui_add_asset_list(editor->madness_mesh_list, ASSET_STATIC_MESH);
     madness_ui_add_asset_list(editor->madness_skmesh_list, ASSET_SKINNED_MESH);
@@ -119,6 +134,9 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_DEBUG:
         editor_ui_debug(editor);
+        break;
+    case EDITOR_UI_STATE_RENDERER:
+        editor_render_view(editor);
         break;
     case EDITOR_UI_STATE_SCENE:
         editor_ui_scene(editor);
@@ -561,7 +579,7 @@ void editor_material_asset_view(Editor* editor)
     madness_ui_set_window_pos(600, 200);
 
     static Material_Info material_info;
-    static u8 fuck_you_memory[1024];
+    static u8 fuck_you_memory[512];
     static Material_Info mat_info;
     if (!mat_info.material_name)
     {
@@ -584,13 +602,14 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
 
+        madness_ui_padding("mat padding");
 
         static u32 selected_index;
         if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
                                       material_struct_string_list,
                                       ARRAY_SIZE(material_struct_string_list)))
         {
-            memset(fuck_you_memory, 0, 1024);
+            memset(fuck_you_memory, 0, 512);
         }
 
         Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
@@ -619,37 +638,93 @@ void editor_mesh_view(Editor* editor)
     madness_ui_window_end();
 }
 
+void editor_render_view(Editor* editor)
+{
+    Renderer* renderer = editor->renderer;
+
+    madness_ui_window_begin(STRING("Renderer View"));
+    {
+        madness_ui_check_box(STRING("DEBUG AXIS"), &renderer->draw_debug_axis);
+
+        madness_ui_combo_box_char(STRING("RENDER_MODE"), &renderer->mode, render_mode_enum_string,
+                                  ARRAY_SIZE(render_mode_enum_string));
+    }
+    madness_ui_window_end();
+}
+
 
 void editor_particle_view(Editor* editor)
 {
     Particle_System* particle_system = editor->asset_system->particle_system;
 
+    madness_ui_window_begin(STRING("Particle Creation"));
+    {
+
+    }
+    madness_ui_window_end();
+
+
+
     madness_ui_window_begin(STRING("Particle View"));
     {
         Particle_Emitter* emitter = &particle_system->emitters[0];
 
-        madness_ui_float(STRING("EMISSION RATE"), &emitter->emission_rate, 1.0f);
-        madness_ui_float(STRING("spawn_trigger"), &emitter->spawn_trigger, 1.0f);
-        madness_ui_float(STRING("particle lifetime"), &emitter->particle_lifetime, 1.0f);
-        madness_ui_float(STRING("particle lifetime variance"), &emitter->particle_lifetime_variance, 1.0f);
+        Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
+            editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
+        madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
+                                      &emitter->data, "emitter");
+    }
+    madness_ui_window_end();
 
-        madness_ui_vec4(STRING("particle_color"), &emitter->particle_color, 1.0f);
+    String effect_path;
+    madness_ui_window_begin(STRING("Particle Effects"));
+    {
+        madness_ui_combo_box_string(STRING("selected effect"), &effect_path,
+                                    editor->particle_effect_list->strings,
+                                    editor->particle_effect_list->count);
+    }
+    madness_ui_window_end();
 
-        madness_ui_vec3(STRING("particle_velocity"), &emitter->velocity, 1.0f);
-        madness_ui_vec3(STRING("velocity_variance"), &emitter->velocity_variance, 1.0f);
-        madness_ui_vec3(STRING("particle gravity"), &emitter->gravity, 1.0f);
+    madness_ui_window_begin(STRING("Particle Emitters"));
+    {
+        madness_ui_combo_box_string(STRING("selected emitter"), &effect_path,
+                                    editor->particle_emitter_list->strings,
+                                    editor->particle_emitter_list->count);
+    }
+    madness_ui_window_end();
 
-        const vec3s origin = GLMS_VEC3_ZERO;
-        const float axis_length = 10.0f;
+    madness_ui_window_begin(STRING("emitter material"));
+    {
+        static Material_Info material_info;
+        static u8 fuck_you_memory[1024];
+        static Material_Info mat_info;
+        if (!mat_info.material_name)
+        {
+            mat_info.material_name = STRING_CREATE("0");
+        }
+        if (!mat_info.shader_name)
+        {
+            mat_info.shader_name = STRING_CREATE("0");
+        }
+        Reflection_Runtime_Struct material_info_struct = reflection_registry_get_struct(
+            editor->reflection_registry, TYPE_STRING(Material_Info));
 
-        const vec3s x_axis = {axis_length, 0.0f, 0.0f};
-        const vec3s y_axis = {0.0f, axis_length, 0.0f};
-        const vec3s z_axis = {0.0f, 0.0f, axis_length};
+        madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
 
-        debug_draw_line(origin, x_axis, (vec4s){1.0f, 0.0f, 0.0f, 1.0f});
-        debug_draw_line(origin, y_axis, (vec4s){0.0f, 1.0f, 0.0f, 1.0f});
-        debug_draw_line(origin, z_axis, (vec4s){0.0f, 0.0f, 1.0f, 1.0f});
+        madness_ui_padding("mat padding");
 
+        static u32 selected_index;
+        if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
+                                      material_struct_string_list,
+                                      ARRAY_SIZE(material_struct_string_list)))
+        {
+            memset(fuck_you_memory, 0, 1024);
+        }
+
+        Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
+            material_struct_string_list[selected_index]);
+
+        madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
     }
     madness_ui_window_end();
 }

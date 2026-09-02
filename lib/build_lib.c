@@ -18,3 +18,6 @@
 #include "ufbx/ufbx.h"
 #include "ufbx/ufbx.c"
 
+
+
+#include "tracy_lib/tracy/public/tracy/TracyC.h"

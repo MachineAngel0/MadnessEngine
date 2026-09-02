@@ -75,6 +75,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     camera_init(&renderer->main_camera);
     renderer->is_init = false;
+    renderer->draw_debug_axis = true;
     // vulkan_context vulkan_context;
 
     //get the size for the default window from the app config
@@ -211,6 +212,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packets)
 {
+    PROFILE_ZONE(renderer_update)
+
     MASSERT(renderer);
 
     //NOTE: only duplicate resources which are uploaded from the cpu to the gpu, not anything that lives on the gpu like textures
@@ -252,6 +255,22 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     }
 
     allocator_clear(&renderer->frame_allocator);
+
+    //
+    if (renderer->draw_debug_axis && app_is_debug_build())
+    {
+        const vec3s origin = GLMS_VEC3_ZERO;
+        const float axis_length = 10.0f;
+
+        const vec3s x_axis = {axis_length, 0.0f, 0.0f};
+        const vec3s y_axis = {0.0f, axis_length, 0.0f};
+        const vec3s z_axis = {0.0f, 0.0f, axis_length};
+
+        debug_draw_line(origin, x_axis, (vec4s){1.0f, 0.0f, 0.0f, 1.0f});
+        debug_draw_line(origin, y_axis, (vec4s){0.0f, 1.0f, 0.0f, 1.0f});
+        debug_draw_line(origin, z_axis, (vec4s){0.0f, 0.0f, 1.0f, 1.0f});
+    }
+
 
 
     // Begin recording commands.
@@ -658,6 +677,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Increment (and loop) the frame index.
     renderer->current_frame = (renderer->current_frame + 1) % renderer->max_frames_in_flight;
+
+    PROFILE_ZONE_END(renderer_update)
+
 }
 
 

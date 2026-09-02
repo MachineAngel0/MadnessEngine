@@ -38,6 +38,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 #ifdef RELEASE_BUILD
     DEBUG("RELEASE MODE")
 #endif
+#ifdef TRACY_ENABLE
+    DEBUG("TRACY MODE")
+#endif
 
 
     Platform_Config platform_config;
@@ -187,6 +190,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     while (application_core->is_running)
     {
         clock_update_frame_start(&application_core->clock);
+        PROFILE_FRAME();
+
         // clock_print_info(&application_core->clock);
 
         input_update();

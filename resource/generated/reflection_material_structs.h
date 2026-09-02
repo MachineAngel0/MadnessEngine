@@ -8,6 +8,7 @@ const char* material_struct_string_list[] = {
 	"Material_Black_Hole", 
 	"Material_Flat_Color", 
 	"Material_Spherical_Billboard", 
+	"Material_Spherical_Billboard_GPU", 
 };
 
 void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
@@ -321,5 +322,49 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Spherical_Billboard_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Material_Spherical_Billboard_GPU_Fields[] =
+	{
+		{
+			.name = "point",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Material_Spherical_Billboard_GPU, point)
+		},
+		{
+			.name = "texture_idx",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
+			.offset = offsetof(Material_Spherical_Billboard_GPU, texture_idx)
+		},
+		{
+			.name = "size",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Material_Spherical_Billboard_GPU, size)
+		},
+		{
+			.name = "rotation",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Material_Spherical_Billboard_GPU, rotation)
+		},
+		{
+			.name = "color",
+			.type = REFLECTION_TYPE_VEC4,
+			.type_name = "vec4s",
+			.offset = offsetof(Material_Spherical_Billboard_GPU, color)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Spherical_Billboard_GPU_Runtime_Struct =
+	{
+		.name = "Material_Spherical_Billboard_GPU",
+		.fields = Material_Spherical_Billboard_GPU_Fields,
+		.field_count = 5,
+		.struct_size = sizeof(Material_Spherical_Billboard_GPU)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Spherical_Billboard_GPU_Runtime_Struct);
 
 }

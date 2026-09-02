@@ -232,6 +232,10 @@ void debug_system_upload_frame_data(Renderer* renderer)
         );
     }*/
 
+    //TODO: create a bool flag for this on the rneder, and a ui for the renderer options in general
+    //generally want to do this so that we can see our directions
+
+
     if (dynamic_array_is_empty(debug_draw_system.debug_lines))
     {
         return;

@@ -36,6 +36,7 @@ void shader_system_shutdown(Shader_System* system)
 
 void shader_system_update(Renderer* renderer, Shader_System* shader_system, Render_Packet* render_packet)
 {
+    //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
     //TODO: we should call this at start up once
     for (int i = 0; i < render_packet->draw_3d_data_packet.material_batch_count; ++i)
     {
@@ -47,6 +48,13 @@ void shader_system_update(Renderer* renderer, Shader_System* shader_system, Rend
         shader_system_shader_batch_create(renderer, shader_system,
                                           &render_packet->draw_3d_data_packet.material_batch[i]);
     }
+
+
+
+
+
+
+
 
 }
 

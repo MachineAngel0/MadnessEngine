@@ -135,7 +135,7 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
 
     //give out the handle and add to our batch
     out_handle->material_id = material_batch->material_key;
-    out_handle->buffer_handle = material_batch->material_data->num_items;
+    out_handle->material_index = material_batch->material_data->num_items;
     dynamic_array_push(material_batch->material_data, material_data);
     return true;
 }
@@ -225,7 +225,7 @@ bool material_system_change_material_param(Asset_System* asset_system, Material_
     {
         if (batch->material_asset->material_gpu_definition->name_hashes[i] == hash_name)
         {
-            void* mat_data = _dynamic_array_get(batch->material_data, material_handle.buffer_handle);
+            void* mat_data = _dynamic_array_get(batch->material_data, material_handle.material_index);
             memcpy((u8*)mat_data + batch->material_asset->material_gpu_definition->field_offsets[i], new_data,
                    reflection_type_get_size(*batch->material_asset->material_gpu_definition->types));
             return true;

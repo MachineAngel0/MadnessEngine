@@ -143,6 +143,9 @@ void platform_shutdown(Platform_State* plat_state)
 
 bool platform_pump_messages(Platform_State* plat_state)
 {
+    PROFILE_ZONE(WIN32_PLATFORM)
+
+
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE))
     {
@@ -150,7 +153,9 @@ bool platform_pump_messages(Platform_State* plat_state)
         DispatchMessageA(&message);
     }
 
-    return TRUE;
+    PROFILE_ZONE_END(WIN32_PLATFORM)
+
+    return true;
 }
 
 

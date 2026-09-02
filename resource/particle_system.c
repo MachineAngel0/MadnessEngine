@@ -1,5 +1,6 @@
 ﻿#include "../resource/particle_system.h"
 #include "asset_system.h"
+#include "tracy/TracyC.h"
 
 Particle_System* particle_system_init(Asset_System* resource_system, Memory_System* memory_system)
 {
@@ -99,8 +100,16 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
 
 
     //Temp:
-    ps->emitter_count = 1;
-    particle_system_emitter_spawn(ps, &ps->emitters[0]);
+    // TYPE_STRING()
+    Particle_Emitter* emitter = particle_emitter_acquire(ps, STRING("Material_Spherical_Billboard"));
+    emitter->data.emission_rate = 1;
+    emitter->data.particle_lifetime = 8.0f;
+    emitter->data.gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
+    emitter->data.particle_color = (vec4s){.x = 0.0f, .y = 1.f, .z = 0.0f, .w = 1.0f};
+
+    emitter->runtime_data.particle = dynamic_array_create(u32, 256, ps->heap_allocator);
+
+
 
 
     return ps;
@@ -172,13 +181,22 @@ void particle_update(Particle_System* ps, float dt)
 
 void particle_system_update(Particle_System* ps, float dt)
 {
+    PROFILE_ZONE(particle_system_update);
+
+    PROFILE_ZONE(particle_update_emitter);
     for (u32 i = 0; i < ps->emitter_count; i++)
     {
         particle_emitter_update(ps, &ps->emitters[i], dt);
     }
+    PROFILE_ZONE_END(particle_update_emitter);
 
-
+    PROFILE_ZONE(particle_update);
     particle_update(ps, dt);
+    PROFILE_ZONE_END(particle_update);
+
+    PROFILE_ZONE_END(particle_system_update);
+
+
 }
 
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps)
@@ -191,7 +209,7 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
     };
 }
 
-Particle_Emitter* particle_emitter_acquire(Particle_System* ps)
+Particle_Emitter* particle_emitter_acquire(Particle_System* ps, String material_name)
 {
     Particle_Emitter* particle_emitter = NULL;
     if (ps->emitter_count < ps->emitter_count_max)
@@ -206,7 +224,6 @@ Particle_Emitter* particle_emitter_acquire(Particle_System* ps)
         }
     }
 
-
     if (!particle_emitter)
     {
         FATAL("NO PARTICLE EFFECTS TO GIVE OUT")
@@ -220,37 +237,30 @@ void particle_emitter_release(Particle_System* ps, Particle_Emitter* emitter)
     ps->available_emitters[ps->available_emitters_count] = emitter;
     ps->available_emitters_count++;
 }
-void particle_system_emitter_spawn(Particle_System* ps, Particle_Emitter* emitter)
-{
-    emitter->emission_rate = 1;
-    emitter->particle_lifetime = 8.0f;
-    emitter->particle = dynamic_array_create(u32, 256, ps->heap_allocator);
-    emitter->gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
-    emitter->particle_color = (vec4s){.x = 0.0f, .y = 1.f, .z = 0.0f, .w = 1.0f};
-}
+
 
 void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, float dt)
 {
     //remove any dead particles
-    for (u32 emitter_particle_index = 0; emitter_particle_index < emitter->particle->num_items; emitter_particle_index
+    for (u32 emitter_particle_index = 0; emitter_particle_index < emitter->runtime_data.particle->num_items; emitter_particle_index
          ++)
     {
-        u32 particle_index = dynamic_array_get(emitter->particle, u32, emitter_particle_index);
+        u32 particle_index = dynamic_array_get(emitter->runtime_data.particle, u32, emitter_particle_index);
         if (particle_system_is_dead(ps, particle_index))
         {
             particle_system_free_particle(ps, particle_index);
-            dynamic_array_remove_swap(emitter->particle, emitter_particle_index);
+            dynamic_array_remove_swap(emitter->runtime_data.particle, emitter_particle_index);
             emitter_particle_index--;
         }
     }
 
     //see if we need to spawn any new particles
-    emitter->spawn_trigger += emitter->emission_rate * dt;
-    if (emitter->spawn_trigger >= 1.0f)
+    emitter->data.spawn_trigger += emitter->data.emission_rate * dt;
+    if (emitter->data.spawn_trigger >= 1.0f)
     {
         //see how many we need to spawn
-        u32 spawn_amount = (u32)floorf(emitter->spawn_trigger / 1.0f);
-        emitter->spawn_trigger -= spawn_amount;
+        u32 spawn_amount = (u32)floorf(emitter->data.spawn_trigger / 1.0f);
+        emitter->data.spawn_trigger -= spawn_amount;
 
 
         //grab a new particle, if available, and initialize it
@@ -263,27 +273,27 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
                 break;
             }
 
-            dynamic_array_push(emitter->particle, &particle_index);
+            dynamic_array_push(emitter->runtime_data.particle, &particle_index);
 
-            ps->particles.life_left[particle_index] = emitter->particle_lifetime +
-                rand_range_f(-emitter->particle_lifetime_variance, emitter->particle_lifetime_variance);
-            ps->particles.vel_x[particle_index] = emitter->velocity.x + rand_range_f(
-                -emitter->velocity_variance.x, emitter->velocity_variance.x);
-            ps->particles.vel_y[particle_index] = emitter->velocity.y + rand_range_f(
-                -emitter->velocity_variance.y, emitter->velocity_variance.y);
-            ps->particles.vel_z[particle_index] = emitter->velocity.z + rand_range_f(
-                -emitter->velocity_variance.z, emitter->velocity_variance.z);
+            ps->particles.life_left[particle_index] = emitter->data.particle_lifetime +
+                rand_range_f(-emitter->data.particle_lifetime_variance, emitter->data.particle_lifetime_variance);
+            ps->particles.vel_x[particle_index] = emitter->data.velocity.x + rand_range_f(
+                -emitter->data.velocity_variance.x, emitter->data.velocity_variance.x);
+            ps->particles.vel_y[particle_index] = emitter->data.velocity.y + rand_range_f(
+                -emitter->data.velocity_variance.y, emitter->data.velocity_variance.y);
+            ps->particles.vel_z[particle_index] = emitter->data.velocity.z + rand_range_f(
+                -emitter->data.velocity_variance.z, emitter->data.velocity_variance.z);
 
 
-            ps->particles.pos_x[particle_index] = emitter->particle_position.x;
-            ps->particles.pos_y[particle_index] = emitter->particle_position.y;
-            ps->particles.pos_z[particle_index] = emitter->particle_position.z;
+            ps->particles.pos_x[particle_index] = emitter->runtime_data.position.x;
+            ps->particles.pos_y[particle_index] = emitter->runtime_data.position.y;
+            ps->particles.pos_z[particle_index] = emitter->runtime_data.position.z;
 
-            ps->particles.color[particle_index] = emitter->particle_color;
+            ps->particles.color[particle_index] = emitter->data.particle_color;
 
-            ps->particles.gravity_x[particle_index] = emitter->gravity.x;
-            ps->particles.gravity_y[particle_index] = emitter->gravity.y;
-            ps->particles.gravity_z[particle_index] = emitter->gravity.z;
+            ps->particles.gravity_x[particle_index] = emitter->data.gravity.x;
+            ps->particles.gravity_y[particle_index] = emitter->data.gravity.y;
+            ps->particles.gravity_z[particle_index] = emitter->data.gravity.z;
         }
     }
 

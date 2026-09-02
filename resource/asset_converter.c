@@ -5,6 +5,7 @@
 #include "stb_image.h"
 #include "stb_truetype.h"
 #include "asset_registry.h"
+#include "material_system.h"
 #include "math_lib.h"
 
 bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
@@ -1163,6 +1164,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     return true;
 }
 
+
+
 bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
                                     MADNESS_UUID* out_uuid)
 {
@@ -1187,39 +1190,8 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* m
 
 
     // do a conversion of any texture types to u32 for bindless
-    asset.material_gpu_definition = allocator_alloc(asset_system->frame_allocator, sizeof(Reflection_Runtime_Struct));
-    asset.material_gpu_definition->field_count = reflection_material.field_count;
-    asset.material_gpu_definition->name_hashes = allocator_alloc(asset_system->frame_allocator,
-                                                                 sizeof(u64) *
-                                                                 reflection_material.field_count);
-    asset.material_gpu_definition->field_offsets = allocator_alloc(asset_system->frame_allocator,
-                                                                   sizeof(u32) *
-                                                                   reflection_material.field_count);
-    asset.material_gpu_definition->types = allocator_alloc(asset_system->frame_allocator,
-                                                           sizeof(Reflection_Type) *
-                                                           reflection_material.field_count);
-
-    asset.material_gpu_definition->struct_size = 0;
-
-    u32 offset = 0;
-    for (u32 i = 0; i < reflection_material.field_count; i++)
-    {
-        asset.material_gpu_definition->name_hashes[i] =
-            c_string_hash_u64(reflection_material.fields[i].name);
-
-        if (reflection_material.fields[i].type == REFLECTION_TYPE_UUID)
-        {
-            asset.material_gpu_definition->types[i] = REFLECTION_TYPE_U32;
-        }
-        else
-        {
-            asset.material_gpu_definition->types[i] = reflection_material.fields[i].type;
-        }
-        asset.material_gpu_definition->field_offsets[i] = offset;
-        asset.material_gpu_definition->struct_size += reflection_type_get_size(
-            asset.material_gpu_definition->types[i]);
-        offset += reflection_type_get_size(asset.material_gpu_definition->types[i]);
-    }
+    // asset.material_gpu_definition = alloc(); // TODO:
+    material_create_gpu_definition(asset_system, reflection_material, asset.material_gpu_definition);
 
 
     //write out the file
@@ -1257,9 +1229,6 @@ bool asset_converter_material_instance_from_material_asset(Asset_System* asset_s
                                                            Material_Info* material_info,
                                                            const char* asset_name)
 {
-    Reflection_Runtime_Struct runtime_material_data = reflection_registry_get_struct(
-        asset_system->global_reflection_registry,
-        string_to_c_string_allocator(material_info->material_name, asset_system->frame_allocator));
 
     MASSERT(mat_inst->material_asset_uuid.high != 0);
     MASSERT(mat_inst->material_asset_uuid.low != 0);
@@ -1274,8 +1243,6 @@ bool asset_converter_material_instance_from_material_asset(Asset_System* asset_s
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
 
     const char* output_path = string_builder_to_c_string(str_builder);
-
-
 
 
 

@@ -6,9 +6,6 @@
 #define SHADER_SYSTEM_CAPACITY 100lu
 #include "vulkan_struct_types.h"
 
-//shader is the pipeline and descriptors ubos/ssbos needed
-//material is all the param data
-//texture is the physical image
 
 
 Shader_System* shader_system_init(Renderer* renderer);

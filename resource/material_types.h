@@ -92,4 +92,15 @@ typedef struct Material_Spherical_Billboard
 } Material_Spherical_Billboard;
 
 
+typedef struct Material_Spherical_Billboard_GPU
+{
+    vec3s point;
+    Path_String texture_idx;
+    vec2s size; //also a radius
+    vec2s rotation;
+    vec4s color; //tint basically
+    // vec2s tex_offset;
+    // vec2s tex_size;
+} Material_Spherical_Billboard_GPU;
+
 #endif //MATERIAL_TYPES_H

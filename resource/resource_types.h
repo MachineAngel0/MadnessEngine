@@ -157,7 +157,7 @@ typedef u64 Material_ID;
 typedef struct Material_Handle
 {
     Material_ID material_id;
-    u32 buffer_handle;
+    u32 material_index;
 } Material_Handle;
 
 typedef struct Madness_Mesh_Handle
@@ -492,8 +492,6 @@ typedef struct Particle
     f32* gravity_y;
     f32* gravity_z;
     // f32* drag;
-
-
 } Particle;
 
 typedef struct Particle_Mesh
@@ -576,7 +574,8 @@ typedef struct Particle_Animation_float
 } Particle_Emitter;*/
 
 //start simple, then we can use the complex_version
-typedef struct Particle_Emitter
+
+typedef struct Particle_Emitter_Data
 {
     //lifetime
     f32 emission_rate;
@@ -588,6 +587,9 @@ typedef struct Particle_Emitter
     //properties
     vec4s particle_color;
 
+    vec3s position_variance;
+
+
     vec3s scale;
     vec3s scale_variance;
     vec3s rotation;
@@ -598,26 +600,37 @@ typedef struct Particle_Emitter
 
     vec3s gravity;
 
-
-    // offset from where the emitter is location in relation to its particle effect, might move to the effects
-    vec3s particle_position;
-
-
-
     Material_Instance material_instance;
+} Particle_Emitter_Data;
 
+typedef struct Particle_Emitter_Runtime
+{
+    //runtime data
+    Material_Handle material_handle;
+
+    vec3s position; // given to us by the effect
 
 
     // u32 Maximum_Particles; // it would be good to have a limit for many reasons
     DYNAMIC_ARRAY_TYPE(u32)* particle;
+} Particle_Emitter_Runtime;
+
+typedef struct Particle_Emitter
+{
+    //serializable data
+    Particle_Emitter_Data data;
+    //runtime data
+    Particle_Emitter_Runtime runtime_data;
 } Particle_Emitter;
 
-typedef struct Particle_Effect{
+typedef struct Particle_Effect
+{
     //the thing that manages the Particle_Emitters and their lifetimes
 
     //NOTE: for more particle emitter types you can use a union
 
-    //TODO: temp count for testing, switch to a dynamic array later if needed, or just max size them
+    //TODO: temp count for testing, switch to a dynamic array later if needed,
+    // or just max size them to something reasonable like 8
     //manage the emitters, when they start and stop
     Particle_Emitter* emitters[4];
     u32 emitter_count;
@@ -625,13 +638,19 @@ typedef struct Particle_Effect{
     u32 emitters_start[4];
     u32 emitters_end[4];
 
+    u32 effect_current_time;
+    u32 effect_length;
+
     Transform transform;
+
+    // emitter location offset in relation to the particle effects base tramsform
+    vec3s emitter_position[4];
+
 
     String* name;
 
     bool infinite;
     bool is_visible;
-
 } Particle_Effect;
 
 ///////////////// MESH  //////////////////////
@@ -953,7 +972,6 @@ typedef struct Animation_System
 
 typedef struct Particle_System
 {
-
     //TODO: change the available effects and emitters to dynamic arrays to save on memory
 
 
@@ -983,13 +1001,8 @@ typedef struct Particle_System
     u32 dead_particles_count;
 
 
-
-
     //TODO: might want to look into ways to use a pool allocator
     Heap_Allocator* heap_allocator;
-
-
-
 } Particle_System;
 
 

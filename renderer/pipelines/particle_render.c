@@ -238,6 +238,14 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,
                                   Vulkan_Command_Buffer* command_buffer)
 {
+
+
+    // particle_ssbo[]
+    // material_ssbo[] - material2_ssbo[]
+    // e1|e2 (mat instance) - e1 (mat instance 2)
+
+
+
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             particle_render->spherical_billboard_pipeline.pipeline_layout, 0, 1,

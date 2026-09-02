@@ -40,6 +40,9 @@ bool madness_pulse_game_shutdown(Madness_Pulse_Game* game, Memory_System* memory
 
 bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 {
+    PROFILE_ZONE(GAME)
+
+
     allocator_clear(&game->frame_allocator);
 
     //TODO: DEBUG CODE
@@ -136,6 +139,10 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     case Game_State_Enum_MAX:
         break;
     }
+
+
+
+    PROFILE_ZONE_END(GAME)
 
     return true;
 }

@@ -138,6 +138,9 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
     // if (input_was_key_released(madness_ui->input_system_reference, KEY_LCONTROL) && input_was_key_released(madness_ui->input_system_reference, KEY_S))
     // {
 
+    PROFILE_ZONE(madness_ui_begin)
+
+
     if (madness_ui_frame_count_for_serialization++ >= 60)
     {
         madness_ui_serialize_windows();
@@ -234,11 +237,15 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
     madness_ui->nuke_pop_up = false;
     array_clear(madness_ui->pop_up_frame_state);
+
+    PROFILE_ZONE_END(madness_ui_begin)
+
 }
 
 
 void madness_ui_end(void)
 {
+    PROFILE_ZONE(madness_ui_end)
 
     /*
     if (texture_system_is_loaded(madness_ui->asset_system->texture_system, madness_ui->default_font_handle))
@@ -327,6 +334,9 @@ void madness_ui_end(void)
     input_get_mouse_pos(&madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
     //update mouse delta/change
     input_get_mouse_change(&madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
+
+    PROFILE_ZONE_END(madness_ui_end)
+
 }
 
 UI_Render_Packet madness_ui_get_ui_render_data(void)

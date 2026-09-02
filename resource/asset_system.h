@@ -8,7 +8,6 @@
 #include "resource_types.h"
 
 
-
 //TODO/GOALS:
 // placing or updating a file in the asset directory should (re)generate the asset,
 // I should be able to edit the text format and have it automatically change within the engine
@@ -46,7 +45,7 @@ typedef struct Asset_Load_Handle
     //we use the type to get the type of handle we were given back
     Asset_Type type;
     void* handle;
-}Asset_Load_Handle;
+} Asset_Load_Handle;
 
 Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry);
 
@@ -56,7 +55,6 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 bool asset_system_update_and_create_render_packet(Asset_System* asset_system);
 
 MAPI void render_packet_clear(Render_Packet* renderer_packets);
-
 
 
 //ASSET MANAGER
@@ -87,8 +85,11 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
 
 
-
-
+bool material_asset_create(Asset_System* asset_system, Material_Info* material_info)
+{
+    MADNESS_UUID discard;
+    asset_converter_material_asset(asset_system, material_info, &discard);
+}
 
 
 //Data format stuff

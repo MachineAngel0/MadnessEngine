@@ -104,4 +104,11 @@ typedef enum Render_Mode
 } Render_Mode;
 
 
+const char* render_mode_enum_string[RENDER_MODE_MAX] = {
+    [RENDER_MODE_NONE] = "RENDER_MODE_NONE",
+    [RENDER_MODE_NORMAL] = "RENDER_MODE_NORMAL",
+    [RENDER_MODE_LIGHTING] = "RENDER_MODE_LIGHTING",
+};
+
+
 #endif //VULKAN_ENUM_TYPES_H

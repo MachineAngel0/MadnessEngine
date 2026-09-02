@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "event.h"
 #include "platform.h"
+#include "tracy/TracyC.h"
 
 Input_System* input_init(Memory_System* memory_system)
 {
@@ -24,6 +25,8 @@ void input_shutdown(void)
 
 void input_update(void)
 {
+    PROFILE_ZONE(input_update)
+
     MASSERT(input_system);
     // Copy current states to previous states.
     memcpy(&input_system->keyboard_previous, &input_system->keyboard_current, sizeof(keyboard_state));
@@ -32,6 +35,9 @@ void input_update(void)
     //NOTE: as this only records the delta, we have no way of knowing if nothing happened, hence we set it to 0
     //and only check the previous frame for how the wheel moved
     input_system->mouse_current.mouse_wheel_delta = 0;
+
+    PROFILE_ZONE_END(input_update)
+
 }
 
 

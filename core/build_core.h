@@ -15,6 +15,7 @@
 #include "../core/color_asci.h"
 #include "../core/logger.h"
 #include "../core/asserts.h"
+#include "../core/profiler.h"
 
 
 //CORE - Allocators

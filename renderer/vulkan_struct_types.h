@@ -434,6 +434,14 @@ typedef struct Shader_System
     Vulkan_Shader_Batch skinned_batch[100];
     u32 skinned_batch_count;
 
+    //this gives out material data as neccessary
+    Buffer_Handle particle_material_ssbo;
+
+    Vulkan_Shader_Batch particle_batch[100];
+    u32 particle_batch_count;
+
+
+
 
     //the shader name is the lookup
     //we want the pointer to the shader batch,
@@ -1002,6 +1010,8 @@ typedef struct Renderer
 
     Camera main_camera;
     Render_Mode mode;
+    bool draw_debug_axis;
+
 
     Allocator allocator; // total memory for the entire renderer
     Allocator frame_allocator;
