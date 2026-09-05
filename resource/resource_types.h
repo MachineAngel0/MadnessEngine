@@ -41,6 +41,11 @@
 #define ENGINE_MATERIAL_PATH "../z_assets_engine/material/"
 #define ENGINE_MATERIAL_INSTANCE_PATH "../z_assets_engine/material_instance/"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
+#define ENGINE_PARTICLE_PATH "../z_assets_engine/particle/"
+#define ENGINE_PARTICLE_EFFECT_PATH "../z_assets_engine/particle/particle_effect"
+#define ENGINE_PARTICLE_EMITTER_PATH "../z_assets_engine/particle/particle_emitter"
+
+
 
 #define ENGINE_TEXTURE_EXTENSION ".mtex"
 #define ENGINE_FONTS_EXTENSION ".mfont"
@@ -49,6 +54,10 @@
 #define ENGINE_MATERIAL_EXTENSION ".mmat"
 #define ENGINE_MATERIAL_INSTANCE_EXTENSION ".mmi"
 #define ENGINE_AUDIO_EXTENSION ".maudio"
+#define ENGINE_PARTICLE_EFFECT_EXTENSION ".mparticle"
+#define ENGINE_PARTICLE_EMITTER_EXTENSION ".memitter"
+
+
 
 
 #define MAX_ASSETS_STRINGS 5000u
@@ -99,7 +108,8 @@ typedef enum Asset_Type
     ASSET_MATERIAL,
     ASSET_MATERIAL_INSTANCE,
     ASSET_SCENE,
-    // RESOURCE_PARTICLE,
+    ASSET_PARTICLE_EFFECT,
+    ASSET_PARTICLE_EMITTER,
 
     ASSET_TYPE_MAX,
 } Asset_Type;
@@ -114,6 +124,9 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_MATERIAL] = "ASSET_MATERIAL",
     [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
     [ASSET_SCENE] = "ASSET_SCENE",
+    [ASSET_PARTICLE_EFFECT] = "ASSET_PARTICLE_EFFECT",
+    [ASSET_PARTICLE_EMITTER] = "ASSET_PARTICLE_EMITTER",
+
 };
 
 
@@ -159,6 +172,13 @@ typedef struct Material_Handle
     Material_ID material_id;
     u32 material_index;
 } Material_Handle;
+
+typedef struct Material_Asset_Handle
+{
+    u32 handle;
+} Material_Asset_Handle;
+
+
 
 typedef struct Madness_Mesh_Handle
 {
@@ -413,7 +433,7 @@ typedef struct Material_Info
     Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
 
-    Material_ID material_id;
+    Material_ID material_key;
 } Material_Info;
 
 typedef struct Material_GPU_Definition
@@ -430,16 +450,42 @@ typedef struct Material_Asset
 {
     //information about the material structure, think of it like the definition of a material/shader
     Material_Info material_info;
-    Reflection_Runtime_Struct* reflection_material_data;
-    Material_GPU_Definition* material_gpu_definition;
+    MADNESS_UUID uuid;
+    Reflection_Runtime_Struct reflection_material_data;
+    Material_GPU_Definition material_gpu_definition;
 } Material_Asset;
+
+
+
+
+typedef struct Material_Instance_Data
+{
+    MADNESS_UUID material_asset_uuid;
+    MADNESS_UUID material_instance_uuid;
+
+    // NOTE: the material data is the serialized data containing the UUID for textures
+    u64 data_size;
+    void* material_data;
+}Material_Instance_Data;
+
+typedef struct Material_Instance_Runtime
+{
+    Material_Asset_Handle handle;
+    Material_Asset* material_asset;
+
+}Material_Instance_Runtime;
 
 typedef struct Material_Instance
 {
-    // NOTE: the material data is the serialized data containing the UUID for textures
     MADNESS_UUID material_asset_uuid;
+    MADNESS_UUID material_instance_uuid;
+
+    // NOTE: the material data is the serialized data containing the UUID for textures
     u64 data_size;
     void* material_data;
+
+    String* material_name;
+    String* name;
 } Material_Instance;
 
 
@@ -600,7 +646,7 @@ typedef struct Particle_Emitter_Data
 
     vec3s gravity;
 
-    Material_Instance material_instance;
+
 } Particle_Emitter_Data;
 
 typedef struct Particle_Emitter_Runtime
@@ -619,6 +665,9 @@ typedef struct Particle_Emitter
 {
     //serializable data
     Particle_Emitter_Data data;
+    String* name;
+    Material_Instance material_instance;
+
     //runtime data
     Particle_Emitter_Runtime runtime_data;
 } Particle_Emitter;
@@ -632,8 +681,11 @@ typedef struct Particle_Effect
     //TODO: temp count for testing, switch to a dynamic array later if needed,
     // or just max size them to something reasonable like 8
     //manage the emitters, when they start and stop
-    Particle_Emitter* emitters[4];
+    MADNESS_UUID emmiter_uuid[4];
     u32 emitter_count;
+
+
+
 
     u32 emitters_start[4];
     u32 emitters_end[4];
@@ -649,8 +701,14 @@ typedef struct Particle_Effect
 
     String* name;
 
+    //runtime data
+    Particle_Emitter* emitters[4];
+
     bool infinite;
     bool is_visible;
+
+
+
 } Particle_Effect;
 
 ///////////////// MESH  //////////////////////
@@ -846,9 +904,15 @@ typedef struct Material_System
     Material_Batch material_batch[100];
     u32 material_batch_count;
 
+    Material_Asset material_asset[100];
+    u32 material_asset_count;
+
 
     Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
     u32 material_madness_asset_count;
+
+    MADNESS_UUID default_material_uuid;
+
 } Material_System;
 
 
@@ -875,6 +939,7 @@ typedef struct Texture_System
 {
     //handle 0 is always the default texture, it should never be allowed to be modified
     Texture_Handle default_texture_handle;
+    MADNESS_UUID default_texture_uuid;
 
     //Textures
     Madness_Texture textures[MAX_TEXTURE_COUNT];

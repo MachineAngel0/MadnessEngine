@@ -659,6 +659,20 @@ void editor_particle_view(Editor* editor)
 
     madness_ui_window_begin(STRING("Particle Creation"));
     {
+        String text_box_id = STRING("EMITTER NAME");
+        madness_ui_text_box(text_box_id);
+
+        if (madness_ui_button(STRING("PARTICLE EMITTER CREATE")))
+        {
+            const char* emitter_name = string_builder_to_c_string(madness_ui_text_box_get_string(text_box_id));
+            if (strcmp(emitter_name, "") == 0)
+            {
+                emitter_name = "emitter_no_name\0";
+            }
+
+            particle_emitter_create_default(editor->asset_system, editor->asset_system->particle_system,
+                emitter_name);
+        }
 
     }
     madness_ui_window_end();

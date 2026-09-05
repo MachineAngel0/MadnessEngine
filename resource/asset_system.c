@@ -29,7 +29,7 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     //texture memory
     asset_system->texture_allocator = memory_system_heap_allocator_create(
         memory_system, MAX_TEXTURE_MEMORY_CPU, MEMORY_SUBSYSTEM_TEXTURE);
-    //texture memory
+    //mesh memory
     asset_system->mesh_allocator = memory_system_heap_allocator_create(
         memory_system, MAX_MESH_MEMORY_CPU, MEMORY_SUBSYSTEM_MESH);
 
@@ -59,6 +59,18 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->animation_system = animation_init(memory_system);
 
 
+    //scan for new assets
+    if (app_is_debug_build())
+    {
+        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                           memory_system, ASSET_TEXTURE);
+        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                           memory_system, ASSET_FONT);
+
+        //ASSET_STATIC_MESH: used in this case as a catch all for both normal and skeletal meshes
+        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
+                                           memory_system, ASSET_STATIC_MESH);
+    }
 
     return asset_system;
 }
@@ -513,7 +525,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
     //material system does exists function
     //has asset already been loaded
-    if (material_system_exists(asset_system, out_meta_data->uuid))
+    if (material_system_material_batch_exists(asset_system, out_meta_data->uuid))
     {
         return true;
     }
@@ -533,7 +545,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
+        asset_material_asset_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
         material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
     }
     else
@@ -560,7 +572,7 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
     //material system does exists function
     //has asset already been loaded
-    if (material_system_exists(asset_system, out_meta_data->uuid))
+    if (material_system_material_batch_exists(asset_system, out_meta_data->uuid))
     {
         return true;
     }
@@ -580,7 +592,7 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
         Material_Asset_Runtime runtime_material = {0};
         runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
+        asset_material_asset_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
         material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
     }
     else

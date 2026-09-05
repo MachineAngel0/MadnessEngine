@@ -32,6 +32,8 @@ MAPI bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUI
 MAPI bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
+MADNESS_UUID texture_system_get_default_uuid(Asset_System* asset_system);
+
 MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle,
                                      Madness_Texture* out_texture);
 

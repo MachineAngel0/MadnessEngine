@@ -8,6 +8,7 @@
 #include "material_system.h"
 #include "math_lib.h"
 
+
 bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
     const char* extension_name = c_string_path_get_extension(file_path, asset_system->frame_allocator);
@@ -63,9 +64,80 @@ void asset_converter_create_directory_for_engine_asset(String_Builder* str_build
     filesystem_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
 }
 
+void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitter* particle_emitter,
+                                      MADNESS_UUID* out_uuid)
+{
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+
+
+    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
+    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EMITTER_PATH);
+    string_builder_append_c_string(str_builder, "/");
+    string_builder_append_string(str_builder, particle_emitter->name);
+    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EFFECT_EXTENSION);
+
+    //TODO: check if asset already exists, so we dont overwrite it
+    const char* output_path = string_builder_to_c_string(str_builder);
+    asset_converter_create_directory_for_engine_asset(str_builder);
+
+
+    //write out the engine format data
+    FILE* fptr = fopen(output_path, "wb");
+
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+
+    particle_emitter_serialize(particle_emitter, fptr);
+    fclose(fptr);
+
+
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, "", output_path,
+                                                ASSET_PARTICLE_EMITTER, asset_system->heap_allocator, out_uuid);
+
+    scratch_allocator_end(scratch);
+}
+
+void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect* particle_effect,
+                                     MADNESS_UUID* out_uuid)
+{
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+
+
+    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
+    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EFFECT_PATH);
+    string_builder_append_c_string(str_builder, "/");
+    string_builder_append_string(str_builder, particle_effect->name);
+    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EFFECT_EXTENSION);
+
+    //TODO: check if asset already exists, so we dont overwrite it
+    const char* output_path = string_builder_to_c_string(str_builder);
+    asset_converter_create_directory_for_engine_asset(str_builder);
+
+
+    //write out the engine format data
+    FILE* fptr = fopen(output_path, "wb");
+
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+
+    particle_effect_serialize(particle_effect, fptr);
+    fclose(fptr);
+
+
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, "", output_path,
+                                                ASSET_PARTICLE_EFFECT, asset_system->heap_allocator, out_uuid);
+
+    scratch_allocator_end(scratch);
+}
+
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
     Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+
 
     //check for supported file formats
     if (!c_string_path_is_extension(file_path, ".png") && !c_string_path_is_extension(file_path, ".jpeg") && !
@@ -73,6 +145,20 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     {
         WARN("asset_converter_texture: INVALID TEXTURE EXTENSION: %s", file_path);
         return false;
+    }
+
+    Asset_MetaData meta_data;
+    if (asset_registry_exists_by_source_path(asset_system->asset_registry,
+                                             STRING_CREATE_FROM_BUFFER_ALLOCATOR(
+                                                 file_path, scratch_allocator.allocator),
+                                             &meta_data))
+    {
+        if (out_uuid)
+        {
+            *out_uuid = meta_data.uuid;
+        }
+        INFO("asset_converter_texture: texture asset already exists: %s", file_path);
+        return true;
     }
 
 
@@ -119,8 +205,8 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     fclose(fptr);
 
 
-    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
-                             ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+                                                ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
 
     scratch_allocator_end(scratch_allocator);
@@ -298,8 +384,8 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
     //write it out to the file
     String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
-                                                                           file_path, ENGINE_FONTS_PATH,
-                                                                           ENGINE_FONTS_EXTENSION);
+                                                                               file_path, ENGINE_FONTS_PATH,
+                                                                               ENGINE_FONTS_EXTENSION);
     const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
     //create path if it does not exist
@@ -324,8 +410,8 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     fclose(fptr);
 
 
-    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
-                             ASSET_FONT, asset_system->heap_allocator, NULL);
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+                                                ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch_allocator);
 
@@ -429,8 +515,8 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     //write it out to the file
     //write it out to the file
     String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
-                                                                           file_path, ENGINE_FONTS_PATH,
-                                                                           ENGINE_FONTS_EXTENSION);
+                                                                               file_path, ENGINE_FONTS_PATH,
+                                                                               ENGINE_FONTS_EXTENSION);
     const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
     //create path if it does not exist
@@ -449,8 +535,8 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     fclose(fptr);
 
-    asset_registry_add_asset(asset_system->asset_registry, file_path, output_path,
-                             ASSET_FONT, asset_system->heap_allocator, NULL);
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+                                                ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch_allocator);
     return true;
@@ -495,7 +581,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     MASSERT(result == cgltf_result_success)
 
 
-     Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
+    Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
                                                  sizeof(Madness_Mesh));
 
     madness_mesh->mesh_count = data->meshes_count;
@@ -655,8 +741,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                                                submesh->indices_bytes);
         submesh->index_count = submesh->indices_bytes / index_stride;
 
-        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices, submesh_gpu->indices, sizeof(u16), submesh->index_count);
-
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices, submesh_gpu->indices, sizeof(u16),
+                                      submesh->index_count);
 
 
         //LOAD TEXTURES/MATERIALS
@@ -812,21 +898,19 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 .blend_mode = Shader_Blend_Mode_Default,
             };
         }
-        default_info.material_id = material_system_generate_id(&default_info);
-        //generate the id, as we dont likley want to do this at runtime
-        Material_Instance* mat_inst = &material_instances[mesh_idx];
-        mat_inst->material_data = cur_mat;
-       mat_inst->data_size = reflection_registry_get_struct(
-            asset_system->global_reflection_registry, TYPE_STRING(Material_Default)).struct_size;
 
-        asset_converter_material_asset(asset_system, &default_info,
-                                       &mat_inst->material_asset_uuid);
+        Material_Asset mat_asset = {0};
+        material_asset_create(asset_system, &default_info, &mat_asset);
+
+        Material_Instance* mat_inst = &material_instances[mesh_idx];
+        // material_instance_create(asset_system, mat_asset, mat_inst, name);
 
         if (data->meshes[mesh_idx].primitives->material->name)
         {
-            asset_converter_material_instance_from_material_asset(asset_system, mat_inst, &default_info,
-                                                                  data->meshes[mesh_idx].primitives->material->name);
-        }else
+            material_instance_create_from_data(asset_system, &mat_asset, mat_inst,
+                                               data->meshes[mesh_idx].primitives->material->name, cur_mat);
+        }
+        else
         {
             String_Builder* base_name = string_builder_create(256, scratch.allocator);
             string_builder_append_c_string(base_name, gltf_path);
@@ -838,9 +922,13 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
 
-            asset_converter_material_instance_from_material_asset(asset_system, mat_inst, &default_info,
-                                                      string_builder_to_c_string(string_mat_name));
+            material_instance_create_from_data(asset_system, &mat_asset, mat_inst,
+                                               string_builder_to_c_string(string_mat_name), cur_mat);
         }
+
+
+        asset_converter_material_asset(asset_system, &mat_asset);
+        asset_converter_material_instance(asset_system, mat_inst);
     }
 
 
@@ -1098,12 +1186,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         String_Builder* str_builder = asset_converter_create_file_path(scratch, gltf_path,
-                                                      ENGINE_SK_MESH_PATH, ENGINE_SKMESH_EXTENSION);
+                                                                       ENGINE_SK_MESH_PATH, ENGINE_SKMESH_EXTENSION);
 
 
         const char* output_path = string_builder_to_c_string(str_builder);
         asset_converter_create_directory_for_engine_asset(str_builder);
-
 
 
         //write out the engine format data
@@ -1118,8 +1205,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         fclose(fptr);
 
 
-        asset_registry_add_asset(asset_system->asset_registry, gltf_path, output_path,
-                                 ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
+        asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, gltf_path, output_path,
+                                                    ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
     }
     else
     {
@@ -1133,8 +1220,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
-                                                                               gltf_path, ENGINE_MESH_PATH,
-                                                                               ENGINE_MESH_EXTENSION);
+            gltf_path, ENGINE_MESH_PATH,
+            ENGINE_MESH_EXTENSION);
         const char* output_path = string_builder_to_c_string(str_builder_output_path);
 
         //create path if it does not exist
@@ -1154,8 +1241,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         // write out metadata
-        asset_registry_add_asset(asset_system->asset_registry, gltf_path, output_path,
-                                 ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
+        asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, gltf_path, output_path,
+                                                    ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
     }
 
     cgltf_free(data);
@@ -1164,141 +1251,114 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     return true;
 }
 
-
-
-bool asset_converter_material_asset(Asset_System* asset_system, Material_Info* material_info,
-                                    MADNESS_UUID* out_uuid)
+bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* material_asset)
 {
-    //We are always going to assume that our reflection registry is up to date and that it is the source of truth
+    MASSERT(material_asset)
 
-    MASSERT(material_info)
-    MASSERT(material_info->shader_name)
-    MASSERT(material_info->material_name)
+    MASSERT(material_asset->uuid.high != 0)
+    MASSERT(material_asset->uuid.low != 0)
 
-
-    Material_Asset asset = {0};
-    asset.material_info = *material_info;
-    asset.material_info.material_name = &(STRING_STRLEN(MATERIAL_DEFAULT_NAME));
-    asset.material_info.transluency = Shader_Transluency_Type_Opaque;
-    asset.material_info.renderpass = Renderpass_Type_Predepth | Renderpass_Type_Color | Renderpass_Type_Shadow;
-    asset.material_info.blend_mode = Shader_Blend_Mode_Default;
-    asset.material_info.material_id = material_system_generate_id(material_info);
-
-    Reflection_Runtime_Struct reflection_material = reflection_registry_get_struct(
-        asset_system->global_reflection_registry, MATERIAL_DEFAULT_NAME);
-    asset.reflection_material_data = &reflection_material;
+    MASSERT(material_asset->material_info.material_name)
+    MASSERT(material_asset->material_info.shader_name)
 
 
-    // do a conversion of any texture types to u32 for bindless
-    // asset.material_gpu_definition = alloc(); // TODO:
-    material_create_gpu_definition(asset_system, reflection_material, asset.material_gpu_definition);
-
-
-    //write out the file
+    //TODO: we only want to serialize the material asset if it does not exist
+    //NOTE: we serialize material instances separately
     String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material_info->material_name);
+    string_builder_append_string(str_builder, material_asset->material_info.material_name);
     string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material_info->shader_name);
+    string_builder_append_string(str_builder, material_asset->material_info.shader_name);
     string_builder_append_c_string(str_builder, "_");
-    string_builder_append_u64(str_builder, asset.material_info.material_id, asset_system->frame_allocator);
+    string_builder_append_u64(str_builder, material_asset->material_info.material_key, asset_system->frame_allocator);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
 
-
-    const char* output_path = string_builder_to_c_string(str_builder);
-    FILE* fptr = fopen(output_path, "wb");
-    if (!fptr)
+    if (!filesystem_does_file_exists(string_builder_to_c_string(str_builder)))
     {
-        MASSERT(false);
+        const char* output_path = string_builder_to_c_string(str_builder);
+        FILE* fptr = fopen(output_path, "wb");
+        if (!fptr)
+        {
+            MASSERT(false);
+        }
+
+        Material_Asset_Runtime asset_editor = {0};
+        asset_editor.version = 1;
+        asset_editor.asset = material_asset;
+        asset_material_asset_serialize(&asset_editor, fptr);
+
+        asset_registry_add_asset_from_uuid(asset_system->asset_registry, output_path, output_path,
+                                           ASSET_MATERIAL, asset_system->heap_allocator, material_asset->uuid);
+        fclose(fptr);
     }
-
-    Material_Asset_Runtime asset_editor = {0};
-    asset_editor.version = 1;
-    asset_editor.asset = &asset;
-    asset_material_serialize(&asset_editor, fptr);
-
-
-    asset_registry_add_asset(asset_system->asset_registry, output_path, output_path,
-                             ASSET_MATERIAL, asset_system->heap_allocator, out_uuid);
-    fclose(fptr);
-
     return true;
 }
 
-bool asset_converter_material_instance_from_material_asset(Asset_System* asset_system, Material_Instance* mat_inst,
-                                                           Material_Info* material_info,
-                                                           const char* asset_name)
+bool asset_converter_material_instance(Asset_System* asset_system, Material_Instance* mat_inst)
 {
+    MASSERT(mat_inst)
+    MASSERT(mat_inst->material_instance_uuid.high != 0);
+    MASSERT(mat_inst->material_instance_uuid.high != 0);
 
     MASSERT(mat_inst->material_asset_uuid.high != 0);
     MASSERT(mat_inst->material_asset_uuid.low != 0);
+
     MASSERT(mat_inst->data_size != 0);
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
-    string_builder_append_string(str_builder, material_info->material_name);
+    string_builder_append_string(str_builder, mat_inst->material_name);
     string_builder_append_c_string(str_builder, "_");
-    string_builder_append_c_string(str_builder, asset_name);
+    string_builder_append_string(str_builder, mat_inst->name);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
 
     const char* output_path = string_builder_to_c_string(str_builder);
-
-
-
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {
         MASSERT(false);
     }
-
 
     asset_material_instance_serialize(mat_inst, fptr);
 
 
-    asset_registry_add_asset(asset_system->asset_registry, asset_name, output_path, ASSET_MATERIAL_INSTANCE,
-                             asset_system->heap_allocator, NULL);
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+                                                string_to_c_string_allocator(
+                                                    mat_inst->name, scratch.allocator), output_path,
+                                                ASSET_MATERIAL_INSTANCE,
+                                                asset_system->heap_allocator, NULL);
 
     fclose(fptr);
+
+    scratch_allocator_end(scratch);
+
+
     return true;
 }
 
-bool asset_converter_material_instance_from_material_info(Asset_System* asset_system, Material_Info* material_info,
-                                                          const char* asset_name, void* material_data,
-                                                          MADNESS_UUID mat_asset_uuid)
+bool asset_converter_material(Asset_System* asset_system, Material_Info* material_info,
+    Material_Asset* out_material_asset, Material_Instance* out_material_instance, const char* mat_inst_name)
 {
-    Reflection_Runtime_Struct runtime_material_data = reflection_registry_get_struct(
-        asset_system->global_reflection_registry,
-        string_to_c_string_allocator(material_info->material_name, asset_system->frame_allocator));
+    //create the material asset and instance
+    material_asset_create(asset_system,
+                          material_info,
+                          out_material_asset);
 
 
-    //write out the file
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
-    string_builder_append_string(str_builder, material_info->material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_c_string(str_builder, asset_name);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
+    material_instance_create(asset_system,
+                             out_material_asset,
+                             out_material_instance,
+                             mat_inst_name);
 
-    const char* output_path = string_builder_to_c_string(str_builder);
-    FILE* fptr = fopen(output_path, "wb");
-    if (!fptr)
-    {
-        MASSERT(false);
-    }
+    //serialize the data
+    asset_converter_material_asset(asset_system,
+                                   out_material_asset);
 
-    Material_Instance material_instance = {
-        .material_asset_uuid = mat_asset_uuid,
-        .data_size = runtime_material_data.struct_size,
-        .material_data = material_data,
-    };
-    asset_material_instance_serialize(&material_instance, fptr);
+    asset_converter_material_instance(asset_system, out_material_instance);
 
 
-    asset_registry_add_asset(asset_system->asset_registry, asset_name, output_path, ASSET_MATERIAL_INSTANCE,
-                             asset_system->heap_allocator, NULL);
-
-    fclose(fptr);
     return true;
 }
-

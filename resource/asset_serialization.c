@@ -11,7 +11,6 @@ bool asset_texture_serialize(Madness_Texture_Runtime* runtime, FILE* fptr)
 
 bool asset_texture_deserialize(Madness_Texture_Runtime* runtime, FILE* fptr, Heap_Allocator* texture_memory_allocator)
 {
-
     /* NOTE: unsuccessful attempt, weird padding/alignment issues
     u64 size = filesystem_file_size(fptr);
     void* data = allocator_heap_alloc(allocator, size);
@@ -54,7 +53,7 @@ bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap_Allo
 }
 
 
-bool asset_material_serialize(Material_Asset_Runtime* runtime, FILE* fptr)
+bool asset_material_asset_serialize(Material_Asset_Runtime* runtime, FILE* fptr)
 {
     fwrite(&runtime->version, sizeof(runtime->version), 1, fptr);
     string_serialize(runtime->asset->material_info.shader_name, fptr);
@@ -63,29 +62,30 @@ bool asset_material_serialize(Material_Asset_Runtime* runtime, FILE* fptr)
     fwrite(&runtime->asset->material_info.transluency, sizeof(runtime->asset->material_info.transluency), 1, fptr);
     fwrite(&runtime->asset->material_info.mesh_type, sizeof(runtime->asset->material_info.mesh_type), 1, fptr);
     fwrite(&runtime->asset->material_info.blend_mode, sizeof(runtime->asset->material_info.blend_mode), 1, fptr);
-    fwrite(&runtime->asset->material_info.material_id, sizeof(runtime->asset->material_info.material_id), 1, fptr);
+    fwrite(&runtime->asset->material_info.material_key, sizeof(runtime->asset->material_info.material_key), 1, fptr);
 
-    reflection_registry_serialize_runtime_struct(runtime->asset->reflection_material_data, fptr);
+    reflection_registry_serialize_runtime_struct(&runtime->asset->reflection_material_data, fptr);
 
-    fwrite(&runtime->asset->material_gpu_definition->field_count, sizeof(u32), 1, fptr);
-    fwrite(&runtime->asset->material_gpu_definition->struct_size, sizeof(u32), 1, fptr);
-    fwrite(runtime->asset->material_gpu_definition->name_hashes,
-           sizeof(u64) * runtime->asset->material_gpu_definition->field_count, 1,
+    fwrite(&runtime->asset->material_gpu_definition.field_count, sizeof(u32), 1, fptr);
+    fwrite(&runtime->asset->material_gpu_definition.struct_size, sizeof(u32), 1, fptr);
+    fwrite(runtime->asset->material_gpu_definition.name_hashes,
+           sizeof(u64) * runtime->asset->material_gpu_definition.field_count, 1,
            fptr);
-    fwrite(runtime->asset->material_gpu_definition->field_offsets,
-           sizeof(u32) * runtime->asset->material_gpu_definition->field_count, 1,
+    fwrite(runtime->asset->material_gpu_definition.field_offsets,
+           sizeof(u32) * runtime->asset->material_gpu_definition.field_count, 1,
            fptr);
-    fwrite(runtime->asset->material_gpu_definition->types,
-           sizeof(Reflection_Type) * runtime->asset->material_gpu_definition->field_count,
+    fwrite(runtime->asset->material_gpu_definition.types,
+           sizeof(Reflection_Type) * runtime->asset->material_gpu_definition.field_count,
            1, fptr);
 
+    madness_uuid_serialize(runtime->asset->uuid, fptr);
 
     return true;
 }
 
 
-bool asset_material_deserialize(Material_Asset_Runtime* runtime, FILE* fptr,
-                                     Heap_Allocator* allocator)
+bool asset_material_asset_deserialize(Material_Asset_Runtime* runtime, FILE* fptr,
+                                      Heap_Allocator* allocator)
 {
     fread(&runtime->version, sizeof(runtime->version), 1, fptr);
 
@@ -97,31 +97,31 @@ bool asset_material_deserialize(Material_Asset_Runtime* runtime, FILE* fptr,
     fread(&runtime->asset->material_info.transluency, sizeof(runtime->asset->material_info.transluency), 1, fptr);
     fread(&runtime->asset->material_info.mesh_type, sizeof(runtime->asset->material_info.mesh_type), 1, fptr);
     fread(&runtime->asset->material_info.blend_mode, sizeof(runtime->asset->material_info.blend_mode), 1, fptr);
-    fread(&runtime->asset->material_info.material_id, sizeof(runtime->asset->material_info.material_id), 1, fptr);
+    fread(&runtime->asset->material_info.material_key, sizeof(runtime->asset->material_info.material_key), 1, fptr);
 
-    runtime->asset->reflection_material_data = allocator_heap_alloc(allocator, sizeof(Reflection_Runtime_Struct));
-    runtime->asset->material_gpu_definition = allocator_heap_alloc(allocator, sizeof(Material_GPU_Definition));
-    reflection_registry_deserialize_runtime_struct_heap(runtime->asset->reflection_material_data, fptr, allocator);
+    // runtime->asset->reflection_material_data = allocator_heap_alloc(allocator, sizeof(Reflection_Runtime_Struct));
+    // runtime->asset->material_gpu_definition;
 
-    fread(&runtime->asset->material_gpu_definition->field_count, sizeof(u32), 1, fptr);
-    fread(&runtime->asset->material_gpu_definition->struct_size, sizeof(u32), 1, fptr);
+    fread(&runtime->asset->material_gpu_definition.field_count, sizeof(u32), 1, fptr);
+    fread(&runtime->asset->material_gpu_definition.struct_size, sizeof(u32), 1, fptr);
 
-    runtime->asset->material_gpu_definition->name_hashes = allocator_heap_alloc(
-        allocator, sizeof(u64) * runtime->asset->material_gpu_definition->field_count);
-    runtime->asset->material_gpu_definition->field_offsets = allocator_heap_alloc(
-        allocator, sizeof(u32) * runtime->asset->material_gpu_definition->field_count);
-    runtime->asset->material_gpu_definition->types = allocator_heap_alloc(
-        allocator, sizeof(Reflection_Type) * runtime->asset->material_gpu_definition->field_count);
+    runtime->asset->material_gpu_definition.name_hashes = allocator_heap_alloc(
+        allocator, sizeof(u64) * runtime->asset->material_gpu_definition.field_count);
+    runtime->asset->material_gpu_definition.field_offsets = allocator_heap_alloc(
+        allocator, sizeof(u32) * runtime->asset->material_gpu_definition.field_count);
+    runtime->asset->material_gpu_definition.types = allocator_heap_alloc(
+        allocator, sizeof(Reflection_Type) * runtime->asset->material_gpu_definition.field_count);
 
-    fread(runtime->asset->material_gpu_definition->name_hashes,
-          sizeof(u64) * runtime->asset->material_gpu_definition->field_count, 1,
+    fread(runtime->asset->material_gpu_definition.name_hashes,
+          sizeof(u64) * runtime->asset->material_gpu_definition.field_count, 1,
           fptr);
-    fread(runtime->asset->material_gpu_definition->field_offsets,
-          sizeof(u32) * runtime->asset->material_gpu_definition->field_count, 1,
+    fread(runtime->asset->material_gpu_definition.field_offsets,
+          sizeof(u32) * runtime->asset->material_gpu_definition.field_count, 1,
           fptr);
-    fread(runtime->asset->material_gpu_definition->types,
-          sizeof(Reflection_Type) * runtime->asset->material_gpu_definition->field_count,
+    fread(runtime->asset->material_gpu_definition.types,
+          sizeof(Reflection_Type) * runtime->asset->material_gpu_definition.field_count,
           1, fptr);
+    madness_uuid_deserialize(&runtime->asset->uuid, fptr);
 
 
     return true;
@@ -129,20 +129,32 @@ bool asset_material_deserialize(Material_Asset_Runtime* runtime, FILE* fptr,
 
 MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr)
 {
-    fwrite(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
+    madness_uuid_serialize(instance->material_asset_uuid, fptr);
+    madness_uuid_serialize(instance->material_instance_uuid, fptr);
     fwrite(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     fwrite(instance->material_data, instance->data_size, 1, fptr);
+
+    string_serialize(instance->material_name, fptr);
+    string_serialize(instance->name, fptr);
+
     return true;
 }
 
 
-
 MAPI bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator)
 {
-    fread(&instance->material_asset_uuid, sizeof(instance->material_asset_uuid), 1, fptr);
+    madness_uuid_deserialize(&instance->material_asset_uuid, fptr);
+    madness_uuid_deserialize(&instance->material_instance_uuid, fptr);
     fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
     instance->material_data = allocator_heap_alloc(allocator, instance->data_size);
     fread(instance->material_data, instance->data_size, 1, fptr);
+
+
+    instance->material_name = allocator_heap_alloc(allocator, sizeof(String));
+    instance->name = allocator_heap_alloc(allocator, sizeof(String));
+
+    string_deserialize_heap(instance->material_name, fptr, allocator);
+    string_deserialize_heap(instance->name, fptr, allocator);
 
     return true;
 }

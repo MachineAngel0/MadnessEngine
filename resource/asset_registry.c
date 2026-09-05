@@ -60,17 +60,6 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
     }
 
 
-    if (app_is_debug_build())
-    {
-        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
-                                           memory_system, ASSET_TEXTURE);
-        asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
-                                           memory_system, ASSET_FONT);
-
-        //ASSET_STATIC_MESH: used in this case as a catch all for both normal and skeletal meshes
-       asset_registry_scan_for_new_assets(asset_system, asset_system->asset_registry,
-                                      memory_system, ASSET_STATIC_MESH);
-    }
 
     return true;
 }
@@ -215,9 +204,12 @@ void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaDat
     fwrite(&header, sizeof(Asset_Registry_Header), 1, fptr);
 }
 
-void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source_path,
-                              const char* engine_path,
-                              Asset_Type asset_type, Heap_Allocator* allocator, MADNESS_UUID* out_uuid)
+
+void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
+                                                          const char* source_path,
+                                                          const char* engine_path,
+                                                          Asset_Type asset_type, Heap_Allocator* allocator,
+                                                          MADNESS_UUID uuid)
 {
     //find if the asset already exists
     String* str_source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(source_path, allocator);
@@ -235,7 +227,7 @@ void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source
     {
         meta_data.source_file = str_source_file;
         meta_data.engine_path = str_engine_path;
-        meta_data.uuid = madness_uuid_generate_return();
+        meta_data.uuid = uuid;
         meta_data.hash = madness_uuid_hash(&meta_data.uuid);
         meta_data.type = asset_type;
 
@@ -244,11 +236,25 @@ void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source
     }
 
     asset_registry_overwrite_file(asset_registry);
+}
+
+
+void asset_registry_add_asset_and_generated_uuid(Asset_Registry* asset_registry, const char* source_path,
+                              const char* engine_path,
+                              Asset_Type asset_type, Heap_Allocator* allocator, MADNESS_UUID* out_uuid)
+{
+    MADNESS_UUID uuid = madness_uuid_generate_return();
 
     if (out_uuid)
     {
-        *out_uuid = meta_data.uuid;
+        *out_uuid = uuid;
     }
+
+    asset_registry_add_asset_from_uuid(asset_registry,
+                                                         source_path,
+                                                         engine_path,
+                                                         asset_type, allocator,
+                                                         uuid);
 }
 
 void asset_registry_remove(Asset_Registry* asset_registry)

@@ -85,12 +85,6 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
 
 
-bool material_asset_create(Asset_System* asset_system, Material_Info* material_info)
-{
-    MADNESS_UUID discard;
-    asset_converter_material_asset(asset_system, material_info, &discard);
-}
-
 
 //Data format stuff
 typedef struct Asset_MetaData_Header

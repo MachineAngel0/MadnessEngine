@@ -26,7 +26,12 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
 //
 void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaData* asset_meta_data);
 
-void asset_registry_add_asset(Asset_Registry* asset_registry, const char* source_path,
+void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
+                                                          const char* source_path,
+                                                          const char* engine_path,
+                                                          Asset_Type asset_type, Heap_Allocator* allocator,
+                                                          MADNESS_UUID uuid);
+void asset_registry_add_asset_and_generated_uuid(Asset_Registry* asset_registry, const char* source_path,
                               const char* engine_path,
                               Asset_Type asset_type, Heap_Allocator* allocator, MADNESS_UUID* out_uuid);
 

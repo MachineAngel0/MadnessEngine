@@ -35,15 +35,16 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
 
 
     //create our debug texture
+    asset_converter_texture(asset_system, "../z_assets/textures/error_texture.png",
+                            &texture_system->default_texture_uuid);
     /*
-    asset_converter_texture(asset_system, "../z_assets/textures/error_texture.png", NULL);
     asset_converter_texture(asset_system, "../z_assets/textures/test_particle.png", NULL);
     asset_converter_msdf_font(asset_system, "../z_assets/msdf_fonts/arial_msdf.png");
     */
 
-
     texture_system->default_texture_handle = asset_load_texture_path(
         asset_system, "error_texture");
+
 
     return texture_system;
 }
@@ -56,6 +57,11 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
 
     return true;
 }
+MADNESS_UUID texture_system_get_default_uuid(Asset_System* asset_system)
+{
+    return asset_system->texture_system->default_texture_uuid;
+}
+
 
 bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Madness_Texture* out_texture)
 {
@@ -76,7 +82,6 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
     *out_texture = texture_system->textures[handle.handle];
     return true;
 }
-
 
 
 Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,

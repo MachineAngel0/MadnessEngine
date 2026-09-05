@@ -333,8 +333,8 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 		},
 		{
 			.name = "texture_idx",
-			.type = REFLECTION_TYPE_PATH_STRING,
-			.type_name = "Path_String",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Material_Spherical_Billboard_GPU, texture_idx)
 		},
 		{

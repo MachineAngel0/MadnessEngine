@@ -94,7 +94,7 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
     shader_batch->renderpass_types = material_batch->material_asset->material_info.renderpass;
     shader_batch->mesh_type = material_batch->material_asset->material_info.mesh_type;
     shader_batch->blend_mode = material_batch->material_asset->material_info.blend_mode;
-    shader_batch->material_stride = material_batch->material_asset->material_gpu_definition->struct_size;
+    shader_batch->material_stride = material_batch->material_asset->material_gpu_definition.struct_size;
     shader_batch->draw_count = 0;
 
 

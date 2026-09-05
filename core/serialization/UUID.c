@@ -33,3 +33,10 @@ bool madness_uuid_deserialize(MADNESS_UUID* uuid, FILE* fptr)
     fread(uuid, sizeof(MADNESS_UUID), 1, fptr);
     return true;
 }
+
+void madness_uuid_validate(MADNESS_UUID uuid)
+{
+    MASSERT(uuid.high != 0)
+    MASSERT(uuid.low != 0)
+}
+

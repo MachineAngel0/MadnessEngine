@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "event.h"
 #include "platform.h"
+#include "profiler.h"
 #include "tracy/TracyC.h"
 
 Input_System* input_init(Memory_System* memory_system)

@@ -44,13 +44,14 @@ bool string_free_allocator_heap(String* string, Heap_Allocator* allocator);
 
 //this gets created on the stack as a string literal, this also uses read only memory so it can crash if modified
 #define STRING(string) ((String){.chars = (char*)(string), .length = sizeof(string)-1})
+
 #define STRING_STRLEN(string) ((String){.chars = (char*)(string), .length = strlen(string)})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed as a param
 #define STRING_CREATE(string) string_create(string, sizeof(string))
 //create a string from an already existing char[]/char* that excludes the null terminated string
 #define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 #define STRING_CREATE_FROM_BUFFER_ALLOCATOR(string, allocator) string_create_allocator(string, strlen(string), allocator)
-#define STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(string, allocator) string_create_allocator_heap(string, strlen(string), allocator)
+#define STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(string, heap_allocator) string_create_allocator_heap(string, strlen(string), heap_allocator)
 
 
 

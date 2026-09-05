@@ -60,4 +60,25 @@ mat4s transform_get_world(Transform* t);
 void transform_mark_dirty(Transform* t);
 
 
+void transform_serialize(Transform* t, FILE* fptr)
+{
+    MASSERT(fptr)
+
+    fwrite(t->euler_angles.raw, sizeof(vec3s), 1, fptr);
+    fwrite(t->local.raw, sizeof(mat4s), 1, fptr);
+    fwrite(t->position.raw, sizeof(vec3s), 1, fptr);
+    fwrite(t->rotation.raw, sizeof(versor), 1, fptr);
+    fwrite(t->scale.raw, sizeof(vec3s), 1, fptr);
+}
+
+void transform_deserialize(Transform* out_t, FILE* fptr)
+{
+    fread(out_t->euler_angles.raw, sizeof(vec3s), 1, fptr);
+    fread(out_t->local.raw, sizeof(mat4s), 1, fptr);
+    fread(out_t->position.raw, sizeof(vec3s), 1, fptr);
+    fread(out_t->rotation.raw, sizeof(versor), 1, fptr);
+    fread(out_t->scale.raw, sizeof(vec3s), 1, fptr);
+}
+
+
 #endif //TRANSFORMS_H
