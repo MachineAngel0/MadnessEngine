@@ -47,7 +47,9 @@ typedef struct Asset_Load_Handle
     void* handle;
 } Asset_Load_Handle;
 
-Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry);
+Asset_System* asset_system_init(Memory_System* memory_system,
+                                Reflection_Registry* global_reflection_registry,
+                                Reflection_Registry* material_reflection_registry);
 
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
 
@@ -80,10 +82,9 @@ Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUI
 Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
-bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path);
+bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path, Material_Asset* out_material_asset);
 bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
-
 
 
 //Data format stuff

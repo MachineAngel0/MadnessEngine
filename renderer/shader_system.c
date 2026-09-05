@@ -38,15 +38,17 @@ void shader_system_update(Renderer* renderer, Shader_System* shader_system, Rend
 {
     //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
     //TODO: we should call this at start up once
-    for (int i = 0; i < render_packet->draw_3d_data_packet.material_batch_count; ++i)
+    for (int i = 0; i < render_packet->draw_3d_data_packet.material_count; ++i)
     {
         if (hash_set_contains(shader_system->shader_batch_hash_set,
-                              &render_packet->draw_3d_data_packet.material_batch[i].material_key))
+                              &render_packet->draw_3d_data_packet.material_assets[i].material_info.material_key))
         {
             continue;
         }
         shader_system_shader_batch_create(renderer, shader_system,
-                                          &render_packet->draw_3d_data_packet.material_batch[i]);
+                                          &render_packet->draw_3d_data_packet.material_batch[i],
+                                          &render_packet->draw_3d_data_packet.material_assets[i],
+                                          &render_packet->draw_3d_data_packet.material_definition[i]);
     }
 
 
@@ -69,10 +71,11 @@ void shader_system_update(Renderer* renderer, Shader_System* shader_system, Rend
 
 
 
-void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system, Material_Batch* material_batch)
+void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system,
+    Material_Batch* material_batch, Material_Asset* material_asset, Material_Definition* material_definition)
 {
     Vulkan_Shader_Batch* shader_batch = NULL;
-    switch (material_batch->material_asset->material_info.mesh_type)
+    switch (material_asset->material_info.mesh_type)
     {
     case Shader_Mesh_Type_Mesh:
         shader_batch = &shader_system->mesh_batch[shader_system->mesh_batch_count++];
@@ -88,13 +91,13 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
     }
     shader_batch->material_batch_reference = material_batch;
 
-    shader_batch->material_id = material_batch->material_key;
-    shader_batch->shader_name = string_to_c_string_alloc_heap(material_batch->material_asset->material_info.shader_name, renderer->heap_allocator);
-    shader_batch->transluency = material_batch->material_asset->material_info.transluency;
-    shader_batch->renderpass_types = material_batch->material_asset->material_info.renderpass;
-    shader_batch->mesh_type = material_batch->material_asset->material_info.mesh_type;
-    shader_batch->blend_mode = material_batch->material_asset->material_info.blend_mode;
-    shader_batch->material_stride = material_batch->material_asset->material_gpu_definition.struct_size;
+    shader_batch->material_id = material_asset->material_info.material_key;
+    shader_batch->shader_name = string_to_c_string_alloc_heap(material_asset->material_info.shader_name, renderer->heap_allocator);
+    shader_batch->transluency = material_asset->material_info.transluency;
+    shader_batch->renderpass_types = material_asset->material_info.renderpass;
+    shader_batch->mesh_type = material_asset->material_info.mesh_type;
+    shader_batch->blend_mode = material_asset->material_info.blend_mode;
+    shader_batch->material_stride = material_definition->material_gpu_definition.struct_size;
     shader_batch->draw_count = 0;
 
 

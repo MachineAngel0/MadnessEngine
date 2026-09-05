@@ -16,9 +16,9 @@ MAPI bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap
 
 //
 //material defines the layout and shader definition of the object, instance is the specific data/params of that material
-MAPI bool asset_material_asset_serialize(Material_Asset_Runtime* runtime, FILE* fptr);
-MAPI bool asset_material_asset_deserialize(Material_Asset_Runtime* runtime, FILE* fptr,
-                                          Heap_Allocator* allocator);
+MAPI bool asset_material_asset_serialize(Material_Asset* mat_asset, FILE* fptr);
+MAPI bool asset_material_asset_deserialize(Material_Asset* mat_asset, FILE* fptr,
+                                           Heap_Allocator* allocator);
 
 MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr);
 MAPI bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator);

@@ -8,7 +8,7 @@ const char* material_struct_string_list[] = {
 	"Material_Black_Hole", 
 	"Material_Flat_Color", 
 	"Material_Spherical_Billboard", 
-	"Material_Spherical_Billboard_GPU", 
+	"Material_Spherical_Billboard_CPU", 
 };
 
 void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
@@ -323,48 +323,48 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 
 	reflection_registry_add_struct(reflection_registry, Material_Spherical_Billboard_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Material_Spherical_Billboard_GPU_Fields[] =
+	Reflection_Runtime_Struct_Field Material_Spherical_Billboard_CPU_Fields[] =
 	{
 		{
 			.name = "point",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
-			.offset = offsetof(Material_Spherical_Billboard_GPU, point)
+			.offset = offsetof(Material_Spherical_Billboard_CPU, point)
 		},
 		{
 			.name = "texture_idx",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Spherical_Billboard_GPU, texture_idx)
+			.offset = offsetof(Material_Spherical_Billboard_CPU, texture_idx)
 		},
 		{
 			.name = "size",
 			.type = REFLECTION_TYPE_VEC2,
 			.type_name = "vec2s",
-			.offset = offsetof(Material_Spherical_Billboard_GPU, size)
+			.offset = offsetof(Material_Spherical_Billboard_CPU, size)
 		},
 		{
 			.name = "rotation",
 			.type = REFLECTION_TYPE_VEC2,
 			.type_name = "vec2s",
-			.offset = offsetof(Material_Spherical_Billboard_GPU, rotation)
+			.offset = offsetof(Material_Spherical_Billboard_CPU, rotation)
 		},
 		{
 			.name = "color",
 			.type = REFLECTION_TYPE_VEC4,
 			.type_name = "vec4s",
-			.offset = offsetof(Material_Spherical_Billboard_GPU, color)
+			.offset = offsetof(Material_Spherical_Billboard_CPU, color)
 		},
 	};
 
-	 Reflection_Runtime_Struct Material_Spherical_Billboard_GPU_Runtime_Struct =
+	 Reflection_Runtime_Struct Material_Spherical_Billboard_CPU_Runtime_Struct =
 	{
-		.name = "Material_Spherical_Billboard_GPU",
-		.fields = Material_Spherical_Billboard_GPU_Fields,
+		.name = "Material_Spherical_Billboard_CPU",
+		.fields = Material_Spherical_Billboard_CPU_Fields,
 		.field_count = 5,
-		.struct_size = sizeof(Material_Spherical_Billboard_GPU)
+		.struct_size = sizeof(Material_Spherical_Billboard_CPU)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Material_Spherical_Billboard_GPU_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Material_Spherical_Billboard_CPU_Runtime_Struct);
 
 }

@@ -48,11 +48,11 @@ void material_system_add_skmesh_instance_to_default_material_batch(Asset_System*
 }
 */
 
-bool material_system_material_batch_exists(Asset_System* asset_system, MADNESS_UUID uuid);
+bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
-bool material_system_material_asset_exists(Asset_System* asset_system,
-                                           Material_ID material_id,
-                                           Material_Asset* out_asset);
+bool material_system_material_exists_by_material_id(Asset_System* asset_system,
+                                                    Material_ID material_id,
+                                                    Material_Asset* out_asset);
 
 
 bool material_system_load_material_instance(Asset_System* asset_system, Material_Instance* material_instance,
@@ -60,8 +60,7 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
 
 
 bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
-                                         Material_Asset_Runtime* material_asset);
-
+                                         Material_Asset* material_asset);
 
 //NOTE: changing textures requires more elaborate steps
 bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
@@ -86,34 +85,36 @@ void material_system_add_skinned_instance_and_material(Asset_System* asset_syste
 
 Material_ID material_generate_id(Material_Info* material_info);
 
-/**
- * @note: pass in a null gpu definition, it will be allocated inside the function
- */
-void material_create_gpu_definition(Asset_System* asset_system,
-                                    Reflection_Runtime_Struct reflection_material,
+
+void material_create_gpu_definition(Asset_System* asset_system, Reflection_Runtime_Struct* reflection_material,
                                     Material_GPU_Definition* out_material_gpu_definition);
 /**
  * @brief: sets any uuids in the materials to the default texture uuid
  */
 void material_instance_set_default_textures(Asset_System* asset_system,
-                                            Material_Asset* material_asset,
-                                            Material_Instance* material_instance);
+                                            Material_Instance* material_instance,
+                                            Material_Definition* material_definition);
 
 void material_asset_create(Asset_System* asset_system,
                            Material_Info* material_info,
-                           Material_Asset* material_asset);
+                           Material_Asset* out_material_asset);
 
+void material_definition_create(Asset_System* asset_system,
+                                Material_Definition* material_definition,
+                                const char* material_name);
 /**
  * @note: allocates for a material instance with all values to 0, user has to fill it out
  * @note: its required that there be a material asset for creating an instance
  */
 void material_instance_create(Asset_System* asset_system,
                               Material_Asset* material_asset,
+                              Material_Definition* material_definition,
                               Material_Instance* out_material_instance,
                               const char* mat_inst_name);
 
 void material_instance_create_from_data(Asset_System* asset_system,
                                         Material_Asset* material_asset,
+                                        Material_Definition* material_definition,
                                         Material_Instance* out_material_instance,
                                         const char* mat_instance_name,
                                         void* data);

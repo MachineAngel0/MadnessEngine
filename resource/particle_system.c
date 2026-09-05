@@ -2,7 +2,7 @@
 #include "asset_system.h"
 #include "tracy/TracyC.h"
 
-Particle_System* particle_system_init(Asset_System* resource_system, Memory_System* memory_system)
+Particle_System* particle_system_init(Asset_System* asset_system, Memory_System* memory_system)
 {
     Particle_System* ps = memory_system_alloc(memory_system, sizeof(Particle_System), MEMORY_SUBSYSTEM_PARTICLE);
 
@@ -55,10 +55,10 @@ Particle_System* particle_system_init(Asset_System* resource_system, Memory_Syst
     ps->particles.gravity_z = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
                                                   MEMORY_SUBSYSTEM_PARTICLE);
 
-    asset_converter_texture(resource_system,
+    asset_converter_texture(asset_system,
                             "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png", NULL);
     Texture_Handle handle =
-        asset_load_texture_path(resource_system, "kenney_particle-pack/PNG (Transparent)/circle_05");
+        asset_load_texture_path(asset_system, "kenney_particle-pack/PNG (Transparent)/circle_05");
     for (u32 i = 0; i < ps->particles_count; i++)
     {
         ps->particles.texture_handle[i] = handle;

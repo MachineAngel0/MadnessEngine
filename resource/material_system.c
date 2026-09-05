@@ -3,14 +3,29 @@
 
 bool material_system_init(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system)
 {
-    //reflection/registry system
-    material_system->reflection_registry = reflection_registry_init(memory_system);
-    generate_runtime_enums_material(material_system->reflection_registry);
-    generate_runtime_structs_material(material_system->reflection_registry);
+    memset(material_system->material_batch, 0, MAX_MATERIAL_COUNT * sizeof(Material_Batch));
+    memset(material_system->material_asset, 0, MAX_MATERIAL_COUNT * sizeof(Material_Asset));
+    memset(material_system->material_definition, 0, MAX_MATERIAL_COUNT * sizeof(Material_Definition));
+    memset(material_system->material_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
+    material_system->material_count = 0;
+    material_system->material_madness_asset_count = 0;
 
-    reflection_registry_debug_print_info(material_system->reflection_registry);
 
-    memset(material_system->material_batch, 0, 100 * sizeof(Material_Batch));
+    // if (app_is_debug_build())
+    // {
+    Asset_List_Scan* list_scan =
+        asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, ENGINE_MATERIAL_PATH_NO_SLASH);
+
+    for (u32 i = 0; i < list_scan->count; i++)
+    {
+        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+
+        asset_load_material_asset_path(asset_system,
+                                       string_to_c_string_allocator(list_scan->strings, scratch.allocator), NULL);
+
+        scratch_allocator_end(scratch);
+    }
+    // }
 
 
     return material_system;
@@ -29,20 +44,21 @@ bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d)
 {
     render_packet_3d->material_batch = material_system->material_batch;
-    render_packet_3d->material_batch_count = material_system->material_batch_count;
+    render_packet_3d->material_assets = material_system->material_asset;
+    render_packet_3d->material_definition = material_system->material_definition;
+    render_packet_3d->material_count = material_system->material_count;
 
 
     return true;
 }
 
-bool material_system_material_batch_exists(Asset_System* asset_system, MADNESS_UUID uuid)
+bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
     Material_System* material_system = asset_system->material_system;
 
-    for (u32 i = 0; i < material_system->material_batch_count; i++)
+    for (u32 i = 0; i < material_system->material_count; i++)
     {
-        if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
-                                 uuid))
+        if (madness_uuid_compare(material_system->material_asset[i].uuid, uuid))
         {
             return true;
         }
@@ -50,13 +66,13 @@ bool material_system_material_batch_exists(Asset_System* asset_system, MADNESS_U
     return false;
 }
 
-bool material_system_material_asset_exists(Asset_System* asset_system, Material_ID material_id,
-                                           Material_Asset* out_asset)
+bool material_system_material_exists_by_material_id(Asset_System* asset_system, Material_ID material_id,
+                                                    Material_Asset* out_asset)
 {
     Material_System* material_system = asset_system->material_system;
 
 
-    for (u32 i = 0; i < material_system->material_asset_count; i++)
+    for (u32 i = 0; i < material_system->material_count; i++)
     {
         if (material_system->material_asset[i].material_info.material_key == material_id)
         {
@@ -75,14 +91,16 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     Material_System* material_system = asset_system->material_system;
 
     Material_Batch* material_batch = NULL;
+    u32 material_index = 0;
 
     //find the material batch associated with the material data
-    for (u32 i = 0; i < material_system->material_batch_count; i++)
+    for (u32 i = 0; i < material_system->material_count; i++)
     {
-        if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
+        if (madness_uuid_compare(material_system->material_asset[i].uuid,
                                  material_instance->material_asset_uuid))
         {
             material_batch = &material_system->material_batch[i];
+            material_index = i;
             break;
         }
     }
@@ -92,30 +110,35 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     {
         asset_load_material_asset_uuid(asset_system, material_instance->material_asset_uuid);
         //find it
-        for (u32 i = 0; i < material_system->material_batch_count; i++)
+        for (u32 i = 0; i < material_system->material_count; i++)
         {
-            if (madness_uuid_compare(material_system->material_batch[i].material_asset_uuid,
+            if (madness_uuid_compare(material_system->material_asset[i].uuid,
                                      material_instance->material_asset_uuid))
             {
                 material_batch = &material_system->material_batch[i];
+                material_index = i;
+
                 break;
             }
         }
     }
     MASSERT(material_batch);
 
+    Material_Asset* material_asset = &material_system->material_asset[material_index];
+    Material_Definition* material_definition = &material_system->material_definition[material_index];
+
 
     void* material_data = allocator_alloc(asset_system->frame_allocator,
-                                          material_batch->material_asset->material_gpu_definition.struct_size);
+                                          material_definition->material_gpu_definition.struct_size);
 
     //resolve any uuid for texture loading
-    for (u32 i = 0; i < material_batch->material_asset->reflection_material_data.field_count; i++)
+    for (u32 i = 0; i < material_definition->reflection_material_data.field_count; i++)
     {
-        Reflection_Runtime_Struct_Field* field = &material_batch->material_asset->reflection_material_data.fields[i];
+        Reflection_Runtime_Struct_Field* field = &material_definition->reflection_material_data.fields[i];
 
         if (field->type == REFLECTION_TYPE_UUID)
         {
-            MASSERT(material_batch->material_asset->material_gpu_definition.types[i] == REFLECTION_TYPE_U32);
+            MASSERT(material_definition->material_gpu_definition.types[i] == REFLECTION_TYPE_U32);
 
             //load in texture and use the bindless index
             MADNESS_UUID uuid_data = *(MADNESS_UUID*)((u8*)material_instance->material_data + field->offset);
@@ -124,7 +147,7 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
             {
                 u32 default_texture = 0;
                 //copy into the gpu struct
-                memcpy(((u8*)material_data + material_batch->material_asset->material_gpu_definition.field_offsets[i]),
+                memcpy(((u8*)material_data + material_definition->material_gpu_definition.field_offsets[i]),
                        &default_texture,
                        sizeof(u32));
             }
@@ -133,17 +156,17 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
                 Texture_Handle texture_handle = asset_load_texture_uuid(asset_system, uuid_data);
 
                 //copy into the gpu struct
-                memcpy(((u8*)material_data + material_batch->material_asset->material_gpu_definition.field_offsets[i]),
+                memcpy(((u8*)material_data + material_definition->material_gpu_definition.field_offsets[i]),
                        &texture_handle.handle,
                        sizeof(u32));
             }
         }
-        else if (material_batch->material_asset->material_gpu_definition.types[i] == field->type)
+        else if (material_definition->material_gpu_definition.types[i] == field->type)
         {
             //copy into the gpu struct
-            memcpy((u8*)material_data + material_batch->material_asset->material_gpu_definition.field_offsets[i],
+            memcpy((u8*)material_data + material_definition->material_gpu_definition.field_offsets[i],
                    (u8*)material_instance->material_data + field->offset,
-                   reflection_type_get_size(material_batch->material_asset->material_gpu_definition.types[i]));
+                   reflection_type_get_size(material_definition->material_gpu_definition.types[i]));
         }
         else
         {
@@ -152,33 +175,101 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     }
 
     //give out the handle and add to our batch
-    out_handle->material_id = material_batch->material_key;
+    out_handle->material_id = material_asset->material_info.material_key;
     out_handle->material_index = material_batch->material_data->num_items;
     dynamic_array_push(material_batch->material_data, material_data);
     return true;
 }
 
-bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
-                                         Material_Asset_Runtime* material_asset)
+void material_definition_create(Asset_System* asset_system,
+                                Material_Definition* material_definition, const char* material_name)
 {
-    //checks if a material has a batch associated with it, if not create it, otherwise do nothing and return the handle
+    //get the data from the reflection system and hash it
+    material_definition->reflection_material_data = reflection_registry_get_struct(
+        asset_system->material_reflection_registry, material_name);
+
+    material_definition->reflection_hash = reflection_registry_struct_hash_u32(
+        &material_definition->reflection_material_data);
+
+    //create the gpu definition
+    Reflection_Runtime_Struct* reflection_material = &material_definition->reflection_material_data;
+    Material_GPU_Definition* material_gpu_definition = &material_definition->material_gpu_definition;
+    material_gpu_definition->field_count = reflection_material->field_count;
+    material_gpu_definition->name_hashes = allocator_alloc(asset_system->frame_allocator,
+                                                               sizeof(u64) *
+                                                               reflection_material->field_count);
+    material_gpu_definition->field_offsets = allocator_alloc(asset_system->frame_allocator,
+                                                                 sizeof(u32) *
+                                                                 reflection_material->field_count);
+    material_gpu_definition->types = allocator_alloc(asset_system->frame_allocator,
+                                                         sizeof(Reflection_Type) *
+                                                         reflection_material->field_count);
+    material_gpu_definition->struct_size = 0;
+    u32 offset = 0;
+    for (u32 i = 0; i < reflection_material->field_count; i++)
+    {
+        material_gpu_definition->name_hashes[i] =
+            c_string_hash_u64(reflection_material->fields[i].name);
+
+        if (reflection_material->fields[i].type == REFLECTION_TYPE_UUID)
+        {
+            material_gpu_definition->types[i] = REFLECTION_TYPE_U32;
+        }
+        else
+        {
+            material_gpu_definition->types[i] = reflection_material->fields[i].type;
+        }
+        material_gpu_definition->field_offsets[i] = offset;
+        material_gpu_definition->struct_size += reflection_type_get_size(material_gpu_definition->types[i]);
+        offset += reflection_type_get_size(material_gpu_definition->types[i]);
+    }
+}
+
+
+bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
+                                         Material_Asset* material_asset)
+{
+    //NOTE: we assume that at this point the asset is not loaded
+
+
     Material_System* material_system = asset_system->material_system;
 
-    if (material_system_material_batch_exists(asset_system, uuid))
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    //we already have our reflection data, we load it, we compare and do any updates, create the gpu definition,
+    //serialize it back out, then load it into the material system
+
+    Material_Batch* batch = &material_system->material_batch[material_system->material_count];
+    Material_Asset* cur_material_asset = &material_system->material_asset[material_system->material_count];
+    *cur_material_asset = *material_asset;
+    Material_Definition* material_definition = &material_system->material_definition[material_system->material_count];
+
+    //load in the mat definition
+    material_definition_create(asset_system,
+                               material_definition,
+                               string_to_c_string_allocator(material_asset->material_info.material_name,
+                                                            scratch.allocator));
+
+    //compare hashes, if its different we simply just overwrite the hash and the mat inst will check on its load
+    if (cur_material_asset->reflection_hash != material_definition->reflection_hash)
     {
-        return true;
+        cur_material_asset->reflection_hash = material_definition->reflection_hash;
+        asset_converter_material_asset(asset_system, cur_material_asset);
     }
 
 
-    Material_Batch* batch = &material_system->material_batch[material_system->material_batch_count++];
-    batch->material_asset = material_asset->asset;
-    batch->material_asset_uuid = uuid;
-    batch->material_asset = material_asset->asset;
+    //create the material definition
+    material_definition_create(asset_system, material_definition,
+                               string_to_c_string_allocator(cur_material_asset->material_info.material_name,
+                                                            scratch.allocator));
+
+
+    material_system->material_count++;
+
     //create the material array
-    batch->material_data = _dynamic_array_create(batch->material_asset->material_gpu_definition.struct_size, 10,
+    batch->material_data = _dynamic_array_create(material_definition->material_gpu_definition.struct_size, 10,
                                                  asset_system->heap_allocator);
-    // batch->material_key = material_generate_id(&batch->material_asset->material_info);
-    batch->material_key = batch->material_asset->material_info.material_key;
 
 
     Madness_Asset* madness_asset = &material_system->material_madness_asset[material_system->
@@ -187,6 +278,9 @@ bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUI
     madness_asset->path_hash = uuid_hash;
     madness_asset->type = ASSET_MATERIAL;
     madness_asset->reference_count = 1;
+
+
+    scratch_allocator_end(scratch);
 
 
     return true;
@@ -228,25 +322,30 @@ bool material_system_change_material_param(Asset_System* asset_system, Material_
     Material_System* material_system = asset_system->material_system;
 
     Material_Batch* batch = NULL;
-    for (u32 i = 0; i < material_system->material_batch_count; i++)
+    u32 material_index = 0;
+    for (u32 i = 0; i < material_system->material_count; i++)
     {
-        if (material_system->material_batch[i].material_key == material_handle.material_id)
+        if (material_system->material_asset[i].material_info.material_key == material_handle.material_id)
         {
             batch = &material_system->material_batch[i];
+            material_index = i;
         }
     }
 
     MASSERT(batch);
 
+    Material_Asset* material_asset = &material_system->material_asset[material_index];
+    Material_Definition* material_definition = &material_system->material_definition[material_index];
+
     const u64 hash_name = c_string_hash_u64(param_name);
 
-    for (int i = 0; i < batch->material_asset->material_gpu_definition.field_count; ++i)
+    for (int i = 0; i < material_definition->material_gpu_definition.field_count; ++i)
     {
-        if (batch->material_asset->material_gpu_definition.name_hashes[i] == hash_name)
+        if (material_definition->material_gpu_definition.name_hashes[i] == hash_name)
         {
             void* mat_data = _dynamic_array_get(batch->material_data, material_handle.material_index);
-            memcpy((u8*)mat_data + batch->material_asset->material_gpu_definition.field_offsets[i], new_data,
-                   reflection_type_get_size(*batch->material_asset->material_gpu_definition.types));
+            memcpy((u8*)mat_data + material_definition->material_gpu_definition.field_offsets[i], new_data,
+                   reflection_type_get_size(*material_definition->material_gpu_definition.types));
             return true;
         }
     }
@@ -281,124 +380,89 @@ Material_ID material_generate_id(Material_Info* material_info)
     return hash;
 }
 
-void material_create_gpu_definition(Asset_System* asset_system, Reflection_Runtime_Struct reflection_material,
-                                    Material_GPU_Definition* out_material_gpu_definition)
-{
-    MASSERT(out_material_gpu_definition);
-    out_material_gpu_definition->field_count = reflection_material.field_count;
-    out_material_gpu_definition->name_hashes = allocator_alloc(asset_system->frame_allocator,
-                                                               sizeof(u64) *
-                                                               reflection_material.field_count);
-    out_material_gpu_definition->field_offsets = allocator_alloc(asset_system->frame_allocator,
-                                                                 sizeof(u32) *
-                                                                 reflection_material.field_count);
-    out_material_gpu_definition->types = allocator_alloc(asset_system->frame_allocator,
-                                                         sizeof(Reflection_Type) *
-                                                         reflection_material.field_count);
 
-    out_material_gpu_definition->struct_size = 0;
-
-    u32 offset = 0;
-    for (u32 i = 0; i < reflection_material.field_count; i++)
-    {
-        out_material_gpu_definition->name_hashes[i] =
-            c_string_hash_u64(reflection_material.fields[i].name);
-
-        if (reflection_material.fields[i].type == REFLECTION_TYPE_UUID)
-        {
-            out_material_gpu_definition->types[i] = REFLECTION_TYPE_U32;
-        }
-        else
-        {
-            out_material_gpu_definition->types[i] = reflection_material.fields[i].type;
-        }
-        out_material_gpu_definition->field_offsets[i] = offset;
-        out_material_gpu_definition->struct_size += reflection_type_get_size(out_material_gpu_definition->types[i]);
-        offset += reflection_type_get_size(out_material_gpu_definition->types[i]);
-    }
-}
-
-void material_instance_set_default_textures(Asset_System* asset_system, Material_Asset* material_asset,
-                                            Material_Instance* material_instance)
+void material_instance_set_default_textures(Asset_System* asset_system,
+                                            Material_Instance* material_instance,
+                                            Material_Definition* material_definition)
 {
     MASSERT(asset_system);
-    MASSERT(material_asset);
     MASSERT(material_instance);
     MASSERT(material_instance->material_data);
-    MASSERT(material_asset->reflection_material_data.name);
-    MASSERT(material_asset->material_gpu_definition.types);
+    MASSERT(material_definition->reflection_material_data.name);
+    MASSERT(material_definition->material_gpu_definition.types);
 
 
-    for (u32 i = 0; i < material_asset->reflection_material_data.field_count; i++)
+    for (u32 i = 0; i < material_definition->reflection_material_data.field_count; i++)
     {
-        if (material_asset->reflection_material_data.fields[i].type == REFLECTION_TYPE_UUID)
+        if (material_definition->reflection_material_data.fields[i].type == REFLECTION_TYPE_UUID)
         {
-            MADNESS_UUID* uuid_data = *(MADNESS_UUID**)((u8*)material_instance->material_data + material_asset->
+            MADNESS_UUID* uuid_data = *(MADNESS_UUID**)((u8*)material_instance->material_data + material_definition->
                 reflection_material_data.fields[i].offset);
             *uuid_data = asset_system->texture_system->default_texture_uuid;
         }
     }
 }
 
-void material_asset_create(Asset_System* asset_system, Material_Info* material_info, Material_Asset* material_asset)
+void material_asset_create(Asset_System* asset_system, Material_Info* material_info, Material_Asset* out_material_asset)
 {
     MASSERT(asset_system);
     MASSERT(material_info);
     MASSERT(material_info->material_name);
-    MASSERT(material_asset);
-
-    //TODO: we want to check if the mat asset has already been created and then just pass it back
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
-
-    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material_asset->material_info.material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material_asset->material_info.shader_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_u64(str_builder, material_asset->material_info.material_key, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
+    MASSERT(out_material_asset);
 
     //look for it by key
     material_info->material_key = material_generate_id(material_info);
-    const char* mat_asset_path = string_builder_to_c_string(str_builder);
 
-    if (material_system_material_asset_exists(asset_system, material_info->material_key, material_asset))
+    if (material_system_material_exists_by_material_id(asset_system, material_info->material_key, out_material_asset))
     {
         return;
     }
 
-    //if this happens and the asset was not found in the material system, either the material asset changed or
+    //we want to check if the mat asset has already been created in a file and then just pass it back
+    // the load function makes sure the definition is up to date
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
+    string_builder_append_string(str_builder, material_info->material_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_string(str_builder, material_info->shader_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_u64(str_builder, material_info->material_key, scratch.allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
+
+    const char* mat_asset_path = string_builder_to_c_string(str_builder);
+
     if (filesystem_does_file_exists(mat_asset_path))
     {
-        //TODO: check to see if its loaded in, if not then do so
+        asset_load_material_asset_path(asset_system, mat_asset_path, out_material_asset);
+        scratch_allocator_end(scratch);
 
-        // else
-        // {
-            // asset_load_material_asset_path(asset_system, mat_asset_path);
-        // }
+        return;
     }
+    scratch_allocator_end(scratch);
 
+    //this doesn't exist and we have to create it
 
     Reflection_Runtime_Struct reflection_material = reflection_registry_get_struct(
-        asset_system->global_reflection_registry, MATERIAL_DEFAULT_NAME);
-
-    Material_GPU_Definition material_gpu_definition;
-    material_create_gpu_definition(asset_system, reflection_material, &material_gpu_definition);
+        asset_system->material_reflection_registry, MATERIAL_DEFAULT_NAME);
 
     //TODO: check to see if we already have this particular material asset already created
 
-    *material_asset = (Material_Asset){
+    *out_material_asset = (Material_Asset){
+        .version = 1.0f,
+        .reflection_hash = reflection_registry_struct_hash_u32(&reflection_material),
         .material_info = *material_info,
-        .reflection_material_data = reflection_material,
-        .material_gpu_definition = material_gpu_definition,
         .uuid = madness_uuid_generate_return(),
     };
+}
 
-    scratch_allocator_end(scratch);
+void material_asset_destroy(Asset_System* asset_system, Material_Info* material_info, Material_Asset* material_asset)
+{
 }
 
 void material_instance_create(Asset_System* asset_system, Material_Asset* material_asset,
+                              Material_Definition* material_definition,
                               Material_Instance* out_material_instance, const char* mat_inst_name)
 {
     MASSERT(asset_system);
@@ -409,12 +473,13 @@ void material_instance_create(Asset_System* asset_system, Material_Asset* materi
 
 
     out_material_instance->material_data = allocator_heap_alloc(asset_system->heap_allocator,
-                                                                material_asset->reflection_material_data.struct_size);
+                                                                material_definition->reflection_material_data.
+                                                                struct_size);
     //just for insurance
-    memset(out_material_instance->material_data, 0, material_asset->reflection_material_data.struct_size);
+    memset(out_material_instance->material_data, 0, material_definition->reflection_material_data.struct_size);
 
 
-    out_material_instance->data_size = material_asset->reflection_material_data.struct_size;
+    out_material_instance->data_size = material_definition->reflection_material_data.struct_size;
     out_material_instance->material_asset_uuid = material_asset->uuid;
     out_material_instance->material_instance_uuid = madness_uuid_generate_return();
     out_material_instance->material_name = string_duplicate_heap(material_asset->material_info.material_name,
@@ -422,8 +487,8 @@ void material_instance_create(Asset_System* asset_system, Material_Asset* materi
     out_material_instance->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(mat_inst_name, asset_system->heap_allocator);
 
     material_instance_set_default_textures(asset_system,
-                                           material_asset,
-                                           out_material_instance);
+                                           out_material_instance,
+                                           material_definition);
 }
 
 /**
@@ -431,6 +496,7 @@ void material_instance_create(Asset_System* asset_system, Material_Asset* materi
  */
 void material_instance_create_from_data(Asset_System* asset_system,
                                         Material_Asset* material_asset,
+                                        Material_Definition* material_definition,
                                         Material_Instance* out_material_instance,
                                         const char* mat_instance_name,
                                         void* data)
@@ -445,7 +511,7 @@ void material_instance_create_from_data(Asset_System* asset_system,
 
 
     out_material_instance->material_data = data;
-    out_material_instance->data_size = material_asset->reflection_material_data.struct_size;
+    out_material_instance->data_size = material_definition->reflection_material_data.struct_size;
     out_material_instance->material_asset_uuid = material_asset->uuid;
     out_material_instance->material_instance_uuid = madness_uuid_generate_return();
     out_material_instance->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(

@@ -100,11 +100,12 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
     Asset_List_Scan* list_scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, asset_path);
     for (u32 i = 0; i < list_scan->count; i++)
     {
-        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
-        const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], asset_system->frame_allocator);
+        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+        const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], scratch.allocator);
 
         if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
         {
+        scratch_allocator_end(scratch);
             continue;
         }
 

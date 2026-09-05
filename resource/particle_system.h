@@ -24,7 +24,7 @@
 //
 
 
-Particle_System* particle_system_init(Asset_System* resource_system, Memory_System* memory_system);
+Particle_System* particle_system_init(Asset_System* asset_system, Memory_System* memory_system);
 
 void particle_system_shutdown(Particle_System* ps, Memory_System* memory_system);
 

@@ -70,7 +70,6 @@ typedef struct Material_Black_Hole
     float distortion;
     float speed;
     float size;
-
 } Material_Black_Hole;
 
 //this is mostly a test material
@@ -92,7 +91,7 @@ typedef struct Material_Spherical_Billboard
 } Material_Spherical_Billboard;
 
 //TODO: this should say cpu version
-typedef struct Material_Spherical_Billboard_GPU
+typedef struct Material_Spherical_Billboard_CPU
 {
     vec3s point;
     MADNESS_UUID texture_idx;
@@ -101,6 +100,6 @@ typedef struct Material_Spherical_Billboard_GPU
     vec4s color; //tint basically
     // vec2s tex_offset;
     // vec2s tex_size;
-} Material_Spherical_Billboard_GPU;
+} Material_Spherical_Billboard_CPU;
 
 #endif //MATERIAL_TYPES_H

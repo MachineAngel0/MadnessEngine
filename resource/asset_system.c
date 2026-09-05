@@ -6,12 +6,14 @@
 #include "sprite_system.h"
 
 
-Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry)
+Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registry* global_reflection_registry,
+                                Reflection_Registry* material_reflection_registry)
 {
     Asset_System* asset_system = memory_system_alloc(memory_system, sizeof(Asset_System),
                                                      MEMORY_SUBSYSTEM_RESOURCE);
 
     asset_system->global_reflection_registry = global_reflection_registry;
+    asset_system->material_reflection_registry = material_reflection_registry;
 
     asset_system->render_packet = memory_system_alloc(memory_system, sizeof(Render_Packet),
                                                       MEMORY_SUBSYSTEM_RESOURCE);
@@ -19,12 +21,12 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
                                                                        MEMORY_SUBSYSTEM_RESOURCE);
 
-    asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(64),
+    asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(4),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
 
     //really not using this for much rn
-    asset_system->allocator = memory_system_allocator_create(memory_system, KB(16),
-                                                               MEMORY_SUBSYSTEM_RESOURCE);
+    asset_system->allocator = memory_system_allocator_create(memory_system, MB(16),
+                                                             MEMORY_SUBSYSTEM_RESOURCE);
 
     //texture memory
     asset_system->texture_allocator = memory_system_heap_allocator_create(
@@ -90,8 +92,6 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 }
 
 
-
-
 bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
 {
     allocator_clear(asset_system->frame_allocator);
@@ -129,8 +129,6 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         skinned_mesh_instance_count;
 
 
-
-
     return true;
 }
 
@@ -142,6 +140,9 @@ void render_packet_clear(Render_Packet* renderer_packets)
 
 Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path)
 {
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+
     Texture_Handle texture_handle = {0};
 
     //either load from metadata -> binary or binary blob
@@ -149,7 +150,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     //in general we just want to deserialize the data quickly,
     //the deserialization is the same, it just depends which file data we end up giving it
 
-    String_Builder* string_builder = string_builder_create(512, asset_system->frame_allocator);
+    String_Builder* string_builder = string_builder_create(512, scratch.allocator);
     string_builder_append_c_string(string_builder, ENGINE_TEXTURE_PATH);
     string_builder_append_c_string(string_builder, asset_path);
     string_builder_append_c_string(string_builder, ENGINE_TEXTURE_EXTENSION);
@@ -157,7 +158,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 
     String* load_asset_path = string_builder_to_string(string_builder);
 
-    Asset_MetaData* meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
+    Asset_MetaData* meta_data = allocator_alloc( scratch.allocator, sizeof(Asset_MetaData));
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
     {
         //TODO: try to load in the asset from the import path
@@ -179,7 +180,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     bool debug = true;
     if (debug)
     {
-        fptr = fopen(string_to_c_string_allocator(load_asset_path, asset_system->frame_allocator), "rb");
+        fptr = fopen(string_to_c_string_allocator(load_asset_path, scratch.allocator), "rb");
         if (!fptr)
         {
             //TODO: since were in the editor, we should at least try to find the asset in our asset folder
@@ -205,6 +206,8 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     }*/
     fclose(fptr);
 
+
+    scratch_allocator_end(scratch);
     return texture_handle;
 }
 
@@ -511,7 +514,7 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
 }
 
 
-bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path)
+bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path, Material_Asset* out_material_asset)
 {
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, asset_system->frame_allocator);
 
@@ -525,7 +528,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
     //material system does exists function
     //has asset already been loaded
-    if (material_system_material_batch_exists(asset_system, out_meta_data->uuid))
+    if (material_system_material_exist_by_uuid(asset_system, out_meta_data->uuid))
     {
         return true;
     }
@@ -543,10 +546,16 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
         }
 
 
-        Material_Asset_Runtime runtime_material = {0};
-        runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_asset_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
-        material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
+        Material_Asset* material_asset = {0};
+        material_asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
+        asset_material_asset_deserialize(material_asset, fptr, asset_system->heap_allocator);
+        material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, material_asset);
+
+        if (out_material_asset)
+        {
+            *out_material_asset = *material_asset;
+        }
+
     }
     else
     {
@@ -572,7 +581,7 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
     //material system does exists function
     //has asset already been loaded
-    if (material_system_material_batch_exists(asset_system, out_meta_data->uuid))
+    if (material_system_material_exist_by_uuid(asset_system, out_meta_data->uuid))
     {
         return true;
     }
@@ -590,10 +599,10 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
         }
 
 
-        Material_Asset_Runtime runtime_material = {0};
-        runtime_material.asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
-        asset_material_asset_deserialize(&runtime_material, fptr, asset_system->heap_allocator);
-        material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, &runtime_material);
+        Material_Asset* material_asset = {0};
+        material_asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
+        asset_material_asset_deserialize(material_asset, fptr, asset_system->heap_allocator);
+        material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, material_asset);
     }
     else
     {

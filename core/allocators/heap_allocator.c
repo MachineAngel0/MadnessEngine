@@ -18,9 +18,9 @@ void allocator_heap_free_all(Heap_Allocator* ha)
 
 void allocator_heap_init(Heap_Allocator* ha, void* backing_memory, const size_t memory_size)
 {
-    MASSERT(ha)
-    MASSERT(backing_memory)
-    MASSERT(memory_size > 0)
+    MASSERT(ha);
+    MASSERT(backing_memory);
+    MASSERT(memory_size > 0);
 
 
     ha->data = backing_memory;

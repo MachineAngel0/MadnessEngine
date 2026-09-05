@@ -307,7 +307,7 @@ Free_List_Node* free_list_get_node(Free_List* free_list)
 
 void freelist_free_all(Free_List* free_list)
 {
-    MASSERT(free_list)
+    MASSERT(free_list);
 
     // Invalidate the offset for all but the first node. The invalid
     // value will be checked for when seeking a new node from the list.
@@ -331,7 +331,7 @@ void free_list_return_node(Free_List_Node* node)
 u64 freelist_space_available(Free_List* free_list)
 {
     // return free_list->capacity - free_list->used;
-    MASSERT(free_list)
+    MASSERT(free_list);
 
     u64 running_total = 0;
     Free_List_Node* node = free_list->head;

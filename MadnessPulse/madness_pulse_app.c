@@ -115,7 +115,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system);
     //asset system
-    application_core->asset_system = asset_system_init(&application_core->memory_system, global_reflection_registry);
+    application_core->asset_system = asset_system_init(&application_core->memory_system, global_reflection_registry, material_reflection_registry);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
     //UI

@@ -39,6 +39,7 @@
 #define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
 #define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
 #define ENGINE_MATERIAL_PATH "../z_assets_engine/material/"
+#define ENGINE_MATERIAL_PATH_NO_SLASH "../z_assets_engine/material"
 #define ENGINE_MATERIAL_INSTANCE_PATH "../z_assets_engine/material_instance/"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 #define ENGINE_PARTICLE_PATH "../z_assets_engine/particle/"
@@ -449,19 +450,25 @@ typedef struct Material_GPU_Definition
 typedef struct Material_Asset
 {
     //information about the material structure, think of it like the definition of a material/shader
-    Material_Info material_info;
+    u32 version;
+    u32 reflection_hash;
     MADNESS_UUID uuid;
-    Reflection_Runtime_Struct reflection_material_data;
-    Material_GPU_Definition material_gpu_definition;
+    Material_Info material_info;
 } Material_Asset;
 
-
+typedef struct Material_Definition
+{
+    u32 reflection_hash;
+    Reflection_Runtime_Struct reflection_material_data;
+    Material_GPU_Definition material_gpu_definition;
+} Material_Definition;
 
 
 typedef struct Material_Instance_Data
 {
     MADNESS_UUID material_asset_uuid;
     MADNESS_UUID material_instance_uuid;
+    // u32 mat_hash;
 
     // NOTE: the material data is the serialized data containing the UUID for textures
     u64 data_size;
@@ -489,21 +496,12 @@ typedef struct Material_Instance
 } Material_Instance;
 
 
-typedef struct Material_Asset_Runtime
-{
-    u32 version;
-    Material_Asset* asset;
-} Material_Asset_Runtime;
-
-
 typedef struct Material_Batch
 {
     //to solve the problem of having different batches for the material types, it would make sense to have a sort key
     // https://realtimecollisiondetection.net/blog/?p=86
 
-    Material_ID material_key;
-    MADNESS_UUID material_asset_uuid;
-    Material_Asset* material_asset;
+
     Dynamic_Array* material_data;
 } Material_Batch;
 
@@ -896,22 +894,20 @@ typedef struct Madness_SkMesh_Runtime
 
 typedef struct Material_System
 {
-    Reflection_Registry* reflection_registry;
-
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
     //sort material batches by their mesh type, possibly fine grain it later
-    Material_Batch material_batch[100];
-    u32 material_batch_count;
-
-    Material_Asset material_asset[100];
-    u32 material_asset_count;
+    Material_Batch material_batch[MAX_MATERIAL_COUNT];
+    Material_Asset material_asset[MAX_MATERIAL_COUNT];
+    Material_Definition material_definition[MAX_MATERIAL_COUNT];
+    u32 material_count;
 
 
     Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
     u32 material_madness_asset_count;
 
-    MADNESS_UUID default_material_uuid;
+    //TODO: if needed reusable material slots
+    // u32* free_mat_index;
 
 } Material_System;
 
@@ -1080,7 +1076,9 @@ typedef struct Render_Packet_3D
 
     //TODO: we should have a dirty bit for generating any new batches
     Material_Batch* material_batch;
-    u32 material_batch_count;
+    Material_Asset* material_assets;
+    Material_Definition* material_definition;
+    u32 material_count;
 
     Madness_Mesh_Instance* mesh_instances;
     u32 mesh_instances_count;
@@ -1167,6 +1165,7 @@ typedef struct Asset_System
     Heap_Allocator* mesh_allocator;
 
     Reflection_Registry* global_reflection_registry; // ref
+    Reflection_Registry* material_reflection_registry; // ref
 
     // Shader_System* shader_system;
     // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer

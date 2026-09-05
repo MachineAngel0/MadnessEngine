@@ -67,7 +67,7 @@ void asset_converter_create_directory_for_engine_asset(String_Builder* str_build
 void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitter* particle_emitter,
                                       MADNESS_UUID* out_uuid)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -102,7 +102,7 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
 void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect* particle_effect,
                                      MADNESS_UUID* out_uuid)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -136,7 +136,7 @@ void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect
 
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
-    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
     //check for supported file formats
@@ -150,7 +150,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     Asset_MetaData meta_data;
     if (asset_registry_exists_by_source_path(asset_system->asset_registry,
                                              STRING_CREATE_FROM_BUFFER_ALLOCATOR(
-                                                 file_path, scratch_allocator.allocator),
+                                                 file_path, scratch.allocator),
                                              &meta_data))
     {
         if (out_uuid)
@@ -184,7 +184,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     runtime_texture.texture.type = ASSET_TEXTURE;
     runtime_texture.pixel_data = pixel_data;
 
-    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
+    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
                                                                                file_path, ENGINE_TEXTURE_PATH,
                                                                                ENGINE_TEXTURE_EXTENSION);
     const char* output_path = string_builder_to_c_string(str_builder_output_path);
@@ -209,7 +209,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
                                                 ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
 
-    scratch_allocator_end(scratch_allocator);
+    scratch_allocator_end(scratch);
 
     return true;
 }
@@ -217,7 +217,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
 
 bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 {
-    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
     Madness_Font font_structure = {0};
     Madness_Texture texture = {0};
 
@@ -251,7 +251,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     float scale = stbtt_ScaleForPixelHeight(&font_info, DEFAULT_FONT_CREATION_SIZE);
     int atlas_width = 1024 * 4;
     int atlas_height = 1024 * 4;
-    char* atlasPixels = allocator_alloc(asset_system->frame_allocator, atlas_width * atlas_height);
+    char* atlasPixels = allocator_alloc(scratch.allocator, atlas_width * atlas_height);
 
     int x = 0, y = 0, rowHeight = 0;
 
@@ -324,7 +324,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
     // Convert to RGBA
     u64 atlasRGBA_size = atlas_width * atlas_height * 4;
-    unsigned char* atlas_RGBA_pixels = allocator_alloc(asset_system->frame_allocator, atlasRGBA_size);
+    unsigned char* atlas_RGBA_pixels = allocator_alloc(scratch.allocator, atlasRGBA_size);
     for (int i = 0; i < atlas_width * atlas_height; i++)
     {
         unsigned char v = atlasPixels[i];
@@ -383,7 +383,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 
     //write it out to the file
-    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch_allocator,
+    String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
                                                                                file_path, ENGINE_FONTS_PATH,
                                                                                ENGINE_FONTS_EXTENSION);
     const char* output_path = string_builder_to_c_string(str_builder_output_path);
@@ -413,14 +413,14 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_FONT, asset_system->heap_allocator, NULL);
 
-    scratch_allocator_end(scratch_allocator);
+    scratch_allocator_end(scratch);
 
     return true;
 }
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
-    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->allocator);
     //TODO: we should check ahead of time for the csv file as well
     //check for supported file formats
     if (!c_string_path_is_extension(file_path, ".png"))
@@ -559,7 +559,7 @@ bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
 
 bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -741,7 +741,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                                                submesh->indices_bytes);
         submesh->index_count = submesh->indices_bytes / index_stride;
 
-        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices, submesh_gpu->indices, sizeof(u16),
+        cgltf_accessor_unpack_indices(data->meshes[mesh_idx].primitives->indices, submesh_gpu->indices,
+                                      index_stride,
                                       submesh->index_count);
 
 
@@ -901,13 +902,19 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
         Material_Asset mat_asset = {0};
         material_asset_create(asset_system, &default_info, &mat_asset);
+        Material_Definition material_definition = {0};
+        material_definition_create(asset_system, &material_definition,
+                                   string_to_c_string_allocator(mat_asset.material_info.material_name,
+                                                                scratch.allocator));
 
         Material_Instance* mat_inst = &material_instances[mesh_idx];
         // material_instance_create(asset_system, mat_asset, mat_inst, name);
 
         if (data->meshes[mesh_idx].primitives->material->name)
         {
-            material_instance_create_from_data(asset_system, &mat_asset, mat_inst,
+            material_instance_create_from_data(asset_system, &mat_asset,
+                                               &material_definition,
+                                               mat_inst,
                                                data->meshes[mesh_idx].primitives->material->name, cur_mat);
         }
         else
@@ -922,7 +929,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
 
-            material_instance_create_from_data(asset_system, &mat_asset, mat_inst,
+            material_instance_create_from_data(asset_system, &mat_asset, &material_definition,
+                                               mat_inst,
                                                string_builder_to_c_string(string_mat_name), cur_mat);
         }
 
@@ -1282,10 +1290,9 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
             MASSERT(false);
         }
 
-        Material_Asset_Runtime asset_editor = {0};
-        asset_editor.version = 1;
-        asset_editor.asset = material_asset;
-        asset_material_asset_serialize(&asset_editor, fptr);
+
+        material_asset->version = 1.0f;
+        asset_material_asset_serialize(material_asset, fptr);
 
         asset_registry_add_asset_from_uuid(asset_system->asset_registry, output_path, output_path,
                                            ASSET_MATERIAL, asset_system->heap_allocator, material_asset->uuid);
@@ -1308,7 +1315,7 @@ bool asset_converter_material_instance(Asset_System* asset_system, Material_Inst
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     //write out the file
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
+    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
     string_builder_append_string(str_builder, mat_inst->material_name);
     string_builder_append_c_string(str_builder, "_");
@@ -1340,16 +1347,23 @@ bool asset_converter_material_instance(Asset_System* asset_system, Material_Inst
 }
 
 bool asset_converter_material(Asset_System* asset_system, Material_Info* material_info,
-    Material_Asset* out_material_asset, Material_Instance* out_material_instance, const char* mat_inst_name)
+                              Material_Asset* out_material_asset, Material_Instance* out_material_instance,
+                              const char* mat_inst_name)
 {
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
     //create the material asset and instance
     material_asset_create(asset_system,
                           material_info,
                           out_material_asset);
 
+    Material_Definition material_definition;
+    material_definition_create(asset_system, &material_definition,
+                               string_to_c_string_allocator(material_info->material_name, scratch.allocator));
 
     material_instance_create(asset_system,
                              out_material_asset,
+                             &material_definition,
                              out_material_instance,
                              mat_inst_name);
 
@@ -1359,6 +1373,7 @@ bool asset_converter_material(Asset_System* asset_system, Material_Info* materia
 
     asset_converter_material_instance(asset_system, out_material_instance);
 
+    scratch_allocator_end(scratch);
 
     return true;
 }

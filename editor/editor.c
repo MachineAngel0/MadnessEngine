@@ -190,8 +190,7 @@ void editor_ui(Editor* editor)
         madness_ui_set_window_pos(700, 100);
         madness_ui_window_begin(STRING("Material Menu"));
         {
-            Reflection_Registry* material_reflection_registry = editor->asset_system->material_system->
-                                                                        reflection_registry;
+            Reflection_Registry* material_reflection_registry = editor->asset_system->material_reflection_registry;
 
             if (madness_ui_button(STRING("Serialize Runtime Data")))
             {
@@ -558,13 +557,15 @@ void editor_material_asset_view(Editor* editor)
     Asset_System* asset_system = editor->asset_system;
     madness_ui_window_begin(STRING("Material Reflection View"));
     {
-        for (u32 i = 0; i < asset_system->material_system->material_batch_count; i++)
+        for (u32 i = 0; i < asset_system->material_system->material_count; i++)
         {
             Material_Batch* batch = &asset_system->material_system->material_batch[i];
-            batch->material_asset->material_info.blend_mode;
-            batch->material_asset->material_info.mesh_type;
-            batch->material_asset->material_info.renderpass;
-            batch->material_asset->material_info.transluency;
+            batch->material_data;
+            Material_Asset* material_asset = &asset_system->material_system->material_asset[i];
+            material_asset->material_info.blend_mode;
+            material_asset->material_info.mesh_type;
+            material_asset->material_info.renderpass;
+            material_asset->material_info.transluency;
 
 
             /*

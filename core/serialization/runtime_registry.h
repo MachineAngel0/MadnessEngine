@@ -848,8 +848,6 @@ void reflection_registry_debug_print_info(Reflection_Registry* reflection_regist
 }
 
 
-
-
 void reflection_serialize_type(Reflection_Type type, void* data, FILE* fptr)
 {
     switch (type)
@@ -1090,7 +1088,8 @@ void reflection_registry_deserialize_runtime_struct_heap(Reflection_Runtime_Stru
 }
 
 
-void reflection_registry_serialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr, void* data)
+void reflection_registry_serialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct,
+                                                           FILE* fptr, void* data)
 {
     fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
     fwrite(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
@@ -1112,10 +1111,10 @@ void reflection_registry_serialize_runtime_struct_and_data(Reflection_Runtime_St
         Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
         reflection_serialize_type(field->type, ((u8*)data + field->offset), fptr);
     }
-
 }
 
-void reflection_registry_deserialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct, FILE* fptr, void* data, Allocator* allocator)
+void reflection_registry_deserialize_runtime_struct_and_data(Reflection_Runtime_Struct* reflection_runtime_struct,
+                                                             FILE* fptr, void* data, Allocator* allocator)
 {
     fwrite(&reflection_runtime_struct->field_count, sizeof(reflection_runtime_struct->field_count), 1, fptr);
     fwrite(&reflection_runtime_struct->struct_size, sizeof(reflection_runtime_struct->struct_size), 1, fptr);
@@ -1142,6 +1141,76 @@ void reflection_registry_deserialize_runtime_struct_and_data(Reflection_Runtime_
         Reflection_Runtime_Struct_Field* field = &reflection_runtime_struct->fields[i];
         reflection_deserialize_type(field->type, data, fptr, allocator);
     }
+}
+
+
+bool reflection_registry_struct_compare_is_same(const Reflection_Runtime_Struct* def1,
+                                                const Reflection_Runtime_Struct* def2)
+{
+    // def1->name, im gonna just assume the names are the same
+
+    if (def1->field_count != def2->field_count)
+    {
+        return false;
+    }
+    if (def1->struct_size != def2->struct_size)
+    {
+        return false;
+    }
+
+    for (u32 i = 0; i < def1->field_count; i++)
+    {
+        if (def1->fields[i].type != def2->fields[i].type)
+        {
+            return false;
+        }
+
+        if (def1->fields[i].offset != def2->fields[i].offset)
+        {
+            return false;
+        }
+
+        if (strcmp(def1->fields[i].type_name, def2->fields[i].type_name) != 0)
+        {
+            return false;
+        }
+
+        if (strcmp(def1->fields[i].name, def2->fields[i].name) != 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+u32 reflection_registry_struct_hash_u32(const Reflection_Runtime_Struct* reflection_runtime_struct)
+{
+    uint64_t hash = hash_32_continous_start();
+
+    hash = hash_32_continous(
+        hash,
+        (uint8_t*)&reflection_runtime_struct->field_count,
+        sizeof(reflection_runtime_struct->field_count));
+
+    for (u32 i = 0; i < reflection_runtime_struct->field_count; i++)
+    {
+        const Reflection_Runtime_Struct_Field* field =
+            &reflection_runtime_struct->fields[i];
+
+        hash = hash_32_continous(
+            hash,
+            (uint8_t*)field->name,
+            strlen(field->name) + 1);
+
+        hash = hash_32_continous(
+            hash,
+            (uint8_t*)&field->type,
+            sizeof(field->type));
+    }
+
+    return hash;
 }
 
 

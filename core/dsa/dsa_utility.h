@@ -204,5 +204,27 @@ uint64_t hash_64_continous(uint64_t hash, uint8_t* key, size_t data_size)
     return hash;
 }
 
+u32 hash_32_continous_start()
+{
+    return FNV_OFFSET_BASIS_32;
+}
+
+u32 hash_32_continous(uint32_t hash, uint8_t* key, size_t data_size)
+{
+    // https://en.wikipedia.org/wiki/Jenkins_hash_function#lookup3
+
+    // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+    const uint8_t* bytes = (const uint8_t*)key;
+
+    for (size_t i = 0; i < data_size; i++)
+    {
+        hash ^= bytes[i];
+        hash *= FNV_PRIME_32;
+    }
+
+    return hash;
+}
+
+
 
 #endif //CONTAINER_UTILITY_H
