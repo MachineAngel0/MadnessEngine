@@ -111,7 +111,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
                 madness_ui_u8(STRING("Slot Number:"), &game->save_meta_data[i].slot_number, 0);
                 madness_ui_float(STRING("Game Version:"), &game->save_meta_data[i].version, 0);
                 madness_ui_u8(STRING("Missions Beaten:"), &game->save_meta_data[i].missions_beaten, 0);
-                madness_ui_padding("");
+                madness_ui_padding();
             }
         }
         madness_ui_window_end();

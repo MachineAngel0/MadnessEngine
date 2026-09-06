@@ -30,6 +30,9 @@ typedef enum Event_Type
     EVENT_HOT_RELOAD_SHADER,
 
 
+    EDITOR_RELOAD_PATHS,
+
+
     EVENT_TEST,
     MAX_EVENTS,
 } Event_Type;

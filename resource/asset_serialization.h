@@ -42,11 +42,12 @@ bool particle_emitter_serialize(Particle_Emitter* particle_emitter, FILE* fptr)
     return true;
 }
 
-bool particle_emitter_deserialize(Asset_System* asset_system, Particle_Emitter* particle_emitter, FILE* fptr)
+bool particle_emitter_deserialize(Particle_Emitter* particle_emitter, FILE* fptr, Heap_Allocator* allocator)
 {
     fread(&particle_emitter->data, sizeof(Particle_Emitter_Data), 1, fptr);
-    string_deserialize_heap(particle_emitter->name, fptr, asset_system->heap_allocator);
-    asset_material_instance_deserialize(&particle_emitter->material_instance, fptr, asset_system->heap_allocator);
+    particle_emitter->name =  allocator_heap_alloc(allocator, sizeof(String));
+    string_deserialize_heap(particle_emitter->name, fptr, allocator);
+    asset_material_instance_deserialize(&particle_emitter->material_instance, fptr, allocator);
     return true;
 }
 
@@ -90,6 +91,7 @@ bool particle_effect_deserialize(Particle_Effect* particle_effect, FILE* fptr, H
     {
         madness_uuid_deserialize(&particle_effect->emmiter_uuid[i], fptr);
     }
+    particle_effect->name = allocator_heap_alloc(allocator, sizeof (String));
     string_deserialize_heap(particle_effect->name, fptr, allocator);
     return true;
 }

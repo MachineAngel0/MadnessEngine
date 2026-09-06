@@ -1,19 +1,20 @@
 ﻿#include "editor.h"
 
+#include "asset_system.h"
 #include "memory/memory_system.h"
 
+
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                    Asset_System* resource_system, Clock* clock, Reflection_Registry* reflection_registry,
-                    Reflection_Registry* material_registry)
+                    Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry)
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
 
-    editor->editor_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
-    u64 editor_memory_size = MB(5);
+    editor->editor_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
+    u64 editor_memory_size = MB(4);
 
     void* editor_memory = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_arena, editor_memory, editor_memory_size);
+    allocator_init(editor->editor_allocator, editor_memory, editor_memory_size);
 
 
     editor->editor_frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
@@ -22,7 +23,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
 
     editor->renderer = renderer;
-    editor->asset_system = resource_system;
+    editor->asset_system = asset_system;
     editor->clock = clock;
     editor->reflection_registry = reflection_registry;
     editor->memory_system = memory_system;
@@ -43,6 +44,7 @@ bool editor_update(Editor* editor)
 {
     PROFILE_ZONE(editor_update)
 
+    allocator_clear(editor->editor_frame_allocator);
 
     //do the ui and stuff
     //manage a bunch of ui state
@@ -75,6 +77,7 @@ bool editor_shutdown(Editor* editor)
     return true;
 }
 
+
 bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
 {
     //meshes
@@ -103,7 +106,7 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
                              "../z_assets_engine/scene");
 
 
-    //scenes
+    //particles
     editor->particle_effect_list =
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
@@ -112,7 +115,8 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
                              "../z_assets_engine/particle/particle_emitter");
-
+    madness_ui_add_asset_list(editor->particle_effect_list, ASSET_PARTICLE_EFFECT);
+    madness_ui_add_asset_list(editor->particle_emitter_list, ASSET_PARTICLE_EMITTER);
     madness_ui_add_asset_list(editor->texture_list, ASSET_TEXTURE);
     madness_ui_add_asset_list(editor->madness_mesh_list, ASSET_STATIC_MESH);
     madness_ui_add_asset_list(editor->madness_skmesh_list, ASSET_SKINNED_MESH);
@@ -603,7 +607,7 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
 
-        madness_ui_padding("mat padding");
+        madness_ui_padding();
 
         static u32 selected_index;
         if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
@@ -656,90 +660,263 @@ void editor_render_view(Editor* editor)
 
 void editor_particle_view(Editor* editor)
 {
+    PROFILE_ZONE(editor_particle_view);
+
     Particle_System* particle_system = editor->asset_system->particle_system;
 
-    madness_ui_window_begin(STRING("Particle Creation"));
+
+    asset_list_regenerate(editor->particle_effect_list, "../z_assets_engine/particle/particle_effect");
+    asset_list_regenerate(editor->particle_emitter_list, "../z_assets_engine/particle/particle_emitter");
+
+
+    madness_ui_window_begin(STRING("Emitter Editor View"));
     {
-        String text_box_id = STRING("EMITTER NAME");
-        madness_ui_text_box(text_box_id);
+        madness_ui_string(STRING("EMITTER SELECTED"));
+
+        String emitter_path;
+        madness_ui_combo_box_string(STRING("selected emitter"), &emitter_path,
+                                    editor->particle_emitter_list->strings,
+                                    editor->particle_emitter_list->count);
+
+        static Particle_Emitter_Handle emitter_to_edit_handle;
+        if (madness_ui_button(STRING("LOAD EMITTER")))
+        {
+            asset_load_particle_emitter(editor->asset_system,
+                                        string_to_c_string_allocator(&emitter_path, editor->editor_frame_allocator),
+                                        &emitter_to_edit_handle);
+        }
+
+        madness_ui_padding();
+
+        Particle_Emitter* emitter_to_edit = &particle_system->emitters[emitter_to_edit_handle.handle];
+
+        if (madness_ui_button(STRING("SAVE EMITTER")))
+        {
+            asset_converter_particle_emitter(editor->asset_system, emitter_to_edit, NULL);
+        }
+
+        madness_ui_string(STRING("NAME: "));
+        madness_ui_same_line();
+        madness_ui_string(*emitter_to_edit->name);
+
+        Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
+            editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
+        madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
+                                      &emitter_to_edit->data, "emitter_edit");
+
+
+        emitter_to_edit->runtime_data.material_handle;
+        emitter_to_edit->runtime_data.position;
+
+        madness_ui_padding();
+
+        if (emitter_to_edit->material_instance.material_name)
+        {
+            madness_ui_string(*emitter_to_edit->material_instance.name);
+
+            Reflection_Runtime_Struct emitter_material = reflection_registry_get_struct(
+                editor->asset_system->material_reflection_registry, TYPE_STRING(Material_Spherical_Billboard));
+            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_material,
+                                          &emitter_to_edit->material_instance.material_data, "emitter_mat");
+        }
+
+
+        /*
+        madness_ui_string(STRING("NAME: "));
+        madness_ui_same_line();
+        madness_ui_string(*emitter->name);
+
+        Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
+            editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
+        madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
+                                      &emitter->data, "emitter");*/
+    }
+    madness_ui_window_end();
+
+
+    String effect_path;
+    static u32 effect_index;
+    static u32 effect_emitter_index;
+    madness_ui_window_begin(STRING("Particle Effects Editor"));
+    {
+        //TODO:
+        // create effect asset
+        // load effect asset
+        // show list of emitters on the effect
+        // add emitters -> load in the asset if its not already
+        // remove emitter -> just remove from the effect, no need to unload it
+        // select particle to edit
+        // select emitter to edit
+        // load in a particle effect
+        //
+        String emitter_text_box_id = STRING("EMITTER NAME");
+        madness_ui_text_box(emitter_text_box_id);
 
         if (madness_ui_button(STRING("PARTICLE EMITTER CREATE")))
         {
-            const char* emitter_name = string_builder_to_c_string(madness_ui_text_box_get_string(text_box_id));
+            const char* emitter_name = string_builder_to_c_string(madness_ui_text_box_get_string(emitter_text_box_id));
             if (strcmp(emitter_name, "") == 0)
             {
                 emitter_name = "emitter_no_name\0";
             }
 
             particle_emitter_create_default(editor->asset_system, editor->asset_system->particle_system,
-                emitter_name);
+                                            emitter_name);
         }
 
-    }
-    madness_ui_window_end();
+        madness_ui_padding();
 
 
+        String text_box_id = STRING("EFFECT NAME");
+        madness_ui_text_box(text_box_id);
 
-    madness_ui_window_begin(STRING("Particle View"));
-    {
-        Particle_Emitter* emitter = &particle_system->emitters[0];
+        if (madness_ui_button(STRING("PARTICLE EFFECT CREATE ASSET")))
+        {
+            const char* effect_name = string_builder_to_c_string(madness_ui_text_box_get_string(text_box_id));
+            if (strcmp(effect_name, "") == 0)
+            {
+                effect_name = "effect_no_name\0";
+            }
+            particle_effect_create_empty(editor->asset_system, editor->asset_system->particle_system,
+                                         effect_name);
+        }
 
-        Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
-            editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
-        madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
-                                      &emitter->data, "emitter");
-    }
-    madness_ui_window_end();
 
-    String effect_path;
-    madness_ui_window_begin(STRING("Particle Effects"));
-    {
+        madness_ui_padding();
+
+
+        madness_ui_string(STRING("EFFECT SELECTED"));
         madness_ui_combo_box_string(STRING("selected effect"), &effect_path,
                                     editor->particle_effect_list->strings,
                                     editor->particle_effect_list->count);
-    }
-    madness_ui_window_end();
+        if (madness_ui_button(STRING("LOAD EFFECT")))
+        {
+            Particle_Effect_Handle discard_handle;
+            asset_load_particle_effect_by_path(editor->asset_system,
+                                               string_to_c_string_allocator(
+                                                   &effect_path, editor->editor_frame_allocator), &discard_handle);
+        }
 
-    madness_ui_window_begin(STRING("Particle Emitters"));
-    {
-        madness_ui_combo_box_string(STRING("selected emitter"), &effect_path,
+
+        madness_ui_padding();
+
+
+        madness_ui_string(STRING("EMITTER TO ADD"));
+
+        String effect_to_add_path;
+        madness_ui_combo_box_string(STRING("selected emitter to add"), &effect_to_add_path,
                                     editor->particle_emitter_list->strings,
                                     editor->particle_emitter_list->count);
+
+
+        //add from a global list
+        if (madness_ui_button(STRING("ADD EMITTER")))
+        {
+            if (particle_system->particle_effects_count > 1)
+            {
+                Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+
+                //load an emitter
+                Particle_Emitter_Handle emitter_handle = {0};
+                asset_load_particle_emitter(editor->asset_system,
+                                            string_to_c_string_allocator(&effect_to_add_path,
+                                                                         editor->editor_frame_allocator),
+                                            &emitter_handle);
+                particle_effect_add_emitter_by_handle(editor->asset_system->particle_system, particle_effect,
+                                                      emitter_handle);
+            }
+        }
+
+
+        //remove from the current emitters list
+
+
+        madness_ui_padding();
+
+
+        //particle selection
+        madness_ui_u32(STRING("PARTICLE INDEX"), &effect_index, 1);
+        effect_index = clamp_uint(effect_index, 0, particle_system->particle_effects_count - 1);
+
+        if (particle_system->particle_effects_count > 1)
+        {
+            Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+
+            madness_ui_string(STRING("PARTICLE EFFECT NAME: "));
+            madness_ui_same_line();
+            madness_ui_string(*particle_effect->name);
+
+            madness_ui_u32(STRING("EMITTER INDEX"), &effect_emitter_index, 1);
+            effect_emitter_index = clamp_uint(effect_emitter_index, 0, particle_effect->emitter_count - 1);
+        }
+
+
+        if (madness_ui_button(STRING("REMOVE EMITTER AT INDEX")))
+        {
+            //remove an emitter
+            Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+            particle_effect_remove_emitter(particle_effect, effect_emitter_index);
+            effect_emitter_index = clamp_uint(effect_index, 0, particle_system->particle_effects_count - 1);
+        }
+
+
+        madness_ui_padding();
     }
     madness_ui_window_end();
 
-    madness_ui_window_begin(STRING("emitter material"));
+
+    madness_ui_window_begin(STRING("Particle Effect View"));
     {
-        static Material_Info material_info;
-        static u8 fuck_you_memory[1024];
-        static Material_Info mat_info;
-        if (!mat_info.material_name)
-        {
-            mat_info.material_name = STRING_CREATE("0");
-        }
-        if (!mat_info.shader_name)
-        {
-            mat_info.shader_name = STRING_CREATE("0");
-        }
-        Reflection_Runtime_Struct material_info_struct = reflection_registry_get_struct(
-            editor->reflection_registry, TYPE_STRING(Material_Info));
+        Particle_Effect* effect = &particle_system->particle_effects[effect_index];
 
-        madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
-
-        madness_ui_padding("mat padding");
-
-        static u32 selected_index;
-        if (madness_ui_combo_box_char(STRING("Material Struct"), &selected_index,
-                                      material_struct_string_list,
-                                      ARRAY_SIZE(material_struct_string_list)))
+        if (madness_ui_button(STRING("SAVE EFFECT")))
         {
-            memset(fuck_you_memory, 0, 1024);
+            asset_converter_particle_effect(editor->asset_system, effect, NULL);
         }
 
-        Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
-            material_struct_string_list[selected_index]);
+        madness_ui_string(*effect->name);
 
-        madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
+
+        madness_ui_u32(STRING("effect current time"), &effect->effect_current_time, 1);
+        madness_ui_u32(STRING("effect length"), &effect->effect_length, 1);
+        madness_ui_u32(STRING("generation"), &effect->generation, 1);
+        madness_ui_check_box(STRING("infinite duration"), &effect->infinite);
+        madness_ui_check_box(STRING("is visible"), &effect->is_visible);
+
+
+        madness_ui_u32(STRING("Emitter Count"), &effect->emitter_count, 0);
+        for (u32 emitter_idx = 0; emitter_idx < effect->emitter_count; emitter_idx++)
+        {
+            madness_ui_string(*effect->emitters[emitter_idx]->name);
+            madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_start %d", emitter_idx),
+                           &effect->emitters_start[emitter_idx], 1);
+            madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_end %d", emitter_idx),
+                           &effect->emitters_end[emitter_idx], 1);
+        }
     }
     madness_ui_window_end();
+
+
+    madness_ui_window_begin(STRING("Particle Effect Emitter View"));
+    {
+        Particle_Effect* effect = &particle_system->particle_effects[effect_index];
+
+        if (effect->emitter_count > 0)
+        {
+            Particle_Emitter* emitter = effect->emitters[effect_emitter_index];
+
+            madness_ui_string(STRING("NAME: "));
+            madness_ui_same_line();
+            madness_ui_string(*emitter->name);
+
+            Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
+                editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
+            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
+                                          &emitter->data, "emitter");
+        }
+    }
+    madness_ui_window_end();
+
+
+    PROFILE_ZONE_END(editor_particle_view);
 }

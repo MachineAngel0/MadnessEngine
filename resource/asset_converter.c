@@ -11,6 +11,8 @@
 
 bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
+    PROFILE_ZONE(asset_convert_file_path)
+
     const char* extension_name = c_string_path_get_extension(file_path, asset_system->frame_allocator);
     if (strcmp(extension_name, ".png") == 0)
     {
@@ -31,12 +33,19 @@ bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, 
 
 
     WARN("ASSET CONVERT FILE: NO VALID FILE EXT FOUND: %s", file_path);
+
+    PROFILE_ZONE_END(asset_convert_file_path)
+
+
     return false;
 }
 
 String_Builder* asset_converter_create_file_path(const Scratch_Allocator scratch_allocator, const char* file_path,
                                                  const char* engine_path, const char* engine_ext)
 {
+    PROFILE_ZONE(asset_converter_create_file_path)
+
+
     String_Builder* file_path_strip = string_builder_create(256, scratch_allocator.allocator);
     string_builder_append_c_string(file_path_strip, file_path);
     string_builder_strip_extension(file_path_strip);
@@ -51,22 +60,36 @@ String_Builder* asset_converter_create_file_path(const Scratch_Allocator scratch
     string_builder_append_c_string(str_builder, engine_path);
     string_builder_append_builder(str_builder, file_path_strip);
     string_builder_append_c_string(str_builder, engine_ext);
+
+
+    PROFILE_ZONE_END(asset_converter_create_file_path)
+
+
     return str_builder;
 }
 
 void asset_converter_create_directory_for_engine_asset(String_Builder* str_builder_output_path)
 {
+    PROFILE_ZONE(asset_converter_create_directory_for_engine_asset)
+
+
     string_builder_strip_extension(str_builder_output_path);
     string_builder_strip_path_from_end(str_builder_output_path);
     string_builder_print(str_builder_output_path);
 
     //TODO: test
     filesystem_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
+    PROFILE_ZONE_END(asset_converter_create_directory_for_engine_asset)
+
+
 }
 
 void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitter* particle_emitter,
                                       MADNESS_UUID* out_uuid)
 {
+    PROFILE_ZONE(asset_converter_particle_emitter)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
@@ -74,7 +97,7 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
     string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EMITTER_PATH);
     string_builder_append_c_string(str_builder, "/");
     string_builder_append_string(str_builder, particle_emitter->name);
-    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EFFECT_EXTENSION);
+    string_builder_append_c_string(str_builder, ENGINE_PARTICLE_EMITTER_EXTENSION);
 
     //TODO: check if asset already exists, so we dont overwrite it
     const char* output_path = string_builder_to_c_string(str_builder);
@@ -93,15 +116,22 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, "", output_path,
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+                                                string_to_c_string_allocator(particle_emitter->name, scratch.allocator),
+                                                output_path,
                                                 ASSET_PARTICLE_EMITTER, asset_system->heap_allocator, out_uuid);
 
     scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_converter_particle_emitter)
+
 }
 
 void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect* particle_effect,
                                      MADNESS_UUID* out_uuid)
 {
+    PROFILE_ZONE(asset_converter_particle_effect)
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
@@ -128,14 +158,20 @@ void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, "", output_path,
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+                                                string_to_c_string_allocator(particle_effect->name, scratch.allocator),
+                                                output_path,
                                                 ASSET_PARTICLE_EFFECT, asset_system->heap_allocator, out_uuid);
 
     scratch_allocator_end(scratch);
+    PROFILE_ZONE_END(asset_converter_particle_effect)
 }
 
 bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
+    PROFILE_ZONE(asset_converter_texture)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
@@ -211,12 +247,17 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
 
     scratch_allocator_end(scratch);
 
+    PROFILE_ZONE_END(asset_converter_texture)
+
     return true;
 }
 
 
 bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 {
+    PROFILE_ZONE(asset_converter_font)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
     Madness_Font font_structure = {0};
     Madness_Texture texture = {0};
@@ -415,11 +456,17 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
     scratch_allocator_end(scratch);
 
+    PROFILE_ZONE_END(asset_converter_font)
+
+
     return true;
 }
 
 bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path)
 {
+    PROFILE_ZONE(asset_converter_msdf_font)
+
+
     Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->allocator);
     //TODO: we should check ahead of time for the csv file as well
     //check for supported file formats
@@ -539,11 +586,18 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
                                                 ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch_allocator);
+
+    PROFILE_ZONE_END(asset_converter_msdf_font)
+
+
     return true;
 }
 
 bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
 {
+
+    PROFILE_ZONE(asset_converter_mesh)
+
     if (c_string_path_is_extension(gltf_path, ".gltf"))
     {
         asset_converter_gltf_mesh(asset_system, gltf_path);
@@ -553,12 +607,16 @@ bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
 
     //if wanted support other file formats
 
+    PROFILE_ZONE_END(asset_converter_mesh)
 
     return false;
 }
 
 bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
 {
+    PROFILE_ZONE(asset_converter_gltf_mesh)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
@@ -1256,11 +1314,19 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     cgltf_free(data);
 
     scratch_allocator_end(scratch);
+
+
+    PROFILE_ZONE_END(asset_converter_gltf_mesh)
+
+
     return true;
 }
 
 bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* material_asset)
 {
+    PROFILE_ZONE(asset_converter_material_asset)
+
+
     MASSERT(material_asset)
 
     MASSERT(material_asset->uuid.high != 0)
@@ -1268,6 +1334,7 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
 
     MASSERT(material_asset->material_info.material_name)
     MASSERT(material_asset->material_info.shader_name)
+
 
 
     //TODO: we only want to serialize the material asset if it does not exist
@@ -1298,11 +1365,19 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
                                            ASSET_MATERIAL, asset_system->heap_allocator, material_asset->uuid);
         fclose(fptr);
     }
+
+    PROFILE_ZONE_END(asset_converter_material_asset)
+
+
     return true;
 }
 
 bool asset_converter_material_instance(Asset_System* asset_system, Material_Instance* mat_inst)
 {
+
+    PROFILE_ZONE(asset_converter_material_instance)
+
+
     MASSERT(mat_inst)
     MASSERT(mat_inst->material_instance_uuid.high != 0);
     MASSERT(mat_inst->material_instance_uuid.high != 0);
@@ -1342,6 +1417,8 @@ bool asset_converter_material_instance(Asset_System* asset_system, Material_Inst
 
     scratch_allocator_end(scratch);
 
+    PROFILE_ZONE_END(asset_converter_material_instance)
+
 
     return true;
 }
@@ -1350,6 +1427,8 @@ bool asset_converter_material(Asset_System* asset_system, Material_Info* materia
                               Material_Asset* out_material_asset, Material_Instance* out_material_instance,
                               const char* mat_inst_name)
 {
+    PROFILE_ZONE(asset_converter_material)
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     //create the material asset and instance
@@ -1374,6 +1453,9 @@ bool asset_converter_material(Asset_System* asset_system, Material_Info* materia
     asset_converter_material_instance(asset_system, out_material_instance);
 
     scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_converter_material)
+
 
     return true;
 }

@@ -48,6 +48,10 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
                                   Render_Packet* render_packet,
                                   Vulkan_Command_Buffer* command_buffer)
 {
+
+    PROFILE_ZONE(ui_renderer_upload_draw_data)
+
+
     ui_renderer->madness_ui_render_packet = &render_packet->ui_data_packet.madness_ui_render_packet;
     ui_renderer->insanity_ui_render_packet = &render_packet->ui_data_packet.insanity_ui_render_packet;
 
@@ -130,6 +134,10 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
 
         //buffer upload, TODO: redo buffers from the ground up again.
     }*/
+
+    PROFILE_ZONE_END(ui_renderer_upload_draw_data)
+
+
 }
 
 void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
@@ -278,4 +286,5 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
             break;
         }
     }
+
 }

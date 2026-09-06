@@ -82,9 +82,100 @@ Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUI
 Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
-bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path, Material_Asset* out_material_asset);
+bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path,
+                                    Material_Asset* out_material_asset);
 bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
+
+bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* asset_path,
+                                        Particle_Effect_Handle* out_handle);
+
+
+bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Handle* out_handle);
+
+
+bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_path,
+                                 Particle_Emitter_Handle* out_handle)
+{
+    MASSERT(asset_system);
+    MASSERT(asset_path);
+    MASSERT(out_handle);
+
+    PROFILE_ZONE(asset_load_particle_emitter)
+
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
+
+    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, path_string, out_meta_data))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Particle_Emitter_Handle){0, 0};
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+
+    for (u32 i = 0; i < asset_system->asset_registry->particle_emitter_asset_count; i++)
+    {
+        if (string_compare(asset_system->asset_registry->particle_emitter_asset[i].engine_path, path_string))
+        {
+            *out_handle = asset_system->asset_registry->particle_emitter_handles[i];
+            PROFILE_ZONE_END(asset_load_particle_emitter)
+
+            return true;
+        }
+    }
+
+    //the asset isn't loaded, so we load it in asset
+    FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
+
+    if (!fptr)
+    {
+        MASSERT(false);
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+    //effect -> emitter[]
+    //emitter[] -> asset or part of the effect
+
+
+    //grab an available particle effect, with its handle
+    Particle_Emitter* particle_emitter = particle_emitter_acquire(asset_system->particle_system, out_handle);
+    if (!particle_emitter)
+    {
+        MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
+
+        *out_handle = asset_system->particle_system->default_emitter_handle;
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+    particle_emitter_deserialize(particle_emitter, fptr, asset_system->heap_allocator);
+
+    fclose(fptr);
+
+
+    u32 asset_index = asset_system->asset_registry->particle_emitter_asset_count++;
+    asset_system->asset_registry->particle_emitter_asset[asset_index].reference_count = 1;
+    asset_system->asset_registry->particle_emitter_asset[asset_index].engine_path = out_meta_data->engine_path;
+    asset_system->asset_registry->particle_emitter_asset[asset_index].path_hash = out_meta_data->hash;
+    asset_system->asset_registry->particle_emitter_asset[asset_index].type = ASSET_PARTICLE_EMITTER;
+    asset_system->asset_registry->particle_emitter_handles[asset_index] = *out_handle;
+
+    scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_load_particle_emitter)
+
+
+    return true;
+}
 
 
 //Data format stuff

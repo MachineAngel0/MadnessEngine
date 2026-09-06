@@ -286,6 +286,18 @@ Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asse
 
     return asset_list;
 }
+bool asset_list_regenerate(Asset_List_Scan* asset_list, const char* relative_asset_path)
+{
+    allocator_clear(asset_list->allocator);
+    asset_list->count = 0;
+    asset_list->strings = allocator_alloc(asset_list->allocator,
+                                           sizeof(String) * asset_list->max_count);
+
+    platform_get_assets_from_directory(relative_asset_path, asset_list);
+
+    return asset_list;
+}
+
 
 bool asset_lists_free(Asset_List_Scan* asset_list_scan, Memory_System* memory_system)
 {

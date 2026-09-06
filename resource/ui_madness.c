@@ -2167,14 +2167,24 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
 
             if (mouse_change_x > 0)
             {
+
                 *i += increment_value;
                 // *f += increment_override;
                 has_changed = true;
             }
             if (mouse_change_x < 0)
             {
-                *i -= increment_value;
-                // *f -= increment_override;
+                u32 result = 0;
+                if (u32_sub_overflow(*i, increment_value, &result))
+                {
+                    //we overflowed
+                    *i = 0;
+                }
+                else
+                {
+                    *i = result;
+                }
+                // *i -= increment_value;
                 has_changed = true;
             }
         }
@@ -2189,7 +2199,17 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
         }
         if (input_is_mouse_wheel_down())
         {
-            *i -= increment_value;
+            u32 result = 0;
+            if (u32_sub_overflow(*i, increment_value, &result))
+            {
+                //we overflowed
+                *i = 0;
+            }
+            else
+            {
+                *i = result;
+            }
+            // *i -= increment_value;
             has_changed = true;
         }
 
@@ -2200,6 +2220,8 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
             set_active(node->hash_id);
         }
     }
+
+
 
     return has_changed;
 }
@@ -3048,7 +3070,7 @@ bool madness_ui_combo_box_string(String id, String* out_select_string, String* s
 }
 
 
-void madness_ui_padding(const char* identifier)
+void madness_ui_padding(void)
 {
     madness_ui_advance_cursor((vec2s){madness_ui->element_padding_x, madness_ui->element_padding_y});
 }
@@ -3680,8 +3702,8 @@ bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* pos4)
 
     UI_Node* node1 = madness_ui_get_new_node();
     node1->pos = *pos1;
-    node1->size.x = 150;
-    node1->size.y = 150;
+    node1->size.x = 150.f;
+    node1->size.y = 150.f;
     node1->color = COLOR_GREEN;
     node1->thickness = 1.f;
     node1->flags = UI_FLAG_CIRCLE;
@@ -3701,8 +3723,8 @@ bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* pos4)
 
     UI_Node* node2 = madness_ui_get_new_node();
     node2->pos = *pos2;
-    node2->size.x = 150;
-    node2->size.y = 150;
+    node2->size.x = 150.f;
+    node2->size.y = 150.f;
     node2->color = COLOR_RED;
     node2->thickness = 1.f;
     node2->flags = UI_FLAG_CIRCLE;
@@ -3765,8 +3787,8 @@ bool madness_ui_cubic_bezier(vec2s* pos1, vec2s* pos2, vec2s* pos3, vec2s* pos4)
     for (u32 i = 0; i <= steps; i++)
     {
         UI_Node* background = madness_ui_get_new_node();
-        background->size.x = 10;
-        background->size.y = 10;
+        background->size.x = 10.f;
+        background->size.y = 10.f;
         background->color = madness_ui->editor_style.color;
 
         float t = (float)i / (float)steps;

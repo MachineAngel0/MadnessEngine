@@ -98,6 +98,7 @@ typedef struct Handle
     u32 generation;
 } Handle;
 
+
 typedef enum Asset_Type
 {
     ASSET_TEXTURE,
@@ -149,13 +150,6 @@ typedef struct Asset_MetaData
     String* engine_path; //256 in length max
 } Asset_MetaData;
 
-typedef struct Texture_Handle
-{
-    u32 handle;
-    u32 generation;
-} Texture_Handle;
-
-
 typedef struct Madness_Asset
 {
     //runtime format for assets
@@ -164,6 +158,16 @@ typedef struct Madness_Asset
     Asset_Type type;
     String* engine_path; // should just be a reference, mainly for debugging
 } Madness_Asset;
+
+
+typedef struct Texture_Handle
+{
+    u32 handle;
+    u32 generation;
+} Texture_Handle;
+
+
+
 
 //Renderpass || translucency || Blend || Mesh Type
 typedef u64 Material_ID;
@@ -233,6 +237,17 @@ typedef struct Animation_Handle
     u32 gen;
 } Animation_Handle;
 
+typedef struct Particle_Emitter_Handle
+{
+    u32 handle;
+    u32 gen;
+} Particle_Emitter_Handle;
+
+typedef struct Particle_Effect_Handle
+{
+    u32 handle;
+    u32 gen;
+} Particle_Effect_Handle;
 
 ///////////////// Texture  //////////////////////
 
@@ -682,9 +697,6 @@ typedef struct Particle_Effect
     MADNESS_UUID emmiter_uuid[4];
     u32 emitter_count;
 
-
-
-
     u32 emitters_start[4];
     u32 emitters_end[4];
 
@@ -702,6 +714,7 @@ typedef struct Particle_Effect
     //runtime data
     Particle_Emitter* emitters[4];
 
+    u32 generation;
     bool infinite;
     bool is_visible;
 
@@ -1035,12 +1048,13 @@ typedef struct Particle_System
 {
     //TODO: change the available effects and emitters to dynamic arrays to save on memory
 
+    //TODO: reserve the particle effect and emitter 0 slots for defaults/invalid handles
 
     Particle_Effect* particle_effects;
     u32 particle_effects_count;
     u32 particle_effects_count_max;
 
-    Particle_Effect** available_particle_effects;
+    u32* available_particle_effects;
     u32 available_particle_effects_count;
 
 
@@ -1060,6 +1074,15 @@ typedef struct Particle_System
     u32* dead_particles;
     u32 dead_particles_available;
     u32 dead_particles_count;
+
+
+    //defaults/fallbacks
+    Particle_Effect* default_effect;
+    Particle_Effect_Handle default_effect_handle;
+
+    Particle_Emitter* default_emitter;
+    Particle_Emitter_Handle default_emitter_handle;
+
 
 
     //TODO: might want to look into ways to use a pool allocator
@@ -1140,7 +1163,17 @@ typedef struct Asset_Registry
 {
     DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
 
-    //ideally we have another data format which points to the data?? just for easy lookup and display
+    // DYNAMIC_ARRAY_TYPE(Madness_Asset) loaded_asset;
+    // ref counted asset
+    Madness_Asset particle_effect_asset[100];
+    Particle_Effect_Handle particle_effect_handles[100];
+    u32 particle_effect_asset_count;
+
+    Madness_Asset particle_emitter_asset[100];
+    Particle_Emitter_Handle particle_emitter_handles[100];
+    u32 particle_emitter_asset_count;
+
+
 } Asset_Registry;
 
 

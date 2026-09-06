@@ -36,6 +36,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     MASSERT(input_system);
     MASSERT(event_system);
 
+    PROFILE_ZONE(renderer_init)
+
 
     Renderer* renderer = memory_system_alloc(memory_system, sizeof(Renderer), MEMORY_SUBSYSTEM_RENDERER);
     memset(renderer, 0, sizeof(Renderer));
@@ -205,6 +207,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     INFO("VULKAN RENDERER INITIALIZED");
 
+
+    PROFILE_ZONE_END(renderer_init)
 
     return renderer;
 }

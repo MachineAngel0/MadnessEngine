@@ -123,6 +123,16 @@ bool app_is_release_build()
 #endif
 
 
+// Toolchain detection
+#if defined(_MSC_VER) // MSVC
+#define MTOOLCHAIN_MSVC 1
+#elif defined(__clang__) // Clang
+#define MTOOLCHAIN_CLANG 1
+#elif defined(__GNUC__) // GCC
+#define MTOOLCHAIN_GCC 1
+#else
+#error "Unsupported compiler"
+#endif
 
 
 #define MEXPORT //defining this by default

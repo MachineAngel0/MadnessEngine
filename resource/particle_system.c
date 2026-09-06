@@ -83,10 +83,11 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->particle_effects_count = 0;
     ps->particle_effects_count_max = PARTICLE_EFFECTS_COUNT;
     ps->particle_effects = memory_system_alloc(memory_system, sizeof(Particle_Effect) * ps->particle_effects_count_max,
-                                      MEMORY_SUBSYSTEM_PARTICLE);;
+                                               MEMORY_SUBSYSTEM_PARTICLE);;
 
-    ps->available_particle_effects = memory_system_alloc(memory_system, sizeof(Particle_Effect) * ps->particle_effects_count_max,
-                                      MEMORY_SUBSYSTEM_PARTICLE);
+    ps->available_particle_effects = memory_system_alloc(memory_system,
+                                                         sizeof(u32) * ps->particle_effects_count_max,
+                                                         MEMORY_SUBSYSTEM_PARTICLE);
     ps->available_particle_effects_count = 0;
 
     //emitters
@@ -95,29 +96,49 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
                                        MEMORY_SUBSYSTEM_PARTICLE);
     ps->emitter_count = 0;
     ps->available_emitters = memory_system_alloc(memory_system, sizeof(Particle_Emitter*) * ps->emitter_count_max,
-                                       MEMORY_SUBSYSTEM_PARTICLE);
+                                                 MEMORY_SUBSYSTEM_PARTICLE);
     ps->available_emitters_count = 0;
 
 
-    //Temp:
-    // TYPE_STRING()
-    Particle_Emitter* emitter = particle_emitter_acquire(ps, STRING("Material_Spherical_Billboard"));
-    emitter->data.emission_rate = 1;
-    emitter->data.particle_lifetime = 8.0f;
-    emitter->data.gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
-    emitter->data.particle_color = (vec4s){.x = 0.0f, .y = 1.f, .z = 0.0f, .w = 1.0f};
+    //create our default system and emitter
+    ps->default_emitter = particle_emitter_acquire(ps, &ps->default_emitter_handle);
+    ps->default_emitter->data.emission_rate = 1;
+    ps->default_emitter->data.particle_lifetime = 8.0f;
+    ps->default_emitter->data.gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
+    ps->default_emitter->data.particle_color = (vec4s){.x = 0.0f, .y = 0.f, .z = 1.0f, .w = 1.0f};
+    ps->default_emitter->runtime_data.particle = dynamic_array_create(u32, 256, ps->heap_allocator);
+    ps->default_emitter->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(
+        "INVALID EMITTER", asset_system->heap_allocator);
 
-    emitter->runtime_data.particle = dynamic_array_create(u32, 256, ps->heap_allocator);
-
-
-
-
+    particle_effect_acquire(ps, &ps->default_effect, &ps->default_effect_handle);
+    ps->default_effect->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR("INVALID EFFECT", asset_system->heap_allocator);
+    particle_effect_add_emitter(ps->default_effect, ps->default_emitter);
+    ps->default_effect->emitters_start[0] = 0.0f;
+    ps->default_effect->emitters_end[1] = 5.0f;
     return ps;
 }
 
 void particle_system_shutdown(Particle_System* ps, Memory_System* memory_system)
 {
     //TODO:
+}
+
+void particle_system_update(Particle_System* ps, float dt)
+{
+    PROFILE_ZONE(particle_system_update);
+
+    PROFILE_ZONE(particle_update_emitter);
+    for (u32 i = 0; i < ps->emitter_count; i++)
+    {
+        particle_emitter_update(ps, &ps->emitters[i], dt);
+    }
+    PROFILE_ZONE_END(particle_update_emitter);
+
+    PROFILE_ZONE(particle_update);
+    particle_update(ps, dt);
+    PROFILE_ZONE_END(particle_update);
+
+    PROFILE_ZONE_END(particle_system_update);
 }
 
 bool particle_system_request_particle(Particle_System* ps, u32* out_particle_index)
@@ -179,25 +200,6 @@ void particle_update(Particle_System* ps, float dt)
     }
 }
 
-void particle_system_update(Particle_System* ps, float dt)
-{
-    PROFILE_ZONE(particle_system_update);
-
-    PROFILE_ZONE(particle_update_emitter);
-    for (u32 i = 0; i < ps->emitter_count; i++)
-    {
-        particle_emitter_update(ps, &ps->emitters[i], dt);
-    }
-    PROFILE_ZONE_END(particle_update_emitter);
-
-    PROFILE_ZONE(particle_update);
-    particle_update(ps, dt);
-    PROFILE_ZONE_END(particle_update);
-
-    PROFILE_ZONE_END(particle_system_update);
-
-
-}
 
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps)
 {
@@ -209,20 +211,25 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
     };
 }
 
-Particle_Emitter* particle_emitter_acquire(Particle_System* ps, String material_name)
+Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter_Handle* out_handle)
 {
     Particle_Emitter* particle_emitter = NULL;
     if (ps->emitter_count < ps->emitter_count_max)
     {
-        particle_emitter = &ps->emitters[ps->emitter_count++];
+        *out_handle = (Particle_Emitter_Handle){.handle = ps->emitter_count, .gen = 0};
+        particle_emitter = &ps->emitters[ps->emitter_count];
+        particle_emitter->runtime_data.particle = dynamic_array_create(u32, 256, ps->heap_allocator);
+        ps->emitter_count++;
     }
     else
     {
         if (ps->available_emitters_count > 0)
         {
+            //TODO: out handle
             particle_emitter = ps->available_emitters[ps->available_emitters_count--];
         }
     }
+
 
     if (!particle_emitter)
     {
@@ -242,7 +249,8 @@ void particle_emitter_release(Particle_System* ps, Particle_Emitter* emitter)
 void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, float dt)
 {
     //remove any dead particles
-    for (u32 emitter_particle_index = 0; emitter_particle_index < emitter->runtime_data.particle->num_items; emitter_particle_index
+    for (u32 emitter_particle_index = 0; emitter_particle_index < emitter->runtime_data.particle->num_items;
+         emitter_particle_index
          ++)
     {
         u32 particle_index = dynamic_array_get(emitter->runtime_data.particle, u32, emitter_particle_index);
@@ -306,42 +314,72 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
     }*/
 }
 
-Particle_Effect* particle_effect_acquire(Particle_System* ps, String name, Transform transform)
+bool particle_system_does_emitter_exist(Particle_System* ps, String* name)
 {
-    Particle_Effect* particle_effect = NULL;
-    if (ps->particle_effects_count < ps->particle_effects_count_max)
+    for (u32 i = 0; i < ps->emitter_count; i++)
     {
-        particle_effect = &ps->particle_effects[ps->particle_effects_count++];
-    }
-    else
-    {
-        if (ps->available_particle_effects_count > 0)
+        if (string_compare(ps->emitters[i].name, name))
         {
-            particle_effect = ps->available_particle_effects[ps->available_particle_effects_count--];
+            return true;
         }
     }
 
-    particle_effect->name = string_duplicate_heap(&name, ps->heap_allocator);
-    particle_effect->transform = transform;
+    return false;
+}
 
-    if (!particle_effect)
+bool particle_system_does_effect_exist(Particle_System* ps, String* name)
+{
+    for (u32 i = 0; i < ps->particle_effects_count; i++)
+    {
+        if (string_compare(ps->particle_effects[i].name, name))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+bool particle_effect_acquire(Particle_System* ps, Particle_Effect** out_effect, Particle_Effect_Handle* out_handle)
+{
+    MASSERT(out_handle);
+
+    if (ps->particle_effects_count < ps->particle_effects_count_max)
+    {
+        *out_handle = (Particle_Effect_Handle){ps->particle_effects_count, 0/*TODO*/};
+        *out_effect = &ps->particle_effects[ps->particle_effects_count++];
+        return true;
+    }
+
+    //check our free list
+    if (ps->available_particle_effects_count > 0)
+    {
+        u32 free_particle_effect_index = ps->available_particle_effects[ps->available_particle_effects_count--];
+        Particle_Effect* particle_effect = &ps->particle_effects[free_particle_effect_index];
+        *out_effect = particle_effect;
+        *out_handle = (Particle_Effect_Handle){free_particle_effect_index, particle_effect->generation};
+    }
+    return true;
+
+    if (!out_effect)
     {
         FATAL("NO PARTICLE EFFECTS TO GIVE OUT")
     }
 
-    return particle_effect;
+    return false;
 }
 
-void particle_effect_release(Particle_System* ps, Particle_Effect* particle_effect)
+void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle)
 {
-    ps->available_particle_effects[ps->available_particle_effects_count] = particle_effect;
+    ps->particle_effects[handle.handle].generation++; // bump the generation
+
+    ps->available_particle_effects[ps->available_particle_effects_count] = handle.handle;
     ps->available_particle_effects_count++;
 }
 
 
-
-void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emitter* emitter, u32 emitter_time_start,
-                                 u32 emitter_time_end)
+void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emitter* emitter)
 {
     if (particle_effect->emitter_count >= 4)
     {
@@ -349,9 +387,52 @@ void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emit
         return;
     }
 
+    //check if we are adding a duplicate emitter, since we only allow one of any emitter asset
+    for (u32 i = 0; i < particle_effect->emitter_count; i++)
+    {
+        if (string_compare(particle_effect->emitters[i]->name, emitter->name))
+        {
+            WARN("particle_effect_add_emitter: trying to add a duplicate emitter [%.*s] to particle [%.*s]",
+                 emitter->name->length, emitter->name->chars, particle_effect->name->length,
+                 particle_effect->name->chars);
+            return;
+        }
+    }
+
     particle_effect->emitters[particle_effect->emitter_count] = emitter;
-    particle_effect->emitters_start[particle_effect->emitter_count] = emitter_time_start;
-    particle_effect->emitters_end[particle_effect->emitter_count] = emitter_time_end;
+    particle_effect->emitters_start[particle_effect->emitter_count] = 0;
+    particle_effect->emitters_end[particle_effect->emitter_count] = 5.0f;
 
     particle_effect->emitter_count++;
+}
+
+void particle_effect_add_emitter_by_handle(Particle_System* particle_system, Particle_Effect* particle_effect,
+                                           Particle_Emitter_Handle emitter_handle)
+{
+    particle_effect_add_emitter(particle_effect, &particle_system->emitters[emitter_handle.handle]);
+}
+
+void particle_effect_remove_emitter(Particle_Effect* particle_effect, u32 emitter_index)
+{
+    if (particle_effect->emitter_count < emitter_index)
+    {
+        WARN("particle_effect_remove_emitter: invalid removal area")
+        return;
+    }
+
+    //TODO: unload emitter
+
+    if (particle_effect->emitter_count == emitter_index)
+    {
+        particle_effect->emitter_count--;
+        return;
+    }
+
+    //swap and remove
+    particle_effect->emitters[emitter_index] = particle_effect->emitters[particle_effect->emitter_count - 1];
+    particle_effect->emitters_start[emitter_index] = particle_effect->emitters_start[particle_effect->emitter_count -
+        1];
+    particle_effect->emitters_end[emitter_index] = particle_effect->emitters_end[particle_effect->emitter_count - 1];
+
+    particle_effect->emitter_count--;
 }

@@ -167,7 +167,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
                                  application_core->asset_system,
-                                 &application_core->clock, global_reflection_registry, material_reflection_registry);
+                                 &application_core->clock, global_reflection_registry);
 
     filewatcher_init(&application_core->memory_system);
     filewatcher_directory_register("../z_assets");

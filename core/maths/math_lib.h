@@ -6,19 +6,15 @@
 #include <math.h>
 
 
-
 //outdated:
 //NOTE: Y Up, left handed
 // Left-handed system: +X right, +Y up, +Z forward (into the screen)
 // Column Based Matrix's: meaning we go from top to bottom (for each column), then move onto the right (to the new row)
 
 
-
-
 //// MAX/MIN FUNCTIONS ////
 int32_t max_i(const int32_t a, const int32_t b)
 {
-
     if (a > b)
     {
         return a;
@@ -53,6 +49,58 @@ float min_f(const float a, const float b)
     return b;
 }
 
+//// OVERFLOW ////
+/**
+ * return if we have overflowed
+ * out value is still the overflowed value
+ */
+bool u32_add_overflow(const u32 a, const u32 b, u32* out_addition_result)
+{
+#if MTOOLCHAIN_MSVC
+
+    /* the out value gives the whether it has overflowed, 0 for no overflow, 1 for overflow
+    unsigned char _addcarry_u32(
+        unsigned char carry,
+        unsigned int x,
+        unsigned int y,
+        unsigned int *out);*/
+
+    u8 overflow = _addcarry_u32(0, a, b, out_addition_result);
+
+    if (overflow == 0) { return false; }
+    return true;
+#endif
+
+    MASSERT_FALSE();
+}
+
+/**
+ * return if we have overflowed
+ * out value is still the overflowed value
+ */
+bool u32_sub_overflow(const u32 a, const u32 b, u32* out_subtraction_result)
+{
+#if MTOOLCHAIN_MSVC
+
+    /* the out value gives the whether it has overflowed, 0 for no overflow, 1 for overflow
+    unsigned char _addcarry_u32(
+        unsigned char carry,
+        unsigned int x,
+        unsigned int y,
+        unsigned int *out);*/
+
+    u8 overflow = _subborrow_u32(0, a, b, out_subtraction_result);
+
+    if (overflow == 0) { return false; }
+    return true;
+#endif
+
+    MASSERT_FALSE();
+}
+
+
+//// COLORS ////
+
 static const vec3s COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
 static const vec3s COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
 static const vec3s COLOR_GREY = {0.5f, 0.5f, 0.5f};
@@ -84,7 +132,6 @@ static const vec4s COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 static const vec4s COLOR_YELLOW_V4 = {1.0f, 1.0f, 0.0f, 1.0f};
 static const vec4s COLOR_MAGENTA_V4 = {1.0f, 0.0f, 1.0f, 1.0f};
 static const vec4s COLOR_CYAN_V4 = {0.0f, 1.0f, 1.0f, 1.0f};
-
 
 
 /*** RANDOM ***/
@@ -239,27 +286,6 @@ MINLINE f32 rad_to_deg(const f32 radians)
 {
     return radians * RAD2DEG;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 //NOTE: NOT IN USE ANYMORE
@@ -2202,7 +2228,6 @@ static const mvec4 COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
 static const mvec4 COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
 
 */
-
 
 
 #endif //MATH_LIB_H

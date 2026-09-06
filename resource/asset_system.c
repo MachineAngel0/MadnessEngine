@@ -94,6 +94,8 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 
 bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
 {
+    PROFILE_ZONE(asset_system_update_and_create_render_packet)
+
     allocator_clear(asset_system->frame_allocator);
     render_packet_clear(asset_system->render_packet);
     asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
@@ -128,6 +130,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     asset_system->render_packet->draw_3d_data_packet.skinned_instances_count = asset_system->mesh_system->
         skinned_mesh_instance_count;
 
+    PROFILE_ZONE_END(asset_system_update_and_create_render_packet)
 
     return true;
 }
@@ -140,6 +143,10 @@ void render_packet_clear(Render_Packet* renderer_packets)
 
 Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path)
 {
+
+    PROFILE_ZONE(asset_load_texture_path)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
 
@@ -158,7 +165,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 
     String* load_asset_path = string_builder_to_string(string_builder);
 
-    Asset_MetaData* meta_data = allocator_alloc( scratch.allocator, sizeof(Asset_MetaData));
+    Asset_MetaData* meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_MetaData));
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
     {
         //TODO: try to load in the asset from the import path
@@ -208,11 +215,18 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
 
 
     scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_load_texture_path)
+
+
     return texture_handle;
 }
 
 Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
+    PROFILE_ZONE(asset_load_texture_uuid)
+
+
     Texture_Handle texture_handle = {0};
 
     //either load from metadata -> binary or binary blob
@@ -268,12 +282,19 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     }*/
     fclose(fptr);
 
+    PROFILE_ZONE_END(asset_load_texture_uuid)
+
+
     return texture_handle;
 }
 
 
 Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engine_asset_path)
 {
+
+    PROFILE_ZONE(asset_load_font_path)
+
+
     Texture_Handle out_handle = (Texture_Handle){0};
 
 
@@ -336,11 +357,18 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
     }
     fclose(fptr);
 
+    PROFILE_ZONE_END(asset_load_font_path)
+
+
     return out_handle;
 }
 
 Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
+
+    PROFILE_ZONE(asset_load_font_uuid)
+
+
     Texture_Handle out_handle = (Texture_Handle){0};
     Asset_MetaData* meta_data = NULL;
 
@@ -386,27 +414,43 @@ Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
     fclose(fptr);
 
+    PROFILE_ZONE_END(asset_load_font_uuid)
+
+
     return out_handle;
 }
 
 
 bool asset_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
 {
+    PROFILE_ZONE(asset_system_unload_texture)
+
+
     MASSERT(false);
     //TODO:
     // texture_system_texture_free(asset_system, texture_handle);
+
+    PROFILE_ZONE_END(asset_system_unload_texture)
+
+
     return false;
 }
 
 
 bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle)
 {
+    PROFILE_ZONE(asset_unload_font)
+
     MASSERT(false);
+
+    PROFILE_ZONE_END(asset_unload_font)
+
     return false;
 }
 
 Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
+
     Madness_Mesh_Handle handle = (Madness_Mesh_Handle){0};
     MASSERT(false);
     return handle;
@@ -414,6 +458,9 @@ Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUI
 
 Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path)
 {
+    PROFILE_ZONE(asset_load_mesh_path)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, scratch.allocator);
 
@@ -461,11 +508,17 @@ Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char*
 
     scratch_allocator_end(scratch);
 
+    PROFILE_ZONE_END(asset_load_mesh_path)
+
+
     return mesh_handle;
 }
 
 Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path)
 {
+    PROFILE_ZONE(asset_load_skmesh)
+
+
     Madness_SkMesh_Handle out_handle = (Madness_SkMesh_Handle){0};
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
@@ -510,12 +563,19 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
     }
     fclose(fptr);
 
+    PROFILE_ZONE_END(asset_load_skmesh)
+
+
     return out_handle;
 }
 
 
-bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path, Material_Asset* out_material_asset)
+bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path,
+                                    Material_Asset* out_material_asset)
 {
+    PROFILE_ZONE(asset_load_material_asset_path)
+
+
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, asset_system->frame_allocator);
 
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
@@ -547,7 +607,7 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
 
 
         Material_Asset* material_asset = {0};
-        material_asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Madness_Mesh));
+        material_asset = allocator_heap_alloc(asset_system->heap_allocator, sizeof(Material_Asset));
         asset_material_asset_deserialize(material_asset, fptr, asset_system->heap_allocator);
         material_system_load_material_asset(asset_system, out_meta_data->uuid, out_meta_data->hash, material_asset);
 
@@ -555,7 +615,6 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
         {
             *out_material_asset = *material_asset;
         }
-
     }
     else
     {
@@ -566,11 +625,17 @@ bool asset_load_material_asset_path(Asset_System* asset_system, const char* asse
     fclose(fptr);
 
 
+    PROFILE_ZONE_END(asset_load_material_asset_path)
+
     return true;
 }
 
 bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
+
+    PROFILE_ZONE(asset_load_material_asset_uuid)
+
+
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));;
     if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, out_meta_data))
     {
@@ -612,6 +677,8 @@ bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uui
 
     fclose(fptr);
 
+    PROFILE_ZONE_END(asset_load_material_asset_uuid)
+
 
     return true;
 }
@@ -620,4 +687,115 @@ bool asset_load_material_instance(Asset_System* asset_system, const char* asset_
 {
     MASSERT(false);
     return false;
+}
+
+bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* asset_path,
+    Particle_Effect_Handle* out_handle)
+
+{
+
+
+    MASSERT(asset_system);
+    MASSERT(asset_path);
+    MASSERT(out_handle);
+
+    PROFILE_ZONE(asset_load_particle_effect_by_path)
+
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
+
+    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, path_string, out_meta_data))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = asset_system->particle_system->default_effect_handle;
+        return false;
+    }
+
+
+    for (u32 i = 0; i < asset_system->asset_registry->particle_effect_asset_count; i++)
+    {
+        if (string_compare(asset_system->asset_registry->particle_effect_asset[i].engine_path, path_string))
+        {
+            asset_system->asset_registry->particle_effect_asset[i].reference_count++;
+            *out_handle = asset_system->asset_registry->particle_effect_handles[i];
+            return true;
+        }
+    }
+
+    //the asset isn't loaded, so we load it in asset
+    FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
+
+    if (!fptr)
+    {
+        MASSERT(false);
+        return false;
+    }
+
+
+    //grab an available particle effect, with its handle
+    Particle_Effect* particle_effect = NULL;
+    if (!particle_effect_acquire(asset_system->particle_system, &particle_effect, out_handle))
+    {
+        MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
+
+        *out_handle = (Particle_Effect_Handle){0, 0};
+        return false;
+    }
+
+    particle_effect_deserialize(particle_effect, fptr, asset_system->heap_allocator);
+
+    fclose(fptr);
+
+    u32 asset_index = asset_system->asset_registry->particle_effect_asset_count++;
+    asset_system->asset_registry->particle_effect_asset[asset_index].reference_count = 1;
+    asset_system->asset_registry->particle_effect_asset[asset_index].engine_path = out_meta_data->engine_path;
+    asset_system->asset_registry->particle_effect_asset[asset_index].path_hash = out_meta_data->hash;
+    asset_system->asset_registry->particle_effect_asset[asset_index].type = ASSET_PARTICLE_EFFECT;
+
+    asset_system->asset_registry->particle_effect_handles[asset_index] = *out_handle;
+
+
+    scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_load_particle_effect_by_path)
+
+
+    return true;
+}
+
+
+bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Handle* out_handle)
+{
+
+    PROFILE_ZONE(asset_unload_particle_effect)
+
+    MASSERT(asset_system);
+    MASSERT(out_handle);
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+
+    for (u32 i = 0; i < asset_system->asset_registry->particle_effect_asset_count; i++)
+    {
+        if (asset_system->asset_registry->particle_effect_handles[i].handle == out_handle->handle)
+        {
+            asset_system->asset_registry->particle_effect_asset[i].reference_count--;
+            if (asset_system->asset_registry->particle_effect_asset[i].reference_count <= 0)
+            {
+                //unload the asset
+                particle_effect_release(asset_system->particle_system, *out_handle);
+            }
+        }
+    }
+
+
+    scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_unload_particle_effect)
+
+
+    return true;
 }

@@ -21,7 +21,9 @@ void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer
 
 void allocator_clear(Allocator* a)
 {
+    PROFILE_ZONE(allocator_clear)
     a->current_offset = 0;
+    PROFILE_ZONE_END(allocator_clear)
 }
 
 void allocator_clear_and_zero(Allocator* a)

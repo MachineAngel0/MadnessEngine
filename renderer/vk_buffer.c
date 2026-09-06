@@ -70,6 +70,8 @@ Buffer_System* buffer_system_init(Renderer* renderer, const u32 frames_in_flight
 
 void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system, u32 current_frame)
 {
+    PROFILE_ZONE(buffer_system_frame_start)
+
     //rn just clears the staging buffer
     Vulkan_Buffer* current_frame_staging_buffer = &buffer_system->per_frame_staging_buffers[
         current_frame];
@@ -107,6 +109,9 @@ void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system,
 
         array_idx++;
     }
+
+    PROFILE_ZONE_END(buffer_system_frame_start)
+
 
 }
 

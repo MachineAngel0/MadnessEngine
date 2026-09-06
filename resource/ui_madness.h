@@ -416,6 +416,7 @@ MAPI void madness_ui_slider_arrow(String id, float* slider_val, float min, float
 MAPI void madness_ui_slider_arrow_u16(String id, u16* slider_val, u16 min, u16 max);
 MAPI void madness_ui_slider_arrow_u32(String id, u32* slider_val, u32 min, u32 max);
 
+//TODO: these should really check for overflows, there are toolchain specific overflow builtin functions
 MAPI bool madness_ui_u8(String text, u8* i, u32 increment_value);
 MAPI bool madness_ui_u16(String text, u16* i, u32 increment_value);
 MAPI bool madness_ui_u32(String text, u32* i, u32 increment_value);
@@ -459,7 +460,7 @@ MAPI bool madness_ui_combo_box_string(String id, String* out_select_string, Stri
 // > wednesday
 MAPI bool madness_ui_grid_start(String id, String text, int x_size, int y_size);
 MAPI bool madness_ui_grid_end(String id, String text);
-MAPI void madness_ui_padding(const char* identifier);
+MAPI void madness_ui_padding(void);
 
 
 MAPI bool madness_ui_color_picker(String label, vec3s* color_value);

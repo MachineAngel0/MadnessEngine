@@ -2,7 +2,6 @@
 #define PARTICLE_SYSTEM_H
 
 #include "asset_converter.h"
-#include "material_system.h"
 #include "resource_types.h"
 
 #define PARTICLE_COUNT 1000
@@ -35,6 +34,10 @@ void particle_update(Particle_System* ps, float dt);
 void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, float dt);
 
 
+bool particle_system_does_emitter_exist(Particle_System* ps, String* name);
+bool particle_system_does_effect_exist(Particle_System* ps, String* name);
+
+
 //RENDER
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps);
 
@@ -57,7 +60,7 @@ bool particle_system_is_dead(Particle_System* ps, u32 particle_index);
 
 /////////////// EMITTERS ///////////////
 
-Particle_Emitter* particle_emitter_acquire(Particle_System* ps, String material_name);
+Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter_Handle* out_handle);
 void particle_emitter_release(Particle_System* ps, Particle_Emitter* emitter);
 
 //should be moved to the asset system, and we should load by effect
@@ -71,41 +74,45 @@ void particle_system_emitter_spawn(Particle_System* ps, Particle_Emitter* emitte
 
 //TODO: for this it probably needs a file format saving configurations and an api to make creating one simple
 
-Particle_Effect* particle_effect_acquire(Particle_System* ps, String name, Transform transform);
-void particle_effect_release(Particle_System* ps, Particle_Effect* particle_effect);
+/**
+ * both are optional but you should really get a reference to one of them
+ */
+bool particle_effect_acquire(Particle_System* ps, Particle_Effect** out_effect, Particle_Effect_Handle* out_handle);
+void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle);
 
 
-void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emitter* emitter, u32 emitter_time_start,
-                                 u32 emitter_time_end);
+void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emitter* emitter);
+void particle_effect_add_emitter_by_handle(Particle_System* particle_system, Particle_Effect* particle_effect,
+                                           Particle_Emitter_Handle emitter_handle);
+
+void particle_effect_remove_emitter(Particle_Effect* particle_effect, u32 emitter_index);
 
 
 
-
-typedef struct Asset_Particle_Effect
+void particle_effect_create_empty(Asset_System* asset_system, Particle_System* particle_system,
+                                  const char* effect_name)
 {
-    String name;
-    u32 emitter_count;
-} Asset_Particle_Effect;
+    MASSERT(asset_system);
+    MASSERT(particle_system);
+    MASSERT(strlen(effect_name) > 0);
 
-typedef struct Asset_Particle_Emitter
+    Particle_Effect particle_effect = {0};
+    particle_effect.name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(effect_name, asset_system->frame_allocator);
+
+    asset_converter_particle_effect(asset_system, &particle_effect, NULL);
+}
+
+void particle_emitter_create_default(Asset_System* asset_system,
+                                     Particle_System* particle_system,
+                                     const char* emitter_name)
 {
-    bool a;
-} Asset_Particle_Emitter;
-
-
-
-
-void particle_emitter_create_default(Asset_System* asset_system, Particle_System* particle_system,
-                                               const char* emitter_name)
-{
-
     MASSERT(asset_system);
     MASSERT(emitter_name);
     MASSERT(strlen(emitter_name) > 0);
 
     Material_Info default_particle_material_info = {
         .shader_name = &STRING("billboard_spherical"),
-        .material_name = &STRING("Material_Spherical_Billboard_GPU"),
+        .material_name = &STRING("Material_Spherical_Billboard_CPU"),
         .renderpass = Renderpass_Type_Color,
         .transluency = Shader_Transluency_Type_Opaque,
         .mesh_type = Shader_Mesh_Type_Mesh,
@@ -117,11 +124,10 @@ void particle_emitter_create_default(Asset_System* asset_system, Particle_System
     Material_Instance mat_inst = {0};
 
     asset_converter_material(asset_system,
-                                          &default_particle_material_info,
-                                          &material_asset,
-                                          &mat_inst,
-                                          emitter_name);
-
+                             &default_particle_material_info,
+                             &material_asset,
+                             &mat_inst,
+                             emitter_name);
 
 
     Particle_Emitter emitter = {
@@ -139,7 +145,7 @@ void particle_emitter_create_default(Asset_System* asset_system, Particle_System
             .velocity_variance = {0},
             .gravity = {0},
         },
-        .name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR("no name", asset_system->heap_allocator),
+        .name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(emitter_name, asset_system->heap_allocator),
         .material_instance = mat_inst,
         .runtime_data = {0}
     };

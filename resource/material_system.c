@@ -396,7 +396,7 @@ void material_instance_set_default_textures(Asset_System* asset_system,
     {
         if (material_definition->reflection_material_data.fields[i].type == REFLECTION_TYPE_UUID)
         {
-            MADNESS_UUID* uuid_data = *(MADNESS_UUID**)((u8*)material_instance->material_data + material_definition->
+            MADNESS_UUID* uuid_data = (MADNESS_UUID*)((u8*)material_instance->material_data + material_definition->
                 reflection_material_data.fields[i].offset);
             *uuid_data = asset_system->texture_system->default_texture_uuid;
         }

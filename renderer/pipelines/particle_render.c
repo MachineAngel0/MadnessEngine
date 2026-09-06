@@ -80,6 +80,9 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
+    PROFILE_ZONE(particle_renderer_upload_data_draw)
+
+
     Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
     vulkan_buffer_frame_reset(renderer, particle_render->spherical_billboard_material_buffer_handle);
 
@@ -233,6 +236,10 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     scratch_allocator_end(scratch);
+
+
+    PROFILE_ZONE_END(particle_renderer_upload_data_draw)
+
 }
 
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,

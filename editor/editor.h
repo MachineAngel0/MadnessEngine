@@ -33,7 +33,7 @@ typedef struct Editor
     Reflection_Registry* reflection_registry; // ref
     Memory_System* memory_system; // ref
 
-    Allocator* editor_arena;
+    Allocator* editor_allocator;
     Frame_Allocator* editor_frame_allocator;
 
     //checked by the applicaiton to see if we should run the game dll
@@ -65,9 +65,7 @@ typedef struct Editor
 
 
 MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                         Asset_System* resource_system, Clock* clock,
-                         Reflection_Registry* reflection_registry,
-                         Reflection_Registry* material_registry);
+                    Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry);
 
 Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
                                       const char* relative_asset_path);

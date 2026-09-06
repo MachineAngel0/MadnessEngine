@@ -516,7 +516,7 @@ void turn_update(Madness_Pulse_Game* game)
                 madness_ui_same_line();
                 madness_ui_float(STRING(""), &unit->mp_component.max_mp, 0);
             }
-            madness_ui_padding("player to enemy padding");
+            madness_ui_padding();
             madness_ui_string(STRING("ENEMIES"));
             for (u32 i = 0; i < game->enemy_count; i++)
             {
