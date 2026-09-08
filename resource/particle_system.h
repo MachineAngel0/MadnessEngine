@@ -4,9 +4,6 @@
 #include "asset_converter.h"
 #include "resource_types.h"
 
-#define PARTICLE_COUNT 1000
-#define PARTICLE_EMITTER_COUNT 100
-#define PARTICLE_EFFECTS_COUNT 10
 
 
 //requirements:
@@ -61,7 +58,7 @@ bool particle_system_is_dead(Particle_System* ps, u32 particle_index);
 /////////////// EMITTERS ///////////////
 
 Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter_Handle* out_handle);
-void particle_emitter_release(Particle_System* ps, Particle_Emitter* emitter);
+void particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handle);
 
 //should be moved to the asset system, and we should load by effect
 Particle_Emitter* particle_emitter_acquire_from_file(Particle_System* ps, const char* file_path);
@@ -77,7 +74,7 @@ void particle_system_emitter_spawn(Particle_System* ps, Particle_Emitter* emitte
 /**
  * both are optional but you should really get a reference to one of them
  */
-bool particle_effect_acquire(Particle_System* ps, Particle_Effect** out_effect, Particle_Effect_Handle* out_handle);
+Particle_Effect* particle_effect_acquire(Particle_System* ps, Particle_Effect_Handle* out_handle);
 void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle);
 
 
@@ -147,7 +144,9 @@ void particle_emitter_create_default(Asset_System* asset_system,
         },
         .name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(emitter_name, asset_system->heap_allocator),
         .material_instance = mat_inst,
-        .runtime_data = {0}
+        .material_handle = {0},
+        .position = {0},
+        .particle =  {0},
     };
 
     MADNESS_UUID uuid;

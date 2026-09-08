@@ -43,6 +43,8 @@ typedef struct Application_Config
     u32 mesh_count;
     u32 animation_count;
     u32 audio_count;
+    u32 paritcle_effect_count;
+    u32 paritcle_emitter_count;
 
 } Application_Config;
 

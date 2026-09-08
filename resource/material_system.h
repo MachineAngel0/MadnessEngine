@@ -12,6 +12,53 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d);
 
+bool material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
+                                                 const char* shader_name, const char* material_name, Shader_Mesh_Type shader_type);
+
+Material_Asset* material_asset_acquire(Material_System* material_system,
+                                       Shader_Handle* out_shader_handle)
+{
+    MASSERT(out_shader_handle);
+
+    //check the free index's
+    if (material_system->free_count <= 0)
+    {
+        MASSERT(false);
+        return NULL;
+    }
+
+    //get a free slot
+    u32 index = material_system->free_list[material_system->free_count--];
+
+    *out_shader_handle = (Shader_Handle){
+        .handle = index,
+        .generation = material_system->material_asset_generation[index],
+    };
+
+    return &material_system->material_asset[index];
+}
+
+bool material_asset_release(Material_System* material_system, Shader_Handle shader_handle)
+{
+    material_system->free_list[material_system->free_count] = shader_handle.handle;
+    material_system->material_asset_generation[material_system->free_count]++;
+    material_system->free_count++;
+    return true;
+}
+
+Material_Asset* material_asset_get(Material_System* material_system,
+                                   Shader_Handle out_shader_handle)
+{
+    if (material_system->material_asset_generation[out_shader_handle.generation] != out_shader_handle.generation)
+    {
+        WARN("material_asset_get: OLD GENERATION, handing back 0 index")
+        return &material_system->material_asset[0];
+    }
+
+    return &material_system->material_asset[out_shader_handle.handle];
+}
+
+
 //you have to create a material before requesting an add material type to it
 // Material_Handle material_system_create_material(Material_System* material_system);
 
@@ -51,7 +98,7 @@ void material_system_add_skmesh_instance_to_default_material_batch(Asset_System*
 bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
 bool material_system_material_exists_by_material_id(Asset_System* asset_system,
-                                                    Material_ID material_id,
+                                                    Material_Key material_id,
                                                     Material_Asset* out_asset);
 
 
@@ -59,8 +106,8 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
                                             Material_Handle* out_handle);
 
 
-bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
-                                         Material_Asset* material_asset);
+bool material_system_load_material_asset_definition(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
+                                                    Material_Asset* material_asset);
 
 //NOTE: changing textures requires more elaborate steps
 bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
@@ -83,7 +130,7 @@ void material_system_add_skinned_instance_and_material(Asset_System* asset_syste
 
 //
 
-Material_ID material_generate_id(Material_Info* material_info);
+Material_Key material_generate_id(Material_Info* material_info);
 
 
 void material_create_gpu_definition(Asset_System* asset_system, Reflection_Runtime_Struct* reflection_material,

@@ -5,6 +5,7 @@
 #include "asset_converter.h"
 #include "asset_registry.h"
 #include "asset_serialization.h"
+#include "material_system.h"
 #include "resource_types.h"
 
 
@@ -83,15 +84,19 @@ Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* 
 
 
 bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path,
-                                    Material_Asset* out_material_asset);
-bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
+                                    Material_Asset* out_material_asset, Shader_Handle* out_shader_handle);
+bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Shader_Handle* out_handle);
+
+bool asset_unload_material_asset(Asset_System* asset_system, Shader_Handle shader_handle);
+
+
 bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
 
 bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* asset_path,
                                         Particle_Effect_Handle* out_handle);
 
 
-bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Handle* out_handle);
+bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Handle out_handle);
 
 
 bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_path,
@@ -118,12 +123,18 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
         return false;
     }
 
-
-    for (u32 i = 0; i < asset_system->asset_registry->particle_emitter_asset_count; i++)
+    //check if the emitter has already been loaded
+    for (u32 asset_idx = 0; asset_idx < MAX_PARTICLE_EMITTER_COUNT; asset_idx++)
     {
-        if (string_compare(asset_system->asset_registry->particle_emitter_asset[i].engine_path, path_string))
+        if (asset_system->asset_registry->particle_emitter_asset[asset_idx].path_hash == 0) { continue; }
+        if (string_compare(asset_system->asset_registry->particle_emitter_asset[asset_idx].engine_path, path_string))
         {
-            *out_handle = asset_system->asset_registry->particle_emitter_handles[i];
+            asset_system->asset_registry->particle_emitter_asset[asset_idx].reference_count++;
+
+            *out_handle = (Particle_Emitter_Handle){
+                .handle = asset_idx,
+                .gen = asset_system->particle_system->emitter_generation[asset_idx],
+            };
             PROFILE_ZONE_END(asset_load_particle_emitter)
 
             return true;
@@ -162,12 +173,12 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     fclose(fptr);
 
 
-    u32 asset_index = asset_system->asset_registry->particle_emitter_asset_count++;
-    asset_system->asset_registry->particle_emitter_asset[asset_index].reference_count = 1;
-    asset_system->asset_registry->particle_emitter_asset[asset_index].engine_path = out_meta_data->engine_path;
-    asset_system->asset_registry->particle_emitter_asset[asset_index].path_hash = out_meta_data->hash;
-    asset_system->asset_registry->particle_emitter_asset[asset_index].type = ASSET_PARTICLE_EMITTER;
-    asset_system->asset_registry->particle_emitter_handles[asset_index] = *out_handle;
+    Madness_Asset* madness_asset = &asset_system->asset_registry->particle_emitter_asset[out_handle->handle];
+    madness_asset->path_hash = out_meta_data->hash;
+    madness_asset->engine_path = out_meta_data->engine_path;
+    madness_asset->type = ASSET_PARTICLE_EMITTER;
+    madness_asset->reference_count = 1;
+
 
     scratch_allocator_end(scratch);
 
@@ -175,6 +186,38 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
 
 
     return true;
+}
+
+bool asset_unload_particle_emitter(Asset_System* asset_system, Particle_Emitter_Handle handle);
+
+
+
+void madness_asset_set_info(Madness_Asset* asset, Asset_MetaData* meta_data, Asset_Type asset_type)
+{
+    asset->reference_count = 1;
+    asset->engine_path = meta_data->engine_path;
+    asset->path_hash = meta_data->hash;
+    asset->type = asset_type;
+}
+
+
+/**
+ * check the bool, as that means we need to free this asset
+ * decrements ref count
+ */
+bool madness_asset_release(Madness_Asset* asset)
+{
+    asset->reference_count--;
+    if (asset->reference_count <= 0)
+    {
+        //unload the asset
+        asset->path_hash = 0;
+        asset->engine_path = NULL;
+        asset->type = ASSET_TYPE_MAX;
+        return true;
+    }
+
+    return false;
 }
 
 

@@ -60,6 +60,9 @@ typedef struct Editor
     Asset_List_Scan* particle_effect_list;
     Asset_List_Scan* particle_emitter_list;
 
+    //Material asset
+    Asset_List_Scan* material_asset_list;
+
 
 } Editor;
 

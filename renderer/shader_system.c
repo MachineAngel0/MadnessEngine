@@ -2,9 +2,9 @@
 #include "vk_image.h"
 
 
-Shader_System* shader_system_init(Renderer* renderer)
+Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
 {
-    Shader_System* shader_system = allocator_alloc(&renderer->allocator, sizeof(Shader_System));
+    Vulkan_Shader_System* shader_system = allocator_alloc(&renderer->allocator, sizeof(Vulkan_Shader_System));
     renderer->shader_system = shader_system;
 
     // create_texture_image(&renderer->context, renderer->context.graphics_command_buffer,
@@ -16,7 +16,7 @@ Shader_System* shader_system_init(Renderer* renderer)
 
 
     //we store the pointer, we dont want a copy
-    shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_ID), 100);
+    shader_system->shader_batch_hash_set = hash_set_init(sizeof(Material_Key), 100);
 
 
     INFO("SHADER SYSTEM CREATED")
@@ -26,7 +26,7 @@ Shader_System* shader_system_init(Renderer* renderer)
 }
 
 
-void shader_system_shutdown(Shader_System* system)
+void vulkan_shader_system_shutdown(Vulkan_Shader_System* system)
 {
     //TODO: create and hookup to the renderer shutdown
 }
@@ -34,7 +34,7 @@ void shader_system_shutdown(Shader_System* system)
 
 
 
-void shader_system_update(Renderer* renderer, Shader_System* shader_system, Render_Packet* render_packet)
+void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shader_system, Render_Packet* render_packet)
 {
     //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
     //TODO: we should call this at start up once
@@ -45,7 +45,7 @@ void shader_system_update(Renderer* renderer, Shader_System* shader_system, Rend
         {
             continue;
         }
-        shader_system_shader_batch_create(renderer, shader_system,
+        vulkan_shader_system_shader_batch_create(renderer, shader_system,
                                           &render_packet->draw_3d_data_packet.material_batch[i],
                                           &render_packet->draw_3d_data_packet.material_assets[i],
                                           &render_packet->draw_3d_data_packet.material_definition[i]);
@@ -71,7 +71,7 @@ void shader_system_update(Renderer* renderer, Shader_System* shader_system, Rend
 
 
 
-void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader_system,
+void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
     Material_Batch* material_batch, Material_Asset* material_asset, Material_Definition* material_definition)
 {
     Vulkan_Shader_Batch* shader_batch = NULL;
@@ -91,7 +91,7 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
     }
     shader_batch->material_batch_reference = material_batch;
 
-    shader_batch->material_id = material_asset->material_info.material_key;
+    shader_batch->material_key = material_asset->material_info.material_key;
     shader_batch->shader_name = string_to_c_string_alloc_heap(material_asset->material_info.shader_name, renderer->heap_allocator);
     shader_batch->transluency = material_asset->material_info.transluency;
     shader_batch->renderpass_types = material_asset->material_info.renderpass;
@@ -148,12 +148,24 @@ void shader_system_shader_batch_create(Renderer* renderer, Shader_System* shader
 
 
 
-    hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->material_id);
+    hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->material_key);
 }
 
-void shader_system_shader_batch_free(Renderer* renderer, Shader_System* shader_system, const char* shader_name)
+void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system, const char* shader_name)
 {
     //TODO:
+}
+
+Vulkan_Shader_Batch* vulkan_shader_system_shader_batch_get_by_mat_key_for_particles(Renderer* renderer,
+    u64 material_key)
+{
+    for (u32 i = 0; i < renderer->shader_system->particle_batch_count; i++)
+    {
+        if (renderer->shader_system->particle_batch[i].material_key == material_key)
+        {
+            return &renderer->shader_system->particle_batch[i];
+        }
+    }
 }
 
 

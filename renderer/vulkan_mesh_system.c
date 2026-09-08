@@ -535,7 +535,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         {
             Mesh_Render_Item* cur_render_item = &render_items[item_idx];
 
-            if (cur_render_item->material_key == current_batch->material_id)
+            if (cur_render_item->material_key == current_batch->material_key)
             {
                 mesh_draw = (Vulkan_Mesh_Draw){
                     .transform_idx = cur_render_item->transform_handle,

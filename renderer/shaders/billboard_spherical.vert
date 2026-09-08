@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_shader_draw_parameters : enable
-
+#extension GL_ARB_gpu_shader_int64 : require
 
 
 #include "shader_includes/test_uniform.glsl"
@@ -26,10 +26,20 @@ layout(buffer_reference, scalar) readonly buffer Spherical_Billboard_Buffer{
 };
 
 
+struct Particle_Draw{
+    uint64_t material_key;
+    uint material_id;
+    uint particle_index;
+};
+
+layout(buffer_reference, scalar) readonly buffer Particle_Draw_Buffer{
+    Particle_Draw data[];
+};
+
 
 layout(push_constant, scalar) uniform PC_PARTICLE{
     Spherical_Billboard_Buffer material_buffer;
-    Spherical_Billboard_Buffer unused;
+    Particle_Draw particle_draw_data;
 }pc;
 
 const vec2 corners[4] = vec2[](

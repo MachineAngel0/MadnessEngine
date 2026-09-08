@@ -14,8 +14,8 @@
 
 #include "camera.h"
 #include "../core/dsa/darray.h"
-#include "hash_table.h"
 #include "input.h"
+#include "misc_util.h"
 #include "../resource/resource_types.h"
 
 //RESOURCE COUNTS
@@ -25,10 +25,10 @@
 /// HANDLES ///
 
 
-typedef struct Shader_Handle
+typedef struct Vulkan_Shader_Handle
 {
     u32 handle;
-} Shader_Handle;
+} Vulkan_Shader_Handle;
 
 typedef struct Pipeline_Handle
 {
@@ -71,9 +71,6 @@ typedef struct Vulkan_Texture
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
     // vk_image_type image_type;
-
-
-
 } Vulkan_Texture;
 
 
@@ -215,9 +212,7 @@ typedef struct Vulkan_Transfer_Buffer_Pending_Upload
     VkDeviceSize size;
     // VkSemaphore semaphore;
     u64 semaphore_wait_value;
-}Vulkan_Staging_Buffer_Pending_Upload;
-
-
+} Vulkan_Staging_Buffer_Pending_Upload;
 
 
 typedef struct Vulkan_Shader_Pipeline
@@ -225,6 +220,14 @@ typedef struct Vulkan_Shader_Pipeline
     VkPipelineLayout pipeline_layout;
     VkPipeline handle;
 } Vulkan_Shader_Pipeline;
+
+typedef struct Vulkan_Particle_Draw
+{
+    u64 material_key;
+    u32 material_index;
+    u32 particle_index;
+} Vulkan_Particle_Draw;
+
 
 
 typedef struct Mesh_Render_Item
@@ -323,7 +326,6 @@ typedef struct Mesh_Unfinished_Upload
 } Mesh_Unfinished_Upload;
 
 
-
 typedef struct Mesh_Gpu_Upload_Pending
 {
     u32 mesh_id;
@@ -389,7 +391,7 @@ typedef struct Vulkan_Shader_Batch
     Shader_Renderpass_Type renderpass_types;
 
 
-    Material_ID material_id;
+    Material_Key material_key;
 
 
     Vulkan_Shader_Pipeline pipeline;
@@ -441,12 +443,10 @@ typedef struct Shader_System
     u32 particle_batch_count;
 
 
-
-
     //the shader name is the lookup
     //we want the pointer to the shader batch,
     HASH_SET(Material_ID)* shader_batch_hash_set;
-} Shader_System;
+} Vulkan_Shader_System;
 
 
 typedef struct vulkan_shader_default
@@ -563,8 +563,6 @@ typedef struct Light_System
     Buffer_Frame_Handle directional_light_ssbo_handle;
     Buffer_Frame_Handle point_light_ssbo_handle;
     Buffer_Frame_Handle spot_light_ssbo_handle;
-
-
 } Light_System;
 
 
@@ -630,7 +628,6 @@ typedef struct Descriptor_System
 
 typedef struct Vulkan_Texture_System
 {
-
     Vulkan_Texture default_texture;
     Vulkan_Texture error_texture;
 
@@ -698,10 +695,7 @@ typedef struct Buffer_System
     Free_List* upload_staging_free_list;
 
 
-
     VkSemaphore timeline_transfer_upload_semaphore;
-
-
 
 
     //TODO: queries for size
@@ -780,7 +774,6 @@ typedef struct Vulkan_Mesh_System
     Buffer_Handle weight_buffer_handle;
 
 
-
     //per frame
     Buffer_Frame_Handle skinned_matrix_buffer;
     Buffer_Frame_Handle transform_buffer_handle;
@@ -804,7 +797,6 @@ typedef struct Vulkan_Mesh_System
     ARRAY_TYPE(Skinned_Gpu_Upload_Pending)* skinned_pending_array;
     VkSemaphore skinned_upload_timeline_semaphore;
     u64 skinned_upload_semaphore_value;
-
 } Vulkan_Mesh_System;
 
 typedef struct Particle_Render
@@ -824,15 +816,21 @@ typedef struct Particle_Render
 
     Buffer_Frame_Handle particle_color_buffer_handle;
 
+    //draw buffer
+    Buffer_Frame_Handle particle_draw_buffer_handle;
 
-    //idk about this rn
-    Buffer_Frame_Handle particle_material_buffer_handle;
-
+    //material
+    Buffer_Frame_Handle spherical_billboard_material_buffer_handle_new;
 
     u32 draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;
     Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
+
+
+    Vulkan_Particle_Draw* particle_draw;
+    u32 particle_draw_count;
+
 } Particle_Render;
 
 typedef struct Vulkan_Render_Thread
@@ -850,7 +848,7 @@ typedef struct Transfer_Command_Buffer_In_Flight
     Vulkan_Command_Buffer* command_buffer;
     VkSemaphore timeline_semaphore;
     u64 semaphore_value;
-}Transfer_Command_Buffer_In_Flight;
+} Transfer_Command_Buffer_In_Flight;
 
 typedef struct Vulkan_Transfer_Queue
 {
@@ -1020,7 +1018,7 @@ typedef struct Renderer
 
     Input_System* input_system; //meant only to be used for debugging
     //general resources taken from the resource system
-    Shader_System* shader_system;
+    Vulkan_Shader_System* shader_system;
     Sprite_Renderer* sprite_renderer;
     Vulkan_Mesh_System* mesh_system;
     Particle_Render* particle_render;

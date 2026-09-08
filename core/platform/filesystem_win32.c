@@ -680,6 +680,9 @@ bool platform_get_assets_from_directory(const char* directory_path, Asset_List_S
     MASSERT(asset_list_scan->allocator)
     MASSERT(asset_list_scan->strings)
 
+    PROFILE_ZONE(platform_get_assets_from_directory);
+
+
     WIN32_FIND_DATAA findFileData;
     HANDLE findHandle;
     char search_path[MAX_PATH];
@@ -742,6 +745,10 @@ bool platform_get_assets_from_directory(const char* directory_path, Asset_List_S
     while (FindNextFileA(findHandle, &findFileData));
 
     FindClose(findHandle);
+
+    PROFILE_ZONE_END(platform_get_assets_from_directory);
+
+
     return true;
 }
 

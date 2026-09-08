@@ -123,6 +123,13 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
     madness_ui_add_asset_list(editor->scene_list, ASSET_SCENE);
 
 
+    editor->material_asset_list =
+        asset_lists_generate(memory_system,
+                             MAX_ASSETS_STRINGS,
+                             "../z_assets_engine/material");
+    madness_ui_add_asset_list(editor->scene_list, ASSET_MATERIAL);
+
+
     return true;
 }
 
@@ -559,8 +566,74 @@ void editor_meta_data_view(Editor* editor)
 void editor_material_asset_view(Editor* editor)
 {
     Asset_System* asset_system = editor->asset_system;
+    Material_System* material_system = editor->asset_system->material_system;
+
+
+    static Shader_Handle handle;
+    String material_path;
     madness_ui_window_begin(STRING("Material Reflection View"));
     {
+        madness_ui_combo_box_string(STRING("selected material asset"), &material_path,
+                                    editor->material_asset_list->strings,
+                                    editor->material_asset_list->count);
+
+
+        if (madness_ui_button(STRING("LOAD SHADER")))
+        {
+            asset_load_material_asset_path(asset_system,
+                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                           NULL, &handle);
+        }
+
+        madness_ui_padding();
+
+        if (madness_ui_button(STRING("SAVE SHADER")))
+        {
+            asset_load_material_asset_path(asset_system,
+                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                           NULL, &handle);
+        }
+
+        madness_ui_padding();
+
+        static u32 shader_mapping_index;
+        madness_ui_u32(STRING("asdsa"), &shader_mapping_index, 1);
+        shader_mapping_index = clamp_uint(shader_mapping_index, 0,
+                                          editor->asset_system->material_system->shader_to_material_count-1);
+        // madness_ui_string(
+        // *material_system->shader_to_material_mapping.shader_name[shader_mapping_index]);
+
+        madness_ui_combo_box2(STRING("STRINGasdasd"), &shader_mapping_index,
+                             material_system->shader_to_material_mapping.shader_name,
+                             editor->asset_system->material_system->shader_to_material_count);
+        madness_ui_string(
+              *material_system->shader_to_material_mapping.material_name[shader_mapping_index]);
+
+
+        madness_ui_padding();
+
+        if (handle.handle != 0)
+        {
+            Material_Asset* material_asset = material_asset_get(asset_system->material_system, handle);
+
+            madness_ui_u64(STRING("High:"), &material_asset->uuid.high, 0);
+            madness_ui_u64(STRING("Low:"), &material_asset->uuid.low, 0);
+            madness_ui_u32(STRING("Version:"), &material_asset->version, 0);
+
+
+            // madness_ui_string(STRING("shader_name"), &material_asset->material_info, 0);
+            // madness_ui_string(STRING("material_name"), &material_asset->material_info, 0);
+            //
+
+            Reflection_Runtime_Struct reflection_asset = reflection_registry_get_struct(
+                asset_system->global_reflection_registry, TYPE_STRING(Material_Info));
+
+            madness_ui_reflect_using_data(asset_system->global_reflection_registry, reflection_asset,
+                                          &material_asset->material_info, "mat asset");
+        }
+
+
+        /*
         for (u32 i = 0; i < asset_system->material_system->material_count; i++)
         {
             Material_Batch* batch = &asset_system->material_system->material_batch[i];
@@ -575,8 +648,8 @@ void editor_material_asset_view(Editor* editor)
             /*
             madness_ui_reflect_data(Reflection_Registry* reflection_registry, struct_info,
                                    void* passin_data, const char* id)
-            */
-        }
+            #1#
+        }*/
     }
     madness_ui_window_end();
 
@@ -623,12 +696,6 @@ void editor_material_asset_view(Editor* editor)
         madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
 
 
-        /*
-        Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct(editor->reflection_registry,
-            "Material_Info");
-
-        madness_ui_reflect_using_data(editor->reflection_registry, runtime_struct, &material_info, "hi");
-        */
     }
     madness_ui_window_end();
 }
@@ -685,10 +752,18 @@ void editor_particle_view(Editor* editor)
                                         string_to_c_string_allocator(&emitter_path, editor->editor_frame_allocator),
                                         &emitter_to_edit_handle);
         }
-
+        if (madness_ui_button(STRING("UNLOAD EMITTER")))
+        {
+            /*
+            asset_unload_particle_emitter(editor->asset_system,
+                                        string_to_c_string_allocator(&emitter_path, editor->editor_frame_allocator),
+                                        &emitter_to_edit_handle);
+                                        */
+        }
         madness_ui_padding();
 
         Particle_Emitter* emitter_to_edit = &particle_system->emitters[emitter_to_edit_handle.handle];
+
 
         if (madness_ui_button(STRING("SAVE EMITTER")))
         {
@@ -705,8 +780,8 @@ void editor_particle_view(Editor* editor)
                                       &emitter_to_edit->data, "emitter_edit");
 
 
-        emitter_to_edit->runtime_data.material_handle;
-        emitter_to_edit->runtime_data.position;
+        emitter_to_edit->material_handle;
+        emitter_to_edit->position;
 
         madness_ui_padding();
 
@@ -718,6 +793,38 @@ void editor_particle_view(Editor* editor)
                 editor->asset_system->material_reflection_registry, TYPE_STRING(Material_Spherical_Billboard));
             madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_material,
                                           &emitter_to_edit->material_instance.material_data, "emitter_mat");
+        }
+
+
+        String material_path;
+        madness_ui_combo_box_string(STRING("selected material asset"), &material_path,
+                                    editor->material_asset_list->strings,
+                                    editor->material_asset_list->count);
+
+        static Shader_Handle handle;
+        if (madness_ui_button(STRING("LOAD SHADER")))
+        {
+            Material_Asset material_asset;
+            asset_load_material_asset_path(editor->asset_system,
+                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                           &material_asset, &handle);
+        }
+
+        //just need to swap the material asset and update the material instance
+        if (madness_ui_button(STRING("SET NEW SHADER")))
+        {
+            emitter_to_edit->material_instance.material_asset_uuid;
+        }
+
+        if (handle.handle != 0)
+        {
+            Material_Asset* material_asset = material_asset_get(editor->asset_system->material_system, handle);
+
+            Reflection_Runtime_Struct reflection_asset = reflection_registry_get_struct(
+                editor->asset_system->global_reflection_registry, TYPE_STRING(Material_Asset));
+
+            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, reflection_asset,
+                                          material_asset, "mat asset");
         }
 
 
@@ -812,19 +919,16 @@ void editor_particle_view(Editor* editor)
         //add from a global list
         if (madness_ui_button(STRING("ADD EMITTER")))
         {
-            if (particle_system->particle_effects_count > 1)
-            {
-                Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+            Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
 
-                //load an emitter
-                Particle_Emitter_Handle emitter_handle = {0};
-                asset_load_particle_emitter(editor->asset_system,
-                                            string_to_c_string_allocator(&effect_to_add_path,
-                                                                         editor->editor_frame_allocator),
-                                            &emitter_handle);
-                particle_effect_add_emitter_by_handle(editor->asset_system->particle_system, particle_effect,
-                                                      emitter_handle);
-            }
+            //load an emitter
+            Particle_Emitter_Handle emitter_handle = {0};
+            asset_load_particle_emitter(editor->asset_system,
+                                        string_to_c_string_allocator(&effect_to_add_path,
+                                                                     editor->editor_frame_allocator),
+                                        &emitter_handle);
+            particle_effect_add_emitter_by_handle(editor->asset_system->particle_system, particle_effect,
+                                                  emitter_handle);
         }
 
 
@@ -836,31 +940,32 @@ void editor_particle_view(Editor* editor)
 
         //particle selection
         madness_ui_u32(STRING("PARTICLE INDEX"), &effect_index, 1);
-        effect_index = clamp_uint(effect_index, 0, particle_system->particle_effects_count - 1);
+        effect_index = clamp_uint(effect_index, 0, particle_system->active_effects->num_items - 1);
 
-        if (particle_system->particle_effects_count > 1)
+
+        Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+
+        if (particle_effect->name)
         {
-            Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
-
             madness_ui_string(STRING("PARTICLE EFFECT NAME: "));
             madness_ui_same_line();
             madness_ui_string(*particle_effect->name);
 
             madness_ui_u32(STRING("EMITTER INDEX"), &effect_emitter_index, 1);
             effect_emitter_index = clamp_uint(effect_emitter_index, 0, particle_effect->emitter_count - 1);
+
+
+            if (madness_ui_button(STRING("REMOVE EMITTER AT INDEX")))
+            {
+                //remove an emitter
+                Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
+                particle_effect_remove_emitter(particle_effect, effect_emitter_index);
+                effect_emitter_index = clamp_uint(effect_index, 0, particle_system->active_effects->num_items - 1);
+            }
+
+
+            madness_ui_padding();
         }
-
-
-        if (madness_ui_button(STRING("REMOVE EMITTER AT INDEX")))
-        {
-            //remove an emitter
-            Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
-            particle_effect_remove_emitter(particle_effect, effect_emitter_index);
-            effect_emitter_index = clamp_uint(effect_index, 0, particle_system->particle_effects_count - 1);
-        }
-
-
-        madness_ui_padding();
     }
     madness_ui_window_end();
 
@@ -868,30 +973,32 @@ void editor_particle_view(Editor* editor)
     madness_ui_window_begin(STRING("Particle Effect View"));
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
-
-        if (madness_ui_button(STRING("SAVE EFFECT")))
+        if (effect->name)
         {
-            asset_converter_particle_effect(editor->asset_system, effect, NULL);
-        }
+            if (madness_ui_button(STRING("SAVE EFFECT")))
+            {
+                asset_converter_particle_effect(editor->asset_system, effect, NULL);
+            }
 
-        madness_ui_string(*effect->name);
-
-
-        madness_ui_u32(STRING("effect current time"), &effect->effect_current_time, 1);
-        madness_ui_u32(STRING("effect length"), &effect->effect_length, 1);
-        madness_ui_u32(STRING("generation"), &effect->generation, 1);
-        madness_ui_check_box(STRING("infinite duration"), &effect->infinite);
-        madness_ui_check_box(STRING("is visible"), &effect->is_visible);
+            madness_ui_string(*effect->name);
 
 
-        madness_ui_u32(STRING("Emitter Count"), &effect->emitter_count, 0);
-        for (u32 emitter_idx = 0; emitter_idx < effect->emitter_count; emitter_idx++)
-        {
-            madness_ui_string(*effect->emitters[emitter_idx]->name);
-            madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_start %d", emitter_idx),
-                           &effect->emitters_start[emitter_idx], 1);
-            madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_end %d", emitter_idx),
-                           &effect->emitters_end[emitter_idx], 1);
+            madness_ui_u32(STRING("effect current time"), &effect->effect_current_time, 1);
+            madness_ui_u32(STRING("effect length"), &effect->effect_length, 1);
+            madness_ui_u32(STRING("generation"), &particle_system->particle_generation[effect_index], 1);
+            madness_ui_check_box(STRING("infinite duration"), &effect->infinite);
+            madness_ui_check_box(STRING("is visible"), &effect->is_visible);
+
+
+            madness_ui_u32(STRING("Emitter Count"), &effect->emitter_count, 0);
+            for (u32 emitter_idx = 0; emitter_idx < effect->emitter_count; emitter_idx++)
+            {
+                madness_ui_string(*effect->emitters[emitter_idx]->name);
+                madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_start %d", emitter_idx),
+                               &effect->emitters_start[emitter_idx], 1);
+                madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_end %d", emitter_idx),
+                               &effect->emitters_end[emitter_idx], 1);
+            }
         }
     }
     madness_ui_window_end();
@@ -900,6 +1007,7 @@ void editor_particle_view(Editor* editor)
     madness_ui_window_begin(STRING("Particle Effect Emitter View"));
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
+
 
         if (effect->emitter_count > 0)
         {
@@ -913,6 +1021,24 @@ void editor_particle_view(Editor* editor)
                 editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
             madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
                                           &emitter->data, "emitter");
+        }
+    }
+    madness_ui_window_end();
+
+    madness_ui_window_begin(STRING("Particle Active View"));
+    {
+        for (u32 i = 0; i < particle_system->active_emitters->num_items; i++)
+        {
+            u32 index = array_get(particle_system->active_emitters, u32, i);
+
+            madness_ui_string(*particle_system->emitters[index].name);
+        }
+
+        for (u32 i = 0; i < particle_system->active_effects->num_items; i++)
+        {
+            u32 index = array_get(particle_system->active_effects, u32, i);
+
+            madness_ui_string(*particle_system->particle_effects[index].name);
         }
     }
     madness_ui_window_end();

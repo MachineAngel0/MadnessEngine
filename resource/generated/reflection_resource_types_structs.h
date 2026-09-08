@@ -4,9 +4,12 @@
 
 const char* resources_struct_string_list[] = {
 	"Handle", 
+	"Asset_MetaData", 
+	"Madness_Asset", 
 	"Texture_Handle", 
 	"Material_Handle", 
 	"Material_Asset_Handle", 
+	"Shader_Handle", 
 	"Madness_Mesh_Handle", 
 	"Madness_Mesh_Handle_Internal", 
 	"Madness_SkMesh_Handle", 
@@ -14,9 +17,8 @@ const char* resources_struct_string_list[] = {
 	"Transform_Handle", 
 	"Sprite_Handle", 
 	"Animation_Handle", 
+	"Particle_Emitter_Handle", 
 	"Particle_Effect_Handle", 
-	"Asset_MetaData", 
-	"Madness_Asset", 
 	"Madness_Texture", 
 	"Texture_GPU_Upload", 
 	"Madness_Texture_Runtime", 
@@ -40,7 +42,6 @@ const char* resources_struct_string_list[] = {
 	"Particle_Animation_vec2", 
 	"Particle_Animation_float", 
 	"Particle_Emitter_Data", 
-	"Particle_Emitter_Runtime", 
 	"Particle_Emitter", 
 	"Particle_Effect", 
 	"Madness_Animation", 
@@ -58,6 +59,7 @@ const char* resources_struct_string_list[] = {
 	"Skinned_Mesh_GPU_Upload", 
 	"Madness_Mesh_Runtime", 
 	"Madness_SkMesh_Runtime", 
+	"Shader_Mat_Mapping", 
 	"Material_System", 
 	"Sprite_System", 
 	"Texture_System", 
@@ -101,6 +103,88 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Handle_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Asset_MetaData_Fields[] =
+	{
+		{
+			.name = "uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Asset_MetaData, uuid)
+		},
+		{
+			.name = "hash",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Asset_MetaData, hash)
+		},
+		{
+			.name = "type",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Asset_Type",
+			.offset = offsetof(Asset_MetaData, type)
+		},
+		{
+			.name = "source_file",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Asset_MetaData, source_file)
+		},
+		{
+			.name = "engine_path",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Asset_MetaData, engine_path)
+		},
+	};
+
+	 Reflection_Runtime_Struct Asset_MetaData_Runtime_Struct =
+	{
+		.name = "Asset_MetaData",
+		.fields = Asset_MetaData_Fields,
+		.field_count = 5,
+		.struct_size = sizeof(Asset_MetaData)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Asset_MetaData_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Madness_Asset_Fields[] =
+	{
+		{
+			.name = "path_hash",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_Asset, path_hash)
+		},
+		{
+			.name = "reference_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_Asset, reference_count)
+		},
+		{
+			.name = "type",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Asset_Type",
+			.offset = offsetof(Madness_Asset, type)
+		},
+		{
+			.name = "engine_path",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Madness_Asset, engine_path)
+		},
+	};
+
+	 Reflection_Runtime_Struct Madness_Asset_Runtime_Struct =
+	{
+		.name = "Madness_Asset",
+		.fields = Madness_Asset_Fields,
+		.field_count = 4,
+		.struct_size = sizeof(Madness_Asset)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Madness_Asset_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Texture_Handle_Fields[] =
 	{
@@ -167,6 +251,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Asset_Handle_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Shader_Handle_Fields[] =
+	{
+		{
+			.name = "handle",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Shader_Handle, handle)
+		},
+		{
+			.name = "generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Shader_Handle, generation)
+		},
+	};
+
+	 Reflection_Runtime_Struct Shader_Handle_Runtime_Struct =
+	{
+		.name = "Shader_Handle",
+		.fields = Shader_Handle_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Shader_Handle)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Shader_Handle_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Mesh_Handle_Fields[] =
 	{
@@ -326,6 +436,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Animation_Handle_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Particle_Emitter_Handle_Fields[] =
+	{
+		{
+			.name = "handle",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Emitter_Handle, handle)
+		},
+		{
+			.name = "gen",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_Emitter_Handle, gen)
+		},
+	};
+
+	 Reflection_Runtime_Struct Particle_Emitter_Handle_Runtime_Struct =
+	{
+		.name = "Particle_Emitter_Handle",
+		.fields = Particle_Emitter_Handle_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Particle_Emitter_Handle)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Handle_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Particle_Effect_Handle_Fields[] =
 	{
 		{
@@ -351,88 +487,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Particle_Effect_Handle_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Asset_MetaData_Fields[] =
-	{
-		{
-			.name = "uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Asset_MetaData, uuid)
-		},
-		{
-			.name = "hash",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Asset_MetaData, hash)
-		},
-		{
-			.name = "type",
-			.type = REFLECTION_TYPE_ENUM,
-			.type_name = "Asset_Type",
-			.offset = offsetof(Asset_MetaData, type)
-		},
-		{
-			.name = "source_file",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
-			.offset = offsetof(Asset_MetaData, source_file)
-		},
-		{
-			.name = "engine_path",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
-			.offset = offsetof(Asset_MetaData, engine_path)
-		},
-	};
-
-	 Reflection_Runtime_Struct Asset_MetaData_Runtime_Struct =
-	{
-		.name = "Asset_MetaData",
-		.fields = Asset_MetaData_Fields,
-		.field_count = 5,
-		.struct_size = sizeof(Asset_MetaData)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Asset_MetaData_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_Asset_Fields[] =
-	{
-		{
-			.name = "path_hash",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_Asset, path_hash)
-		},
-		{
-			.name = "reference_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_Asset, reference_count)
-		},
-		{
-			.name = "type",
-			.type = REFLECTION_TYPE_ENUM,
-			.type_name = "Asset_Type",
-			.offset = offsetof(Madness_Asset, type)
-		},
-		{
-			.name = "engine_path",
-			.type = REFLECTION_TYPE_STRING,
-			.type_name = "String",
-			.offset = offsetof(Madness_Asset, engine_path)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_Asset_Runtime_Struct =
-	{
-		.name = "Madness_Asset",
-		.fields = Madness_Asset_Fields,
-		.field_count = 4,
-		.struct_size = sizeof(Madness_Asset)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_Asset_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Texture_Fields[] =
 	{
@@ -1356,32 +1410,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Data_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Particle_Emitter_Runtime_Fields[] =
-	{
-		{
-			.name = "material_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Handle",
-			.offset = offsetof(Particle_Emitter_Runtime, material_handle)
-		},
-		{
-			.name = "position",
-			.type = REFLECTION_TYPE_VEC3,
-			.type_name = "vec3s",
-			.offset = offsetof(Particle_Emitter_Runtime, position)
-		},
-	};
-
-	 Reflection_Runtime_Struct Particle_Emitter_Runtime_Runtime_Struct =
-	{
-		.name = "Particle_Emitter_Runtime",
-		.fields = Particle_Emitter_Runtime_Fields,
-		.field_count = 2,
-		.struct_size = sizeof(Particle_Emitter_Runtime)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Particle_Emitter_Runtime_Runtime_Struct);
-
 	Reflection_Runtime_Struct_Field Particle_Emitter_Fields[] =
 	{
 		{
@@ -1403,10 +1431,22 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Emitter, material_instance)
 		},
 		{
-			.name = "runtime_data",
+			.name = "material_handle",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Particle_Emitter_Runtime",
-			.offset = offsetof(Particle_Emitter, runtime_data)
+			.type_name = "Material_Handle",
+			.offset = offsetof(Particle_Emitter, material_handle)
+		},
+		{
+			.name = "position",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle_Emitter, position)
+		},
+		{
+			.name = "in_use",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Particle_Emitter, in_use)
 		},
 	};
 
@@ -1414,7 +1454,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_Emitter",
 		.fields = Particle_Emitter_Fields,
-		.field_count = 4,
+		.field_count = 6,
 		.struct_size = sizeof(Particle_Emitter)
 	};
 
@@ -2172,6 +2212,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_SkMesh_Runtime_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Shader_Mat_Mapping_Fields[] =
+	{
+		{
+			.name = "shader_name",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
+			.offset = offsetof(Shader_Mat_Mapping, shader_name)
+		},
+		{
+			.name = "material_name",
+			.type = REFLECTION_TYPE_PATH_STRING,
+			.type_name = "Path_String",
+			.offset = offsetof(Shader_Mat_Mapping, material_name)
+		},
+	};
+
+	 Reflection_Runtime_Struct Shader_Mat_Mapping_Runtime_Struct =
+	{
+		.name = "Shader_Mat_Mapping",
+		.fields = Shader_Mat_Mapping_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Shader_Mat_Mapping)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Shader_Mat_Mapping_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Material_System_Fields[] =
 	{
 		{
@@ -2193,22 +2259,34 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Material_System, material_definition)
 		},
 		{
+			.name = "material_asset_generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_System, material_asset_generation)
+		},
+		{
 			.name = "material_count",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Material_System, material_count)
 		},
 		{
-			.name = "material_madness_asset",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_Asset",
-			.offset = offsetof(Material_System, material_madness_asset)
-		},
-		{
-			.name = "material_madness_asset_count",
+			.name = "free_list",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_System, material_madness_asset_count)
+			.offset = offsetof(Material_System, free_list)
+		},
+		{
+			.name = "free_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_System, free_count)
+		},
+		{
+			.name = "shader_to_material_mapping",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Shader_Mat_Mapping",
+			.offset = offsetof(Material_System, shader_to_material_mapping)
 		},
 	};
 
@@ -2216,7 +2294,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Material_System",
 		.fields = Material_System_Fields,
-		.field_count = 6,
+		.field_count = 8,
 		.struct_size = sizeof(Material_System)
 	};
 
@@ -2481,10 +2559,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_System, particle_effects)
 		},
 		{
-			.name = "particle_effects_count",
+			.name = "particle_generation",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Particle_System, particle_effects_count)
+			.offset = offsetof(Particle_System, particle_generation)
 		},
 		{
 			.name = "particle_effects_count_max",
@@ -2493,10 +2571,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_System, particle_effects_count_max)
 		},
 		{
-			.name = "available_particle_effects_count",
+			.name = "free_particle_effects",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Particle_System, available_particle_effects_count)
+			.offset = offsetof(Particle_System, free_particle_effects)
+		},
+		{
+			.name = "free_particle_effects_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, free_particle_effects_count)
 		},
 		{
 			.name = "emitters",
@@ -2505,10 +2589,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_System, emitters)
 		},
 		{
-			.name = "emitter_count",
+			.name = "emitter_generation",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Particle_System, emitter_count)
+			.offset = offsetof(Particle_System, emitter_generation)
 		},
 		{
 			.name = "emitter_count_max",
@@ -2517,10 +2601,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_System, emitter_count_max)
 		},
 		{
-			.name = "available_emitters_count",
+			.name = "free_emitters",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Particle_System, available_emitters_count)
+			.offset = offsetof(Particle_System, free_emitters)
+		},
+		{
+			.name = "free_emitters_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle_System, free_emitters_count)
 		},
 		{
 			.name = "particles",
@@ -2552,13 +2642,37 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Particle_System, dead_particles_count)
 		},
+		{
+			.name = "default_effect",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Effect",
+			.offset = offsetof(Particle_System, default_effect)
+		},
+		{
+			.name = "default_effect_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Effect_Handle",
+			.offset = offsetof(Particle_System, default_effect_handle)
+		},
+		{
+			.name = "default_emitter",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter",
+			.offset = offsetof(Particle_System, default_emitter)
+		},
+		{
+			.name = "default_emitter_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Particle_Emitter_Handle",
+			.offset = offsetof(Particle_System, default_emitter_handle)
+		},
 	};
 
 	 Reflection_Runtime_Struct Particle_System_Runtime_Struct =
 	{
 		.name = "Particle_System",
 		.fields = Particle_System_Fields,
-		.field_count = 13,
+		.field_count = 19,
 		.struct_size = sizeof(Particle_System)
 	};
 
@@ -2763,16 +2877,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Asset_Registry, particle_effect_asset)
 		},
 		{
-			.name = "particle_effect_handles",
+			.name = "particle_emitter_asset",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Particle_Effect_Handle",
-			.offset = offsetof(Asset_Registry, particle_effect_handles)
+			.type_name = "Madness_Asset",
+			.offset = offsetof(Asset_Registry, particle_emitter_asset)
 		},
 		{
-			.name = "particle_effect_asset_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Asset_Registry, particle_effect_asset_count)
+			.name = "material_madness_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Madness_Asset",
+			.offset = offsetof(Asset_Registry, material_madness_asset)
 		},
 	};
 

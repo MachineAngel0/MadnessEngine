@@ -445,6 +445,8 @@ MAPI bool madness_ui_drop_down_tree(String id, String text);
 
 MAPI bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
                                u32 string_array_size);
+bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array,
+                          u32 string_array_size);
 MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array,
                                     u32 char_array_size);
 

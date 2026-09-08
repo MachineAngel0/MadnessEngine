@@ -58,6 +58,13 @@ int cmp_uint(void* a, void* b)
     return (A > B) - (A < B);
 }
 
+MINLINE int cmp_u64(void* a, void* b)
+{
+    u64 A = *(u64*) a;
+    u64 B = *(u64*) b;
+    return (A > B) - (A < B);
+}
+
 int cmp_char(void* a, void* b)
 {
     char A = *(char*) a;

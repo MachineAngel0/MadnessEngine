@@ -6,9 +6,29 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
     memset(material_system->material_batch, 0, MAX_MATERIAL_COUNT * sizeof(Material_Batch));
     memset(material_system->material_asset, 0, MAX_MATERIAL_COUNT * sizeof(Material_Asset));
     memset(material_system->material_definition, 0, MAX_MATERIAL_COUNT * sizeof(Material_Definition));
-    memset(material_system->material_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
+    memset(material_system->material_asset_generation, 0, MAX_MATERIAL_COUNT * sizeof(u32));
+    memset(material_system->free_list, 0, MAX_MATERIAL_COUNT * sizeof(u32));
     material_system->material_count = 0;
-    material_system->material_madness_asset_count = 0;
+
+
+    material_system->free_count = MAX_MATERIAL_COUNT;
+    s64 temp_i = MAX_MATERIAL_COUNT - 1;
+    while (temp_i >= 0)
+    {
+        material_system->free_list[temp_i] = temp_i;
+        temp_i--;
+    }
+
+
+    material_system_add_shader_material_mapping(asset_system, material_system,
+                                                "mesh", TYPE_STRING(Material_Default),
+                                                Shader_Mesh_Type_Mesh);
+    material_system_add_shader_material_mapping(asset_system, material_system,
+                                                "skinned_mesh", TYPE_STRING(Material_Default),
+                                                Shader_Mesh_Type_Skinned);
+    material_system_add_shader_material_mapping(asset_system, material_system,
+                                                "billboard_spherical", TYPE_STRING(Material_Spherical_Billboard_CPU),
+                                                Shader_Mesh_Type_Particle);
 
 
     // if (app_is_debug_build())
@@ -16,12 +36,14 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
     Asset_List_Scan* list_scan =
         asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, ENGINE_MATERIAL_PATH_NO_SLASH);
 
+    Shader_Handle handle;
     for (u32 i = 0; i < list_scan->count; i++)
     {
         Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
 
         asset_load_material_asset_path(asset_system,
-                                       string_to_c_string_allocator(list_scan->strings, scratch.allocator), NULL);
+                                       string_to_c_string_allocator(list_scan->strings, scratch.allocator), NULL,
+                                       &handle);
 
         scratch_allocator_end(scratch);
     }
@@ -52,6 +74,20 @@ bool material_system_generate_render_packet(Material_System* material_system,
     return true;
 }
 
+bool material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
+                                                 const char* shader_name, const char* material_name,
+                                                 Shader_Mesh_Type shader_type)
+{
+    material_system->shader_to_material_mapping.shader_name[material_system->shader_to_material_count] =
+        STRING_CREATE_FROM_BUFFER_ALLOCATOR(shader_name, asset_system->allocator);
+
+    material_system->shader_to_material_mapping.material_name[material_system->shader_to_material_count] =
+        STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_name, asset_system->allocator);
+
+    material_system->shader_to_material_count++;
+}
+
+
 bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
 {
     Material_System* material_system = asset_system->material_system;
@@ -66,7 +102,7 @@ bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_
     return false;
 }
 
-bool material_system_material_exists_by_material_id(Asset_System* asset_system, Material_ID material_id,
+bool material_system_material_exists_by_material_id(Asset_System* asset_system, Material_Key material_id,
                                                     Material_Asset* out_asset)
 {
     Material_System* material_system = asset_system->material_system;
@@ -108,7 +144,8 @@ bool material_system_load_material_instance(Asset_System* asset_system, Material
     //if we didn't find it load it in
     if (material_batch == NULL)
     {
-        asset_load_material_asset_uuid(asset_system, material_instance->material_asset_uuid);
+        Shader_Handle handle;
+        asset_load_material_asset_uuid(asset_system, material_instance->material_asset_uuid, &handle);
         //find it
         for (u32 i = 0; i < material_system->material_count; i++)
         {
@@ -196,14 +233,14 @@ void material_definition_create(Asset_System* asset_system,
     Material_GPU_Definition* material_gpu_definition = &material_definition->material_gpu_definition;
     material_gpu_definition->field_count = reflection_material->field_count;
     material_gpu_definition->name_hashes = allocator_alloc(asset_system->frame_allocator,
-                                                               sizeof(u64) *
-                                                               reflection_material->field_count);
+                                                           sizeof(u64) *
+                                                           reflection_material->field_count);
     material_gpu_definition->field_offsets = allocator_alloc(asset_system->frame_allocator,
-                                                                 sizeof(u32) *
-                                                                 reflection_material->field_count);
+                                                             sizeof(u32) *
+                                                             reflection_material->field_count);
     material_gpu_definition->types = allocator_alloc(asset_system->frame_allocator,
-                                                         sizeof(Reflection_Type) *
-                                                         reflection_material->field_count);
+                                                     sizeof(Reflection_Type) *
+                                                     reflection_material->field_count);
     material_gpu_definition->struct_size = 0;
     u32 offset = 0;
     for (u32 i = 0; i < reflection_material->field_count; i++)
@@ -226,8 +263,8 @@ void material_definition_create(Asset_System* asset_system,
 }
 
 
-bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
-                                         Material_Asset* material_asset)
+bool material_system_load_material_asset_definition(Asset_System* asset_system, MADNESS_UUID uuid, u64 uuid_hash,
+                                                    Material_Asset* material_asset)
 {
     //NOTE: we assume that at this point the asset is not loaded
 
@@ -270,14 +307,6 @@ bool material_system_load_material_asset(Asset_System* asset_system, MADNESS_UUI
     //create the material array
     batch->material_data = _dynamic_array_create(material_definition->material_gpu_definition.struct_size, 10,
                                                  asset_system->heap_allocator);
-
-
-    Madness_Asset* madness_asset = &material_system->material_madness_asset[material_system->
-        material_madness_asset_count++];
-    // madness_asset->engine_path = uuid;
-    madness_asset->path_hash = uuid_hash;
-    madness_asset->type = ASSET_MATERIAL;
-    madness_asset->reference_count = 1;
 
 
     scratch_allocator_end(scratch);
@@ -367,7 +396,7 @@ void material_system_swap_material(Asset_System* asset_system, Material_Handle m
 }
 
 
-Material_ID material_generate_id(Material_Info* material_info)
+Material_Key material_generate_id(Material_Info* material_info)
 {
     u64 hash = hash_64_continous_start();
     hash = hash_64_continous(hash, (u8*)&material_info->mesh_type, sizeof(material_info->mesh_type));
@@ -435,7 +464,8 @@ void material_asset_create(Asset_System* asset_system, Material_Info* material_i
 
     if (filesystem_does_file_exists(mat_asset_path))
     {
-        asset_load_material_asset_path(asset_system, mat_asset_path, out_material_asset);
+        Shader_Handle shader_handle;
+        asset_load_material_asset_path(asset_system, mat_asset_path, out_material_asset, &shader_handle);
         scratch_allocator_end(scratch);
 
         return;

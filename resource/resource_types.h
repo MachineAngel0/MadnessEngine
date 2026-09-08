@@ -69,6 +69,12 @@
 
 #define MAX_TRANSFORM_COUNT (MAX_MESH_COUNT + MAX_SKINNED_MESH_COUNT)
 
+#define MAX_PARTICLE_COUNT 1000
+#define MAX_PARTICLE_EMITTER_COUNT 100
+#define MAX_PARTICLE_EFFECTS_COUNT 10
+
+
+
 //FONT/TEXT
 //NOTE: this should realy be 40, but looks nicer as 32, im doing something wierd cause its casuing text padding
 #define DEFAULT_FONT_CREATION_SIZE 32.0f
@@ -169,12 +175,13 @@ typedef struct Texture_Handle
 
 
 
+
 //Renderpass || translucency || Blend || Mesh Type
-typedef u64 Material_ID;
+typedef u64 Material_Key;
 
 typedef struct Material_Handle
 {
-    Material_ID material_id;
+    Material_Key material_id;
     u32 material_index;
 } Material_Handle;
 
@@ -183,6 +190,11 @@ typedef struct Material_Asset_Handle
     u32 handle;
 } Material_Asset_Handle;
 
+typedef struct Shader_Handle
+{
+    u32 handle;
+    u32 generation;
+} Shader_Handle;
 
 
 typedef struct Madness_Mesh_Handle
@@ -361,7 +373,7 @@ typedef enum Shader_Mesh_Type
 {
     Shader_Mesh_Type_Mesh,
     Shader_Mesh_Type_Skinned,
-    // Shader_Mesh_Type_Particle,
+    Shader_Mesh_Type_Particle,
     // Shader_Mesh_Type_Foilage,
 } Shader_Mesh_Type;
 
@@ -427,8 +439,8 @@ typedef struct PC_General
 
 typedef struct PC_Particle
 {
-    VkDeviceAddress draw_material_buffer;
-    VkDeviceAddress unused;
+    VkDeviceAddress material_buffer;
+    VkDeviceAddress particle_draw_buffer;
 } PC_Particle;
 
 
@@ -449,7 +461,7 @@ typedef struct Material_Info
     Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
 
-    Material_ID material_key;
+    Material_Key material_key;
 } Material_Info;
 
 typedef struct Material_GPU_Definition
@@ -551,6 +563,10 @@ typedef struct Particle
     f32* gravity_y;
     f32* gravity_z;
     // f32* drag;
+
+    u64* material_key;
+    u32* material_id;
+
 } Particle;
 
 typedef struct Particle_Mesh
@@ -662,17 +678,6 @@ typedef struct Particle_Emitter_Data
 
 } Particle_Emitter_Data;
 
-typedef struct Particle_Emitter_Runtime
-{
-    //runtime data
-    Material_Handle material_handle;
-
-    vec3s position; // given to us by the effect
-
-
-    // u32 Maximum_Particles; // it would be good to have a limit for many reasons
-    DYNAMIC_ARRAY_TYPE(u32)* particle;
-} Particle_Emitter_Runtime;
 
 typedef struct Particle_Emitter
 {
@@ -682,7 +687,14 @@ typedef struct Particle_Emitter
     Material_Instance material_instance;
 
     //runtime data
-    Particle_Emitter_Runtime runtime_data;
+    Material_Handle material_handle;
+
+    vec3s position; // given to us by the effect
+
+    bool in_use; // for the editor
+
+    // u32 Maximum_Particles; // it would be good to have a limit for many reasons
+    DYNAMIC_ARRAY_TYPE(u32)* particle;
 } Particle_Emitter;
 
 typedef struct Particle_Effect
@@ -714,10 +726,8 @@ typedef struct Particle_Effect
     //runtime data
     Particle_Emitter* emitters[4];
 
-    u32 generation;
     bool infinite;
     bool is_visible;
-
 
 
 } Particle_Effect;
@@ -904,6 +914,11 @@ typedef struct Madness_SkMesh_Runtime
 
 ///////////////// Systems  //////////////////////
 
+typedef struct Shader_Mat_Mapping{
+    Path_String* shader_name[MAX_MATERIAL_COUNT];
+    Path_String* material_name[MAX_MATERIAL_COUNT];
+    Shader_Mesh_Type* mesh_type[MAX_MATERIAL_COUNT];
+}Shader_Mat_Mapping;
 
 typedef struct Material_System
 {
@@ -913,14 +928,20 @@ typedef struct Material_System
     Material_Batch material_batch[MAX_MATERIAL_COUNT];
     Material_Asset material_asset[MAX_MATERIAL_COUNT];
     Material_Definition material_definition[MAX_MATERIAL_COUNT];
+    u32 material_asset_generation[MAX_MATERIAL_COUNT];
     u32 material_count;
 
 
-    Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
-    u32 material_madness_asset_count;
+    u32 free_list[MAX_MATERIAL_COUNT];
+    u32 free_count;
 
     //TODO: if needed reusable material slots
     // u32* free_mat_index;
+
+
+    Shader_Mat_Mapping shader_to_material_mapping;
+    u32 shader_to_material_count;
+
 
 } Material_System;
 
@@ -1051,19 +1072,25 @@ typedef struct Particle_System
     //TODO: reserve the particle effect and emitter 0 slots for defaults/invalid handles
 
     Particle_Effect* particle_effects;
-    u32 particle_effects_count;
+    u32* particle_generation;
     u32 particle_effects_count_max;
 
-    u32* available_particle_effects;
-    u32 available_particle_effects_count;
+    u32* free_particle_effects;
+    u32 free_particle_effects_count;
+
+    ARRAY_TYPE(u32)* active_effects;
 
 
     Particle_Emitter* emitters;
-    u32 emitter_count;
+    u32* emitter_generation;
     u32 emitter_count_max;
 
-    Particle_Emitter** available_emitters;
-    u32 available_emitters_count;
+    u32* free_emitters;
+    u32 free_emitters_count;
+
+    ARRAY_TYPE(u32)* active_emitters;
+
+
 
     //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
     //NOTE: for multithreading, we can have each thread manage their own particles pools,
@@ -1165,13 +1192,11 @@ typedef struct Asset_Registry
 
     // DYNAMIC_ARRAY_TYPE(Madness_Asset) loaded_asset;
     // ref counted asset
-    Madness_Asset particle_effect_asset[100];
-    Particle_Effect_Handle particle_effect_handles[100];
-    u32 particle_effect_asset_count;
+    Madness_Asset particle_effect_asset[MAX_PARTICLE_EFFECTS_COUNT];
 
-    Madness_Asset particle_emitter_asset[100];
-    Particle_Emitter_Handle particle_emitter_handles[100];
-    u32 particle_emitter_asset_count;
+    Madness_Asset particle_emitter_asset[MAX_PARTICLE_EMITTER_COUNT];
+
+    Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
 
 
 } Asset_Registry;

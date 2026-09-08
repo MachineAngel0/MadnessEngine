@@ -170,7 +170,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
     // Texture System
     renderer->texture_system = vulkan_texture_system_init(renderer);
     //Shader System
-    renderer->shader_system = shader_system_init(renderer);
+    renderer->shader_system = vulkan_shader_system_init(renderer);
     // Light System
     renderer->light_system = light_system_init(renderer);
 
@@ -293,7 +293,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     vulkan_texture_system_update(renderer, render_packets);
 
-    shader_system_update(renderer, renderer->shader_system, render_packets);
+    vulkan_shader_system_update(renderer, renderer->shader_system, render_packets);
 
 
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
@@ -358,6 +358,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                        render_packets, graphics_command_buffer);
 
     debug_system_upload_frame_data(renderer);
+
 
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);

@@ -10,7 +10,7 @@ spirv_refect_info* spriv_reflection_testing(const char* shader_path)
     file_read_data shader_data = {0};
 
 
-    filesystem_open_and_return_bytes("../renderer/shaders/spirv_reflect_test.vert.spv", &shader_data);
+    filesystem_open_and_return_bytes("../renderer/shaders/mesh.vert.spv", &shader_data);
 
 
     SpvReflectShaderModule module = {0};

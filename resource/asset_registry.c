@@ -8,11 +8,11 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
     //TODO: allocate them
     // Madness_Asset particle_effect_asset[100];
     // Particle_Effect_Handle particle_effect_handles[100];
-    asset_registry-> particle_effect_asset_count = 0;
 
     // Madness_Asset particle_emitter_asset[100];
     // Particle_Emitter_Handle particle_emitter_handles[100];
-    asset_registry->particle_emitter_asset_count = 0;
+
+    memset(asset_registry->material_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
 
 
 

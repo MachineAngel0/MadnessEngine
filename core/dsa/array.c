@@ -29,9 +29,45 @@ Array* _array_create(const u64 data_stride, const u64 capacity, Allocator* alloc
     return arr;
 }
 
+Array* _array_create_heap(const u64 data_stride, const u64 capacity, Heap_Allocator* allocator)
+{
+    MASSERT(allocator)
+
+    Array* arr = NULL;
+    arr = allocator_heap_alloc(allocator, sizeof(Array));
+    arr->data = allocator_heap_alloc(allocator, capacity * data_stride);
+
+    /*if (fl_allocator)
+    {
+        arr = allocator_fl_alloc(fl_allocator, sizeof(Array));
+        arr->data = allocator_fl_alloc(fl_allocator, capacity * data_stride);
+        arr->allocator_fl = fl_allocator;
+    }*/
+
+
+    arr->num_items = 0;
+    arr->stride = data_stride;
+    arr->capacity = capacity;
+
+
+    return arr;
+}
+
+
 Array* _array_create_debug(u64 data_stride, u64 capacity, Allocator* allocator, const char* type_name)
 {
     Array* array = _array_create(data_stride, capacity, allocator);
+
+#ifndef NDEBUG
+    array->type_name = type_name;
+#endif
+
+    return array;
+}
+
+Array* _array_create_heap_debug(u64 data_stride, u64 capacity, Heap_Allocator* allocator, const char* type_name)
+{
+    Array* array = _array_create_heap(data_stride, capacity, allocator);
 
 #ifndef NDEBUG
     array->type_name = type_name;
@@ -66,6 +102,12 @@ void array_free(Array* array)
     }*/
 
     //rn does nothing
+}
+
+void _array_free_heap(Array* array, Heap_Allocator* allocator)
+{
+    allocator_heap_free(allocator, array->data);
+    allocator_heap_free(allocator, array);
 }
 
 void array_clear(Array* array)

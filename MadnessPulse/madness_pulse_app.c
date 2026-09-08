@@ -127,6 +127,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                     application_core->asset_system);
 
 
+
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
 

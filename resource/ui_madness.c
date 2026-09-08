@@ -2892,6 +2892,120 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
     return false;
 }
 
+
+bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array,
+                          u32 string_array_size)
+{
+    //TODO: should size to the largest element or currently named string
+    String selected_string = *string_array[*selected_value];
+    vec2s text_size = madness_ui_get_text_size(selected_string);
+
+
+    UI_Node* combo_box_node = madness_ui_get_new_node();
+    combo_box_node->string_id = id;
+    combo_box_node->hash_id = string_hash_u64(id);
+    combo_box_node->pos = madness_ui->cursor_pos;
+    combo_box_node->size = (vec2s){
+        text_size.x + madness_ui->text_padding_x, madness_ui_get_default_element_height()
+    };
+    combo_box_node->color = madness_ui->editor_style.color;
+
+
+    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_CENTER,
+                               UI_ALIGNMENT_CENTER);
+    madness_ui_advance_cursor(combo_box_node->size);
+
+
+    madness_ui_set_interaction_state(combo_box_node);
+    //active state
+    if (is_active(combo_box_node->hash_id))
+    {
+        combo_box_node->color = madness_ui->editor_style.pressed_color;
+        madness_ui->active_combo_box = id;
+    }
+    //hot state
+    else if (is_hot(combo_box_node->hash_id))
+    {
+        combo_box_node->color = madness_ui->editor_style.hovered_color;
+    }
+
+    //basically we want to defer this draw after everything else
+    if (string_compare(&madness_ui->active_combo_box, &id))
+    {
+        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_allocator);
+        madness_ui_pop_up_begin(*pop_up_name, madness_ui->cursor_pos);
+
+        /*
+        //TODO: probably should be a scroll box here
+        UI_Node* drop_down_node = madness_ui_get_pop_up_node(madness_ui);
+        drop_down_node->string_id = id;
+        drop_down_node->hash_id = string_hash_u64(id);
+        drop_down_node->pos = madness_ui->cursor_pos;
+        drop_down_node->size = (vec2){combo_box_node->size.x, 0};
+        drop_down_node->color = madness_ui->editor_style.textbox_color;
+
+        vec2 temp_cursor = madness_ui->cursor_pos;
+        for (u32 i = 0; i < string_array_size; i++)
+        {
+            String draw = string_array[i];
+            UI_Node* string_node = madness_ui_text_internal(madness_ui, draw, temp_cursor,
+                                                            combo_box_node->size,
+                                                            UI_ALIGNMENT_LEFT,
+                                                            UI_ALIGNMENT_CENTER);
+            string_node->string_id = draw;
+            string_node->hash_id = string_hash_u64(draw);
+
+            madness_ui_set_interaction_state(madness_ui, string_node);
+            if (is_hot(madness_ui, string_node->hash_id))
+            {
+                string_node->color = madness_ui->editor_style.hovered_color;
+            }
+
+            if (region_hit(madness_ui, string_node->pos, string_node->size))
+            {
+                if (madness_ui->mouse_down)
+                {
+                    *selected_value = i;
+                }
+            }
+            // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
+            drop_down_node->size.y += string_node->size.y + madness_ui->element_padding_y;
+            temp_cursor.y += string_node->size.y + madness_ui->element_padding_y;
+        }*/
+
+        for (u32 i = 0; i < string_array_size; i++)
+        {
+            String draw = *string_array[i];
+            UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
+                                                              UI_ALIGNMENT_LEFT,
+                                                              UI_ALIGNMENT_CENTER);
+            madness_ui_set_interaction_state(string_node);
+            if (is_hot(string_node->hash_id))
+            {
+                string_node->color = madness_ui->editor_style.hovered_color;
+            }
+
+            if (region_hit(string_node->pos, string_node->size))
+            {
+                if (madness_ui->mouse_down)
+                {
+                    *selected_value = i;
+                    madness_ui->nuke_pop_up = true;
+                }
+            }
+            // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
+            madness_ui_advance_cursor(string_node->size);
+        }
+
+        madness_ui_pop_up_end();
+    }
+
+
+    // return madness_ui_use_ui_element(madness_ui, combo_box_node->hash_id, combo_box_node->pos, combo_box_node->size);
+    // this should return when somehting has changed or on click, and let the user decide
+    return false;
+}
+
 bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array,
                                u32 char_array_size)
 {
@@ -3370,6 +3484,7 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         string_builder_append_c_string(builder, field_info.name);
         string_builder_append_c_string(builder, "_");
         string_builder_append_c_string(builder, id);
+        string_builder_append_c_string(builder, ": ");
 
         String* custom_name = string_builder_to_string(builder);
 
@@ -3420,6 +3535,9 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         case REFLECTION_TYPE_PATH_STRING:
             static u32 selected_string;
             madness_ui_string(*custom_name);
+            madness_ui_same_line();
+            Path_String* path_string = *(Path_String**)data;
+            madness_ui_string(*path_string);
             /*madness_ui_combo_box_string(*custom_name, *(Path_String**)data,
                                         madness_ui->asset_list_scan_reference->strings,
                                         madness_ui->asset_list_scan_reference->count);*/
