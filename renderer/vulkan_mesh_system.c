@@ -62,7 +62,7 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
                              Vulkan_Mesh_Data_Type type,
                              void* data,
                              u64 data_byte_size,
-                             u32 mesh_id,
+                             u32 submesh_id,
                              u64 mesh_upload_semaphore_value,
                              Mesh_Render_Record* record, bool is_initial_submit)
 {
@@ -87,7 +87,7 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
         //successful upload
         Mesh_Gpu_Upload_Pending mesh_pending =
         {
-            .mesh_id = mesh_id,
+            .submesh_id = submesh_id,
             .type = type,
             .timeline_semaphore_value = mesh_upload_semaphore_value,
         };
@@ -101,7 +101,7 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
         {
             //not enough memory, will try again next frame
             Mesh_Unfinished_Upload unfinished_upload = {
-                .mesh_id = mesh_id,
+                .submesh_id = submesh_id,
                 .type = type,
                 .buffer_handle = handle,
                 .bytes = data_byte_size,
@@ -135,7 +135,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
             vulkan_queue_system_get_transfer_semaphore(renderer),
             pending_upload.timeline_semaphore_value))
         {
-            Mesh_Render_Record* mesh_record = &mesh_system->mesh_render_record[pending_upload.mesh_id];
+            Mesh_Render_Record* mesh_record = &mesh_system->mesh_render_record[pending_upload.submesh_id];
             mesh_record->pending_uploads--;
             if (mesh_record->pending_uploads == 0)
             {
@@ -182,7 +182,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                 unfinished_idx);
 
 
-        Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.mesh_id];
+        Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];
 
         //if upload successful remove it from the array
         if (mesh_system_upload_data(renderer,
@@ -192,7 +192,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                     unfinished_upload.type,
                                     unfinished_upload.data,
                                     unfinished_upload.bytes,
-                                    unfinished_upload.mesh_id,
+                                    unfinished_upload.submesh_id,
                                     mesh_upload_semaphore_value,
                                     record, false))
         {
@@ -223,8 +223,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
     {
         ring_dequeue(mesh_render_queue, &submesh_upload_data);
 
-        Mesh_Render_Record* record = &mesh_system->mesh_render_record[submesh_upload_data.mesh_id];
-        record->mesh_id = submesh_upload_data.mesh_id; // TODO: change this for now we are just testing, should be false
+        Mesh_Render_Record* record = &mesh_system->mesh_render_record[submesh_upload_data.submesh_id];
+        record->submesh_id = submesh_upload_data.submesh_id; // TODO: change this for now we are just testing, should be false
         record->is_uploaded = false; // TODO: change this for now we are just testing, should be false
         record->is_in_use = true;
         record->tangent_bytes = submesh_upload_data.submesh->tangent_bytes;
@@ -250,7 +250,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 VERTEX,
                                 submesh_upload_data.gpu_data->vertex,
                                 submesh_upload_data.submesh->vertex_bytes,
-                                submesh_upload_data.mesh_id,
+                                submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
 
@@ -261,7 +261,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 INDEX,
                                 submesh_upload_data.gpu_data->indices,
                                 submesh_upload_data.submesh->indices_bytes,
-                                submesh_upload_data.mesh_id,
+                                submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
 
@@ -272,7 +272,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 NORMAL,
                                 submesh_upload_data.gpu_data->normal,
                                 submesh_upload_data.submesh->normal_bytes,
-                                submesh_upload_data.mesh_id,
+                                submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
 
@@ -283,7 +283,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 UV,
                                 submesh_upload_data.gpu_data->uv,
                                 submesh_upload_data.submesh->uv_bytes,
-                                submesh_upload_data.mesh_id,
+                                submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
 
@@ -294,7 +294,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 TANGENT,
                                 submesh_upload_data.gpu_data->tangent,
                                 submesh_upload_data.submesh->tangent_bytes,
-                                submesh_upload_data.mesh_id,
+                                submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
     }
@@ -454,7 +454,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         for (u32 submesh_idx = 0; submesh_idx < mesh_instance->mesh_count; submesh_idx++)
         {
             Madness_SubMesh_Instance* sub_mesh_instance = &mesh_instance->submesh_instances[submesh_idx];
-            Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[sub_mesh_instance->mesh_id];
+            Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[sub_mesh_instance->parent_mesh_id];
 
             //check if its valid for uploading
             if (!render_record->is_uploaded || !render_record->is_in_use)
@@ -466,8 +466,8 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
             Mesh_Render_Item* render_inst = &render_items[render_item_count++];
             *render_inst = (Mesh_Render_Item){
                 .material_key = sub_mesh_instance->material_handle.material_id,
-                .mesh_id = sub_mesh_instance->mesh_id,
-                .mesh_handle = mesh_instance->mesh_reference_index.handle,
+                .mesh_id = sub_mesh_instance->parent_mesh_id,
+                .mesh_handle = mesh_instance->mesh_asset_index.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.material_index,
                 .transform_handle = mesh_instance->transform_handle.handle,

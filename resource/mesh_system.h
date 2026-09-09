@@ -7,6 +7,8 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
 
 bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
 
+// bool mesh_acquire_instance(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, Mesh_Handle* out_handle)
+// { }
 
 bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, Mesh_Handle* out_handle)
 {
@@ -14,53 +16,55 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
 
     Mesh_System* mesh_system = asset_system->mesh_system;
 
-    //TODO: find a proper free range for meshes
-    *out_handle = (Mesh_Handle){.handle = mesh_system->mesh_instance_count, 0};
-    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_system->mesh_instance_count];
-
-    mesh_system->mesh_instance_count += mesh_asset->mesh_count;
-
-
-    //meta data of the mesh
+    //TODO: find a slot for the mesh asset/metadata, also lazy load is this asset has already been loaded
+    const u32 mesh_asset_index = mesh_system->madness_mesh_count;
     Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->madness_mesh_count++];
     madness_mesh->mesh_count = mesh_asset->mesh_count;
     madness_mesh->mesh_data = mesh_asset->submeshes;
-    madness_mesh->submesh_ids =
-        allocator_heap_alloc(asset_system->heap_allocator, sizeof(u32) * mesh_asset->mesh_count);
+    madness_mesh->mesh_data = mesh_asset->submeshes;
 
 
-    //create the instance
-    //OPTIMIZE: submesh's should really be a flat list so that the render can quickly extract data from it
-
-
-    mesh_inst->mesh_reference_index = mesh_system->madness_mesh_count - 1;
-    scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, mesh_asset->mesh_uuid);
+    //TODO: find a slot for the mesh instance, (this will be the handle passed back)
+    const u32 mesh_instance_idx = mesh_system->mesh_instance_count;
+    *out_handle = (Mesh_Handle){.handle = mesh_instance_idx, 0};
+    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_instance_idx];
+    mesh_system->mesh_instance_count++;
     mesh_inst->mesh_count = mesh_asset->mesh_count;
-    mesh_inst->submesh_instances = allocator_heap_alloc(
-        asset_system->heap_allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
+    // mesh_inst->first_submesh = mesh_asset->mesh_count;
+    mesh_inst->mesh_asset_index = mesh_asset_index;
+    scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, mesh_asset->mesh_uuid);
 
-    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
+
+    //TODO: find a free range for the submeshes needed
+    const u32 start_submesh_index = mesh_system->submesh_instance_count;
+    mesh_system->submesh_instance_count += mesh_asset->mesh_count;
+    mesh_inst->start_submesh_index = start_submesh_index;
+
+
+    // the submesh index is different from the upload data, since that allocated data starting at 0 and eventually needs to be freed
+    size_t upload_index = 0;
+
+    //create the submesh instance
+    for (size_t submesh_idx = start_submesh_index; submesh_idx < start_submesh_index + mesh_asset->mesh_count; submesh_idx++)
     {
-        u32 cur_mesh_id = mesh_system->mesh_ids++;
-        madness_mesh->submesh_ids[mesh_idx] = cur_mesh_id;
-
-        Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
+        Madness_SubMesh_Instance* submesh_inst = &mesh_system->submesh_instance[submesh_idx];
         //handles
-        submesh_inst->mesh_id = cur_mesh_id;
+        submesh_inst->mesh_asset_index = mesh_asset_index;
+        submesh_inst->parent_instance_index = mesh_instance_idx;
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
 
         //send to the gpu
         Mesh_GPU_Upload upload = {
-            .mesh_id = cur_mesh_id,
-            .submesh = &mesh_asset->submeshes[mesh_idx],
-            .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx],
+            .submesh_id = submesh_idx,
+            .submesh = &mesh_asset->submeshes[upload_index],
+            .gpu_data = &mesh_asset->mesh_gpu_upload[upload_index],
             .mesh_memory_allocator = asset_system->mesh_allocator,
 
         };
         ring_enqueue(mesh_system->mesh_ring_queue, &upload);
+        upload_index++;
     }
-
 
     return true;
 }

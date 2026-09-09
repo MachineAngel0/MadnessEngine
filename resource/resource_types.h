@@ -778,18 +778,19 @@ typedef struct Madness_Skinned_Mesh_Instance
 
 typedef struct Madness_SubMesh_Instance
 {
-    u32 mesh_id;
+    u32 mesh_asset_index;
+    u32 parent_instance_index;
     Material_Handle material_handle;
-    Transform_Handle parent_transform_handle;
+    Transform_Handle parent_transform_handle; // here for easy gpu usage, without the indirect lookup into the parent
 } Madness_SubMesh_Instance;
 
 typedef struct Madness_Mesh_Instance
 {
-    //this generally is only for changing materials and transforms, and not for the renderer
     u32 mesh_count;
-    u32 mesh_reference_index;
+    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
+    //this generally is only for changing materials and transforms, and not for the renderer
+    u32 mesh_asset_index;
     Transform_Handle transform_handle;
-    Madness_SubMesh_Instance* submesh_instances;
 } Madness_Mesh_Instance;
 
 
@@ -826,7 +827,6 @@ typedef struct Madness_Mesh
 {
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
-    u32* submesh_ids;
     MADNESS_UUID* material_uuid;
     Material_Handle* material_handles;
 } Madness_Mesh;
@@ -863,7 +863,7 @@ typedef struct Madness_SkMesh_GPU_Data
 
 typedef struct Mesh_GPU_Upload
 {
-    u32 mesh_id;
+    u32 submesh_id;
     Madness_SubMesh* submesh;
     Madness_Mesh_GPU_Data* gpu_data;
 
@@ -1017,6 +1017,8 @@ typedef struct Mesh_System
     Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
     u32 mesh_instance_count;
 
+    Madness_SubMesh_Instance submesh_instance[MAX_MESH_COUNT];
+    u32 submesh_instance_count;
 
     //skinned
     Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
@@ -1025,9 +1027,6 @@ typedef struct Mesh_System
     Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
-    //TODO: this only counts up rn, likely to change it later, probably just a pool
-    u32 mesh_ids;
-    u32 skinned_ids;
 
 
     // data*, offset, byte_size ->for all the types

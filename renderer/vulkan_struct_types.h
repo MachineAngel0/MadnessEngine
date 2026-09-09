@@ -306,7 +306,7 @@ typedef struct Mesh_Render_Record
     u32 index_offset_count; //offset into the index buffer
     Index_Type index_type;
 
-    u32 mesh_id;
+    u32 submesh_id;
 
 
     //when this hits zero the asset is ready for usage
@@ -318,7 +318,7 @@ typedef struct Mesh_Render_Record
 
 typedef struct Mesh_Unfinished_Upload
 {
-    u32 mesh_id;
+    u32 submesh_id;
     Vulkan_Mesh_Data_Type type;
     Buffer_Handle buffer_handle;
     u64 bytes;
@@ -328,7 +328,7 @@ typedef struct Mesh_Unfinished_Upload
 
 typedef struct Mesh_Gpu_Upload_Pending
 {
-    u32 mesh_id;
+    u32 submesh_id;
     Vulkan_Mesh_Data_Type type;
     u64 timeline_semaphore_value;
 } Mesh_Gpu_Upload_Pending;

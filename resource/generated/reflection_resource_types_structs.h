@@ -1687,7 +1687,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "mesh_id",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh_Instance, mesh_id)
+			.offset = offsetof(Madness_SubMesh_Instance, parent_mesh_id)
 		},
 		{
 			.name = "material_handle",
@@ -1725,7 +1725,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "mesh_asset",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Mesh_Handle_Internal",
-			.offset = offsetof(Madness_Mesh_Instance, mesh_reference_index)
+			.offset = offsetof(Madness_Mesh_Instance, mesh_asset_index)
 		},
 		{
 			.name = "transform_handle",
@@ -2063,7 +2063,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "mesh_id",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Mesh_GPU_Upload, mesh_id)
+			.offset = offsetof(Mesh_GPU_Upload, submesh_id)
 		},
 		{
 			.name = "submesh",

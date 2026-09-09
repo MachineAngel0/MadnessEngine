@@ -18,12 +18,11 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
 
 
     out_mesh_system->madness_mesh_count = 0;
-    out_mesh_system->madness_sk_mesh_count = 0;
     out_mesh_system->mesh_instance_count = 0;
-    out_mesh_system->skinned_mesh_instance_count = 0;
+    out_mesh_system->submesh_instance_count = 0;
 
-    out_mesh_system->mesh_ids = 0;
-    out_mesh_system->skinned_ids = 0;
+    out_mesh_system->madness_sk_mesh_count = 0;
+    out_mesh_system->skinned_mesh_instance_count = 0;
 
     INFO("MESH SYSTEM CREATED");
 
@@ -39,9 +38,6 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 
     return true;
 }
-
-
-
 
 
 void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset,
@@ -101,6 +97,4 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
     }
-
-
 }
