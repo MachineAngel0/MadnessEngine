@@ -4,6 +4,10 @@
 
 #include "resource_types.h"
 
+//NOTE: the converters are only responsible for serializing the asset to a file and handing you back a UUID,
+// if you want the data, you have to load it in (w/ UUID), and then modify it however you wish
+
+
 //takes in any file and checks its extension type, and calls the appropriate function
 MAPI bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
 
@@ -25,21 +29,36 @@ MAPI bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path
 MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path);
 
 
-MAPI bool asset_converter_material_asset(Asset_System* asset_system,
-                                         Material_Asset* material_asset);
+MAPI bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset);
 
-
-MAPI bool asset_converter_material_instance(Asset_System* asset_system,
-                                            Material_Instance* mat_inst);
-/***
- * @note: only the material info and name are manditory, the rest will get auto created,
- * @note: it will fill out and give you a default material instance
- */
 MAPI bool asset_converter_material(Asset_System* asset_system,
-                                   Material_Info* material_info,
-                                   Material_Asset* out_material_asset,
-                                   Material_Instance* out_material_instance,
-                                   const char* mat_inst_name);
+                                   Material* material);
+MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
+                                   Material* material, MADNESS_UUID* out_material_uuid);
+
+
+MAPI bool asset_converter_shader_and_material(Asset_System* asset_system,
+                                         Material_Info* material_info,
+                                         const char* mat_inst_name,
+                                         MADNESS_UUID* out_shader_uuid,
+                                         MADNESS_UUID* out_material_uuid);
+
+MAPI bool asset_converter_shader_and_material_from_data(Asset_System* asset_system,
+                                                   Material_Info* material_info,
+                                                   const char* mat_inst_name,
+                                                   void* data,
+                                                   MADNESS_UUID* out_shader_uuid,
+                                                   MADNESS_UUID* out_material_uuid);
+
+MAPI void asset_converter_particle_emitter(Asset_System* asset_system,
+                                      Particle_Emitter* particle_emitter,
+                                      MADNESS_UUID* out_uuid);
+
+
+MAPI void asset_converter_particle_effect(Asset_System* asset_system,
+                                     Particle_Effect* particle_effect,
+                                     MADNESS_UUID* out_uuid);
+
 
 
 
@@ -50,8 +69,6 @@ String_Builder* asset_converter_create_file_path(Scratch_Allocator scratch_alloc
 void asset_converter_create_directory_for_engine_asset(String_Builder* str_builder_output_path);
 
 
-bool asset_converter_material_from_material_info(Asset_System* asset_system, Material_Info* material_info,
-                                                 MADNESS_UUID* out_uuid);
 
 
 
@@ -59,14 +76,7 @@ bool asset_converter_material_from_material_info(Asset_System* asset_system, Mat
 
 
 
-void asset_converter_particle_emitter(Asset_System* asset_system,
-                                      Particle_Emitter* particle_emitter,
-                                      MADNESS_UUID* out_uuid);
 
-
-void asset_converter_particle_effect(Asset_System* asset_system,
-                                     Particle_Effect* particle_effect,
-                                     MADNESS_UUID* out_uuid);
 
 
 #endif

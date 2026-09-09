@@ -12,7 +12,7 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
     // Madness_Asset particle_emitter_asset[100];
     // Particle_Emitter_Handle particle_emitter_handles[100];
 
-    memset(asset_registry->material_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
+    memset(asset_registry->shader_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
 
 
 

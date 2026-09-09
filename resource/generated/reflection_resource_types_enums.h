@@ -35,6 +35,7 @@ const char* Texture_Filter_enum_string[] = {
 const char* Shader_Mesh_Type_enum_string[] = {
 	[Shader_Mesh_Type_Mesh]= "Shader_Mesh_Type_Mesh", 
 	[Shader_Mesh_Type_Skinned]= "Shader_Mesh_Type_Skinned", 
+	[Shader_Mesh_Type_Particle]= "Shader_Mesh_Type_Particle", 
 };
 
 const char* Shader_Transluency_Type_enum_string[] = {
@@ -126,7 +127,7 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	{
 		.name = "Shader_Mesh_Type",
 		.enum_names = Shader_Mesh_Type_enum_string,
-		.count = 2,
+		.count = 3,
 		.type = Reflection_Enum_Type_Normal,
 		.bitflag_values = NULL, //filled in the function if applicable
 	};

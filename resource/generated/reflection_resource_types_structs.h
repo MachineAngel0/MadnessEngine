@@ -8,11 +8,10 @@ const char* resources_struct_string_list[] = {
 	"Madness_Asset", 
 	"Texture_Handle", 
 	"Material_Handle", 
-	"Material_Asset_Handle", 
 	"Shader_Handle", 
-	"Madness_Mesh_Handle", 
+	"Mesh_Handle", 
 	"Madness_Mesh_Handle_Internal", 
-	"Madness_SkMesh_Handle", 
+	"Skinned_Mesh_Handle", 
 	"Madness_SkMesh_Handle_Internal", 
 	"Transform_Handle", 
 	"Sprite_Handle", 
@@ -30,11 +29,11 @@ const char* resources_struct_string_list[] = {
 	"PC_Shadow_Mapping", 
 	"Material_Info", 
 	"Material_GPU_Definition", 
-	"Material_Asset", 
+	"Shader_Asset", 
 	"Material_Definition", 
-	"Material_Instance_Data", 
-	"Material_Instance_Runtime", 
-	"Material_Instance", 
+	"Material_Meta_Data", 
+	"Material_Data", 
+	"Material", 
 	"Material_Batch", 
 	"Particle", 
 	"Particle_Mesh", 
@@ -215,10 +214,22 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Material_Handle_Fields[] =
 	{
 		{
+			.name = "material_batch_index",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Handle, material_batch_index)
+		},
+		{
 			.name = "material_index",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Material_Handle, material_index)
+		},
+		{
+			.name = "generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Handle, generation)
 		},
 	};
 
@@ -226,31 +237,11 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Material_Handle",
 		.fields = Material_Handle_Fields,
-		.field_count = 1,
+		.field_count = 3,
 		.struct_size = sizeof(Material_Handle)
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Handle_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Material_Asset_Handle_Fields[] =
-	{
-		{
-			.name = "handle",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_Asset_Handle, handle)
-		},
-	};
-
-	 Reflection_Runtime_Struct Material_Asset_Handle_Runtime_Struct =
-	{
-		.name = "Material_Asset_Handle",
-		.fields = Material_Asset_Handle_Fields,
-		.field_count = 1,
-		.struct_size = sizeof(Material_Asset_Handle)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Material_Asset_Handle_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Shader_Handle_Fields[] =
 	{
@@ -278,25 +269,31 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Shader_Handle_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Madness_Mesh_Handle_Fields[] =
+	Reflection_Runtime_Struct_Field Mesh_Handle_Fields[] =
 	{
 		{
 			.name = "handle",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Madness_Mesh_Handle, handle)
+			.offset = offsetof(Mesh_Handle, handle)
+		},
+		{
+			.name = "generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Mesh_Handle, generation)
 		},
 	};
 
-	 Reflection_Runtime_Struct Madness_Mesh_Handle_Runtime_Struct =
+	 Reflection_Runtime_Struct Mesh_Handle_Runtime_Struct =
 	{
-		.name = "Madness_Mesh_Handle",
-		.fields = Madness_Mesh_Handle_Fields,
-		.field_count = 1,
-		.struct_size = sizeof(Madness_Mesh_Handle)
+		.name = "Mesh_Handle",
+		.fields = Mesh_Handle_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Mesh_Handle)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Handle_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Mesh_Handle_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Mesh_Handle_Internal_Fields[] =
 	{
@@ -318,25 +315,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Handle_Internal_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Madness_SkMesh_Handle_Fields[] =
+	Reflection_Runtime_Struct_Field Skinned_Mesh_Handle_Fields[] =
 	{
 		{
 			.name = "handle",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Madness_SkMesh_Handle, handle)
+			.offset = offsetof(Skinned_Mesh_Handle, handle)
 		},
 	};
 
-	 Reflection_Runtime_Struct Madness_SkMesh_Handle_Runtime_Struct =
+	 Reflection_Runtime_Struct Skinned_Mesh_Handle_Runtime_Struct =
 	{
-		.name = "Madness_SkMesh_Handle",
-		.fields = Madness_SkMesh_Handle_Fields,
+		.name = "Skinned_Mesh_Handle",
+		.fields = Skinned_Mesh_Handle_Fields,
 		.field_count = 1,
-		.struct_size = sizeof(Madness_SkMesh_Handle)
+		.struct_size = sizeof(Skinned_Mesh_Handle)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Madness_SkMesh_Handle_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Skinned_Mesh_Handle_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_SkMesh_Handle_Internal_Fields[] =
 	{
@@ -846,43 +843,43 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Material_GPU_Definition_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Material_Asset_Fields[] =
+	Reflection_Runtime_Struct_Field Shader_Asset_Fields[] =
 	{
 		{
 			.name = "version",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_Asset, version)
+			.offset = offsetof(Shader_Asset, version)
 		},
 		{
 			.name = "reflection_hash",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_Asset, reflection_hash)
+			.offset = offsetof(Shader_Asset, reflection_hash)
 		},
 		{
 			.name = "uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Asset, uuid)
+			.offset = offsetof(Shader_Asset, uuid)
 		},
 		{
 			.name = "material_info",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Material_Info",
-			.offset = offsetof(Material_Asset, material_info)
+			.offset = offsetof(Shader_Asset, material_info)
 		},
 	};
 
-	 Reflection_Runtime_Struct Material_Asset_Runtime_Struct =
+	 Reflection_Runtime_Struct Shader_Asset_Runtime_Struct =
 	{
-		.name = "Material_Asset",
-		.fields = Material_Asset_Fields,
+		.name = "Shader_Asset",
+		.fields = Shader_Asset_Fields,
 		.field_count = 4,
-		.struct_size = sizeof(Material_Asset)
+		.struct_size = sizeof(Shader_Asset)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Material_Asset_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Shader_Asset_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Material_Definition_Fields[] =
 	{
@@ -910,107 +907,95 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Material_Definition_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Material_Instance_Data_Fields[] =
+	Reflection_Runtime_Struct_Field Material_Meta_Data_Fields[] =
 	{
 		{
-			.name = "material_asset_uuid",
+			.name = "shader_uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Instance_Data, material_asset_uuid)
+			.offset = offsetof(Material_Meta_Data, shader_uuid)
 		},
 		{
-			.name = "material_instance_uuid",
+			.name = "material_uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Instance_Data, material_instance_uuid)
+			.offset = offsetof(Material_Meta_Data, material_uuid)
 		},
 		{
-			.name = "data_size",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Material_Instance_Data, data_size)
-		},
-	};
-
-	 Reflection_Runtime_Struct Material_Instance_Data_Runtime_Struct =
-	{
-		.name = "Material_Instance_Data",
-		.fields = Material_Instance_Data_Fields,
-		.field_count = 3,
-		.struct_size = sizeof(Material_Instance_Data)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Material_Instance_Data_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Material_Instance_Runtime_Fields[] =
-	{
-		{
-			.name = "handle",
+			.name = "shader_handle",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Asset_Handle",
-			.offset = offsetof(Material_Instance_Runtime, handle)
-		},
-		{
-			.name = "material_asset",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Asset",
-			.offset = offsetof(Material_Instance_Runtime, material_asset)
-		},
-	};
-
-	 Reflection_Runtime_Struct Material_Instance_Runtime_Runtime_Struct =
-	{
-		.name = "Material_Instance_Runtime",
-		.fields = Material_Instance_Runtime_Fields,
-		.field_count = 2,
-		.struct_size = sizeof(Material_Instance_Runtime)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Material_Instance_Runtime_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Material_Instance_Fields[] =
-	{
-		{
-			.name = "material_asset_uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Instance, material_asset_uuid)
-		},
-		{
-			.name = "material_instance_uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Instance, material_instance_uuid)
-		},
-		{
-			.name = "data_size",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Material_Instance, data_size)
+			.type_name = "Shader_Handle",
+			.offset = offsetof(Material_Meta_Data, shader_handle)
 		},
 		{
 			.name = "material_name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Material_Instance, material_name)
+			.offset = offsetof(Material_Meta_Data, material_name)
 		},
 		{
 			.name = "name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Material_Instance, name)
+			.offset = offsetof(Material_Meta_Data, name)
 		},
 	};
 
-	 Reflection_Runtime_Struct Material_Instance_Runtime_Struct =
+	 Reflection_Runtime_Struct Material_Meta_Data_Runtime_Struct =
 	{
-		.name = "Material_Instance",
-		.fields = Material_Instance_Fields,
+		.name = "Material_Meta_Data",
+		.fields = Material_Meta_Data_Fields,
 		.field_count = 5,
-		.struct_size = sizeof(Material_Instance)
+		.struct_size = sizeof(Material_Meta_Data)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Material_Instance_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Material_Meta_Data_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Material_Data_Fields[] =
+	{
+		{
+			.name = "data_size",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Material_Data, data_size)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Data_Runtime_Struct =
+	{
+		.name = "Material_Data",
+		.fields = Material_Data_Fields,
+		.field_count = 1,
+		.struct_size = sizeof(Material_Data)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Data_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Material_Fields[] =
+	{
+		{
+			.name = "meta_data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Meta_Data",
+			.offset = offsetof(Material, meta_data)
+		},
+		{
+			.name = "cpu_data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Data",
+			.offset = offsetof(Material, cpu_data)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Runtime_Struct =
+	{
+		.name = "Material",
+		.fields = Material_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Material)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Material_Batch_Fields[] =
 	{
@@ -1136,13 +1121,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "f32",
 			.offset = offsetof(Particle, gravity_z)
 		},
+		{
+			.name = "material_key",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Particle, material_key)
+		},
+		{
+			.name = "material_id",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Particle, material_id)
+		},
 	};
 
 	 Reflection_Runtime_Struct Particle_Runtime_Struct =
 	{
 		.name = "Particle",
 		.fields = Particle_Fields,
-		.field_count = 18,
+		.field_count = 20,
 		.struct_size = sizeof(Particle)
 	};
 
@@ -1231,7 +1228,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		{
 			.name = "mesh_handle",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_Mesh_Handle",
+			.type_name = "Mesh_Handle",
 			.offset = offsetof(Particle_Mesh, mesh_handle)
 		},
 	};
@@ -1425,10 +1422,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Emitter, name)
 		},
 		{
-			.name = "material_instance",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Instance",
-			.offset = offsetof(Particle_Emitter, material_instance)
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Particle_Emitter, material_uuid)
 		},
 		{
 			.name = "material_handle",
@@ -1728,7 +1725,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "mesh_asset",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Mesh_Handle_Internal",
-			.offset = offsetof(Madness_Mesh_Instance, mesh_asset)
+			.offset = offsetof(Madness_Mesh_Instance, mesh_reference_index)
 		},
 		{
 			.name = "transform_handle",
@@ -1893,10 +1890,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Mesh, submesh_ids)
 		},
 		{
-			.name = "material_instance",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Instance",
-			.offset = offsetof(Madness_Mesh, material_instance)
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Mesh, material_uuid)
 		},
 		{
 			.name = "material_handles",
@@ -1956,9 +1953,15 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		},
 		{
 			.name = "material_instance",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Instance",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Madness_Skinned_Mesh, material_instance)
+		},
+		{
+			.name = "material_handles",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Madness_Skinned_Mesh, material_handles)
 		},
 		{
 			.name = "skinned_mesh_data",
@@ -1972,7 +1975,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Madness_Skinned_Mesh",
 		.fields = Madness_Skinned_Mesh_Fields,
-		.field_count = 4,
+		.field_count = 5,
 		.struct_size = sizeof(Madness_Skinned_Mesh)
 	};
 
@@ -2139,10 +2142,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Mesh_Runtime, mesh_gpu_upload)
 		},
 		{
-			.name = "material_instance",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Instance",
-			.offset = offsetof(Madness_Mesh_Runtime, material_instance)
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Mesh_Runtime, material_uuid)
 		},
 	};
 
@@ -2183,10 +2186,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_SkMesh_Runtime, mesh_gpu_upload)
 		},
 		{
-			.name = "material_instance",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Instance",
-			.offset = offsetof(Madness_SkMesh_Runtime, material_instance)
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_SkMesh_Runtime, material_uuid)
 		},
 		{
 			.name = "skinned_submeshes",
@@ -2226,13 +2229,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Path_String",
 			.offset = offsetof(Shader_Mat_Mapping, material_name)
 		},
+		{
+			.name = "mesh_type",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Shader_Mesh_Type",
+			.offset = offsetof(Shader_Mat_Mapping, mesh_type)
+		},
 	};
 
 	 Reflection_Runtime_Struct Shader_Mat_Mapping_Runtime_Struct =
 	{
 		.name = "Shader_Mat_Mapping",
 		.fields = Shader_Mat_Mapping_Fields,
-		.field_count = 2,
+		.field_count = 3,
 		.struct_size = sizeof(Shader_Mat_Mapping)
 	};
 
@@ -2247,10 +2256,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Material_System, material_batch)
 		},
 		{
-			.name = "material_asset",
+			.name = "shader_asset",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Asset",
-			.offset = offsetof(Material_System, material_asset)
+			.type_name = "Shader_Asset",
+			.offset = offsetof(Material_System, shader_asset)
 		},
 		{
 			.name = "material_definition",
@@ -2259,10 +2268,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Material_System, material_definition)
 		},
 		{
-			.name = "material_asset_generation",
+			.name = "shader_asset_generation",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_System, material_asset_generation)
+			.offset = offsetof(Material_System, shader_asset_generation)
 		},
 		{
 			.name = "material_count",
@@ -2288,13 +2297,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Shader_Mat_Mapping",
 			.offset = offsetof(Material_System, shader_to_material_mapping)
 		},
+		{
+			.name = "shader_to_material_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_System, shader_to_material_count)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_System_Runtime_Struct =
 	{
 		.name = "Material_System",
 		.fields = Material_System_Fields,
-		.field_count = 8,
+		.field_count = 9,
 		.struct_size = sizeof(Material_System)
 	};
 
@@ -2494,25 +2509,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Mesh_System, skinned_ids)
 		},
-		{
-			.name = "skinned_madness_asset",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_Asset",
-			.offset = offsetof(Mesh_System, skinned_madness_asset)
-		},
-		{
-			.name = "skinned_madness_asset_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Mesh_System, skinned_madness_asset_count)
-		},
 	};
 
 	 Reflection_Runtime_Struct Mesh_System_Runtime_Struct =
 	{
 		.name = "Mesh_System",
 		.fields = Mesh_System_Fields,
-		.field_count = 12,
+		.field_count = 10,
 		.struct_size = sizeof(Mesh_System)
 	};
 
@@ -2689,7 +2692,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		{
 			.name = "material_assets",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Asset",
+			.type_name = "Shader_Asset",
 			.offset = offsetof(Render_Packet_3D, material_assets)
 		},
 		{
@@ -2883,10 +2886,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Asset_Registry, particle_emitter_asset)
 		},
 		{
-			.name = "material_madness_asset",
+			.name = "shader_madness_asset",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Asset",
-			.offset = offsetof(Asset_Registry, material_madness_asset)
+			.offset = offsetof(Asset_Registry, shader_madness_asset)
 		},
 	};
 

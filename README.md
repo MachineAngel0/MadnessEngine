@@ -16,17 +16,20 @@ write my own in Vulkan.
     - C doesn't provide nice things like std::vector<>, so you have to write them yourself, however, it's also a greate
       opportunity to learn how these things are created in the first place. It also means there are no hidden/unknown
       allocations happening like might happen with a std::vector<> resize.
-- Memory System
+- Memory System (w/Custom Allocators)
 - Unit Tests and Custom Loggers/Asserts.
-- File and network serialization code.
-- Resource System: Meshes, Sprites, UI Sprites
-- Immediate Mode UI
+- Asset System (and Engine specific Format): Meshes, Skinned Meshes, Sprites, UI Sprites, Particles
+- Custom Immediate Mode UI
 - Runtime Reflection System and Reflection Registry
 - GLTF File Loading (using cgltf)
+- Tracy Profiler
 - Renderer
+    - GPU Driven Rendering
     - Bling Phong Shading
+    - Transfer Queue Mesh and Texture Data Upload
     - Mesh/Skeletal Mesh Rendering
     - Material System and Material Batching
+    - Particle Rendering
     - UI Rendering
     - Sprite Rendering
     - Pipeline Cache
@@ -34,23 +37,24 @@ write my own in Vulkan.
     - Engine stats (ms timing per frame)
     - Object Transforms editing
     - Texture Viewer
+    - Particle Editor
+    - Scene and Resource Loader
 
 ### Current Todo's:
 
 - General
     - Extend Animation API
-    - Game Engine Specific Format
     - Level File Format
 - Multithreading
-    - multi-thread the resource system
+    - multi-thread the asset system
     - multi-thread the renderer
+    - multi-thread the particle simulation (or move to compute shaders)
 - Renderer
     - PBR
     - Shadows
     - Instancing
     - Compute Shaders
     - Culling
-- Particle System
 - Work on the Linux Platform Layer
 - Editor
     - Level Editor

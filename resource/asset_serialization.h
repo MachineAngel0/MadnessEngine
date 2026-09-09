@@ -4,10 +4,10 @@
 #include "resource_types.h"
 
 
-
 //
 MAPI bool asset_texture_serialize(Madness_Texture_Runtime* runtime, FILE* fptr);
-MAPI bool asset_texture_deserialize(Madness_Texture_Runtime* runtime, FILE* fptr, Heap_Allocator* texture_memory_allocator);
+MAPI bool asset_texture_deserialize(Madness_Texture_Runtime* runtime, FILE* fptr,
+                                    Heap_Allocator* texture_memory_allocator);
 
 
 MAPI bool asset_font_serialize(Madness_Font_Runtime* runtime, FILE* fptr);
@@ -16,12 +16,12 @@ MAPI bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap
 
 //
 //material defines the layout and shader definition of the object, instance is the specific data/params of that material
-MAPI bool asset_material_asset_serialize(Material_Asset* mat_asset, FILE* fptr);
-MAPI bool asset_material_asset_deserialize(Material_Asset* mat_asset, FILE* fptr,
+MAPI bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr);
+MAPI bool asset_shader_deserialize(Shader_Asset* mat_asset, FILE* fptr,
                                            Heap_Allocator* allocator);
 
-MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr);
-MAPI bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator);
+MAPI bool asset_material_serialize(Material* material, FILE* fptr);
+MAPI bool asset_material_deserialize(Material* material, FILE* fptr, Heap_Allocator* allocator);
 
 
 //
@@ -34,27 +34,14 @@ MAPI bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, 
 
 
 
-bool particle_emitter_serialize(Particle_Emitter* particle_emitter, FILE* fptr)
-{
-    fwrite(&particle_emitter->data, sizeof(Particle_Emitter_Data), 1, fptr);
-    string_serialize(particle_emitter->name, fptr);
-    asset_material_instance_serialize(&particle_emitter->material_instance, fptr);
-    return true;
-}
+bool particle_emitter_serialize(Particle_Emitter* particle_emitter, FILE* fptr);
+bool particle_emitter_deserialize(Particle_Emitter* particle_emitter, FILE* fptr, Heap_Allocator* allocator);
 
-bool particle_emitter_deserialize(Particle_Emitter* particle_emitter, FILE* fptr, Heap_Allocator* allocator)
-{
-    fread(&particle_emitter->data, sizeof(Particle_Emitter_Data), 1, fptr);
-    particle_emitter->name =  allocator_heap_alloc(allocator, sizeof(String));
-    string_deserialize_heap(particle_emitter->name, fptr, allocator);
-    asset_material_instance_deserialize(&particle_emitter->material_instance, fptr, allocator);
-    return true;
-}
 
 bool particle_effect_serialize(Particle_Effect* particle_effect, FILE* fptr)
 {
     fwrite(&particle_effect->effect_current_time, sizeof(u32), 1, fptr);
-    fwrite(&particle_effect->effect_length, sizeof(u32),1,fptr);
+    fwrite(&particle_effect->effect_length, sizeof(u32), 1, fptr);
 
     transform_serialize(&particle_effect->transform, fptr);
 
@@ -76,7 +63,7 @@ bool particle_effect_serialize(Particle_Effect* particle_effect, FILE* fptr)
 bool particle_effect_deserialize(Particle_Effect* particle_effect, FILE* fptr, Heap_Allocator* allocator)
 {
     fread(&particle_effect->effect_current_time, sizeof(u32), 1, fptr);
-    fread(&particle_effect->effect_length, sizeof(u32),1,fptr);
+    fread(&particle_effect->effect_length, sizeof(u32), 1, fptr);
 
     transform_deserialize(&particle_effect->transform, fptr);
 
@@ -91,11 +78,10 @@ bool particle_effect_deserialize(Particle_Effect* particle_effect, FILE* fptr, H
     {
         madness_uuid_deserialize(&particle_effect->emmiter_uuid[i], fptr);
     }
-    particle_effect->name = allocator_heap_alloc(allocator, sizeof (String));
+    particle_effect->name = allocator_heap_alloc(allocator, sizeof(String));
     string_deserialize_heap(particle_effect->name, fptr, allocator);
     return true;
 }
-
 
 
 #endif

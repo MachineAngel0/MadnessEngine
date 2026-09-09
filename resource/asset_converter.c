@@ -80,8 +80,6 @@ void asset_converter_create_directory_for_engine_asset(String_Builder* str_build
     //TODO: test
     filesystem_create_directory_recursive(string_builder_to_c_string(str_builder_output_path));
     PROFILE_ZONE_END(asset_converter_create_directory_for_engine_asset)
-
-
 }
 
 void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitter* particle_emitter,
@@ -124,7 +122,6 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
     scratch_allocator_end(scratch);
 
     PROFILE_ZONE_END(asset_converter_particle_emitter)
-
 }
 
 void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect* particle_effect,
@@ -595,7 +592,6 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
 bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
 {
-
     PROFILE_ZONE(asset_converter_mesh)
 
     if (c_string_path_is_extension(gltf_path, ".gltf"))
@@ -648,8 +644,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
     Madness_Mesh_GPU_Data* gpu_data = allocator_alloc(scratch.allocator,
                                                       sizeof(Madness_Mesh_GPU_Data) * data->meshes_count);
-    Material_Instance* material_instances = allocator_alloc(scratch.allocator,
-                                                            sizeof(Material_Instance) * data->meshes_count);
+    MADNESS_UUID* material_uuids = allocator_alloc(scratch.allocator,
+                                                   sizeof(MADNESS_UUID) * data->meshes_count);
 
     //check if we are loading a skinned or normal mesh
     Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(scratch.allocator,
@@ -958,22 +954,14 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             };
         }
 
-        Material_Asset mat_asset = {0};
-        material_asset_create(asset_system, &default_info, &mat_asset);
-        Material_Definition material_definition = {0};
-        material_definition_create(asset_system, &material_definition,
-                                   string_to_c_string_allocator(mat_asset.material_info.material_name,
-                                                                scratch.allocator));
-
-        Material_Instance* mat_inst = &material_instances[mesh_idx];
-        // material_instance_create(asset_system, mat_asset, mat_inst, name);
-
+        MADNESS_UUID shader_uuid;
         if (data->meshes[mesh_idx].primitives->material->name)
         {
-            material_instance_create_from_data(asset_system, &mat_asset,
-                                               &material_definition,
-                                               mat_inst,
-                                               data->meshes[mesh_idx].primitives->material->name, cur_mat);
+            asset_converter_shader_and_material_from_data(asset_system, &default_info,
+                                                data->meshes[mesh_idx].primitives->material->name, cur_mat, &shader_uuid,
+                                                &material_uuids[mesh_idx]);
+
+
         }
         else
         {
@@ -986,15 +974,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_c_string(string_mat_name, "No_Mat_Name");
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
-
-            material_instance_create_from_data(asset_system, &mat_asset, &material_definition,
-                                               mat_inst,
-                                               string_builder_to_c_string(string_mat_name), cur_mat);
+            asset_converter_shader_and_material_from_data(asset_system, &default_info,
+                                                     string_builder_to_c_string(string_mat_name), cur_mat, &shader_uuid,
+                                                     &material_uuids[mesh_idx]);
         }
 
-
-        asset_converter_material_asset(asset_system, &mat_asset);
-        asset_converter_material_instance(asset_system, mat_inst);
     }
 
 
@@ -1245,7 +1229,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         sk_mesh_runtime.mesh_count = madness_mesh->mesh_count;
         sk_mesh_runtime.submeshes = madness_mesh->mesh_data;
         sk_mesh_runtime.mesh_gpu_upload = gpu_data;
-        sk_mesh_runtime.material_instance = material_instances;
+        sk_mesh_runtime.material_uuid = material_uuids;
         sk_mesh_runtime.skmesh_gpu_upload = skinned_gpu_data;
         sk_mesh_runtime.skinned_submeshes = skinned_mesh;
         sk_mesh_runtime.animation_data = animation_data;
@@ -1282,7 +1266,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         engine_format.mesh_count = madness_mesh->mesh_count;
         engine_format.submeshes = madness_mesh->mesh_data;
         engine_format.mesh_gpu_upload = gpu_data;
-        engine_format.material_instance = material_instances;
+        engine_format.material_uuid = material_uuids;
 
 
         String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
@@ -1322,10 +1306,12 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     return true;
 }
 
-bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* material_asset)
+bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset)
 {
     PROFILE_ZONE(asset_converter_material_asset)
 
+    //TODO: check the out_shder_uuid and see how its bieng generated
+    MASSERT(false);
 
     MASSERT(material_asset)
 
@@ -1334,7 +1320,6 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
 
     MASSERT(material_asset->material_info.material_name)
     MASSERT(material_asset->material_info.shader_name)
-
 
 
     //TODO: we only want to serialize the material asset if it does not exist
@@ -1359,7 +1344,7 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
 
 
         material_asset->version = 1.0f;
-        asset_material_asset_serialize(material_asset, fptr);
+        asset_shader_serialize(material_asset, fptr);
 
         asset_registry_add_asset_from_uuid(asset_system->asset_registry, output_path, output_path,
                                            ASSET_MATERIAL, asset_system->heap_allocator, material_asset->uuid);
@@ -1372,29 +1357,30 @@ bool asset_converter_material_asset(Asset_System* asset_system, Material_Asset* 
     return true;
 }
 
-bool asset_converter_material_instance(Asset_System* asset_system, Material_Instance* mat_inst)
+MAPI bool asset_converter_material(Asset_System* asset_system,
+                                   Material* material)
 {
-
     PROFILE_ZONE(asset_converter_material_instance)
 
 
-    MASSERT(mat_inst)
-    MASSERT(mat_inst->material_instance_uuid.high != 0);
-    MASSERT(mat_inst->material_instance_uuid.high != 0);
+    MASSERT(material)
+    MASSERT(material->meta_data.material_uuid.high != 0);
+    MASSERT(material->meta_data.material_uuid.high != 0);
 
-    MASSERT(mat_inst->material_asset_uuid.high != 0);
-    MASSERT(mat_inst->material_asset_uuid.low != 0);
+    MASSERT(material->meta_data.shader_uuid.high != 0);
+    MASSERT(material->meta_data.shader_uuid.low != 0);
 
-    MASSERT(mat_inst->data_size != 0);
+    MASSERT(material->cpu_data.material_data);
+    MASSERT(material->cpu_data.data_size != 0);
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
-    string_builder_append_string(str_builder, mat_inst->material_name);
+    string_builder_append_string(str_builder, material->meta_data.material_name);
     string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, mat_inst->name);
+    string_builder_append_string(str_builder, material->meta_data.name);
     string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
 
     const char* output_path = string_builder_to_c_string(str_builder);
@@ -1404,14 +1390,14 @@ bool asset_converter_material_instance(Asset_System* asset_system, Material_Inst
         MASSERT(false);
     }
 
-    asset_material_instance_serialize(mat_inst, fptr);
+    asset_material_serialize(material, fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
-                                                string_to_c_string_allocator(
-                                                    mat_inst->name, scratch.allocator), output_path,
-                                                ASSET_MATERIAL_INSTANCE,
-                                                asset_system->heap_allocator, NULL);
+    asset_registry_add_asset_from_uuid(asset_system->asset_registry,
+                                       string_to_c_string_allocator(
+                                           material->meta_data.name, scratch.allocator), output_path,
+                                       ASSET_MATERIAL_INSTANCE,
+                                       asset_system->heap_allocator, material->meta_data.material_uuid);
 
     fclose(fptr);
 
@@ -1423,34 +1409,141 @@ bool asset_converter_material_instance(Asset_System* asset_system, Material_Inst
     return true;
 }
 
-bool asset_converter_material(Asset_System* asset_system, Material_Info* material_info,
-                              Material_Asset* out_material_asset, Material_Instance* out_material_instance,
-                              const char* mat_inst_name)
+MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
+                                                     Material* material, MADNESS_UUID* out_material_uuid)
 {
+    PROFILE_ZONE(asset_converter_material_instance)
+
+
+    MASSERT(material)
+    MASSERT(material->meta_data.material_uuid.high != 0);
+    MASSERT(material->meta_data.material_uuid.high != 0);
+
+    MASSERT(material->meta_data.shader_uuid.high != 0);
+    MASSERT(material->meta_data.shader_uuid.low != 0);
+
+    MASSERT(material->cpu_data.material_data);
+    MASSERT(material->cpu_data.data_size != 0);
+
+    MASSERT(out_material_uuid);
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    //write out the file
+    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
+    string_builder_append_string(str_builder, material->meta_data.material_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_string(str_builder, material->meta_data.name);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
+
+    const char* output_path = string_builder_to_c_string(str_builder);
+    FILE* fptr = fopen(output_path, "wb");
+    if (!fptr)
+    {
+        MASSERT(false);
+    }
+
+    asset_material_serialize(material, fptr);
+
+
+    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+                                                string_to_c_string_allocator(
+                                                    material->meta_data.name, scratch.allocator), output_path,
+                                                ASSET_MATERIAL_INSTANCE,
+                                                asset_system->heap_allocator, out_material_uuid);
+
+    fclose(fptr);
+
+    scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_converter_material_instance)
+
+
+    return true;
+}
+
+bool asset_converter_shader_and_material(Asset_System* asset_system,
+                                         Material_Info* material_info,
+                                         const char* mat_inst_name,
+                                         MADNESS_UUID* out_shader_uuid,
+                                         MADNESS_UUID* out_material_uuid)
+{
+    MASSERT(out_shader_uuid)
+    MASSERT(out_material_uuid)
+
     PROFILE_ZONE(asset_converter_material)
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
-    //create the material asset and instance
-    material_asset_create(asset_system,
-                          material_info,
-                          out_material_asset);
+    Shader_Asset shader_asset;
+    //create the material asset and instance, the functions will serialize the defaults
+    shader_asset_create(asset_system,
+                        material_info,
+                        &shader_asset);
+
 
     Material_Definition material_definition;
-    material_definition_create(asset_system, &material_definition,
+    material_definition_create(asset_system,
+                               &material_definition,
                                string_to_c_string_allocator(material_info->material_name, scratch.allocator));
 
-    material_instance_create(asset_system,
-                             out_material_asset,
-                             &material_definition,
-                             out_material_instance,
-                             mat_inst_name);
+    Material material;
+    material_create(asset_system,
+                    &shader_asset,
+                    &material_definition,
+                    &material,
+                    mat_inst_name);
 
-    //serialize the data
-    asset_converter_material_asset(asset_system,
-                                   out_material_asset);
+    *out_shader_uuid = shader_asset.uuid;
+    *out_material_uuid = material.meta_data.material_uuid;
 
-    asset_converter_material_instance(asset_system, out_material_instance);
+
+    scratch_allocator_end(scratch);
+
+    PROFILE_ZONE_END(asset_converter_material)
+
+
+    return true;
+}
+
+bool asset_converter_shader_and_material_from_data(Asset_System* asset_system,
+                                                   Material_Info* material_info,
+                                                   const char* mat_inst_name,
+                                                   void* data,
+                                                   MADNESS_UUID* out_shader_uuid,
+                                                   MADNESS_UUID* out_material_uuid)
+{
+    MASSERT(out_shader_uuid)
+    MASSERT(out_material_uuid)
+
+    PROFILE_ZONE(asset_converter_material)
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    Shader_Asset shader_asset;
+    //create the material asset and instance, the functions will serialize the defaults
+    shader_asset_create(asset_system,
+                        material_info,
+                        &shader_asset);
+
+
+    Material_Definition material_definition;
+    material_definition_create(asset_system,
+                               &material_definition,
+                               string_to_c_string_allocator(material_info->material_name, scratch.allocator));
+
+    Material material;
+    material_create_from_data(asset_system,
+                              &shader_asset,
+                              &material_definition,
+                              &material,
+                              mat_inst_name,
+                              data);
+
+    *out_shader_uuid = shader_asset.uuid;
+    *out_material_uuid = material.meta_data.material_uuid;
+
 
     scratch_allocator_end(scratch);
 

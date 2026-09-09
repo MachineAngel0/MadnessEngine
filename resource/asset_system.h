@@ -7,6 +7,7 @@
 #include "asset_serialization.h"
 #include "material_system.h"
 #include "resource_types.h"
+#include "particle_system.h"
 
 
 //TODO/GOALS:
@@ -32,13 +33,8 @@
 //assume we load in mesh1, then we change it and now we have more vertex data, do we delete the old asset?
 //or just set a flag to not render and put the new one in,
 //basically just find the old data, update the mesh data and point it to the correct vertex spot, no unloading, just restart the engine
-//
-//assets imported with different names, are treated as a different asset, even if they are the same as another asset
 
-//TODO:
-// WAY TO CREATE MULTIPLE OF A THING for modification
-// RUNTIME FORMAT
-// probably keep a hash of the paths, for quicker lookups
+
 
 typedef struct Asset_Load_Handle
 {
@@ -77,20 +73,26 @@ Texture_Handle asset_load_font_uuid(Asset_System* asset_system, MADNESS_UUID uui
 bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle);
 
 
-Madness_Mesh_Handle asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path);
-Madness_Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
+bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Mesh_Handle* out_handle);
+Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
-Madness_SkMesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
-
-
-bool asset_load_material_asset_path(Asset_System* asset_system, const char* asset_path,
-                                    Material_Asset* out_material_asset, Shader_Handle* out_shader_handle);
-bool asset_load_material_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Shader_Handle* out_handle);
-
-bool asset_unload_material_asset(Asset_System* asset_system, Shader_Handle shader_handle);
+Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
-bool asset_load_material_instance(Asset_System* asset_system, const char* asset_path);
+bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_data,
+                             Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator);
+bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_path,
+                                  Shader_Handle* out_shader_handle);
+bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Shader_Handle* out_handle);
+
+bool asset_unload_shader_asset(Asset_System* asset_system, Shader_Handle shader_handle);
+
+
+bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data, Material_Handle* out_material_handle);
+bool asset_load_material_path(Asset_System* asset_system,  const char* asset_path,  Material_Handle* out_material);
+bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_uuid, Material_Handle* out_material);
+bool asset_unload_material(Asset_System* asset_system, const char* asset_path);
+
 
 bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* asset_path,
                                         Particle_Effect_Handle* out_handle);
@@ -169,8 +171,15 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     }
 
     particle_emitter_deserialize(particle_emitter, fptr, asset_system->heap_allocator);
-
     fclose(fptr);
+    scratch_allocator_end(scratch);
+
+    //we also have to load in the material
+    if (!asset_load_material_uuid(asset_system, particle_emitter->material_uuid, &particle_emitter->material_handle))
+    {
+        MASSERT_FALSE();
+    }
+
 
 
     Madness_Asset* madness_asset = &asset_system->asset_registry->particle_emitter_asset[out_handle->handle];
@@ -180,7 +189,6 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     madness_asset->reference_count = 1;
 
 
-    scratch_allocator_end(scratch);
 
     PROFILE_ZONE_END(asset_load_particle_emitter)
 
@@ -299,4 +307,4 @@ void asset_system_convert_to_runtime_format(void)
 }
 
 
-#endif //RESOURCE_SYSTEM_H
+#endif //ASSET_SYSTEM_H

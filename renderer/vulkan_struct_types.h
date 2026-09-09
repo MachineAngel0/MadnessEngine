@@ -383,7 +383,7 @@ typedef struct Skinned_Render_Record
 typedef struct Vulkan_Shader_Batch
 {
     const char* shader_name;
-    // const char* material_name;
+    const char* material_name;
 
     Shader_Mesh_Type mesh_type;
     Shader_Transluency_Type transluency;

@@ -181,14 +181,12 @@ typedef u64 Material_Key;
 
 typedef struct Material_Handle
 {
-    Material_Key material_id;
+    // Material_Key material_id;
+    u32 material_batch_index;
     u32 material_index;
+    u32 generation;
 } Material_Handle;
 
-typedef struct Material_Asset_Handle
-{
-    u32 handle;
-} Material_Asset_Handle;
 
 typedef struct Shader_Handle
 {
@@ -197,20 +195,17 @@ typedef struct Shader_Handle
 } Shader_Handle;
 
 
-typedef struct Madness_Mesh_Handle
+typedef struct Mesh_Handle
 {
     u32 handle;
-} Madness_Mesh_Handle;
+    u32 generation;
+} Mesh_Handle;
 
-typedef struct Madness_Mesh_Handle_Internal
-{
-    u32 handle;
-} Madness_Mesh_Handle_Internal;
 
-typedef struct Madness_SkMesh_Handle
+typedef struct Skinned_Mesh_Handle
 {
     u32 handle;
-} Madness_SkMesh_Handle;
+} Skinned_Mesh_Handle;
 
 typedef struct Madness_SkMesh_Handle_Internal
 {
@@ -474,14 +469,14 @@ typedef struct Material_GPU_Definition
     Reflection_Type* types;
 } Material_GPU_Definition;
 
-typedef struct Material_Asset
+typedef struct Shader_Asset
 {
     //information about the material structure, think of it like the definition of a material/shader
     u32 version;
     u32 reflection_hash;
     MADNESS_UUID uuid;
     Material_Info material_info;
-} Material_Asset;
+} Shader_Asset;
 
 typedef struct Material_Definition
 {
@@ -490,37 +485,30 @@ typedef struct Material_Definition
     Material_GPU_Definition material_gpu_definition;
 } Material_Definition;
 
-
-typedef struct Material_Instance_Data
+typedef struct Material_Meta_Data
 {
-    MADNESS_UUID material_asset_uuid;
-    MADNESS_UUID material_instance_uuid;
-    // u32 mat_hash;
-
     // NOTE: the material data is the serialized data containing the UUID for textures
-    u64 data_size;
-    void* material_data;
-}Material_Instance_Data;
-
-typedef struct Material_Instance_Runtime
-{
-    Material_Asset_Handle handle;
-    Material_Asset* material_asset;
-
-}Material_Instance_Runtime;
-
-typedef struct Material_Instance
-{
-    MADNESS_UUID material_asset_uuid;
-    MADNESS_UUID material_instance_uuid;
-
-    // NOTE: the material data is the serialized data containing the UUID for textures
-    u64 data_size;
-    void* material_data;
-
+    MADNESS_UUID shader_uuid;
+    MADNESS_UUID material_uuid;
+    Shader_Handle shader_handle;
     String* material_name;
     String* name;
-} Material_Instance;
+} Material_Meta_Data;
+
+typedef struct Material_Data
+{
+    //we load this in and then unload it once copied into the material array
+    u64 data_size;
+    void* material_data;
+} Material_Data;
+
+typedef struct Material
+{
+    Material_Meta_Data meta_data;
+    Material_Data cpu_data;
+} Material;
+
+
 
 
 typedef struct Material_Batch
@@ -528,8 +516,13 @@ typedef struct Material_Batch
     //to solve the problem of having different batches for the material types, it would make sense to have a sort key
     // https://realtimecollisiondetection.net/blog/?p=86
 
-
     Dynamic_Array* material_data;
+    DYNAMIC_ARRAY_TYPE(Material*)* material_meta_data; //store the pointer to the material asset
+
+    //TODO:
+    // DYNAMIC_ARRAY_TYPE(u32) free_list;
+    // DYNAMIC_ARRAY_TYPE(u32)* generations;
+
 } Material_Batch;
 
 
@@ -590,7 +583,7 @@ typedef struct Particle_Mesh
 
     //not render data
     f32* lifetime_left;
-    Madness_Mesh_Handle* mesh_handle;
+    Mesh_Handle* mesh_handle;
 } Particle_Mesh;
 
 typedef struct Particle_Animation_vec3
@@ -684,7 +677,7 @@ typedef struct Particle_Emitter
     //serializable data
     Particle_Emitter_Data data;
     String* name;
-    Material_Instance material_instance;
+    MADNESS_UUID material_uuid;
 
     //runtime data
     Material_Handle material_handle;
@@ -794,7 +787,7 @@ typedef struct Madness_Mesh_Instance
 {
     //this generally is only for changing materials and transforms, and not for the renderer
     u32 mesh_count;
-    Madness_Mesh_Handle_Internal mesh_asset;
+    u32 mesh_reference_index;
     Transform_Handle transform_handle;
     Madness_SubMesh_Instance* submesh_instances;
 } Madness_Mesh_Instance;
@@ -834,13 +827,8 @@ typedef struct Madness_Mesh
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
     u32* submesh_ids;
-    Material_Instance* material_instance;
+    MADNESS_UUID* material_uuid;
     Material_Handle* material_handles;
-
-    u64 path_hash;
-    String* engine_path;
-    u32 generation;
-    u32 reference_count;
 } Madness_Mesh;
 
 
@@ -848,7 +836,8 @@ typedef struct Madness_Skinned_Mesh
 {
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
-    Material_Instance* material_instance;
+    MADNESS_UUID* material_instance;
+    Material_Handle* material_handles;
     //
     Madness_Skinned_SubMesh* skinned_mesh_data;
     GLTF_Animation_Data* animation_data;
@@ -895,7 +884,8 @@ typedef struct Madness_Mesh_Runtime
     u32 mesh_count;
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-    Material_Instance* material_instance;
+    MADNESS_UUID* material_uuid;
+    MADNESS_UUID mesh_uuid;
 } Madness_Mesh_Runtime;
 
 typedef struct Madness_SkMesh_Runtime
@@ -904,7 +894,7 @@ typedef struct Madness_SkMesh_Runtime
     u32 mesh_count;
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-    Material_Instance* material_instance;
+    MADNESS_UUID* material_uuid;
 
     Madness_Skinned_SubMesh* skinned_submeshes;
     Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
@@ -926,9 +916,9 @@ typedef struct Material_System
 
     //sort material batches by their mesh type, possibly fine grain it later
     Material_Batch material_batch[MAX_MATERIAL_COUNT];
-    Material_Asset material_asset[MAX_MATERIAL_COUNT];
+    Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
     Material_Definition material_definition[MAX_MATERIAL_COUNT];
-    u32 material_asset_generation[MAX_MATERIAL_COUNT];
+    u32 shader_asset_generation[MAX_MATERIAL_COUNT];
     u32 material_count;
 
 
@@ -1020,14 +1010,17 @@ typedef struct Mesh_System
     //-> mesh_instance (inside the material batches)
 
 
+    //mesh
     Madness_Mesh madness_mesh[MAX_MESH_COUNT];
     u32 madness_mesh_count;
 
-    Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
-    u32 madness_sk_mesh_count;
-
     Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
     u32 mesh_instance_count;
+
+
+    //skinned
+    Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
+    u32 madness_sk_mesh_count;
 
     Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
@@ -1047,8 +1040,6 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(const char*)* load_queue;
 
 
-    Madness_Asset skinned_madness_asset[100];
-    u32 skinned_madness_asset_count;
 } Mesh_System;
 
 
@@ -1126,7 +1117,7 @@ typedef struct Render_Packet_3D
 
     //TODO: we should have a dirty bit for generating any new batches
     Material_Batch* material_batch;
-    Material_Asset* material_assets;
+    Shader_Asset* material_assets;
     Material_Definition* material_definition;
     u32 material_count;
 
@@ -1190,13 +1181,18 @@ typedef struct Asset_Registry
 {
     DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
 
+    //OPTIMIZE: a hash would make way more sense for this, profile to be sure
+    // HASH_TABLE_TYPE(Madness_Asset)* path_to_mesh_asset;
+
     // DYNAMIC_ARRAY_TYPE(Madness_Asset) loaded_asset;
     // ref counted asset
     Madness_Asset particle_effect_asset[MAX_PARTICLE_EFFECTS_COUNT];
 
     Madness_Asset particle_emitter_asset[MAX_PARTICLE_EMITTER_COUNT];
 
-    Madness_Asset material_madness_asset[MAX_MATERIAL_COUNT];
+    Madness_Asset shader_madness_asset[MAX_MATERIAL_COUNT];
+
+    Madness_Asset mesh_asset[MAX_PARTICLE_EFFECTS_COUNT];
 
 
 } Asset_Registry;

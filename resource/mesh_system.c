@@ -2,7 +2,6 @@
 
 #include "animation_system.h"
 #include "cgltf.h"
-#include "material_system.h"
 #include "resource_types.h"
 #include "ufbx.h"
 
@@ -41,131 +40,9 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
     return true;
 }
 
-bool mesh_system_exists_mesh(Asset_System* asset_system, Madness_Mesh_Handle* out_handle, u64 hash, MADNESS_UUID uuid)
-{
-    Mesh_System* mesh_system = asset_system->mesh_system;
-
-    //TODO: this is wrong, i need the madness mesh to hold onto the submesh id's
-    for (u32 i = 0; i < mesh_system->madness_mesh_count; i++)
-    {
-        //see if we have the mesh loaded
-        Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[i];
-        if (madness_mesh->path_hash == hash)
-        {
-            madness_mesh->reference_count++;
-
-            //pass out the handle
-            *out_handle = (Madness_Mesh_Handle){
-                .handle = mesh_system->mesh_instance_count,
-            };
-
-            //create the instance
-            Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_system->
-                mesh_instance_count++];
 
 
-            mesh_inst->mesh_asset = (Madness_Mesh_Handle_Internal){.handle = i};
-            scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
-            mesh_inst->mesh_count = madness_mesh->mesh_count;
-            mesh_inst->submesh_instances = allocator_heap_alloc(
-                asset_system->heap_allocator, sizeof(Madness_SubMesh_Instance) * madness_mesh->mesh_count);
 
-            for (size_t mesh_idx = 0; mesh_idx < madness_mesh->mesh_count; mesh_idx++)
-            {
-                Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
-
-                //handles
-                submesh_inst->mesh_id = madness_mesh->submesh_ids[mesh_idx];
-                submesh_inst->material_handle = (Material_Handle){0};
-                submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-            }
-
-            //loads in the material asset if needed, and adds material instance data to the material batch
-            material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
-
-
-            return true;
-        }
-    }
-
-
-    return false;
-}
-
-bool mesh_system_exists_skmesh(Asset_System* asset_system, Madness_SkMesh_Handle* out_handle,
-                               u64 hash)
-{
-    for (u32 i = 0; i < asset_system->mesh_system->skinned_madness_asset_count; i++)
-    {
-        if (asset_system->mesh_system->skinned_madness_asset[i].path_hash == hash)
-        {
-            asset_system->mesh_system->skinned_madness_asset[i].reference_count++;
-            FATAL("mesh_system_exists_mesh: NOT PASSING BACK A MESH HANDLE IF ALREADY LOADED")
-            //TODO: this should be creating a new parent skinned mesh instance
-
-            return true;
-        }
-    }
-    return false;
-}
-
-
-void mesh_system_load_mesh(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, u64 hash, String* engine_path,
-                           MADNESS_UUID uuid, Madness_Mesh_Handle* out_handle)
-{
-    Mesh_System* mesh_system = asset_system->mesh_system;
-
-
-    //take a reference to the og asset
-    Madness_Mesh* madness_mesh = &mesh_system->madness_mesh[mesh_system->madness_mesh_count++];
-    madness_mesh->mesh_count = mesh_asset->mesh_count;
-    madness_mesh->mesh_data = mesh_asset->submeshes;
-    madness_mesh->submesh_ids = allocator_heap_alloc(asset_system->heap_allocator, sizeof(u32) * mesh_asset->mesh_count);
-    madness_mesh->material_instance = mesh_asset->material_instance;
-    madness_mesh->path_hash = hash;
-    madness_mesh->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
-    madness_mesh->generation++;
-    madness_mesh->reference_count = 1;
-
-
-    //create the instance
-    //OPTIMIZE: submehses should really be a flat list so that the render can quickly extract data from it
-    *out_handle = (Madness_Mesh_Handle){.handle = mesh_system->mesh_instance_count};
-    Madness_Mesh_Instance* mesh_inst = &mesh_system->mesh_instance[mesh_system->
-        mesh_instance_count++];
-
-    mesh_inst->mesh_asset = (Madness_Mesh_Handle_Internal){.handle = mesh_system->madness_mesh_count - 1};
-    scene_get_new_transform(asset_system->scene, &mesh_inst->transform_handle, uuid);
-    mesh_inst->mesh_count = mesh_asset->mesh_count;
-    mesh_inst->submesh_instances = allocator_heap_alloc(
-        asset_system->heap_allocator, sizeof(Madness_SubMesh_Instance) * mesh_asset->mesh_count);
-
-    for (size_t mesh_idx = 0; mesh_idx < mesh_asset->mesh_count; mesh_idx++)
-    {
-
-        u32 cur_mesh_id = mesh_system->mesh_ids++;
-        madness_mesh->submesh_ids[mesh_idx] = cur_mesh_id;
-
-        Madness_SubMesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
-        //handles
-        submesh_inst->mesh_id = cur_mesh_id;
-        submesh_inst->material_handle = (Material_Handle){0};
-        submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-
-        //send to the gpu
-        Mesh_GPU_Upload upload = {
-            .mesh_id = cur_mesh_id,
-            .submesh = &mesh_asset->submeshes[mesh_idx],
-            .gpu_data = &mesh_asset->mesh_gpu_upload[mesh_idx],
-            .mesh_memory_allocator = asset_system->mesh_allocator,
-
-        };
-        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
-    }
-
-    //loads in the material asset if needed, and adds material instance data to the material batch
-    material_system_add_mesh_instance_and_material(asset_system, madness_mesh, mesh_inst);
-}
 
 void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset,
                                    u64 hash, String* engine_path, MADNESS_UUID uuid)
@@ -191,7 +68,7 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
     Madness_Skinned_Mesh* madness_mesh = &mesh_system->madness_skinned_mesh[mesh_system->madness_sk_mesh_count++];
     madness_mesh->mesh_count = skmesh_asset->mesh_count;
     madness_mesh->mesh_data = skmesh_asset->submeshes;
-    madness_mesh->material_instance = skmesh_asset->material_instance;
+    madness_mesh->material_instance = skmesh_asset->material_uuid;
     madness_mesh->skinned_mesh_data = skmesh_asset->skinned_submeshes;
     madness_mesh->animation_data = skmesh_asset->animation_data;
 
@@ -226,14 +103,4 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
     }
 
 
-    //loads in the material asset if needed, and adds material instance data to the material batch
-    material_system_add_skinned_instance_and_material(asset_system, madness_mesh, mesh_inst);
-
-
-    //take a reference to the og asset
-    Madness_Asset* asset = &mesh_system->skinned_madness_asset[mesh_system->skinned_madness_asset_count++];
-    asset->path_hash = hash;
-    asset->engine_path = engine_path;
-    asset->reference_count = 1;
-    asset->type = ASSET_SKINNED_MESH;
 }

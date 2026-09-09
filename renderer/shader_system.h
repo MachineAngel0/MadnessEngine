@@ -19,7 +19,7 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
 //Shader Batch system
 
 void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
-                                              Material_Batch* material_batch, Material_Asset* material_asset,
+                                              Material_Batch* material_batch, Shader_Asset* material_asset,
                                               Material_Definition* material_definition);
 
 void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system,

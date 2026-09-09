@@ -1,5 +1,4 @@
 ﻿#include "shader_system.h"
-#include "vk_image.h"
 
 
 Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
@@ -12,7 +11,6 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
     //                      &(*out_shader_system)->error_texture);
 
     shader_system->pipeline_indexes = 0;
-
 
 
     //we store the pointer, we dont want a copy
@@ -32,8 +30,6 @@ void vulkan_shader_system_shutdown(Vulkan_Shader_System* system)
 }
 
 
-
-
 void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shader_system, Render_Packet* render_packet)
 {
     //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
@@ -46,33 +42,16 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
             continue;
         }
         vulkan_shader_system_shader_batch_create(renderer, shader_system,
-                                          &render_packet->draw_3d_data_packet.material_batch[i],
-                                          &render_packet->draw_3d_data_packet.material_assets[i],
-                                          &render_packet->draw_3d_data_packet.material_definition[i]);
+                                                 &render_packet->draw_3d_data_packet.material_batch[i],
+                                                 &render_packet->draw_3d_data_packet.material_assets[i],
+                                                 &render_packet->draw_3d_data_packet.material_definition[i]);
     }
-
-
-
-
-
-
-
-
 }
 
 
-
-// Vulkan_Texture* shader_system_new_render_pass_texture(Shader_System* system)
-// {
-//     return &system->renderpass_textures[system->renderpass_texture_indexes++];
-// }
-
-
-
-
-
 void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
-    Material_Batch* material_batch, Material_Asset* material_asset, Material_Definition* material_definition)
+                                              Material_Batch* material_batch, Shader_Asset* material_asset,
+                                              Material_Definition* material_definition)
 {
     Vulkan_Shader_Batch* shader_batch = NULL;
     switch (material_asset->material_info.mesh_type)
@@ -83,16 +62,20 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
     case Shader_Mesh_Type_Skinned:
         shader_batch = &shader_system->skinned_batch[shader_system->skinned_batch_count++];
         break;
+    case Shader_Mesh_Type_Particle:
+        shader_batch = &shader_system->particle_batch[shader_system->particle_batch_count++];
+        break;
     }
 
-    if (!shader_batch)
-    {
-        MASSERT(false);
-    }
+    MASSERT(shader_batch)
+
     shader_batch->material_batch_reference = material_batch;
 
     shader_batch->material_key = material_asset->material_info.material_key;
-    shader_batch->shader_name = string_to_c_string_alloc_heap(material_asset->material_info.shader_name, renderer->heap_allocator);
+    shader_batch->shader_name = string_to_c_string_alloc_heap(material_asset->material_info.shader_name,
+                                                              renderer->heap_allocator);
+    shader_batch->material_name = string_to_c_string_alloc_heap(material_asset->material_info.material_name,
+                                                                renderer->heap_allocator);
     shader_batch->transluency = material_asset->material_info.transluency;
     shader_batch->renderpass_types = material_asset->material_info.renderpass;
     shader_batch->mesh_type = material_asset->material_info.mesh_type;
@@ -121,37 +104,41 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
 
     //create the ssbo's
     shader_batch->material_data_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STORAGE_GPU,
-                                                                     shader_batch->material_stride *
-                                                                     ssbo_init_amount);
+                                                                           BUFFER_TYPE_STORAGE_GPU,
+                                                                           shader_batch->material_stride *
+                                                                           ssbo_init_amount);
     switch (shader_batch->mesh_type)
     {
     case Shader_Mesh_Type_Mesh:
 
         shader_batch->draw_data_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STORAGE_GPU,
-                                                                     sizeof(Vulkan_Mesh_Draw) * ssbo_init_amount);
+                                                                           BUFFER_TYPE_STORAGE_GPU,
+                                                                           sizeof(Vulkan_Mesh_Draw) * ssbo_init_amount);
         break;
     case Shader_Mesh_Type_Skinned:
 
         shader_batch->draw_data_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_STORAGE_GPU,
-                                                                     sizeof(Vulkan_Skinned_Draw) * ssbo_init_amount);
+                                                                           BUFFER_TYPE_STORAGE_GPU,
+                                                                           sizeof(Vulkan_Skinned_Draw) *
+                                                                           ssbo_init_amount);
+        break;
+    case Shader_Mesh_Type_Particle:
+        //not needed
         break;
     }
 
 
     shader_batch->indirect_draw_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                     BUFFER_TYPE_INDIRECT,
-                                                                     sizeof(VkDrawIndexedIndirectCommand) *
-                                                                     ssbo_init_amount);
-
+                                                                           BUFFER_TYPE_INDIRECT,
+                                                                           sizeof(VkDrawIndexedIndirectCommand) *
+                                                                           ssbo_init_amount);
 
 
     hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->material_key);
 }
 
-void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system, const char* shader_name)
+void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system,
+                                            const char* shader_name)
 {
     //TODO:
 }
@@ -167,5 +154,3 @@ Vulkan_Shader_Batch* vulkan_shader_system_shader_batch_get_by_mat_key_for_partic
         }
     }
 }
-
-

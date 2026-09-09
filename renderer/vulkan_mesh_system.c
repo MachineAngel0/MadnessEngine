@@ -467,7 +467,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
             *render_inst = (Mesh_Render_Item){
                 .material_key = sub_mesh_instance->material_handle.material_id,
                 .mesh_id = sub_mesh_instance->mesh_id,
-                .mesh_handle = mesh_instance->mesh_asset.handle,
+                .mesh_handle = mesh_instance->mesh_reference_index.handle,
                 .submesh_handle = submesh_idx,
                 .material_handle = sub_mesh_instance->material_handle.material_index,
                 .transform_handle = mesh_instance->transform_handle.handle,

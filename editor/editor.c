@@ -469,7 +469,7 @@ void editor_ui_scene(Editor* editor)
         if (madness_ui_button(STRING("LOAD MESH ASSET")))
         {
             asset_load_mesh_path(editor->asset_system,
-                                 string_builder_to_c_string(madness_ui_text_box_get_string(scene_mesh_asset_name)));
+                                 string_builder_to_c_string(madness_ui_text_box_get_string(scene_mesh_asset_name)), TODO);
         }
 
         String mesh_path2 = STRING("Mesh Path2");
@@ -482,7 +482,7 @@ void editor_ui_scene(Editor* editor)
         if (madness_ui_button(STRING("LOAD MESH ASSET2")))
         {
             asset_load_mesh_path(editor->asset_system,
-                                 string_to_c_string(&path_string));
+                                 string_to_c_string(&path_string), TODO);
         }
     }
     madness_ui_window_end();
@@ -580,18 +580,18 @@ void editor_material_asset_view(Editor* editor)
 
         if (madness_ui_button(STRING("LOAD SHADER")))
         {
-            asset_load_material_asset_path(asset_system,
-                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
-                                           NULL, &handle);
+            asset_load_shader_asset_path(asset_system,
+                                         string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                         &handle);
         }
 
         madness_ui_padding();
 
         if (madness_ui_button(STRING("SAVE SHADER")))
         {
-            asset_load_material_asset_path(asset_system,
-                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
-                                           NULL, &handle);
+            asset_load_shader_asset_path(asset_system,
+                                         string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                         &handle);
         }
 
         madness_ui_padding();
@@ -599,22 +599,22 @@ void editor_material_asset_view(Editor* editor)
         static u32 shader_mapping_index;
         madness_ui_u32(STRING("asdsa"), &shader_mapping_index, 1);
         shader_mapping_index = clamp_uint(shader_mapping_index, 0,
-                                          editor->asset_system->material_system->shader_to_material_count-1);
+                                          editor->asset_system->material_system->shader_to_material_count - 1);
         // madness_ui_string(
         // *material_system->shader_to_material_mapping.shader_name[shader_mapping_index]);
 
         madness_ui_combo_box2(STRING("STRINGasdasd"), &shader_mapping_index,
-                             material_system->shader_to_material_mapping.shader_name,
-                             editor->asset_system->material_system->shader_to_material_count);
+                              material_system->shader_to_material_mapping.shader_name,
+                              editor->asset_system->material_system->shader_to_material_count);
         madness_ui_string(
-              *material_system->shader_to_material_mapping.material_name[shader_mapping_index]);
+            *material_system->shader_to_material_mapping.material_name[shader_mapping_index]);
 
 
         madness_ui_padding();
 
         if (handle.handle != 0)
         {
-            Material_Asset* material_asset = material_asset_get(asset_system->material_system, handle);
+            Shader_Asset* material_asset = shader_asset_get(asset_system->material_system, handle);
 
             madness_ui_u64(STRING("High:"), &material_asset->uuid.high, 0);
             madness_ui_u64(STRING("Low:"), &material_asset->uuid.low, 0);
@@ -694,8 +694,6 @@ void editor_material_asset_view(Editor* editor)
             material_struct_string_list[selected_index]);
 
         madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
-
-
     }
     madness_ui_window_end();
 }
@@ -785,6 +783,8 @@ void editor_particle_view(Editor* editor)
 
         madness_ui_padding();
 
+
+
         if (emitter_to_edit->material_instance.material_name)
         {
             madness_ui_string(*emitter_to_edit->material_instance.name);
@@ -795,6 +795,11 @@ void editor_particle_view(Editor* editor)
                                           &emitter_to_edit->material_instance.material_data, "emitter_mat");
         }
 
+        /*
+        Material_Asset* material_asset = material_asset_get(editor->asset_system->material_system,
+                                                    emitter_to_edit->material_instance.shader_handle);
+        */
+
 
         String material_path;
         madness_ui_combo_box_string(STRING("selected material asset"), &material_path,
@@ -804,10 +809,10 @@ void editor_particle_view(Editor* editor)
         static Shader_Handle handle;
         if (madness_ui_button(STRING("LOAD SHADER")))
         {
-            Material_Asset material_asset;
-            asset_load_material_asset_path(editor->asset_system,
-                                           string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
-                                           &material_asset, &handle);
+            Shader_Asset material_asset;
+            asset_load_shader_asset_path(editor->asset_system,
+                                         string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
+                                         &handle);
         }
 
         //just need to swap the material asset and update the material instance
@@ -818,7 +823,7 @@ void editor_particle_view(Editor* editor)
 
         if (handle.handle != 0)
         {
-            Material_Asset* material_asset = material_asset_get(editor->asset_system->material_system, handle);
+            Shader_Asset* material_asset = shader_asset_get(editor->asset_system->material_system, handle);
 
             Reflection_Runtime_Struct reflection_asset = reflection_registry_get_struct(
                 editor->asset_system->global_reflection_registry, TYPE_STRING(Material_Asset));

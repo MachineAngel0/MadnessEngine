@@ -5,7 +5,6 @@
 #include "resource_types.h"
 
 
-
 //requirements:
 // works with the transform system so it can be moved
 // threadable for performance gains
@@ -85,7 +84,6 @@ void particle_effect_add_emitter_by_handle(Particle_System* particle_system, Par
 void particle_effect_remove_emitter(Particle_Effect* particle_effect, u32 emitter_index);
 
 
-
 void particle_effect_create_empty(Asset_System* asset_system, Particle_System* particle_system,
                                   const char* effect_name)
 {
@@ -117,14 +115,14 @@ void particle_emitter_create_default(Asset_System* asset_system,
         .material_key = 0,
     };
 
-    Material_Asset material_asset = {0};
-    Material_Instance mat_inst = {0};
+    MADNESS_UUID shader_uuid = {0};
+    MADNESS_UUID mat_uuid = {0};
 
-    asset_converter_material(asset_system,
-                             &default_particle_material_info,
-                             &material_asset,
-                             &mat_inst,
-                             emitter_name);
+    asset_converter_shader_and_material(asset_system,
+                                        &default_particle_material_info,
+                                        emitter_name,
+                                        &shader_uuid,
+                                        &mat_uuid);
 
 
     Particle_Emitter emitter = {
@@ -143,11 +141,14 @@ void particle_emitter_create_default(Asset_System* asset_system,
             .gravity = {0},
         },
         .name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(emitter_name, asset_system->heap_allocator),
-        .material_instance = mat_inst,
+        .material_uuid = mat_uuid,
         .material_handle = {0},
         .position = {0},
-        .particle =  {0},
+        .particle = {0},
     };
+
+    // asset_load_material_uuid(asset_system, mat_uuid, &emitter.material_handle);
+
 
     MADNESS_UUID uuid;
     asset_converter_particle_emitter(asset_system, &emitter, &uuid);

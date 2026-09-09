@@ -53,7 +53,7 @@ bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap_Allo
 }
 
 
-bool asset_material_asset_serialize(Material_Asset* mat_asset, FILE* fptr)
+bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr)
 {
     fwrite(&mat_asset->version, sizeof(mat_asset->version), 1, fptr);
 
@@ -70,16 +70,12 @@ bool asset_material_asset_serialize(Material_Asset* mat_asset, FILE* fptr)
     madness_uuid_serialize(mat_asset->uuid, fptr);
 
 
-
-
-
-
     return true;
 }
 
 
-bool asset_material_asset_deserialize(Material_Asset* mat_asset, FILE* fptr,
-                                      Heap_Allocator* allocator)
+bool asset_shader_deserialize(Shader_Asset* mat_asset, FILE* fptr,
+                              Heap_Allocator* allocator)
 {
     fread(&mat_asset->version, sizeof(mat_asset->version), 1, fptr);
     fread(&mat_asset->reflection_hash, sizeof(mat_asset->reflection_hash), 1, fptr);
@@ -98,39 +94,40 @@ bool asset_material_asset_deserialize(Material_Asset* mat_asset, FILE* fptr,
     madness_uuid_deserialize(&mat_asset->uuid, fptr);
 
 
+    return true;
+}
+
+bool asset_material_serialize(Material* material, FILE* fptr)
+{
+    madness_uuid_serialize(material->meta_data.shader_uuid, fptr);
+    madness_uuid_serialize(material->meta_data.material_uuid, fptr);
+    string_serialize(material->meta_data.material_name, fptr);
+    string_serialize(material->meta_data.name, fptr);
+
+
+    fwrite(&material->cpu_data.data_size, sizeof(material->cpu_data.data_size), 1, fptr);
+    fwrite(material->cpu_data.material_data, material->cpu_data.data_size, 1, fptr);
 
 
     return true;
 }
 
-MAPI bool asset_material_instance_serialize(Material_Instance* instance, FILE* fptr)
+
+bool asset_material_deserialize(Material* material, FILE* fptr, Heap_Allocator* allocator)
 {
-    madness_uuid_serialize(instance->material_asset_uuid, fptr);
-    madness_uuid_serialize(instance->material_instance_uuid, fptr);
-    fwrite(&instance->data_size, sizeof(instance->data_size), 1, fptr);
-    fwrite(instance->material_data, instance->data_size, 1, fptr);
+    madness_uuid_deserialize(&material->meta_data.shader_uuid, fptr);
+    madness_uuid_deserialize(&material->meta_data.material_uuid, fptr);
 
-    string_serialize(instance->material_name, fptr);
-    string_serialize(instance->name, fptr);
+    material->meta_data.material_name = allocator_heap_alloc(allocator, sizeof(String));
+    material->meta_data.name = allocator_heap_alloc(allocator, sizeof(String));
 
-    return true;
-}
+    string_deserialize_heap(material->meta_data.material_name, fptr, allocator);
+    string_deserialize_heap(material->meta_data.name, fptr, allocator);
 
+    fread(&material->cpu_data.data_size, sizeof(material->cpu_data.data_size), 1, fptr);
+    material->cpu_data.material_data = allocator_heap_alloc(allocator, material->cpu_data.data_size);
+    fread(material->cpu_data.material_data, material->cpu_data.data_size, 1, fptr);
 
-MAPI bool asset_material_instance_deserialize(Material_Instance* instance, FILE* fptr, Heap_Allocator* allocator)
-{
-    madness_uuid_deserialize(&instance->material_asset_uuid, fptr);
-    madness_uuid_deserialize(&instance->material_instance_uuid, fptr);
-    fread(&instance->data_size, sizeof(instance->data_size), 1, fptr);
-    instance->material_data = allocator_heap_alloc(allocator, instance->data_size);
-    fread(instance->material_data, instance->data_size, 1, fptr);
-
-
-    instance->material_name = allocator_heap_alloc(allocator, sizeof(String));
-    instance->name = allocator_heap_alloc(allocator, sizeof(String));
-
-    string_deserialize_heap(instance->material_name, fptr, allocator);
-    string_deserialize_heap(instance->name, fptr, allocator);
 
     return true;
 }
@@ -157,8 +154,7 @@ bool asset_mesh_serialize(Madness_Mesh_Runtime* runtime, FILE* fptr)
 
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
-        Material_Instance* material_instance = &runtime->material_instance[i];
-        asset_material_instance_serialize(material_instance, fptr);
+        madness_uuid_serialize(runtime->material_uuid[i], fptr);
     }
     return true;
 }
@@ -171,7 +167,7 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Heap_Allo
 
     runtime->submeshes = allocator_heap_alloc(allocator, sizeof(Madness_SubMesh) * runtime->mesh_count);
     runtime->mesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Mesh_GPU_Data) * runtime->mesh_count);
-    runtime->material_instance = allocator_heap_alloc(allocator, sizeof(Material_Instance) * runtime->mesh_count);
+    runtime->material_uuid = allocator_heap_alloc(allocator, sizeof(MADNESS_UUID) * runtime->mesh_count);
 
 
     fread(runtime->submeshes, sizeof(Madness_SubMesh) * runtime->mesh_count, 1, fptr);
@@ -201,8 +197,7 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Heap_Allo
 
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
-        Material_Instance* material_instance = &runtime->material_instance[i];
-        asset_material_instance_deserialize(material_instance, fptr, allocator);
+        madness_uuid_deserialize(&runtime->material_uuid[i], fptr);
     }
     return true;
 }
@@ -228,8 +223,7 @@ bool asset_skmesh_serialize(Madness_SkMesh_Runtime* runtime, FILE* fptr)
 
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
-        Material_Instance* material_instance = &runtime->material_instance[i];
-        asset_material_instance_serialize(material_instance, fptr);
+        madness_uuid_serialize(runtime->material_uuid[i], fptr);
     }
 
     //sk mesh data
@@ -297,7 +291,7 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
 
     runtime->submeshes = allocator_heap_alloc(allocator, sizeof(Madness_SubMesh) * runtime->mesh_count);
     runtime->mesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Mesh_GPU_Data) * runtime->mesh_count);
-    runtime->material_instance = allocator_heap_alloc(allocator, sizeof(Material_Instance) * runtime->mesh_count);
+    runtime->material_uuid = allocator_heap_alloc(allocator, sizeof(MADNESS_UUID) * runtime->mesh_count);
     runtime->skinned_submeshes = allocator_heap_alloc(allocator, sizeof(Madness_Skinned_SubMesh) * runtime->mesh_count);
     runtime->skmesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_SkMesh_GPU_Data) * runtime->mesh_count);
     runtime->animation_data = allocator_heap_alloc(allocator, sizeof(GLTF_Animation_Data));
@@ -330,8 +324,7 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
 
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
-        Material_Instance* material_instance = &runtime->material_instance[i];
-        asset_material_instance_deserialize(material_instance, fptr, allocator);
+        madness_uuid_deserialize(&runtime->material_uuid[i], fptr);
     }
 
 
@@ -410,6 +403,26 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
         }
     }
 
+
+    return true;
+}
+
+bool particle_emitter_serialize(Particle_Emitter* particle_emitter, FILE* fptr)
+{
+    fwrite(&particle_emitter->data, sizeof(Particle_Emitter_Data), 1, fptr);
+    string_serialize(particle_emitter->name, fptr);
+    madness_uuid_serialize(particle_emitter->material_uuid, fptr);
+
+    return true;
+}
+
+bool particle_emitter_deserialize(Particle_Emitter* particle_emitter, FILE* fptr, Heap_Allocator* allocator)
+{
+    fread(&particle_emitter->data, sizeof(Particle_Emitter_Data), 1, fptr);
+    particle_emitter->name = allocator_heap_alloc(allocator, sizeof(String));
+    string_deserialize_heap(particle_emitter->name, fptr, allocator);
+
+    madness_uuid_deserialize(&particle_emitter->material_uuid, fptr);
 
     return true;
 }
