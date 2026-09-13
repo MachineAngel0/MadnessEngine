@@ -3,6 +3,7 @@
 #include "sprite_type.h"
 
 #include "resource_import_types.h"
+#include "sort_key.h"
 #include "resource_types.h"
 
 

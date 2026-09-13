@@ -3,6 +3,9 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_shader_draw_parameters : enable
 #extension GL_ARB_gpu_shader_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_scalar_block_layout: require
+#extension GL_EXT_buffer_reference : require
 
 
 #include "shader_includes/test_uniform.glsl"
@@ -63,8 +66,6 @@ int indices[6] = int[6](0, 1, 2, 2, 3, 0);
 layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec2 out_uv;
 layout(location = 2) out flat uint out_texture_idx;
-
-
 
 
 void main() {

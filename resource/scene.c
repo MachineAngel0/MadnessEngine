@@ -51,6 +51,12 @@ bool scene_get_new_transform(Scene* scene, Transform_Handle* transform_handle, M
     return true;
 }
 
+Transform* scene_get_transform(Scene* scene, Transform_Handle handle)
+{
+    //TODO: check generation
+    return &scene->transforms[handle.handle];
+}
+
 void scene_update(Scene* scene, Asset_System* resource_system)
 {
     //generate the world space matrix, and that also takes care of all the local transforms

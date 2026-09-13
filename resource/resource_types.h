@@ -38,8 +38,8 @@
 #define ENGINE_FONTS_PATH "../z_assets_engine/fonts/"
 #define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
 #define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
-#define ENGINE_MATERIAL_PATH "../z_assets_engine/material/"
-#define ENGINE_MATERIAL_PATH_NO_SLASH "../z_assets_engine/material"
+#define ENGINE_SHADER_PATH "../z_assets_engine/material/"
+#define ENGINE_SHADER_PATH_NO_SLASH "../z_assets_engine/material"
 #define ENGINE_MATERIAL_INSTANCE_PATH "../z_assets_engine/material_instance/"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 #define ENGINE_PARTICLE_PATH "../z_assets_engine/particle/"
@@ -52,7 +52,7 @@
 #define ENGINE_FONTS_EXTENSION ".mfont"
 #define ENGINE_MESH_EXTENSION ".mmesh"
 #define ENGINE_SKMESH_EXTENSION ".mskin"
-#define ENGINE_MATERIAL_EXTENSION ".mmat"
+#define ENGINE_SHADER_EXTENSION ".mmat"
 #define ENGINE_MATERIAL_INSTANCE_EXTENSION ".mmi"
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 #define ENGINE_PARTICLE_EFFECT_EXTENSION ".mparticle"
@@ -72,6 +72,9 @@
 #define MAX_PARTICLE_COUNT 1000
 #define MAX_PARTICLE_EMITTER_COUNT 100
 #define MAX_PARTICLE_EFFECTS_COUNT 10
+
+
+#define MATERIAL_BUFFER_SIZE MB(16)
 
 
 
@@ -177,13 +180,12 @@ typedef struct Texture_Handle
 
 
 //Renderpass || translucency || Blend || Mesh Type
-typedef u64 Material_Key;
+typedef u64 Shader_Key;
 
 typedef struct Material_Handle
 {
     // Material_Key material_id;
-    u32 material_batch_index;
-    u32 material_index;
+    u32 handle;
     u32 generation;
 } Material_Handle;
 
@@ -191,7 +193,6 @@ typedef struct Material_Handle
 typedef struct Shader_Handle
 {
     u32 handle;
-    u32 generation;
 } Shader_Handle;
 
 
@@ -364,19 +365,8 @@ typedef struct Madness_Font_Runtime
 
 //////////////////////MATERIAL/SHADER/////////////////////////
 
-typedef enum Shader_Mesh_Type
-{
-    Shader_Mesh_Type_Mesh,
-    Shader_Mesh_Type_Skinned,
-    Shader_Mesh_Type_Particle,
-    // Shader_Mesh_Type_Foilage,
-} Shader_Mesh_Type;
 
-typedef enum Shader_Transluency_Type
-{
-    Shader_Transluency_Type_Opaque,
-    Shader_Transluency_Type_Transparent,
-} Shader_Transluency_Type;
+
 
 
 typedef enum Shader_Renderpass_Type
@@ -393,11 +383,10 @@ typedef enum Shader_Renderpass_Type
 } Shader_Renderpass_Type;
 
 
-typedef enum Shader_Blend
+typedef enum Shader_Blend_Mode
 {
-    Shader_Blend_Mode_Default, // oqaque
-    Shader_Blend_Mode_Alpha,
-    Shader_Blend_Mode_PreMultiplied_Alpha,
+    // oqaque
+    Shader_Blend_Mode_Default,
 
     Shader_Blend_Mode_Additive,
     Shader_Blend_Mode_Soft_Additive, // soft make it harder for white to blow out the screen
@@ -406,11 +395,17 @@ typedef enum Shader_Blend
     Shader_Blend_Mode_Multiply2x,
     //  Shader_Blend_Mode_SCREEN,
 
+    //NOTE: these dont need sorting but may have artifacts
     Shader_Blend_Mode_Subtract,
     Shader_Blend_Mode_Reverse_Subtract,
 
     //  Shader_Blend_Mode_MIN,
     //  Shader_Blend_Mode_MAX,
+
+    //NOTE: Requires sorting
+    Shader_Blend_Mode_Alpha,
+    Shader_Blend_Mode_PreMultiplied_Alpha,
+
 } Shader_Blend_Mode;
 
 
@@ -446,18 +441,22 @@ typedef struct PC_Shadow_Mapping
 } PC_Shadow_Mapping;
 
 
-typedef struct Material_Info
+typedef struct Shader_Info
 {
     Path_String* shader_name;
-    Path_String* material_name;
-
-    Shader_Renderpass_Type renderpass;
-    Shader_Transluency_Type transluency;
-    Shader_Mesh_Type mesh_type;
     Shader_Blend_Mode blend_mode;
+    bool two_sided;
+} Shader_Info;
 
-    Material_Key material_key;
-} Material_Info;
+typedef struct Shader_Asset
+{
+    //information about the material structure, think of it like the definition of a material/shader
+    u32 version;
+    u32 reflection_hash;
+    MADNESS_UUID uuid;
+    Shader_Info shader_info;
+    Shader_Key shader_key;
+} Shader_Asset;
 
 typedef struct Material_GPU_Definition
 {
@@ -468,15 +467,6 @@ typedef struct Material_GPU_Definition
     u32* field_offsets;
     Reflection_Type* types;
 } Material_GPU_Definition;
-
-typedef struct Shader_Asset
-{
-    //information about the material structure, think of it like the definition of a material/shader
-    u32 version;
-    u32 reflection_hash;
-    MADNESS_UUID uuid;
-    Material_Info material_info;
-} Shader_Asset;
 
 typedef struct Material_Definition
 {
@@ -490,7 +480,10 @@ typedef struct Material_Meta_Data
     // NOTE: the material data is the serialized data containing the UUID for textures
     MADNESS_UUID shader_uuid;
     MADNESS_UUID material_uuid;
-    Shader_Handle shader_handle;
+
+    u16 shader_id;
+    u16 permutation;
+
     String* material_name;
     String* name;
 } Material_Meta_Data;
@@ -509,21 +502,6 @@ typedef struct Material
 } Material;
 
 
-
-
-typedef struct Material_Batch
-{
-    //to solve the problem of having different batches for the material types, it would make sense to have a sort key
-    // https://realtimecollisiondetection.net/blog/?p=86
-
-    Dynamic_Array* material_data;
-    DYNAMIC_ARRAY_TYPE(Material*)* material_meta_data; //store the pointer to the material asset
-
-    //TODO:
-    // DYNAMIC_ARRAY_TYPE(u32) free_list;
-    // DYNAMIC_ARRAY_TYPE(u32)* generations;
-
-} Material_Batch;
 
 
 ///////////////// Particle  //////////////////////
@@ -766,9 +744,9 @@ typedef struct Madness_Skinned_Submesh_Instance
 typedef struct Madness_Skinned_Mesh_Instance
 {
     u32 mesh_count;
-    Madness_Skinned_Submesh_Instance* submesh_instances;
+    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
 
-    Madness_SkMesh_Handle_Internal skinned_mesh_asset;
+    u32 mesh_asset_index;
     Transform_Handle transform_handle;
 
     Animation_Handle animation_handle;
@@ -838,6 +816,7 @@ typedef struct Madness_Skinned_Mesh
     Madness_SubMesh* mesh_data;
     MADNESS_UUID* material_instance;
     Material_Handle* material_handles;
+    // Madness_Mesh madness_mesh;
     //
     Madness_Skinned_SubMesh* skinned_mesh_data;
     GLTF_Animation_Data* animation_data;
@@ -872,9 +851,12 @@ typedef struct Mesh_GPU_Upload
 
 typedef struct Skinned_Mesh_GPU_Upload
 {
+
     Madness_Skinned_SubMesh* skinned_submesh;
     Madness_SkMesh_GPU_Data* skinned_gpu_data;
     //TODO: Heap_Allocator* mesh_memory_allocator; // ref
+
+    Heap_Allocator* mesh_memory_allocator; // ref
 } Skinned_Mesh_GPU_Upload;
 
 
@@ -895,6 +877,7 @@ typedef struct Madness_SkMesh_Runtime
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
     MADNESS_UUID* material_uuid;
+    MADNESS_UUID skinned_mesh_uuid;
 
     Madness_Skinned_SubMesh* skinned_submeshes;
     Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
@@ -905,33 +888,59 @@ typedef struct Madness_SkMesh_Runtime
 ///////////////// Systems  //////////////////////
 
 typedef struct Shader_Mat_Mapping{
-    Path_String* shader_name[MAX_MATERIAL_COUNT];
-    Path_String* material_name[MAX_MATERIAL_COUNT];
-    Shader_Mesh_Type* mesh_type[MAX_MATERIAL_COUNT];
+    String* shader_name[MAX_MATERIAL_COUNT];
+    String* material_name[MAX_MATERIAL_COUNT];
+    Material_Definition material_definition[MAX_MATERIAL_COUNT];
 }Shader_Mat_Mapping;
+
+typedef struct Material_Record
+{
+    u64 offset;
+    u64 size;
+}Material_Record;
+
 
 typedef struct Material_System
 {
+
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
-    //sort material batches by their mesh type, possibly fine grain it later
-    Material_Batch material_batch[MAX_MATERIAL_COUNT];
+    //NOTE: each shader asset get its own material definition,
+    // this is technically duplicating what should only exist once but rn its fine
+
     Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
-    Material_Definition material_definition[MAX_MATERIAL_COUNT];
-    u32 shader_asset_generation[MAX_MATERIAL_COUNT];
-    u32 material_count;
+    u32 shader_asset_to_mapping[MAX_MATERIAL_COUNT];
+    u32 shader_count;
 
+    //TODO:
+    RING_QUEUE_TYPE(Shader_Asset)* new_shaders_pipeline_creation;
 
-    u32 free_list[MAX_MATERIAL_COUNT];
-    u32 free_count;
-
-    //TODO: if needed reusable material slots
-    // u32* free_mat_index;
-
-
+    //tells us the mapping between shader and material, as well as the material definition
     Shader_Mat_Mapping shader_to_material_mapping;
     u32 shader_to_material_count;
 
+
+    //TODO: some way to get the shader information by using the material handle
+    //all use the same index
+    Material_Record material_record[MAX_MATERIAL_COUNT];
+    Material materials[MAX_MATERIAL_COUNT];
+    u32 generation[MAX_MATERIAL_COUNT];
+    u64 material_record_count;
+    // u32 material_index_to_shader_index[MAX_MATERIAL_COUNT];
+
+    //TODO:
+    // u32* record_freelist[MAX_MATERIAL_COUNT];
+    // u64 record_freelist_count;
+
+    //we can have two buffers, the active one gets uploaded into the cpu,
+    // the second one, gets cleared then, traverses the material record and uploads data into it from the active buffer, updating the offsets
+    // then the next frame, we do a swap
+
+    uint8_t* material_buffer;
+    u64 material_buffer_offset;
+    u64 material_buffer_size;
+
+    //TODO: might not be a bad idea to have a cpu based buffer as well for development
 
 } Material_System;
 
@@ -1017,7 +1026,7 @@ typedef struct Mesh_System
     Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
     u32 mesh_instance_count;
 
-    Madness_SubMesh_Instance submesh_instance[MAX_MESH_COUNT];
+    Madness_SubMesh_Instance submesh_instances[MAX_MESH_COUNT];
     u32 submesh_instance_count;
 
     //skinned
@@ -1027,7 +1036,8 @@ typedef struct Mesh_System
     Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
-
+    Madness_Skinned_Submesh_Instance skinned_submesh[MAX_MESH_COUNT];
+    u32 skinned_submesh_count;
 
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;
@@ -1112,16 +1122,26 @@ typedef struct Particle_System
 //these are all just references to the data, they do not own anything
 typedef struct Render_Packet_3D
 {
+
+    Scene* scene;
+
+
     //geometry data for indirect draws
 
     //TODO: we should have a dirty bit for generating any new batches
-    Material_Batch* material_batch;
-    Shader_Asset* material_assets;
-    Material_Definition* material_definition;
+    Shader_Asset* shader_assets;
     u32 material_count;
+
+    u8* material_buffer;
+    u64 material_buffer_byte_size;
+
 
     Madness_Mesh_Instance* mesh_instances;
     u32 mesh_instances_count;
+
+    Madness_SubMesh_Instance* submesh_instances;
+    u32 submesh_instances_count;
+
 
     Madness_Skinned_Mesh_Instance* skinned_instances;
     u32 skinned_instances_count;

@@ -263,18 +263,34 @@ const char* string_to_c_string_alloc_heap(const String* s, Heap_Allocator* alloc
 }
 
 
-bool string_compare_c_string(const String* str1, const char* c_str)
+
+bool string_compare_c_string_length(const String* str1, const char* c_str, size_t c_string_length)
 {
     MASSERT(str1 != NULL);
     MASSERT(c_str != NULL);
 
-    for (uint32_t i = 0; i < str1->length; i++)
+    if (c_string_length != str1->length) return false;
+
+
+    for (uint32_t i = 0; i < c_string_length; i++)
     {
         if (str1->chars[i] != c_str[i]) return false;
     }
 
     return true;
 }
+
+bool string_compare_c_string(const String* str1, const char* c_str)
+{
+    MASSERT(str1 != NULL);
+    MASSERT(c_str != NULL);
+
+    size_t c_string_length = strlen(c_str);
+
+    return string_compare_c_string_length(str1, c_str, c_string_length);
+}
+
+
 
 String* string_from_int(s32 value, Allocator* allocator)
 {

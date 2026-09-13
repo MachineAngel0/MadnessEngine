@@ -930,38 +930,33 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                                                                 emissive_strength;
         }
 
-        Material_Info default_info = {0};
+        Shader_Info default_shader_info = {0};
         if (data->skins_count > 0)
         {
-            default_info = (Material_Info){
+            default_shader_info = (Shader_Info){
                 .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
-                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
-                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
-                .transluency = Shader_Transluency_Type_Opaque,
-                .mesh_type = Shader_Mesh_Type_Skinned,
                 .blend_mode = Shader_Blend_Mode_Default,
             };
         }
         else
         {
-            default_info = (Material_Info){
+            default_shader_info = (Shader_Info){
                 .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
-                .material_name = &STRING_STRLEN(MATERIAL_DEFAULT_NAME),
-                .renderpass = Renderpass_Type_Color | Renderpass_Type_Predepth | Renderpass_Type_Shadow,
-                .transluency = Shader_Transluency_Type_Opaque,
-                .mesh_type = Shader_Mesh_Type_Mesh,
                 .blend_mode = Shader_Blend_Mode_Default,
             };
         }
 
+        Shader_Handle handle;
+        shader_get_or_create(asset_system, &default_shader_info, &handle);
+
+
         MADNESS_UUID shader_uuid;
         if (data->meshes[mesh_idx].primitives->material->name)
         {
-            asset_converter_shader_and_material_from_data(asset_system, &default_info,
-                                                data->meshes[mesh_idx].primitives->material->name, cur_mat, &shader_uuid,
-                                                &material_uuids[mesh_idx]);
-
-
+            asset_converter_material_from_data(asset_system, &handle,
+                                               data->meshes[mesh_idx].primitives->material->name, cur_mat,
+                                               &shader_uuid,
+                                               &material_uuids[mesh_idx]);
         }
         else
         {
@@ -974,11 +969,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_c_string(string_mat_name, "No_Mat_Name");
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
-            asset_converter_shader_and_material_from_data(asset_system, &default_info,
-                                                     string_builder_to_c_string(string_mat_name), cur_mat, &shader_uuid,
-                                                     &material_uuids[mesh_idx]);
+            asset_converter_material_from_data(asset_system,  &handle,
+                                               string_builder_to_c_string(string_mat_name), cur_mat,
+                                               &shader_uuid,
+                                               &material_uuids[mesh_idx]);
         }
-
     }
 
 
@@ -1309,29 +1304,16 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset)
 {
     PROFILE_ZONE(asset_converter_material_asset)
-
-    //TODO: check the out_shder_uuid and see how its bieng generated
-    MASSERT(false);
-
     MASSERT(material_asset)
-
-    MASSERT(material_asset->uuid.high != 0)
-    MASSERT(material_asset->uuid.low != 0)
-
-    MASSERT(material_asset->material_info.material_name)
-    MASSERT(material_asset->material_info.shader_name)
+    madness_uuid_validate(material_asset->uuid);
+    MASSERT(material_asset->shader_info.shader_name)
 
 
     //TODO: we only want to serialize the material asset if it does not exist
     //NOTE: we serialize material instances separately
-    String_Builder* str_builder = string_builder_create(256, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material_asset->material_info.material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material_asset->material_info.shader_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_u64(str_builder, material_asset->material_info.material_key, asset_system->frame_allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
+
+    String_Builder* str_builder = shader_asset_construct_path(asset_system->material_system, material_asset,
+                                                              asset_system->frame_allocator);
 
     if (!filesystem_does_file_exists(string_builder_to_c_string(str_builder)))
     {
@@ -1463,11 +1445,9 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
     return true;
 }
 
-bool asset_converter_shader_and_material(Asset_System* asset_system,
-                                         Material_Info* material_info,
-                                         const char* mat_inst_name,
-                                         MADNESS_UUID* out_shader_uuid,
-                                         MADNESS_UUID* out_material_uuid)
+bool asset_converter_material_from_shader_handle(Asset_System* asset_system, Shader_Handle* shader_handle,
+                                                 const char* mat_inst_name, MADNESS_UUID* out_shader_uuid,
+                                                 MADNESS_UUID* out_material_uuid)
 {
     MASSERT(out_shader_uuid)
     MASSERT(out_material_uuid)
@@ -1476,26 +1456,22 @@ bool asset_converter_shader_and_material(Asset_System* asset_system,
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
-    Shader_Asset shader_asset;
-    //create the material asset and instance, the functions will serialize the defaults
-    shader_asset_create(asset_system,
-                        material_info,
-                        &shader_asset);
+    u32 def_index = asset_system->material_system->shader_asset_to_mapping[shader_handle->handle];
+    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.
+                                                              material_definition[def_index];
 
-
-    Material_Definition material_definition;
-    material_definition_create(asset_system,
-                               &material_definition,
-                               string_to_c_string_allocator(material_info->material_name, scratch.allocator));
+    u64 data_size = material_definition->reflection_material_data.struct_size;
+    void* data = allocator_alloc(asset_system->frame_allocator, data_size);
 
     Material material;
-    material_create(asset_system,
-                    &shader_asset,
-                    &material_definition,
-                    &material,
-                    mat_inst_name);
+    material_create_from_data(asset_system,
+                              shader_handle,
+                              &material,
+                              mat_inst_name,
+                              data);
 
-    *out_shader_uuid = shader_asset.uuid;
+    Shader_Asset* shader_asset = shader_asset_get(asset_system->material_system, *shader_handle);
+    *out_shader_uuid = shader_asset->uuid;
     *out_material_uuid = material.meta_data.material_uuid;
 
 
@@ -1507,12 +1483,13 @@ bool asset_converter_shader_and_material(Asset_System* asset_system,
     return true;
 }
 
-bool asset_converter_shader_and_material_from_data(Asset_System* asset_system,
-                                                   Material_Info* material_info,
-                                                   const char* mat_inst_name,
-                                                   void* data,
-                                                   MADNESS_UUID* out_shader_uuid,
-                                                   MADNESS_UUID* out_material_uuid)
+
+bool asset_converter_material_from_data(Asset_System* asset_system,
+                                        Shader_Handle* shader_handle,
+                                        const char* mat_inst_name,
+                                        void* data,
+                                        MADNESS_UUID* out_shader_uuid,
+                                        MADNESS_UUID* out_material_uuid)
 {
     MASSERT(out_shader_uuid)
     MASSERT(out_material_uuid)
@@ -1521,27 +1498,16 @@ bool asset_converter_shader_and_material_from_data(Asset_System* asset_system,
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
-    Shader_Asset shader_asset;
-    //create the material asset and instance, the functions will serialize the defaults
-    shader_asset_create(asset_system,
-                        material_info,
-                        &shader_asset);
-
-
-    Material_Definition material_definition;
-    material_definition_create(asset_system,
-                               &material_definition,
-                               string_to_c_string_allocator(material_info->material_name, scratch.allocator));
 
     Material material;
     material_create_from_data(asset_system,
-                              &shader_asset,
-                              &material_definition,
+                              shader_handle,
                               &material,
                               mat_inst_name,
                               data);
 
-    *out_shader_uuid = shader_asset.uuid;
+    Shader_Asset* shader_asset = shader_asset_get(asset_system->material_system, *shader_handle);
+    *out_shader_uuid = shader_asset->uuid;
     *out_material_uuid = material.meta_data.material_uuid;
 
 

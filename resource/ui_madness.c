@@ -239,7 +239,6 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
     array_clear(madness_ui->pop_up_frame_state);
 
     PROFILE_ZONE_END(madness_ui_begin)
-
 }
 
 
@@ -336,7 +335,6 @@ void madness_ui_end(void)
     input_get_mouse_change(&madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
 
     PROFILE_ZONE_END(madness_ui_end)
-
 }
 
 UI_Render_Packet madness_ui_get_ui_render_data(void)
@@ -651,6 +649,7 @@ bool madness_ui_is_outside_window(vec2s size, bool advance_cursor)
         for (u32 i = 0; i < madness_ui->window_states_stack->num_items; i++)
         {
             Window_State* window_state = *(Window_State**)stack_get(madness_ui->window_states_stack, i);
+
             if (window_state->window_relative_cursor_pos.y < window_state->scroll_offset -
                 madness_ui_get_default_element_height() ||
                 (window_state->window_relative_cursor_pos.y + window_state->header_size.y - window_state->scroll_offset
@@ -662,6 +661,8 @@ bool madness_ui_is_outside_window(vec2s size, bool advance_cursor)
                 }
                 return true;
             }
+
+
         }
 
 
@@ -2167,7 +2168,6 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
 
             if (mouse_change_x > 0)
             {
-
                 *i += increment_value;
                 // *f += increment_override;
                 has_changed = true;
@@ -2220,7 +2220,6 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
             set_active(node->hash_id);
         }
     }
-
 
 
     return has_changed;
@@ -2545,7 +2544,6 @@ void madness_ui_file_picker(String id)
     text_box->color = madness_ui->editor_style.textbox_color;
 
 
-
     String* display_string = string_builder_to_string(string_state->active_menu_item);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
@@ -2553,7 +2551,6 @@ void madness_ui_file_picker(String id)
                                UI_ALIGNMENT_CENTER);
 
     madness_ui_advance_cursor(text_box->size);
-
 }
 
 bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, float increment_value)
@@ -2813,6 +2810,14 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
     else if (is_hot(combo_box_node->hash_id))
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
+        if (input_is_mouse_wheel_up())
+        {
+            *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size-1);
+        }
+        if (input_is_mouse_wheel_down())
+        {
+            *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size-1);
+        }
     }
 
     //basically we want to defer this draw after everything else
@@ -2894,7 +2899,7 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
 
 
 bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array,
-                          u32 string_array_size)
+                           u32 string_array_size)
 {
     //TODO: should size to the largest element or currently named string
     String selected_string = *string_array[*selected_value];
@@ -2927,6 +2932,15 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
     else if (is_hot(combo_box_node->hash_id))
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
+
+        if (input_is_mouse_wheel_up())
+        {
+            *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size-1);
+        }
+        if (input_is_mouse_wheel_down())
+        {
+            *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size-1);
+        }
     }
 
     //basically we want to defer this draw after everything else
@@ -3040,6 +3054,14 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     else if (is_hot(combo_box_node->hash_id))
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
+        if (input_is_mouse_wheel_up())
+        {
+            *selected_value = clamp_uint((*selected_value) - 1, 0, char_array_size-1);
+        }
+        if (input_is_mouse_wheel_down())
+        {
+            *selected_value = clamp_uint((*selected_value) + 1, 0, char_array_size-1);
+        }
     }
 
     //basically we want to defer this draw after everything else
@@ -3482,7 +3504,7 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
 
         String_Builder* builder = string_builder_create(256, madness_ui->frame_allocator);
         string_builder_append_c_string(builder, field_info.name);
-        string_builder_append_c_string(builder, "_");
+        string_builder_append_c_string(builder, ": ");
         string_builder_append_c_string(builder, id);
         string_builder_append_c_string(builder, ": ");
 
@@ -3956,8 +3978,7 @@ void madness_ui_serialize_windows()
 
     fclose(file);
 
-    platform_file_copy( MADNESS_UI_SAVE_FILE_PATH, MADNESS_UI_SAVE_FILE_PATH_TEMP);
-
+    platform_file_copy(MADNESS_UI_SAVE_FILE_PATH, MADNESS_UI_SAVE_FILE_PATH_TEMP);
 }
 
 void madness_ui_deserialize_windows()

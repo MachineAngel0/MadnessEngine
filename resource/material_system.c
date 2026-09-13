@@ -3,38 +3,36 @@
 
 bool material_system_init(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system)
 {
-    memset(material_system->material_batch, 0, MAX_MATERIAL_COUNT * sizeof(Material_Batch));
     memset(material_system->shader_asset, 0, MAX_MATERIAL_COUNT * sizeof(Shader_Asset));
-    memset(material_system->material_definition, 0, MAX_MATERIAL_COUNT * sizeof(Material_Definition));
-    memset(material_system->shader_asset_generation, 0, MAX_MATERIAL_COUNT * sizeof(u32));
-    memset(material_system->free_list, 0, MAX_MATERIAL_COUNT * sizeof(u32));
-    material_system->material_count = 0;
+    material_system->shader_count = 0;
 
 
-    material_system->free_count = MAX_MATERIAL_COUNT;
-    s64 temp_i = MAX_MATERIAL_COUNT - 1;
-    while (temp_i >= 0)
-    {
-        material_system->free_list[temp_i] = temp_i;
-        temp_i--;
-    }
+    memset(material_system->material_record, 0, MAX_MATERIAL_COUNT * sizeof(Material_Record));
+    memset(material_system->materials, 0, MAX_MATERIAL_COUNT * sizeof(Material));
+    memset(material_system->generation, 0, MAX_MATERIAL_COUNT * sizeof(u32));
+
+    material_system->material_record_count = 0;
+
+
+    material_system->material_buffer = memory_system_alloc(memory_system, MATERIAL_BUFFER_SIZE,
+                                                           MEMORY_SUBSYSTEM_MATERIAL);
+    material_system->material_buffer_offset = 0;
+    material_system->material_buffer_size = MATERIAL_BUFFER_SIZE;
 
 
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "mesh", TYPE_STRING(Material_Default),
-                                                Shader_Mesh_Type_Mesh);
+                                                "mesh", TYPE_STRING(Material_Default));
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "skinned_mesh", TYPE_STRING(Material_Default),
-                                                Shader_Mesh_Type_Skinned);
+                                                "skinned_mesh", TYPE_STRING(Material_Default));
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "billboard_spherical", TYPE_STRING(Material_Spherical_Billboard_CPU),
-                                                Shader_Mesh_Type_Particle);
+                                                "billboard_spherical", TYPE_STRING(Material_Spherical_Billboard_CPU));
 
 
+    //load all shaders up front
     // if (app_is_debug_build())
     // {
     Asset_List_Scan* list_scan =
-        asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, ENGINE_MATERIAL_PATH_NO_SLASH);
+        asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, ENGINE_SHADER_PATH_NO_SLASH);
 
     Shader_Handle handle;
     for (u32 i = 0; i < list_scan->count; i++)
@@ -64,20 +62,26 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d)
 {
-    render_packet_3d->material_batch = material_system->material_batch;
-    render_packet_3d->material_assets = material_system->shader_asset;
-    render_packet_3d->material_definition = material_system->material_definition;
-    render_packet_3d->material_count = material_system->material_count;
+    render_packet_3d->shader_assets = material_system->shader_asset;
+    render_packet_3d->material_count = material_system->shader_count;
 
 
     return true;
 }
 
-bool material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
-                                                 const char* shader_name, const char* material_name,
-                                                 Shader_Mesh_Type shader_type)
+void material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
+                                                 const char* shader_name, const char* material_name)
 {
-    //TODO: CHECK IF VALID PATH AND VALID MATERIAL NAME
+    //TODO: CHECK IF VALID PATH AND VALID MATERIAL NAME, also that we are not adding duplicates
+
+    //check if shader actual exists
+    // shader_name;
+
+    //check if the material exists
+    Reflection_Runtime_Struct material_reflection_struct =
+        reflection_registry_get_struct(asset_system->material_reflection_registry, material_name);
+
+    MASSERT(material_reflection_struct.field_count > 0);
 
     material_system->shader_to_material_mapping.shader_name[material_system->shader_to_material_count] =
         STRING_CREATE_FROM_BUFFER_ALLOCATOR(shader_name, asset_system->allocator);
@@ -85,117 +89,93 @@ bool material_system_add_shader_material_mapping(Asset_System* asset_system, Mat
     material_system->shader_to_material_mapping.material_name[material_system->shader_to_material_count] =
         STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_name, asset_system->allocator);
 
+    //create the material definition
+    Material_Definition* material_definition = &material_system->shader_to_material_mapping.material_definition[
+        material_system->shader_to_material_count];
+    material_definition_create(asset_system, material_definition, material_name, asset_system->allocator);
+
+
     material_system->shader_to_material_count++;
 }
 
-bool material_system_get_shader_material_mapping(Asset_System* asset_system, const char* shader_name,
-    Path_String* out_string)
+bool shader_material_mapping_get_material_name_and_defintion(Asset_System* asset_system,
+                                                             String* shader_name,
+                                                             String* out_string,
+                                                             Material_Definition* out_definition,
+                                                             Allocator* allocator)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
-
-    String* shader_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(shader_name, scratch.allocator);
-
     bool found = false;
     for (u32 i = 0; i < asset_system->material_system->shader_to_material_count; i++)
     {
-        if (string_compare(shader_string,
-                           asset_system->material_system->shader_to_material_mapping.shader_name[i]))
+        if (string_compare(asset_system->material_system->shader_to_material_mapping.shader_name[i],
+                           shader_name))
         {
-            out_string = asset_system->material_system->shader_to_material_mapping.shader_name[i];
+            out_string = string_create_allocator(shader_name->chars, shader_name->length, allocator);
+            *out_definition = asset_system->material_system->shader_to_material_mapping.material_definition[i];
             found = true;
             break;
         }
     }
 
+    return found;
+}
 
-    scratch_allocator_end(scratch);
+bool shader_material_mapping_get_index(Asset_System* asset_system, String* shader_name, u32* index)
+{
+    for (u32 i = 0; i < asset_system->material_system->shader_to_material_count; i++)
+    {
+        if (string_compare(asset_system->material_system->shader_to_material_mapping.shader_name[i],
+                           shader_name))
+        {
+            *index = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool shader_material_mapping_get_material_defintion(Asset_System* asset_system, String* shader_name,
+                                                    Material_Definition* out_definition)
+{
+    bool found = false;
+    for (u32 i = 0; i < asset_system->material_system->shader_to_material_count; i++)
+    {
+        if (string_compare(asset_system->material_system->shader_to_material_mapping.shader_name[i],
+                           shader_name))
+        {
+            *out_definition = asset_system->material_system->shader_to_material_mapping.material_definition[i];
+            found = true;
+            break;
+        }
+    }
 
     return found;
 }
 
-Shader_Asset* shader_asset_acquire(Material_System* material_system, Shader_Handle* out_shader_handle)
+
+String_Builder* shader_asset_construct_path(Material_System* material_system, Shader_Asset* asset, Allocator* allocator)
 {
-    MASSERT(out_shader_handle);
+    String_Builder* str_builder = string_builder_create(256, allocator);
+    string_builder_append_c_string(str_builder, ENGINE_SHADER_PATH);
+    string_builder_append_string(str_builder, asset->shader_info.shader_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_u64(str_builder, asset->shader_key, allocator);
+    string_builder_append_c_string(str_builder, ENGINE_SHADER_EXTENSION);
 
-    //check the free index's
-    if (material_system->free_count <= 0)
-    {
-        MASSERT(false);
-        return NULL;
-    }
-
-    //get a free slot
-    u32 index = material_system->free_list[material_system->free_count--];
-
-    *out_shader_handle = (Shader_Handle){
-        .handle = index,
-        .generation = material_system->shader_asset_generation[index],
-    };
-
-    return &material_system->shader_asset[index];
+    return str_builder;
 }
 
-bool shader_asset_release(Material_System* material_system, Shader_Handle shader_handle)
-{
-    material_system->free_list[material_system->free_count] = shader_handle.handle;
-    material_system->shader_asset_generation[material_system->free_count]++;
-    material_system->free_count++;
-    return true;
-}
 
 Shader_Asset* shader_asset_get(Material_System* material_system, Shader_Handle out_shader_handle)
 {
-    if (material_system->shader_asset_generation[out_shader_handle.generation] != out_shader_handle.generation)
-    {
-        WARN("material_asset_get: OLD GENERATION, handing back 0 index")
-        return &material_system->shader_asset[0];
-    }
-
     return &material_system->shader_asset[out_shader_handle.handle];
 }
 
 
-bool material_system_material_exist_by_uuid(Asset_System* asset_system, MADNESS_UUID uuid)
-{
-    Material_System* material_system = asset_system->material_system;
-
-    for (u32 i = 0; i < material_system->material_count; i++)
-    {
-        if (madness_uuid_compare(material_system->shader_asset[i].uuid, uuid))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool material_system_shader_exists_by_material_key(Asset_System* asset_system, Material_Key material_id,
-                                                   Shader_Asset* out_asset, Shader_Handle* out_handle)
-{
-    Material_System* material_system = asset_system->material_system;
-
-
-    for (u32 i = 0; i < material_system->material_count; i++)
-    {
-        if (material_system->shader_asset[i].material_info.material_key == material_id)
-        {
-            *out_asset = material_system->shader_asset[i];
-
-            *out_handle = (Shader_Handle){
-                .handle = i,
-                .generation = material_system->shader_asset_generation[i]
-            };
-
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
 void material_definition_create(Asset_System* asset_system,
-                                Material_Definition* material_definition, const char* material_name)
+                                Material_Definition* material_definition,
+                                const char* material_name, Allocator* allocator)
 {
     //get the data from the reflection system and hash it
     material_definition->reflection_material_data = reflection_registry_get_struct(
@@ -208,13 +188,13 @@ void material_definition_create(Asset_System* asset_system,
     Reflection_Runtime_Struct* reflection_material = &material_definition->reflection_material_data;
     Material_GPU_Definition* material_gpu_definition = &material_definition->material_gpu_definition;
     material_gpu_definition->field_count = reflection_material->field_count;
-    material_gpu_definition->name_hashes = allocator_alloc(asset_system->frame_allocator,
+    material_gpu_definition->name_hashes = allocator_alloc(allocator,
                                                            sizeof(u64) *
                                                            reflection_material->field_count);
-    material_gpu_definition->field_offsets = allocator_alloc(asset_system->frame_allocator,
+    material_gpu_definition->field_offsets = allocator_alloc(allocator,
                                                              sizeof(u32) *
                                                              reflection_material->field_count);
-    material_gpu_definition->types = allocator_alloc(asset_system->frame_allocator,
+    material_gpu_definition->types = allocator_alloc(allocator,
                                                      sizeof(Reflection_Type) *
                                                      reflection_material->field_count);
     material_gpu_definition->struct_size = 0;
@@ -239,111 +219,53 @@ void material_definition_create(Asset_System* asset_system,
 }
 
 
-bool shader_asset_load_definitions(Asset_System* asset_system, Shader_Asset* shader_asset)
+bool shader_asset_acquire_load_data(Asset_System* asset_system, Shader_Asset* loaded_asset, Shader_Handle* out_handle)
 {
-    //NOTE: we assume that at this point the asset is not loaded
+    //NOTE: we assume that at this point the asset is loaded
 
     Material_System* material_system = asset_system->material_system;
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
-
     //we already have our reflection data, we load it, we compare and do any updates, create the gpu definition,
     //serialize it back out, then load it into the material system
 
-    Material_Batch* batch = &material_system->material_batch[material_system->material_count];
-    Shader_Asset* cur_material_asset = &material_system->shader_asset[material_system->material_count];
-    *cur_material_asset = *shader_asset;
-    Material_Definition* material_definition = &material_system->material_definition[material_system->material_count];
+    u32 shader_index = material_system->shader_count++;
+    *out_handle = (Shader_Handle){.handle = shader_index};
 
-    //load in the mat definition
-    material_definition_create(asset_system,
-                               material_definition,
-                               string_to_c_string_allocator(shader_asset->material_info.material_name,
-                                                            scratch.allocator));
+    //take a copy of the loaded asset
+    Shader_Asset* shader_asset = &material_system->shader_asset[shader_index];
+    shader_asset->shader_info.shader_name = string_duplicate_heap(loaded_asset->shader_info.shader_name,
+                                                                  asset_system->heap_allocator);
+    shader_asset->shader_info.two_sided = loaded_asset->shader_info.two_sided;
+    shader_asset->shader_info.blend_mode = loaded_asset->shader_info.blend_mode;
+    shader_asset->reflection_hash = loaded_asset->reflection_hash;
+    shader_asset->shader_key = loaded_asset->shader_key;
+    shader_asset->uuid = loaded_asset->uuid;
+    shader_asset->version = loaded_asset->version;
+
+    Material_Definition out_definition = {0};
+    shader_material_mapping_get_material_defintion(asset_system,
+                                                   loaded_asset->shader_info.shader_name,
+                                                   &out_definition);
 
     //compare hashes, if its different we simply just overwrite the hash and the mat inst will check on its load
-    if (cur_material_asset->reflection_hash != material_definition->reflection_hash)
+    if (shader_asset->reflection_hash != shader_asset->reflection_hash)
     {
-        cur_material_asset->reflection_hash = material_definition->reflection_hash;
-        asset_converter_shader_asset(asset_system, cur_material_asset);
+        shader_asset->reflection_hash = out_definition.reflection_hash;
+        asset_converter_shader_asset(asset_system, shader_asset);
     }
-
-
-    material_system->material_count++;
-
-    //create the material array
-    batch->material_data = _dynamic_array_create(material_definition->material_gpu_definition.struct_size, 10,
-                                                 asset_system->heap_allocator);
-
-
-    scratch_allocator_end(scratch);
-
 
     return true;
 }
 
 
-bool material_system_change_material_param(Asset_System* asset_system, Material_Handle material_handle,
-                                           const char* param_name, const void* new_data)
-{
-    Material_System* material_system = asset_system->material_system;
-
-    Material_Batch* batch = NULL;
-    u32 material_index = 0;
-    for (u32 i = 0; i < material_system->material_count; i++)
-    {
-        if (material_system->shader_asset[i].material_info.material_key == material_handle.material_batch_index)
-        {
-            batch = &material_system->material_batch[i];
-            material_index = i;
-        }
-    }
-
-    MASSERT(batch);
-
-    Shader_Asset* shader_asset = &material_system->shader_asset[material_index];
-    Material_Definition* material_definition = &material_system->material_definition[material_index];
-
-    const u64 hash_name = c_string_hash_u64(param_name);
-
-    for (int i = 0; i < material_definition->material_gpu_definition.field_count; ++i)
-    {
-        if (material_definition->material_gpu_definition.name_hashes[i] == hash_name)
-        {
-            void* mat_data = _dynamic_array_get(batch->material_data, material_handle.material_index);
-            memcpy((u8*)mat_data + material_definition->material_gpu_definition.field_offsets[i], new_data,
-                   reflection_type_get_size(*material_definition->material_gpu_definition.types));
-            return true;
-        }
-    }
-
-    MASSERT(false);
-    return false;
-}
-
-void material_system_change_material_texture(Asset_System* asset_system, Material_Handle material_handle,
-                                             const char* param_name, const char* texture_name)
-{
-    MASSERT(false);
-}
-
-void material_system_swap_material(Asset_System* asset_system, Material_Handle material_handle,
-                                   const char* material_name)
-{
-    MASSERT(false);
-}
-
-
-Material_Key material_generate_id(Material_Info* material_info)
+Shader_Key shader_generate_key(Shader_Info* shader_info)
 {
     u64 hash = hash_64_continous_start();
-    hash = hash_64_continous(hash, (u8*)&material_info->mesh_type, sizeof(material_info->mesh_type));
-    hash = hash_64_continous(hash, (u8*)&material_info->transluency, sizeof(material_info->transluency));
-    hash = hash_64_continous(hash, (u8*)&material_info->blend_mode, sizeof(material_info->blend_mode));
-    hash = hash_64_continous(hash, (u8*)&material_info->renderpass, sizeof(material_info->renderpass));
-    hash = hash_64_continous(hash, (u8*)material_info->material_name->chars, material_info->material_name->length);
-    hash = hash_64_continous(hash, (u8*)material_info->shader_name->chars, material_info->shader_name->length);
+    hash = hash_64_continous(hash, (u8*)&shader_info->blend_mode, sizeof(shader_info->blend_mode));
+    hash = hash_64_continous(hash, (u8*)&shader_info->two_sided, sizeof(shader_info->two_sided));
+    // hash = hash_64_continous(hash, (u8*)shader_info->material_name->chars, shader_info->material_name->length);
+    hash = hash_64_continous(hash, (u8*)shader_info->shader_name->chars, shader_info->shader_name->length);
 
     return hash;
 }
@@ -373,61 +295,59 @@ void material_instance_set_default_textures(Asset_System* asset_system,
     }
 }
 
-void shader_asset_create(Asset_System* asset_system,
-                         Material_Info* material_info,
-                         Shader_Asset* shader_asset)
+void shader_get_or_create(Asset_System* asset_system, Shader_Info* shader_info, Shader_Handle* out_handle)
 {
     MASSERT(asset_system);
-    MASSERT(material_info);
-    MASSERT(material_info->material_name);
-    MASSERT(shader_asset);
-
-    // we want to check if the registry to see if the shader asset has already been created,
-    // if so we get the uuid, otherwise, we have to create it, we also make sure the hash is up to date
+    MASSERT(shader_info);
+    MASSERT(shader_info->shader_name);
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Material_System* material_system = asset_system->material_system;
+    Shader_Key key = shader_generate_key(shader_info);
 
-    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material_info->material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material_info->shader_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_u64(str_builder, material_info->material_key, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
-
-
-    Reflection_Runtime_Struct reflection_material = reflection_registry_get_struct(
-        asset_system->material_reflection_registry, MATERIAL_DEFAULT_NAME);
-
-
-    //this exist and we have to create it, then serialize it out
-    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (asset_registry_exists_by_engine_path(asset_system->asset_registry,
-                                             string_builder_to_string_allocator(str_builder, scratch.allocator),
-                                             out_meta_data))
+    //optimize: hash map
+    for (u32 shader_idx = 0; shader_idx < material_system->shader_count; shader_idx++)
     {
-        *shader_asset = (Shader_Asset){
-            .version = 1.0f,
-            .reflection_hash = reflection_registry_struct_hash_u32(&reflection_material),
-            .material_info = *material_info,
-            .uuid = out_meta_data->uuid,
-        };
-    }
-    else
-    {
-        *shader_asset = (Shader_Asset){
-            .version = 1.0f,
-            .reflection_hash = reflection_registry_struct_hash_u32(&reflection_material),
-            .material_info = *material_info,
-            .uuid = madness_uuid_generate_return(),
-        };
+        if (material_system->shader_asset->shader_key == key)
+        {
+            *out_handle = (Shader_Handle){
+                .handle = shader_idx,
+            };
+            return;
+        }
     }
 
-    scratch_allocator_end(scratch);
 
+    //create a new shader
+    u32 shader_index = material_system->shader_count++;
+    *out_handle = (Shader_Handle){
+        .handle = shader_index,
+    };
+    Shader_Asset* shader_asset = &material_system->shader_asset[shader_index];
+
+    // get shader mapping, for the material name and the material definition
+    // if we are loading from a file, we also then need to check if our hash is out of date
+    u32 index = 0;
+    shader_material_mapping_get_index(asset_system, shader_info->shader_name, &index);
+    material_system->shader_asset_to_mapping[shader_index] = index;
+
+
+    Material_Definition* mat_def = &material_system->shader_to_material_mapping.material_definition[index];
+    // material_system->shader_to_material_mapping.material_name[index];
+
+
+    *shader_asset = (Shader_Asset){
+        .version = 1.0f,
+        .reflection_hash = mat_def->reflection_hash,
+        .shader_info = *shader_info,
+        .uuid = madness_uuid_generate_return(),
+        .shader_key = key,
+    };
     asset_converter_shader_asset(asset_system, shader_asset);
+
+    //TODO:
+    // ring_enqueue(asset_system->material_system->new_shaders, );
+
 }
 
 
@@ -435,20 +355,23 @@ void shader_asset_create(Asset_System* asset_system,
  * @note: we have the data for the material but we want everything else filled out, does not own the data
  */
 void material_create_from_data(Asset_System* asset_system,
-                               Shader_Asset* shader_asset,
-                               Material_Definition* material_definition,
+                               Shader_Handle* shader_handle,
                                Material* out_material,
-                               const char* material_name,
+                               const char* material_asset_name,
                                void* data)
 {
     MASSERT(asset_system);
     MASSERT(out_material);
-    MASSERT(shader_asset);
-    MASSERT(shader_asset->material_info.material_name);
-    MASSERT(material_name);
-    MASSERT(shader_asset->uuid.high != 0);
-    MASSERT(shader_asset->uuid.low != 0);
-    madness_uuid_validate(shader_asset->uuid);
+    MASSERT(material_asset_name);
+
+
+    Shader_Asset* shader_asset = &asset_system->material_system->shader_asset[shader_handle->handle];
+
+
+
+    u32 def_index = asset_system->material_system->shader_asset_to_mapping[shader_handle->handle];
+    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.material_definition[def_index];
+    String* mat_name = asset_system->material_system->shader_to_material_mapping.material_name[def_index];
 
 
     out_material->cpu_data.material_data = data;
@@ -456,9 +379,9 @@ void material_create_from_data(Asset_System* asset_system,
     out_material->meta_data.shader_uuid = shader_asset->uuid;
     out_material->meta_data.material_uuid = madness_uuid_generate_return();
     out_material->meta_data.name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(
-        material_name, asset_system->heap_allocator);
+        material_asset_name, asset_system->heap_allocator);
 
-    out_material->meta_data.material_name = string_duplicate_heap(shader_asset->material_info.material_name,
+    out_material->meta_data.material_name = string_duplicate_heap(mat_name,
                                                                   asset_system->heap_allocator);
 
     material_instance_set_default_textures(asset_system,
@@ -468,21 +391,3 @@ void material_create_from_data(Asset_System* asset_system,
     asset_converter_material(asset_system, out_material);
 }
 
-
-void material_create(Asset_System* asset_system, Shader_Asset* shader_asset,
-                     Material_Definition* material_definition,
-                     Material* out_material,
-                     const char* material_name)
-{
-    void* material_data = allocator_heap_alloc(asset_system->heap_allocator,
-                                               material_definition->reflection_material_data.
-                                                                    struct_size);
-    memset(out_material->cpu_data.material_data, 0, material_definition->reflection_material_data.struct_size);
-
-    material_create_from_data(asset_system,
-                              shader_asset,
-                              material_definition,
-                              out_material,
-                              material_name,
-                              material_data);
-}

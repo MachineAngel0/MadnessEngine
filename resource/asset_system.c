@@ -124,6 +124,11 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.mesh_instances_count = asset_system->mesh_system->
         mesh_instance_count;
+    asset_system->render_packet->draw_3d_data_packet.submesh_instances = asset_system->mesh_system->
+        submesh_instances;
+    asset_system->render_packet->draw_3d_data_packet.submesh_instances_count = asset_system->mesh_system->
+        submesh_instance_count;
+
 
     asset_system->render_packet->draw_3d_data_packet.skinned_instances = asset_system->mesh_system->
         skinned_mesh_instance;
@@ -485,14 +490,15 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
 
 
     //load in the materials and textures
-    Material_Handle* material_handles = allocator_alloc(scratch.allocator, sizeof(Material_Handle) * runtime_mesh.mesh_count);
+    Material_Handle* material_handles = allocator_heap_alloc(asset_system->heap_allocator,
+                                                             sizeof(Material_Handle) * runtime_mesh.mesh_count);
     for (u32 i = 0; i < runtime_mesh.mesh_count; i++)
     {
         asset_load_material_uuid(asset_system, runtime_mesh.material_uuid[i], &material_handles[i]);
     }
 
 
-    if (!mesh_acquire(asset_system, &runtime_mesh, out_handle))
+    if (!mesh_acquire(asset_system, &runtime_mesh, out_handle, material_handles))
     {
         MASSERT(false);
     }
@@ -528,7 +534,6 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
     //TODO: check if has asset already been loaded
 
 
-
     FILE* fptr = fopen(engine_asset_path, "rb");
 
     if (!fptr)
@@ -554,21 +559,6 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
 bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_data,
                               Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator)
 {
-    //check if the shader asset has already been loaded
-    for (u32 i = 0; i < MAX_MATERIAL_COUNT; i++)
-    {
-        if (string_compare(asset_system->asset_registry->shader_madness_asset[i].engine_path,
-                           meta_data->engine_path))
-        {
-            *out_handle = (Shader_Handle){
-                .handle = i,
-                .generation = asset_system->material_system->shader_asset_generation,
-            };
-            return true;
-        }
-    }
-
-
     FILE* fptr = fopen(string_to_c_string_allocator(meta_data->engine_path, scratch_allocator->allocator), "rb");
 
     if (!fptr)
@@ -578,10 +568,13 @@ bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_d
     }
 
 
-    Shader_Asset* shader_asset = shader_asset_acquire(asset_system->material_system, out_handle);
-    asset_shader_deserialize(shader_asset, fptr, asset_system->heap_allocator);
+    Shader_Asset* shader_asset = allocator_alloc(scratch_allocator->allocator, sizeof(Shader_Asset));
+    asset_shader_deserialize(shader_asset, fptr, scratch_allocator->allocator);
 
-    shader_asset_load_definitions(asset_system, shader_asset);
+    fclose(fptr);
+
+
+    shader_asset_acquire_load_data(asset_system, shader_asset, out_handle);
 
 
     Madness_Asset* madness_asset = &asset_system->asset_registry->shader_madness_asset[out_handle->handle];
@@ -590,7 +583,7 @@ bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_d
     madness_asset->type = ASSET_MATERIAL;
     madness_asset->reference_count = 1;
 
-    fclose(fptr);
+    return true;
 }
 
 
@@ -614,22 +607,6 @@ bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_
         return false;
     }
 
-
-    //check if the shader asset has already been loaded
-    for (u32 i = 0; i < MAX_MATERIAL_COUNT; i++)
-    {
-        if (asset_system->asset_registry->shader_madness_asset[i].path_hash == 0) { continue; }
-        if (string_compare(asset_system->asset_registry->shader_madness_asset[i].engine_path,
-                           out_meta_data->engine_path))
-        {
-            *out_shader_handle = (Shader_Handle){
-                .handle = i,
-                .generation = asset_system->material_system->shader_asset_generation[i],
-            };
-            PROFILE_ZONE_END(asset_load_material_asset_path)
-            return true;
-        }
-    }
 
     bool load_result = _asset_load_shader_asset(asset_system, out_meta_data,
                                                 out_shader_handle, &scratch);
@@ -667,33 +644,6 @@ bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
     return load_result;
 }
 
-bool asset_unload_shader_asset(Asset_System* asset_system, Shader_Handle shader_handle)
-{
-    PROFILE_ZONE(asset_unload_material_asset)
-    MASSERT(asset_system);
-
-
-    Madness_Asset* madness_asset = &asset_system->asset_registry->shader_madness_asset[shader_handle.handle];
-    if (asset_system->material_system->shader_asset_generation[shader_handle.handle] == shader_handle.generation)
-    {
-        madness_asset->reference_count--;
-        if (madness_asset->reference_count <= 0)
-        {
-            //unload the asset
-            shader_asset_release(asset_system->material_system, shader_handle);
-        }
-    }
-    else
-    {
-        WARN("asset_unload_material_asset: trying to unload an invalid generation")
-    }
-
-
-    PROFILE_ZONE_END(asset_unload_material_asset)
-
-
-    return true;
-}
 
 
 bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data, Material_Handle* out_material_handle)
@@ -716,16 +666,14 @@ bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data,
 
     Material material = {0};
     asset_material_deserialize(&material, fptr, asset_system->heap_allocator);
+    Shader_Handle shader_handle;
+    asset_load_shader_asset_uuid(asset_system, material.meta_data.material_uuid, &shader_handle);
 
-    asset_load_shader_asset_uuid(asset_system, material.meta_data.material_uuid, &material.meta_data.shader_handle);
-
-    if (!material_acquire(asset_system, material.meta_data.shader_handle, &material,
+    if (!material_acquire(asset_system, shader_handle, &material,
                           out_material_handle))
     {
         MASSERT(false);
     }
-
-
 
 
     scratch_allocator_end(scratch);
@@ -883,6 +831,101 @@ bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Ha
     return true;
 }
 
+bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_path,
+    Particle_Emitter_Handle* out_handle)
+{
+     MASSERT(asset_system);
+    MASSERT(asset_path);
+    MASSERT(out_handle);
+
+    PROFILE_ZONE(asset_load_particle_emitter)
+
+
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+
+    String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
+
+    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, path_string, out_meta_data))
+    {
+        MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        *out_handle = (Particle_Emitter_Handle){0, 0};
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+    //check if the emitter has already been loaded
+    for (u32 asset_idx = 0; asset_idx < MAX_PARTICLE_EMITTER_COUNT; asset_idx++)
+    {
+        if (asset_system->asset_registry->particle_emitter_asset[asset_idx].path_hash == 0) { continue; }
+        if (string_compare(asset_system->asset_registry->particle_emitter_asset[asset_idx].engine_path, path_string))
+        {
+            asset_system->asset_registry->particle_emitter_asset[asset_idx].reference_count++;
+
+            *out_handle = (Particle_Emitter_Handle){
+                .handle = asset_idx,
+                .gen = asset_system->particle_system->emitter_generation[asset_idx],
+            };
+            PROFILE_ZONE_END(asset_load_particle_emitter)
+
+            return true;
+        }
+    }
+
+    //the asset isn't loaded, so we load it in asset
+    FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
+
+    if (!fptr)
+    {
+        MASSERT(false);
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+    //effect -> emitter[]
+    //emitter[] -> asset or part of the effect
+
+
+    //grab an available particle effect, with its handle
+    Particle_Emitter* particle_emitter = particle_emitter_acquire(asset_system->particle_system, out_handle);
+    if (!particle_emitter)
+    {
+        MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
+
+        *out_handle = asset_system->particle_system->default_emitter_handle;
+        PROFILE_ZONE_END(asset_load_particle_emitter)
+
+        return false;
+    }
+
+    particle_emitter_deserialize(particle_emitter, fptr, asset_system->heap_allocator);
+    fclose(fptr);
+    scratch_allocator_end(scratch);
+
+    //we also have to load in the material
+    if (!asset_load_material_uuid(asset_system, particle_emitter->material_uuid, &particle_emitter->material_handle))
+    {
+        MASSERT_FALSE();
+    }
+
+
+
+    Madness_Asset* madness_asset = &asset_system->asset_registry->particle_emitter_asset[out_handle->handle];
+    madness_asset->path_hash = out_meta_data->hash;
+    madness_asset->engine_path = out_meta_data->engine_path;
+    madness_asset->type = ASSET_PARTICLE_EMITTER;
+    madness_asset->reference_count = 1;
+
+
+
+    PROFILE_ZONE_END(asset_load_particle_emitter)
+
+
+    return true;
+}
+
 bool asset_unload_particle_emitter(Asset_System* asset_system, Particle_Emitter_Handle handle)
 {
     PROFILE_ZONE(asset_unload_particle_effect)
@@ -908,4 +951,5 @@ bool asset_unload_particle_emitter(Asset_System* asset_system, Particle_Emitter_
 bool asset_unload_particle_emitter_by_asset_path(Asset_System* asset_system, const char* asset_path)
 {
     MASSERT_FALSE();
+    return true;
 }

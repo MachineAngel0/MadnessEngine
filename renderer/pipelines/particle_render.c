@@ -2,6 +2,7 @@
 #include "particle_render.h"
 
 
+#include "shader_system.h"
 #include "vk_buffer.h"
 
 Particle_Render* particle_renderer_init(Renderer* renderer)
@@ -67,11 +68,13 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 
 
     //default blend for now
-    vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
+    /*vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive,
                                     Shader_Transluency_Type_Opaque,
                                     &particle_renderer->spherical_billboard_pipeline,
+                                    &particle_renderer->wireframe_spherical_billboard_pipeline);*/
+    vulkan_pipeline_graphics_create(renderer, "billboard_spherical", Shader_Blend_Mode_Soft_Additive, false,
+                                    &particle_renderer->spherical_billboard_pipeline,
                                     &particle_renderer->wireframe_spherical_billboard_pipeline);
-
 
     // TODO: should pass in particle count from the particle system
     /*_shader_system_shader_batch_create_internal(renderer, renderer->shader_system,
@@ -87,12 +90,12 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 }
 
 
-int vulkan_particle_sort_key(void* draw1, void* draw2)
+int vulkan_particle_sort_key(const void* draw1, const void* draw2)
 {
     Vulkan_Particle_Draw p1 = *(Vulkan_Particle_Draw*)draw1;
     Vulkan_Particle_Draw p2 = *(Vulkan_Particle_Draw*)draw2;
 
-    return cmp_u64(&p1.material_key, &p2.material_key);
+    return cmp_u64(&p1.shader_key, &p2.shader_key);
 }
 
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
@@ -262,7 +265,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         if (render_packet->particle_packet.particles->life_left[i] > 0)
         {
             // particle_draw[particle_draw_count].material_key = render_packet->particle_packet.particles->material_key[i];
-            particle_render->particle_draw[particle_render->particle_draw_count].material_key = rand_range_i(0, 789);
+            particle_render->particle_draw[particle_render->particle_draw_count].shader_key = rand_range_i(0, 789);
             particle_render->particle_draw[particle_render->particle_draw_count].material_index = render_packet->
                 particle_packet.particles->material_id[i];
             particle_render->particle_draw[particle_render->particle_draw_count].particle_index = i;
@@ -309,15 +312,15 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     bool do_it = false;
     if (do_it)
     {
-        u64 current_key = particle_render->particle_draw[0].material_key;
+        u64 current_key = particle_render->particle_draw[0].shader_key;
         u64 last_idx = 0;
         u64 current_idx = 0;
         while (last_idx <= particle_render->particle_draw_count)
         {
-            if (current_key != particle_render->particle_draw[current_idx].material_key)
+            if (current_key != particle_render->particle_draw[current_idx].shader_key)
             {
                 //find the batch and do a draw over the range
-                Vulkan_Shader_Batch* batch = vulkan_shader_system_shader_batch_get_by_mat_key_for_particles(
+                Vulkan_Shader_Batch* batch = vulkan_shader_system_shader_get_by_key(
                     renderer, current_key);
 
                 //uniform

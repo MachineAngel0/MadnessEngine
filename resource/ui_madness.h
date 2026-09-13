@@ -165,7 +165,7 @@ typedef struct Window_State
 
     // only for actual windows and not scroll boxes
     // should be used as an offset to get to the proper scroll region
-    //NOTE:  the header position is at the same spot where the window starts01
+    //NOTE:  the header position is at the same spot where the window starts
     vec2s header_size;
 
     float scroll_offset; // should ideally be in a range of size, and then we increment the size by that

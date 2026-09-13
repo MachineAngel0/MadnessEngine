@@ -223,7 +223,7 @@ typedef struct Vulkan_Shader_Pipeline
 
 typedef struct Vulkan_Particle_Draw
 {
-    u64 material_key;
+    u64 shader_key;
     u32 material_index;
     u32 particle_index;
 } Vulkan_Particle_Draw;
@@ -232,11 +232,12 @@ typedef struct Vulkan_Particle_Draw
 
 typedef struct Mesh_Render_Item
 {
-    u64 material_key;
-    u32 mesh_id;
-    u32 mesh_handle;
-    u32 submesh_handle;
-    u32 material_handle;
+    u64 sort_key; // pipeline, permutation <-> depth(if needed for transparency)
+
+    u32 material_idx;
+    u32 mesh_instance_idx;
+    u32 mesh_asset_idx;
+    // u32 submesh_idx;
     u32 transform_handle;
     // u32 cull_bounds_handle;
     u32 index_count;
@@ -383,15 +384,14 @@ typedef struct Skinned_Render_Record
 typedef struct Vulkan_Shader_Batch
 {
     const char* shader_name;
-    const char* material_name;
 
-    Shader_Mesh_Type mesh_type;
-    Shader_Transluency_Type transluency;
     Shader_Blend_Mode blend_mode;
-    Shader_Renderpass_Type renderpass_types;
+    bool two_sided;
 
+    //TODO: you should really just use shader_info
+    // Shader_Info shader_info;
 
-    Material_Key material_key;
+    u64 material_key;
 
 
     Vulkan_Shader_Pipeline pipeline;
@@ -401,12 +401,9 @@ typedef struct Vulkan_Shader_Batch
     u32 draw_count;
 
     Buffer_Frame_Handle draw_data_buffer_handle;
-    Buffer_Frame_Handle material_data_buffer_handle;
-    u32 material_stride;
 
     PC_General pc_data;
 
-    Material_Batch* material_batch_reference;
 
     // u32 pc_size;
     // void* pc_data;
@@ -429,23 +426,19 @@ typedef struct Shader_System
     // https://realtimecollisiondetection.net/blog/?p=86
 
     //TODO: temp value for now, should probably be a dynamic array
-    Vulkan_Shader_Batch mesh_batch[100];
-    u32 mesh_batch_count;
+    Vulkan_Shader_Batch material_batch[100];
+    u32 material_batch_count;
 
-
-    Vulkan_Shader_Batch skinned_batch[100];
-    u32 skinned_batch_count;
-
-    //this gives out material data as neccessary
-    Buffer_Handle particle_material_ssbo;
-
-    Vulkan_Shader_Batch particle_batch[100];
-    u32 particle_batch_count;
 
 
     //the shader name is the lookup
     //we want the pointer to the shader batch,
-    HASH_SET(Material_ID)* shader_batch_hash_set;
+    HASH_SET(Material_Key)* shader_batch_hash_set;
+
+
+    Buffer_Frame_Handle material_buffers;
+
+
 } Vulkan_Shader_System;
 
 

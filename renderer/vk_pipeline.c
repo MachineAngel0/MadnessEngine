@@ -4,7 +4,7 @@
 
 
 bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name, Shader_Blend_Mode blend_mode,
-                                     Shader_Transluency_Type transluency_type,
+                                     bool two_sided,
                                      Vulkan_Shader_Pipeline* out_pipeline,
                                      Vulkan_Shader_Pipeline* out_wire_frame_pipeline)
 {
@@ -114,10 +114,17 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     // VK_POLYGON_MODE_LINE for wireframes, VK_POLYGON_MODE_POINT for just points, using these require gpu features
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
-    // rasterizer.cullMode = VK_CULL_MODE_NONE; // NOTE: temp for debugging
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    if (two_sided)
+    {
+        rasterizer.cullMode = VK_CULL_MODE_NONE;
+    }
+    else
+    {
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
+    }
     // rasterizer.frontFace = VK_FRONT_FALlCE_CLOCKWISE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    // NOTE: it seems everything just gets flipped for some reason
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.lineWidth = 1.0f;
@@ -142,19 +149,12 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     // Depth and stencil testing.
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {0};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    switch (transluency_type)
-    {
-    case Shader_Transluency_Type_Opaque:
-        depth_stencil.depthTestEnable = VK_TRUE;
-        depth_stencil.depthWriteEnable = VK_FALSE;
-        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        break;
-    case Shader_Transluency_Type_Transparent:
-        depth_stencil.depthTestEnable = VK_TRUE;
-        depth_stencil.depthWriteEnable = VK_FALSE;
-        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        break;
-    }
+
+    //these might need to be configurable
+    depth_stencil.depthTestEnable = VK_TRUE;
+    depth_stencil.depthWriteEnable = VK_FALSE;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
     depth_stencil.depthTestEnable = VK_TRUE;
     depth_stencil.depthWriteEnable = VK_FALSE;
     depth_stencil.depthBoundsTestEnable = VK_FALSE;
@@ -505,7 +505,8 @@ bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name
     // rasterizer.cullMode = VK_CULL_MODE_NONE; // temp for debugging
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
     // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // NOTE: it seems everything just gets flipped for some reason
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    // NOTE: it seems everything just gets flipped for some reason
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.lineWidth = 1.0f;

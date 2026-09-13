@@ -371,6 +371,10 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
             ps->particles.gravity_x[particle_index] = emitter->data.gravity.x;
             ps->particles.gravity_y[particle_index] = emitter->data.gravity.y;
             ps->particles.gravity_z[particle_index] = emitter->data.gravity.z;
+
+
+            ps->particles.material_key[particle_index] = emitter->material_handle.handle;
+            ps->particles.material_id[particle_index] = emitter->material_handle.handle;
         }
     }
 

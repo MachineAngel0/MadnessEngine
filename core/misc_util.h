@@ -51,7 +51,7 @@ int cmp_int(void* a, void* b)
 }
 
 
-int cmp_uint(void* a, void* b)
+int cmp_u32(void* a, void* b)
 {
     u32 A = *(u32*) a;
     u32 B = *(u32*) b;

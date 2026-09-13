@@ -105,24 +105,22 @@ void particle_emitter_create_default(Asset_System* asset_system,
     MASSERT(emitter_name);
     MASSERT(strlen(emitter_name) > 0);
 
-    Material_Info default_particle_material_info = {
+    Shader_Info default_particle_material_info = {
         .shader_name = &STRING("billboard_spherical"),
-        .material_name = &STRING("Material_Spherical_Billboard_CPU"),
-        .renderpass = Renderpass_Type_Color,
-        .transluency = Shader_Transluency_Type_Opaque,
-        .mesh_type = Shader_Mesh_Type_Mesh,
-        .blend_mode = Shader_Blend_Mode_Additive,
-        .material_key = 0,
+        .blend_mode = Shader_Blend_Mode_Default,
+        .two_sided = false,
     };
+
+
+    Shader_Handle shader_handle;
+    shader_get_or_create(asset_system, &default_particle_material_info, &shader_handle);
 
     MADNESS_UUID shader_uuid = {0};
     MADNESS_UUID mat_uuid = {0};
+    asset_converter_material_from_shader_handle(asset_system, &shader_handle, emitter_name,
+                                       &shader_uuid,
+                                       &mat_uuid);
 
-    asset_converter_shader_and_material(asset_system,
-                                        &default_particle_material_info,
-                                        emitter_name,
-                                        &shader_uuid,
-                                        &mat_uuid);
 
 
     Particle_Emitter emitter = {
@@ -148,7 +146,6 @@ void particle_emitter_create_default(Asset_System* asset_system,
     };
 
     // asset_load_material_uuid(asset_system, mat_uuid, &emitter.material_handle);
-
 
     MADNESS_UUID uuid;
     asset_converter_particle_emitter(asset_system, &emitter, &uuid);

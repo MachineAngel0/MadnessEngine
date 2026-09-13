@@ -1,5 +1,6 @@
 ﻿#include "vulkan_mesh_system.h"
 
+#include "scene.h"
 #include "vk_buffer.h"
 #include "vulkan_struct_types.h"
 
@@ -66,7 +67,6 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
                              u64 mesh_upload_semaphore_value,
                              Mesh_Render_Record* record, bool is_initial_submit)
 {
-
     if (data_byte_size == 0)
     {
         WARN("mesh_system_upload_data: passed in 0 data size, for type %d", type);
@@ -224,7 +224,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         ring_dequeue(mesh_render_queue, &submesh_upload_data);
 
         Mesh_Render_Record* record = &mesh_system->mesh_render_record[submesh_upload_data.submesh_id];
-        record->submesh_id = submesh_upload_data.submesh_id; // TODO: change this for now we are just testing, should be false
+        record->submesh_id = submesh_upload_data.submesh_id;
+        // TODO: change this for now we are just testing, should be false
         record->is_uploaded = false; // TODO: change this for now we are just testing, should be false
         record->is_in_use = true;
         record->tangent_bytes = submesh_upload_data.submesh->tangent_bytes;
@@ -407,7 +408,14 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
     }
 
     vulkan_command_flush_barriers(command_buffer);
+}
 
+
+int vulkan_mesh_sort_key(void* const render_item1, Mesh_Render_Item* render_item2)
+{
+    Mesh_Render_Item* p1 = render_item1;
+    Mesh_Render_Item* p2 = render_item2;
+    return cmp_u64(&p1->sort_key, &p2->sort_key);
 }
 
 void mesh_renderer_construct_batch_draw(Renderer* renderer,
@@ -444,40 +452,42 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     // .transform_idx = sub_mesh_instance->parent_transform_handle.handle,
     // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
     // };
-
-    //TODO: realizing now that visibility work load doenst need to happen in the renderer,
-    // it can be an intermediate step that generates the info needed for the render packet,
-    // unless you do gpu compute culling then that shit happens in the renderer
-    for (u32 i = 0; i < render_packet->draw_3d_data_packet.mesh_instances_count; i++)
+    for (u32 i = 0; i < render_packet->draw_3d_data_packet.submesh_instances_count; i++)
     {
-        Madness_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.mesh_instances[i];
-        for (u32 submesh_idx = 0; submesh_idx < mesh_instance->mesh_count; submesh_idx++)
+        Madness_SubMesh_Instance* submesh_instance = &render_packet->draw_3d_data_packet.submesh_instances[i];
+        Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[i];
+
+        //check if its valid for uploading
+        if (!render_record->is_uploaded || !render_record->is_in_use)
         {
-            Madness_SubMesh_Instance* sub_mesh_instance = &mesh_instance->submesh_instances[submesh_idx];
-            Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[sub_mesh_instance->parent_mesh_id];
-
-            //check if its valid for uploading
-            if (!render_record->is_uploaded || !render_record->is_in_use)
-            {
-                continue;
-            }
-
-            //TODO: check if material upload is valid yet, when we get around to that
-            Mesh_Render_Item* render_inst = &render_items[render_item_count++];
-            *render_inst = (Mesh_Render_Item){
-                .material_key = sub_mesh_instance->material_handle.material_id,
-                .mesh_id = sub_mesh_instance->parent_mesh_id,
-                .mesh_handle = mesh_instance->mesh_asset_index.handle,
-                .submesh_handle = submesh_idx,
-                .material_handle = sub_mesh_instance->material_handle.material_index,
-                .transform_handle = mesh_instance->transform_handle.handle,
-                .index_count = render_record->index_count,
-                .index_offset = render_record->index_offset_count,
-                .vertex_offset = render_record->vertex_count_offset,
-            };
+            continue;
         }
+
+        //TODO: check if material upload is valid yet, when we get around to that
+        Mesh_Render_Item* render_inst = &render_items[render_item_count++];
+
+
+        Transform* transform = scene_get_transform(render_packet->draw_3d_data_packet.scene,
+                                                   submesh_instance->parent_transform_handle);
+
+        *render_inst = (Mesh_Render_Item){
+            //TODO:
+            // .sort_key = material_create_sort_key(submesh_instance->material_handle.handle, transform->position.z),
+
+            .material_idx = submesh_instance->material_handle.handle,
+            .mesh_instance_idx = submesh_instance->parent_instance_index,
+            .mesh_asset_idx = submesh_instance->mesh_asset_index,
+            // .submesh_idx = submesh_idx,
+            .transform_handle = submesh_instance->parent_transform_handle.handle,
+            .index_count = render_record->index_count,
+            .index_offset = render_record->index_offset_count,
+            .vertex_offset = render_record->vertex_count_offset,
+        };
     }
-    // }
+
+    //TODO: sort the meshes by sort key
+    qsort(render_items, render_item_count, sizeof(Mesh_Render_Item), vulkan_mesh_sort_key);
+
 
     /*
     for (u32 i = 0; i < render_packet->draw_3d_data_packet.skinned_instances_count; i++)
@@ -507,66 +517,57 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     }*/
 
 
-    //TODO/ OPTIMIZE : sort render items by material id,
-    // when a render item doesn't match, that means we move onto the next batch
+    //TODO/ OPTIMIZE : when a render item doesn't match, that means we move onto the next batch
+    // we can also upload based on that range instead of individual uploads
+
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
     Vulkan_Mesh_Draw mesh_draw = {0};
-    for (u32 batch_idx = 0; batch_idx < renderer->shader_system->mesh_batch_count; batch_idx++)
+
+    for (u32 i = 0; i < render_item_count; i++)
     {
-        Vulkan_Shader_Batch* current_batch = &renderer->shader_system->mesh_batch[batch_idx];
-        current_batch->draw_count = 0;
+        //TODO:
+        /*
+        //TODO: check if material upload is valid yet, when we get around to that
+        Mesh_Render_Item* mesh_item = &render_items[render_item_count++];
 
-        vulkan_buffer_frame_reset(renderer, current_batch->material_data_buffer_handle);
-        vulkan_buffer_frame_reset(renderer, current_batch->draw_data_buffer_handle);
-        vulkan_buffer_frame_reset(renderer, current_batch->indirect_draw_buffer_handle);
+        mesh_item->mesh_instance_idx;
+        Vulkan_Shader_Batch* current_batch = &renderer->shader_system->mesh_batch[mesh_item->material_batch_idx];
 
-
-        //TODO/ OPTIMIZE: we can upload only whats needed per frame, instead of the whole thing,
-        // but who knows if individual uploads would be slower?
-        // honestly, just depends on the performance, should profile
         vulkan_buffer_frame_staging_upload(
             renderer, current_batch->material_data_buffer_handle,
             command_buffer,
             current_batch->material_batch_reference->material_data->data,
             dynamic_array_get_byte_size(current_batch->material_batch_reference->material_data));
 
-        for (u32 item_idx = 0; item_idx < render_item_count; item_idx++)
-        {
-            Mesh_Render_Item* cur_render_item = &render_items[item_idx];
+        mesh_draw = (Vulkan_Mesh_Draw){
+            .transform_idx = mesh_item->transform_handle,
+            .material_instance_handle = mesh_item->material_idx,
+        };
+        indirect_draw = (VkDrawIndexedIndirectCommand){
+            .indexCount = mesh_item->index_count,
+            .firstIndex = mesh_item->index_offset,
+            .vertexOffset = mesh_item->vertex_offset,
+            .instanceCount = 1,
+            .firstInstance = 0
+        };
 
-            if (cur_render_item->material_key == current_batch->material_key)
-            {
-                mesh_draw = (Vulkan_Mesh_Draw){
-                    .transform_idx = cur_render_item->transform_handle,
-                    .material_instance_handle = cur_render_item->material_handle,
-                };
-                indirect_draw = (VkDrawIndexedIndirectCommand){
-                    .indexCount = cur_render_item->index_count,
-                    .firstIndex = cur_render_item->index_offset,
-                    .vertexOffset = cur_render_item->vertex_offset,
-                    .instanceCount = 1,
-                    .firstInstance = 0
-                };
-
-
-                vulkan_buffer_frame_staging_upload(
-                    renderer, current_batch->draw_data_buffer_handle,
-                    command_buffer,
-                    &mesh_draw,
-                    sizeof(Vulkan_Mesh_Draw));
+        vulkan_buffer_frame_staging_upload(
+            renderer, current_batch->draw_data_buffer_handle,
+            command_buffer,
+            &mesh_draw,
+            sizeof(Vulkan_Mesh_Draw));
 
 
-                vulkan_buffer_frame_staging_upload(
-                    renderer, current_batch->indirect_draw_buffer_handle,
-                    command_buffer,
-                    &indirect_draw,
-                    sizeof(VkDrawIndexedIndirectCommand));
+        vulkan_buffer_frame_staging_upload(
+            renderer, current_batch->indirect_draw_buffer_handle,
+            command_buffer,
+            &indirect_draw,
+            sizeof(VkDrawIndexedIndirectCommand));
 
 
-                current_batch->draw_count++;
-            }
-        }
+        current_batch->draw_count++;
+        */
     }
 
 
@@ -691,8 +692,10 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 
         draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
             renderer, draw_data->draw_data_buffer_handle);
-        draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
-            renderer, draw_data->material_data_buffer_handle);
+        //TODO:
+        // draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
+        // renderer, draw_data->material_data_buffer_handle);
+
 
         VkPushConstantsInfo push_constant_info = {0};
         push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
@@ -777,8 +780,9 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
 
         draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
             renderer, draw_data->draw_data_buffer_handle);
-        draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
-            renderer, draw_data->material_data_buffer_handle);
+        //TODO:
+        /*draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
+                   renderer, draw_data->material_data_buffer_handle);*/
 
 
         VkPushConstantsInfo push_constant_info = {0};

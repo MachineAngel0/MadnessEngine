@@ -13,6 +13,7 @@ bool scene_shutdown(Scene* scene, Memory_System* memory_system);
 
 
 bool scene_get_new_transform(Scene* scene, Transform_Handle* transform_handle, MADNESS_UUID asset_uuid);
+Transform* scene_get_transform(Scene* scene, Transform_Handle handle);
 
 void scene_update(Scene* scene, Asset_System* resource_system);
 

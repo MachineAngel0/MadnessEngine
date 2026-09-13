@@ -35,7 +35,6 @@ typedef struct Material_Default
     MADNESS_UUID ambient_occlusion_texture;
     MADNESS_UUID emissive_texture;
 
-
 } Material_Default;
 
 typedef struct Material_Default_CPU
@@ -70,6 +69,7 @@ typedef struct Material_Black_Hole
     float distortion;
     float speed;
     float size;
+    u32 padding;
 } Material_Black_Hole;
 
 //this is mostly a test material
@@ -90,7 +90,6 @@ typedef struct Material_Spherical_Billboard
     // vec2s tex_size;
 } Material_Spherical_Billboard;
 
-//TODO: this should say cpu version
 typedef struct Material_Spherical_Billboard_CPU
 {
     vec3s point;

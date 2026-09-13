@@ -241,13 +241,19 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 			.type_name = "float",
 			.offset = offsetof(Material_Black_Hole, size)
 		},
+		{
+			.name = "padding",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Black_Hole, padding)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_Black_Hole_Runtime_Struct =
 	{
 		.name = "Material_Black_Hole",
 		.fields = Material_Black_Hole_Fields,
-		.field_count = 3,
+		.field_count = 4,
 		.struct_size = sizeof(Material_Black_Hole)
 	};
 

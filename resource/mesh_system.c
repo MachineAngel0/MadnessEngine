@@ -43,7 +43,7 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Runtime* skmesh_asset,
                                    u64 hash, String* engine_path, MADNESS_UUID uuid)
 {
-    Mesh_System* mesh_system = asset_system->mesh_system;
+    /*Mesh_System* mesh_system = asset_system->mesh_system;
 
     for (size_t mesh_idx = 0; mesh_idx < skmesh_asset->mesh_count; mesh_idx++)
     {
@@ -93,8 +93,8 @@ void mesh_system_load_skinned_mesh(Asset_System* asset_system, Madness_SkMesh_Ru
         Madness_Skinned_Submesh_Instance* submesh_inst = &mesh_inst->submesh_instances[mesh_idx];
 
         //handles
-        submesh_inst->skinned_id = mesh_system->skinned_ids++;
+        // submesh_inst->skinned_id = mesh_system->skinned_ids++;
         submesh_inst->material_handle = (Material_Handle){0};
         submesh_inst->parent_transform_handle = mesh_inst->transform_handle;
-    }
+    }*/
 }

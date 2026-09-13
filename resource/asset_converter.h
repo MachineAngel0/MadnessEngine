@@ -37,18 +37,24 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
                                    Material* material, MADNESS_UUID* out_material_uuid);
 
 
-MAPI bool asset_converter_shader_and_material(Asset_System* asset_system,
-                                         Material_Info* material_info,
-                                         const char* mat_inst_name,
-                                         MADNESS_UUID* out_shader_uuid,
-                                         MADNESS_UUID* out_material_uuid);
 
-MAPI bool asset_converter_shader_and_material_from_data(Asset_System* asset_system,
-                                                   Material_Info* material_info,
+
+
+MAPI bool asset_converter_material_from_shader_handle(Asset_System* asset_system,
+                                                   Shader_Handle* shader_handle,
+                                                   const char* mat_inst_name,
+                                                   MADNESS_UUID* out_shader_uuid,
+                                                   MADNESS_UUID* out_material_uuid);
+
+MAPI bool asset_converter_material_from_data(Asset_System* asset_system,
+                                                   Shader_Handle* shader_handle,
                                                    const char* mat_inst_name,
                                                    void* data,
                                                    MADNESS_UUID* out_shader_uuid,
                                                    MADNESS_UUID* out_material_uuid);
+
+
+
 
 MAPI void asset_converter_particle_emitter(Asset_System* asset_system,
                                       Particle_Emitter* particle_emitter,

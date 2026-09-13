@@ -5,9 +5,7 @@
 #include "asset_converter.h"
 #include "asset_registry.h"
 #include "asset_serialization.h"
-#include "material_system.h"
 #include "resource_types.h"
-#include "particle_system.h"
 
 
 //TODO/GOALS:
@@ -79,13 +77,13 @@ Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
 
 
+//NOTE: we dont unload shaders
 bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_data,
                              Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator);
 bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_path,
                                   Shader_Handle* out_shader_handle);
 bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Shader_Handle* out_handle);
 
-bool asset_unload_shader_asset(Asset_System* asset_system, Shader_Handle shader_handle);
 
 
 bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data, Material_Handle* out_material_handle);
@@ -102,99 +100,7 @@ bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Ha
 
 
 bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_path,
-                                 Particle_Emitter_Handle* out_handle)
-{
-    MASSERT(asset_system);
-    MASSERT(asset_path);
-    MASSERT(out_handle);
-
-    PROFILE_ZONE(asset_load_particle_emitter)
-
-
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
-
-    String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
-
-    Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
-    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, path_string, out_meta_data))
-    {
-        MASSERT_MSG(false, "PLZ CONVERT ASSET")
-        *out_handle = (Particle_Emitter_Handle){0, 0};
-        PROFILE_ZONE_END(asset_load_particle_emitter)
-
-        return false;
-    }
-
-    //check if the emitter has already been loaded
-    for (u32 asset_idx = 0; asset_idx < MAX_PARTICLE_EMITTER_COUNT; asset_idx++)
-    {
-        if (asset_system->asset_registry->particle_emitter_asset[asset_idx].path_hash == 0) { continue; }
-        if (string_compare(asset_system->asset_registry->particle_emitter_asset[asset_idx].engine_path, path_string))
-        {
-            asset_system->asset_registry->particle_emitter_asset[asset_idx].reference_count++;
-
-            *out_handle = (Particle_Emitter_Handle){
-                .handle = asset_idx,
-                .gen = asset_system->particle_system->emitter_generation[asset_idx],
-            };
-            PROFILE_ZONE_END(asset_load_particle_emitter)
-
-            return true;
-        }
-    }
-
-    //the asset isn't loaded, so we load it in asset
-    FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
-
-    if (!fptr)
-    {
-        MASSERT(false);
-        PROFILE_ZONE_END(asset_load_particle_emitter)
-
-        return false;
-    }
-
-    //effect -> emitter[]
-    //emitter[] -> asset or part of the effect
-
-
-    //grab an available particle effect, with its handle
-    Particle_Emitter* particle_emitter = particle_emitter_acquire(asset_system->particle_system, out_handle);
-    if (!particle_emitter)
-    {
-        MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
-
-        *out_handle = asset_system->particle_system->default_emitter_handle;
-        PROFILE_ZONE_END(asset_load_particle_emitter)
-
-        return false;
-    }
-
-    particle_emitter_deserialize(particle_emitter, fptr, asset_system->heap_allocator);
-    fclose(fptr);
-    scratch_allocator_end(scratch);
-
-    //we also have to load in the material
-    if (!asset_load_material_uuid(asset_system, particle_emitter->material_uuid, &particle_emitter->material_handle))
-    {
-        MASSERT_FALSE();
-    }
-
-
-
-    Madness_Asset* madness_asset = &asset_system->asset_registry->particle_emitter_asset[out_handle->handle];
-    madness_asset->path_hash = out_meta_data->hash;
-    madness_asset->engine_path = out_meta_data->engine_path;
-    madness_asset->type = ASSET_PARTICLE_EMITTER;
-    madness_asset->reference_count = 1;
-
-
-
-    PROFILE_ZONE_END(asset_load_particle_emitter)
-
-
-    return true;
-}
+                                 Particle_Emitter_Handle* out_handle);
 
 bool asset_unload_particle_emitter(Asset_System* asset_system, Particle_Emitter_Handle handle);
 

@@ -34,7 +34,7 @@ typedef struct Editor
     Memory_System* memory_system; // ref
 
     Allocator* editor_allocator;
-    Frame_Allocator* editor_frame_allocator;
+    Frame_Allocator* frame_allocator;
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;

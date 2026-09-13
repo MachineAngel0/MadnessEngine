@@ -59,15 +59,12 @@ bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr)
 
     fwrite(&mat_asset->reflection_hash, sizeof(mat_asset->reflection_hash), 1, fptr);
 
-    string_serialize(mat_asset->material_info.shader_name, fptr);
-    string_serialize(mat_asset->material_info.material_name, fptr);
-    fwrite(&mat_asset->material_info.renderpass, sizeof(mat_asset->material_info.renderpass), 1, fptr);
-    fwrite(&mat_asset->material_info.transluency, sizeof(mat_asset->material_info.transluency), 1, fptr);
-    fwrite(&mat_asset->material_info.mesh_type, sizeof(mat_asset->material_info.mesh_type), 1, fptr);
-    fwrite(&mat_asset->material_info.blend_mode, sizeof(mat_asset->material_info.blend_mode), 1, fptr);
-    fwrite(&mat_asset->material_info.material_key, sizeof(mat_asset->material_info.material_key), 1, fptr);
-
     madness_uuid_serialize(mat_asset->uuid, fptr);
+
+    string_serialize(mat_asset->shader_info.shader_name, fptr);
+    fwrite(&mat_asset->shader_info.blend_mode, sizeof(mat_asset->shader_info.blend_mode), 1, fptr);
+    fwrite(&mat_asset->shader_info.two_sided, sizeof(mat_asset->shader_info.two_sided), 1, fptr);
+
 
 
     return true;
@@ -75,23 +72,19 @@ bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr)
 
 
 bool asset_shader_deserialize(Shader_Asset* mat_asset, FILE* fptr,
-                              Heap_Allocator* allocator)
+                              Allocator* allocator)
 {
     fread(&mat_asset->version, sizeof(mat_asset->version), 1, fptr);
     fread(&mat_asset->reflection_hash, sizeof(mat_asset->reflection_hash), 1, fptr);
 
-
-    mat_asset->material_info.shader_name = allocator_heap_alloc(allocator, sizeof(String));
-    mat_asset->material_info.material_name = allocator_heap_alloc(allocator, sizeof(String));
-    string_deserialize_heap(mat_asset->material_info.shader_name, fptr, allocator);
-    string_deserialize_heap(mat_asset->material_info.material_name, fptr, allocator);
-    fread(&mat_asset->material_info.renderpass, sizeof(mat_asset->material_info.renderpass), 1, fptr);
-    fread(&mat_asset->material_info.transluency, sizeof(mat_asset->material_info.transluency), 1, fptr);
-    fread(&mat_asset->material_info.mesh_type, sizeof(mat_asset->material_info.mesh_type), 1, fptr);
-    fread(&mat_asset->material_info.blend_mode, sizeof(mat_asset->material_info.blend_mode), 1, fptr);
-    fread(&mat_asset->material_info.material_key, sizeof(mat_asset->material_info.material_key), 1, fptr);
-
     madness_uuid_deserialize(&mat_asset->uuid, fptr);
+
+    mat_asset->shader_info.shader_name = allocator_alloc(allocator, sizeof(String));
+
+    string_deserialize(mat_asset->shader_info.shader_name, fptr, allocator);
+    fread(&mat_asset->shader_info.blend_mode, sizeof(mat_asset->shader_info.blend_mode), 1, fptr);
+    fread(&mat_asset->shader_info.two_sided, sizeof(mat_asset->shader_info.two_sided), 1, fptr);
+
 
 
     return true;

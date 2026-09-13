@@ -93,7 +93,12 @@ const char* string_to_c_string(const String* s);
 const char* string_to_c_string_allocator(const String* s, Allocator* allocator);
 const char* string_to_c_string_alloc_heap(const String* s, Heap_Allocator* allocator);
 
+/**
+ * use the length version of this function if using in a loop, cause then you can call strlen once
+ */
 bool string_compare_c_string(const String* str1, const char* c_str);
+
+bool string_compare_c_string_length(const String* str1, const char* c_str, size_t c_string_length);
 
 
 

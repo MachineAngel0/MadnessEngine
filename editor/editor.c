@@ -17,9 +17,9 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     allocator_init(editor->editor_allocator, editor_memory, editor_memory_size);
 
 
-    editor->editor_frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
+    editor->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
     void* editor_memory_frame = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_frame_allocator, editor_memory_frame, editor_memory_size);
+    allocator_init(editor->frame_allocator, editor_memory_frame, editor_memory_size);
 
 
     editor->renderer = renderer;
@@ -44,7 +44,7 @@ bool editor_update(Editor* editor)
 {
     PROFILE_ZONE(editor_update)
 
-    allocator_clear(editor->editor_frame_allocator);
+    allocator_clear(editor->frame_allocator);
 
     //do the ui and stuff
     //manage a bunch of ui state
@@ -460,7 +460,7 @@ void editor_ui_scene(Editor* editor)
             if (string_builder)
             {
                 scene_load(editor->asset_system->scene,
-                           string_builder_to_string_allocator(string_builder, editor->editor_frame_allocator));
+                           string_builder_to_string_allocator(string_builder, editor->frame_allocator));
             }
         }
 
@@ -468,8 +468,10 @@ void editor_ui_scene(Editor* editor)
         madness_ui_file_picker(scene_mesh_asset_name);
         if (madness_ui_button(STRING("LOAD MESH ASSET")))
         {
+            Mesh_Handle handle;
             asset_load_mesh_path(editor->asset_system,
-                                 string_builder_to_c_string(madness_ui_text_box_get_string(scene_mesh_asset_name)), TODO);
+                                 string_builder_to_c_string(madness_ui_text_box_get_string(scene_mesh_asset_name)),
+                                 &handle);
         }
 
         String mesh_path2 = STRING("Mesh Path2");
@@ -481,8 +483,9 @@ void editor_ui_scene(Editor* editor)
         String scene_name2 = STRING("SCENE LOAD2");
         if (madness_ui_button(STRING("LOAD MESH ASSET2")))
         {
+            Mesh_Handle handle;
             asset_load_mesh_path(editor->asset_system,
-                                 string_to_c_string(&path_string), TODO);
+                                 string_to_c_string(&path_string), &handle);
         }
     }
     madness_ui_window_end();
@@ -550,8 +553,8 @@ void editor_meta_data_view(Editor* editor)
         {
             Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
             madness_ui_string(STRING("UUID:"));
-            madness_ui_u32(STRING("id1"), &meta_data->uuid.high, 0);
-            madness_ui_u32(STRING("id2"), &meta_data->uuid.low, 0);
+            madness_ui_u64(STRING("id1"), &meta_data->uuid.high, 0);
+            madness_ui_u64(STRING("id2"), &meta_data->uuid.low, 0);
             madness_ui_same_line();
 
             madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
@@ -570,6 +573,84 @@ void editor_material_asset_view(Editor* editor)
 
 
     static Shader_Handle handle;
+    static u32 selected_shader;
+    static u32 selected_blend_mode;
+    static bool double_sided;
+    madness_ui_window_begin(STRING("Shader Creation"));
+    {
+        madness_ui_combo_box2(STRING("Shader: "), &selected_shader,
+                              material_system->shader_to_material_mapping.shader_name,
+                              material_system->shader_to_material_count);
+
+        madness_ui_combo_box_char(STRING("Blend Mode: "), &selected_blend_mode, Shader_Blend_Mode_enum_string,
+                                  ARRAY_SIZE(Shader_Blend_Mode_enum_string));
+
+        madness_ui_check_box(STRING("Double Sided"), &double_sided);
+
+
+        if (madness_ui_button(STRING("CREATE SHADER")))
+        {
+            Shader_Info shader_info = {
+                .shader_name = material_system->shader_to_material_mapping.shader_name[selected_shader],
+                .blend_mode = selected_blend_mode,
+                .two_sided = double_sided,
+
+            };
+            shader_get_or_create(asset_system, &shader_info, &handle);
+        }
+
+
+        madness_ui_padding();
+
+        madness_ui_string(*material_system->shader_to_material_mapping.material_name[selected_shader]);
+
+        static u8 material_memory[1024];
+        Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
+            asset_system->global_reflection_registry, string_to_c_string_allocator(
+                material_system->shader_to_material_mapping.material_name[selected_shader], editor->frame_allocator));
+        madness_ui_padding();
+
+        // shader_asset
+        madness_ui_reflect_using_data(asset_system->global_reflection_registry, material_reflect_struct,
+                                      &material_memory,
+                                      "Material");
+
+
+        static u32 selected_texture;
+        madness_ui_combo_box(STRING("Texture: "), &selected_texture,
+                             editor->texture_list->strings,
+                             editor->texture_list->max_count);
+    }
+    madness_ui_window_end();
+
+    madness_ui_window_begin(STRING("Additional Shader Info"));
+    {
+        madness_ui_string(STRING("ADDITIONAL INFO"));
+        madness_ui_padding();
+
+        madness_ui_string(STRING("MATERIAL NAME: "));
+        madness_ui_same_line();
+        madness_ui_string(*material_system->shader_to_material_mapping.material_name[selected_shader]);
+
+        Reflection_Runtime_Struct mat_def_reflect_struct = reflection_registry_get_struct(
+            asset_system->global_reflection_registry, TYPE_STRING(Material_Definition));
+        // shader_asset
+        madness_ui_reflect_using_data(asset_system->global_reflection_registry, mat_def_reflect_struct,
+                                      &material_system->shader_to_material_mapping.material_definition[selected_shader],
+                                      "Mat");
+
+
+        Shader_Asset* shader_asset = shader_asset_get(material_system, handle);
+        Reflection_Runtime_Struct shader_reflect_struct = reflection_registry_get_struct(
+            asset_system->global_reflection_registry, TYPE_STRING(Shader_Asset));
+        // shader_asset
+        madness_ui_reflect_using_data(asset_system->global_reflection_registry, shader_reflect_struct, shader_asset,
+                                      "Shader");
+    }
+    madness_ui_window_end();
+
+
+    /*static Shader_Handle handle;
     String material_path;
     madness_ui_window_begin(STRING("Material Reflection View"));
     {
@@ -629,56 +710,42 @@ void editor_material_asset_view(Editor* editor)
                 asset_system->global_reflection_registry, TYPE_STRING(Material_Info));
 
             madness_ui_reflect_using_data(asset_system->global_reflection_registry, reflection_asset,
-                                          &material_asset->material_info, "mat asset");
+                                          &material_asset->shader_info, "mat asset");
         }
 
 
-        /*
-        for (u32 i = 0; i < asset_system->material_system->material_count; i++)
-        {
-            Material_Batch* batch = &asset_system->material_system->material_batch[i];
-            batch->material_data;
-            Material_Asset* material_asset = &asset_system->material_system->material_asset[i];
-            material_asset->material_info.blend_mode;
-            material_asset->material_info.mesh_type;
-            material_asset->material_info.renderpass;
-            material_asset->material_info.transluency;
 
-
-            /*
-            madness_ui_reflect_data(Reflection_Registry* reflection_registry, struct_info,
-                                   void* passin_data, const char* id)
-            #1#
-        }*/
     }
     madness_ui_window_end();
 
 
     madness_ui_set_window_pos(600, 200);
 
-    static Material_Info material_info;
+    static Shader_Info material_info;
     static u8 fuck_you_memory[512];
-    static Material_Info mat_info;
-    if (!mat_info.material_name)
+    static Shader_Info shader_info;
+    if (!shader_info.material_name)
     {
-        mat_info.material_name = STRING_CREATE("0");
+        shader_info.material_name = STRING_CREATE("0");
     }
-    if (!mat_info.shader_name)
+    if (!shader_info.shader_name)
     {
-        mat_info.shader_name = STRING_CREATE("0");
+        shader_info.shader_name = STRING_CREATE("0");
     }
-    madness_ui_window_begin(STRING("Material Creation"));
+    madness_ui_window_begin(STRING("Shader Creation"));
     {
-        madness_ui_button(STRING("Create Material Asset"));
-        {
-            //TODO:
-        }
-
 
         Reflection_Runtime_Struct material_info_struct = reflection_registry_get_struct(
             editor->reflection_registry, TYPE_STRING(Material_Info));
 
-        madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &mat_info, "bye");
+        madness_ui_reflect_using_data(editor->reflection_registry, material_info_struct, &shader_info, "new");
+
+        madness_ui_button(STRING("Create Shader Asset"));
+        {
+            Shader_Handle shader_handle;
+            shader_get_or_create(asset_system, &shader_info, &shader_handle);
+        }
+
 
         madness_ui_padding();
 
@@ -690,12 +757,14 @@ void editor_material_asset_view(Editor* editor)
             memset(fuck_you_memory, 0, 512);
         }
 
+
+
         Reflection_Runtime_Struct material_struct_runtime = reflection_registry_get_struct(editor->reflection_registry,
             material_struct_string_list[selected_index]);
 
         madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
     }
-    madness_ui_window_end();
+    madness_ui_window_end();*/
 }
 
 void editor_mesh_view(Editor* editor)
@@ -747,7 +816,7 @@ void editor_particle_view(Editor* editor)
         if (madness_ui_button(STRING("LOAD EMITTER")))
         {
             asset_load_particle_emitter(editor->asset_system,
-                                        string_to_c_string_allocator(&emitter_path, editor->editor_frame_allocator),
+                                        string_to_c_string_allocator(&emitter_path, editor->frame_allocator),
                                         &emitter_to_edit_handle);
         }
         if (madness_ui_button(STRING("UNLOAD EMITTER")))
@@ -778,22 +847,8 @@ void editor_particle_view(Editor* editor)
                                       &emitter_to_edit->data, "emitter_edit");
 
 
-        emitter_to_edit->material_handle;
-        emitter_to_edit->position;
-
         madness_ui_padding();
 
-
-
-        if (emitter_to_edit->material_instance.material_name)
-        {
-            madness_ui_string(*emitter_to_edit->material_instance.name);
-
-            Reflection_Runtime_Struct emitter_material = reflection_registry_get_struct(
-                editor->asset_system->material_reflection_registry, TYPE_STRING(Material_Spherical_Billboard));
-            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_material,
-                                          &emitter_to_edit->material_instance.material_data, "emitter_mat");
-        }
 
         /*
         Material_Asset* material_asset = material_asset_get(editor->asset_system->material_system,
@@ -805,32 +860,6 @@ void editor_particle_view(Editor* editor)
         madness_ui_combo_box_string(STRING("selected material asset"), &material_path,
                                     editor->material_asset_list->strings,
                                     editor->material_asset_list->count);
-
-        static Shader_Handle handle;
-        if (madness_ui_button(STRING("LOAD SHADER")))
-        {
-            Shader_Asset material_asset;
-            asset_load_shader_asset_path(editor->asset_system,
-                                         string_to_c_string_allocator(&material_path, editor->editor_frame_allocator),
-                                         &handle);
-        }
-
-        //just need to swap the material asset and update the material instance
-        if (madness_ui_button(STRING("SET NEW SHADER")))
-        {
-            emitter_to_edit->material_instance.material_asset_uuid;
-        }
-
-        if (handle.handle != 0)
-        {
-            Shader_Asset* material_asset = shader_asset_get(editor->asset_system->material_system, handle);
-
-            Reflection_Runtime_Struct reflection_asset = reflection_registry_get_struct(
-                editor->asset_system->global_reflection_registry, TYPE_STRING(Material_Asset));
-
-            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, reflection_asset,
-                                          material_asset, "mat asset");
-        }
 
 
         /*
@@ -906,7 +935,7 @@ void editor_particle_view(Editor* editor)
             Particle_Effect_Handle discard_handle;
             asset_load_particle_effect_by_path(editor->asset_system,
                                                string_to_c_string_allocator(
-                                                   &effect_path, editor->editor_frame_allocator), &discard_handle);
+                                                   &effect_path, editor->frame_allocator), &discard_handle);
         }
 
 
@@ -930,7 +959,7 @@ void editor_particle_view(Editor* editor)
             Particle_Emitter_Handle emitter_handle = {0};
             asset_load_particle_emitter(editor->asset_system,
                                         string_to_c_string_allocator(&effect_to_add_path,
-                                                                     editor->editor_frame_allocator),
+                                                                     editor->frame_allocator),
                                         &emitter_handle);
             particle_effect_add_emitter_by_handle(editor->asset_system->particle_system, particle_effect,
                                                   emitter_handle);
@@ -999,9 +1028,9 @@ void editor_particle_view(Editor* editor)
             for (u32 emitter_idx = 0; emitter_idx < effect->emitter_count; emitter_idx++)
             {
                 madness_ui_string(*effect->emitters[emitter_idx]->name);
-                madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_start %d", emitter_idx),
+                madness_ui_u32(*string_format(editor->frame_allocator, "emitter_start %d", emitter_idx),
                                &effect->emitters_start[emitter_idx], 1);
-                madness_ui_u32(*string_format(editor->editor_frame_allocator, "emitter_end %d", emitter_idx),
+                madness_ui_u32(*string_format(editor->frame_allocator, "emitter_end %d", emitter_idx),
                                &effect->emitters_end[emitter_idx], 1);
             }
         }

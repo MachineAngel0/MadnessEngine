@@ -32,17 +32,6 @@ const char* Texture_Filter_enum_string[] = {
 	[Texture_Filter_Linear]= "Texture_Filter_Linear", 
 };
 
-const char* Shader_Mesh_Type_enum_string[] = {
-	[Shader_Mesh_Type_Mesh]= "Shader_Mesh_Type_Mesh", 
-	[Shader_Mesh_Type_Skinned]= "Shader_Mesh_Type_Skinned", 
-	[Shader_Mesh_Type_Particle]= "Shader_Mesh_Type_Particle", 
-};
-
-const char* Shader_Transluency_Type_enum_string[] = {
-	[Shader_Transluency_Type_Opaque]= "Shader_Transluency_Type_Opaque", 
-	[Shader_Transluency_Type_Transparent]= "Shader_Transluency_Type_Transparent", 
-};
-
 const char* Shader_Renderpass_Type_enum_string[] = {
 	"Renderpass_Type_Predepth", 
 	"Renderpass_Type_Shadow", 
@@ -54,16 +43,16 @@ const char* Shader_Renderpass_Type_enum_string[] = {
 	"Renderpass_Type_Reserved5", 
 };
 
-const char* Shader_Blend_enum_string[] = {
+const char* Shader_Blend_Mode_enum_string[] = {
 	[Shader_Blend_Mode_Default]= "Shader_Blend_Mode_Default", 
-	[Shader_Blend_Mode_Alpha]= "Shader_Blend_Mode_Alpha", 
-	[Shader_Blend_Mode_PreMultiplied_Alpha]= "Shader_Blend_Mode_PreMultiplied_Alpha", 
 	[Shader_Blend_Mode_Additive]= "Shader_Blend_Mode_Additive", 
 	[Shader_Blend_Mode_Soft_Additive]= "Shader_Blend_Mode_Soft_Additive", 
 	[Shader_Blend_Mode_Multiply]= "Shader_Blend_Mode_Multiply", 
 	[Shader_Blend_Mode_Multiply2x]= "Shader_Blend_Mode_Multiply2x", 
 	[Shader_Blend_Mode_Subtract]= "Shader_Blend_Mode_Subtract", 
 	[Shader_Blend_Mode_Reverse_Subtract]= "Shader_Blend_Mode_Reverse_Subtract", 
+	[Shader_Blend_Mode_Alpha]= "Shader_Blend_Mode_Alpha", 
+	[Shader_Blend_Mode_PreMultiplied_Alpha]= "Shader_Blend_Mode_PreMultiplied_Alpha", 
 };
 
 const char* Mesh_PBR_Flags_enum_string[] = {
@@ -123,26 +112,6 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	};
 	reflection_registry_add_enums(reflection_registry, Texture_Filter_enum);
 
-	const Reflection_Runtime_Enum Shader_Mesh_Type_enum =
-	{
-		.name = "Shader_Mesh_Type",
-		.enum_names = Shader_Mesh_Type_enum_string,
-		.count = 3,
-		.type = Reflection_Enum_Type_Normal,
-		.bitflag_values = NULL, //filled in the function if applicable
-	};
-	reflection_registry_add_enums(reflection_registry, Shader_Mesh_Type_enum);
-
-	const Reflection_Runtime_Enum Shader_Transluency_Type_enum =
-	{
-		.name = "Shader_Transluency_Type",
-		.enum_names = Shader_Transluency_Type_enum_string,
-		.count = 2,
-		.type = Reflection_Enum_Type_Normal,
-		.bitflag_values = NULL, //filled in the function if applicable
-	};
-	reflection_registry_add_enums(reflection_registry, Shader_Transluency_Type_enum);
-
 	const Reflection_Runtime_Enum Shader_Renderpass_Type_enum =
 	{
 		.name = "Shader_Renderpass_Type",
@@ -153,15 +122,15 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	};
 	reflection_registry_add_enums(reflection_registry, Shader_Renderpass_Type_enum);
 
-	const Reflection_Runtime_Enum Shader_Blend_enum =
+	const Reflection_Runtime_Enum Shader_Blend_Mode_enum =
 	{
-		.name = "Shader_Blend",
-		.enum_names = Shader_Blend_enum_string,
+		.name = "Shader_Blend_Mode",
+		.enum_names = Shader_Blend_Mode_enum_string,
 		.count = 9,
 		.type = Reflection_Enum_Type_Normal,
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
-	reflection_registry_add_enums(reflection_registry, Shader_Blend_enum);
+	reflection_registry_add_enums(reflection_registry, Shader_Blend_Mode_enum);
 
 	const Reflection_Runtime_Enum Mesh_PBR_Flags_enum =
 	{

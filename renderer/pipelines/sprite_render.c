@@ -153,6 +153,8 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
                          sprite_backend->index_type
     );
 
+
+
     //we use one for the draw count since we are instancing the sprites
     if (renderer->features2.features.multiDrawIndirect)
     {
