@@ -39,7 +39,10 @@ bool stack_is_full(const stack* s);
 
 void stack_push(stack* s, const void* data);
 
-void stack_pop(stack* s);
+void* stack_pop_(stack* s);
+
+//doesn't return the top element when popping
+void stack_pop_fast(stack* s);
 
 // Peek element
 void* stack_top_(stack* s);
@@ -47,6 +50,9 @@ void* stack_top_(stack* s);
 
 #define stack_top(s, type)\
     (*(type*)stack_top_((s)))
+
+#define stack_pop(s, type) \
+    (*(type*)stack_pop_((s)))
 
 //dont use this unless you have to
 void* stack_get(stack* s, u32 index);

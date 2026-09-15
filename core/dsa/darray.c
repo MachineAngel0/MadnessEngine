@@ -721,7 +721,7 @@ Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocat
     Dynamic_Array* array = allocator_heap_alloc(allocator, sizeof(Dynamic_Array));
 
     array->data = allocator_heap_alloc(allocator, data_stride * capacity);
-    array->allocator = allocator;
+    array->heap_allocator = allocator;
     array->capacity = capacity;
     array->stride = data_stride;
     array->num_items = 0;
@@ -731,8 +731,8 @@ Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocat
 
 void dynamic_array_free(Dynamic_Array* array)
 {
-    allocator_heap_free(array->allocator, array->data);
-    allocator_heap_free(array->allocator, array);
+    allocator_heap_free(array->heap_allocator, array->data);
+    allocator_heap_free(array->heap_allocator, array);
     array = NULL;
 }
 
@@ -744,10 +744,10 @@ void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
         return;
     }
 
-    void* new_data = allocator_heap_alloc(array->allocator, new_capacity * array->stride);
+    void* new_data = allocator_heap_alloc(array->heap_allocator, new_capacity * array->stride);
 
     memcpy(new_data, array->data, array->capacity * array->stride);
-    allocator_heap_free(array->allocator, array->data);
+    allocator_heap_free(array->heap_allocator, array->data);
     array->data = new_data;
     array->capacity = new_capacity;
 }
@@ -877,7 +877,7 @@ bool dynamic_array_valid_index(const Dynamic_Array* array, const u64 index)
 Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy)
 {
     Dynamic_Array* out_array = _dynamic_array_create(array_to_copy->stride, array_to_copy->capacity,
-                                                     array_to_copy->allocator);
+                                                     array_to_copy->heap_allocator);
     memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
     out_array->num_items = array_to_copy->num_items;
 

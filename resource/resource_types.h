@@ -1157,7 +1157,7 @@ typedef struct Render_Packet_3D
 typedef struct Render_Packet_UI
 {
     UI_Render_Packet madness_ui_render_packet;
-    UI_Render_Packet insanity_ui_render_packet;
+    Insanity_UI_Render_Packet insanity_ui_render_packet;
 } Render_Packet_UI;
 
 

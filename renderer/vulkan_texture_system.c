@@ -61,8 +61,8 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
         Vulkan_Texture_Pending_Upload pending_upload =
             array_get(
                 texture_system->texture_pending_array,
-                Vulkan_Texture_Pending_Upload,
-                i);
+                i,
+                Vulkan_Texture_Pending_Upload);
 
         if (timeline_semaphore_query_and_compare(
             renderer,

@@ -234,7 +234,7 @@ typedef struct Madness_UI
 
 
     //DRAW DATA //
-    UI_Node_Draw_Data* ui_draw_data;
+    UI_Render_Node* ui_draw_data;
     u64 ui_draw_data_count;
 
 

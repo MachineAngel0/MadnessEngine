@@ -208,7 +208,7 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
         {
         case Target_Area_Affect_Single_Target:
             u32 random_target_index = rand_range_i(0, unit_targets->num_items-1);
-            decision.chosen_targets[decision.chosen_units_count++] = array_get(unit_targets, Unit*, random_target_index);
+            decision.chosen_targets[decision.chosen_units_count++] = array_get(unit_targets, random_target_index, Unit*);
             break;
         case Target_Area_Affect_Target_All:
             for (u32 i = 0; i < unit_targets->num_items; i++)

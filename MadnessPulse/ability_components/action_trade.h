@@ -25,7 +25,7 @@ void action_trade_ability(Madness_Pulse_Game* game, Unit* caster, ARRAY_TYPE(Cha
 
     for (u32 i = 0; i < targets->num_items; i++)
     {
-        Character_Name current_target = array_get(targets, Character_Name, i);
+        Character_Name current_target = array_get(targets, i, Character_Name);
         Unit* current_unit_target = madness_pulse_get_unit(game, current_target);
 
         DEBUG("Target Before Change %d", current_unit_target->action_component.actions_available);

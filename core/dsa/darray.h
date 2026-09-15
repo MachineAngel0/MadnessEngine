@@ -150,8 +150,10 @@ typedef struct Dynamic_Array
     u32 stride; // size of each void* data
     void* data;
 
-    Heap_Allocator* allocator;
-    // Allocator* temp_allocator;
+    Heap_Allocator* heap_allocator;
+
+    // Allocator* allocator;
+    // u32 offset;
 
 #ifndef NDEBUG
     const char* type_name;
@@ -163,6 +165,10 @@ typedef struct Dynamic_Array
 
 Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocator* allocator);
 // Dynamic_Array* _dynamic_array_create_alloc(u32 data_stride, u64 capacity, Allocator* allocator);
+
+
+// Dynamic_Array* _dynamic_array_create_frame(u32 data_stride, u64 capacity, Allocator* allocator);
+
 
 void dynamic_array_free(Dynamic_Array* array);
 

@@ -223,7 +223,7 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
     {
         for (u32 i = 0; i < madness_ui->pop_up_frame_state->num_items; i++)
         {
-            Pop_Up_State pop_up_state = array_get(madness_ui->pop_up_frame_state, Pop_Up_State, i);
+            Pop_Up_State pop_up_state = array_get(madness_ui->pop_up_frame_state, i, Pop_Up_State);
 
             if (!region_hit(pop_up_state.pop_up_pos, pop_up_state.pop_up_size))
             {
@@ -257,11 +257,11 @@ void madness_ui_end(void)
     for (u32 i = 0; i < madness_ui->pop_up_ui_nodes->num_items; i++)
     {
         UI_Node* deffered_node = (UI_Node*)_array_get(madness_ui->pop_up_ui_nodes, i);
-        if (array_get(madness_ui->pop_up_ui_nodes, UI_Node, i).flags & UI_FLAG_SCISSOR_START)
+        if (array_get(madness_ui->pop_up_ui_nodes, i, UI_Node).flags & UI_FLAG_SCISSOR_START)
         {
             madness_ui_new_scissor_start(deffered_node->scissor_pos, deffered_node->scissor_size);
         }
-        else if (array_get(madness_ui->pop_up_ui_nodes, UI_Node, i).flags & UI_FLAG_SCISSOR_END)
+        else if (array_get(madness_ui->pop_up_ui_nodes, i, UI_Node).flags & UI_FLAG_SCISSOR_END)
         {
             madness_ui_new_scissor_end();
         }
@@ -279,7 +279,7 @@ void madness_ui_end(void)
     // madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_arena,
     //                                            madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
     madness_ui->ui_draw_data = allocator_alloc(madness_ui->frame_allocator,
-                                               madness_ui->ui_nodes->num_items * sizeof(UI_Node_Draw_Data));
+                                               madness_ui->ui_nodes->num_items * sizeof(UI_Render_Node));
     madness_ui->ui_draw_data_count = madness_ui->ui_nodes->num_items; // needs to be here for the render draw count
 
     for (u32 i = 0; i < madness_ui->ui_nodes->num_items; i++)
@@ -287,7 +287,7 @@ void madness_ui_end(void)
         UI_Node* node_data = (UI_Node*)_array_get(madness_ui->ui_nodes, i);
 
         // UI_Node* node_data = &array_get(madness_ui->ui_nodes, UI_Node, i);
-        UI_Node_Draw_Data* draw_data = &madness_ui->ui_draw_data[i];
+        UI_Render_Node* draw_data = &madness_ui->ui_draw_data[i];
 
         draw_data->ui_flags = node_data->flags;
         draw_data->pos = glms_vec2_div(node_data->pos, madness_ui->screen_size);
@@ -342,7 +342,7 @@ UI_Render_Packet madness_ui_get_ui_render_data(void)
     return (UI_Render_Packet){
         .ui_material_data = madness_ui->ui_draw_data,
         .ui_material_data_count = madness_ui->ui_draw_data_count,
-        .ui_material_bytes = madness_ui->ui_draw_data_count * sizeof(UI_Node_Draw_Data),
+        .ui_material_bytes = madness_ui->ui_draw_data_count * sizeof(UI_Render_Node),
         .draw_command = madness_ui->draw_command_list->data,
         .draw_command_count = madness_ui->draw_command_list->num_items,
     };
@@ -866,7 +866,7 @@ bool madness_ui_pop_up_end(void)
     array_push(madness_ui->pop_up_frame_state, &state);
 
     madness_ui_new_scissor_end();
-    stack_pop(madness_ui->pop_up_stack);
+    stack_pop_fast(madness_ui->pop_up_stack);
 
 
     return false;
@@ -1023,7 +1023,7 @@ void madness_ui_window_end(void)
     madness_ui_new_scissor_end();
 
     Window_State* state = stack_top(madness_ui->window_states_stack, Window_State*);
-    stack_pop(madness_ui->window_states_stack);
+    stack_pop_fast(madness_ui->window_states_stack);
 
     float scroll_region_start_pos = (state->window_region_pos.y + state->header_size.y);
     float scroll_region_size_y = (state->window_region_size.y - state->header_size.y);
@@ -1165,7 +1165,7 @@ vec2s madness_ui_get_window_pos(void)
         return (vec2s){.x = MIN_UI_NODE_SCREEN_SIZE, .y = MIN_UI_NODE_SCREEN_SIZE};
     }
     vec2s out = stack_top(madness_ui->window_pos_stack, vec2s);
-    stack_pop(madness_ui->window_pos_stack);
+    stack_pop_fast(madness_ui->window_pos_stack);
     return out;
 }
 
@@ -1182,7 +1182,7 @@ vec2s madness_ui_get_window_size(void)
         return (vec2s){.x = MIN_UI_NODE_SCREEN_SIZE, .y = MIN_UI_NODE_SCREEN_SIZE};
     }
     vec2s out = stack_top(madness_ui->window_size_stack, vec2s);
-    stack_pop(madness_ui->window_size_stack);
+    stack_pop_fast(madness_ui->window_size_stack);
     return out;
 }
 

@@ -73,8 +73,8 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     vulkan_buffer_frame_staging_upload(renderer,
                                        ui_renderer->insanity_ui_material_ssbo_handle,
                                        command_buffer,
-                                       ui_renderer->insanity_ui_render_packet->ui_material_data,
-                                       ui_renderer->insanity_ui_render_packet->ui_material_bytes);
+                                       ui_renderer->insanity_ui_render_packet->material_data,
+                                       ui_renderer->insanity_ui_render_packet->material_bytes);
 
     Vulkan_Buffer* madness_material_buffer = vulkan_buffer_get_frame(renderer, ui_renderer->ui_material_ssbo_handle);
     Vulkan_Buffer* insanity_material_buffer = vulkan_buffer_get_frame(
@@ -223,35 +223,58 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
         }
     }
 
+}
 
-    //insanity_ui
 
 
-    PC_UI pc_insanity_ui = {
-        .material_bda = get_buffer_device_address(renderer->logical_device,
-                                                  vulkan_buffer_get_frame(
-                                                      renderer, ui_renderer->insanity_ui_material_ssbo_handle)->
-                                                  handle),
+
+
+void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
+                              Vulkan_Command_Buffer* command_buffer)
+{
+    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "INSANITY UI DRAW", (float[4]){1.0, 0.0, 1.0, 1.0});
+
+   //uniform
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer->ui_pipeline.pipeline_layout, 0, 1,
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
+
+    //textures
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer->ui_pipeline.pipeline_layout, 1, 1,
+                            &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
+
+    //storage buffers
+    vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            renderer->ui_pipeline.pipeline_layout, 2, 1,
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            0, 0);
+
+    PC_UI pc_ui = {
+        .material_bda =
+        get_buffer_device_address(renderer->logical_device,
+                                  vulkan_buffer_get_frame(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->handle),
         .padding1 = 0,
         .padding2 = 0,
 
     };
 
 
-    VkPushConstantsInfo insanity_pc_info = {0};
-    insanity_pc_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    insanity_pc_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    insanity_pc_info.layout = renderer->ui_pipeline.pipeline_layout;
-    insanity_pc_info.offset = 0;
-    insanity_pc_info.size = sizeof(PC_UI);
-    insanity_pc_info.pValues = &pc_insanity_ui;
-    insanity_pc_info.pNext = NULL;
+    VkPushConstantsInfo push_constant_info_ui = {0};
+    push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_info_ui.layout = renderer->ui_pipeline.pipeline_layout;
+    push_constant_info_ui.offset = 0;
+    push_constant_info_ui.size = sizeof(PC_UI);
+    push_constant_info_ui.pValues = &pc_ui;
+    push_constant_info_ui.pNext = NULL;
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->ui_pipeline.handle);
-    vkCmdPushConstants2(command_buffer->handle, &insanity_pc_info);
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
 
-    //two pipelines are slower than one, and much faster if I use instancing for them
+    //two pipelines are slower than one, and much much faster if I use instancing for them
 
     //draw
     for (u32 i = 0; i < ui_renderer->insanity_ui_render_packet->draw_command_count; i++)
@@ -286,5 +309,9 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
             break;
         }
     }
+
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
 
 }

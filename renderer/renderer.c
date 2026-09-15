@@ -637,6 +637,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &pScissors);
 
     ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
+    ui_renderer_insanity_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
 
 
     // Finish the current dynamic rendering section

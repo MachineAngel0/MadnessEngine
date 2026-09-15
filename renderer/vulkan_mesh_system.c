@@ -127,8 +127,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         Mesh_Gpu_Upload_Pending pending_upload =
             array_get(
                 mesh_system->mesh_submitted_upload_array,
-                Mesh_Gpu_Upload_Pending,
-                i);
+                i,
+                Mesh_Gpu_Upload_Pending);
 
         if (timeline_semaphore_query_and_compare(
             renderer,
@@ -178,8 +178,8 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         Mesh_Unfinished_Upload unfinished_upload =
             array_get(
                 mesh_system->mesh_pending_upload_array,
-                Mesh_Unfinished_Upload,
-                unfinished_idx);
+                unfinished_idx,
+                Mesh_Unfinished_Upload);
 
 
         Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];

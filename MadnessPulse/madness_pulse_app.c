@@ -21,8 +21,6 @@ bool application_on_resized(const Event_Type code, String sender, String listene
 bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
 
-
-
 static Madness_Pulse_Application* app_internal;
 
 bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
@@ -63,7 +61,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     // reflection_game_data(reflection_system);
 
 
-    Reflection_Registry* global_reflection_registry = reflection_registry_init(&app_internal->application_core.memory_system);
+    Reflection_Registry* global_reflection_registry = reflection_registry_init(
+        &app_internal->application_core.memory_system);
     //reflection runtimes
     generate_runtime_enums(global_reflection_registry);
     generate_runtime_structs(global_reflection_registry);
@@ -115,7 +114,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                               platform_config, &application_core->memory_system,
                                               application_core->input_system);
     //asset system
-    application_core->asset_system = asset_system_init(&application_core->memory_system, global_reflection_registry, material_reflection_registry);
+    application_core->asset_system = asset_system_init(&application_core->memory_system, global_reflection_registry,
+                                                       material_reflection_registry);
     application_core->audio_system = audio_system_init(&application_core->memory_system,
                                                        application_core->asset_system);
     //UI
@@ -125,7 +125,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     madness_ui_init(&application_core->memory_system,
                     application_core->input_system,
                     application_core->asset_system);
-
 
 
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
@@ -248,15 +247,14 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                application_core->clock.delta_time);
 
         madness_ui_end();
-        insanity_ui_end();
+
 
         //render packet
         asset_system_update_and_create_render_packet(application_core->asset_system);
 
+        application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet = insanity_ui_end();
         application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
-        application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet =
-            insanity_get_render_data();
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
         // insanity_get_render_data();

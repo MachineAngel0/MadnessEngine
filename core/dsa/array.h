@@ -89,7 +89,7 @@ void* _array_get_debug(Array* array, const u64 index, const char* type_name);
         _array_create_heap_debug(sizeof(type), capacity, heap_allocator, #type)
 
 
-#define array_get(arr, type, index)\
+#define array_get(arr, index, type)\
         (*(type*)_array_get_debug(arr, index, #type))
 
 #define array_top(arr, type)\
@@ -108,7 +108,7 @@ void* _array_get_debug(Array* array, const u64 index, const char* type_name);
 #define array_top(arr, type)\
         (*(type*)_array_get(arr, arr->num_items-1))
 
-#define array_get(arr, type, index)\
+#define array_get(arr, index, type)\
         (*(type*)_array_get(arr, index))
 
 #define array_top_free(arr, type)\

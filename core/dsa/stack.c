@@ -85,7 +85,20 @@ void stack_push(stack* s, const void* data)
     s->num_items++;
 }
 
-void stack_pop(stack* s)
+void* stack_pop_(stack* s)
+{
+    MASSERT(s);
+    if (stack_is_empty(s))
+    {
+        WARN("STACK POP: Trying to Pop on an empty stack")
+        return NULL; // might want to get the first element as a fall back
+    }
+    void* out_data =  (((uint8_t*)s->data) + (s->stride * (s->num_items - 1)));
+    s->num_items--;
+    return out_data;
+}
+
+void stack_pop_fast(stack* s)
 {
     MASSERT(s);
     if (stack_is_empty(s))
@@ -95,6 +108,7 @@ void stack_pop(stack* s)
     }
     s->num_items--;
 }
+
 
 // Peek element
 void* stack_top_(stack* s)
@@ -160,14 +174,14 @@ void stack_test(void)
     stack_print(stack, print_int);
     printf("PEEK: %d\n", *(int*)stack_top_(stack));
 
-    stack_pop(stack);
+    stack_pop_fast(stack);
 
     stack_print(stack, print_int);
 
-    stack_pop(stack);
-    stack_pop(stack);
-    stack_pop(stack);
-    stack_pop(stack);
+    stack_pop_fast(stack);
+    stack_pop_fast(stack);
+    stack_pop_fast(stack);
+    stack_pop_fast(stack);
     stack_print(stack, print_int);
 
 

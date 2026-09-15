@@ -10,5 +10,6 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
                                   Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer);
 
 void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
-
+void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
+                              Vulkan_Command_Buffer* command_buffer);
 #endif //UI_RENDERER_H

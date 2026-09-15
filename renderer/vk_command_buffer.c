@@ -94,7 +94,7 @@ void vulkan_queue_frame_begin(Renderer* renderer, u32 current_frame)
     while (i < transfer_queue->transfer_command_buffer_in_flight->num_items)
     {
         Transfer_Command_Buffer_In_Flight inflight = array_get(transfer_queue->transfer_command_buffer_in_flight,
-                                                               Transfer_Command_Buffer_In_Flight, i);
+                                                               i, Transfer_Command_Buffer_In_Flight);
 
         if (timeline_semaphore_query_and_compare(
             renderer,

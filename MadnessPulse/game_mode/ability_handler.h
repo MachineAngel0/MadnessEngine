@@ -68,7 +68,7 @@ void ability_handler_process_normal_components(Madness_Pulse_Game* game,
                  target_number
                  ++)
             {
-                Unit* current_target = array_get(ability_target_info->ability_component_target, Unit*, target_number);
+                Unit* current_target = array_get(ability_target_info->ability_component_target, target_number, Unit*);
 
                 ability_component_process_effect(game, ability_target_info, current_target, &ability_component);
             }

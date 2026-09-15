@@ -30,7 +30,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_PARTICLE;;
+    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MATERIAL;
 
@@ -162,7 +162,7 @@ void editor_ui(Editor* editor)
         editor_ui_animation(editor);
         break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
-        insanity_ui_test();
+        insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
         break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test();
@@ -284,7 +284,7 @@ void editor_ui_debug(Editor* editor)
         madness_ui_circle(STRING("circle"), &thick);
 
         static f32 rot;
-        array_get(madness_ui->ui_nodes, UI_Node, 0).rotation = rot;
+        array_get(madness_ui->ui_nodes, 0, UI_Node).rotation = rot;
         if (madness_ui_float(STRING("material flags disable"), &rot, 15.f))
         {
         }
@@ -1063,14 +1063,14 @@ void editor_particle_view(Editor* editor)
     {
         for (u32 i = 0; i < particle_system->active_emitters->num_items; i++)
         {
-            u32 index = array_get(particle_system->active_emitters, u32, i);
+            u32 index = array_get(particle_system->active_emitters, i, u32);
 
             madness_ui_string(*particle_system->emitters[index].name);
         }
 
         for (u32 i = 0; i < particle_system->active_effects->num_items; i++)
         {
-            u32 index = array_get(particle_system->active_effects, u32, i);
+            u32 index = array_get(particle_system->active_effects, i, u32);
 
             madness_ui_string(*particle_system->particle_effects[index].name);
         }

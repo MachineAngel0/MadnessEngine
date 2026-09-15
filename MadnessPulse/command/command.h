@@ -89,7 +89,7 @@ void command_handler_add_multiple_actions(Command_Handler* command_handler, Arra
 
     for (int i = 0; i < command_array->num_items; i++)
     {
-        ring_enqueue(command_handler->command_queue, &array_get(command_array->data, Command, i));
+        ring_enqueue(command_handler->command_queue, &array_get(command_array->data, i, Command));
     }
     // OnActionHandlerUpdate.Broadcast(ActionQueue, ActionStack);
 }

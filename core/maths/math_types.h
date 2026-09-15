@@ -40,6 +40,15 @@ MINLINE vec2s glms_vec2_scale_div(vec2s vec, float scalar)
 }
 
 
+//divide by a scalar value
+MINLINE void vec2_print(vec2s v)
+{
+    INFO("VEC2: %f, %f", v.x, v.y)
+}
+
+
+
+
 /* NOTE: not in use anymore
 typedef union
 {

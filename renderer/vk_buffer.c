@@ -91,8 +91,8 @@ void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system,
         Vulkan_Staging_Buffer_Pending_Upload pending_upload =
             array_get(
                 buffer_system->staging_upload_pending_array,
-                Vulkan_Staging_Buffer_Pending_Upload,
-                array_idx);
+                array_idx,
+                Vulkan_Staging_Buffer_Pending_Upload);
 
         if (timeline_semaphore_query_and_compare(
             renderer,

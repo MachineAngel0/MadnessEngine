@@ -464,7 +464,7 @@ void array_test(void)
     array_push(arr, &num5);
     printf("ARRAY GET START\n");
     print_int(_array_get(arr, 0));
-    TEST_DEBUG(array_get(arr, int, 0) == num10);
+    TEST_DEBUG(array_get(arr, 0, int) == num10);
 
     printf("\n");
     printf("ARRAY GET END\n\n");
@@ -472,13 +472,13 @@ void array_test(void)
     printf("ARRAY SET START\n");
     array_set(arr, &num3, 2); // this should be invalid
     array_set(arr, &num3, 1); //overwrites the 10
-    TEST_DEBUG(array_get(arr, int, 1) == num3);
+    TEST_DEBUG(array_get(arr, 1, int) == num3);
     array_print(arr, print_int);
     printf("ARRAY SET END\n\n");
 
     printf("ARRAY REMOVE START\n");
     array_remove(arr, 0);
-    TEST_DEBUG(array_get(arr, int, 0) == num3);
+    TEST_DEBUG(array_get(arr, 0, int) == num3);
     array_print(arr, print_int);
     array_push(arr, &num20);
     array_push(arr, &num10);

@@ -247,8 +247,8 @@ void vulkan_physical_device_find_transfer_queue(Vulkan_Physical_Device_Heuristic
 {
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
 
 
         VkQueueFlags flags = queue_family_properties.queueFlags;
@@ -269,8 +269,8 @@ void vulkan_physical_device_find_transfer_queue(Vulkan_Physical_Device_Heuristic
     //second best options is a transfer queue with no graphics, but compute is fine
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
         VkQueueFlags flags = queue_family_properties.queueFlags;
 
         bool graphics = (flags & VK_QUEUE_GRAPHICS_BIT);
@@ -295,8 +295,8 @@ void vulkan_physical_device_find_transfer_queue(Vulkan_Physical_Device_Heuristic
     {
         for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
         {
-            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                        queue_index);
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                        queue_index, VkQueueFamilyProperties);
 
             if (queue_family_properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
             {
@@ -314,8 +314,8 @@ void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic*
     //find a dedicated compute queue (without graphics). Doesn't matter if it shares an index with the transfer queue
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
 
 
         VkQueueFlags flags = queue_family_properties.queueFlags;
@@ -347,8 +347,9 @@ void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic*
     //there are instances where the queue lives on a seperate index from the initial transfer queue, and does not have a transfer queue
     if (device_heuristic->dedicated_transfer && !device_heuristic->dedicated_compute)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    device_heuristic->transfer_queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    device_heuristic->transfer_queue_index,
+                                                                    VkQueueFamilyProperties);
         //try to share with transfer but not graphics
         if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT &&
             !(queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT))
@@ -367,8 +368,9 @@ void vulkan_physical_device_find_compute_queue(Vulkan_Physical_Device_Heuristic*
     {
         for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
         {
-            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                        queue_index);
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                        queue_index,
+                                                                        VkQueueFamilyProperties);
 
             if (queue_family_properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
             {
@@ -387,8 +389,8 @@ void vulkan_physical_device_find_graphics_and_present_queue(Renderer* renderer,
 {
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
 
 
         //skip any dedicated queues
@@ -426,8 +428,8 @@ void vulkan_physical_device_find_graphics_and_present_queue(Renderer* renderer,
     {
         for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
         {
-            VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                        queue_index);
+            VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                        queue_index, VkQueueFamilyProperties);
 
             if (queue_family_properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
             {
@@ -552,11 +554,11 @@ bool vulkan_device_create2(Renderer* renderer)
     for (u32 physical_device_idx = 0; physical_device_idx < valid_physical_device->num_items; physical_device_idx++)
     {
         Vulkan_Physical_Device_Suitable physical_device_suitable = array_get(
-            valid_physical_device, Vulkan_Physical_Device_Suitable, physical_device_idx);
+            valid_physical_device, physical_device_idx, Vulkan_Physical_Device_Suitable);
         VkPhysicalDevice current_device = physical_device_suitable.physical_device;
         Vulkan_Physical_Device_Heuristic device_heuristic = array_get(heuristic_selection,
-                                                                      Vulkan_Physical_Device_Heuristic,
-                                                                      physical_device_idx);
+                                                                      physical_device_idx,
+                                                                      Vulkan_Physical_Device_Heuristic);
 
         u32 queue_family_count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(current_device, &queue_family_count, 0);
@@ -680,7 +682,7 @@ bool vulkan_device_create2(Renderer* renderer)
     for (u64 i = 0; i < index_array_size; ++i)
     {
         VkQueueFamilyProperties family_properties = array_get(renderer->queue_family_properties,
-                                                              VkQueueFamilyProperties, index_array[i]);
+                                                              index_array[i], VkQueueFamilyProperties);
 
         queue_create_infos[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_create_infos[i].queueFamilyIndex = index_array[i];
@@ -1096,8 +1098,8 @@ void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surf
     queue_families->num_items = queue_family_count;
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
 
         DEBUG("QUEUE INDEX: %d", queue_index);
         // Graphics queue?
@@ -1164,7 +1166,7 @@ void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surf
     DEBUG("Device Extensions");
     for (u32 ext_index = 0; ext_index < available_extension_count; ++ext_index)
     {
-        VkExtensionProperties ext_property = array_get(available_extensions, VkExtensionProperties, ext_index);
+        VkExtensionProperties ext_property = array_get(available_extensions, ext_index, VkExtensionProperties);
         INFO("Extensions: %s", ext_property.extensionName);
     }
 
@@ -1238,8 +1240,8 @@ bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, 
     queue_families->num_items = queue_family_count;
     for (u32 queue_index = 0; queue_index < queue_family_count; queue_index++)
     {
-        VkQueueFamilyProperties queue_family_properties = array_get(queue_families, VkQueueFamilyProperties,
-                                                                    queue_index);
+        VkQueueFamilyProperties queue_family_properties = array_get(queue_families,
+                                                                    queue_index, VkQueueFamilyProperties);
 
         DEBUG("QUEUE INDEX: %d", queue_index);
         // Graphics queue?
@@ -1304,11 +1306,11 @@ bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, 
     for (u32 required_index = 0; required_index < required_extension_names->num_items; ++required_index)
     {
         bool found = false;
-        const char* required_ext_name = array_get(required_extension_names, const char*, required_index);
+        const char* required_ext_name = array_get(required_extension_names, required_index, const char*);
 
         for (u32 ext_index = 0; ext_index < available_extension_count; ++ext_index)
         {
-            VkExtensionProperties ext_property = array_get(available_extensions, VkExtensionProperties, ext_index);
+            VkExtensionProperties ext_property = array_get(available_extensions, ext_index, VkExtensionProperties);
 
             if (strcmp(ext_property.extensionName, required_ext_name) == 0)
             {

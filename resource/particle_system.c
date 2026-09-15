@@ -302,7 +302,7 @@ void particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handl
 
     for (u32 i = 0; i < ps->active_emitters->num_items; i++)
     {
-        if (handle.handle == array_get(ps->active_emitters, u32, i))
+        if (handle.handle == array_get(ps->active_emitters, i,u32))
         {
             array_remove_swap(ps->active_emitters, i);
             break;
@@ -444,7 +444,7 @@ void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle)
 {
     for (u32 i = 0; i < ps->active_effects->num_items; i++)
     {
-        if (handle.handle == array_get(ps->active_effects, u32, i))
+        if (handle.handle == array_get(ps->active_effects, i,u32))
         {
             array_remove_swap(ps->active_effects, i);
             break;

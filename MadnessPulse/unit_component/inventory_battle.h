@@ -214,10 +214,10 @@ void battle_inventory_use_up_overflow_and_abilities(Battle_Inventory_Component* 
     //we copy from the current battle list, only the abilities whos count are not zero, this is to fill the holes in the array
     Dynamic_Array* replacement_battle_list = dynamic_array_create(Ability_Name,
                                                                   battle_inventory->battle_list->num_items,
-                                                                  battle_inventory->battle_list->allocator);
+                                                                  battle_inventory->battle_list->heap_allocator);
 
     Dynamic_Array* replacement_ability_count = dynamic_array_create(u16, battle_inventory->battle_list->num_items,
-                                                                    battle_inventory->battle_list->allocator);
+                                                                    battle_inventory->battle_list->heap_allocator);
 
     for (int i = 0; i < battle_inventory->battle_list->num_items; ++i)
     {
