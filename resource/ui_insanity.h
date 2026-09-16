@@ -33,7 +33,6 @@
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
 
 
-
 typedef struct Insanity_UI_Editor_Style
 {
     vec3s layout_color;
@@ -182,6 +181,7 @@ typedef struct Insanity_UI
     u32 hot_last_frame;
     u32 hot_this_frame;
     u32 active;
+    u32 hover_hot;
 
     //TODO:
     // u32 navigation_focus_id;
@@ -246,20 +246,22 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 //Building Blocks
 Insanity_UI_Node* insanity_ui_node(const char* name);
+/*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
+Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable);
+
+//copies pos and size
 Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Node* node);
 
-Insanity_UI_Node* insanity_ui_node_rect_left(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
-                                             vec2 percent_size);
-Insanity_UI_Node* insanity_ui_node_rect_right(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
-                                              vec2 percent_size);
-Insanity_UI_Node* insanity_ui_node_rect_up(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
-                                           vec2 percent_size);
-Insanity_UI_Node* insanity_ui_node_rect_down(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
-                                             vec2 percent_size);
+//rn these are percents
+Insanity_UI_Node* insanity_ui_node_cut_left(Insanity_UI_Node* parent, const char* name, f32 size);
+Insanity_UI_Node* insanity_ui_node_cut_right(Insanity_UI_Node* parent, const char* name, f32 size);
+Insanity_UI_Node* insanity_ui_node_cut_top(Insanity_UI_Node* parent, const char* name, f32 size);
+Insanity_UI_Node* insanity_ui_node_cut_bottom(Insanity_UI_Node* parent, const char* name, f32 size);
 
 //TODO:
 // void madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
 // void madness_ui_new_scissor_end(void);
+
 
 //Windows
 Insanity_UI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size);
@@ -290,7 +292,6 @@ bool scrollbox_is_cursor_outside_view(Insanity_UI_Scroll* scroll)
     {
         return true;
     }
-
 }
 
 
@@ -302,7 +303,6 @@ bool scroll_advance_down(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, boo
         insanity_ui_is_scroll_outside_view(node);
     }
     scroll->cursor.y += node->size.y;
-
 }
 
 bool scrollbox_advance_right(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
@@ -321,8 +321,9 @@ void pop_up_end();
 
 //STRING
 Insanity_UI_Node* insanity_ui_text(const char* text);
-// Insanity_UI_Node* insanity_ui_text_wrapped(const char* text);
 Insanity_UI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
+
+Insanity_UI_Node* insanity_ui_text_wrapped(const char* text, Insanity_UI_Node* container);
 
 vec2s insanity_ui_text_calculate_size(const char* text);
 vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
@@ -340,9 +341,9 @@ Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle);
 
 //LAYOUT and CONSTRAINTS
 void insanity_ui_node_offset_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
-                                         float x_offset);
+                               float x_offset);
 void insanity_ui_node_offset_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
-                                         float y_offset);
+                               float y_offset);
 void insanity_ui_node_offset(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset);
 
 
@@ -362,16 +363,20 @@ void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanit
 void insanity_ui_node_expand_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, vec2s percent);
 
 
-
 vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);
 
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
 
 
-/*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
-Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable);
 
+
+
+//Styling
+void insanity_ui_node_node(Insanity_UI_Node* node);
+
+
+//Utility
 bool insanity_ui_rect_hit(Insanity_UI_Node* node);
 
 

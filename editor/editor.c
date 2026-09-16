@@ -30,8 +30,8 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
-    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
+    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
+    // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
 
     editor_generate_asset_lists(editor, memory_system);
 

@@ -306,6 +306,9 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
 
 void insanity_ui_resolve_interaction(void)
 {
+    //TODO: if we are a hot node and we become pressed, even if not hovered over, it becomes hovered
+    //idk if i want to resolve this per node, as any node should in theory be hovered
+
     // resolve hot
     u32 new_hot = 0;
 
@@ -322,10 +325,11 @@ void insanity_ui_resolve_interaction(void)
             Insanity_UI_Node* node = insanity_ui->interaction_node_array[i];
             if (!insanity_ui_rect_hit(node)) continue;
 
-            if (node->z_order > best_z) // topmost wins, not last-in-array
+            if (node->z_order >= best_z) // topmost wins, then last in array
             {
                 best_z = node->z_order;
                 new_hot = node->hash_id;
+                // WARN("new hot: %llu", new_hot);
             }
         }
     }
@@ -370,6 +374,29 @@ void insanity_ui_resolve_interaction(void)
 }
 
 
+Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable)
+{
+    if (interactable)
+    {
+        insanity_ui->interaction_node_array[insanity_ui->interaction_node_count++] = node;
+    }
+    if (navigatable)
+    {
+        insanity_ui->navigation_node_array[insanity_ui->navigation_node_count++] = node;
+    }
+
+
+    if (node->hash_id == insanity_ui->hot_last_frame || node->hash_id == insanity_ui->active)
+    {
+        //we want to do a compare with our selected nodes flags to ensure that we are returning the results we actually wanted
+        // we dont want to be listening for a pressed event if we didnt specify so
+        //otherwise the interaction events get set by default
+
+        return insanity_ui->interaction_result;
+    }
+    return (Insanity_UI_Event){0};
+}
+
 Insanity_UI_Node* insanity_ui_node(const char* name)
 {
     if (insanity_ui->scroll_array_count > 0 &&
@@ -399,6 +426,73 @@ Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Nod
     out_node->pos = node->pos;
     out_node->size = node->size;
     return out_node;
+}
+
+Insanity_UI_Node* insanity_ui_node_cut_left(Insanity_UI_Node* parent, const char* name, f32 size)
+{
+    Insanity_UI_Node* new_node = insanity_ui_node(name);
+
+    new_node->pos = parent->pos;
+    new_node->size = (vec2s){.x = parent->size.x * size, .y = parent->size.y};
+
+
+    //shift parent to the right and reduce size
+    parent->pos.x += new_node->size.x;
+    parent->size.x -= new_node->size.x;
+
+    return new_node;
+}
+
+Insanity_UI_Node* insanity_ui_node_cut_right(Insanity_UI_Node* parent, const char* name, f32 size)
+{
+    Insanity_UI_Node* new_node = insanity_ui_node(name);
+
+    //size node and shift it to the proper spot
+    new_node->size = (vec2s){.x = parent->size.x * size, .y = parent->size.y};
+    new_node->pos = (vec2s){parent->pos.x + parent->size.x - new_node->size.x, parent->pos.y};
+
+
+    //reduce parent node size
+    parent->size.x -= new_node->size.x;
+
+
+    return new_node;
+}
+
+Insanity_UI_Node* insanity_ui_node_cut_top(Insanity_UI_Node* parent, const char* name, f32 size)
+{
+    Insanity_UI_Node* new_node = insanity_ui_node(name);
+
+    //place new node where parent is, shift parent down and reduce parent size
+    new_node->pos = parent->pos;
+    new_node->size = (vec2s){.x = parent->size.x , .y = parent->size.y * size};
+
+    parent->pos.y += new_node->size.y;
+    parent->size.y -= new_node->size.y;
+
+    return new_node;
+}
+
+Insanity_UI_Node* insanity_ui_node_cut_bottom(Insanity_UI_Node* parent, const char* name, f32 size)
+{
+    Insanity_UI_Node* new_node = insanity_ui_node(name);
+
+
+    //size node and shift it to the proper spot
+    new_node->size = (vec2s){.x = parent->size.x , .y = parent->size.y* size};
+    new_node->pos = (vec2s){parent->pos.x, parent->pos.y + parent->size.y - new_node->size.y};
+
+
+    //reduce parent node size
+    parent->size.y -= new_node->size.y;
+
+    return new_node;
+}
+
+void insanity_ui_node_node(Insanity_UI_Node* node)
+{
+    //TODO: may want to change color, since this also means we do no recieve input anymore, really just depends
+    node->size = glms_vec2_zero();
 }
 
 Insanity_UI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size)
@@ -438,6 +532,23 @@ Insanity_UI_Node* insanity_ui_text(const char* text)
 
 
     return text_node;
+}
+
+Insanity_UI_Node* insanity_ui_text_wrapped(const char* text, Insanity_UI_Node* container)
+{
+    Insanity_UI_Node* text_node = insanity_ui_node(text);
+    text_node->text = STRING_CREATE_FROM_BUFFER_ALLOCATOR(text, insanity_ui->frame_allocator);
+    text_node->type = Insanity_UI_Node_Type_Text;
+    text_node->ui_flags |= UI_FLAG_TEXT;
+    text_node->color = COLOR_WHITE;
+    //we need to calculate the text size
+    size_t text_size = strlen(text);
+    text_node->size = insanity_ui_text_calculate_size_fast(text, text_size);
+
+
+    return text_node;
+
+
 }
 
 vec2s insanity_ui_text_calculate_size(const char* text)
@@ -488,13 +599,13 @@ Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle)
 }
 
 void insanity_ui_node_offset_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
-                                         float x_offset)
+                               float x_offset)
 {
     node_to_offset->pos.x = anchor_node->pos.x + x_offset;
 }
 
 void insanity_ui_node_offset_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
-                                         float y_offset)
+                               float y_offset)
 {
     node_to_offset->pos.y = anchor_node->pos.y + y_offset;
 }
@@ -581,34 +692,10 @@ void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanit
 }
 
 
-
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container)
 {
     node_to_constraint->size.x = clamp_f32(node_to_constraint->size.x, 0, container->size.x);
     node_to_constraint->size.y = clamp_f32(node_to_constraint->size.y, 0, container->size.y);
-}
-
-Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable)
-{
-    if (interactable)
-    {
-        insanity_ui->interaction_node_array[insanity_ui->interaction_node_count++] = node;
-    }
-    if (navigatable)
-    {
-        insanity_ui->navigation_node_array[insanity_ui->navigation_node_count++] = node;
-    }
-
-
-    if (node->hash_id == insanity_ui->hot_last_frame || node->hash_id == insanity_ui->active)
-    {
-        //we want to do a compare with our selected nodes flags to ensure that we are returning the results we actually wanted
-        // we dont want to be listening for a pressed event if we didnt specify so
-        //otherwise the interaction events get set by default
-
-        return insanity_ui->interaction_result;
-    }
-    return (Insanity_UI_Event){0};
 }
 
 
@@ -768,6 +855,23 @@ void insanity_ui_test(float dt, float elapsed_time)
         }
     }
     insanity_ui_scroll_end();
+
+
+    Insanity_UI_Node* rect_cut = insanity_ui_node("rect");
+    rect_cut->pos = (vec2s){1200, 800};
+    rect_cut->size = (vec2s){100, 100};
+    rect_cut->color = COLOR_WHITE;
+    if (insanity_ui_event(rect_cut, true, true).hovered)
+    {
+        rect_cut->color = COLOR_BLUE;
+    }
+    Insanity_UI_Node* rect_l = insanity_ui_node_cut_right(rect_cut, "rect_l", 0.5);
+    rect_l->color = COLOR_RED;
+    rect_l->size = glms_vec2_zero();
+    if (insanity_ui_event(rect_l, true, true).hovered)
+    {
+        rect_l->color = COLOR_VIOLET;
+    }
 
 
     PROFILE_ZONE_END(insanity_ui_test)
