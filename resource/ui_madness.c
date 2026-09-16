@@ -335,11 +335,6 @@ void madness_ui_end(void)
     }
 
 
-
-
-
-
-
     PROFILE_ZONE_END(madness_ui_end)
 }
 
@@ -385,8 +380,6 @@ void madness_ui_resolve_interaction(void)
             madness_ui->clicked_this_frame = madness_ui->active;
 
         madness_ui->active = 0;
-
-
     }
 
     // build the result once, we dont want to do this with every query
@@ -394,7 +387,7 @@ void madness_ui_resolve_interaction(void)
 
     madness_ui->event_result.mouse_delta_x = madness_ui->mouse_delta_x;
     madness_ui->event_result.mouse_delta_y = madness_ui->mouse_delta_y;
-    madness_ui->event_result.mouse_scrolled = madness_ui->mouse_wheel_down || madness_ui->mouse_wheel_up;
+    madness_ui->event_result.mouse_wheel_scrolled = madness_ui->mouse_wheel_down || madness_ui->mouse_wheel_up;
     madness_ui->event_result.mouse_wheel_up = madness_ui->mouse_wheel_up;
     madness_ui->event_result.mouse_wheel_down = madness_ui->mouse_wheel_down;
     madness_ui->event_result.mouse_wheel_delta = madness_ui->mouse_wheel_delta;
@@ -1070,15 +1063,15 @@ void madness_ui_window_end(void)
             //handle window scrolling
             if (input_is_mouse_wheel_up())
             {
-                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset - 0.1, 0, 1);
-                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_bar_percent_offset = clamp_f32(state->scroll_bar_percent_offset - 0.1, 0, 1);
+                state->scroll_offset = clamp_f32(state->scroll_offset, 0, madness_ui->screen_size.y);
                 state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
             if (input_is_mouse_wheel_down())
             {
                 // state.scroll_offset += 10;
-                state->scroll_bar_percent_offset = clamp_float(state->scroll_bar_percent_offset + 0.1, 0, 1);
-                state->scroll_offset = clamp_float(state->scroll_offset, 0, madness_ui->screen_size.y);
+                state->scroll_bar_percent_offset = clamp_f32(state->scroll_bar_percent_offset + 0.1, 0, 1);
+                state->scroll_offset = clamp_f32(state->scroll_offset, 0, madness_ui->screen_size.y);
                 state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
         }
@@ -1086,7 +1079,7 @@ void madness_ui_window_end(void)
         {
             float track_width = scroll_region_size_y - slider_bar->size.y;
             float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
-            float t = clamp_float(relative_y / track_width, 0.0f, 1.0f);
+            float t = clamp_f32(relative_y / track_width, 0.0f, 1.0f);
 
             state->scroll_bar_percent_offset = 0 + t * (1 - 0);
             state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
@@ -1098,9 +1091,9 @@ void madness_ui_window_end(void)
         // but using the resize bar at all turns off the auto resize
         //resize the window up if needed, it looks a little funny but whatever
         state->window_region_size.y = content_height + (madness_ui_get_default_element_height() * 2);
-        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.y - state->window_region_pos.y -
-                                                  (madness_ui_get_default_element_height()));
+        state->window_region_size.y = clamp_f32(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                madness_ui->screen_size.y - state->window_region_pos.y -
+                                                (madness_ui_get_default_element_height()));
     }
 
 
@@ -1122,10 +1115,10 @@ void madness_ui_window_end(void)
     {
         state->window_region_size.x += madness_ui->mouse_delta_x;
         state->window_region_size.y += madness_ui->mouse_delta_y;
-        state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.x);
-        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                  madness_ui->screen_size.y);
+        state->window_region_size.x = clamp_f32(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
+                                                madness_ui->screen_size.x);
+        state->window_region_size.y = clamp_f32(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                madness_ui->screen_size.y);
     }
 
     madness_ui_set_cursor_pos(state->window_region_pos);
@@ -1656,13 +1649,13 @@ void madness_ui_slider_scroll(String id, float* slider_val, float min, float max
 
         float track_width = quad_node->size.x - slider_node->size.x;
         float relative_x = madness_ui->mouse_pos_x - quad_node->pos.x - (slider_node->size.x * 0.5f);
-        float t = clamp_float(relative_x / track_width, 0.0f, 1.0f);
+        float t = clamp_f32(relative_x / track_width, 0.0f, 1.0f);
 
         *slider_val = min + t * (max - min);
         slider_node->pos.x = quad_node->pos.x + t * track_width;
     }
 
-    *slider_val = clamp_float(*slider_val, min, max);
+    *slider_val = clamp_f32(*slider_val, min, max);
 
 
     char* float_char = madness_ui_float_to_char(*slider_val);
@@ -1758,184 +1751,188 @@ void madness_ui_slider_arrow(String id, float* slider_val, float min, float max)
         *slider_val += ((max - min) / 10.f);
     }
 
-    *slider_val = clamp_float(*slider_val, min, max);
+    *slider_val = clamp_f32(*slider_val, min, max);
 
 
     //update ui state for the next element
     madness_ui_advance_cursor(quad_node->size);
 }
 
-void madness_ui_slider_arrow_u32(String id, u32* slider_val, const u32 min, const u32 max)
+
+//returns the buffer size
+int madness_ui_scalar_format(char* buffer, int size, UI_Scalar_Type type, void* data)
 {
-    //draw the rect, then based on the cur val, draw it proportionally to where it should be
-    const u32 s = max - min;
-
-    // proper screen pos and size
-
-    //quad
-    UI_Node* quad_node = madness_ui_get_new_node();
-    quad_node->string_id = id;
-    quad_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
-    quad_node->pos = madness_ui->cursor_pos;
-    quad_node->size = (vec2s){
-        madness_ui->current_window_screen_size.x * 0.7, madness_ui_get_default_element_height()
-    };
-    quad_node->color = madness_ui->editor_style.color;
-
-
-    char float_char[12]; // Large enough to hold the digits, sign, and null terminator
-
-    // Safely write the integer into the character array
-    snprintf(float_char, sizeof(float_char), "%u", *slider_val);
-    String float_string = STRING_STRLEN(float_char);
-
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
-
-
-    //update ui state for the next element
-    madness_ui_advance_cursor(quad_node->size);
-
-    madness_ui_same_line();
-    UI_Node* left_arrow = madness_ui_get_new_node();
-    left_arrow->hash_id = string_hash_u64(id);
-    left_arrow->pos = madness_ui->cursor_pos;
-    left_arrow->size = (vec2s){
-        madness_ui_get_default_element_height(), madness_ui_get_default_element_height()
-    };
-    left_arrow->color = madness_ui->editor_style.color;
-    madness_ui_advance_cursor(left_arrow->size);
-    madness_ui_same_line();
-    UI_Node* right_arrow = madness_ui_get_new_node();
-    right_arrow->hash_id = string_hash_u64(id) / 2;
-    right_arrow->pos = madness_ui->cursor_pos;
-    right_arrow->size = (vec2s){
-        madness_ui_get_default_element_height(), madness_ui_get_default_element_height()
-    };
-    right_arrow->color = madness_ui->editor_style.color;
-
-    Madness_UI_Event left_result = madness_ui_event(left_arrow, true, true);
-    Madness_UI_Event right_result = madness_ui_event(right_arrow, true, true);
-
-    if (left_result.hovered)
+    int ret_size = 0;
+    switch (type)
     {
-        left_arrow->color = madness_ui->editor_style.hovered_color;
-    }
-    if (right_result.hovered)
-    {
-        right_arrow->color = madness_ui->editor_style.hovered_color;
+    case Madness_UI_Scalar_Type_U8:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(u8*)data);
+        break;
+    case Madness_UI_Scalar_Type_U16:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(u16*)data);
+        break;
+    case Madness_UI_Scalar_Type_U32:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(u32*)data);
+        break;
+    case Madness_UI_Scalar_Type_U64:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(u64*)data);
+        break;
+    case Madness_UI_Scalar_Type_S8:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(s8*)data);
+        break;
+    case Madness_UI_Scalar_Type_S16:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(s16*)data);
+        break;
+    case Madness_UI_Scalar_Type_S32:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(s32*)data);
+        break;
+    case Madness_UI_Scalar_Type_S64:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(s64*)data);
+        break;
+    case Madness_UI_Scalar_Type_F32:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(f32*)data);
+        break;
+    case Madness_UI_Scalar_Type_F64:
+        ret_size = snprintf(buffer, size, ui_scalar_type_print_fmt[type], *(f64*)data);
+        break;
+    case Madness_UI_Scalar_Type_MAX:
+        ret_size = 0;
+        break;
     }
 
-    if (left_result.pressed)
-    {
-        left_arrow->color = madness_ui->editor_style.pressed_color;
-    }
-    if (right_result.pressed)
-    {
-        right_arrow->color = madness_ui->editor_style.pressed_color;
-    }
-
-
-    if (left_result.clicked)
-    {
-        *slider_val -= 1;
-    }
-    if (right_result.clicked)
-    {
-        *slider_val += 1;
-    }
-
-    *slider_val = clamp_int(*slider_val, min, max);
-
-
-    //update ui state for the next element
-    madness_ui_advance_cursor(quad_node->size);
+    return ret_size;
 }
 
-void madness_ui_slider_arrow_u16(String id, u16* slider_val, u16 min, u16 max)
+
+bool madness_ui_scalar_change(UI_Scalar_Type type, void* data, f64 increment_value)
 {
-    //draw the rect, then based on the cur val, draw it proportionally to where it should be
-    const u32 s = max - min;
-
-    // proper screen pos and size
-
-    //quad
-    UI_Node* quad_node = madness_ui_get_new_node();
-    quad_node->string_id = id;
-    quad_node->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
-    quad_node->pos = madness_ui->cursor_pos;
-    quad_node->size = (vec2s){
-        madness_ui->current_window_screen_size.x * 0.7, madness_ui_get_default_element_height()
-    };
-    quad_node->color = madness_ui->editor_style.color;
-
-
-    char float_char[12]; // Large enough to hold the digits, sign, and null terminator
-
-    // Safely write the integer into the character array
-    snprintf(float_char, sizeof(float_char), "%u", *slider_val);
-    String float_string = STRING_STRLEN(float_char);
-
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
-
-
-    //update ui state for the next element
-    madness_ui_advance_cursor(quad_node->size);
-
-    madness_ui_same_line();
-    UI_Node* left_arrow = madness_ui_get_new_node();
-    left_arrow->hash_id = string_hash_u64(id);
-    left_arrow->pos = madness_ui->cursor_pos;
-    left_arrow->size = (vec2s){
-        madness_ui_get_default_element_height(), madness_ui_get_default_element_height()
-    };
-    left_arrow->color = madness_ui->editor_style.color;
-    madness_ui_advance_cursor(left_arrow->size);
-    madness_ui_same_line();
-    UI_Node* right_arrow = madness_ui_get_new_node();
-    right_arrow->hash_id = string_hash_u64(id) / 2;
-    right_arrow->pos = madness_ui->cursor_pos;
-    right_arrow->size = (vec2s){
-        madness_ui_get_default_element_height(), madness_ui_get_default_element_height()
-    };
-    right_arrow->color = madness_ui->editor_style.color;
-
-    Madness_UI_Event left_result = madness_ui_event(left_arrow, true, true);
-    Madness_UI_Event right_result = madness_ui_event(right_arrow, true, true);
-
-
-    if (left_result.hovered)
+    switch (type)
     {
-        left_arrow->color = madness_ui->editor_style.hovered_color;
+    case Madness_UI_Scalar_Type_U8:
+        u8 v = clamp_u8(*(u8*)data + (u8)increment_value, 0, UINT8_MAX);
+        *(u8*)data = v;
+        break;
+    case Madness_UI_Scalar_Type_U16:
+        {
+            u16 v = clamp_u16(*(u16*)data + (u16)increment_value, 0, UINT16_MAX);
+            *(u16*)data = v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_U32:
+        {
+            u32 v = clamp_u32(*(u32*)data + (u32)increment_value, 0, UINT32_MAX);
+            *(u32*)data = v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_U64:
+        {
+            u64 v = clamp_u64(*(u64*)data + (u64)increment_value, 0, UINT64_MAX);
+            *(u64*)data = v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_S8:
+        {
+            s8 v = clamp_s8(*(s8*)data + (s8)increment_value, INT8_MIN, INT8_MAX);
+            *(s8*)data = (s8)v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_S16:
+        {
+            s16 v = clamp_s16(*(s16*)data + (s16)increment_value, INT16_MIN, INT16_MAX);
+            *(s16*)data = (s16)v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_S32:
+        {
+            s32 v = clamp_s32(*(s32*)data + (s32)increment_value, INT32_MIN, INT16_MAX);
+            *(s32*)data = (s32)v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_S64:
+        {
+            s64 v = clamp_s64(*(s64*)data + (s64)increment_value, INT64_MIN, INT64_MAX);
+            *(s64*)data = (s64)v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_F32:
+        {
+            f32 v = clamp_f32(*(f32*)data + (f32)increment_value, -FLT_MAX, FLT_MAX);
+            *(f32*)data = (f32)v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_F64:
+        {
+            f64 v = clamp_f64(*(f64*)data + (f64)increment_value, -DBL_MAX, DBL_MAX);
+            *(f64*)data = v;
+            break;
+        }
+    case Madness_UI_Scalar_Type_MAX:
+        // MASSERT(false);
+        break;
     }
-    if (right_result.hovered)
-    {
-        right_arrow->color = madness_ui->editor_style.hovered_color;
-    }
-
-    if (left_result.pressed)
-    {
-        left_arrow->color = madness_ui->editor_style.pressed_color;
-    }
-    if (right_result.pressed)
-    {
-        right_arrow->color = madness_ui->editor_style.pressed_color;
-    }
-
-    if (left_result.clicked)
-    {
-        *slider_val -= 1;
-    }
-    if (right_result.clicked)
-    {
-        *slider_val += 1;
-    }
-
-    *slider_val = clamp_int(*slider_val, min, max);
-
-
-    //update ui state for the next element
-    madness_ui_advance_cursor(quad_node->size);
 }
+
+bool madness_ui_scalar(String text, UI_Scalar_Type type, void* data, f64 value_change)
+{
+    madness_ui_string(text);
+    madness_ui_same_line();
+
+
+    int size = madness_ui_scalar_format(NULL, 0, type, data);
+    char* buffer = allocator_alloc(madness_ui->frame_allocator, size + 1);
+    madness_ui_scalar_format(buffer, size + 1, type, data);
+
+
+    String* scalar_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(buffer, madness_ui->frame_allocator);
+
+    vec2s text_size = madness_ui_get_text_size(*scalar_string);
+
+
+    UI_Node* node = madness_ui_get_new_node();
+    node->string_id = text;
+    node->hash_id = string_hash_u64(text);
+    node->pos = madness_ui->cursor_pos;
+    node->size = (vec2s){
+        text_size.x + madness_ui->text_padding_x,
+        madness_ui_get_default_element_height(),
+    };
+    node->color = madness_ui->editor_style.color;
+
+
+    madness_ui_string_internal(*scalar_string, node->pos, node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+
+    madness_ui_advance_cursor(node->size);
+
+
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
+
+
+    if (node_result.pressed)
+    {
+        node->color = madness_ui->editor_style.pressed_color;
+
+        madness_ui_scalar_change(type, data, madness_ui->mouse_delta_x * value_change);
+        madness_ui_scalar_change(type, data, madness_ui->mouse_delta_y * value_change);
+    }
+
+    else if (node_result.hovered)
+    {
+        node->color = madness_ui->editor_style.hovered_color;
+    }
+
+    if (node_result.mouse_wheel_up)
+    {
+        madness_ui_scalar_change(type, data, value_change);
+    }
+    if (node_result.mouse_wheel_down)
+    {
+        madness_ui_scalar_change(type, data, -value_change);
+    }
+
+
+    return node_result.mouse_wheel_scrolled;
+}
+
 
 bool madness_ui_u8(String text, u8* i, u32 increment_value)
 {
@@ -2372,7 +2369,7 @@ void madness_ui_text_box(String id)
     text_box->hash_id = generate_hash_key_64bit((u8*)id.chars, id.length);
     text_box->pos = madness_ui->cursor_pos;
 
-    float size_x = clamp_float(madness_ui->current_window_screen_size.x - label_node->size.x, 4, 10000);
+    float size_x = clamp_f32(madness_ui->current_window_screen_size.x - label_node->size.x, 4, 10000);
     text_box->size = (vec2s){size_x - madness_ui_get_default_element_height(), madness_ui_get_default_element_height()};
     text_box->color = madness_ui->editor_style.textbox_color;
 
@@ -2468,7 +2465,7 @@ void madness_ui_file_picker(String id)
     Window_State* top_window = stack_top(madness_ui->window_states_stack, Window_State*);
 
 
-    float size_x = clamp_float(
+    float size_x = clamp_f32(
         madness_ui->current_window_screen_size.x - (madness_ui->cursor_pos.x - top_window->window_region_pos.x),
         0,
         10000);
@@ -2734,11 +2731,11 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
         combo_box_node->color = madness_ui->editor_style.hovered_color;
         if (combo_box_result.mouse_wheel_up)
         {
-            *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) - 1, 0, string_array_size - 1);
         }
         if (combo_box_result.mouse_wheel_down)
         {
-            *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) + 1, 0, string_array_size - 1);
         }
     }
 
@@ -2855,11 +2852,11 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
 
         if (event.mouse_wheel_up)
         {
-            *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) - 1, 0, string_array_size - 1);
         }
         if (event.mouse_wheel_down)
         {
-            *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) + 1, 0, string_array_size - 1);
         }
     }
 
@@ -2972,11 +2969,11 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
         combo_box_node->color = madness_ui->editor_style.hovered_color;
         if (event.mouse_wheel_up)
         {
-            *selected_value = clamp_uint((*selected_value) - 1, 0, char_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) - 1, 0, char_array_size - 1);
         }
         if (event.mouse_wheel_down)
         {
-            *selected_value = clamp_uint((*selected_value) + 1, 0, char_array_size - 1);
+            *selected_value = clamp_u32((*selected_value) + 1, 0, char_array_size - 1);
         }
     }
 
@@ -3157,9 +3154,9 @@ bool madness_ui_color_picker(String label, vec3s* color_value)
     madness_ui_same_line();
     madness_ui_float_internal(madness_ui, *z_id, &color_value->z, increment_value);
 
-    color_value->x = clamp_float(color_value->x, 0.0, 1.0);
-    color_value->y = clamp_float(color_value->y, 0.0, 1.0);
-    color_value->z = clamp_float(color_value->z, 0.0, 1.0);
+    color_value->x = clamp_f32(color_value->x, 0.0, 1.0);
+    color_value->y = clamp_f32(color_value->y, 0.0, 1.0);
+    color_value->z = clamp_f32(color_value->z, 0.0, 1.0);
 
     madness_ui_advance_cursor(color_node->size);
 
@@ -3169,7 +3166,7 @@ bool madness_ui_color_picker(String label, vec3s* color_value)
 
 bool madness_ui_circle(String id, float* thickness)
 {
-    *thickness = clamp_float(*thickness, 0.0f, 1.0f);
+    *thickness = clamp_f32(*thickness, 0.0f, 1.0f);
 
     // 0-1 range
     const float button_ratio_to_layout_size = 0.8f;
@@ -3235,7 +3232,7 @@ bool madness_ui_progress_bar(String label, float current, float max)
     background_bar->flags = 0;
     background_bar->color = COLOR_GREY;
 
-    float fill_bar_x = bar_size.x * clamp_float(current / max, 0.f, 1.f);
+    float fill_bar_x = bar_size.x * clamp_f32(current / max, 0.f, 1.f);
 
     UI_Node* fill_bar = madness_ui_get_new_node();
     fill_bar->string_id = label;
@@ -4145,16 +4142,29 @@ void madness_ui_example(void)
         madness_ui_combo_box_string(STRING("combo box"), &selected_string,
                                     string_array, ARRAY_SIZE(string_array));
 
-        /*TODO: test these out
-         *static u8 little;
-        static u16 medium;
-        static u32 big;
-        madness_ui_u8(STRING("u8"), &little, 1.0);
-        madness_ui_u16(STRING("u16"), &medium, 1.0);
-        madness_ui_u16(STRING("u16/8"), &little, 1.0);
-        madness_ui_u32(STRING("u32"), &big, 1.0);
-        madness_ui_u32(STRING("u32/8"), &little, 1.0);
-        // madness_ui_u64()*/
+        static u64 val_u64 = 32;
+        static u32 val_u32;
+        static u16 val_u16;
+        static u8 val_u8;
+        static s64 val_s64;
+        static s32 val_s32;
+        static s16 val_s16;
+        static s8 val_s8;
+        static s8 val_f32;
+        static s8 val_f64;
+
+        f64 change_val = 1.5f;
+
+        madness_ui_scalar(STRING("u64"), Madness_UI_Scalar_Type_U64, &val_u64, change_val);
+        madness_ui_scalar(STRING("u32"), Madness_UI_Scalar_Type_U32, &val_u32, change_val);
+        madness_ui_scalar(STRING("u16"), Madness_UI_Scalar_Type_U16, &val_u16, change_val);
+        madness_ui_scalar(STRING("u8"), Madness_UI_Scalar_Type_U8, &val_u8, change_val);
+        madness_ui_scalar(STRING("s64"), Madness_UI_Scalar_Type_S64, &val_s64, change_val);
+        madness_ui_scalar(STRING("s32"), Madness_UI_Scalar_Type_S32, &val_s32, change_val);
+        madness_ui_scalar(STRING("s16"), Madness_UI_Scalar_Type_S16, &val_s16, change_val);
+        madness_ui_scalar(STRING("s8"), Madness_UI_Scalar_Type_S8, &val_s8, change_val);
+        madness_ui_scalar(STRING("f32"), Madness_UI_Scalar_Type_F32, &val_f32, change_val);
+        madness_ui_scalar(STRING("f64"), Madness_UI_Scalar_Type_F64, &val_f64, change_val);
     }
     madness_ui_window_end();
     madness_ui_config_menu();

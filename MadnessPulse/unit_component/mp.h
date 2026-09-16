@@ -29,7 +29,7 @@ void mp_component_create_default(MP_Component* mp_component)
 
 void mp_component_clamp(MP_Component* mp_component)
 {
-    mp_component->current_mp = clamp_int(mp_component->current_mp, -mp_component->max_mp * 2, mp_component->max_mp * 2);
+    mp_component->current_mp = clamp_s32(mp_component->current_mp, -mp_component->max_mp * 2, mp_component->max_mp * 2);
 }
 
 float mp_component_get_mp_percent(MP_Component* mp_component)

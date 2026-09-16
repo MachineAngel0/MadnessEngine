@@ -60,8 +60,8 @@ void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
     VkExtent2D min = renderer->swapchain_capabilities.capabilities.minImageExtent;
     VkExtent2D max = renderer->swapchain_capabilities.capabilities.maxImageExtent;
 
-    swapchain_extent.width = clamp_int(swapchain_extent.width, min.width, max.width);
-    swapchain_extent.height = clamp_int(swapchain_extent.height, min.height, max.height);
+    swapchain_extent.width = clamp_s32(swapchain_extent.width, min.width, max.width);
+    swapchain_extent.height = clamp_s32(swapchain_extent.height, min.height, max.height);
 
     //TODO: we should have a clamp here to choose the smallest frame counts possible
     u32 image_count = renderer->swapchain_capabilities.capabilities.minImageCount;

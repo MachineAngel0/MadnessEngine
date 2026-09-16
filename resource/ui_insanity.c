@@ -584,8 +584,8 @@ void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanit
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container)
 {
-    node_to_constraint->size.x = clamp_float(node_to_constraint->size.x, 0, container->size.x);
-    node_to_constraint->size.y = clamp_float(node_to_constraint->size.y, 0, container->size.y);
+    node_to_constraint->size.x = clamp_f32(node_to_constraint->size.x, 0, container->size.x);
+    node_to_constraint->size.y = clamp_f32(node_to_constraint->size.y, 0, container->size.y);
 }
 
 Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable)

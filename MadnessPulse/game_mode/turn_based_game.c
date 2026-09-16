@@ -360,7 +360,7 @@ void turn_update(Madness_Pulse_Game* game)
                     String* usage_id = string_concat(&(STRING("Usage")),
                                                      &STRING_STRLEN(c_string_from_int(i,&game->frame_allocator)),
                                                      &game->frame_allocator);
-                    madness_ui_slider_arrow_u16(*usage_id, &overflow_usage_count, 0, ability_count);
+                    madness_ui_slider_arrow(*usage_id, &overflow_usage_count, 0, ability_count);
 
 
                     //TODO: TEMP: display ability text
@@ -633,7 +633,7 @@ Unit* madness_pulse_get_unit(const Madness_Pulse_Game* game, const Character_Nam
         if (game->units[i]->name == name)
         {
             return game->units[i];
-        };
+        }
     }
     MASSERT(false);
     return NULL;

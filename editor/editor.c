@@ -30,9 +30,8 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
-    // editor->state = EDITOR_UI_STATE_MATERIAL;
+    editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
 
     editor_generate_asset_lists(editor, memory_system);
 
@@ -339,7 +338,7 @@ void editor_ui_animation(Editor* editor)
             madness_ui_float(STRING("Animation Current Time:"), &madness_animation->current_time, 0);
             if (madness_ui_u32(STRING_STRLEN(buffer), &madness_animation->current_animation_index, 1))
             {
-                madness_animation->current_animation_index = clamp_uint(
+                madness_animation->current_animation_index = clamp_u32(
                     madness_animation->current_animation_index, 0,
                     animation_data->animations_count - 1);
 
@@ -977,7 +976,7 @@ void editor_particle_view(Editor* editor)
 
         //particle selection
         madness_ui_u32(STRING("PARTICLE INDEX"), &effect_index, 1);
-        effect_index = clamp_uint(effect_index, 0, particle_system->active_effects->num_items - 1);
+        effect_index = clamp_u32(effect_index, 0, particle_system->active_effects->num_items - 1);
 
 
         Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
@@ -989,7 +988,7 @@ void editor_particle_view(Editor* editor)
             madness_ui_string(*particle_effect->name);
 
             madness_ui_u32(STRING("EMITTER INDEX"), &effect_emitter_index, 1);
-            effect_emitter_index = clamp_uint(effect_emitter_index, 0, particle_effect->emitter_count - 1);
+            effect_emitter_index = clamp_u32(effect_emitter_index, 0, particle_effect->emitter_count - 1);
 
 
             if (madness_ui_button(STRING("REMOVE EMITTER AT INDEX")))
@@ -997,7 +996,7 @@ void editor_particle_view(Editor* editor)
                 //remove an emitter
                 Particle_Effect* particle_effect = &particle_system->particle_effects[effect_index];
                 particle_effect_remove_emitter(particle_effect, effect_emitter_index);
-                effect_emitter_index = clamp_uint(effect_index, 0, particle_system->active_effects->num_items - 1);
+                effect_emitter_index = clamp_u32(effect_index, 0, particle_system->active_effects->num_items - 1);
             }
 
 

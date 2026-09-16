@@ -191,8 +191,7 @@ float rand_range_f(const float min, const float max)
 
 
 /*** CLAMP ***/
-
-MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_t max)
+MINLINE u8 clamp_u8(const u8 cur_val, const u8 min, const u8 max)
 {
     if (cur_val > max)
     {
@@ -205,7 +204,7 @@ MINLINE int32_t clamp_int(const int32_t cur_val, const int32_t min, const int32_
     return cur_val;
 }
 
-MINLINE uint32_t clamp_uint(const uint32_t cur_val, const uint32_t min, const uint32_t max)
+MINLINE u16 clamp_u16(const u16 cur_val, const u16 min, const u16 max)
 {
     if (cur_val > max)
     {
@@ -218,7 +217,8 @@ MINLINE uint32_t clamp_uint(const uint32_t cur_val, const uint32_t min, const ui
     return cur_val;
 }
 
-MINLINE float clamp_float(const float cur_val, const float min, const float max)
+
+MINLINE u32 clamp_u32(const u32 cur_val, const u32 min, const u32 max)
 {
     if (cur_val > max)
     {
@@ -230,6 +230,97 @@ MINLINE float clamp_float(const float cur_val, const float min, const float max)
     }
     return cur_val;
 }
+MINLINE u64 clamp_u64(const u64 cur_val, const u64 min, const u64 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE s8 clamp_s8(const s8 cur_val, const s8 min, const s8 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE s16 clamp_s16(const s16 cur_val, const s16 min, const s16 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE s32 clamp_s32(const s32 cur_val, const s32 min, const s32 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+MINLINE s64 clamp_s64(const s64 cur_val, const s64 min, const s64 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+MINLINE f32 clamp_f32(const f32 cur_val, const f32 min, const f32 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
+
+MINLINE f64 clamp_f64(const f64 cur_val, const f64 min, const f64 max)
+{
+    if (cur_val > max)
+    {
+        return max;
+    }
+    if (cur_val < min)
+    {
+        return min;
+    }
+    return cur_val;
+}
+
 
 /*** EQUAL ***/
 

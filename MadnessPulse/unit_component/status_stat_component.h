@@ -45,7 +45,7 @@ void Status_Stat_Component_init_default(Status_Stat_Component* status_stat_compo
 //utility
 void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component, const Element_Type StatusTypeToCheck)
 {
-    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
+    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_f32(
         status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
         status_stat_component->UpperClampValue);
     //truncate the value
@@ -54,7 +54,7 @@ void ClampAndTruncateStatusBuildup(Status_Stat_Component* status_stat_component,
 
 void ClampStatusThreshold(Status_Stat_Component* status_stat_component, const Element_Type StatusTypeToCheck)
 {
-    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_float(
+    status_stat_component->StatusInfo[StatusTypeToCheck] = clamp_f32(
         status_stat_component->StatusInfo[StatusTypeToCheck], status_stat_component->LowerClampValue,
         status_stat_component->UpperClampValue);
 }

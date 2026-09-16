@@ -41,6 +41,34 @@ typedef enum UI_Alignment
     UI_ALIGNMENT_RIGHT,// also bottom
 } UI_Alignment;
 
+typedef enum UI_Scalar_Type
+{
+    Madness_UI_Scalar_Type_U8,
+    Madness_UI_Scalar_Type_U16,
+    Madness_UI_Scalar_Type_U32,
+    Madness_UI_Scalar_Type_U64,
+    Madness_UI_Scalar_Type_S8,
+    Madness_UI_Scalar_Type_S16,
+    Madness_UI_Scalar_Type_S32,
+    Madness_UI_Scalar_Type_S64,
+    Madness_UI_Scalar_Type_F32,
+    Madness_UI_Scalar_Type_F64,
+    Madness_UI_Scalar_Type_MAX,
+}UI_Scalar_Type;
+
+const char* ui_scalar_type_print_fmt[Madness_UI_Scalar_Type_MAX] = {
+    [Madness_UI_Scalar_Type_U8] = "%hhu",
+    [Madness_UI_Scalar_Type_U16] = "%hu",
+    [Madness_UI_Scalar_Type_U32] = "%u",
+    [Madness_UI_Scalar_Type_U64] = "%llu",
+    [Madness_UI_Scalar_Type_S8] = "%hhd",
+    [Madness_UI_Scalar_Type_S16] = "%hd",
+    [Madness_UI_Scalar_Type_S32] = "%d",
+    [Madness_UI_Scalar_Type_S64] = "%lld",
+    [Madness_UI_Scalar_Type_F32] = "%f",
+    [Madness_UI_Scalar_Type_F64] = "%f",
+
+};
 
 
 typedef struct UI_Render_Node

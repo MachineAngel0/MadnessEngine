@@ -92,7 +92,7 @@ void camera_process_mouse_movement(Camera* cam, float dt, float x_offset, float 
     // make sure that when pitch is out of bounds, screen doesn't get flipped
     if (constrain_pitch)
     {
-        cam->pitch = clamp_float(cam->pitch, -89.0f, 89.0f);
+        cam->pitch = clamp_f32(cam->pitch, -89.0f, 89.0f);
     }
 
     // Don't clamp yaw; wrap it instead if desired.

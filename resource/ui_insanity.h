@@ -33,6 +33,7 @@
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
 
 
+
 typedef struct Insanity_UI_Editor_Style
 {
     vec3s layout_color;

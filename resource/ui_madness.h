@@ -220,7 +220,7 @@ typedef struct Madness_UI_Event
     bool pressed; //is this node active and bieng pressed
     bool clicked; // has the mouse been released while hovering over this node
 
-    bool mouse_scrolled;
+    bool mouse_wheel_scrolled;
     bool mouse_wheel_up;
     bool mouse_wheel_down;
     s32 mouse_wheel_delta;
@@ -473,13 +473,14 @@ MAPI bool madness_ui_check_box(String label, bool* check_box_state);
 MAPI void madness_image(String id, Texture_System* texture_system, const char* icon_path);
 MAPI void madness_image_handle(Texture_Handle handle);
 
+//TODO: make the slider scroll and arrow use scalars
 MAPI void madness_ui_slider_scroll(String id, float* slider_val, float min, float max);
-//TODO: might get rid of the arrow version
 MAPI void madness_ui_slider_arrow(String id, float* slider_val, float min, float max);
-MAPI void madness_ui_slider_arrow_u16(String id, u16* slider_val, u16 min, u16 max);
-MAPI void madness_ui_slider_arrow_u32(String id, u32* slider_val, u32 min, u32 max);
 
 //TODO: these should really check for overflows, there are toolchain specific overflow builtin functions
+MAPI bool madness_ui_scalar(String text, UI_Scalar_Type type, void* data, f64 value_change);
+MAPI bool madness_ui_scalar_range(String text, UI_Scalar_Type type, void* data, u64 increment_value, u64 min, u64 max);
+
 MAPI bool madness_ui_u8(String text, u8* i, u32 increment_value);
 MAPI bool madness_ui_u16(String text, u16* i, u32 increment_value);
 MAPI bool madness_ui_u32(String text, u32* i, u32 increment_value);
