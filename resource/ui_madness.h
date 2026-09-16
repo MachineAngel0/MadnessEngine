@@ -138,8 +138,6 @@ typedef struct scroll_box_state
 typedef enum UI_Window_Flag
 {
     UI_Window_Flag_Window = BITFLAG(0),
-    UI_Window_Flag_Scrollable = BITFLAG(1),
-    UI_Window_Flag_Scrollbox = BITFLAG(2), // for setting the background
     UI_Window_Flag_Resizable = BITFLAG(3),
     UI_Window_Flag_Header = BITFLAG(4),
     UI_Window_Flag_Movable = BITFLAG(5),
@@ -215,7 +213,7 @@ typedef struct String_Builder_State
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
 {
-    Heap_Allocator* free_list_allocator;
+    Heap_Allocator* heap_allocator;
     Allocator* allocator;
     //permanent storage location, rn mainly just for loading fonts, would be better as a pool arena
     Frame_Allocator* frame_allocator;
@@ -265,11 +263,15 @@ typedef struct Madness_UI
     vec3s text_outline_color;
 
 
-    // Mouse/Key STATE // // TODO: gamepad and proper keyboard navigation
-
+    //INTERACTION EVENT
+    /*Madness_UI_Event_Result interaction_result;
+    u32 hot_last_frame;
+    u32 hot_this_frame;
+    u32 active;*/
     int hot;
     int active;
 
+    // Mouse State
     bool mouse_down;
     bool mouse_released_unique;
     s16 mouse_pos_x;
@@ -277,10 +279,19 @@ typedef struct Madness_UI
     s16 mouse_delta_x;
     s16 mouse_delta_y;
 
+    bool mouse_wheel;
+    s32 mouse_wheel_delta;
+
+
     //TODO: keep track if backspace has been held down for a certain period of time
     // for the backspace functionality of the textbox
 
+    //KEYBOARD STATE
+
     char released_key;
+
+    // TODO: gamepad and proper keyboard navigation
+
 
 
     //Keep an array of strings used in textboxes
@@ -360,6 +371,35 @@ MAPI void madness_ui_end(void);
 
 //NOTE: must be retrieved after madness_ui_end
 MAPI UI_Render_Packet madness_ui_get_ui_render_data(void);
+
+
+typedef struct Madness_UI_Event
+{
+    //interaction events
+    bool hovered; //is this node currently bieng hovered over
+    bool pressed; //is this node active and bieng pressed
+    bool clicked; // has the mouse been released while hovering over this node
+
+    bool mouse_scrolled;
+    s32 mouse_wheel_delta;
+
+    float mouse_delta_x;
+    float mouse_delta_y;
+
+
+    //nagivation events
+    bool nav_hovered;
+    bool nav_pressed;
+    bool nav_clicked;
+    bool nav_returned;
+    // bool nav_up; ...etc for all directions
+}Madness_UI_Event;
+
+
+MAPI Madness_UI_Event madness_ui_add_event(UI_Node* node, bool interaction, bool navigation)
+{
+    //TODO:
+}
 
 
 //API START (besides init/shutdown, begin/end)

@@ -2,7 +2,6 @@
 #define INSANITY_UI_H
 
 #include "allocator.h"
-#include "stack.h"
 #include "ui_types.h"
 
 //IMMEDIATE MODE UI
@@ -30,84 +29,10 @@
 #define INSANITY_EDITOR_FONT_SIZE 16.0f
 #define INSANITY_TEXT_OUTLINE 0.5f
 
-
-
 #define INSANITY_UI_MAX_NODE_COUNT 1000
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
 
 
-typedef enum Insanity_UI_Interaction_Flags
-{
-    UI_EVENT_HOVER = BITFLAG(0),
-    UI_EVENT_CLICK = BITFLAG(1),
-    UI_EVENT_DRAG = BITFLAG(2),
-    UI_EVENT_SCROLL = BITFLAG(3),
-    UI_EVENT_TEXT_INPUT = BITFLAG(4),
-    UI_EVENT_KEYBOARD = BITFLAG(5),
-    UI_EVENT_CONTROLLER = BITFLAG(6),
-    UI_EVENT_SLIDER_CHANGE = BITFLAG(7),
-    // UI_EVENT_ = BITFLAG(32),
-} Insanity_UI_Interaction_Flags;
-
-
-typedef struct Insanity_UI_Interaction_Node
-{
-    // u32 array_position;
-    struct Insanity_UI_Node* node;
-    Insanity_UI_Interaction_Flags flags;
-    // Type flags; //normal, pop up, modal etc
-} Insanity_UI_Interaction_Node;
-
-
-typedef struct Insanity_UI_Interaction_Result
-{
-    bool hovered;
-    bool pressed;
-    bool clicked;
-    bool scrolled;
-    bool slider_change;
-
-    bool dragged;
-    float mouse_delta_x;
-    float mouse_delta_y;
-
-} Insanity_UI_Interaction_Result;
-
-
-typedef enum Insanity_UI_Window_Flags
-{
-    Insanity_UI_Window_Flag_Scrollable = BITFLAG(0),
-    Insanity_UI_Window_Flag_Resizable = BITFLAG(1),
-    Insanity_UI_Window_Flag_Header = BITFLAG(2),
-    Insanity_UI_Window_Flag_Movable = BITFLAG(3), // must have a header to be movable
-    Insanity_UI_Window_Flag_Autoresize = BITFLAG(4),
-    Insanity_UI_Window_Flag_Dont_Save_Position = BITFLAG(5),
-    Insanity_UI_Window_Flag_Closable = BITFLAG(6),
-    Insanity_UI_Window_Flag_No_Background_Color = BITFLAG(7),
-} Insanity_UI_Window_Flags;
-
-
-typedef struct Insanity_UI_Window
-{
-    const char* name;
-    Insanity_UI_Window_Flags flags;
-
-
-    vec2s intial_position_percent;
-    vec2s intial_size_percent;
-
-    //
-    vec2s window_pos;
-    vec2s window_size;
-
-    vec2s header_size;
-    vec2s header_pos;
-
-    float scroll_offset; // should ideally be in a range of size, and then we increment the size by that
-    float scroll_bar_percent_offset; // should ideally be in a range of size, and then we increment the size by that
-
-    vec2s window_relative_cursor_pos; // track how far down items have gone relative to the window*/
-} Insanity_UI_Window;
 
 
 typedef struct Insanity_UI_Editor_Style
@@ -132,7 +57,34 @@ typedef struct Insanity_UI_Editor_Style
     vec3s header_color;
     vec3s pop_up_color;
     vec3s scrollbox_color;
+    vec3s error_color;
 } Insanity_UI_Editor_Style;
+
+
+
+typedef struct Insanity_UI_Event
+{
+    //interaction events
+    bool hovered; //is this node currently bieng hovered over
+    bool pressed; //is this node active and bieng pressed
+    bool clicked; // has the mouse been released while hovering over this node
+
+    bool mouse_scrolled;
+    s32 mouse_wheel_delta;
+
+    float mouse_delta_x;
+    float mouse_delta_y;
+
+
+    //nagivation events
+    bool nav_hovered;
+    bool nav_pressed;
+    bool nav_clicked;
+    bool nav_returned;
+    // bool nav_up; ...etc for all directions
+} Insanity_UI_Event;
+
+
 
 
 typedef struct Insanity_UI_Node
@@ -168,8 +120,11 @@ typedef struct Insanity_UI_Node
 
     //colors
     vec3s color;
-    vec3s background_color;
+
+    s32 z_order;
+
 } Insanity_UI_Node;
+
 
 
 typedef struct Insanity_UI
@@ -193,9 +148,17 @@ typedef struct Insanity_UI
     float text_outline;
     // Font fonts[100];
 
+
+    //Interaction
+    Insanity_UI_Node* interaction_node_array[INSANITY_UI_MAX_NODE_COUNT];
+    u32 interaction_node_count;
+
+    Insanity_UI_Node* navigation_node_array[INSANITY_UI_MAX_NODE_COUNT];
+    u32 navigation_node_count;
+
     ARRAY_TYPE(Insanity_UI_Node)* ui_nodes;
-    ARRAY_TYPE(Insanity_UI_Node)* pop_up_nodes;
-    ARRAY_TYPE(Insanity_UI_Node)* modal_nodes;
+
+
 
     //Render
     UI_Render_Node* render_node_array;
@@ -206,39 +169,36 @@ typedef struct Insanity_UI
 
 
     Insanity_UI_Editor_Style editor_style;
-    vec2s default_padding;
-
-    //Frame State
-    STACK_TYPE(Insanity_UI_Window*)* window_states_stack;
-    STACK_TYPE(Insanity_UI_Window*)* pop_up_states_stack;
-    STACK_TYPE(Insanity_UI_Window*)* modal_states_stack;
-
-    vec2s cursor_position;
-    // vec2 starting_cursor_position;
 
 
-    //Persistant State
-    Insanity_UI_Window window_state_array[INSANITY_UI_MAX_WINDOW_COUNT];
-    u32 window_state_count;
 
-    //Interaction
-    Insanity_UI_Interaction_Node interaction_node_array[INSANITY_UI_MAX_NODE_COUNT];
-    u32 interaction_node_count;
-
-    Insanity_UI_Interaction_Result interaction_result;
-    u32 hot;
+    //snapshot of our inputs, used for telling any hot/active nodes what happened
+    Insanity_UI_Event interaction_result;
+    u32 hot_last_frame;
+    u32 hot_this_frame;
     u32 active;
-    // const char* active_node_name;
 
-    u32 hash;
+    //TODO:
+    // u32 navigation_focus_id;
+    // u32 navigation_hot_id;
+    // u32 navigation_active_id;
+
+    u32 hash; // a continous hash to give nodes a unique id
 
     //Mouse
     bool mouse_down;
+    bool mouse_down_unique;
     bool mouse_released_unique;
     s16 mouse_pos_x;
     s16 mouse_pos_y;
     s16 mouse_delta_x;
     s16 mouse_delta_y;
+    s32 clicked_this_frame;
+
+
+    bool mouse_wheel_up;
+    bool mouse_wheel_down;
+    s32 mouse_wheel_delta;
 
     //Keyboard
     char first_released_key;
@@ -251,7 +211,40 @@ typedef struct Insanity_UI
     // bool key_super;
 
     bool key_backspace;
+
+
+    /*
+    //EDITOR STATE
+
+    vec2s cursor_position;
+
+
+    Insanity_UI_Window window_state_array[INSANITY_UI_MAX_WINDOW_COUNT];
+    u32 window_state_count;
+
+    ARRAY_TYPE(Insanity_UI_Node)* pop_up_nodes;
+    ARRAY_TYPE(Insanity_UI_Node)* modal_nodes;
+
+    Insanity_UI_Window* active_pop_ups;
+    Insanity_UI_Window* active_modals;
+
+
+    float text_padding;
+    float node_padding;
+
+    float window_padding_x;
+    float window_padding_y;
+
+    vec2s window_min_size;
+
+    //Frame State
+    STACK_TYPE(Insanity_UI_Window)* window_states_stack;
+    STACK_TYPE(Insanity_UI_Window)* pop_up_states_stack;
+    STACK_TYPE(Insanity_UI_Window)* modal_states_stack;*/
+
 } Insanity_UI;
+
+static Insanity_UI* insanity_ui;
 
 
 //API
@@ -272,7 +265,7 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 
 //Building Blocks
-Insanity_UI_Node* insanity_ui_node(const char* name, Insanity_UI_Interaction_Flags interaction_flags);
+Insanity_UI_Node* insanity_ui_node(const char* name);
 
 Insanity_UI_Node* insanity_ui_node_rect_left(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
                                              vec2 percent_size);
@@ -287,13 +280,9 @@ Insanity_UI_Node* insanity_ui_node_rect_down(const char* name, Insanity_UI_Node*
 // void madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
 // void madness_ui_new_scissor_end(void);
 
-
-//returns if the window is open
-bool insanity_ui_window_begin(const char* window_name, vec2s initial_percent_pos, vec2s initial_percent_size,
-                              Insanity_UI_Window_Flags flags);
-void insanity_ui_window_end();
-void insanity_ui_window_cursor_offset(vec2s offset);
-void insanity_ui_window_cursor_advance_down(Insanity_UI_Node* node);
+//Scroll
+void scrollbox_begin();
+void scrollbox_end();
 
 
 //STRING
@@ -312,33 +301,48 @@ vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
 
 //TEXTURES AND FONTS
 void insanity_ui_set_font(Texture_Handle handle);
+void insanity_ui_set_font_default();
 Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle);
 
 
 //LAYOUT and Contraints
-void insanity_ui_node_offset_from_node_x(Insanity_UI_Node* anchor_node, Insanity_UI_Node* node_to_offset,
+void insanity_ui_node_offset_from_node_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float x_offset);
-void insanity_ui_node_offset_from_node_y(Insanity_UI_Node* anchor_node, Insanity_UI_Node* node_to_offset,
+void insanity_ui_node_offset_from_node_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float y_offset);
-void insanity_ui_node_offset_from_node(Insanity_UI_Node* anchor_node, Insanity_UI_Node* node_to_offset, vec2s offset);
+void insanity_ui_node_offset_from_node(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset);
 
 
-void insanity_ui_node_align_to_node_horizontal(Insanity_UI_Node* container, Insanity_UI_Node* node_to_align,
+void insanity_ui_node_align_x(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                                                UI_Alignment x_alignment);
-void insanity_ui_node_align_to_node_vertical(Insanity_UI_Node* container, Insanity_UI_Node* node_to_align,
+void insanity_ui_node_align_y(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                                              UI_Alignment y_alignment);
-void insanity_ui_node_align_to_node(Insanity_UI_Node* container, Insanity_UI_Node* node_to_align,
+
+void insanity_ui_node_align(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                                     UI_Alignment x_alignment, UI_Alignment y_alignment);
 
-// void insanity_ui_auto_layout(); // maybe do this, it wouldn't be the worst thing to implement
+void insanity_ui_node_expand_xy(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
+void insanity_ui_node_expand_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
+void insanity_ui_node_expand_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
 
-//NOTE: about sizing to children, you technically only need a max size,
-// and whatever the last child was (or at least the lowest positioned child)
+void insanity_ui_node_expand_x_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
+void insanity_ui_node_expand_y_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
 
 
-//Interaction
-Insanity_UI_Interaction_Result insanity_ui_node_get_interaction(Insanity_UI_Node* node);
-void insanity_ui_node_add_interaction(Insanity_UI_Node* node, Insanity_UI_Interaction_Flags flags);
+void insanity_ui_node_expand_and_align_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent,  UI_Alignment y_alignment);
+
+
+vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);
+
+
+void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
+
+
+
+
+
+/*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
+Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable);
 
 bool insanity_ui_rect_hit(Insanity_UI_Node* node);
 
@@ -347,26 +351,17 @@ bool insanity_ui_rect_hit(Insanity_UI_Node* node);
 void insanity_ui_test(float dt, float elapsed_time);
 
 
-//EDITOR API
-//everything should be created from the building blocks above
-Insanity_UI_Interaction_Result insanity_ui_button(const char* label);
-
-Insanity_UI_Interaction_Result insanity_ui_checkbox(const char* name, bool* state);
-
-Insanity_UI_Interaction_Result insanity_ui_combo_box(const char* name);
+// void insanity_ui_autoplace_and_size(Insanity_UI_Node* node);
 
 
-Insanity_UI_Interaction_Result insanity_ui_u64(const char* name, u64* value);
-Insanity_UI_Interaction_Result insanity_ui_s64(const char* name, u64* value);
-Insanity_UI_Interaction_Result insanity_ui_float(const char* name, f32* value);
-Insanity_UI_Interaction_Result insanity_ui_double(const char* name, f64* value);
-
-
-//what about interaction
-//what about keyboard/controller input
-//what about text wrapping or text shrinking
-//how about text effects, like floating text
-//handling animations for the ui's?
+// what about interaction
+// what about keyboard/controller input
+// what about text wrapping or text shrinking
+// how about text effects, like floating text
+// handling animations for the ui's?
+// what about clipping items outside a window context?
+// what about clipping items outside a window context?
+// should the system handle movable or the user? the system informs, the user should handle it what happens, provided some generally utility functions
 
 
 // how about querying for interactions,
@@ -448,12 +443,12 @@ Insanity_UI_Interaction_Result insanity_ui_double(const char* name, f64* value);
 //scenarios - exit pop up
 //       button = Node()
 //       if(button.event.pressed){
-//          pop_up_begin()
+//          modal_begin()
 //          container = Node()
 //          button1, button2
 //          if(interaction(button1).pressed){exit; do other state}
 //          if(interaction(button2).pressed){exit; do other state}
-//          pop_up_end()
+//          modal_end()
 //       };
 
 

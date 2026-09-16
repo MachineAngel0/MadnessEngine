@@ -164,6 +164,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
         insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
         break;
+    case EDITOR_UI_STATE_INSANITY_UI_EDITOR_TEST:
+        // insanity_ui_editor_test(editor->clock->delta_time, editor->clock->time_elapsed);
+        break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test();
         madness_ui_example();

@@ -710,6 +710,7 @@ bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_u
 
 bool asset_load_material_path(Asset_System* asset_system, const char* asset_path, Material_Handle* out_material)
 {
+    PROFILE_ZONE(asset_load_material_path)
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
@@ -727,7 +728,7 @@ bool asset_load_material_path(Asset_System* asset_system, const char* asset_path
 
     scratch_allocator_end(scratch);
 
-    PROFILE_ZONE_END(asset_load_material_uuid)
+    PROFILE_ZONE_END(asset_load_material_path)
 
 
     return load_result;

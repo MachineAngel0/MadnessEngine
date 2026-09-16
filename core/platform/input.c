@@ -33,7 +33,7 @@ void input_update(void)
     memcpy(&input_system->keyboard_previous, &input_system->keyboard_current, sizeof(keyboard_state));
     memcpy(&input_system->mouse_previous, &input_system->mouse_current, sizeof(mouse_state));
 
-    //NOTE: as this only records the delta, we have no way of knowing if nothing happened, hence we set it to 0
+    //NOTE: as this only records the delta (-1 or 1), we have no way of knowing if nothing happened, hence we set it to 0
     //and only check the previous frame for how the wheel moved
     input_system->mouse_current.mouse_wheel_delta = 0;
 

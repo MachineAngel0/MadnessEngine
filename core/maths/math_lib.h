@@ -99,7 +99,6 @@ bool u32_sub_overflow(const u32 a, const u32 b, u32* out_subtraction_result)
 }
 
 
-//// COLORS ////
 
 static const vec3s COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
 static const vec3s COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
@@ -114,6 +113,22 @@ static const vec3s COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
 static const vec3s COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
 static const vec3s COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
 
+//// COLORS4 ////
+
+static const vec4s COLOR4_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
+static const vec4s COLOR4_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f, .w = 1.0f};
+static const vec4s COLOR4_GREY = {0.5f, 0.5f, 0.5f, .w = 1.0f};
+static const vec4s COLOR4_WHITE = {1.0f, 1.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_RED = {1.0f, 0.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_GREEN = {0.0f, 1.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_BLUE = {0.0f, 0.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_YELLOW = {1.0f, 1.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_MAGENTA = {1.0f, 0.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_VIOLET = {0.5f, 0.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_HOT_PINK = {1.0f, 0.412f, 0.706f, .w = 1.0f};
+static const vec4s COLOR4_ORANGE = {1.0f, 0.5f, 0.0f, .w = 1.0f};
+static const vec4s COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, .w = 1.0f};
+
 //Purple Color Pallette
 static const vec3s COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
 static const vec3s COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
@@ -124,14 +139,6 @@ static const vec3s COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y 
 static const vec3s COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
 
 
-static const vec4s COLOR_BLACK_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
-static const vec4s COLOR_WHITE_V4 = {1.0f, 1.0f, 1.0f, 1.0f};
-static const vec4s COLOR_RED_V4 = {1.0f, 0.0f, 0.0f, 1.0f};
-static const vec4s COLOR_GREEN_V4 = {0.0f, 1.0f, 0.0f, 1.0f};
-static const vec4s COLOR_BLUE_V4 = {0.0f, 0.0f, 1.0f, 1.0f};
-static const vec4s COLOR_YELLOW_V4 = {1.0f, 1.0f, 0.0f, 1.0f};
-static const vec4s COLOR_MAGENTA_V4 = {1.0f, 0.0f, 1.0f, 1.0f};
-static const vec4s COLOR_CYAN_V4 = {0.0f, 1.0f, 1.0f, 1.0f};
 
 
 /*** RANDOM ***/
