@@ -219,6 +219,8 @@ typedef struct Insanity_UI
     //Scroll
     Insanity_UI_Scroll scroll_array[100];
     u32 scroll_array_count;
+
+    vec2 scroll_max_view;
 } Insanity_UI;
 
 static Insanity_UI* insanity_ui;
@@ -259,8 +261,8 @@ Insanity_UI_Node* insanity_ui_node_rect_down(const char* name, Insanity_UI_Node*
 // void madness_ui_new_scissor_end(void);
 
 //Windows
-Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
-void scroll_end();
+Insanity_UI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size);
+void insanity_ui_scroll_end();
 
 //an idea, we can pass back a garbage node, so any modifications dont matter
 //this is here as an optimization, inside a loop, so that we are not need
@@ -292,7 +294,7 @@ bool scrollbox_is_cursor_outside_view(Insanity_UI_Scroll* scroll)
 
 
 //returns true if we went outside the view of the scrollbox, will cull all future nodes
-bool scrollbox_advance_down(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
+bool scroll_advance_down(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
 {
     if (cull_nodes_outside_view)
     {
@@ -335,32 +337,29 @@ void insanity_ui_set_font_default();
 Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle);
 
 
-//LAYOUT and Contraints
-void insanity_ui_node_offset_from_node_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+//LAYOUT and CONSTRAINTS
+void insanity_ui_node_offset_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float x_offset);
-void insanity_ui_node_offset_from_node_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+void insanity_ui_node_offset_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float y_offset);
-void insanity_ui_node_offset_from_node(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset);
+void insanity_ui_node_offset(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset);
 
 
 void insanity_ui_node_align_x(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                               UI_Alignment x_alignment);
 void insanity_ui_node_align_y(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                               UI_Alignment y_alignment);
-
 void insanity_ui_node_align(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
                             UI_Alignment x_alignment, UI_Alignment y_alignment);
 
-void insanity_ui_node_expand_xy(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
+void insanity_ui_node_expand(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
 void insanity_ui_node_expand_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
 void insanity_ui_node_expand_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
 
-void insanity_ui_node_expand_x_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
-void insanity_ui_node_expand_y_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
+void insanity_ui_node_expand_percent_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
+void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
+void insanity_ui_node_expand_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, vec2s percent);
 
-
-void insanity_ui_node_expand_and_align_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent,
-                                         UI_Alignment y_alignment);
 
 
 vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);

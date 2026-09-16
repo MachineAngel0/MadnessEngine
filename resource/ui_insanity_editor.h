@@ -156,7 +156,7 @@ bool insanity_ui_window_begin(const char* window_name, vec2s initial_percent_pos
     //header_text
     Insanity_UI_Node* header_text = insanity_ui_text(window_name);
     insanity_ui_node_align(header_text, header, UI_ALIGNMENT_LEFT, UI_ALIGNMENT_CENTER);
-    insanity_ui_node_offset_from_node_x(header_text, header, insanity_ui->text_padding);
+    insanity_ui_node_offset_x(header_text, header, insanity_ui->text_padding);
 
 
     //collapse

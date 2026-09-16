@@ -401,7 +401,7 @@ Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Nod
     return out_node;
 }
 
-Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size)
+Insanity_UI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size)
 {
     Insanity_UI_Scroll* scroll = &insanity_ui->scroll_array[insanity_ui->scroll_array_count++];
     scroll->starting_pos = pos;
@@ -412,19 +412,17 @@ Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size)
     Insanity_UI_Node* scroll_node = insanity_ui_node(name);
     scroll_node->pos = pos;
     scroll_node->size = size;
-    scroll_node->color = insanity_ui->editor_style.layout_accent_color;
+    scroll_node->color = insanity_ui->editor_style.layout_color;
 
     scroll->scroll_container_node = scroll_node;
 
     return scroll;
 }
 
-void scroll_end()
+void insanity_ui_scroll_end()
 {
     insanity_ui->scroll_array_count--;
 }
-
-
 
 
 Insanity_UI_Node* insanity_ui_text(const char* text)
@@ -489,22 +487,22 @@ Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle)
     return image_node;
 }
 
-void insanity_ui_node_offset_from_node_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+void insanity_ui_node_offset_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float x_offset)
 {
     node_to_offset->pos.x = anchor_node->pos.x + x_offset;
 }
 
-void insanity_ui_node_offset_from_node_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+void insanity_ui_node_offset_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
                                          float y_offset)
 {
     node_to_offset->pos.y = anchor_node->pos.y + y_offset;
 }
 
-void insanity_ui_node_offset_from_node(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset)
+void insanity_ui_node_offset(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset)
 {
-    insanity_ui_node_offset_from_node_x(node_to_offset, anchor_node, offset.x);
-    insanity_ui_node_offset_from_node_y(node_to_offset, anchor_node, offset.y);
+    insanity_ui_node_offset_x(node_to_offset, anchor_node, offset.x);
+    insanity_ui_node_offset_y(node_to_offset, anchor_node, offset.y);
 }
 
 void insanity_ui_node_align_x(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
@@ -556,7 +554,7 @@ void insanity_ui_node_align(Insanity_UI_Node* node_to_align, Insanity_UI_Node* c
     insanity_ui_node_align_y(node_to_align, container, y_alignment);
 }
 
-void insanity_ui_node_expand_xy(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container)
+void insanity_ui_node_expand(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container)
 {
     node_to_expand->size = container->size;
 }
@@ -572,22 +570,17 @@ void insanity_ui_node_expand_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Nod
     node_to_expand->size.y = container->size.y;
 }
 
-void insanity_ui_node_expand_x_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent)
+void insanity_ui_node_expand_percent_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent)
 {
     node_to_expand->size.x = container->size.x * percent;
 }
 
-void insanity_ui_node_expand_y_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent)
+void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent)
 {
     node_to_expand->size.y = container->size.y * percent;
 }
 
-void insanity_ui_node_expand_and_align_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent,
-                                         UI_Alignment y_alignment)
-{
-    insanity_ui_node_expand_y_percent(node_to_expand, container, percent);
-    insanity_ui_node_align_y(node_to_expand, container, y_alignment);
-}
+
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container)
 {
@@ -669,25 +662,44 @@ void insanity_ui_test(float dt, float elapsed_time)
     // window_end()
 
 
-    /*
-    insanity_ui_window_begin("insanity", (vec2s){0.5, 0.5}, (vec2s){0.5, 0.5}, 0);
+    Insanity_UI_Scroll* scroll = insanity_ui_scroll_begin("insanity", (vec2s){1000, 0}, (vec2s){600, 600});
     {
         //for loop here
-        insanity_ui_window_cursor_offset(insanity_ui->default_padding);
-        Insanity_UI_Node* container = insanity_ui_node("container", UI_EVENT_CLICK);
-        Insanity_UI_Node* icon = insanity_ui_image("icon", (Texture_Handle){0, 0});
-        insanity_ui_window_cursor_advance_down(icon);
-        Insanity_UI_Node* text = insanity_ui_text("container");
-        insanity_ui_node_align_to_node(container, text, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
-        insanity_ui_window_cursor_advance_down(icon);
-        if (insanity_ui_node_get_interaction(container).clicked)
+        for (u32 i = 0; i < 12; i++)
         {
-            //do something with the ability
-            DEBUG("ABILITY CLICKED")
+            scroll->cursor.y += 8.0;
+
+            Insanity_UI_Node* container = insanity_ui_node("container");
+            container->pos = scroll->cursor;
+            container->color = insanity_ui->editor_style.color;
+            insanity_ui_node_expand_x(container, scroll->scroll_container_node);
+            Insanity_UI_Node* icon = insanity_ui_image("icon", (Texture_Handle){0, 0});
+            icon->pos = container->pos;
+            icon->size.x = 32.f;
+            scroll->cursor.y += 8.0;
+            Insanity_UI_Node* text = insanity_ui_text("container");
+            scroll->cursor.y += 8.0;
+            insanity_ui_node_expand_y(container, text);
+            container->size.y += 8.0;
+            insanity_ui_node_expand_y(icon, container);
+            insanity_ui_node_align(text, container, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+
+
+            scroll_advance_down(scroll, container, true);
+
+            Insanity_UI_Event container_event = insanity_ui_event(container, true, true);
+            if (container_event.hovered)
+            {
+                container->color = insanity_ui->editor_style.hovered_color;
+            }
+            if (container_event.clicked)
+            {
+                //do something with the ability
+                FATAL("ABILITY CLICKED")
+            }
         }
     }
-    insanity_ui_window_end();
-    */
+    insanity_ui_scroll_end();
 
 
     Insanity_UI_Node* container = insanity_ui_node("container");
@@ -712,7 +724,7 @@ void insanity_ui_test(float dt, float elapsed_time)
     insanity_ui_event(container2, true,false);
     container2->pos = (vec2s){.x = 200, 200};
     container2->size = (vec2s){.x = 200, .y = (sinf(elapsed_time) * 100.f) + 200.f};
-    insanity_ui_node_offset_from_node_y(container2, container, 50.f);
+    insanity_ui_node_offset_y(container2, container, 50.f);
     if (container2->pos.y <= 0)
     {
         container2->pos.y = 0;
@@ -729,19 +741,18 @@ void insanity_ui_test(float dt, float elapsed_time)
 
 
     //scroll box
-    Insanity_UI_Scroll* scroll = scroll_begin("scroll", (vec2s){800, 600}, (vec2s){200, 200});
+    Insanity_UI_Scroll* scroll_t = insanity_ui_scroll_begin("scroll", (vec2s){800, 600}, (vec2s){200, 200});
     {
         Insanity_UI_Node* item1 = insanity_ui_node("item1");
-        item1->pos = scroll->cursor;
+        item1->pos = scroll_t->cursor;
         item1->size = (vec2s){50, 50};
         item1->color = COLOR_BLUE;
-        scrollbox_advance_down(scroll, item1, false);
+        scroll_advance_down(scroll_t, item1, false);
 
         for (u32 i = 0; i < 8; i++)
         {
-
             Insanity_UI_Node* new_item = insanity_ui_node_create_copy("item", item1);
-            new_item->pos = scroll->cursor;
+            new_item->pos = scroll_t->cursor;
             new_item->size = (vec2s){50, 50};
             if (i == 1)
             {
@@ -753,11 +764,10 @@ void insanity_ui_test(float dt, float elapsed_time)
             }
 
 
-            scrollbox_advance_down(scroll, new_item, true);
+            scroll_advance_down(scroll_t, new_item, true);
         }
-
     }
-    scroll_end();
+    insanity_ui_scroll_end();
 
 
     PROFILE_ZONE_END(insanity_ui_test)
