@@ -57,6 +57,11 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
         .error_color = COLOR_GREEN,
     };
 
+
+    insanity_ui->dummy_node = (Insanity_UI_Node){0};
+    insanity_ui->dummy_node.name_id = "dummy_node";
+    insanity_ui->dummy_node.color = COLOR_HOT_PINK;
+
     INFO("INSANITY UI CREATED");
     return true;
 }
@@ -116,9 +121,11 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     insanity_ui->key_ctrl = input_is_key_pressed(KEY_LCONTROL) || input_is_key_pressed(KEY_RCONTROL);
     insanity_ui->key_backspace = input_is_key_pressed(KEY_BACKSPACE);
 
+    insanity_ui->scroll_array_count = 0;
 
+    //TODO: move into its own function
     //input debug state
-    DEBUG("INSANITY UI MOUSE POS: %d, %d", insanity_ui->mouse_pos_x, insanity_ui->mouse_pos_y);
+    /*DEBUG("INSANITY UI MOUSE POS: %d, %d", insanity_ui->mouse_pos_x, insanity_ui->mouse_pos_y);
     DEBUG("INSANITY UI MOUSE DELTA: %d, %d", insanity_ui->mouse_delta_x, insanity_ui->mouse_delta_y);
     DEBUG("INSANITY UI MOUSE Wheel: UP: %d, DOWN:%d: delta", insanity_ui->mouse_wheel_up,
           insanity_ui->mouse_wheel_down);
@@ -139,7 +146,7 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     if (insanity_ui->key_backspace)
     {
         DEBUG("INSANITY UI BACKSPACE")
-    }
+    }*/
 
     PROFILE_ZONE_END(insanity_ui_begin)
 }
@@ -338,14 +345,6 @@ void insanity_ui_resolve_interaction(void)
             insanity_ui->clicked_this_frame = insanity_ui->active;
 
         insanity_ui->active = 0;
-
-
-        /*// do a hit test to make sure we are the actual active node.
-        Insanity_UI_Node* active_node = insanity_ui_find_node_by_id(insanity_ui->active);
-        if (active_node && insanity_ui_rect_hit(active_node))
-            insanity_ui->clicked_this_frame = insanity_ui->active;
-
-        insanity_ui->active = 0;*/
     }
 
     // build the result once, we dont want to do this with every query
@@ -371,13 +370,16 @@ void insanity_ui_resolve_interaction(void)
 }
 
 
-
-
 Insanity_UI_Node* insanity_ui_node(const char* name)
 {
-    Insanity_UI_Node* return_node;
+    if (insanity_ui->scroll_array_count > 0 &&
+        insanity_ui->scroll_array[insanity_ui->scroll_array_count - 1].outside_view)
+    {
+        return &insanity_ui->dummy_node;
+    };
 
-    return_node = (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes, insanity_ui->ui_nodes->num_items++);
+    Insanity_UI_Node* return_node = (Insanity_UI_Node*)_array_get(insanity_ui->ui_nodes,
+                                                                  insanity_ui->ui_nodes->num_items++);
 
 
     return_node->name_id = name;
@@ -390,6 +392,39 @@ Insanity_UI_Node* insanity_ui_node(const char* name)
 
     return return_node;
 }
+
+Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Node* node)
+{
+    Insanity_UI_Node* out_node = insanity_ui_node(name);
+    out_node->pos = node->pos;
+    out_node->size = node->size;
+    return out_node;
+}
+
+Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size)
+{
+    Insanity_UI_Scroll* scroll = &insanity_ui->scroll_array[insanity_ui->scroll_array_count++];
+    scroll->starting_pos = pos;
+    scroll->starting_size = size;
+    scroll->cursor = pos;
+    scroll->outside_view = false;
+
+    Insanity_UI_Node* scroll_node = insanity_ui_node(name);
+    scroll_node->pos = pos;
+    scroll_node->size = size;
+    scroll_node->color = insanity_ui->editor_style.layout_accent_color;
+
+    scroll->scroll_container_node = scroll_node;
+
+    return scroll;
+}
+
+void scroll_end()
+{
+    insanity_ui->scroll_array_count--;
+}
+
+
 
 
 Insanity_UI_Node* insanity_ui_text(const char* text)
@@ -584,8 +619,6 @@ Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, b
 }
 
 
-
-
 bool insanity_ui_rect_hit(Insanity_UI_Node* node)
 {
     //check if we are inside a ui_object
@@ -693,6 +726,38 @@ void insanity_ui_test(float dt, float elapsed_time)
 
     Insanity_UI_Node* text = insanity_ui_text("image");
     text->pos = (vec2s){container2->pos.x, container2->pos.y};
+
+
+    //scroll box
+    Insanity_UI_Scroll* scroll = scroll_begin("scroll", (vec2s){800, 600}, (vec2s){200, 200});
+    {
+        Insanity_UI_Node* item1 = insanity_ui_node("item1");
+        item1->pos = scroll->cursor;
+        item1->size = (vec2s){50, 50};
+        item1->color = COLOR_BLUE;
+        scrollbox_advance_down(scroll, item1, false);
+
+        for (u32 i = 0; i < 8; i++)
+        {
+
+            Insanity_UI_Node* new_item = insanity_ui_node_create_copy("item", item1);
+            new_item->pos = scroll->cursor;
+            new_item->size = (vec2s){50, 50};
+            if (i == 1)
+            {
+                Insanity_UI_Event event = insanity_ui_event(new_item, true, false);
+                if (event.hovered)
+                {
+                    new_item->color = COLOR_VIOLET;
+                }
+            }
+
+
+            scrollbox_advance_down(scroll, new_item, true);
+        }
+
+    }
+    scroll_end();
 
 
     PROFILE_ZONE_END(insanity_ui_test)

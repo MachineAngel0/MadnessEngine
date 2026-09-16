@@ -33,8 +33,6 @@
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
 
 
-
-
 typedef struct Insanity_UI_Editor_Style
 {
     vec3s layout_color;
@@ -61,7 +59,6 @@ typedef struct Insanity_UI_Editor_Style
 } Insanity_UI_Editor_Style;
 
 
-
 typedef struct Insanity_UI_Event
 {
     //interaction events
@@ -70,6 +67,8 @@ typedef struct Insanity_UI_Event
     bool clicked; // has the mouse been released while hovering over this node
 
     bool mouse_scrolled;
+    // bool mouse_up;
+    // bool mouse_down;
     s32 mouse_wheel_delta;
 
     float mouse_delta_x;
@@ -83,8 +82,6 @@ typedef struct Insanity_UI_Event
     bool nav_returned;
     // bool nav_up; ...etc for all directions
 } Insanity_UI_Event;
-
-
 
 
 typedef struct Insanity_UI_Node
@@ -122,10 +119,18 @@ typedef struct Insanity_UI_Node
     vec3s color;
 
     s32 z_order;
-
 } Insanity_UI_Node;
 
+typedef struct Insanity_UI_Scroll
+{
+    vec2s starting_pos;
+    vec2s starting_size;
+    Insanity_UI_Node* scroll_container_node;
+    vec2s cursor;
 
+    // vec2s current_size;
+    bool outside_view;
+} Insanity_UI_Scroll;
 
 typedef struct Insanity_UI
 {
@@ -158,7 +163,7 @@ typedef struct Insanity_UI
 
     ARRAY_TYPE(Insanity_UI_Node)* ui_nodes;
 
-
+    Insanity_UI_Node dummy_node;
 
     //Render
     UI_Render_Node* render_node_array;
@@ -169,7 +174,6 @@ typedef struct Insanity_UI
 
 
     Insanity_UI_Editor_Style editor_style;
-
 
 
     //snapshot of our inputs, used for telling any hot/active nodes what happened
@@ -212,36 +216,9 @@ typedef struct Insanity_UI
 
     bool key_backspace;
 
-
-    /*
-    //EDITOR STATE
-
-    vec2s cursor_position;
-
-
-    Insanity_UI_Window window_state_array[INSANITY_UI_MAX_WINDOW_COUNT];
-    u32 window_state_count;
-
-    ARRAY_TYPE(Insanity_UI_Node)* pop_up_nodes;
-    ARRAY_TYPE(Insanity_UI_Node)* modal_nodes;
-
-    Insanity_UI_Window* active_pop_ups;
-    Insanity_UI_Window* active_modals;
-
-
-    float text_padding;
-    float node_padding;
-
-    float window_padding_x;
-    float window_padding_y;
-
-    vec2s window_min_size;
-
-    //Frame State
-    STACK_TYPE(Insanity_UI_Window)* window_states_stack;
-    STACK_TYPE(Insanity_UI_Window)* pop_up_states_stack;
-    STACK_TYPE(Insanity_UI_Window)* modal_states_stack;*/
-
+    //Scroll
+    Insanity_UI_Scroll scroll_array[100];
+    u32 scroll_array_count;
 } Insanity_UI;
 
 static Insanity_UI* insanity_ui;
@@ -266,6 +243,7 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 //Building Blocks
 Insanity_UI_Node* insanity_ui_node(const char* name);
+Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Node* node);
 
 Insanity_UI_Node* insanity_ui_node_rect_left(const char* name, Insanity_UI_Node* parent, vec2 percent_pos,
                                              vec2 percent_size);
@@ -280,9 +258,62 @@ Insanity_UI_Node* insanity_ui_node_rect_down(const char* name, Insanity_UI_Node*
 // void madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
 // void madness_ui_new_scissor_end(void);
 
-//Scroll
-void scrollbox_begin();
-void scrollbox_end();
+//Windows
+Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
+void scroll_end();
+
+//an idea, we can pass back a garbage node, so any modifications dont matter
+//this is here as an optimization, inside a loop, so that we are not need
+bool insanity_ui_is_scroll_outside_view(Insanity_UI_Node* node)
+{
+    Insanity_UI_Scroll* state = &insanity_ui->scroll_array[insanity_ui->scroll_array_count - 1];
+    if (state->starting_pos.y + state->starting_size.y <= node->pos.y)
+    {
+        node->size = (vec2s){0, 0};
+        state->outside_view = true;
+        return true;
+    }
+    return false;
+}
+
+
+bool scrollbox_is_cursor_outside_view(Insanity_UI_Scroll* scroll)
+{
+    if (scroll->starting_pos.y + scroll->starting_size.y <= scroll->cursor.y)
+    {
+        return true;
+    }
+    if (scroll->starting_pos.x + scroll->starting_size.x <= scroll->cursor.y)
+    {
+        return true;
+    }
+
+}
+
+
+//returns true if we went outside the view of the scrollbox, will cull all future nodes
+bool scrollbox_advance_down(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
+{
+    if (cull_nodes_outside_view)
+    {
+        insanity_ui_is_scroll_outside_view(node);
+    }
+    scroll->cursor.y += node->size.y;
+
+}
+
+bool scrollbox_advance_right(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
+{
+    if (cull_nodes_outside_view)
+    {
+        insanity_ui_is_scroll_outside_view(node);
+    }
+    scroll->cursor.y += node->size.y;
+}
+
+
+void pop_up_begin();
+void pop_up_end();
 
 
 //STRING
@@ -292,7 +323,6 @@ Insanity_UI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
 
 vec2s insanity_ui_text_calculate_size(const char* text);
 vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
-
 
 
 // TODO: should think about this, since i would probably want multiple node to represent this, maybe pass back the first and last nodes?
@@ -314,12 +344,12 @@ void insanity_ui_node_offset_from_node(Insanity_UI_Node* node_to_offset, Insanit
 
 
 void insanity_ui_node_align_x(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
-                                               UI_Alignment x_alignment);
+                              UI_Alignment x_alignment);
 void insanity_ui_node_align_y(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
-                                             UI_Alignment y_alignment);
+                              UI_Alignment y_alignment);
 
 void insanity_ui_node_align(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
-                                    UI_Alignment x_alignment, UI_Alignment y_alignment);
+                            UI_Alignment x_alignment, UI_Alignment y_alignment);
 
 void insanity_ui_node_expand_xy(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
 void insanity_ui_node_expand_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
@@ -329,16 +359,14 @@ void insanity_ui_node_expand_x_percent(Insanity_UI_Node* node_to_expand, Insanit
 void insanity_ui_node_expand_y_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
 
 
-void insanity_ui_node_expand_and_align_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent,  UI_Alignment y_alignment);
+void insanity_ui_node_expand_and_align_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent,
+                                         UI_Alignment y_alignment);
 
 
 vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);
 
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
-
-
-
 
 
 /*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
@@ -384,7 +412,7 @@ void insanity_ui_test(float dt, float elapsed_time);
 //   loop
 //      container = Node()
 //      icon = Node()
-//      Node_offset(conatiner, icon, right_offset)
+//      Node_offset(container, icon, right_offset)
 //      text = Node()
 //      Node_offset(icon, text)
 //      Node_align(container, text)

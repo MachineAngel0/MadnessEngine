@@ -16,7 +16,7 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     u64 ui_frame_arena_mem_size = MB(128);
 
     madness_ui->heap_allocator = memory_system_alloc(memory_system, sizeof(Heap_Allocator),
-                                                          MEMORY_SUBSYSTEM_UI);
+                                                     MEMORY_SUBSYSTEM_UI);
     madness_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
     madness_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
 
@@ -71,9 +71,11 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     };
 
 
-    madness_ui->active = -1;
-    madness_ui->hot = -1;
-
+    madness_ui->active = 0;
+    madness_ui->hot_last_frame = 0;
+    madness_ui->hot_this_frame = 0;
+    madness_ui->active = 0;
+    madness_ui->clicked_this_frame = 0;
 
     madness_ui->mouse_pos_x = -1.0f;
     madness_ui->mouse_pos_y = -1.0f;
@@ -151,6 +153,7 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
     //clear draw info and reset the hot id
     allocator_clear(madness_ui->frame_allocator);
 
+    madness_ui->hot_last_frame = madness_ui->hot_this_frame;
 
     //on resize, scale the ui window size's accordingly
     if (madness_ui->screen_size.x != screen_size_x || madness_ui->screen_size.y != screen_size_y)
@@ -175,6 +178,10 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 
     madness_ui->screen_size.x = screen_size_x;
     madness_ui->screen_size.y = screen_size_y;
+
+    madness_ui->interaction_node_count = 0;
+
+    madness_ui->navigation_node_count = 0;
 
 
     madness_ui->prev_item_size = glms_vec2_zero();
@@ -206,13 +213,26 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
     madness_ui->current_window_screen_size = glms_vec2_zero();
 
 
-    madness_ui->hot = -1;
-
     madness_ui->mouse_down = input_is_mouse_button_pressed(MOUSE_BUTTON_LEFT);
+    madness_ui->mouse_down_unique = input_is_mouse_button_pressed_unique(MOUSE_BUTTON_LEFT);
     madness_ui->mouse_released_unique = input_is_mouse_button_released_unique(
         MOUSE_BUTTON_LEFT);
+
+    input_get_mouse_pos(&madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
+    input_get_mouse_change(&madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
+
+    madness_ui->mouse_wheel_up = input_is_mouse_wheel_up();
+    madness_ui->mouse_wheel_down = input_is_mouse_wheel_down();
+    input_get_mouse_wheel_value(&madness_ui->mouse_wheel_delta);
+
+    madness_ui->key_shift = input_is_key_pressed(KEY_LSHIFT) || input_is_key_pressed(KEY_RSHIFT);
+    madness_ui->key_alt = input_is_key_pressed(KEY_LALT) || input_is_key_pressed(KEY_RALT);
+    madness_ui->key_ctrl = input_is_key_pressed(KEY_LCONTROL) || input_is_key_pressed(KEY_RCONTROL);
+    madness_ui->key_backspace = input_is_key_pressed(KEY_BACKSPACE);
+
     //this can be 0 if invalid
-    madness_ui->released_key = input_get_first_released_key();
+    madness_ui->first_released_key = input_get_first_released_key();
+
 
     if (madness_ui->nuke_pop_up == true)
     {
@@ -245,6 +265,9 @@ void madness_ui_begin(s32 screen_size_x, s32 screen_size_y)
 void madness_ui_end(void)
 {
     PROFILE_ZONE(madness_ui_end)
+
+    madness_ui_resolve_interaction();
+
 
     /*
     if (texture_system_is_loaded(madness_ui->asset_system->texture_system, madness_ui->default_font_handle))
@@ -312,29 +335,104 @@ void madness_ui_end(void)
     }
 
 
-    //SET UI STATE FOR NEXT FRAME //
-
-    //check if mouse is released, if so reset the active id
-    //also update the mouse state
-
-    //printf("HOT ID: %d, HOT LAYER: %d\n", Madness_UI->hot.ID, Madness_UI->hot.layer);
-    //printf("ACTIVE ID: %d, ACTIVE LAYER: %d\n", Madness_UI->active.ID, Madness_UI->active.layer);
-    //TODO: clear anything whos state relies on a click
 
 
-    if (input_is_mouse_button_released(MOUSE_BUTTON_LEFT))
-    {
-        madness_ui->active = -1;
-    }
 
-    //update mouse state
-    // DEBUG("MOUSE DOWN %d", Madness_UI->mouse_down)
-    //update mouse pos
-    input_get_mouse_pos(&madness_ui->mouse_pos_x, &madness_ui->mouse_pos_y);
-    //update mouse delta/change
-    input_get_mouse_change(&madness_ui->mouse_delta_x, &madness_ui->mouse_delta_y);
+
 
     PROFILE_ZONE_END(madness_ui_end)
+}
+
+
+void madness_ui_resolve_interaction(void)
+{
+    // resolve hot
+    u64 new_hot = 0;
+
+    if (madness_ui->active != 0 && !madness_ui->mouse_released_unique)
+    {
+        // active pins hot — nothing can steal it mid-gesture, skip hit-testing entirely
+        new_hot = madness_ui->active;
+    }
+    else
+    {
+        s32 best_z = -1;
+        for (u32 i = 0; i < madness_ui->interaction_node_count; i++)
+        {
+            UI_Node* node = madness_ui->interaction_node_array[i];
+            if (!region_hit(node->pos, node->size)) continue;
+
+            if (node->z_order > best_z) // topmost wins, not last-in-array
+            {
+                best_z = node->z_order;
+                new_hot = node->hash_id;
+            }
+        }
+    }
+    madness_ui->hot_this_frame = new_hot;
+
+    // claim active on unique press
+    if (madness_ui->active == 0 && new_hot != 0 && madness_ui->mouse_down_unique)
+    {
+        madness_ui->active = new_hot;
+    }
+
+    // clear active, click only counts if released over the SAME node ---
+    madness_ui->clicked_this_frame = 0;
+    if (madness_ui->active != 0 && madness_ui->mouse_released_unique)
+    {
+        if (madness_ui->hot_this_frame == madness_ui->active)
+            madness_ui->clicked_this_frame = madness_ui->active;
+
+        madness_ui->active = 0;
+
+
+    }
+
+    // build the result once, we dont want to do this with every query
+    madness_ui->event_result = (Madness_UI_Event){0};
+
+    madness_ui->event_result.mouse_delta_x = madness_ui->mouse_delta_x;
+    madness_ui->event_result.mouse_delta_y = madness_ui->mouse_delta_y;
+    madness_ui->event_result.mouse_scrolled = madness_ui->mouse_wheel_down || madness_ui->mouse_wheel_up;
+    madness_ui->event_result.mouse_wheel_up = madness_ui->mouse_wheel_up;
+    madness_ui->event_result.mouse_wheel_down = madness_ui->mouse_wheel_down;
+    madness_ui->event_result.mouse_wheel_delta = madness_ui->mouse_wheel_delta;
+
+    if (madness_ui->hot_this_frame != 0)
+    {
+        madness_ui->event_result.hovered = true;
+        madness_ui->event_result.clicked = (madness_ui->clicked_this_frame == madness_ui->hot_this_frame);
+    }
+    if (madness_ui->active != 0)
+    {
+        madness_ui->event_result.pressed = madness_ui->mouse_down;
+    }
+
+    // DEBUG("MADNESS UI: INTERACTION STATE: HOT: %llu, ACTIVE: %llu", madness_ui->hot_this_frame, madness_ui->active)
+}
+
+MAPI Madness_UI_Event madness_ui_event(UI_Node* node, bool interactable, bool navigatable)
+{
+    if (interactable)
+    {
+        madness_ui->interaction_node_array[madness_ui->interaction_node_count++] = node;
+    }
+    if (navigatable)
+    {
+        madness_ui->navigation_node_array[madness_ui->navigation_node_count++] = node;
+    }
+
+
+    if (node->hash_id == madness_ui->hot_last_frame || node->hash_id == madness_ui->active)
+    {
+        //we want to do a compare with our selected nodes flags to ensure that we are returning the results we actually wanted
+        // we dont want to be listening for a pressed event if we didnt specify so
+        //otherwise the interaction events get set by default
+
+        return madness_ui->event_result;
+    }
+    return (Madness_UI_Event){0};
 }
 
 UI_Render_Packet madness_ui_get_ui_render_data(void)
@@ -351,25 +449,15 @@ UI_Render_Packet madness_ui_get_ui_render_data(void)
 
 void madness_ui_print_state(void)
 {
-    DEBUG("HOT: %d, ACTIVE: %d, CURSOR POS: %f %f, MOUSE DOWN: %d,",
-          madness_ui->hot,
+    DEBUG("HOT THIS FRAME: %d, HOT LAST FRAME: %d, ACTIVE: %d, CURSOR POS: %f %f, MOUSE DOWN: %d,",
+          madness_ui->hot_this_frame,
+          madness_ui->hot_last_frame,
           madness_ui->active,
           madness_ui->cursor_pos.x,
           madness_ui->cursor_pos.y,
           madness_ui->mouse_down)
     // madness_ui->mouse_pos_x;
     // madness_ui->mouse_pos_y;
-}
-
-
-bool is_ui_hot(int id)
-{
-    return madness_ui->hot == id;
-}
-
-bool is_ui_active(int id)
-{
-    return madness_ui->active == id;
 }
 
 
@@ -399,60 +487,6 @@ bool region_hit(vec2s pos, vec2s size)
     return true;
 }
 
-
-/*
-bool button(Madness_UI& Madness_UI, int id, int x, int y)
-{
-    if (region_hit())
-    {
-        ui = hot;
-        if (acitve == 0 and mouse down)
-            activeitem = id
-    }
-}*/
-
-//check if we can use the button
-bool madness_ui_use_ui_element(int id, vec2s pos, vec2s size)
-{
-    //checking if we released the mouse button, are active, and we are inside the hit region
-
-    if (madness_ui->mouse_down == false &&
-        madness_ui->active == id &&
-        region_hit(pos, size))
-    {
-        return true;
-    }
-
-
-    return false;
-}
-
-
-void set_hot(int id)
-{
-    madness_ui->hot = id;
-    //printf("ID: %d, is hot\n", id);
-}
-
-void set_active(int id)
-{
-    madness_ui->active = id;
-}
-
-bool can_be_active(void)
-{
-    return madness_ui->active == -1 && madness_ui->mouse_down;
-}
-
-bool is_active(int id)
-{
-    return madness_ui->active == id;
-}
-
-bool is_hot(int id)
-{
-    return madness_ui->hot == id;
-}
 
 void madness_ui_add_draw_command(UI_Draw_Command_Type draw_type)
 {
@@ -769,19 +803,19 @@ bool madness_ui_menu_item_begin(String menu_name)
     madness_ui->menu_bar_state.menu_cursor_position.x += background_node->size.x + madness_ui->element_padding_x;
 
 
-    madness_ui_set_interaction_state(background_node);
+    Madness_UI_Event background_node_event = madness_ui_event(background_node, true, false);
 
-    if (is_hot(background_node->hash_id))
+    if (background_node_event.hovered)
     {
         background_node->color = madness_ui->editor_style.hovered_color;
     }
-    if (is_active(background_node->hash_id))
+    if (background_node_event.pressed)
     {
         background_node->color = madness_ui->editor_style.pressed_color;
     }
 
 
-    if (madness_ui_use_ui_element(background_node->hash_id, background_node->pos, background_node->size))
+    if (background_node_event.clicked)
     {
         madness_ui->menu_bar_state.active_menu_item = menu_name;
     }
@@ -925,14 +959,10 @@ void madness_ui_window_begin(String header_name)
     //set proper cursor offset for the scroll region
     madness_ui->cursor_pos.y -= window_state->scroll_offset;
 
-    vec2s header_size = glms_vec2_zero();
-    if (window_state->flags & UI_Window_Flag_Header)
-    {
-        header_size = (vec2s){
-            madness_ui->current_window_screen_size.x,
-            madness_ui_get_default_element_height(),
-        };
-    }
+    vec2s header_size = (vec2s){
+        madness_ui->current_window_screen_size.x,
+        madness_ui_get_default_element_height(),
+    };
     window_state->header_size = header_size;
 
     if (madness_ui_is_outside_window(header_size, true))
@@ -982,20 +1012,16 @@ void madness_ui_window_begin(String header_name)
                                  });
 
 
-    madness_ui_set_interaction_state(header_node);
-    if (is_active(header_node->hash_id))
+    Madness_UI_Event header_result = madness_ui_event(header_node, true,false);
+    if (header_result.pressed)
     {
         header_node->color = madness_ui->editor_style.pressed_color;
-        if (window_state->flags & UI_Window_Flag_Movable)
-        {
-            if (madness_ui->mouse_down)
-            {
-                window_state->window_region_pos.x += madness_ui->mouse_delta_x;
-                window_state->window_region_pos.y += madness_ui->mouse_delta_y;
-            }
-        }
+
+
+        window_state->window_region_pos.x += madness_ui->mouse_delta_x;
+        window_state->window_region_pos.y += madness_ui->mouse_delta_y;
     }
-    else if (is_hot(header_node->hash_id))
+    if (header_result.hovered)
     {
         header_node->color = madness_ui->editor_style.hovered_color;
     }
@@ -1037,8 +1063,8 @@ void madness_ui_window_end(void)
             scroll_bar_percent_offset);
         slider_bar->pos = (vec2s){scroll_bar_pos_x, scroll_bar_pos_y};
 
-        madness_ui_set_interaction_state(slider_bar);
-        if (is_hot(slider_bar->hash_id))
+        Madness_UI_Event slider_bar_result = madness_ui_event(slider_bar, true,false);
+        if (slider_bar_result.hovered)
         {
             slider_bar->color = madness_ui->editor_style.hovered_color;
             //handle window scrolling
@@ -1056,7 +1082,7 @@ void madness_ui_window_end(void)
                 state->scroll_offset = content_overflow * state->scroll_bar_percent_offset;
             }
         }
-        if (is_active(slider_bar->hash_id))
+        if (slider_bar_result.pressed)
         {
             float track_width = scroll_region_size_y - slider_bar->size.y;
             float relative_y = madness_ui->mouse_pos_y - scroll_region_start_pos - (slider_bar->size.y * 0.5f);
@@ -1067,46 +1093,39 @@ void madness_ui_window_end(void)
             slider_bar->pos.y = scroll_region_start_pos + ((scroll_region_size_y - slider_bar->size.y) * state->
                 scroll_bar_percent_offset);
         }
+
+        //TODO: since the resize node is in conflict with the auto sizer, double clicking the resize should auto resize
+        // but using the resize bar at all turns off the auto resize
+        //resize the window up if needed, it looks a little funny but whatever
+        state->window_region_size.y = content_height + (madness_ui_get_default_element_height() * 2);
+        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                  madness_ui->screen_size.y - state->window_region_pos.y -
+                                                  (madness_ui_get_default_element_height()));
     }
 
-    //TODO: since the resize node is in conflict with the auto sizer, double clicking the resize should auto resize
-    // but using the resize bar at all turns off the auto resize
-    //resize the window up if needed, it looks a little funny but whatever
-    if (state->flags & UI_Window_Flag_Autoresize)
-    {
-        if (content_overflow > 0)
-        {
-            state->window_region_size.y = content_height + (madness_ui_get_default_element_height() * 2);
-            state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                      madness_ui->screen_size.y - state->window_region_pos.y -
-                                                      (madness_ui_get_default_element_height()));
-        }
-    }
 
     // resize bar
-    if (state->flags & UI_Window_Flag_Resizable)
+
+    UI_Node* resize_node = madness_ui_get_new_node();
+    resize_node->size = (vec2s){12, 12};
+    resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_allocator);
+    resize_node->hash_id = string_hash_u64(resize_node->string_id);
+
+    vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
+
+    resize_node->pos = glms_vec2_sub(pos_before_adjustment, resize_node->size);
+    resize_node->color = COLOR_GREEN;
+
+    Madness_UI_Event resize_node_result = madness_ui_event(resize_node, true,false);
+
+    if (resize_node_result.pressed)
     {
-        UI_Node* resize_node = madness_ui_get_new_node();
-        resize_node->size = (vec2s){12, 12};
-        resize_node->string_id = *string_concat(state->window_name, &STRING("resize"), madness_ui->frame_allocator);
-        resize_node->hash_id = string_hash_u64(resize_node->string_id);
-
-        vec2s pos_before_adjustment = glms_vec2_add(state->window_region_pos, state->window_region_size);
-
-        resize_node->pos = glms_vec2_sub(pos_before_adjustment, resize_node->size);
-        resize_node->color = COLOR_GREEN;
-
-        madness_ui_set_interaction_state(resize_node);
-
-        if (is_active(resize_node->hash_id))
-        {
-            state->window_region_size.x += madness_ui->mouse_delta_x;
-            state->window_region_size.y += madness_ui->mouse_delta_y;
-            state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
-                                                      madness_ui->screen_size.x);
-            state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
-                                                      madness_ui->screen_size.y);
-        }
+        state->window_region_size.x += madness_ui->mouse_delta_x;
+        state->window_region_size.y += madness_ui->mouse_delta_y;
+        state->window_region_size.x = clamp_float(state->window_region_size.x, MIN_UI_NODE_SCREEN_SIZE,
+                                                  madness_ui->screen_size.x);
+        state->window_region_size.y = clamp_float(state->window_region_size.y, MIN_UI_NODE_SCREEN_SIZE,
+                                                  madness_ui->screen_size.y);
     }
 
     madness_ui_set_cursor_pos(state->window_region_pos);
@@ -1124,8 +1143,7 @@ void madness_ui_window_end(void)
 
 void madness_scroll_box_begin(String id)
 {
-    madness_ui_set_window_flags(UI_Window_Flag_Resizable | UI_Window_Flag_Header |
-        UI_Window_Flag_Dont_Save_Position);
+    madness_ui_set_window_flags(UI_Window_Flag_Dont_Save_Position);
 
     madness_ui_window_begin(id);
 }
@@ -1185,9 +1203,7 @@ UI_Window_Flag madness_ui_get_window_flags(void)
         madness_ui->window_flag_stack.use = false;
         return madness_ui->window_flag_stack.flags;
     }
-    //default
-    const UI_Window_Flag default_flags = UI_Window_Flag_Movable | UI_Window_Flag_Resizable | UI_Window_Flag_Header;
-    return default_flags;
+    return 0;
 }
 
 
@@ -1298,19 +1314,19 @@ bool madness_ui_drop_down(String label, bool* state)
                                UI_ALIGNMENT_LEFT,
                                UI_ALIGNMENT_CENTER);
 
-    madness_ui_set_interaction_state(drop_down_header_node);
+    Madness_UI_Event drop_down_result = madness_ui_event(drop_down_header_node, true, false);
 
-    if (is_hot(drop_down_header_node->hash_id))
+    if (drop_down_result.hovered)
     {
         drop_down_header_node->color = madness_ui->editor_style.hovered_color;
     }
-    if (is_active(drop_down_header_node->hash_id))
+    if (drop_down_result.pressed)
     {
         drop_down_header_node->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *state = !*state;
-        }
+    }
+    if (drop_down_result.clicked)
+    {
+        *state = !*state;
     }
 
     madness_ui_advance_cursor(drop_down_header_node->size);
@@ -1437,24 +1453,6 @@ UI_Node* madness_ui_c_string(const char* text)
 }
 
 
-void madness_ui_set_interaction_state(UI_Node* new_node)
-{
-    if (region_hit(new_node->pos, new_node->size))
-    {
-        set_hot(new_node->hash_id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active())
-        {
-            set_active(new_node->hash_id);
-        }
-    }
-}
-
-
 bool madness_ui_button(const String label)
 {
     vec2s text_size = madness_ui_get_text_size(label);
@@ -1482,20 +1480,20 @@ bool madness_ui_button(const String label)
 
     madness_ui_advance_cursor(button_size);
 
-    madness_ui_set_interaction_state(button_node);
+    Madness_UI_Event button_node_event = madness_ui_event(button_node, true, true);
 
     //active state
-    if (is_active(button_node->hash_id))
+    if (button_node_event.pressed)
     {
         button_node->color = madness_ui->editor_style.pressed_color;
     }
     //hot state
-    else if (is_hot(button_node->hash_id))
+    else if (button_node_event.hovered)
     {
         button_node->color = madness_ui->editor_style.hovered_color;
     }
 
-    return madness_ui_use_ui_element(button_node->hash_id, button_node->pos, button_node->size);
+    return button_node_event.clicked;
 }
 
 bool madness_ui_check_box(String label, bool* check_box_state)
@@ -1541,18 +1539,18 @@ bool madness_ui_check_box(String label, bool* check_box_state)
     madness_ui_advance_cursor((vec2s){text_node->size.x, checkbox_node->size.y});
 
 
-    madness_ui_set_interaction_state(checkbox_node);
+    Madness_UI_Event checkbox_event = madness_ui_event(checkbox_node, true, true);
 
-    if (is_active(checkbox_node->hash_id))
+    if (checkbox_event.pressed)
     {
         checkbox_node->color = madness_ui->editor_style.pressed_color;
     }
-    else if (is_hot(checkbox_node->hash_id))
+    else if (checkbox_event.hovered)
     {
         checkbox_node->color = madness_ui->editor_style.hovered_color;
     }
 
-    if (madness_ui_use_ui_element(checkbox_node->hash_id, checkbox_node->pos, checkbox_node->size))
+    if (checkbox_event.clicked)
     {
         //set the bool to its opposite
         *check_box_state = !(*check_box_state);
@@ -1635,35 +1633,33 @@ void madness_ui_slider_scroll(String id, float* slider_val, float min, float max
     slider_node->pos = (vec2s){quad_node->pos.x + ((quad_node->size.x - slider_node->size.x) * t), quad_node->pos.y};
     slider_node->color = madness_ui->editor_style.custom_widget_color;
 
-    madness_ui_set_interaction_state(slider_node);
+    Madness_UI_Event slider_event = madness_ui_event(slider_node, true, true);
 
     //check if we are hovering over the slider
     //TODO: have the size be the entire strip where the slider is at
-    if (region_hit(quad_node->pos, quad_node->size))
+    if (slider_event.hovered)
     {
         slider_node->color = madness_ui->editor_style.hovered_color;
 
-        if (input_is_mouse_wheel_up())
+        if (slider_event.mouse_wheel_up)
         {
             *slider_val += 0.1;
         }
-        if (input_is_mouse_wheel_down())
+        if (slider_event.mouse_wheel_down)
         {
             *slider_val -= 0.1;
         }
     }
-    if (is_active(slider_node->hash_id))
+    if (slider_event.pressed)
     {
         slider_node->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_down)
-        {
-            float track_width = quad_node->size.x - slider_node->size.x;
-            float relative_x = madness_ui->mouse_pos_x - quad_node->pos.x - (slider_node->size.x * 0.5f);
-            float t = clamp_float(relative_x / track_width, 0.0f, 1.0f);
 
-            *slider_val = min + t * (max - min);
-            slider_node->pos.x = quad_node->pos.x + t * track_width;
-        }
+        float track_width = quad_node->size.x - slider_node->size.x;
+        float relative_x = madness_ui->mouse_pos_x - quad_node->pos.x - (slider_node->size.x * 0.5f);
+        float t = clamp_float(relative_x / track_width, 0.0f, 1.0f);
+
+        *slider_val = min + t * (max - min);
+        slider_node->pos.x = quad_node->pos.x + t * track_width;
     }
 
     *slider_val = clamp_float(*slider_val, min, max);
@@ -1731,33 +1727,35 @@ void madness_ui_slider_arrow(String id, float* slider_val, float min, float max)
     };
     right_arrow->color = madness_ui->editor_style.color;
 
-    madness_ui_set_interaction_state(left_arrow);
-    madness_ui_set_interaction_state(right_arrow);
+    Madness_UI_Event left_result = madness_ui_event(left_arrow, true, true);
+    Madness_UI_Event right_result = madness_ui_event(right_arrow, true, true);
 
-    if (is_hot(left_arrow->hash_id))
+    if (left_result.hovered)
     {
         left_arrow->color = madness_ui->editor_style.hovered_color;
     }
-    if (is_hot(right_arrow->hash_id))
+    if (right_result.hovered)
     {
         right_arrow->color = madness_ui->editor_style.hovered_color;
     }
 
-    if (is_active(left_arrow->hash_id))
+
+    if (left_result.pressed)
     {
         left_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val -= ((max - min) / 10.f);
-        }
     }
-    if (is_active(right_arrow->hash_id))
+    if (right_result.pressed)
     {
         right_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val += ((max - min) / 10.f);
-        }
+    }
+
+    if (left_result.clicked)
+    {
+        *slider_val -= ((max - min) / 10.f);
+    }
+    if (right_result.clicked)
+    {
+        *slider_val += ((max - min) / 10.f);
     }
 
     *slider_val = clamp_float(*slider_val, min, max);
@@ -1815,33 +1813,35 @@ void madness_ui_slider_arrow_u32(String id, u32* slider_val, const u32 min, cons
     };
     right_arrow->color = madness_ui->editor_style.color;
 
-    madness_ui_set_interaction_state(left_arrow);
-    madness_ui_set_interaction_state(right_arrow);
+    Madness_UI_Event left_result = madness_ui_event(left_arrow, true, true);
+    Madness_UI_Event right_result = madness_ui_event(right_arrow, true, true);
 
-    if (is_hot(left_arrow->hash_id))
+    if (left_result.hovered)
     {
         left_arrow->color = madness_ui->editor_style.hovered_color;
     }
-    if (is_hot(right_arrow->hash_id))
+    if (right_result.hovered)
     {
         right_arrow->color = madness_ui->editor_style.hovered_color;
     }
 
-    if (is_active(left_arrow->hash_id))
+    if (left_result.pressed)
     {
         left_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val -= 1;
-        }
     }
-    if (is_active(right_arrow->hash_id))
+    if (right_result.pressed)
     {
         right_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val += 1;
-        }
+    }
+
+
+    if (left_result.clicked)
+    {
+        *slider_val -= 1;
+    }
+    if (right_result.clicked)
+    {
+        *slider_val += 1;
     }
 
     *slider_val = clamp_int(*slider_val, min, max);
@@ -1899,33 +1899,35 @@ void madness_ui_slider_arrow_u16(String id, u16* slider_val, u16 min, u16 max)
     };
     right_arrow->color = madness_ui->editor_style.color;
 
-    madness_ui_set_interaction_state(left_arrow);
-    madness_ui_set_interaction_state(right_arrow);
+    Madness_UI_Event left_result = madness_ui_event(left_arrow, true, true);
+    Madness_UI_Event right_result = madness_ui_event(right_arrow, true, true);
 
-    if (is_hot(left_arrow->hash_id))
+
+    if (left_result.hovered)
     {
         left_arrow->color = madness_ui->editor_style.hovered_color;
     }
-    if (is_hot(right_arrow->hash_id))
+    if (right_result.hovered)
     {
         right_arrow->color = madness_ui->editor_style.hovered_color;
     }
 
-    if (is_active(left_arrow->hash_id))
+    if (left_result.pressed)
     {
         left_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val -= 1;
-        }
     }
-    if (is_active(right_arrow->hash_id))
+    if (right_result.pressed)
     {
         right_arrow->color = madness_ui->editor_style.pressed_color;
-        if (madness_ui->mouse_released_unique)
-        {
-            *slider_val += 1;
-        }
+    }
+
+    if (left_result.clicked)
+    {
+        *slider_val -= 1;
+    }
+    if (right_result.clicked)
+    {
+        *slider_val += 1;
     }
 
     *slider_val = clamp_int(*slider_val, min, max);
@@ -1968,52 +1970,44 @@ bool madness_ui_u8(String text, u8* i, u32 increment_value)
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            if (mouse_change_x > 0)
-            {
-                *i += increment_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                *i -= increment_value;
-                // *f -= increment_override;
-                has_changed = true;
-            }
+            *i += increment_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *i -= increment_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+
+    else if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
             *i -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2053,52 +2047,45 @@ bool madness_ui_u16(String text, u16* i, u32 increment_value)
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            if (mouse_change_x > 0)
-            {
-                *i += increment_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                *i -= increment_value;
-                // *f -= increment_override;
-                has_changed = true;
-            }
+            *i += increment_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *i -= increment_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+
+    else if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
             *i -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2138,71 +2125,45 @@ bool madness_ui_u32(String text, u32* i, u32 increment_value)
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            if (mouse_change_x > 0)
-            {
-                *i += increment_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                u32 result = 0;
-                if (u32_sub_overflow(*i, increment_value, &result))
-                {
-                    //we overflowed
-                    *i = 0;
-                }
-                else
-                {
-                    *i = result;
-                }
-                // *i -= increment_value;
-                has_changed = true;
-            }
+            *i += increment_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *i -= increment_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+
+    else if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
-            u32 result = 0;
-            if (u32_sub_overflow(*i, increment_value, &result))
-            {
-                //we overflowed
-                *i = 0;
-            }
-            else
-            {
-                *i = result;
-            }
-            // *i -= increment_value;
+            *i -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2243,52 +2204,45 @@ bool madness_ui_u64(String text, u64* i, u64 increment_value)
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            if (mouse_change_x > 0)
-            {
-                *i += increment_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                *i -= increment_value;
-                // *f -= increment_override;
-                has_changed = true;
-            }
+            *i += increment_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *i -= increment_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+
+    else if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
             *i -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2328,52 +2282,45 @@ bool madness_ui_s32(String text, s32* i, u32 increment_value)
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            if (mouse_change_x > 0)
-            {
-                *i += increment_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                *i -= increment_value;
-                // *f -= increment_override;
-                has_changed = true;
-            }
+            *i += increment_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *i -= increment_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+
+    else if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *i += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
             *i -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2440,9 +2387,9 @@ void madness_ui_text_box(String id)
             string_builder_decrement(string_state->active_menu_item);
         }
 
-        if (madness_ui->released_key)
+        if (madness_ui->first_released_key)
         {
-            string_builder_append_c_string(string_state->active_menu_item, &madness_ui->released_key);
+            string_builder_append_c_string(string_state->active_menu_item, &madness_ui->first_released_key);
         }
     }
 
@@ -2572,55 +2519,45 @@ bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, fl
 
     bool has_changed = false;
 
-    madness_ui_set_interaction_state(node);
+    Madness_UI_Event node_result = madness_ui_event(node, true, true);
 
-    if (is_active(node->hash_id))
+    if (node_result.pressed)
     {
         node->color = madness_ui->editor_style.pressed_color;
 
-        if (madness_ui->mouse_down)
+        s16 mouse_change_x;
+        s16 mouse_change_y;
+
+        input_get_mouse_change(&mouse_change_x, &mouse_change_y);
+
+        //we dont want to increment by the full value every single frame
+        float increment_smoother_value = 8.f;
+        float increment_override = 0.1f;
+        if (mouse_change_x > 0)
         {
-            s16 mouse_change_x;
-            s16 mouse_change_y;
-
-            input_get_mouse_change(&mouse_change_x, &mouse_change_y);
-
-            //we dont want to increment by the full value every single frame
-            float increment_smoother_value = 8.f;
-            float increment_override = 0.1f;
-            if (mouse_change_x > 0)
-            {
-                *f += increment_value / increment_smoother_value;
-                // *f += increment_override;
-                has_changed = true;
-            }
-            if (mouse_change_x < 0)
-            {
-                *f -= increment_value / increment_smoother_value;
-                // *f -= increment_override;
-                has_changed = true;
-            }
+            *f += increment_value / increment_smoother_value;
+            // *f += increment_override;
+            has_changed = true;
+        }
+        if (mouse_change_x < 0)
+        {
+            *f -= increment_value / increment_smoother_value;
+            // *f -= increment_override;
+            has_changed = true;
         }
     }
-    else if (is_hot(node->hash_id))
+    if (node_result.hovered)
     {
         node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (node_result.mouse_wheel_up)
         {
             *f += increment_value;
             has_changed = true;
         }
-        if (input_is_mouse_wheel_down())
+        if (node_result.mouse_wheel_down)
         {
             *f -= increment_value;
             has_changed = true;
-        }
-
-        set_hot(node->hash_id);
-
-        if (can_be_active())
-        {
-            set_active(node->hash_id);
         }
     }
 
@@ -2783,23 +2720,23 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
                                UI_ALIGNMENT_CENTER);
     madness_ui_advance_cursor(combo_box_node->size);
 
+    Madness_UI_Event combo_box_result = madness_ui_event(combo_box_node, true, true);
 
-    madness_ui_set_interaction_state(combo_box_node);
     //active state
-    if (is_active(combo_box_node->hash_id))
+    if (combo_box_result.pressed)
     {
         combo_box_node->color = madness_ui->editor_style.pressed_color;
         madness_ui->active_combo_box = id;
     }
     //hot state
-    else if (is_hot(combo_box_node->hash_id))
+    if (combo_box_result.hovered)
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (combo_box_result.mouse_wheel_up)
         {
             *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size - 1);
         }
-        if (input_is_mouse_wheel_down())
+        if (combo_box_result.mouse_wheel_down)
         {
             *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size - 1);
         }
@@ -2855,19 +2792,17 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
             UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
                                                               UI_ALIGNMENT_LEFT,
                                                               UI_ALIGNMENT_CENTER);
-            madness_ui_set_interaction_state(string_node);
-            if (is_hot(string_node->hash_id))
+
+            Madness_UI_Event event = madness_ui_event(string_node, true, true);
+            if (event.hovered)
             {
                 string_node->color = madness_ui->editor_style.hovered_color;
             }
 
-            if (region_hit(string_node->pos, string_node->size))
+            if (event.clicked)
             {
-                if (madness_ui->mouse_down)
-                {
-                    *selected_value = i;
-                    madness_ui->nuke_pop_up = true;
-                }
+                *selected_value = i;
+                madness_ui->nuke_pop_up = true;
             }
             // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
             madness_ui_advance_cursor(string_node->size);
@@ -2906,23 +2841,23 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
     madness_ui_advance_cursor(combo_box_node->size);
 
 
-    madness_ui_set_interaction_state(combo_box_node);
+    Madness_UI_Event event = madness_ui_event(combo_box_node, true, true);
     //active state
-    if (is_active(combo_box_node->hash_id))
+    if (event.pressed)
     {
         combo_box_node->color = madness_ui->editor_style.pressed_color;
         madness_ui->active_combo_box = id;
     }
     //hot state
-    else if (is_hot(combo_box_node->hash_id))
+    if (event.hovered)
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
 
-        if (input_is_mouse_wheel_up())
+        if (event.mouse_wheel_up)
         {
             *selected_value = clamp_uint((*selected_value) - 1, 0, string_array_size - 1);
         }
-        if (input_is_mouse_wheel_down())
+        if (event.mouse_wheel_down)
         {
             *selected_value = clamp_uint((*selected_value) + 1, 0, string_array_size - 1);
         }
@@ -2978,19 +2913,15 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
             UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
                                                               UI_ALIGNMENT_LEFT,
                                                               UI_ALIGNMENT_CENTER);
-            madness_ui_set_interaction_state(string_node);
-            if (is_hot(string_node->hash_id))
+            Madness_UI_Event event = madness_ui_event(string_node, true, true);
+            if (event.hovered)
             {
                 string_node->color = madness_ui->editor_style.hovered_color;
             }
-
-            if (region_hit(string_node->pos, string_node->size))
+            if (event.clicked)
             {
-                if (madness_ui->mouse_down)
-                {
-                    *selected_value = i;
-                    madness_ui->nuke_pop_up = true;
-                }
+                *selected_value = i;
+                madness_ui->nuke_pop_up = true;
             }
             // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
             madness_ui_advance_cursor(string_node->size);
@@ -3028,22 +2959,22 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     madness_ui_advance_cursor(combo_box_node->size);
 
 
-    madness_ui_set_interaction_state(combo_box_node);
+    Madness_UI_Event event = madness_ui_event(combo_box_node, true, true);
     //active state
-    if (is_active(combo_box_node->hash_id))
+    if (event.pressed)
     {
         combo_box_node->color = madness_ui->editor_style.pressed_color;
         madness_ui->active_combo_box = id;
     }
     //hot state
-    else if (is_hot(combo_box_node->hash_id))
+    if (event.hovered)
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
-        if (input_is_mouse_wheel_up())
+        if (event.mouse_wheel_up)
         {
             *selected_value = clamp_uint((*selected_value) - 1, 0, char_array_size - 1);
         }
-        if (input_is_mouse_wheel_down())
+        if (event.mouse_wheel_down)
         {
             *selected_value = clamp_uint((*selected_value) + 1, 0, char_array_size - 1);
         }
@@ -3063,13 +2994,12 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
                                                               UI_ALIGNMENT_LEFT,
                                                               UI_ALIGNMENT_CENTER);
 
-            madness_ui_set_interaction_state(string_node);
-            if (is_hot(string_node->hash_id))
+            Madness_UI_Event string_event = madness_ui_event(string_node, true, true);
+            if (string_event.hovered)
             {
                 string_node->color = madness_ui->editor_style.hovered_color;
             }
-
-            if (region_hit(string_node->pos, string_node->size))
+            if (string_event.pressed)
             {
                 if (madness_ui->mouse_down)
                 {
@@ -3137,15 +3067,15 @@ bool madness_ui_combo_box_string(String id, String* out_select_string, String* s
     madness_ui_advance_cursor(combo_box_node->size);
 
 
-    madness_ui_set_interaction_state(combo_box_node);
+    Madness_UI_Event event = madness_ui_event(combo_box_node, true, true);
     //active state
-    if (is_active(combo_box_node->hash_id))
+    if (event.pressed)
     {
         combo_box_node->color = madness_ui->editor_style.pressed_color;
         madness_ui->active_combo_box = id;
     }
     //hot state
-    else if (is_hot(combo_box_node->hash_id))
+    if (event.hovered)
     {
         combo_box_node->color = madness_ui->editor_style.hovered_color;
     }
@@ -3163,19 +3093,16 @@ bool madness_ui_combo_box_string(String id, String* out_select_string, String* s
                 UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
                                                                   UI_ALIGNMENT_LEFT,
                                                                   UI_ALIGNMENT_CENTER);
-                madness_ui_set_interaction_state(string_node);
-                if (is_hot(string_node->hash_id))
+                Madness_UI_Event string_event = madness_ui_event(string_node, true, true);
+                if (string_event.hovered)
                 {
                     string_node->color = madness_ui->editor_style.hovered_color;
                 }
 
-                if (region_hit(string_node->pos, string_node->size))
+                if (string_event.pressed)
                 {
-                    if (madness_ui->mouse_down)
-                    {
-                        combo_box_string_state->selected_index = i;
-                        madness_ui->nuke_pop_up = true;
-                    }
+                    combo_box_string_state->selected_index = i;
+                    madness_ui->nuke_pop_up = true;
                 }
                 // madness_ui_advance_cursor(madness_ui, combo_box_node->size);
                 madness_ui_advance_cursor(string_node->size);
@@ -3264,37 +3191,18 @@ bool madness_ui_circle(String id, float* thickness)
     new_node->size = button_screen_size;
     new_node->thickness = *thickness;
     new_node->flags |= UI_FLAG_CIRCLE;
+    new_node->color = madness_ui->editor_style.color;
 
 
-    if (region_hit(new_node->pos, new_node->size))
-    {
-        set_hot(new_node->hash_id);
-
-        //check if we have the mouse pressed and nothing else is selected
-        //TODO: so there is a bug with can_be_active, in that the first ui called on the screen will take active focus,
-        //TODO: this is despite there bieng another ui in front of it
-        //TODO: for now imma just leave it be and dont draw things on top of others
-        if (can_be_active())
-        {
-            set_active(new_node->hash_id);
-        }
-    }
-
-
-    //active state
-    if (is_active(new_node->hash_id))
+    Madness_UI_Event event = madness_ui_event(new_node, true, true);
+    if (event.pressed)
     {
         new_node->color = madness_ui->editor_style.pressed_color;
     }
     //hot state
-    else if (is_hot(new_node->hash_id))
+    if (event.hovered)
     {
         new_node->color = madness_ui->editor_style.hovered_color;
-    }
-    // normal state
-    else
-    {
-        new_node->color = madness_ui->editor_style.color;
     }
 
 
@@ -3303,7 +3211,7 @@ bool madness_ui_circle(String id, float* thickness)
 
 
     //check if we clicked the button
-    return madness_ui_use_ui_element(new_node->hash_id, button_screen_pos, button_screen_size);
+    return event.clicked;
 }
 
 bool madness_ui_progress_bar(String label, float current, float max)

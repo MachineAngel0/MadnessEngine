@@ -26,6 +26,7 @@
 #define MAX_MADNESS_UI_STRING_BUILDERS 100
 #define MAX_MADNESS_UI_WINDOWS 100
 #define MAX_COMBO_BOX_STATES 100
+#define MAX_EVENT_COUNT 1000
 
 typedef struct PC_UI
 {
@@ -123,6 +124,8 @@ typedef struct UI_Node
 
     vec2s scissor_pos;
     vec2s scissor_size;
+
+    s32 z_order;
 } UI_Node;
 
 
@@ -137,13 +140,14 @@ typedef struct scroll_box_state
 
 typedef enum UI_Window_Flag
 {
-    UI_Window_Flag_Window = BITFLAG(0),
-    UI_Window_Flag_Resizable = BITFLAG(3),
-    UI_Window_Flag_Header = BITFLAG(4),
-    UI_Window_Flag_Movable = BITFLAG(5),
-    UI_Window_Flag_Autoresize = BITFLAG(6),
+    UI_Window_Flag_No_Header = BITFLAG(0),
+    UI_Window_Flag_No_Resize = BITFLAG(1),
+    UI_Window_Flag_No_Move = BITFLAG(2),
+    UI_Window_Flag_No_Scroll = BITFLAG(3),
+    UI_Window_Flag_No_Scroll_Mouse = BITFLAG(4),
+    UI_Window_Flag_No_Collapse = BITFLAG(5), // you have to have a header to be able to collapse
+    UI_Window_Flag_No_Background = BITFLAG(6),
     UI_Window_Flag_Dont_Save_Position = BITFLAG(7),
-    UI_Window_Flag_Dropdown = BITFLAG(8), // TODO: for combo box and making them scrollable
 } UI_Window_Flag;
 
 
@@ -209,6 +213,30 @@ typedef struct String_Builder_State
     String_Builder* active_menu_item;
 } String_Builder_State;
 
+typedef struct Madness_UI_Event
+{
+    //interaction events
+    bool hovered; //is this node currently bieng hovered over
+    bool pressed; //is this node active and bieng pressed
+    bool clicked; // has the mouse been released while hovering over this node
+
+    bool mouse_scrolled;
+    bool mouse_wheel_up;
+    bool mouse_wheel_down;
+    s32 mouse_wheel_delta;
+
+    float mouse_delta_x;
+    float mouse_delta_y;
+
+
+    //nagivation events
+    bool nav_hovered;
+    bool nav_pressed;
+    bool nav_clicked;
+    bool nav_returned;
+    // bool nav_up; ...etc for all directions
+} Madness_UI_Event;
+
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
@@ -264,22 +292,30 @@ typedef struct Madness_UI
 
 
     //INTERACTION EVENT
-    /*Madness_UI_Event_Result interaction_result;
-    u32 hot_last_frame;
-    u32 hot_this_frame;
-    u32 active;*/
-    int hot;
-    int active;
+    UI_Node* interaction_node_array[1000];
+    u32 interaction_node_count;
+
+    UI_Node* navigation_node_array[1000];
+    u32 navigation_node_count;
+
+    Madness_UI_Event event_result;
+    u64 hot_last_frame;
+    u64 hot_this_frame;
+    u64 active;
+    u64 clicked_this_frame;
+
 
     // Mouse State
     bool mouse_down;
+    bool mouse_down_unique;
     bool mouse_released_unique;
     s16 mouse_pos_x;
     s16 mouse_pos_y;
     s16 mouse_delta_x;
     s16 mouse_delta_y;
 
-    bool mouse_wheel;
+    bool mouse_wheel_up;
+    bool mouse_wheel_down;
     s32 mouse_wheel_delta;
 
 
@@ -288,10 +324,18 @@ typedef struct Madness_UI
 
     //KEYBOARD STATE
 
-    char released_key;
+    //checking if any of the mod keys are pressed
+    bool key_shift;
+    bool key_alt;
+    bool key_ctrl;
+    // bool key_super;
+    bool key_backspace;
+
+    char first_released_key;
+
+
 
     // TODO: gamepad and proper keyboard navigation
-
 
 
     //Keep an array of strings used in textboxes
@@ -368,38 +412,17 @@ MAPI void madness_ui_begin(s32 screen_size_x, s32 screen_size_y);
 //Note: needs to be called right before the renderers update method, to generate the appropriate render data
 MAPI void madness_ui_end(void);
 
+void madness_ui_resolve_interaction(void);
+
 
 //NOTE: must be retrieved after madness_ui_end
 MAPI UI_Render_Packet madness_ui_get_ui_render_data(void);
 
 
-typedef struct Madness_UI_Event
-{
-    //interaction events
-    bool hovered; //is this node currently bieng hovered over
-    bool pressed; //is this node active and bieng pressed
-    bool clicked; // has the mouse been released while hovering over this node
-
-    bool mouse_scrolled;
-    s32 mouse_wheel_delta;
-
-    float mouse_delta_x;
-    float mouse_delta_y;
 
 
-    //nagivation events
-    bool nav_hovered;
-    bool nav_pressed;
-    bool nav_clicked;
-    bool nav_returned;
-    // bool nav_up; ...etc for all directions
-}Madness_UI_Event;
 
-
-MAPI Madness_UI_Event madness_ui_add_event(UI_Node* node, bool interaction, bool navigation)
-{
-    //TODO:
-}
+MAPI Madness_UI_Event madness_ui_event(UI_Node* node, bool interactable, bool navigatable);
 
 
 //API START (besides init/shutdown, begin/end)
@@ -486,7 +509,7 @@ MAPI bool madness_ui_drop_down_tree(String id, String text);
 MAPI bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
                                u32 string_array_size);
 bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array,
-                          u32 string_array_size);
+                           u32 string_array_size);
 MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array,
                                     u32 char_array_size);
 
@@ -625,30 +648,16 @@ MAPI char* madness_ui_float_to_char(float value);
 void madness_ui_add_draw_command(UI_Draw_Command_Type draw_type);
 
 
-MAPI bool is_ui_hot(int id);
 
-MAPI bool is_ui_active(int id);
 
 MAPI bool region_hit(vec2s pos, vec2s size);
 
 
 //UTILITY
 
-//check if we can use the button
-MAPI bool madness_ui_use_ui_element(int id, vec2s pos, vec2s size);
 
 MAPI int generate_id(void);
 
-MAPI void set_hot(int id);
-
-MAPI void set_active(int id);
-
-MAPI bool can_be_active(void);
-MAPI bool is_active(int id);
-
-MAPI bool is_hot(int id);
-
-void madness_ui_set_interaction_state(UI_Node* new_node);
 
 
 //serialization
