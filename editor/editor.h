@@ -19,7 +19,6 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_ASSET_METADATA,
     EDITOR_UI_STATE_MESH_VIEWER,
     EDITOR_UI_STATE_REFLECTION_ABILITY,
-    EDITOR_UI_STATE_MATERIAL,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
     EDITOR_UI_STATE_INSANITY_UI_EDITOR_TEST,
     EDITOR_UI_STATE_MAX,
@@ -87,7 +86,6 @@ void editor_ui(Editor* editor);
 //UI_States
 void editor_ui_debug(Editor* editor);
 void editor_ui_scene(Editor* editor);
-void editor_material_nodes(Editor* editor);
 void editor_texture_view(Editor* editor);
 void editor_meta_data_view(Editor* editor);
 void editor_ui_stats(Editor* editor);

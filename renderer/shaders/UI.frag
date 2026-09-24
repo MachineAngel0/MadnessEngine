@@ -152,7 +152,7 @@ void main() {
 
         // Normalized pixel coordinates (from 0 to 1)
         vec2 local_position = in_local_pos * 2.0 - 1.0;
-        local_position.x *= aspect_ratio;
+//        local_position.x *= aspect_ratio;
 
         float distance = 1.0 - length(local_position);
 
@@ -161,7 +161,7 @@ void main() {
         float circleAlpha = smoothstep(0, edge_fade, distance);
         circleAlpha *= smoothstep(outline_thickness + edge_fade, outline_thickness, distance);
 
-        outColor = vec4(in_color, circleAlpha);
+        outColor = vec4(fill_color, circleAlpha);
 
         //    outColor = vec4(in_color * circle, 1.0); * texture(texture_samples[(nonuniformEXT(in_texture_idx))], in_uv); // if we want colors overlayed
     }

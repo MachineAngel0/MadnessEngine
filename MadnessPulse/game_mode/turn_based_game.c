@@ -320,7 +320,7 @@ void turn_update(Madness_Pulse_Game* game)
 
         madness_ui_set_window_pos(100, 100);
         madness_ui_set_window_size(500, 400);
-        madness_ui_window_begin(STRING("Ability Select"));
+        madness_ui_window_begin(STRING("Ability Select"), 0);
         {
             madness_ui_c_string(Character_Name_enum_string[unit->name]);
             madness_ui_s32(STRING("Actions Left:"), &unit->action_component.actions_available, 0);
@@ -380,7 +380,7 @@ void turn_update(Madness_Pulse_Game* game)
 
         break;
     case Turn_Phase_Target_Select:
-        madness_ui_window_begin(STRING("Target Select"));
+        madness_ui_window_begin(STRING("Target Select"), 0);
         {
             Ability_Info ability_info = ability_registry_get_ability_info(
                 game->ability_registry, game->currently_selected_ability_by_player);
@@ -486,7 +486,7 @@ void turn_update(Madness_Pulse_Game* game)
         //display character info
         madness_ui_set_window_pos(1400, 50);
         madness_ui_set_window_size(400, 800);
-        madness_ui_window_begin(STRING("Units Info"));
+        madness_ui_window_begin(STRING("Units Info"), 0);
         {
             madness_ui_string(STRING("Characters Turn"));
             madness_ui_same_line();

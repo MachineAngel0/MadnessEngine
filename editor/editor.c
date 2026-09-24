@@ -114,19 +114,13 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
                              "../z_assets_engine/particle/particle_emitter");
-    madness_ui_add_asset_list(editor->particle_effect_list, ASSET_PARTICLE_EFFECT);
-    madness_ui_add_asset_list(editor->particle_emitter_list, ASSET_PARTICLE_EMITTER);
-    madness_ui_add_asset_list(editor->texture_list, ASSET_TEXTURE);
-    madness_ui_add_asset_list(editor->madness_mesh_list, ASSET_STATIC_MESH);
-    madness_ui_add_asset_list(editor->madness_skmesh_list, ASSET_SKINNED_MESH);
-    madness_ui_add_asset_list(editor->scene_list, ASSET_SCENE);
+
 
 
     editor->material_asset_list =
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
                              "../z_assets_engine/material");
-    madness_ui_add_asset_list(editor->scene_list, ASSET_MATERIAL);
 
 
     return true;
@@ -151,9 +145,6 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_SCENE:
         editor_ui_scene(editor);
         break;
-    case EDITOR_UI_STATE_MATERIAL:
-        editor_material_nodes(editor);
-        break;
     case EDITOR_UI_STATE_TEXTURE_VIEWER:
         editor_texture_view(editor);
         break;
@@ -175,7 +166,7 @@ void editor_ui(Editor* editor)
         editor_ui_stats(editor);
         break;
     case EDITOR_UI_STATE_REFLECTION_ABILITY:
-        madness_ui_window_begin(STRING("RUNTIME TESTING"));
+        madness_ui_window_begin(STRING("RUNTIME TESTING"), 0);
         {
             // static u32 i = 0;
             // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
@@ -201,7 +192,7 @@ void editor_ui(Editor* editor)
 
 
         madness_ui_set_window_pos(700, 100);
-        madness_ui_window_begin(STRING("Material Menu"));
+        madness_ui_window_begin(STRING("Material Menu"), 0);
         {
             Reflection_Registry* material_reflection_registry = editor->asset_system->material_reflection_registry;
 
@@ -242,7 +233,7 @@ void editor_ui_debug(Editor* editor)
 {
     // madness_ui_test(madness_ui);
 
-    madness_ui_window_begin(STRING("Madness Editor"));
+    madness_ui_window_begin(STRING("Madness Editor"), 0);
     {
         if (madness_ui_button(STRING("Editor Button GO BRRR")))
         {
@@ -303,7 +294,7 @@ void editor_ui_stats(Editor* editor)
 
     madness_ui_set_window_pos(50, 50);
 
-    madness_ui_window_begin(STRING("Stats"));
+    madness_ui_window_begin(STRING("Stats"), 0);
     {
         float ms = clock_delta_time_in_ms(clock);
         float fps = clock_delta_time_to_fps(clock);
@@ -322,7 +313,7 @@ void editor_ui_stats(Editor* editor)
 void editor_ui_animation(Editor* editor)
 {
     Animation_System* animation_system = editor->asset_system->animation_system;
-    madness_ui_window_begin(STRING("Animation Data"));
+    madness_ui_window_begin(STRING("Animation Data"), 0);
     {
         for (u32 i = 0; i < animation_system->animation_count; i++)
         {
@@ -359,7 +350,7 @@ void editor_ui_scene(Editor* editor)
     Light_System* light_system = editor->renderer->light_system;
 
     madness_ui_set_window_pos(50, 50);
-    madness_ui_window_begin(STRING("Scene"));
+    madness_ui_window_begin(STRING("Scene"), 0);
     {
         // madness_scroll_box_begin(STRING("Scene Scroll Box"));
 
@@ -402,7 +393,7 @@ void editor_ui_scene(Editor* editor)
     madness_ui_window_end();
 
     madness_ui_set_window_pos(400, 50);
-    madness_ui_window_begin(STRING("Lights"));
+    madness_ui_window_begin(STRING("Lights"), 0);
     {
         // madness_scroll_box_begin(STRING("Lights Scroll Box"));
         {
@@ -446,7 +437,7 @@ void editor_ui_scene(Editor* editor)
 
     // scene serialization
     madness_ui_set_window_pos(1200, 50);
-    madness_ui_window_begin(STRING("Scene Serialization"));
+    madness_ui_window_begin(STRING("Scene Serialization"), 0);
     {
         if (madness_ui_button(STRING("SCENE SAVE")))
         {
@@ -493,15 +484,12 @@ void editor_ui_scene(Editor* editor)
     madness_ui_window_end();
 }
 
-void editor_material_nodes(Editor* editor)
-{
-    madness_ui_test_material_node();
-}
+
 
 void editor_texture_view(Editor* editor)
 {
     Asset_System* asset_system = editor->asset_system;
-    madness_ui_window_begin(STRING("Texture View"));
+    madness_ui_window_begin(STRING("Texture View"), 0);
     {
         for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {
@@ -530,7 +518,7 @@ void editor_texture_view(Editor* editor)
 void editor_meta_data_view(Editor* editor)
 {
     Asset_System* asset_system = editor->asset_system;
-    madness_ui_window_begin(STRING("MetaData View"));
+    madness_ui_window_begin(STRING("MetaData View"), 0);
     {
         for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {
@@ -560,7 +548,7 @@ void editor_material_asset_view(Editor* editor)
     static u32 selected_shader;
     static u32 selected_blend_mode;
     static bool double_sided;
-    madness_ui_window_begin(STRING("Shader Creation"));
+    madness_ui_window_begin(STRING("Shader Creation"), 0);
     {
         madness_ui_combo_box2(STRING("Shader: "), &selected_shader,
                               material_system->shader_to_material_mapping.shader_name,
@@ -607,7 +595,7 @@ void editor_material_asset_view(Editor* editor)
     }
     madness_ui_window_end();
 
-    madness_ui_window_begin(STRING("Additional Shader Info"));
+    madness_ui_window_begin(STRING("Additional Shader Info"), 0);
     {
         madness_ui_string(STRING("ADDITIONAL INFO"));
         madness_ui_padding();
@@ -758,7 +746,7 @@ void editor_mesh_view(Editor* editor)
 {
     editor->asset_system->mesh_system;
 
-    madness_ui_window_begin(STRING("Mesh View"));
+    madness_ui_window_begin(STRING("Mesh View"), 0);
     {
     }
     madness_ui_window_end();
@@ -768,7 +756,7 @@ void editor_render_view(Editor* editor)
 {
     Renderer* renderer = editor->renderer;
 
-    madness_ui_window_begin(STRING("Renderer View"));
+    madness_ui_window_begin(STRING("Renderer View"), 0);
     {
         madness_ui_check_box(STRING("DEBUG AXIS"), &renderer->draw_debug_axis);
 
@@ -790,7 +778,7 @@ void editor_particle_view(Editor* editor)
     asset_list_regenerate(editor->particle_emitter_list, "../z_assets_engine/particle/particle_emitter");
 
 
-    madness_ui_window_begin(STRING("Emitter Editor View"));
+    madness_ui_window_begin(STRING("Emitter Editor View"), 0);
     {
         madness_ui_string(STRING("EMITTER SELECTED"));
 
@@ -865,7 +853,7 @@ void editor_particle_view(Editor* editor)
     String effect_path;
     static u32 effect_index;
     static u32 effect_emitter_index;
-    madness_ui_window_begin(STRING("Particle Effects Editor"));
+    madness_ui_window_begin(STRING("Particle Effects Editor"), 0);
     {
         //TODO:
         // create effect asset
@@ -991,7 +979,7 @@ void editor_particle_view(Editor* editor)
     madness_ui_window_end();
 
 
-    madness_ui_window_begin(STRING("Particle Effect View"));
+    madness_ui_window_begin(STRING("Particle Effect View"), 0);
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
         if (effect->name)
@@ -1025,7 +1013,7 @@ void editor_particle_view(Editor* editor)
     madness_ui_window_end();
 
 
-    madness_ui_window_begin(STRING("Particle Effect Emitter View"));
+    madness_ui_window_begin(STRING("Particle Effect Emitter View"), 0);
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
 
@@ -1046,7 +1034,7 @@ void editor_particle_view(Editor* editor)
     }
     madness_ui_window_end();
 
-    madness_ui_window_begin(STRING("Particle Active View"));
+    madness_ui_window_begin(STRING("Particle Active View"), 0);
     {
         for (u32 i = 0; i < particle_system->active_emitters->num_items; i++)
         {

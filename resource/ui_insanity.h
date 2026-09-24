@@ -139,6 +139,11 @@ typedef struct Insanity_UI_Scroll
     Insanity_UI_Node* scroll_bar;
 } Insanity_UI_Scroll;
 
+typedef enum Insanity_UI_Scroll_Flags
+{
+    Insanity_UI_Scroll_Flags_Scroll_When_Hovered_Over_Container,
+} Insanity_UI_Scroll_Flags;
+
 
 typedef struct Insanity_UI_Drag_State
 {
@@ -156,7 +161,8 @@ typedef enum Insanity_UI_Event_Flags
 {
     Insanity_UI_Event_Flags_Interaction = BITFLAG(0),
     Insanity_UI_Event_Flags_Navigation = BITFLAG(1),
-
+    Insanity_UI_Event_Flags_Individual_Interaction = BITFLAG(2), // ignores hot/active states and does an individual interaction test
+    Insanity_UI_Event_Flags_Individual_Hover = BITFLAG(3), // just checks for hover ignoring other state
 }Insanity_UI_Event_Flags;
 
 typedef struct Insanity_UI
@@ -357,6 +363,11 @@ vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent)
 
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
+
+
+//TODO: going to need for auto sizing
+// void insanity_ui_node_enforce_min_size(Insanity_UI_Node* node_to_constraint, vec2s min_size_pixels);
+// void insanity_ui_node_enforce_max_size(Insanity_UI_Node* node_to_constraint, vec2s max_size_pixels);
 
 
 //Styling

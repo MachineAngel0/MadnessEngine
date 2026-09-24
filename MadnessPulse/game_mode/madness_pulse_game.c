@@ -55,7 +55,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     {
     case Game_State_Enum_Main_Menu:
         //run the ui
-        madness_ui_window_begin(STRING("Main Menu"));
+        madness_ui_window_begin(STRING("Main Menu"), 0);
 
         if (madness_ui_button(STRING("Load Game")))
         {
@@ -96,7 +96,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     case Game_State_Load_Save:
         // madness_pulse_load_save(game); // TODO:
         // game->game_state = Game_State_Enum_Turn_Based;
-        madness_ui_window_begin(STRING("Load Game Save Slots"));
+        madness_ui_window_begin(STRING("Load Game Save Slots"), 0);
         {
             for (u32 i = 0; i < game->saves_found; i++)
             {
@@ -150,7 +150,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
 void madness_pulse_load_save(Madness_Pulse_Game* game)
 {
-    madness_ui_window_begin(STRING("Load Save"));
+    madness_ui_window_begin(STRING("Load Save"), 0);
     {
         madness_scroll_box_begin(STRING("Load Save"));
         {
@@ -176,7 +176,7 @@ void madness_pulse_load_save(Madness_Pulse_Game* game)
 void madness_pulse_level_select(Madness_Pulse_Game* game)
 {
     //run the ui
-    madness_ui_window_begin(STRING("Level Select"));
+    madness_ui_window_begin(STRING("Level Select"), 0);
     {
         madness_scroll_box_begin(STRING("level select"));
         {
@@ -199,7 +199,7 @@ void madness_pulse_level_select(Madness_Pulse_Game* game)
 
 void madness_pulse_ability_select(Madness_Pulse_Game* game)
 {
-    madness_ui_window_begin(STRING("Ability Inventory Select"));
+    madness_ui_window_begin(STRING("Ability Inventory Select"), 0);
     {
     }
     madness_ui_window_end();

@@ -15,7 +15,8 @@
 #define MAX_UI_NODE_COUNT 100000
 #define MAX_UI_DRAW_COUNT 500
 
-#define MIN_UI_NODE_SCREEN_SIZE 250
+#define MIN_UI_NODE_WINDOW_SIZE 250
+#define MIN_UI_NODE_CHILD_SIZE 64
 
 #define EDITOR_FONT_SIZE 16.0f
 #define EDITOR_TEXT_OUTLINE 0.5f
@@ -57,6 +58,12 @@ typedef enum UI_Layout_Direction
     UI_LAYOUT_VERTICAL,
 } UI_Layout_Direction;
 
+typedef enum Madness_UI_Event_Flags
+{
+    //TODO:
+    Madness_UI_Event_Flags_Interaction = BITFLAG(0),
+    Madness_UI_Event_Flags_Navigation = BITFLAG(1),
+}Madness_UI_Event_Flags;
 
 typedef struct UI_Editor_Style
 {
@@ -148,7 +155,18 @@ typedef enum UI_Window_Flag
     UI_Window_Flag_No_Collapse = BITFLAG(5), // you have to have a header to be able to collapse
     UI_Window_Flag_No_Background = BITFLAG(6),
     UI_Window_Flag_Dont_Save_Position = BITFLAG(7),
+
+    UI_Window_Flag_Pop_Up = BITFLAG(8),
+    UI_Window_Flag_Auto_Resize_To_Min_Content = BITFLAG(9),
+
 } UI_Window_Flag;
+
+typedef enum Madness_UI_Window_Type
+{
+    Madness_UI_Window_Type_Basic,
+    Madness_UI_Window_Type_Pop_Up,
+    Madness_UI_Window_Type_Modal,
+} Madness_UI_Window_Type;
 
 
 typedef struct Window_Flag_Latest
@@ -162,8 +180,8 @@ typedef struct Window_State
 {
     String* window_name;
 
-    vec2s window_region_pos;
-    vec2s window_region_size;
+    vec2s window_pos;
+    vec2s window_size;
 
     // only for actual windows and not scroll boxes
     // should be used as an offset to get to the proper scroll region
@@ -175,19 +193,18 @@ typedef struct Window_State
 
     vec2s window_relative_cursor_pos; // track how far down items have gone down relative to the window
     UI_Window_Flag flags; // track how far down items have gone down relative to the window
-} Window_State;
 
-typedef struct Pop_Up_State
-{
-    String pop_up_name;
+
 
     vec2s cursor_original_pos;
-    vec2s pop_up_pos;
-    vec2s pop_up_size;
+    bool collapsed;
 
-    UI_Node* pop_up_node;
-    UI_Node* pop_up_scissor_start_node;
-} Pop_Up_State;
+    UI_Node* window_node;
+    // UI_Node* header_node;
+    UI_Node* scissor_start_node;
+} Window_State;
+
+
 
 typedef struct Combo_Box_String_State
 {
@@ -269,11 +286,14 @@ typedef struct Madness_UI
     //a window is anything with which things are drawn to inside of it
     Window_State window_state_array[MAX_MADNESS_UI_WINDOWS];
     u32 window_state_array_count;
+
+    //per frame window states
     STACK_TYPE(Window_State*)* window_states_stack;
 
-    STACK_TYPE(Pop_Up_State)* pop_up_stack;
-    ARRAY_TYPE(Pop_Up_State)* pop_up_frame_state;
-    bool nuke_pop_up;
+    ARRAY_TYPE(Madness_UI_Window_Type)* window_type_stack;
+
+    ARRAY_TYPE(Window_State)* pop_up_frame_state;
+    bool nuke_pop_ups;
 
     STACK_TYPE(vec2)* window_pos_stack;
     STACK_TYPE(vec2)* window_size_stack;
@@ -382,8 +402,7 @@ typedef struct Madness_UI
     u32 output_pressed_id;
 
 
-    //NOTE: if i really wanted this to be generic then, i would use strings instead of the enum
-    Asset_List_Scan* asset_list_scan_reference[ASSET_TYPE_MAX];
+
 
 
     // DRAW LIST
@@ -392,8 +411,8 @@ typedef struct Madness_UI
     // push push push, push push
     // count 3, count 2
     // offset 3, count 5
-    DYNAMIC_ARRAY_TYPE(UI_Draw_Command)* draw_command_list;
-    UI_Draw_Command current_draw_command;
+    UI_Draw_Command* draw_command_list;
+    u32 current_draw_command_count;
 } Madness_UI;
 
 
@@ -425,25 +444,20 @@ MAPI Madness_UI_Event madness_ui_event(UI_Node* node, bool interactable, bool na
 
 //API START (besides init/shutdown, begin/end)
 
-void madness_ui_menu_bar_begin(String id);
-void madness_ui_menu_bar_end(void);
-bool madness_ui_menu_item_begin(String menu_name);
-bool madness_ui_menu_item_end(void);
 
-bool madness_ui_pop_up_begin(String pop_up_name, vec2s pop_up_start_location);
+
+bool madness_ui_pop_up_begin(String pop_up_name);
 bool madness_ui_pop_up_end(void);
 
 
-MAPI void madness_ui_window_begin(String header_name);
+MAPI void madness_ui_window_begin(String header_name, UI_Window_Flag window_flags);
 MAPI void madness_ui_window_end(void);
 
 
 MAPI void madness_ui_set_window_pos(u32 x, u32 y);
 MAPI void madness_ui_set_window_size(u32 width, u32 height);
-MAPI void madness_ui_set_window_flags(UI_Window_Flag flags);
 MAPI vec2s madness_ui_get_window_pos(void);
 MAPI vec2s madness_ui_get_window_size(void);
-MAPI UI_Window_Flag madness_ui_get_window_flags(void);
 
 
 MAPI void madness_scroll_box_begin(String id);
@@ -553,31 +567,7 @@ MAPI bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry
 MAPI bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Registry* reflection_registry,
     Reflection_Runtime_Struct struct_info, void* passing_data, const char* id, Asset_List_Scan* texture_asset_list_scan);
 
-typedef struct Material_Link
-{
-    //nodes that we are connecting to
-    u32 from_id;
-    u32 to_id;
-    //inputs and output links
-    u8 from_node;
-    u8 to_node;
-} Material_Link;
 
-
-typedef struct Material_Node
-{
-    u32 node_id;
-
-    String* inputs;
-    vec2s* inputs_positions;
-    Material_Link* inputs_links;
-    int input_size;
-
-    String* outputs;
-    vec2s* output_positions;
-    Material_Link* output_links;
-    int output_size;
-} Material_Node;
 
 // simple version
 //press on an node (at the draw location), and store that state,
@@ -624,8 +614,6 @@ void madness_ui_set_padding_xy(float x, float y);
 //menu for showing configs
 MAPI void madness_ui_config_menu(void);
 
-//
-MAPI void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan, Asset_Type asset_type);
 
 
 //API END
@@ -644,7 +632,7 @@ MAPI void madness_ui_print_state(void);
 
 //utility
 MAPI UI_Node* madness_ui_get_new_node(void);
-UI_Node* madness_ui_get_pop_up_node(void);
+
 
 UI_Node* madness_ui_new_text_node(void);
 UI_Node* madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
@@ -655,8 +643,7 @@ MAPI void madness_ui_center_child_node(vec2s parent_pos, vec2s parent_size, vec2
 MAPI char* madness_ui_float_to_char(float value);
 
 
-//draw list
-void madness_ui_add_draw_command(UI_Draw_Command_Type draw_type, vec2s scissor_pos, vec2s scissor_size);
+
 
 
 MAPI bool region_hit(vec2s pos, vec2s size);
@@ -673,7 +660,6 @@ MAPI void madness_ui_deserialize_windows();
 //test
 MAPI void madness_ui_test(void);
 MAPI void madness_ui_example(void);
-MAPI void madness_ui_test_material_node(void);
 
 
 #endif //UI_H

@@ -387,6 +387,11 @@ Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, Insanity_UI_Event_Fl
         insanity_ui->navigation_node_array[insanity_ui->navigation_node_count++] = node;
     }
 
+    /*if (event_flags & Insanity_UI_Event_Flags_Individual_Interaction)
+    {
+        Insanity_UI_Event out_event = {0};
+    }*/
+
 
     if (node->hash_id == insanity_ui->hot_last_frame || node->hash_id == insanity_ui->active)
     {
@@ -396,7 +401,38 @@ Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, Insanity_UI_Event_Fl
 
         return insanity_ui->interaction_result;
     }
-    return (Insanity_UI_Event){0};
+
+    bool hit = insanity_ui_rect_hit(node);
+
+    Insanity_UI_Event out_event = {0};
+    if ((event_flags & Insanity_UI_Event_Flags_Individual_Hover) ||
+        (event_flags & Insanity_UI_Event_Flags_Individual_Interaction))
+    {
+        if (hit)
+        {
+            out_event.hovered = true;
+        }
+    }
+
+    if (event_flags & Insanity_UI_Event_Flags_Individual_Interaction)
+    {
+        if (hit)
+        {
+            out_event.mouse_delta_x = insanity_ui->mouse_delta_x;
+            out_event.mouse_delta_y = insanity_ui->mouse_delta_y;
+            out_event.mouse_scrolled = insanity_ui->mouse_wheel_down || insanity_ui->mouse_wheel_up;
+            out_event.mouse_wheel_delta = insanity_ui->mouse_wheel_delta;
+            out_event.mouse_pos_x = insanity_ui->mouse_pos_x;
+            out_event.mouse_pos_y = insanity_ui->mouse_pos_y;
+
+            // insanity_ui->interaction_result.hovered = true;
+            out_event.clicked = insanity_ui->mouse_released_unique;
+            out_event.pressed = insanity_ui->mouse_down;
+        }
+    }
+
+
+    return out_event;
 }
 
 Insanity_UI_Node* insanity_ui_node(const char* name)
@@ -520,7 +556,8 @@ void scroll_end(Insanity_UI_Scroll* scroll)
             scroll_bar_percent_offset);
         scroll->scroll_bar->pos = (vec2s){scroll_bar_pos_x, scroll_bar_pos_y};
 
-        Insanity_UI_Event slider_bar_result = insanity_ui_event(scroll->scroll_bar, Insanity_UI_Event_Flags_Interaction);
+        Insanity_UI_Event slider_bar_result =
+            insanity_ui_event(scroll->scroll_bar, Insanity_UI_Event_Flags_Interaction);
         if (slider_bar_result.hovered)
         {
             scroll->scroll_bar->color = insanity_ui->editor_style.hovered_color;
@@ -549,6 +586,24 @@ void scroll_end(Insanity_UI_Scroll* scroll)
             scroll->scroll_offset = (content_visible_range) * scroll->scroll_bar_percent_offset;
             scroll->scroll_bar->pos.y = scroll->starting_pos.y + ((scroll->scroll_container->size.y - scroll->scroll_bar
                 ->size.y) * scroll->scroll_bar_percent_offset);
+        }
+
+        if (insanity_ui_event(scroll->scroll_container, Insanity_UI_Event_Flags_Individual_Hover).hovered)
+        {
+            //handle window scrolling
+            if (input_is_mouse_wheel_up())
+            {
+                scroll->scroll_bar_percent_offset = clamp_f32(scroll->scroll_bar_percent_offset - 0.1, 0, 1);
+                // scroll->scroll_offset = clamp_f32(scroll->scroll_offset, 0, insanity_ui->screen_size.y);
+                scroll->scroll_offset = content_visible_range * scroll->scroll_bar_percent_offset;
+            }
+            if (input_is_mouse_wheel_down())
+            {
+                // state.scroll_offset += 10;
+                scroll->scroll_bar_percent_offset = clamp_f32(scroll->scroll_bar_percent_offset + 0.1, 0, 1);
+                // scroll->scroll_offset = clamp_f32(scroll->scroll_offset, 0, insanity_ui->screen_size.y);
+                scroll->scroll_offset = content_visible_range * scroll->scroll_bar_percent_offset;
+            }
         }
 
         /*//resize the window up
@@ -931,17 +986,20 @@ void insanity_ui_test(float dt, float elapsed_time)
             Insanity_UI_Node* icon = insanity_ui_image("icon", (Texture_Handle){0, 0});
             icon->pos = button->pos;
             // icon->size = (vec2s){button->size.x * 0.1,button->size.y};
-            icon->size = (vec2s){42, button->size.y};
-            icon->rounded_radius = 1.0f;
+            icon->size = (vec2s){button->size.y, button->size.y};
+            icon->thickness = 1.0f;
+            icon->ui_flags |= UI_FLAG_CIRCLE;
 
             Insanity_UI_Node* text_ability = insanity_ui_text("ability x");
             insanity_ui_node_align(text_ability, button, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
 
-            if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).hovered)
+            if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).
+                hovered)
             {
                 button->color = glms_vec3_mul(button->color, (vec3s){0.5 * (i + 1), 0.1 * (i + 1), 0.5 * (i + 1)});
             }
-            if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).pressed)
+            if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).
+                pressed)
             {
                 button->color = glms_vec3_add(button->color, (vec3s){0.5 * (i + 1), 0.1 * (i + 1), 0.5 * (i + 1)});
             }

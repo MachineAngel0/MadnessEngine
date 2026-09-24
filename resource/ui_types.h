@@ -38,7 +38,7 @@ typedef enum UI_Alignment
 {
     UI_ALIGNMENT_LEFT, // also top
     UI_ALIGNMENT_CENTER,
-    UI_ALIGNMENT_RIGHT,// also bottom
+    UI_ALIGNMENT_RIGHT, // also bottom
 } UI_Alignment;
 
 typedef enum UI_Scalar_Type
@@ -54,7 +54,7 @@ typedef enum UI_Scalar_Type
     Madness_UI_Scalar_Type_F32,
     Madness_UI_Scalar_Type_F64,
     Madness_UI_Scalar_Type_MAX,
-}UI_Scalar_Type;
+} UI_Scalar_Type;
 
 const char* ui_scalar_type_print_fmt[Madness_UI_Scalar_Type_MAX] = {
     [Madness_UI_Scalar_Type_U8] = "%hhu",
@@ -167,6 +167,34 @@ void ui_add_draw_command(UI_Draw_Command* draw_command_array, u32 draw_command_a
             draw_command_array[draw_command_array_count].scissor_size = scissor_size;
         }
     }
+}
+
+void ui_add_draw_command2(UI_Draw_Command* draw_command_array, u32* draw_command_array_count,
+                          UI_Draw_Command_Type draw_type, vec2s scissor_pos, vec2s scissor_size)
+{
+    u32 current_draw_index = *draw_command_array_count;
+
+    // Only plain draws merge. Scissor start/end always get their own command,
+    // otherwise nested scissors collapse into one.
+    if (current_draw_index > 0 &&
+        draw_type == UI_DRAW_TYPE_DRAW &&
+        draw_command_array[current_draw_index - 1].type == UI_DRAW_TYPE_DRAW)
+    {
+        draw_command_array[current_draw_index - 1].count++;
+        return;
+    }
+
+    UI_Draw_Command* cmd = &draw_command_array[current_draw_index];
+    cmd->type = draw_type;
+    cmd->count = 1;
+    cmd->offset = (current_draw_index > 0)
+                      ? draw_command_array[current_draw_index - 1].offset + draw_command_array[current_draw_index - 1].
+                      count
+                      : 0;
+    cmd->scissor_pos = scissor_pos;
+    cmd->scissor_size = scissor_size;
+
+    (*draw_command_array_count)++;
 }
 
 
