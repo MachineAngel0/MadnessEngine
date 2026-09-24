@@ -21,11 +21,14 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
 
 
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "mesh", TYPE_STRING(Material_Default));
+                                                "mesh",
+                                                TYPE_STRING(Material_Default));
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "skinned_mesh", TYPE_STRING(Material_Default));
+                                                "skinned_mesh",
+                                                TYPE_STRING(Material_Default));
     material_system_add_shader_material_mapping(asset_system, material_system,
-                                                "billboard_spherical", TYPE_STRING(Material_Spherical_Billboard_CPU));
+                                                "billboard_spherical",
+                                                TYPE_STRING(Material_Spherical_Billboard_CPU));
 
 
     //load all shaders up front
@@ -63,7 +66,7 @@ bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d)
 {
     render_packet_3d->shader_assets = material_system->shader_asset;
-    render_packet_3d->material_count = material_system->shader_count;
+    render_packet_3d->shader_asset_count = material_system->shader_count;
 
 
     return true;
@@ -339,15 +342,19 @@ void shader_get_or_create(Asset_System* asset_system, Shader_Info* shader_info, 
     *shader_asset = (Shader_Asset){
         .version = 1.0f,
         .reflection_hash = mat_def->reflection_hash,
-        .shader_info = *shader_info,
+        .shader_info = *shader_info, //TODO: this is an issue
         .uuid = madness_uuid_generate_return(),
         .shader_key = key,
     };
-    asset_converter_shader_asset(asset_system, shader_asset);
+    //take a copy of the string
+    shader_asset->shader_info.shader_name = string_duplicate_heap(shader_info->shader_name,
+                                                                  asset_system->heap_allocator),
+
+
+        asset_converter_shader_asset(asset_system, shader_asset);
 
     //TODO:
     // ring_enqueue(asset_system->material_system->new_shaders, );
-
 }
 
 
@@ -368,9 +375,9 @@ void material_create_from_data(Asset_System* asset_system,
     Shader_Asset* shader_asset = &asset_system->material_system->shader_asset[shader_handle->handle];
 
 
-
     u32 def_index = asset_system->material_system->shader_asset_to_mapping[shader_handle->handle];
-    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.material_definition[def_index];
+    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.
+                                                              material_definition[def_index];
     String* mat_name = asset_system->material_system->shader_to_material_mapping.material_name[def_index];
 
 
@@ -390,4 +397,3 @@ void material_create_from_data(Asset_System* asset_system,
 
     asset_converter_material(asset_system, out_material);
 }
-

@@ -8,7 +8,7 @@
 
 void debug_draw_system_init(Renderer* renderer, Memory_System* memory_system)
 {
-    debug_draw_system.debug_lines = dynamic_array_create(Debug_Line, DEFAULT_DEBUG_DRAW_COUNT,
+    debug_draw_system.debug_lines = dynamic_array_create_heap(Debug_Line, DEFAULT_DEBUG_DRAW_COUNT,
                                                          &memory_system->application_allocator);
 
     debug_system_create_vulkan_shader(renderer, &debug_draw_system.debug_line_pipeline);

@@ -24,9 +24,12 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(4),
                                                                    MEMORY_SUBSYSTEM_RESOURCE);
 
-    //really not using this for much rn
     asset_system->allocator = memory_system_allocator_create(memory_system, MB(16),
                                                              MEMORY_SUBSYSTEM_RESOURCE);
+    asset_system->scratch_allocator = memory_system_allocator_create(memory_system, MB(16),
+                                                             MEMORY_SUBSYSTEM_RESOURCE);
+
+
 
     //texture memory
     asset_system->texture_allocator = memory_system_heap_allocator_create(
@@ -109,6 +112,9 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
                                            &asset_system->render_packet->draw_3d_data_packet);
 
     scene_update(asset_system->scene, asset_system);
+
+
+    //animation
     asset_system->render_packet->draw_3d_data_packet.world_space_matrix_array = asset_system->scene->
         world_transforms;
     asset_system->render_packet->draw_3d_data_packet.world_space_matrix_count = asset_system->scene->
@@ -117,9 +123,11 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     asset_system->render_packet->draw_3d_data_packet.skinned_matrix = asset_system->animation_system->
         skinned_matrix_array;
 
+    //particle
     asset_system->render_packet->particle_packet = particle_system_generate_render_packet(
         asset_system->particle_system);
 
+    //mesh
     asset_system->render_packet->draw_3d_data_packet.mesh_instances = asset_system->mesh_system->
         mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.mesh_instances_count = asset_system->mesh_system->
@@ -134,6 +142,10 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         skinned_mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.skinned_instances_count = asset_system->mesh_system->
         skinned_mesh_instance_count;
+
+
+
+
 
     PROFILE_ZONE_END(asset_system_update_and_create_render_packet)
 
@@ -151,7 +163,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     PROFILE_ZONE(asset_load_texture_path)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     Texture_Handle texture_handle = {0};
@@ -466,7 +478,7 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     PROFILE_ZONE(asset_load_mesh_path)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, scratch.allocator);
 
     Asset_MetaData* out_meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_MetaData));
@@ -596,7 +608,7 @@ bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_
 
     PROFILE_ZONE(asset_load_material_asset_path)
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 
@@ -622,7 +634,7 @@ bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
 {
     PROFILE_ZONE(asset_load_material_asset_uuid)
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     Asset_MetaData* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));;
     if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, out_meta_data))
@@ -653,7 +665,7 @@ bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data,
     MASSERT(out_material_handle);
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     FILE* fptr = fopen(string_to_c_string_allocator(meta_data->engine_path, scratch.allocator), "rb");
@@ -689,7 +701,7 @@ bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_u
     PROFILE_ZONE(asset_load_material_uuid)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     Asset_MetaData* out_meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_MetaData));;
@@ -711,7 +723,7 @@ bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_u
 bool asset_load_material_path(Asset_System* asset_system, const char* asset_path, Material_Handle* out_material)
 {
     PROFILE_ZONE(asset_load_material_path)
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 
@@ -746,7 +758,7 @@ bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* 
     PROFILE_ZONE(asset_load_particle_effect_by_path)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 
@@ -842,7 +854,7 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     PROFILE_ZONE(asset_load_particle_emitter)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     String* path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 

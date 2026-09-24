@@ -46,7 +46,7 @@
 #include "../core/platform/filesystem.c"
 #if MPLATFORM_WINDOWS
 #include "../core/platform/platform_win32.c"
-#include "../core/platform/gamepad_win32.c"
+#include "../core/platform/gamepad_win32_xinput.c"
 #include "../core/platform/thread_win32.c"
 #include "../core/platform/filesystem_win32.c"
 #elif MPLATFORM_LINUX

@@ -48,7 +48,6 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
                                   Render_Packet* render_packet,
                                   Vulkan_Command_Buffer* command_buffer)
 {
-
     PROFILE_ZONE(ui_renderer_upload_draw_data)
 
 
@@ -136,8 +135,6 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     }*/
 
     PROFILE_ZONE_END(ui_renderer_upload_draw_data)
-
-
 }
 
 void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
@@ -192,7 +189,8 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     //draw
     for (u32 i = 0; i < ui_renderer->madness_ui_render_packet->draw_command_count; i++)
     {
-        switch (ui_renderer->madness_ui_render_packet->draw_command[i].type)
+        UI_Draw_Command* command = &ui_renderer->madness_ui_render_packet->draw_command[i];
+        switch (command->type)
         {
         case UI_DRAW_TYPE_DRAW:
             //bind pipeline
@@ -200,41 +198,39 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
             // firstInstance -> gl_InstanceIndex
             // vkCmdDraw(command_buffer->handle, 6, 1, 0, i);
             vkCmdDraw(command_buffer->handle, 6,
-                      ui_renderer->madness_ui_render_packet->draw_command[i].count, 0,
-                      ui_renderer->madness_ui_render_packet->draw_command[i].offset);
+                      command->count, 0,
+                      command->offset);
 
             break;
         case UI_DRAW_TYPE_SCISSOR_START:
-            // vec2 scissor_pos = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_pos;
-            // vec2 size = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_size;
-            // VkRect2D scissor = {
-            // .offset = {.x = scissor_pos.x, .y = scissor_pos.y},
-            // .extent = {.width = size.x, .height = size.y},
-            // };
-            // vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);
+            //doesn't nest windows properly
+            /*vec2s scissor_pos = command->scissor_pos;
+            vec2s size = command->scissor_size;
+            VkRect2D scissor = {
+                .offset = {.x = scissor_pos.x, .y = scissor_pos.y},
+                .extent = {.width = size.x, .height = size.y},
+            };
+            vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);*/
             break;
         case UI_DRAW_TYPE_SCISSOR_END:
-            // VkRect2D default_scissor = {
-            // .offset = {.x = 0, .y = 0},
-            // .extent = {.width = renderer->context.framebuffer_width, .height = renderer->context.framebuffer_height},
-            // };
-            // vkCmdSetScissor(command_buffer->handle, 0, 1, &default_scissor);
+            /*VkRect2D default_scissor = {
+                .offset = {.x = 0, .y = 0},
+                .extent = {.width = renderer->framebuffer_width, .height = renderer->framebuffer_height},
+            };
+            vkCmdSetScissor(command_buffer->handle, 0, 1, &default_scissor);*/
             break;
         }
     }
-
 }
 
 
-
-
-
 void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                              Vulkan_Command_Buffer* command_buffer)
+                               Vulkan_Command_Buffer* command_buffer)
 {
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "INSANITY UI DRAW", (float[4]){1.0, 0.0, 1.0, 1.0});
+    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "INSANITY UI DRAW",
+                                                  (float[4]){1.0, 0.0, 1.0, 1.0});
 
-   //uniform
+    //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 0, 1,
                             &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
@@ -254,7 +250,8 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
     PC_UI pc_ui = {
         .material_bda =
         get_buffer_device_address(renderer->logical_device,
-                                  vulkan_buffer_get_frame(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->handle),
+                                  vulkan_buffer_get_frame(renderer, ui_renderer->insanity_ui_material_ssbo_handle)->
+                                  handle),
         .padding1 = 0,
         .padding2 = 0,
 
@@ -279,7 +276,8 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
     //draw
     for (u32 i = 0; i < ui_renderer->insanity_ui_render_packet->draw_command_count; i++)
     {
-        switch (ui_renderer->insanity_ui_render_packet->draw_command[i].type)
+        UI_Draw_Command* command = &ui_renderer->insanity_ui_render_packet->draw_command[i];
+        switch (command->type)
         {
         case UI_DRAW_TYPE_DRAW:
             //bind pipeline
@@ -287,31 +285,29 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
             // firstInstance -> gl_InstanceIndex
             // vkCmdDraw(command_buffer->handle, 6, 1, 0, i);
             vkCmdDraw(command_buffer->handle, 6,
-                      ui_renderer->insanity_ui_render_packet->draw_command[i].count, 0,
-                      ui_renderer->insanity_ui_render_packet->draw_command[i].offset);
+                      command->count, 0,
+                      command->offset);
 
             break;
         case UI_DRAW_TYPE_SCISSOR_START:
-            // vec2 scissor_pos = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_pos;
-            // vec2 size = ui_renderer->madness_ui_render_packet->draw_command[i].scissor_size;
-            // VkRect2D scissor = {
-            // .offset = {.x = scissor_pos.x, .y = scissor_pos.y},
-            // .extent = {.width = size.x, .height = size.y},
-            // };
-            // vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);
+            vec2s scissor_pos = command->scissor_pos;
+            vec2s size = command->scissor_size;
+            VkRect2D scissor = {
+                .offset = {.x = scissor_pos.x, .y = scissor_pos.y},
+                .extent = {.width = size.x, .height = size.y},
+            };
+            vkCmdSetScissor(command_buffer->handle, 0, 1, &scissor);
             break;
         case UI_DRAW_TYPE_SCISSOR_END:
-            // VkRect2D default_scissor = {
-            // .offset = {.x = 0, .y = 0},
-            // .extent = {.width = renderer->context.framebuffer_width, .height = renderer->context.framebuffer_height},
-            // };
-            // vkCmdSetScissor(command_buffer->handle, 0, 1, &default_scissor);
+            VkRect2D default_scissor = {
+                .offset = {.x = 0, .y = 0},
+                .extent = {.width = renderer->framebuffer_width, .height = renderer->framebuffer_height},
+            };
+            vkCmdSetScissor(command_buffer->handle, 0, 1, &default_scissor);
             break;
         }
     }
 
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
-
-
 }

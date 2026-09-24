@@ -2690,7 +2690,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "material_count",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Render_Packet_3D, material_count)
+			.offset = offsetof(Render_Packet_3D, shader_asset_count)
 		},
 		{
 			.name = "material_buffer",

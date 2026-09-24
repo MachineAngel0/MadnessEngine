@@ -17,6 +17,8 @@
 //NOTE: the smallest likely screen size for a laptop is likely to be a 1024*600 or more commonly 1024 * 768
 // smalles ill let it be is 600*600
 
+//TODO: flip this on and off for usage
+#define INSANITY_UI_DEBUG_PRINT
 
 // button -> clickable, hoverable, box, text (maybe)
 // slider -> clickable, hoverable, box, slider (horizontal/vertical),
@@ -31,6 +33,7 @@
 
 #define INSANITY_UI_MAX_NODE_COUNT 1000
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
+#define INSANITY_MAX_UI_NODE_CHILD_COUNT 32
 
 
 typedef struct Insanity_UI_Editor_Style
@@ -74,6 +77,8 @@ typedef struct Insanity_UI_Event
     float mouse_delta_x;
     float mouse_delta_y;
 
+    s16 mouse_pos_x;
+    s16 mouse_pos_y;
 
     //nagivation events
     bool nav_hovered;
@@ -123,14 +128,36 @@ typedef struct Insanity_UI_Node
 
 typedef struct Insanity_UI_Scroll
 {
-    vec2s starting_pos;
-    vec2s starting_size;
-    Insanity_UI_Node* scroll_container_node;
-    vec2s cursor;
+    u32 id;
 
-    // vec2s current_size;
-    bool outside_view;
+    vec2s starting_pos;
+    vec2s scroll_cursor;
+    float content_height;
+    float scroll_offset;
+    float scroll_bar_percent_offset;
+    Insanity_UI_Node* scroll_container;
+    Insanity_UI_Node* scroll_bar;
 } Insanity_UI_Scroll;
+
+
+typedef struct Insanity_UI_Drag_State
+{
+    u32 drag_id;
+    vec2s drag_position;
+} Insanity_UI_Drag_State;
+
+typedef enum Insanity_UI_Persistent_State
+{
+    Insanity_UI_Persistent_State_Drag = BITFLAG(0),
+    Insanity_UI_Persistent_State_Scroll = BITFLAG(0),
+} Insanity_UI_Persistent_State;
+
+typedef enum Insanity_UI_Event_Flags
+{
+    Insanity_UI_Event_Flags_Interaction = BITFLAG(0),
+    Insanity_UI_Event_Flags_Navigation = BITFLAG(1),
+
+}Insanity_UI_Event_Flags;
 
 typedef struct Insanity_UI
 {
@@ -145,6 +172,8 @@ typedef struct Insanity_UI
 
     vec2s screen_size; // this gets queried every frame in the begin effect
 
+    //for invalid states, pass this back instead of crashing
+    Insanity_UI_Node dummy_node;
 
     //this should be an array at some point
     Texture_Handle default_font_handle;
@@ -153,6 +182,12 @@ typedef struct Insanity_UI
     float text_outline;
     // Font fonts[100];
 
+    //Persistent Information
+    Insanity_UI_Drag_State drag_state[100];
+    u32 drag_node_count;
+
+    //temp and should be more than one
+    Insanity_UI_Scroll scroll_state;
 
     //Interaction
     Insanity_UI_Node* interaction_node_array[INSANITY_UI_MAX_NODE_COUNT];
@@ -163,7 +198,6 @@ typedef struct Insanity_UI
 
     ARRAY_TYPE(Insanity_UI_Node)* ui_nodes;
 
-    Insanity_UI_Node dummy_node;
 
     //Render
     UI_Render_Node* render_node_array;
@@ -245,12 +279,11 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 
 //Building Blocks
+Insanity_UI_Node* insanity_ui_node_set_flags(const char* name); // has to be called before the node is created
 Insanity_UI_Node* insanity_ui_node(const char* name);
 /*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
-Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, bool interactable, bool navigatable);
+Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, Insanity_UI_Event_Flags event_flags);
 
-//copies pos and size
-Insanity_UI_Node* insanity_ui_node_create_copy(const char* name, Insanity_UI_Node* node);
 
 //rn these are percents
 Insanity_UI_Node* insanity_ui_node_cut_left(Insanity_UI_Node* parent, const char* name, f32 size);
@@ -264,56 +297,11 @@ Insanity_UI_Node* insanity_ui_node_cut_bottom(Insanity_UI_Node* parent, const ch
 
 
 //Windows
-Insanity_UI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size);
-void insanity_ui_scroll_end();
-
-//an idea, we can pass back a garbage node, so any modifications dont matter
-//this is here as an optimization, inside a loop, so that we are not need
-bool insanity_ui_is_scroll_outside_view(Insanity_UI_Node* node)
-{
-    Insanity_UI_Scroll* state = &insanity_ui->scroll_array[insanity_ui->scroll_array_count - 1];
-    if (state->starting_pos.y + state->starting_size.y <= node->pos.y)
-    {
-        node->size = (vec2s){0, 0};
-        state->outside_view = true;
-        return true;
-    }
-    return false;
-}
-
-
-bool scrollbox_is_cursor_outside_view(Insanity_UI_Scroll* scroll)
-{
-    if (scroll->starting_pos.y + scroll->starting_size.y <= scroll->cursor.y)
-    {
-        return true;
-    }
-    if (scroll->starting_pos.x + scroll->starting_size.x <= scroll->cursor.y)
-    {
-        return true;
-    }
-}
-
-
-//returns true if we went outside the view of the scrollbox, will cull all future nodes
-bool scroll_advance_down(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
-{
-    if (cull_nodes_outside_view)
-    {
-        insanity_ui_is_scroll_outside_view(node);
-    }
-    scroll->cursor.y += node->size.y;
-}
-
-bool scrollbox_advance_right(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node, bool cull_nodes_outside_view)
-{
-    if (cull_nodes_outside_view)
-    {
-        insanity_ui_is_scroll_outside_view(node);
-    }
-    scroll->cursor.y += node->size.y;
-}
-
+Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
+void scroll_end(Insanity_UI_Scroll* scroll);
+// might just want to have pos and size instead of node
+void scroll_advance(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node);
+void scroll_advance_size(Insanity_UI_Scroll* scroll, vec2s size);
 
 void pop_up_begin();
 void pop_up_end();
@@ -362,14 +350,13 @@ void insanity_ui_node_expand_percent_x(Insanity_UI_Node* node_to_expand, Insanit
 void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
 void insanity_ui_node_expand_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, vec2s percent);
 
+void insanity_ui_node_expand_percent_screen(Insanity_UI_Node* node_to_expand, vec2s percent);
+
 
 vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);
 
 
 void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
-
-
-
 
 
 //Styling
@@ -385,6 +372,59 @@ void insanity_ui_test(float dt, float elapsed_time);
 
 
 // void insanity_ui_autoplace_and_size(Insanity_UI_Node* node);
+
+
+Insanity_UI_Drag_State* insanity_ui_get_drag_state(Insanity_UI_Node* node)
+{
+    Insanity_UI_Drag_State* drag_state = NULL;
+    for (u32 i = 0; i < insanity_ui->drag_node_count; i++)
+    {
+        if (insanity_ui->drag_state[i].drag_id == node->hash_id)
+        {
+            drag_state = &insanity_ui->drag_state[i];
+        }
+    }
+    if (!drag_state)
+    {
+        u32 drag_index = insanity_ui->drag_node_count++;
+        insanity_ui->drag_state[drag_index].drag_id = node->hash_id;
+        drag_state = &insanity_ui->drag_state[drag_index];
+        drag_state->drag_position = node->pos;
+    }
+    MASSERT(drag_state);
+    return drag_state;
+}
+
+void insanity_ui_drag(Insanity_UI_Node* node)
+{
+    //find the drag state, then adjust position is it moves
+    Insanity_UI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
+    node->pos.x = drag_state->drag_position.x;
+    node->pos.y = drag_state->drag_position.y;
+
+    Insanity_UI_Event event = insanity_ui_event(node, Insanity_UI_Event_Flags_Interaction);
+    if (event.pressed)
+    {
+        drag_state->drag_position.x += event.mouse_delta_x;
+        drag_state->drag_position.y += event.mouse_delta_y;
+    }
+}
+
+void insanity_ui_drag_to_mouse_position(Insanity_UI_Node* node)
+{
+    //find the drag state, then adjust position is it moves
+    Insanity_UI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
+    node->pos.x = drag_state->drag_position.x;
+    node->pos.y = drag_state->drag_position.y;
+
+    Insanity_UI_Event event = insanity_ui_event(node, Insanity_UI_Event_Flags_Interaction);
+    if (event.pressed)
+    {
+        //want to drag from the center of the node
+        drag_state->drag_position.x = (float)event.mouse_pos_x - (node->size.x / 2);
+        drag_state->drag_position.y = (float)event.mouse_pos_y - (node->size.y / 2);
+    }
+}
 
 
 // what about interaction
@@ -483,6 +523,76 @@ void insanity_ui_test(float dt, float elapsed_time);
 //          if(interaction(button2).pressed){exit; do other state}
 //          modal_end()
 //       };
+
+//scenarios - button1 - hard code everything
+//       button = Node()
+//       text = Node()
+//       node_align(text, button, center, center);
+
+
+//scenarios - button2 - use a child node
+//       button = Node()
+//       text = Node_child(button)
+//       node_align_to_parent(text, center, center);
+//       node_resolve_layout(button(root node));
+//  //note but now you can moce just the parent, and its applied to the child
+
+//scenarios - button3 - size button to the child plus some padding
+//       button = Node()
+//       text = Node_child(button)
+//       node_expand = Node(button, text)
+//       node_padding_with_clamp(button)
+//  //note but now you can moce just the parent, and its applied to the child
+
+//scenarios - scroll bar
+//       scroll = node_scroll() -> start scissor
+//       thing = Node() // position node
+//        node_scroll_end(scroll) -> end scissor and state
+//       //later -> cull node
+//       // the clipper can be immediate mode as well, like clip_range() and figure how that works
+
+//scenarios - menu with arrows on object 3
+//       scroll = node_scroll()
+//       assume auto positioning
+//       thing = Node()
+//       thing2 = Node()
+//       thing3 = Node()
+//       thing4 = Node()
+//       thing5 = Node()
+//       node_scroll_end(scroll, {resolve_layout_true_false}) // not this should be true with a push flag for false if needed
+//       node_resolve_layout(scroll)
+//       left_arrow = node();
+//       right_arrow = node();
+//       left_arrow.pos = thing3.pos.x - padding.x;
+//       right.pos = thing3.pos.x + thing3.size.x + padding.x;
+
+
+struct node
+{
+    vec2s pos; // absolute
+    vec2s size; // absolute
+    UI_Alignment alignment; // none isn't needed
+};
+
+typedef enum UI_Sizing
+{
+    UI_Sizing_Fit, //sizes to content
+    UI_Sizing_Grow, // sizes to take up remaining space
+    UI_Sizing_Fixed,
+} UI_Sizing;
+
+struct node_auto
+{
+    vec2s pos; // relative (until layout step)
+    vec2s size;
+    UI_Sizing sizing_type; // fixed, percent, auto
+    UI_Alignment alignment; // for all directions
+    vec4s padding; // for all directions
+    f32 child_padding; // for all directions
+
+    vec2s max_size;
+    vec2s min_size;
+};
 
 
 #endif //INSANITY_UI_H

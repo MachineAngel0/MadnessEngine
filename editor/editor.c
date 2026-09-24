@@ -30,7 +30,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
+    editor->state = EDITOR_UI_STATE_PARTICLE;
     // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
 
     editor_generate_asset_lists(editor, memory_system);
@@ -495,26 +495,7 @@ void editor_ui_scene(Editor* editor)
 
 void editor_material_nodes(Editor* editor)
 {
-    String inputs_String[] = {STRING("in1"), STRING("in2")};
-    String output_String[] = {STRING("out 1"), STRING("out 2"), STRING("out 3")};
-    madness_ui_node(STRING("node"), inputs_String, ARRAY_SIZE(inputs_String), output_String, ARRAY_SIZE(output_String));
-
-    static vec2s pos;
-    madness_ui_drag_test(&pos);
-
-    //think of it like a param node
-    madness_ui_node_simple(STRING("node"), (vec2s){200, 200}, NULL, 0, output_String,
-                           ARRAY_SIZE(output_String), 1);
-
-
-    String inputs_String2[] = {STRING("other in 1"), STRING("other in 2")};
-
-    //takes inputs from the param
-    madness_ui_node_simple(STRING("node"), (vec2s){500, 200}, inputs_String2, ARRAY_SIZE(inputs_String2), output_String,
-                           ARRAY_SIZE(output_String), 2);
-
-    // madness_ui_node_complex(madness_ui, "node", inputs_String, ARRAY_SIZE(inputs_String), output_String,
-    // ARRAY_SIZE(output_String));
+    madness_ui_test_material_node();
 }
 
 void editor_texture_view(Editor* editor)
@@ -570,6 +551,7 @@ void editor_meta_data_view(Editor* editor)
 
 void editor_material_asset_view(Editor* editor)
 {
+    PROFILE_ZONE(editor_material_asset_view)
     Asset_System* asset_system = editor->asset_system;
     Material_System* material_system = editor->asset_system->material_system;
 
@@ -604,6 +586,8 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_padding();
 
+        madness_ui_string(STRING("Material Name: "));
+        madness_ui_same_line();
         madness_ui_string(*material_system->shader_to_material_mapping.material_name[selected_shader]);
 
         static u8 material_memory[1024];
@@ -612,16 +596,14 @@ void editor_material_asset_view(Editor* editor)
                 material_system->shader_to_material_mapping.material_name[selected_shader], editor->frame_allocator));
         madness_ui_padding();
 
-        // shader_asset
-        madness_ui_reflect_using_data(asset_system->global_reflection_registry, material_reflect_struct,
-                                      &material_memory,
-                                      "Material");
 
+        madness_ui_reflect_material(editor->asset_system->asset_registry,
+                                    asset_system->global_reflection_registry,
+                                    material_reflect_struct,
+                                    &material_memory,
+                                    "mat",
+                                    editor->texture_list);
 
-        static u32 selected_texture;
-        madness_ui_combo_box(STRING("Texture: "), &selected_texture,
-                             editor->texture_list->strings,
-                             editor->texture_list->max_count);
     }
     madness_ui_window_end();
 
@@ -767,6 +749,9 @@ void editor_material_asset_view(Editor* editor)
         madness_ui_reflect_using_data(editor->reflection_registry, material_struct_runtime, fuck_you_memory, "hi");
     }
     madness_ui_window_end();*/
+
+
+    PROFILE_ZONE_END(editor_material_asset_view)
 }
 
 void editor_mesh_view(Editor* editor)

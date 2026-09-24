@@ -1,6 +1,5 @@
 ﻿#include "../resource/particle_system.h"
 #include "asset_system.h"
-#include "tracy/TracyC.h"
 
 Particle_System* particle_system_init(Asset_System* asset_system, Memory_System* memory_system)
 {
@@ -145,7 +144,7 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->default_emitter->data.particle_lifetime = 8.0f;
     ps->default_emitter->data.gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
     ps->default_emitter->data.particle_color = (vec4s){.x = 0.0f, .y = 0.f, .z = 1.0f, .w = 1.0f};
-    ps->default_emitter->particle = dynamic_array_create(u32, 256, ps->heap_allocator);
+    ps->default_emitter->particle = dynamic_array_create_heap(u32, 256, ps->heap_allocator);
     ps->default_emitter->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(
         "INVALID EMITTER", asset_system->heap_allocator);
 
@@ -281,7 +280,7 @@ Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter
 
     if (!particle_emitter->particle)
     {
-        particle_emitter->particle = dynamic_array_create(u32, 256, ps->heap_allocator);
+        particle_emitter->particle = dynamic_array_create_heap(u32, 256, ps->heap_allocator);
     }
 
     *out_handle = (Particle_Emitter_Handle){
@@ -322,7 +321,7 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
     for (u32 emitter_particle_index = 0; emitter_particle_index < emitter->particle->num_items; emitter_particle_index
          ++)
     {
-        u32 particle_index = dynamic_array_get(emitter->particle, u32, emitter_particle_index);
+        u32 particle_index = dynamic_array_get(emitter->particle, emitter_particle_index, u32);
         if (particle_system_is_dead(ps, particle_index))
         {
             particle_system_free_particle(ps, particle_index);

@@ -1130,7 +1130,7 @@ typedef struct Render_Packet_3D
 
     //TODO: we should have a dirty bit for generating any new batches
     Shader_Asset* shader_assets;
-    u32 material_count;
+    u32 shader_asset_count;
 
     u8* material_buffer;
     u64 material_buffer_byte_size;
@@ -1227,6 +1227,7 @@ typedef struct Asset_System
     Heap_Allocator* heap_allocator;
     Frame_Allocator* frame_allocator;
     Allocator* allocator;
+    Allocator* scratch_allocator;
 
 
     //half a gig should be good for now

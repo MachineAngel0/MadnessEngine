@@ -8,8 +8,8 @@ Targeting_Handler* targeting_handler_init(Madness_Pulse_Game* game)
 {
     Targeting_Handler* targeting_handler = allocator_alloc(&game->allocator, sizeof(Targeting_Handler));
     u8 max_targets_available = 10; //TODO: completely abritrary value, will either set a hard limit or dynamic allocate
-    targeting_handler->targets_available_array = dynamic_array_create(Character_Name, max_targets_available,
-                                                                      &game->heap_allocator);
+    targeting_handler->targets_available_array = dynamic_array_create_heap(Character_Name, max_targets_available,
+                                                                           &game->heap_allocator);
     return targeting_handler;
 }
 
@@ -90,7 +90,7 @@ void targeting_handler_create_targeting_info(Madness_Pulse_Game* game, Ability_N
 
     //look at the first target
     game->targeting_handler->current_lock_on_target = dynamic_array_get(
-        game->targeting_handler->targets_available_array, Character_Name, 0);
+        game->targeting_handler->targets_available_array, 0, Character_Name);
 
     switch (info.ability_target_area)
     {
@@ -178,7 +178,8 @@ void targeting_handler_move_unit_targeting(Madness_Pulse_Game* game, const Targe
 
     // if its single target, we want to hide the target lock on and resistance display
     // if its multli target, we want to hide only the resistance display
-    Ability_Info info = ability_registry_get_ability_info(game->ability_registry, game->currently_selected_ability_by_player);
+    Ability_Info info = ability_registry_get_ability_info(game->ability_registry,
+                                                          game->currently_selected_ability_by_player);
     switch (info.ability_target_area)
     {
     case Target_Area_Affect_Single_Target:
@@ -228,7 +229,7 @@ void target_handler_clear_all_target_locks(Targeting_Handler* targeting_handler,
     for (int i = 0; i < targeting_handler->targets_available_array->num_items; ++i)
     {
         Unit* unit = madness_pulse_get_unit(
-            game, dynamic_array_get(targeting_handler->targets_available_array, Character_Name, i));
+            game, dynamic_array_get(targeting_handler->targets_available_array, i, Character_Name));
         // LockOnTargets->HideTargetLock();
         // LockOnTargets->HideTargetLockResistanceDisplay();
     }
@@ -237,7 +238,8 @@ void target_handler_clear_all_target_locks(Targeting_Handler* targeting_handler,
 // Character_Name_array* ReturnTargetsForActionManager(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game, Ability* AbilityChoosen)
 ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targeting_handler, Madness_Pulse_Game* game)
 {
-    Ability_Info info = ability_registry_get_ability_info(game->ability_registry, game->currently_selected_ability_by_player);
+    Ability_Info info = ability_registry_get_ability_info(game->ability_registry,
+                                                          game->currently_selected_ability_by_player);
 
     if (info.ability_target_area == Target_Area_Affect_Target_All)
     {
@@ -246,7 +248,7 @@ ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targe
         for (u32 i = 0; i < targeting_handler->targets_available_array->num_items; i++)
         {
             Unit* unit = madness_pulse_get_unit(
-                game, dynamic_array_get(targeting_handler->targets_available_array, Character_Name, i));
+                game, dynamic_array_get(targeting_handler->targets_available_array, i, Character_Name));
             array_push(out_array, &unit);
         }
 
@@ -258,9 +260,8 @@ ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targe
     if (info.ability_target_area == Target_Area_Affect_Single_Target)
     {
         Array* single_target_array = array_create(Unit*, 1, &game->frame_allocator);
-        Unit* unit = madness_pulse_get_unit(game, dynamic_array_get(targeting_handler->targets_available_array,
-                                                                    Character_Name,
-                                                                    targeting_handler->targeting_count));
+        Unit *unit = madness_pulse_get_unit(game, dynamic_array_get(targeting_handler->targets_available_array,
+                                                                    targeting_handler->targeting_count, Character_Name));
         array_push(single_target_array, &unit);
         return single_target_array;
     }
@@ -278,7 +279,7 @@ ARRAY_TYPE(Unit*)* target_handler_return_copy_available_targets_for_ai(Madness_P
     for (u32 i = 0; i < targeting_handler->targets_available_array->num_items; i++)
     {
         array_push(out_array, madness_pulse_get_unit(
-                       game, dynamic_array_get(targeting_handler->targets_available_array, Character_Name, i)));
+                       game, dynamic_array_get(targeting_handler->targets_available_array, i, Character_Name)));
     }
 
     return out_array;

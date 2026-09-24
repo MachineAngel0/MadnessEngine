@@ -44,8 +44,10 @@ bool platform_file_open(Madness_File_Platform* file, const char* path, File_Mode
     }
 
     windows_io->file_handle = CreateFileA(path, win_file_mode, win_share_mode,
-                                     NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,
-                                     NULL);
+                                          NULL,
+                                          OPEN_ALWAYS,
+                                          FILE_ATTRIBUTE_NORMAL,
+                                          NULL);
 
 
     if (windows_io->file_handle == INVALID_HANDLE_VALUE)
@@ -67,7 +69,7 @@ bool platform_file_close(Madness_File_Platform* file)
 bool platform_file_read(Madness_File_Platform* madness_file)
 {
     Windows_IO* windows_io = (Windows_IO*)madness_file->internal_data;
-     char* data = "Hello from Native Win32 API!";
+    char* data = "Hello from Native Win32 API!";
     DWORD bytesWritten = 0;
     return ReadFile(windows_io->file_handle, data, (DWORD)strlen(data), &bytesWritten, NULL);
 }
@@ -79,6 +81,7 @@ bool platform_file_write(Madness_File_Platform* madness_file)
     DWORD bytesWritten = 0;
     return WriteFile(windows_io->file_handle, data, (DWORD)strlen(data), &bytesWritten, NULL);
 }
+
 
 
 typedef struct Windows_File_Data
@@ -538,8 +541,6 @@ bool platform_create_directory_recursive(const char* directory_path)
     }
 
     return true;
-
-
 }
 
 bool platform_create_file(const char* file_path)
@@ -561,8 +562,7 @@ bool platform_create_file(const char* file_path)
         {
             printf("File already exists\n");
             return 1; // File exists - not an error
-        }
-        ;
+        };
         return 0;
     }
 
@@ -680,8 +680,6 @@ bool platform_get_assets_from_directory(const char* directory_path, Asset_List_S
     MASSERT(asset_list_scan->allocator)
     MASSERT(asset_list_scan->strings)
 
-    PROFILE_ZONE(platform_get_assets_from_directory);
-
 
     WIN32_FIND_DATAA findFileData;
     HANDLE findHandle;
@@ -745,8 +743,6 @@ bool platform_get_assets_from_directory(const char* directory_path, Asset_List_S
     while (FindNextFileA(findHandle, &findFileData));
 
     FindClose(findHandle);
-
-    PROFILE_ZONE_END(platform_get_assets_from_directory);
 
 
     return true;

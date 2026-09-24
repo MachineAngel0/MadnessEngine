@@ -10,6 +10,7 @@
 #include <timeapi.h>
 #include <stdlib.h>
 #include <mmsystem.h>
+#include <shellapi.h> // for urls
 
 //renderer
 #include <vulkan/vulkan.h>
@@ -512,10 +513,8 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
 }
 
 
-
 bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 {
-
     c_string_convert_forward_to_backslashes(start_file_absolute_path);
 
 
@@ -538,9 +537,10 @@ bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 }
 
 
+
+
 bool platform_file_copy(const char* destination_file, char* source_file)
 {
-
     if (!CopyFileA(source_file, destination_file, 0))
     {
         M_ERROR("platform_file_copy WIN32: copy failed reason code: %d", GetLastError());
@@ -548,7 +548,6 @@ bool platform_file_copy(const char* destination_file, char* source_file)
     }
 
     return true;
-
 }
 
 void platform_get_vulkan_extension_names(const char*** extension_name_array)
@@ -655,6 +654,33 @@ void platform_generate_uuid(u64* high, u64* low)
 
     memcpy(high, bytes, 8);
     memcpy(low, bytes + 8, 8);
+}
+
+
+void platform_error_message(const char* error_message)
+{
+    DEBUG("platform WIN32: %s, error code: %llu", error_message, GetLastError());
+}
+
+
+bool platform_open_url(const char* url)
+{
+    /* DOCS:
+     * If the function succeeds, it returns a value greater than 32.
+     * If the function fails, it returns an error value that indicates the cause of the failure.
+     * The return value is cast as an HINSTANCE for backward compatibility with 16-bit Windows applications.
+     * It is not a true HINSTANCE, however.
+     * It can be cast only to an INT_PTR and compared to either 32 or the following error codes below.
+     */
+
+    HINSTANCE result = ShellExecuteA(0, "open", url, 0, 0, SW_SHOW);
+    if ((INT_PTR)result > 32)
+    {
+        return true;
+    }
+
+    platform_error_message("open url failed");
+    return false;
 }
 
 

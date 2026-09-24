@@ -24,7 +24,7 @@ Madness_AI* madness_ai_init(Madness_Pulse_Game* game)
     ai->ai_count = 0;
     ai->ai_max = MAX_ENEMY_UNIT_COUNT;
 
-    ai->ai_decision = dynamic_array_create(Madness_AI_Decision,1, &game->heap_allocator);
+    ai->ai_decision = dynamic_array_create_heap(Madness_AI_Decision, 1, &game->heap_allocator);
     return ai;
 }
 
@@ -85,7 +85,7 @@ AI_Ability* madness_ai_get_ability(Madness_AI* ai, Character_Name character_name
 
     for (u32 i = 0; i < ability_list->num_items; ++i)
     {
-        AI_Ability* ability = dynamic_array_get_ptr(ability_list, AI_Ability, i);
+        AI_Ability* ability = dynamic_array_get(ability_list, i, AI_Ability*);
         if (ability->turn_index == turn_index && ability->ability_name == ability_name)
         {
             return ability;
@@ -149,7 +149,7 @@ void madness_ai_instantiate_enemy(Madness_Pulse_Game* game, Madness_AI* madness_
         madness_ai->ai_list[i].character_name = game->enemy_units[i]->name;
         madness_ai->ai_list[i].overflow_points = 0;
         //NOTE: completely abritratry number
-        madness_ai->ai_list[i].ability_list = dynamic_array_create(AI_Ability, 12, &game->heap_allocator);
+        madness_ai->ai_list[i].ability_list = dynamic_array_create_heap(AI_Ability, 12, &game->heap_allocator);
         madness_ai->ai_count++;
 
         madness_ai_create_from_table(madness_ai, game->enemy_units[i]->name, madness_ai->ai_list[i].ability_list);
@@ -166,7 +166,6 @@ ARRAY_TYPE(AI_Ability)* madness_ai_get_abilties_for_turn_index(Madness_Pulse_Gam
     //TODO:
     MASSERT_FALSE();
     return NULL;
-
 }
 
 ARRAY_TYPE(AI_Ability)* madness_ai_filter_abilities_with_cooldowns(Madness_Pulse_Game* game);
@@ -184,8 +183,9 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
     Unit* current_ai_unit = madness_pulse_get_unit(game, game->current_units_turn);
     dynamic_array_free(madness_ai->ai_decision);
 
-    madness_ai->ai_decision = dynamic_array_create(Madness_AI_Decision, current_ai_unit->action_component.actions_available, &game->heap_allocator);
-
+    madness_ai->ai_decision = dynamic_array_create_heap(Madness_AI_Decision,
+                                                        current_ai_unit->action_component.actions_available,
+                                                        &game->heap_allocator);
 
 
     //TODO: ai keeps taking actions as until they run out of moves
@@ -194,12 +194,13 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
         Madness_AI_Unit_Info* unit_info = madness_ai_get_character_ai(madness_ai, current_ai_unit->name);
 
 
-        u32 random_index = rand_range_i(0, unit_info->ability_list->num_items-1);
-        AI_Ability* ai_ability = &dynamic_array_get(unit_info->ability_list, AI_Ability, random_index);
+        u32 random_index = rand_range_i(0, unit_info->ability_list->num_items - 1);
+        AI_Ability* ai_ability = &dynamic_array_get(unit_info->ability_list, random_index, AI_Ability);
         Ability_Name selected_ability = ai_ability->ability_name;
 
         targeting_handler_create_targeting_info(game, selected_ability);
-        ARRAY_TYPE(Unit*)* unit_targets = target_handler_return_copy_available_targets_for_ai(game, game->targeting_handler, &game->frame_allocator);
+        ARRAY_TYPE(Unit*)* unit_targets = target_handler_return_copy_available_targets_for_ai(
+            game, game->targeting_handler, &game->frame_allocator);
 
         Madness_AI_Decision decision = {0};
         decision.ability_info = ai_ability;
@@ -207,8 +208,9 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
         switch (ability_registry_get_new_ability_info(game->ability_registry, selected_ability)->ability_target_area)
         {
         case Target_Area_Affect_Single_Target:
-            u32 random_target_index = rand_range_i(0, unit_targets->num_items-1);
-            decision.chosen_targets[decision.chosen_units_count++] = array_get(unit_targets, random_target_index, Unit*);
+            u32 random_target_index = rand_range_i(0, unit_targets->num_items - 1);
+            decision.chosen_targets[decision.chosen_units_count++] =
+                array_get(unit_targets, random_target_index, Unit*);
             break;
         case Target_Area_Affect_Target_All:
             for (u32 i = 0; i < unit_targets->num_items; i++)
@@ -223,8 +225,7 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
         dynamic_array_push(madness_ai->ai_decision, &decision);
         //TODO: at some point this needs to operate on a copy of the game data, that is hidden from the player and is ahead in game state
         ability_handler_process_ability(game, decision.ability_info->ability_name,
-                                       target_handler_return_attack_targets(game->targeting_handler, game));
-
+                                        target_handler_return_attack_targets(game->targeting_handler, game));
     }
 }
 

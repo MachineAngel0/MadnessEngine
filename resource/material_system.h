@@ -14,6 +14,8 @@ bool material_system_shutdown(Material_System* material_system, Memory_System* m
 bool material_system_generate_render_packet(Material_System* material_system,
                                             Render_Packet_3D* render_packet_3d);
 
+
+
 //////////// SHADERS ////////////
 void material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
                                                  const char* shader_name, const char* material_name);
@@ -227,7 +229,7 @@ bool material_load_gpu_data(Asset_System* asset_system, Shader_Handle handle, Ma
 bool material_acquire(Asset_System* asset_system, Shader_Handle shader_handle, Material* in_material,
                       Material_Handle* out_material_handle)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
     Material_System* material_system = asset_system->material_system;
 
 

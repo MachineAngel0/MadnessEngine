@@ -285,7 +285,7 @@ void create_starting_abilties(Battle_Inventory_Component* battle_inventory, Abil
 {
     for (int i = 0; i < battle_inventory->battle_list->num_items; ++i)
     {
-        ability_creation_table(ability_registry, dynamic_array_get(battle_inventory->battle_list, Ability_Name, i));
+        ability_creation_table(ability_registry, dynamic_array_get(battle_inventory->battle_list, i, Ability_Name));
     }
 }
 

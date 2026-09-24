@@ -331,7 +331,8 @@ void turn_update(Madness_Pulse_Game* game)
                 &unit->battle_inventory_component,
                 game->ability_registry);
 
-            madness_ui_progress_bar(STRING("Progress bar"), overflow_val, unit->battle_inventory_component.overflow_threshold);
+            madness_ui_progress_bar(STRING("Progress bar"), overflow_val,
+                                    unit->battle_inventory_component.overflow_threshold);
 
 
             madness_scroll_box_begin(STRING("Ability Scroll list"));
@@ -339,11 +340,11 @@ void turn_update(Madness_Pulse_Game* game)
                 for (u32 i = 0; i < unit->battle_inventory_component.battle_list->num_items; ++i)
                 {
                     Ability_Name name =
-                        dynamic_array_get(unit->battle_inventory_component.battle_list, Ability_Name, i);
+                        dynamic_array_get(unit->battle_inventory_component.battle_list, i, Ability_Name);
                     Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry, name);
-                    u16 ability_count = dynamic_array_get(unit->battle_inventory_component.ability_count, u16, i);
+                    u16 ability_count = dynamic_array_get(unit->battle_inventory_component.ability_count, i, u16);
                     u16 overflow_usage_count = dynamic_array_get(unit->battle_inventory_component.overflow_usage_count,
-                                                                 u16, i);
+                                                                 i, u16);
 
                     if (madness_ui_button(STRING_STRLEN(Ability_Name_enum_string[name])))
                     {
@@ -401,11 +402,11 @@ void turn_update(Madness_Pulse_Game* game)
             for (int i = 0; i < game->targeting_handler->targets_available_array->num_items; ++i)
             {
                 if (madness_ui_button(STRING_STRLEN(madness_pulse_get_unit_name(game, dynamic_array_get(
-                    game->targeting_handler->targets_available_array, Character_Name, i)))))
+                    game->targeting_handler->targets_available_array, i,Character_Name)))))
                 {
                     //we have selected our target
                     game->targeting_handler->current_lock_on_target = dynamic_array_get(
-                        game->targeting_handler->targets_available_array, Character_Name, i);
+                        game->targeting_handler->targets_available_array, i, Character_Name);
 
                     game->targeting_handler->targeting_count = i;
 
@@ -449,7 +450,7 @@ void turn_update(Madness_Pulse_Game* game)
         for (u32 i = 0; i < game->madness_ai->ai_decision->num_items; ++i)
         {
             Madness_AI_Decision* decision =
-                dynamic_array_get_ptr(game->madness_ai->ai_decision, Madness_AI_Decision, i);
+                dynamic_array_get(game->madness_ai->ai_decision, i, Madness_AI_Decision*);
 
             madness_ui_string(STRING_STRLEN(Ability_Name_enum_string[decision->ability_info->ability_name]));
         }
@@ -534,7 +535,6 @@ void turn_update(Madness_Pulse_Game* game)
                 madness_ui_string(STRING("\\"));
                 madness_ui_same_line();
                 madness_ui_float(STRING(""), &unit->mp_component.max_mp, 0);
-
             }
         }
 
@@ -542,7 +542,7 @@ void turn_update(Madness_Pulse_Game* game)
         for (u32 i = 0; i < game->madness_ai->ai_decision->num_items; ++i)
         {
             Madness_AI_Decision* decision =
-                dynamic_array_get_ptr(game->madness_ai->ai_decision, Madness_AI_Decision, i);
+                dynamic_array_get(game->madness_ai->ai_decision,  i, Madness_AI_Decision*);
 
             madness_ui_string(STRING_STRLEN(Ability_Name_enum_string[decision->ability_info->ability_name]));
         }

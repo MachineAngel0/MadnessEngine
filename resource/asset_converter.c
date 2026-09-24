@@ -88,7 +88,7 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
     PROFILE_ZONE(asset_converter_particle_emitter)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -129,7 +129,7 @@ void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect
 {
     PROFILE_ZONE(asset_converter_particle_effect)
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -169,7 +169,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     PROFILE_ZONE(asset_converter_texture)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     //check for supported file formats
@@ -255,7 +255,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     PROFILE_ZONE(asset_converter_font)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
     Madness_Font font_structure = {0};
     Madness_Texture texture = {0};
 
@@ -464,7 +464,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     PROFILE_ZONE(asset_converter_msdf_font)
 
 
-    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(asset_system->scratch_allocator);
     //TODO: we should check ahead of time for the csv file as well
     //check for supported file formats
     if (!c_string_path_is_extension(file_path, ".png"))
@@ -613,7 +613,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     PROFILE_ZONE(asset_converter_gltf_mesh)
 
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
@@ -1355,7 +1355,7 @@ MAPI bool asset_converter_material(Asset_System* asset_system,
     MASSERT(material->cpu_data.material_data);
     MASSERT(material->cpu_data.data_size != 0);
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -1409,7 +1409,7 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
 
     MASSERT(out_material_uuid);
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
@@ -1454,7 +1454,7 @@ bool asset_converter_material_from_shader_handle(Asset_System* asset_system, Sha
 
     PROFILE_ZONE(asset_converter_material)
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     u32 def_index = asset_system->material_system->shader_asset_to_mapping[shader_handle->handle];
     Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.
@@ -1496,7 +1496,7 @@ bool asset_converter_material_from_data(Asset_System* asset_system,
 
     PROFILE_ZONE(asset_converter_material)
 
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
 
     Material material;

@@ -65,6 +65,7 @@ void x_input_load_dll(void)
     }
 }
 
+
 u32 gamepad_get_max_player_count(void)
 {
     return XUSER_MAX_COUNT;

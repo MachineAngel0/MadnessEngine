@@ -28,11 +28,11 @@ void battle_inventory_component_init(Madness_Pulse_Game* game, Battle_Inventory_
 {
     memset(battle_inventory_component, 0, sizeof(Battle_Inventory_Component));
 
-    battle_inventory_component->battle_list = dynamic_array_create(Ability_Name, INVENTORY_MAX_BATTLE_LIST,
-                                                                   &game->heap_allocator);
-    battle_inventory_component->ability_count = dynamic_array_create(u16, INVENTORY_MAX_BATTLE_LIST,
-                                                                     &game->heap_allocator);
-    battle_inventory_component->overflow_usage_count = dynamic_array_create(
+    battle_inventory_component->battle_list = dynamic_array_create_heap(Ability_Name, INVENTORY_MAX_BATTLE_LIST,
+                                                                        &game->heap_allocator);
+    battle_inventory_component->ability_count = dynamic_array_create_heap(u16, INVENTORY_MAX_BATTLE_LIST,
+                                                                          &game->heap_allocator);
+    battle_inventory_component->overflow_usage_count = dynamic_array_create_heap(
         u16, INVENTORY_MAX_BATTLE_LIST, &game->heap_allocator);
     battle_inventory_component->current_overflow = 0;
     battle_inventory_component->overflow_threshold = OVERFLOW_MAX;
@@ -55,10 +55,9 @@ void battle_inventory_add_ability(Battle_Inventory_Component* battle_inventory_c
 {
     for (int i = 0; i < battle_inventory_component->battle_list->num_items; ++i)
     {
-        if (dynamic_array_get(battle_inventory_component->battle_list, Ability_Name, i) == ability_name)
+        if (dynamic_array_get(battle_inventory_component->battle_list, i, Ability_Name) == ability_name)
         {
-
-            dynamic_array_get(battle_inventory_component->ability_count, u16, i) += count;
+            dynamic_array_get(battle_inventory_component->ability_count, i, u16) += count;
             return;
         }
     }
@@ -73,7 +72,6 @@ void battle_inventory_add_ability(Battle_Inventory_Component* battle_inventory_c
 void battle_inventory_remove_ability(Battle_Inventory_Component* battle_inventory_component, Ability_Name ability_name,
                                      u32 count)
 {
-
 }
 
 void battle_inventory_remove_all_ability(Battle_Inventory_Component* battle_inventory_component,
@@ -88,7 +86,7 @@ void battle_inventory_add_debug_ability(Battle_Inventory_Component* battle_inven
     //OPTIMIZE: hash set, or even a hash map
     for (u32 i = 0; i < battle_inventory_component->battle_list->num_items; i++)
     {
-        if (dynamic_array_get(battle_inventory_component->battle_list, Ability_Name, i) == ability_name)
+        if (dynamic_array_get(battle_inventory_component->battle_list, i, Ability_Name) == ability_name)
         {
             return;
         }
@@ -111,7 +109,7 @@ void battle_inventory_consume_overflow_abilties(Battle_Inventory_Component* batt
     //OPTIMIZE: hash set, or even a hash map
     for (u32 i = 0; i < battle_inventory_component->battle_list->num_items; i++)
     {
-        if (dynamic_array_get(battle_inventory_component->battle_list, Ability_Name, i) == ability_name)
+        if (dynamic_array_get(battle_inventory_component->battle_list, i, Ability_Name) == ability_name)
         {
             return;
         }
@@ -135,9 +133,9 @@ u32 battle_inventory_calculate_value_from_usage(
     {
         const u32 val = ability_registry_get_ability_overflow_value(ability_registry,
                                                                     dynamic_array_get(
-                                                                        battle_inventory->battle_list, Ability_Name,
-                                                                        i));
-        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, u16, i);
+                                                                        battle_inventory->battle_list,
+                                                                        i, Ability_Name));
+        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, i, u16);
 
         out_overflow_value += val * count;
     }
@@ -156,9 +154,9 @@ u32 battle_inventory_get_overflow_trigger_count(const Battle_Inventory_Component
     {
         const u32 val = ability_registry_get_ability_overflow_value(ability_registry,
                                                                     dynamic_array_get(
-                                                                        battle_inventory->battle_list, Ability_Name,
-                                                                        i));
-        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, u16, i);
+                                                                        battle_inventory->battle_list,
+                                                                        i, Ability_Name));
+        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, i, u16);
 
         overflow_bar_usage += val * count;
     }
@@ -179,9 +177,9 @@ void battle_inventory_use_up_overflow_and_abilities(Battle_Inventory_Component* 
     {
         const u32 val = ability_registry_get_ability_overflow_value(ability_registry,
                                                                     dynamic_array_get(
-                                                                        battle_inventory->battle_list, Ability_Name,
-                                                                        i));
-        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, u16, i);
+                                                                        battle_inventory->battle_list,
+                                                                        i, Ability_Name));
+        const u16 count = dynamic_array_get(battle_inventory->overflow_usage_count, i, u16);
 
         overflow_bar_usage += val * count;
     }
@@ -212,12 +210,12 @@ void battle_inventory_use_up_overflow_and_abilities(Battle_Inventory_Component* 
 
 
     //we copy from the current battle list, only the abilities whos count are not zero, this is to fill the holes in the array
-    Dynamic_Array* replacement_battle_list = dynamic_array_create(Ability_Name,
-                                                                  battle_inventory->battle_list->num_items,
-                                                                  battle_inventory->battle_list->heap_allocator);
+    Dynamic_Array* replacement_battle_list = dynamic_array_create_heap(Ability_Name,
+                                                                       battle_inventory->battle_list->num_items,
+                                                                       battle_inventory->battle_list->heap_allocator);
 
-    Dynamic_Array* replacement_ability_count = dynamic_array_create(u16, battle_inventory->battle_list->num_items,
-                                                                    battle_inventory->battle_list->heap_allocator);
+    Dynamic_Array* replacement_ability_count = dynamic_array_create_heap(u16, battle_inventory->battle_list->num_items,
+                                                                         battle_inventory->battle_list->heap_allocator);
 
     for (int i = 0; i < battle_inventory->battle_list->num_items; ++i)
     {
@@ -227,7 +225,7 @@ void battle_inventory_use_up_overflow_and_abilities(Battle_Inventory_Component* 
         //NOTE: it would be interesting to instead just swap the ability to the back of tha array instead of removing it,
         // showing the player the abilties they used to have, and could generate
 
-        if (dynamic_array_get(battle_inventory->ability_count, u16, i) <= 0)
+        if (dynamic_array_get(battle_inventory->ability_count, i, u16) <= 0)
         {
             continue;
         }

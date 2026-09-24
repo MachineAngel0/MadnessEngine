@@ -238,6 +238,8 @@ typedef struct Madness_UI_Event
 } Madness_UI_Event;
 
 
+
+
 //meant to be used as an editor only UI, made for simplicity and fast iteration
 typedef struct Madness_UI
 {
@@ -334,7 +336,6 @@ typedef struct Madness_UI
     char first_released_key;
 
 
-
     // TODO: gamepad and proper keyboard navigation
 
 
@@ -419,9 +420,6 @@ void madness_ui_resolve_interaction(void);
 MAPI UI_Render_Packet madness_ui_get_ui_render_data(void);
 
 
-
-
-
 MAPI Madness_UI_Event madness_ui_event(UI_Node* node, bool interactable, bool navigatable);
 
 
@@ -477,6 +475,10 @@ MAPI void madness_image_handle(Texture_Handle handle);
 MAPI void madness_ui_slider_scroll(String id, float* slider_val, float min, float max);
 MAPI void madness_ui_slider_arrow(String id, float* slider_val, float min, float max);
 
+//helper for scalar
+void madness_ui_scalar_change(UI_Scalar_Type type, void* data, f64 increment_value);
+int madness_ui_scalar_format(char* buffer, int size, UI_Scalar_Type type, void* data);
+
 MAPI bool madness_ui_scalar(String text, UI_Scalar_Type type, void* data, f64 value_change);
 MAPI bool madness_ui_scalar_range(String text, UI_Scalar_Type type, void* data, u64 increment_value, f64 min, f64 max);
 
@@ -484,11 +486,18 @@ MAPI bool madness_ui_u8(String text, u8* i, u32 increment_value);
 MAPI bool madness_ui_u16(String text, u16* i, u32 increment_value);
 MAPI bool madness_ui_u32(String text, u32* i, u32 increment_value);
 MAPI bool madness_ui_u64(String text, u64* i, u64 increment_value);
+
+MAPI bool madness_ui_s8(String text, s32* i, u32 increment_value);
+MAPI bool madness_ui_s16(String text, s32* i, u32 increment_value);
 MAPI bool madness_ui_s32(String text, s32* i, u32 increment_value);
+MAPI bool madness_ui_s64(String text, s32* i, u32 increment_value);
+
+MAPI bool madness_ui_double(String text, double* f, f64 increment_value);
 
 MAPI bool madness_ui_float(String text, float* f, float increment_value);
 MAPI bool madness_ui_float2(String text, float* x, float* y, float increment_value);
 MAPI bool madness_ui_float3(String text, float* x, float* y, float* z, float increment_value);
+
 MAPI bool madness_ui_vec2(String label, vec2s* v, float increment_value);
 MAPI bool madness_ui_vec3(String label, vec3s* v, float increment_value);
 MAPI bool madness_ui_vec4(String label, vec4s* v, float increment_value);
@@ -538,7 +547,11 @@ MAPI bool madness_ui_progress_bar(String label, float current, float max);
 
 MAPI bool madness_ui_reflection_runtime_registry(Reflection_Registry* reflection_registry, const char* struct_name,
                                                  const char* identifier);
+MAPI bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Reflection_Runtime_Struct struct_info,
+                                        void* passing_data, const char* id);
 
+MAPI bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Registry* reflection_registry,
+    Reflection_Runtime_Struct struct_info, void* passing_data, const char* id, Asset_List_Scan* texture_asset_list_scan);
 
 typedef struct Material_Link
 {
@@ -587,6 +600,7 @@ MAPI bool madness_ui_node_complex(String id, String inputs[], u8 input_size, Str
 MAPI bool madness_ui_node(String id, String inputs[], u8 input_size, String outputs[],
                           u8 output_size);
 
+//
 MAPI bool madness_ui_drag_test(vec2s* pos);
 
 
@@ -616,9 +630,6 @@ MAPI void madness_ui_add_asset_list(Asset_List_Scan* asset_list_scan, Asset_Type
 
 //API END
 
-MAPI void madness_ui_test(void);
-MAPI void madness_ui_example(void);
-
 
 //these is only meant for internal use and not part of the API
 MAPI void madness_calculate_text_size(String text, vec2s screen_position, vec2s* out_text_size);
@@ -645,24 +656,24 @@ MAPI char* madness_ui_float_to_char(float value);
 
 
 //draw list
-void madness_ui_add_draw_command(UI_Draw_Command_Type draw_type);
-
-
+void madness_ui_add_draw_command(UI_Draw_Command_Type draw_type, vec2s scissor_pos, vec2s scissor_size);
 
 
 MAPI bool region_hit(vec2s pos, vec2s size);
 
 
 //UTILITY
-
-
 MAPI int generate_id(void);
-
 
 
 //serialization
 MAPI void madness_ui_serialize_windows();
 MAPI void madness_ui_deserialize_windows();
+
+//test
+MAPI void madness_ui_test(void);
+MAPI void madness_ui_example(void);
+MAPI void madness_ui_test_material_node(void);
 
 
 #endif //UI_H

@@ -124,8 +124,8 @@ bool platform_file_close(Madness_File_Platform* file);
 bool platform_file_read(Madness_File_Platform* file);
 bool platform_file_write(Madness_File_Platform* file);
 //FILE SYSTEM - ASYNC
-bool platform_file_read_async();
-bool platform_file_write_async();
+// bool platform_file_read_async();
+// bool platform_file_write_async();
 
 bool platform_file_copy(const char* source_file, char* destination_file);
 
@@ -152,9 +152,17 @@ void platform_windows_resize(Platform_State* platform_state, int width, int heig
 
 void platform_copy_to_clipboard(const char* c_string);
 
+
 // UUID
 void platform_generate_uuid(u64* high, u64* low);
 
+
+//URL
+bool platform_open_url(const char* url);
+//platform_open_url("www.google.com"); // just for testing
+
+
+void platform_error_message(const char* error_message);
 
 
 

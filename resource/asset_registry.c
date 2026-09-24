@@ -20,7 +20,7 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
 
     if (!fptr)
     {
-        asset_registry->asset_meta_data = dynamic_array_create(Asset_MetaData, 1024, allocator);
+        asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, 1024, allocator);
         FILE* temp_file = fopen(ASSET_REGISTRY_BIN_PATH, "wb");
         Asset_Registry_Header header = {
             .magic = ASSET_REGISTRY_MAGIC_NUMBER,
@@ -45,19 +45,19 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
 
         if (header.asset_count < 1024)
         {
-            asset_registry->asset_meta_data = dynamic_array_create(Asset_MetaData, 1024, allocator);
+            asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, 1024, allocator);
         }
         else
         {
-            asset_registry->asset_meta_data = dynamic_array_create(Asset_MetaData, header.asset_count, allocator);
+            asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, header.asset_count, allocator);
         }
         asset_registry->asset_meta_data->num_items = header.asset_count;
         fseek(fptr, 0, SEEK_SET);
 
         for (u64 asset_idx = 0; asset_idx < asset_registry->asset_meta_data->num_items; asset_idx++)
         {
-            Asset_MetaData* asset = dynamic_array_get_ptr(asset_registry->asset_meta_data, Asset_MetaData,
-                                                          asset_idx);
+            Asset_MetaData* asset = &dynamic_array_get(asset_registry->asset_meta_data,
+                                                       asset_idx, Asset_MetaData);
             asset->source_file = allocator_heap_alloc(allocator, sizeof(String));
             asset->engine_path = allocator_heap_alloc(allocator, sizeof(String));
 
@@ -112,7 +112,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
     Asset_List_Scan* list_scan = asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, asset_path);
     for (u32 i = 0; i < list_scan->count; i++)
     {
-        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+        Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
         const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], scratch.allocator);
 
         if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
@@ -173,8 +173,8 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry)
 
     for (u64 asset_idx = 0; asset_idx < asset_registry->asset_meta_data->num_items; asset_idx++)
     {
-        Asset_MetaData* asset = dynamic_array_get_ptr(asset_registry->asset_meta_data, Asset_MetaData,
-                                                      asset_idx);
+        Asset_MetaData* asset = &dynamic_array_get(asset_registry->asset_meta_data,
+                                                   asset_idx, Asset_MetaData);
 
         fwrite(&asset->uuid, sizeof(asset->uuid), 1, fptr);
         fwrite(&asset->hash, sizeof(asset->hash), 1, fptr);

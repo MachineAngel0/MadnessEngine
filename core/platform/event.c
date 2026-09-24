@@ -40,7 +40,7 @@ void event_register(Event_Type event, String subscriber, const event_callback ca
     //check if the event arr has been alloacated
     if (event_system->events_table[event].subscriber_array == NULL)
     {
-        event_system->events_table[event].subscriber_array = dynamic_array_create(
+        event_system->events_table[event].subscriber_array = dynamic_array_create_heap(
             Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
     }
 
@@ -51,7 +51,7 @@ void event_register(Event_Type event, String subscriber, const event_callback ca
     {
         // Subscriber_Data* sub_data = (Subscriber_Data*)_dynamic_array_get(event_system->events_table[event].subscriber_array, i);
         Subscriber_Data* sub_data = dynamic_array_get(event_system->events_table[event].subscriber_array,
-                                                      Subscriber_Data*, i);
+                                                      i, Subscriber_Data*);
         if (!string_compare(&sub_data->subscriber_name, &subscriber))
         {
             WARN("SUBSCRIBER ALREADY REGISTERED TO EVENT");
@@ -74,7 +74,7 @@ void event_unregister(Event_Type event, String subscriber, event_callback callba
     {
         // subscriber_data* sub_data = (subscriber_data *) _dynamic_array_get(event_system->events_table[event].subs_arr, i);
         Subscriber_Data* sub_data = dynamic_array_get(event_system->events_table[event].subscriber_array,
-                                                      Subscriber_Data*, i);
+                                                       i, Subscriber_Data*);
         if (string_compare(&sub_data->subscriber_name, &subscriber) && (sub_data->callback == callback))
         {
             dynamic_array_remove_swap(event_system->events_table[event].subscriber_array, i);
@@ -89,14 +89,14 @@ void event_fire(Event_Type event, String sender_name, Event_Data context)
     //check if the event array has been allocated
     if (event_system->events_table[event].subscriber_array == NULL)
     {
-        event_system->events_table[event].subscriber_array = dynamic_array_create(
+        event_system->events_table[event].subscriber_array = dynamic_array_create_heap(
             Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
     }
 
     for (uint32_t i = 0; i < event_system->events_table[event].subscriber_array->num_items; i++)
     {
         //trigger all the callbacks in the event table
-        Subscriber_Data a = dynamic_array_get(event_system->events_table[event].subscriber_array, Subscriber_Data, i);
+        Subscriber_Data a = dynamic_array_get(event_system->events_table[event].subscriber_array, i, Subscriber_Data);
         // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
         if (a.callback(event, sender_name, a.subscriber_name, context))
         {
@@ -121,7 +121,7 @@ void event_flush_queue(void)
         for (uint32_t i = 0; i < event_system->events_table[data.event].subscriber_array->num_items; i++)
         {
             //trigger all the callbacks in the event table
-            Subscriber_Data a = dynamic_array_get(event_system->events_table[data.event].subscriber_array, Subscriber_Data, i);
+            Subscriber_Data a = dynamic_array_get(event_system->events_table[data.event].subscriber_array, i, Subscriber_Data);
             // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
             if (a.callback(data.event, data.sender_name, a.subscriber_name, data.context))
             {

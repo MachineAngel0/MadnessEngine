@@ -107,14 +107,14 @@ Reflection_Registry* reflection_registry_init(Memory_System* memory_system)
         memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
 
 
-    reflection_registry->enum_list = dynamic_array_create(Reflection_Runtime_Enum, 100,
+    reflection_registry->enum_list = dynamic_array_create_heap(Reflection_Runtime_Enum, 100,
                                                           reflection_registry->allocator);
-    reflection_registry->struct_list = dynamic_array_create(Reflection_Runtime_Struct, 100,
+    reflection_registry->struct_list = dynamic_array_create_heap(Reflection_Runtime_Struct, 100,
                                                             reflection_registry->allocator);
 
-    reflection_registry->runtime_data = dynamic_array_create(Reflection_Runtime_Data, 1000,
+    reflection_registry->runtime_data = dynamic_array_create_heap(Reflection_Runtime_Data, 1000,
                                                              reflection_registry->allocator);
-    reflection_registry->meta_file_data = dynamic_array_create(Reflection_Runtime_Meta_File, 100,
+    reflection_registry->meta_file_data = dynamic_array_create_heap(Reflection_Runtime_Meta_File, 100,
                                                                reflection_registry->allocator);
 
     return reflection_registry;
@@ -181,8 +181,8 @@ void reflection_registry_save_meta_data(Reflection_Registry* reflection_registry
 
     for (int i = 0; i < reflection_registry->meta_file_data->num_items; ++i)
     {
-        Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data,
-                                                              Reflection_Runtime_Meta_File, i);
+        Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data, i,
+                                                              Reflection_Runtime_Meta_File);
         string_serialize(&data.file_string, fptr);
         string_serialize(&data.struct_name, fptr);
         string_serialize(&data.identifier, fptr);
@@ -208,8 +208,8 @@ Reflection_Runtime_Enum reflection_registry_get_enum(Reflection_Registry* reflec
 {
     for (u32 enum_index = 0; enum_index < reflection_registry->enum_list->num_items; enum_index++)
     {
-        Reflection_Runtime_Enum runtime_enum = dynamic_array_get(reflection_registry->enum_list,
-                                                                 Reflection_Runtime_Enum, enum_index);
+        Reflection_Runtime_Enum runtime_enum = dynamic_array_get(reflection_registry->enum_list, enum_index,
+                                                                 Reflection_Runtime_Enum);
 
         if (strcmp(runtime_enum.name, enum_name) == 0)
         {
@@ -241,8 +241,8 @@ Reflection_Runtime_Struct reflection_registry_get_struct(Reflection_Registry* re
 {
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
     {
-        Reflection_Runtime_Struct runtime_struct = dynamic_array_get(reflection_registry->struct_list,
-                                                                     Reflection_Runtime_Struct, struct_index);
+        Reflection_Runtime_Struct runtime_struct = dynamic_array_get(reflection_registry->struct_list, struct_index,
+                                                                     Reflection_Runtime_Struct);
 
         if (strcmp(runtime_struct.name, struct_name) == 0)
         {
@@ -261,7 +261,7 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
     Reflection_Runtime_Data runtime_data = {0};
     for (u32 i = 0; i < reflection_registry->runtime_data->num_items; i++)
     {
-        runtime_data = dynamic_array_get(reflection_registry->runtime_data, Reflection_Runtime_Data, i);
+        runtime_data = dynamic_array_get(reflection_registry->runtime_data, i, Reflection_Runtime_Data);
         if (strcmp(runtime_data.struct_name, struct_name) == 0)
         {
             if (strcmp(runtime_data.identifier, identifier) == 0)
@@ -276,8 +276,8 @@ Reflection_Runtime_Data reflection_registry_get_or_create_runtime_data(Reflectio
     u32 found_index = INT_MAX;
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
     {
-        runtime_struct = dynamic_array_get(reflection_registry->struct_list,
-                                           Reflection_Runtime_Struct, struct_index);
+        runtime_struct = dynamic_array_get(reflection_registry->struct_list, struct_index,
+                                           Reflection_Runtime_Struct);
 
         if (strcmp(runtime_struct.name, struct_name) == 0)
         {
@@ -324,8 +324,8 @@ Reflection_Runtime_Data reflection_registry_runtime_data_create_at_load_time(Ref
     u32 found_index = INT_MAX;
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
     {
-        runtime_struct = dynamic_array_get(reflection_registry->struct_list,
-                                           Reflection_Runtime_Struct, struct_index);
+        runtime_struct = dynamic_array_get(reflection_registry->struct_list, struct_index,
+                                           Reflection_Runtime_Struct);
 
         if (strcmp(runtime_struct.name, struct_name) == 0)
         {
@@ -351,8 +351,8 @@ Reflection_Runtime_Data reflection_registry_runtime_data_create_at_load_time(Ref
 Reflection_Runtime_Struct reflection_registry_get_struct_from_runtime_data(Reflection_Registry* reflection_registry,
                                                                            Reflection_Runtime_Data runtime_data)
 {
-    return dynamic_array_get(reflection_registry->struct_list, Reflection_Runtime_Struct,
-                             runtime_data.struct_index_reference);
+    return dynamic_array_get(reflection_registry->struct_list,
+                             runtime_data.struct_index_reference, Reflection_Runtime_Struct);
 }
 
 
@@ -403,7 +403,7 @@ void reflection_registry_to_txt_format(Reflection_Registry* reflection_registry,
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
     {
         const Reflection_Runtime_Struct runtime_struct = dynamic_array_get(reflection_registry->struct_list,
-                                                                           Reflection_Runtime_Struct, struct_index);
+                                                                           struct_index,Reflection_Runtime_Struct);
 
         //check if we found the correct struct
         if (strcmp(runtime_struct.name, struct_name) != 0) { continue; }
@@ -590,7 +590,7 @@ void reflection_registry_read_from_txt_format(Reflection_Registry* reflection_re
     Reflection_Runtime_Struct runtime_struct = {0};
     for (u32 struct_index = 0; struct_index < reflection_registry->struct_list->num_items; struct_index++)
     {
-        runtime_struct = dynamic_array_get(reflection_registry->struct_list, Reflection_Runtime_Struct, struct_index);
+        runtime_struct = dynamic_array_get(reflection_registry->struct_list, struct_index, Reflection_Runtime_Struct);
         if (strcmp(runtime_struct.name, struct_name) == 0)
         {
             found = true;
@@ -782,8 +782,8 @@ void reflection_registry_runtime_load_data_from_txt(Reflection_Registry* reflect
 {
     for (int i = 0; i < reflection_registry->meta_file_data->num_items; ++i)
     {
-        Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data,
-                                                              Reflection_Runtime_Meta_File, i);
+        Reflection_Runtime_Meta_File data = dynamic_array_get(reflection_registry->meta_file_data, i,
+                                                              Reflection_Runtime_Meta_File);
         //create the runtime data
         //NOTE: this could be more optimized, since we are going a check first to find if the data exists, which we know doesn't at load time
         Reflection_Runtime_Data runtime_data = reflection_registry_runtime_data_create_at_load_time(reflection_registry,
@@ -799,8 +799,8 @@ void reflection_registry_runtime_serialize_all_data_to_txt_format(Reflection_Reg
 {
     for (int i = 0; i < reflection_registry->runtime_data->num_items; ++i)
     {
-        Reflection_Runtime_Data runtime_data = dynamic_array_get(reflection_registry->runtime_data,
-                                                                 Reflection_Runtime_Data, i);
+        Reflection_Runtime_Data runtime_data = dynamic_array_get(reflection_registry->runtime_data, i,
+                                                                 Reflection_Runtime_Data);
 
         Reflection_Runtime_Struct runtime_struct = reflection_registry_get_struct_from_runtime_data(
             reflection_registry, runtime_data);
@@ -833,7 +833,7 @@ void reflection_registry_debug_print_info(Reflection_Registry* reflection_regist
     for (u32 i = 0; i < reflection_registry->struct_list->num_items; i++)
     {
         const Reflection_Runtime_Struct struct_info = dynamic_array_get(reflection_registry->struct_list,
-                                                                        Reflection_Runtime_Struct, i);
+                                                                        i,Reflection_Runtime_Struct);
 
         printf("Struct Name: %s, Size: %d, Field Count: %d\n", struct_info.name, struct_info.struct_size,
                struct_info.field_count);

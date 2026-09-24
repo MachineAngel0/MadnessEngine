@@ -716,7 +716,7 @@ void darray_test(void)
 
 //DYNAMIC ARRAY STARTS
 
-Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocator* allocator)
+Dynamic_Array* _dynamic_array_create_heap(u32 data_stride, u64 capacity, Heap_Allocator* allocator)
 {
     Dynamic_Array* array = allocator_heap_alloc(allocator, sizeof(Dynamic_Array));
 
@@ -729,27 +729,81 @@ Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocat
     return array;
 }
 
+Dynamic_Array* _dynamic_array_create_allocator(u32 data_stride, u64 capacity, Allocator* allocator)
+{
+    Dynamic_Array* array = allocator_alloc(allocator, sizeof(Dynamic_Array));
+
+    array->allocator_before_offset = allocator->current_offset;
+    array->data = allocator_alloc(allocator, data_stride * capacity);
+    array->allocator_after_offset = allocator->current_offset;
+
+    array->heap_allocator = NULL;
+    array->capacity = capacity;
+    array->stride = data_stride;
+    array->num_items = 0;
+    array->allocator = allocator;
+
+    return array;
+}
+
+
 void dynamic_array_free(Dynamic_Array* array)
 {
-    allocator_heap_free(array->heap_allocator, array->data);
-    allocator_heap_free(array->heap_allocator, array);
+    if (array->heap_allocator)
+    {
+        allocator_heap_free(array->heap_allocator, array->data);
+        allocator_heap_free(array->heap_allocator, array);
+    }
     array = NULL;
 }
 
 void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
 {
+    MASSERT(array)
     if (new_capacity <= array->capacity)
     {
         WARN("DYNAMIC ARRAY RESIZE: INVALID RESIZE")
         return;
     }
 
-    void* new_data = allocator_heap_alloc(array->heap_allocator, new_capacity * array->stride);
+    if (array->heap_allocator)
+    {
+        DEBUG("DYNAMIC ARRAY: resize with heap")
+        void* new_data = allocator_heap_alloc(array->heap_allocator, new_capacity * array->stride);
 
-    memcpy(new_data, array->data, array->capacity * array->stride);
-    allocator_heap_free(array->heap_allocator, array->data);
-    array->data = new_data;
-    array->capacity = new_capacity;
+        memcpy(new_data, array->data, array->capacity * array->stride);
+        allocator_heap_free(array->heap_allocator, array->data);
+        array->data = new_data;
+        array->capacity = new_capacity;
+    }
+
+    if (array->allocator)
+    {
+        DEBUG("DYNAMIC ARRAY: resize with allocator")
+
+        if (array->allocator_after_offset == array->allocator->current_offset)
+        {
+            //we can just expand the array without doing much
+            //we do have to make sure the the allocator has space for it
+            if (array->allocator->capacity > array->allocator_before_offset + new_capacity)
+            {
+                array->capacity = new_capacity;
+            }else
+            {
+                WARN("DYNAMIC ARRAY: cant resize with allocator, no space left")
+            }
+
+
+
+        }
+        else
+        {
+            WARN("DYNAMIC ARRAY: cant resize with allocator, allocator used elsewhere")
+        }
+
+
+    }
+
 }
 
 void dynamic_array_push(Dynamic_Array* array, void* data)
@@ -876,8 +930,8 @@ bool dynamic_array_valid_index(const Dynamic_Array* array, const u64 index)
 
 Dynamic_Array* dynamic_array_copy(Dynamic_Array* array_to_copy)
 {
-    Dynamic_Array* out_array = _dynamic_array_create(array_to_copy->stride, array_to_copy->capacity,
-                                                     array_to_copy->heap_allocator);
+    Dynamic_Array* out_array = _dynamic_array_create_heap(array_to_copy->stride, array_to_copy->capacity,
+                                                          array_to_copy->heap_allocator);
     memcpy(out_array->data, array_to_copy->data, array_to_copy->num_items * array_to_copy->stride);
     out_array->num_items = array_to_copy->num_items;
 
@@ -936,15 +990,27 @@ bool dynamic_array_deserialize(Dynamic_Array* array, FILE* fptr)
     return true;
 }
 
-Dynamic_Array* _dynamic_array_create_debug(u64 data_stride, u64 capacity, Heap_Allocator* allocator,
-                                           const char* type_name)
+Dynamic_Array* _dynamic_array_create_heap_debug(u64 data_stride, u64 capacity, Heap_Allocator* heap_allocator,
+                                                const char* type_name)
 {
-    Dynamic_Array* out_array = _dynamic_array_create(data_stride, capacity, allocator);
+    Dynamic_Array* out_array = _dynamic_array_create_heap(data_stride, capacity, heap_allocator);
 #ifndef NDEBUG
     out_array->type_name = type_name;
 #endif
     return out_array;
 }
+
+
+Dynamic_Array* _dynamic_array_create_allocator_debug(u64 data_stride, u64 capacity, Allocator* allocator,
+                                                     const char* type_name)
+{
+    Dynamic_Array* out_array = _dynamic_array_create_allocator(data_stride, capacity, allocator);
+#ifndef NDEBUG
+    out_array->type_name = type_name;
+#endif
+    return out_array;
+}
+
 
 void* _dynamic_array_get_debug(Dynamic_Array* array, u64 index, const char* type_name)
 {

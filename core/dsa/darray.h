@@ -152,8 +152,10 @@ typedef struct Dynamic_Array
 
     Heap_Allocator* heap_allocator;
 
-    // Allocator* allocator;
-    // u32 offset;
+    //allow the array to grow from the end of the allocator if valid
+    Allocator* allocator;
+    u32 allocator_before_offset;
+    u32 allocator_after_offset;
 
 #ifndef NDEBUG
     const char* type_name;
@@ -163,8 +165,10 @@ typedef struct Dynamic_Array
 #define DYNAMIC_ARRAY_TYPE(type) Dynamic_Array
 
 
-Dynamic_Array* _dynamic_array_create(u32 data_stride, u64 capacity, Heap_Allocator* allocator);
-// Dynamic_Array* _dynamic_array_create_alloc(u32 data_stride, u64 capacity, Allocator* allocator);
+Dynamic_Array* _dynamic_array_create_heap(u32 data_stride, u64 capacity, Heap_Allocator* allocator);
+
+//this allows you to resize as long as the last thing allocated was the array
+Dynamic_Array* _dynamic_array_create_allocator(u32 data_stride, u64 capacity, Allocator* allocator);
 
 
 // Dynamic_Array* _dynamic_array_create_frame(u32 data_stride, u64 capacity, Allocator* allocator);
@@ -222,27 +226,33 @@ bool dynamic_array_deserialize(Dynamic_Array* array, FILE* fptr);
 
 #ifndef NDEBUG
 
-Dynamic_Array* _dynamic_array_create_debug(u64 data_stride, u64 capacity, Heap_Allocator* allocator,
+Dynamic_Array* _dynamic_array_create_heap_debug(u64 data_stride, u64 capacity, Heap_Allocator* heap_allocator,
+                                           const char* type_name);
+
+Dynamic_Array* _dynamic_array_create_allocator_debug(u64 data_stride, u64 capacity, Allocator* allocator,
                                            const char* type_name);
     void* _dynamic_array_get_debug(Dynamic_Array* array, u64 index, const char* type_name);
 
-    #define dynamic_array_create(type, initial_capacity, allocator) \
-        _dynamic_array_create_debug(sizeof(type), initial_capacity, allocator, #type);
+    #define dynamic_array_create_heap(type, initial_capacity, heap_allocator) \
+        _dynamic_array_create_heap_debug(sizeof(type), initial_capacity, heap_allocator, #type);
 
-    #define dynamic_array_get(arr, type, index)\
+    #define dynamic_array_create_allocator(type, initial_capacity, allocator) \
+        _dynamic_array_create_allocator_debug(sizeof(type), initial_capacity, allocator, #type);
+
+    #define dynamic_array_get(arr, index, type)\
         (*(type*)_dynamic_array_get_debug(arr, index, #type))
 
-    #define dynamic_array_get_ptr(arr, type, index)\
-        ((type*)_dynamic_array_get_debug(arr, index, #type))
 
 #else
 
-    #define dynamic_array_create(type, initial_capacity, allocator) \
-        _dynamic_array_create(sizeof(type), initial_capacity, allocator);
-    #define dynamic_array_get(arr, type, index)\
+    #define dynamic_array_create_heap(type, initial_capacity, heap_allocator) \
+        _dynamic_array_create_heap(sizeof(type), initial_capacity, heap_allocator);
+
+    #define dynamic_array_create_allocator(type, initial_capacity, allocator) \
+        _dynamic_array_create_allocator(sizeof(type), initial_capacity, allocator);
+
+    #define dynamic_array_get(arr, index, type)\
         (*(type*)_dynamic_array_get(arr, index))
-    #define dynamic_array_get_ptr(arr, type, index)\
-        ((type*)_dynamic_array_get(arr, index))
 
 #endif
 

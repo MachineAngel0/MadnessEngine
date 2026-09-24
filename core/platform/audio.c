@@ -20,7 +20,8 @@ Madness_Audio_System* audio_system_init(Memory_System* memory_system, Asset_Syst
 
     //NOTE: these will play at the same time
     // ma_engine_play_sound(&audio_engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
-    // ma_engine_play_sound(&audio_engine, "..\\z_assets\\audio\\file_example_WAV_1MG.wav", NULL);
+    // ma_result sound_result = ma_engine_play_sound(&audio_engine, "../z_assets/audio/file_example_WAV_1MG.wav", NULL);
+
 
     return madness_audio;
 }

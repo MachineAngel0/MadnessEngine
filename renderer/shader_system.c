@@ -37,7 +37,7 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
 {
     //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
     //TODO: we should call this at start up once
-    for (int i = 0; i < render_packet->draw_3d_data_packet.material_count; ++i)
+    for (int i = 0; i < render_packet->draw_3d_data_packet.shader_asset_count; ++i)
     {
         if (hash_set_contains(shader_system->shader_batch_hash_set,
                               &render_packet->draw_3d_data_packet.shader_assets[i].shader_key))
