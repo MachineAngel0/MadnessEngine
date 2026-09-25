@@ -81,7 +81,6 @@ void insanity_ui_begin(s32 screen_size_x, s32 screen_size_y)
     allocator_clear(insanity_ui->frame_allocator);
 
     insanity_ui->ui_nodes = array_create(IUI_Node, INSANITY_UI_MAX_NODE_COUNT, insanity_ui->frame_allocator);
-    insanity_ui->ui_auto_nodes = array_create(IUI_Auto_Node, INSANITY_UI_MAX_NODE_COUNT, insanity_ui->frame_allocator);
 
 
     //clear ui interaction state
@@ -182,25 +181,7 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
             break;
         }
     }
-    for (u32 i = 0; i < insanity_ui->ui_auto_nodes->num_items; i++)
-    {
-        IUI_Auto_Node* node = &array_get(insanity_ui->ui_auto_nodes, i, IUI_Auto_Node);
-        switch (node->type)
-        {
-        case Insanity_UI_Node_Type_Rect:
-            render_node_count++;
-            break;
-        case Insanity_UI_Node_Type_Text:
-            render_node_count += node->text->length;
-            break;
-        case Insanity_UI_Node_Type_Scissor_Start:
-            render_node_count++;
-            break;
-        case Insanity_UI_Node_Type_Scissor_End:
-            render_node_count++;
-            break;
-        }
-    }
+
 
 
     insanity_ui->render_node_array = allocator_alloc(insanity_ui->frame_allocator,
@@ -313,104 +294,7 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
         }
     }
 
-    for (u32 i = 0; i < insanity_ui->ui_auto_nodes->num_items; i++)
-    {
-        IUI_Auto_Node* node_data = &array_get(insanity_ui->ui_auto_nodes, i, IUI_Auto_Node);
 
-        switch (node_data->type)
-        {
-        case Insanity_UI_Node_Type_Rect:
-
-            UI_Render_Node* render_node = &insanity_ui->render_node_array[render_node_instance];
-
-            render_node->ui_flags = node_data->flags;
-            render_node->pos = glms_vec2_div(node_data->pos, insanity_ui->screen_size);
-            render_node->size = glms_vec2_div(node_data->size, insanity_ui->screen_size);
-            render_node->rotation = deg_to_rad(node_data->rotation);
-
-            render_node->thickness = node_data->thickness;
-
-            render_node->rounded_radius = node_data->rounded_radius;
-
-            render_node->color = node_data->color;
-
-            render_node->texture_handle = node_data->texture_handle;
-            render_node->uv_offset = node_data->uv_offset;
-            render_node->uv_size = node_data->uv_size;
-
-            render_node->outline_color = node_data->outline_color;
-            render_node->outline_thickness = node_data->outline_thickness;
-
-            ui_add_draw_command(insanity_ui->draw_command_array, insanity_ui->current_draw_command_count,
-                                UI_DRAW_TYPE_DRAW, glms_vec2_zero(), glms_vec2_zero());
-
-            render_node_instance++;
-
-            break;
-        case Insanity_UI_Node_Type_Text:
-            //expand string
-            //generate the actual text now that we have the proper position
-            vec2s text_current_pos = node_data->pos;
-            f32 font_scalar = insanity_ui->editor_font_size / insanity_ui->default_font_size;
-            Madness_Font font_data;
-            texture_system_get_font(insanity_ui->asset_system->texture_system, insanity_ui->default_font_handle,
-                                    &font_data);
-
-            for (u64 text_idx = 0; text_idx < node_data->text->length; text_idx++)
-            {
-                const char c = node_data->text->chars[text_idx];
-
-                if (c < 32 || c >= 128) continue; // skip unsupported characters
-
-                Glyph* g = &font_data.glyphs[c - 32];
-
-                f32 x_position = text_current_pos.x + ((float)g->xoff * font_scalar);
-                f32 y_position = text_current_pos.y + ((float)g->yoff * font_scalar);
-
-                f32 x_width = ((f32)g->width * font_scalar);
-                f32 y_height = ((f32)g->height * font_scalar);
-
-                UI_Render_Node* text_render_node = &insanity_ui->render_node_array[render_node_instance];
-                text_render_node->pos = (vec2s){
-                    /*node_data->pos.x +*/ x_position, /*node_data->pos.y +*/ y_position
-                };
-                text_render_node->pos = glms_vec2_div(text_render_node->pos, insanity_ui->screen_size);
-
-                text_render_node->size = (vec2s){x_width, y_height};
-                text_render_node->size = glms_vec2_div(text_render_node->size, insanity_ui->screen_size);
-
-                text_render_node->rotation = deg_to_rad(node_data->rotation);
-                text_render_node->uv_offset = (vec2s){g->u0, g->v0};
-                text_render_node->uv_size = (vec2s){g->u1 - g->u0, g->v1 - g->v0};
-                text_render_node->color = node_data->color;
-                text_render_node->texture_handle = insanity_ui->default_font_handle.handle;
-                text_render_node->ui_flags = node_data->flags;
-                text_render_node->ui_flags |= UI_FLAG_TEXT;
-
-                // render_node->outline_thickness = insanity_ui->text_outline;
-                // render_node->outline_color = insanity_ui->text_outline_color;
-                // render_node->thickness = node_data->thickness;
-
-                text_current_pos.x += (g->advance) * font_scalar; // move offset forward
-                ui_add_draw_command(insanity_ui->draw_command_array, insanity_ui->current_draw_command_count,
-                                    UI_DRAW_TYPE_DRAW, glms_vec2_zero(), glms_vec2_zero());
-                render_node_instance++;
-            }
-
-            break;
-        case Insanity_UI_Node_Type_Scissor_Start:
-            //no need to fill out the render nodes, they are zeroed anyway
-            ui_add_draw_command(insanity_ui->draw_command_array, insanity_ui->current_draw_command_count,
-                                UI_DRAW_TYPE_SCISSOR_START, glms_vec2_zero(), glms_vec2_zero());
-            render_node_instance++;
-            break;
-        case Insanity_UI_Node_Type_Scissor_End:
-            ui_add_draw_command(insanity_ui->draw_command_array, insanity_ui->current_draw_command_count,
-                                UI_DRAW_TYPE_SCISSOR_START, glms_vec2_zero(), glms_vec2_zero());
-            render_node_instance++;
-            break;
-        }
-    }
 
 
     PROFILE_ZONE_END(insanity_ui_end)
@@ -848,19 +732,19 @@ void insanity_ui_node_offset(IUI_Node* node_to_offset, IUI_Node* anchor_node, ve
 }
 
 void insanity_ui_node_align_x(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment x_alignment)
+                              UI_Alignment_X x_alignment)
 {
     float horizontal_space_remaining = 0;
     switch (x_alignment)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         node_to_align->pos.x = container->pos.x;
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         horizontal_space_remaining = container->size.x - node_to_align->size.x;
         node_to_align->pos.x = container->pos.x + (horizontal_space_remaining / 2.f);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         horizontal_space_remaining = container->size.x - node_to_align->size.x;
         node_to_align->pos.x = container->pos.x + horizontal_space_remaining;
         break;
@@ -868,19 +752,19 @@ void insanity_ui_node_align_x(IUI_Node* node_to_align, IUI_Node* container,
 }
 
 void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment y_alignment)
+                              UI_Alignment_X y_alignment)
 {
     float vertical_space_remaining = 0;
     switch (y_alignment)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         node_to_align->pos.y = container->pos.y;
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         vertical_space_remaining = container->size.y - node_to_align->size.y;
         node_to_align->pos.y = container->pos.y + (vertical_space_remaining / 2.f);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         vertical_space_remaining = container->size.y - node_to_align->size.y;
         node_to_align->pos.y = container->pos.y + vertical_space_remaining;
         break;
@@ -889,7 +773,7 @@ void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
 
 
 void insanity_ui_node_align(IUI_Node* node_to_align, IUI_Node* container,
-                            UI_Alignment x_alignment, UI_Alignment y_alignment)
+                            UI_Alignment_X x_alignment, UI_Alignment_Y y_alignment)
 {
     insanity_ui_node_align_x(node_to_align, container, x_alignment);
 
@@ -977,7 +861,7 @@ void insanity_ui_test(float dt, float elapsed_time)
     PROFILE_ZONE(insanity_ui_test)
 
 
-    /*IUI_Node* container = insanity_ui_node("container");
+    IUI_Node* container = insanity_ui_node("container");
     Insanity_UI_Event container_result = insanity_ui_event(container, Insanity_UI_Event_Flags_Interaction);
     container->pos = (vec2s){.x = 100, .y = (sinf(elapsed_time) * 500.f) + 100.f};
     container->size = (vec2s){100, 100};
@@ -1046,7 +930,7 @@ void insanity_ui_test(float dt, float elapsed_time)
             IUI_Node* button = insanity_ui_node("rect");
             button->pos = scroll->scroll_cursor;
             button->size = (vec2s){scroll->scroll_container->size.x * 0.9, 50};
-            insanity_ui_node_align_x(button, scroll->scroll_container, UI_ALIGNMENT_CENTER);
+            insanity_ui_node_align_x(button, scroll->scroll_container, UI_ALIGNMENT_X_CENTER);
             button->color = (vec3s){0.5 * (i + 1), 0.1 * (i + 1), 0.5 * (i + 1)};
             button->rounded_radius = 0.8f;
             button->ui_flags |= UI_FLAG_ROUND_CORNER;
@@ -1059,7 +943,7 @@ void insanity_ui_test(float dt, float elapsed_time)
             icon->ui_flags |= UI_FLAG_CIRCLE;
 
             IUI_Node* text_ability = insanity_ui_text("ability x");
-            insanity_ui_node_align(text_ability, button, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+            insanity_ui_node_align(text_ability, button, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_Y_CENTER);
 
             if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).
                 hovered)
@@ -1077,48 +961,8 @@ void insanity_ui_test(float dt, float elapsed_time)
             scroll_advance(scroll, button);
         }
     }
-    scroll_end(scroll);*/
+    scroll_end(scroll);
 
-    IUI_Auto_Node* root = insanity_ui_auto_node("root");
-    root->size = (vec2s){500, 500};
-    // root->sizing_type_x = UI_Sizing_Fit;
-    // root->sizing_type_y = UI_Sizing_Fit;
-    root->layout_direction = Insanity_UI_Layout_Horizontal;
-    // root->layout_direction = Insanity_UI_Layout_Vertical;
-    // root->size = (vec2s){200, 200};
-    root->color = COLOR_RED;
-    root->padding.left = 32.f;
-    root->padding.right = 32.f;
-    root->padding.top = 32.f;
-    root->padding.bottom = 32.f;
-    root->child_padding = 32.f;
-    IUI_Auto_Node* child1 = insanity_ui_auto_node("child1");
-    child1->size = (vec2s){100, 100};
-    child1->color = COLOR_BLUE;
-    IUI_Auto_Node* child2 = insanity_ui_auto_node("child2");
-    // child2->size = (vec2s){100, 100};
-    child2->sizing_type_x = UI_Sizing_Grow;
-    child2->sizing_type_y = UI_Sizing_Grow;
-    child2->color = COLOR_VIOLET;
-    IUI_Auto_Node* child3 = insanity_ui_auto_node("child3");
-    child3->size = (vec2s){100, 100};
-    child3->color = COLOR_ORANGE;
-
-    IUI_Auto_Node* child3_child1 = insanity_ui_auto_node("child3_child1");
-    child3_child1->sizing_type_x = UI_Sizing_Grow;
-    // child3_child1->sizing_type_y = UI_Sizing_Grow;
-    child3_child1->size = (vec2s){50, 50};
-    child3_child1->color = COLOR_GREEN;
-
-
-    insanity_ui_add_child(root, child1);
-    insanity_ui_add_child(root, child2);
-    insanity_ui_add_child(root, child3);
-
-    insanity_ui_add_child(child3, child3_child1);
-
-
-    insanity_ui_resolve_layout(root);
 
 
     PROFILE_ZONE_END(insanity_ui_test)

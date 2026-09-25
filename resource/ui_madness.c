@@ -897,8 +897,8 @@ void madness_ui_window_begin(String window_name, UI_Window_Flag window_flags)
     vec2s string_header_pos = (vec2s){
         madness_ui->cursor_pos.x, madness_ui->cursor_pos.y + window_state->scroll_offset
     };
-    madness_ui_string_internal(window_name, string_header_pos, header_node->size, UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(window_name, string_header_pos, header_node->size, UI_ALIGNMENT_X_LEFT,
+                               UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(header_node->size);
 
@@ -1275,8 +1275,8 @@ bool madness_ui_drop_down(String label, bool* state)
     }
 
     madness_ui_string_internal(*modified_label, drop_down_header_node->pos, drop_down_header_node->size,
-                               UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
+                               UI_ALIGNMENT_X_LEFT,
+                               UI_ALIGNMENT_X_CENTER);
 
     Madness_UI_Event drop_down_result = madness_ui_event(drop_down_header_node, Madness_UI_Event_Flags_Interaction);
 
@@ -1301,15 +1301,15 @@ bool madness_ui_drop_down(String label, bool* state)
 
 UI_Node* madness_ui_string(String text)
 {
-    UI_Node* ui_node = madness_ui_string_internal(text, madness_ui->cursor_pos, (vec2s){0, 0}, UI_ALIGNMENT_LEFT,
-                                                  UI_ALIGNMENT_LEFT);
+    UI_Node* ui_node = madness_ui_string_internal(text, madness_ui->cursor_pos, (vec2s){0, 0}, UI_ALIGNMENT_X_LEFT,
+                                                  UI_ALIGNMENT_X_LEFT);
     madness_ui_advance_cursor(ui_node->size);
     return ui_node;
 }
 
 
 UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
-                                    vec2s parent_size, UI_Alignment alignment_x, UI_Alignment alignment_y)
+                                    vec2s parent_size, UI_Alignment_X alignment_x, UI_Alignment_X alignment_y)
 {
     //generate the text size
     vec2s text_size = madness_ui_get_text_size(text);
@@ -1319,15 +1319,15 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 
     switch (alignment_x)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         //do nothing
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         // parent_pos = madness_ui->cursor_pos;
         float horizontal_space_remaining = parent_size.x - text_size.x;
         text_pos.x += (horizontal_space_remaining / 2);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         //TODO: if i want this i need to store the window start position, and then offset it from the right, form where the cursor is
         //do nothing
         break;
@@ -1335,15 +1335,15 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 
     switch (alignment_y)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         //do nothing
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         // parent_pos = madness_ui->cursor_pos;
         float vertical_space_remaining = parent_size.y - text_size.y;
         text_pos.y += (vertical_space_remaining / 2);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         //TODO: if i want this i need to store the window start position, and then offset it from the right, form where the cursor is
         //do nothing
         break;
@@ -1410,8 +1410,8 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 UI_Node* madness_ui_c_string(const char* text)
 {
     UI_Node* ui_node = madness_ui_string_internal(STRING_STRLEN(text), madness_ui->cursor_pos, (vec2s){0, 0},
-                                                  UI_ALIGNMENT_LEFT,
-                                                  UI_ALIGNMENT_LEFT);
+                                                  UI_ALIGNMENT_X_LEFT,
+                                                  UI_ALIGNMENT_X_LEFT);
     madness_ui_advance_cursor(ui_node->size);
     return ui_node;
 }
@@ -1440,7 +1440,7 @@ bool madness_ui_button(const String label)
     button_node->flags = UI_FLAG_CLICKABLE;
     button_node->color = madness_ui->editor_style.color;
 
-    madness_ui_string_internal(label, button_node->pos, button_node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(label, button_node->pos, button_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(button_size);
 
@@ -1499,8 +1499,8 @@ bool madness_ui_check_box(String label, bool* check_box_state)
 
     madness_ui_same_line();
     UI_Node* text_node = madness_ui_string_internal(label, madness_ui->cursor_pos, checkbox_node->size,
-                                                    UI_ALIGNMENT_LEFT,
-                                                    UI_ALIGNMENT_CENTER);
+                                                    UI_ALIGNMENT_X_LEFT,
+                                                    UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor((vec2s){text_node->size.x, checkbox_node->size.y});
 
@@ -1637,7 +1637,7 @@ void madness_ui_slider_scroll(String id, float* slider_val, float min, float max
 
     char* float_char = madness_ui_float_to_char(*slider_val);
     String float_string = STRING_STRLEN(float_char);
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
 
 
     //update ui state for the next element
@@ -1673,7 +1673,7 @@ void madness_ui_slider_arrow(String id, float* slider_val, float min, float max)
     char* float_char = madness_ui_float_to_char(*slider_val);
     String float_string = STRING_STRLEN(float_char);
 
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
 
 
     //update ui state for the next element
@@ -1885,7 +1885,7 @@ bool madness_ui_scalar(String text, UI_Scalar_Type type, void* data, f64 value_c
     node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_string_internal(*scalar_string, node->pos, node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(*scalar_string, node->pos, node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(node->size);
 
@@ -1970,8 +1970,8 @@ bool madness_ui_double(String text, double* f, f64 increment_value)
 void madness_ui_text_box(String id)
 {
     UI_Node* label_node = madness_ui_string_internal(id, madness_ui->cursor_pos, (vec2s){0, 0},
-                                                     UI_ALIGNMENT_LEFT,
-                                                     UI_ALIGNMENT_LEFT);
+                                                     UI_ALIGNMENT_X_LEFT,
+                                                     UI_ALIGNMENT_X_LEFT);
 
     if (madness_ui_is_outside_window(label_node->size, true))
     {
@@ -2036,8 +2036,8 @@ void madness_ui_text_box(String id)
     String* display_string = string_builder_to_string(string_state->active_menu_item);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
-                               UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
+                               UI_ALIGNMENT_X_LEFT,
+                               UI_ALIGNMENT_X_CENTER);
 
 
     madness_ui_advance_cursor(text_box->size);
@@ -2118,8 +2118,8 @@ void madness_ui_file_picker(String id)
     String* display_string = string_builder_to_string(string_state->active_menu_item);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
-                               UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
+                               UI_ALIGNMENT_X_LEFT,
+                               UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(text_box->size);
 }
@@ -2151,7 +2151,7 @@ bool madness_ui_float_internal(Madness_UI* madness_ui, String text, float* f, fl
 
 
     // madness_ui_text_new(madness_ui, float_string);
-    madness_ui_string_internal(float_string, node->pos, node->size, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(float_string, node->pos, node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(node->size);
 
@@ -2361,8 +2361,8 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
     combo_box_node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_CENTER,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
     madness_ui_advance_cursor(combo_box_node->size);
 
     Madness_UI_Event combo_box_result = madness_ui_event(combo_box_node,
@@ -2438,8 +2438,8 @@ bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
         {
             String draw = string_array[i];
             UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
-                                                              UI_ALIGNMENT_LEFT,
-                                                              UI_ALIGNMENT_CENTER);
+                                                              UI_ALIGNMENT_X_LEFT,
+                                                              UI_ALIGNMENT_X_CENTER);
 
             Madness_UI_Event event = madness_ui_event(string_node,
                                                       Madness_UI_Event_Flags_Interaction |
@@ -2487,8 +2487,8 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
     combo_box_node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_CENTER,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
     madness_ui_advance_cursor(combo_box_node->size);
 
 
@@ -2563,8 +2563,8 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
         {
             String draw = *string_array[i];
             UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
-                                                              UI_ALIGNMENT_LEFT,
-                                                              UI_ALIGNMENT_CENTER);
+                                                              UI_ALIGNMENT_X_LEFT,
+                                                              UI_ALIGNMENT_X_CENTER);
             Madness_UI_Event strind_event = madness_ui_event(string_node,
                                                              Madness_UI_Event_Flags_Interaction |
                                                              Madness_UI_Event_Flags_Navigation);
@@ -2608,8 +2608,8 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     combo_box_node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_string_internal(*selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_LEFT,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(*selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_X_LEFT,
+                               UI_ALIGNMENT_X_CENTER);
     madness_ui_advance_cursor(combo_box_node->size);
 
 
@@ -2646,8 +2646,8 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
             char* inner_temp = char_array[i];
             String* draw = string_create_allocator(inner_temp, strlen(inner_temp), madness_ui->frame_allocator);
             UI_Node* string_node = madness_ui_string_internal(*draw, madness_ui->cursor_pos, combo_box_node->size,
-                                                              UI_ALIGNMENT_LEFT,
-                                                              UI_ALIGNMENT_CENTER);
+                                                              UI_ALIGNMENT_X_LEFT,
+                                                              UI_ALIGNMENT_X_CENTER);
 
             Madness_UI_Event string_event = madness_ui_event(string_node,
                                                              Madness_UI_Event_Flags_Interaction |
@@ -2719,8 +2719,8 @@ bool madness_ui_combo_box_string(String id, String* out_select_string, String* s
     combo_box_node->color = madness_ui->editor_style.color;
 
 
-    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_CENTER,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(selected_string, combo_box_node->pos, combo_box_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
     madness_ui_advance_cursor(combo_box_node->size);
 
 
@@ -2749,8 +2749,8 @@ bool madness_ui_combo_box_string(String id, String* out_select_string, String* s
             {
                 String draw = string_array[i];
                 UI_Node* string_node = madness_ui_string_internal(draw, madness_ui->cursor_pos, combo_box_node->size,
-                                                                  UI_ALIGNMENT_LEFT,
-                                                                  UI_ALIGNMENT_CENTER);
+                                                                  UI_ALIGNMENT_X_LEFT,
+                                                                  UI_ALIGNMENT_X_CENTER);
                 Madness_UI_Event string_event = madness_ui_event(string_node,
                                                                  Madness_UI_Event_Flags_Interaction |
                                                                  Madness_UI_Event_Flags_Navigation);
@@ -2785,8 +2785,8 @@ void madness_ui_padding(void)
 
 bool madness_ui_color_picker(String label, vec3s* color_value)
 {
-    UI_Node* text_node = madness_ui_string_internal(label, madness_ui->cursor_pos, (vec2s){0, 0}, UI_ALIGNMENT_LEFT,
-                                                    UI_ALIGNMENT_LEFT);
+    UI_Node* text_node = madness_ui_string_internal(label, madness_ui->cursor_pos, (vec2s){0, 0}, UI_ALIGNMENT_X_LEFT,
+                                                    UI_ALIGNMENT_X_LEFT);
 
     if (madness_ui_is_outside_window(text_node->size, true))
     {
@@ -2910,8 +2910,8 @@ bool madness_ui_progress_bar(String label, float current, float max)
     snprintf(float_display, 64, "%.1f / %.1f", current, max);
     String float_string = STRING_STRLEN(float_display);
 
-    madness_ui_string_internal(float_string, background_bar->pos, background_bar->size, UI_ALIGNMENT_CENTER,
-                               UI_ALIGNMENT_CENTER);
+    madness_ui_string_internal(float_string, background_bar->pos, background_bar->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(bar_size);
 

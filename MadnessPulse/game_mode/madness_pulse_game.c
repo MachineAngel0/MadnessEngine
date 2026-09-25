@@ -101,9 +101,9 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
         IUI_Node* new_game = insanity_ui_text("New Game");
 
         background_menu->size = insanity_ui_node_get_screen_size_percent(0.2, 0.2);
-        insanity_ui_node_align_to_screen_size(background_menu, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+        insanity_ui_node_align_to_screen_size(background_menu, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
         /*load_game->pos = */
-        insanity_ui_node_align_to_screen_size(load_game, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+        insanity_ui_node_align_to_screen_size(load_game, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
         // load_game->size = insanity_ui_node_get_screen_size_percent(0.1, 0.1);
         new_game->pos = (vec2s){load_game->pos.x, load_game->pos.y + load_game->size.y + 12.0f};
         // insanity_ui_node_offset(new_game, load_game, (vec2s){0, 8}); //NOTE:  doesnt work how i think it does

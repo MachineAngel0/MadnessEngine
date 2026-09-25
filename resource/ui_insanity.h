@@ -36,28 +36,15 @@
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 32
 
 
-typedef enum UI_Sizing
-{
-    UI_Sizing_Fixed,
-    UI_Sizing_Grow, // sizes to take up remaining space
-    UI_Sizing_Fit, //sizes to content
-    UI_Sizing_Percent,
-} UI_Sizing;
 
 
-typedef struct UI_Padding
+typedef enum UI_Text_Wrap
 {
-    u32 left;
-    u32 right;
-    u32 top;
-    u32 bottom;
-} UI_Padding;
+    UI_Text_Wrap_None,
+    UI_Text_Wrap_Wrap,
+    UI_Text_Wrap_Newline,
+} UI_Text_Wrap;
 
-typedef enum Insanity_UI_Layout_Direction
-{
-    Insanity_UI_Layout_Horizontal,
-    Insanity_UI_Layout_Vertical,
-} Insanity_UI_Layout_Direction;
 
 
 typedef struct Insanity_UI_Editor_Style
@@ -112,59 +99,8 @@ typedef struct Insanity_UI_Event
     // bool nav_up; ...etc for all directions
 } Insanity_UI_Event;
 
-typedef struct IUI_Auto_Node
-{
-    const char* name_id;
-    u32 hash_id;
 
-    vec2s pos; // relative (until layout step)
-    vec2s size;
-
-
-    UI_Sizing sizing_type_x; // fixed, percent, auto
-    UI_Sizing sizing_type_y; // fixed, percent, auto
-    UI_Alignment x_alignment;
-    UI_Alignment y_alignment;
-    Insanity_UI_Layout_Direction layout_direction;
-
-    UI_Padding padding;
-    f32 child_padding; // for all directions
-
-    vec2s max_size;
-    vec2s min_size;
-
-    vec3s color;
-
-    Insanity_UI_Node_Type type;
-    UI_Property_Flags flags;
-
-    //render
-    float rotation;
-    float thickness;
-    float rounded_radius;
-    vec3s outline_color;
-    float outline_thickness;
-
-
-    //text
-    u16 font_size;
-    u16 letter_spacing;
-    // u16 line_height;
-    // wrap_mode
-    String* text;
-
-    //texture
-    u32 texture_handle;
-    vec2s uv_offset;
-    vec2s uv_size;
-
-    struct IUI_Auto_Node* parent;
-    struct IUI_Auto_Node* child[INSANITY_MAX_UI_NODE_CHILD_COUNT];
-    u8 child_count;
-} IUI_Auto_Node;
-
-
-typedef struct Insanity_UI_Node
+typedef struct IUI_Node
 {
     UI_Property_Flags ui_flags;
     Insanity_UI_Node_Type type;
@@ -281,7 +217,6 @@ typedef struct Insanity_UI
     ARRAY_TYPE(IUI_Node)* ui_nodes;
 
 
-    ARRAY_TYPE(IUI_Auto_Node)* ui_auto_nodes;
 
 
     //Render
@@ -424,11 +359,11 @@ void insanity_ui_node_offset(IUI_Node* node_to_offset, IUI_Node* anchor_node, ve
 
 
 void insanity_ui_node_align_x(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment x_alignment);
+                              UI_Alignment_X x_alignment);
 void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment y_alignment);
+                              UI_Alignment_X y_alignment);
 void insanity_ui_node_align(IUI_Node* node_to_align, IUI_Node* container,
-                            UI_Alignment x_alignment, UI_Alignment y_alignment);
+                            UI_Alignment_X x_alignment, UI_Alignment_Y y_alignment);
 
 void insanity_ui_node_expand(IUI_Node* node_to_expand, IUI_Node* container);
 void insanity_ui_node_expand_x(IUI_Node* node_to_expand, IUI_Node* container);
@@ -449,20 +384,20 @@ vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent)
     };
 }
 
-vec2s insanity_ui_node_align_to_screen_size(IUI_Node* node, UI_Alignment x_alignment, UI_Alignment y_alignment)
+vec2s insanity_ui_node_align_to_screen_size(IUI_Node* node, UI_Alignment_X x_alignment, UI_Alignment_X y_alignment)
 {
     vec2s out_pos = {0};
     float horizontal_space_remaining = 0;
     switch (x_alignment)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         node->pos.x = 0;
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         horizontal_space_remaining = insanity_ui->screen_size.x - node->size.x;
         node->pos.x = (horizontal_space_remaining / 2.f);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         horizontal_space_remaining = insanity_ui->screen_size.x - node->size.x;
         node->pos.x = horizontal_space_remaining;
         break;
@@ -471,14 +406,14 @@ vec2s insanity_ui_node_align_to_screen_size(IUI_Node* node, UI_Alignment x_align
     float vertical_space_remaining = 0;
     switch (y_alignment)
     {
-    case UI_ALIGNMENT_LEFT:
+    case UI_ALIGNMENT_X_LEFT:
         node->pos.y = 0;
         break;
-    case UI_ALIGNMENT_CENTER:
+    case UI_ALIGNMENT_X_CENTER:
         vertical_space_remaining = insanity_ui->screen_size.y - node->size.y;
         node->pos.y = (vertical_space_remaining / 2.f);
         break;
-    case UI_ALIGNMENT_RIGHT:
+    case UI_ALIGNMENT_X_RIGHT:
         vertical_space_remaining = insanity_ui->screen_size.y - node->size.y;
         node->pos.y = vertical_space_remaining;
         break;
@@ -701,271 +636,6 @@ void insanity_ui_drag_to_mouse_position(IUI_Node* node)
 //       right.pos = thing3.pos.x + thing3.size.x + padding.x;
 
 
-IUI_Auto_Node* insanity_ui_auto_node(const char* name)
-{
-    IUI_Auto_Node* return_node = (IUI_Auto_Node*)_array_get(insanity_ui->ui_auto_nodes,
-                                                            insanity_ui->ui_auto_nodes->num_items++);
-    return_node->name_id = name;
-    insanity_ui->hash = hash_32_continous(insanity_ui->hash, (u8*)name, strlen(name));
-    return_node->hash_id = insanity_ui->hash;
-    // return_node->ui_flags;
-    return_node->color = insanity_ui->editor_style.error_color;
-
-    return return_node;
-}
-
-void insanity_ui_add_child(IUI_Auto_Node* parent, IUI_Auto_Node* child)
-{
-    parent->child[parent->child_count++] = child;
-    child->parent = parent;
-}
-
-void insanity_ui_fit_sizing(IUI_Auto_Node* root)
-{
-    //fit sizing widths
-    //get all fixed sized items and add them to any fit sized items
-    u32 pos_x_offset = root->padding.left;
-    u32 pos_y_offset = root->padding.top;
-    float total_gap = 0;
-    if (root->child > 0)
-    {
-        total_gap = (root->child_count - 1) * root->child_padding;
-    }
-    root->size.x += root->padding.left + root->padding.right;
-    root->size.y += root->padding.top + root->padding.bottom;
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        //assuming horizontal layout
-        IUI_Auto_Node* child = root->child[i];
-        switch (root->layout_direction)
-        {
-        case Insanity_UI_Layout_Horizontal:
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_x_offset += child->size.x + root->child_padding;
-
-            //size the parent
-            if (root->sizing_type_x == UI_Sizing_Fit)
-            {
-                root->size.x += child->size.x;
-            }
-            if (root->sizing_type_y == UI_Sizing_Fit)
-            {
-                root->size.y = max_f(root->size.y, child->size.y + root->padding.top + root->padding.bottom);
-            }
-
-
-            break;
-        case Insanity_UI_Layout_Vertical:
-
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_y_offset += child->size.y + root->child_padding;
-            //size the parent
-            if (root->sizing_type_x == UI_Sizing_Fit)
-            {
-                root->size.x = max_f(root->size.x, child->size.x + root->padding.left + root->padding.right);
-            }
-            if (root->sizing_type_y == UI_Sizing_Fit)
-            {
-                root->size.y += child->size.y;
-            }
-
-            break;
-        }
-
-
-        insanity_ui_fit_sizing(child);
-    }
-
-    // add total gap once after the loop
-    if (root->layout_direction == Insanity_UI_Layout_Horizontal)
-    {
-        root->size.x += total_gap;
-    }
-    else if (root->layout_direction == Insanity_UI_Layout_Vertical)
-    {
-        root->size.y += total_gap;
-    }
-}
-
-
-
-void insanity_ui_layout_position(IUI_Auto_Node* root)
-{
-    //fit sizing widths
-    //get all fixed sized items and add them to any fit sized items
-    u32 pos_x_offset = root->padding.left;
-    u32 pos_y_offset = root->padding.top;
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        //assuming horizontal layout
-        IUI_Auto_Node* child = root->child[i];
-        switch (root->layout_direction)
-        {
-        case Insanity_UI_Layout_Horizontal:
-            child->pos.x = root->pos.x + (f32)pos_x_offset;
-            child->pos.y = root->pos.y + (f32)pos_y_offset;
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_x_offset += child->size.x + root->child_padding;
-            break;
-        case Insanity_UI_Layout_Vertical:
-            child->pos.x = root->pos.x + (f32)pos_x_offset;
-            child->pos.y = root->pos.y + (f32)pos_y_offset;
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_y_offset += child->size.y + root->child_padding;
-            break;
-        }
-
-
-        insanity_ui_layout_position(child);
-    }
-
-}
-
-void insanity_ui_grow_sizing(IUI_Auto_Node* root)
-{
-
-    //grow sizing
-    float remaining_width = root->size.x;
-    float remaining_height = root->size.y;
-    remaining_width -= root->padding.left + root->padding.right;
-    remaining_height -= root->padding.top + root->padding.bottom;
-
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        IUI_Auto_Node* child = root->child[i];
-        remaining_width -= child->size.x;
-    }
-    float total_gap = 0;
-    if (root->child_count > 0)
-    {
-        total_gap = (root->child_count - 1) * root->child_padding;
-    }
-    remaining_width -= total_gap;
-
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        IUI_Auto_Node* child = root->child[i];
-        if (child->sizing_type_x == UI_Sizing_Grow)
-        {
-            child->size.x += remaining_width;
-
-        }
-
-        if (child->sizing_type_y == UI_Sizing_Grow)
-        {
-            child->size.y += (remaining_height - child->size.y);
-        }
-    }
-
-
-
-}
-
-
-void insanity_ui_resolve_layout(IUI_Auto_Node* root)
-{
-
-    insanity_ui_fit_sizing(root);
-
-    insanity_ui_grow_sizing(root);
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        insanity_ui_grow_sizing(root->child[i]);
-    }
-
-    insanity_ui_layout_position(root);
-
-
-
-
-    /*//do the algo
-    //position the node
-    u32 pos_x_offset = root->padding.left;
-    u32 pos_y_offset = root->padding.top;
-    float total_gap = 0;
-    if (root->child > 0)
-    {
-        total_gap = (root->child_count - 1) * root->child_padding;
-    }
-    root->size.x += root->padding.left + root->padding.right;
-    root->size.y += root->padding.top + root->padding.bottom;
-
-    for (u32 i = 0; i < root->child_count; i++)
-    {
-        //assuming horizontal layout
-        IUI_Auto_Node* child = root->child[i];
-        float element_width = root->padding.left + root->padding.right;
-        float element_height = root->padding.top + root->padding.bottom;
-        switch (root->layout_direction)
-        {
-        case Insanity_UI_Layout_Horizontal:
-            child->pos.x = root->pos.x + (f32)pos_x_offset;
-            child->pos.y = root->pos.y + (f32)pos_y_offset;
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_x_offset += child->size.x + root->child_padding;
-
-            //size the parent
-            switch (root->sizing_type)
-            {
-            case UI_Sizing_Fit:
-                root->size.x += child->size.x;
-                root->size.y = max_f(root->size.y, child->size.y + root->padding.top + root->padding.bottom);
-                break;
-            case UI_Sizing_Grow:
-                break;
-            case UI_Sizing_Fixed:
-                //do nothing
-                break;
-            case UI_Sizing_Percent:
-                break;
-            }
-
-            break;
-        case Insanity_UI_Layout_Vertical:
-            child->pos.x = root->pos.x + (f32)pos_x_offset;
-            child->pos.y = root->pos.y + (f32)pos_y_offset;
-
-            // child->pos.y = root->pos.y + (f32)root->padding_top;
-            pos_y_offset += child->size.y + root->child_padding;
-            //size the parent
-            switch (root->sizing_type)
-            {
-            case UI_Sizing_Fit:
-                root->size.x = max_f(root->size.x, child->size.x + root->padding.left + root->padding.right);
-                root->size.y += child->size.y;
-                break;
-            case UI_Sizing_Grow:
-                break;
-            case UI_Sizing_Fixed:
-                //do nothing
-                break;
-            case UI_Sizing_Percent:
-
-                break;
-            }
-
-            break;
-        }
-
-
-        insanity_ui_resolve_layout(child);
-    }
-
-    // add total gap once after the loop
-    if (root->layout_direction == Insanity_UI_Layout_Horizontal)
-    {
-        root->size.x += total_gap;
-    }
-    else if (root->layout_direction == Insanity_UI_Layout_Vertical)
-    {
-        root->size.y += total_gap;
-    }*/
-}
 
 
 #endif //INSANITY_UI_H

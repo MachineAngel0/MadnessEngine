@@ -34,12 +34,19 @@ typedef enum Insanity_UI_Node_Type
 } Insanity_UI_Node_Type;
 
 
-typedef enum UI_Alignment
+typedef enum UI_Alignment_X
 {
-    UI_ALIGNMENT_LEFT, // also top
-    UI_ALIGNMENT_CENTER,
-    UI_ALIGNMENT_RIGHT, // also bottom
-} UI_Alignment;
+    UI_ALIGNMENT_X_LEFT,
+    UI_ALIGNMENT_X_CENTER,
+    UI_ALIGNMENT_X_RIGHT,
+} UI_Alignment_X;
+
+typedef enum UI_Alignment_Y
+{
+    UI_ALIGNMENT_Y_TOP,
+    UI_ALIGNMENT_Y_CENTER,
+    UI_ALIGNMENT_Y_BOTTOM,
+} UI_Alignment_Y;
 
 typedef enum UI_Scalar_Type
 {

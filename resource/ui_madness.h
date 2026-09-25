@@ -472,7 +472,7 @@ void madness_ui_file_picker(String id);
 
 MAPI UI_Node* madness_ui_string(String text);
 MAPI UI_Node* madness_ui_string_internal(String text, vec2s parent_pos, vec2s parent_size,
-                                         UI_Alignment alignment_x, UI_Alignment alignment_y); // TODO: pass in the pos
+                                         UI_Alignment_X alignment_x, UI_Alignment_X alignment_y); // TODO: pass in the pos
 MAPI UI_Node* madness_ui_c_string(const char* text);
 
 
