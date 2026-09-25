@@ -30,7 +30,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_PARTICLE;
+    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
 
     editor_generate_asset_lists(editor, memory_system);
@@ -56,7 +56,7 @@ bool editor_update(Editor* editor)
     {
         if (editor->state == 0)
         {
-            editor->state = EDITOR_UI_STATE_MAX;
+            editor->state = EDITOR_UI_STATE_MAX-1;
         }
         else
         {
@@ -154,9 +154,6 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
         insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
         break;
-    case EDITOR_UI_STATE_INSANITY_UI_EDITOR_TEST:
-        // insanity_ui_editor_test(editor->clock->delta_time, editor->clock->time_elapsed);
-        break;
     case EDITOR_UI_STATE_MADNESS_UI_TEST:
         // madness_ui_test();
         madness_ui_example();
@@ -209,7 +206,6 @@ void editor_ui(Editor* editor)
         break;
     case EDITOR_UI_STATE_ASSET_METADATA:
         editor_meta_data_view(editor);
-
         break;
     case EDITOR_UI_STATE_MATERIAL_CREATION:
         editor_material_asset_view(editor);

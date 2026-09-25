@@ -1,6 +1,7 @@
 #include "madness_pulse_game.h"
 
 #include "save_game.h"
+#include "ui_insanity.h"
 
 
 Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
@@ -92,6 +93,22 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
             event_fire(EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
         }
         madness_ui_window_end();
+
+        //TODO: Testing
+        IUI_Node* background_menu = insanity_ui_node("");
+        background_menu->color = COLOR_VIOLET;
+        IUI_Node* load_game = insanity_ui_text("Load Game");
+        IUI_Node* new_game = insanity_ui_text("New Game");
+
+        background_menu->size = insanity_ui_node_get_screen_size_percent(0.2, 0.2);
+        insanity_ui_node_align_to_screen_size(background_menu, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+        /*load_game->pos = */
+        insanity_ui_node_align_to_screen_size(load_game, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+        // load_game->size = insanity_ui_node_get_screen_size_percent(0.1, 0.1);
+        new_game->pos = (vec2s){load_game->pos.x, load_game->pos.y + load_game->size.y + 12.0f};
+        // insanity_ui_node_offset(new_game, load_game, (vec2s){0, 8}); //NOTE:  doesnt work how i think it does
+
+
         break;
     case Game_State_Load_Save:
         // madness_pulse_load_save(game); // TODO:
@@ -139,7 +156,6 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     case Game_State_Enum_MAX:
         break;
     }
-
 
 
     PROFILE_ZONE_END(GAME)

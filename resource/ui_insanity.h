@@ -36,6 +36,30 @@
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 32
 
 
+typedef enum UI_Sizing
+{
+    UI_Sizing_Fixed,
+    UI_Sizing_Grow, // sizes to take up remaining space
+    UI_Sizing_Fit, //sizes to content
+    UI_Sizing_Percent,
+} UI_Sizing;
+
+
+typedef struct UI_Padding
+{
+    u32 left;
+    u32 right;
+    u32 top;
+    u32 bottom;
+} UI_Padding;
+
+typedef enum Insanity_UI_Layout_Direction
+{
+    Insanity_UI_Layout_Horizontal,
+    Insanity_UI_Layout_Vertical,
+} Insanity_UI_Layout_Direction;
+
+
 typedef struct Insanity_UI_Editor_Style
 {
     vec3s layout_color;
@@ -88,6 +112,57 @@ typedef struct Insanity_UI_Event
     // bool nav_up; ...etc for all directions
 } Insanity_UI_Event;
 
+typedef struct IUI_Auto_Node
+{
+    const char* name_id;
+    u32 hash_id;
+
+    vec2s pos; // relative (until layout step)
+    vec2s size;
+
+
+    UI_Sizing sizing_type_x; // fixed, percent, auto
+    UI_Sizing sizing_type_y; // fixed, percent, auto
+    UI_Alignment x_alignment;
+    UI_Alignment y_alignment;
+    Insanity_UI_Layout_Direction layout_direction;
+
+    UI_Padding padding;
+    f32 child_padding; // for all directions
+
+    vec2s max_size;
+    vec2s min_size;
+
+    vec3s color;
+
+    Insanity_UI_Node_Type type;
+    UI_Property_Flags flags;
+
+    //render
+    float rotation;
+    float thickness;
+    float rounded_radius;
+    vec3s outline_color;
+    float outline_thickness;
+
+
+    //text
+    u16 font_size;
+    u16 letter_spacing;
+    // u16 line_height;
+    // wrap_mode
+    String* text;
+
+    //texture
+    u32 texture_handle;
+    vec2s uv_offset;
+    vec2s uv_size;
+
+    struct IUI_Auto_Node* parent;
+    struct IUI_Auto_Node* child[INSANITY_MAX_UI_NODE_CHILD_COUNT];
+    u8 child_count;
+} IUI_Auto_Node;
+
 
 typedef struct Insanity_UI_Node
 {
@@ -124,9 +199,9 @@ typedef struct Insanity_UI_Node
     vec3s color;
 
     s32 z_order;
-} Insanity_UI_Node;
+} IUI_Node;
 
-typedef struct Insanity_UI_Scroll
+typedef struct IUI_Scroll
 {
     u32 id;
 
@@ -135,21 +210,21 @@ typedef struct Insanity_UI_Scroll
     float content_height;
     float scroll_offset;
     float scroll_bar_percent_offset;
-    Insanity_UI_Node* scroll_container;
-    Insanity_UI_Node* scroll_bar;
-} Insanity_UI_Scroll;
+    IUI_Node* scroll_container;
+    IUI_Node* scroll_bar;
+} IUI_Scroll;
 
-typedef enum Insanity_UI_Scroll_Flags
+typedef enum IUI_Scroll_Flags
 {
     Insanity_UI_Scroll_Flags_Scroll_When_Hovered_Over_Container,
-} Insanity_UI_Scroll_Flags;
+} IUI_Scroll_Flags;
 
 
-typedef struct Insanity_UI_Drag_State
+typedef struct IUI_Drag_State
 {
     u32 drag_id;
     vec2s drag_position;
-} Insanity_UI_Drag_State;
+} IUI_Drag_State;
 
 typedef enum Insanity_UI_Persistent_State
 {
@@ -157,13 +232,14 @@ typedef enum Insanity_UI_Persistent_State
     Insanity_UI_Persistent_State_Scroll = BITFLAG(0),
 } Insanity_UI_Persistent_State;
 
-typedef enum Insanity_UI_Event_Flags
+typedef enum IUI_Event_Flags
 {
     Insanity_UI_Event_Flags_Interaction = BITFLAG(0),
     Insanity_UI_Event_Flags_Navigation = BITFLAG(1),
-    Insanity_UI_Event_Flags_Individual_Interaction = BITFLAG(2), // ignores hot/active states and does an individual interaction test
+    Insanity_UI_Event_Flags_Individual_Interaction = BITFLAG(2),
+    // ignores hot/active states and does an individual interaction test
     Insanity_UI_Event_Flags_Individual_Hover = BITFLAG(3), // just checks for hover ignoring other state
-}Insanity_UI_Event_Flags;
+} IUI_Event_Flags;
 
 typedef struct Insanity_UI
 {
@@ -179,7 +255,7 @@ typedef struct Insanity_UI
     vec2s screen_size; // this gets queried every frame in the begin effect
 
     //for invalid states, pass this back instead of crashing
-    Insanity_UI_Node dummy_node;
+    IUI_Node dummy_node;
 
     //this should be an array at some point
     Texture_Handle default_font_handle;
@@ -189,20 +265,23 @@ typedef struct Insanity_UI
     // Font fonts[100];
 
     //Persistent Information
-    Insanity_UI_Drag_State drag_state[100];
+    IUI_Drag_State drag_state[100];
     u32 drag_node_count;
 
     //temp and should be more than one
-    Insanity_UI_Scroll scroll_state;
+    IUI_Scroll scroll_state;
 
     //Interaction
-    Insanity_UI_Node* interaction_node_array[INSANITY_UI_MAX_NODE_COUNT];
+    IUI_Node* interaction_node_array[INSANITY_UI_MAX_NODE_COUNT];
     u32 interaction_node_count;
 
-    Insanity_UI_Node* navigation_node_array[INSANITY_UI_MAX_NODE_COUNT];
+    IUI_Node* navigation_node_array[INSANITY_UI_MAX_NODE_COUNT];
     u32 navigation_node_count;
 
-    ARRAY_TYPE(Insanity_UI_Node)* ui_nodes;
+    ARRAY_TYPE(IUI_Node)* ui_nodes;
+
+
+    ARRAY_TYPE(IUI_Auto_Node)* ui_auto_nodes;
 
 
     //Render
@@ -258,7 +337,7 @@ typedef struct Insanity_UI
     bool key_backspace;
 
     //Scroll
-    Insanity_UI_Scroll scroll_array[100];
+    IUI_Scroll scroll_array[100];
     u32 scroll_array_count;
 
     vec2 scroll_max_view;
@@ -285,17 +364,17 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 
 //Building Blocks
-Insanity_UI_Node* insanity_ui_node_set_flags(const char* name); // has to be called before the node is created
-Insanity_UI_Node* insanity_ui_node(const char* name);
+IUI_Node* insanity_ui_node_set_flags(const char* name); // has to be called before the node is created
+IUI_Node* insanity_ui_node(const char* name);
 /*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
-Insanity_UI_Event insanity_ui_event(Insanity_UI_Node* node, Insanity_UI_Event_Flags event_flags);
+Insanity_UI_Event insanity_ui_event(IUI_Node* node, IUI_Event_Flags event_flags);
 
 
 //rn these are percents
-Insanity_UI_Node* insanity_ui_node_cut_left(Insanity_UI_Node* parent, const char* name, f32 size);
-Insanity_UI_Node* insanity_ui_node_cut_right(Insanity_UI_Node* parent, const char* name, f32 size);
-Insanity_UI_Node* insanity_ui_node_cut_top(Insanity_UI_Node* parent, const char* name, f32 size);
-Insanity_UI_Node* insanity_ui_node_cut_bottom(Insanity_UI_Node* parent, const char* name, f32 size);
+IUI_Node* insanity_ui_node_cut_left(IUI_Node* parent, const char* name, f32 size);
+IUI_Node* insanity_ui_node_cut_right(IUI_Node* parent, const char* name, f32 size);
+IUI_Node* insanity_ui_node_cut_top(IUI_Node* parent, const char* name, f32 size);
+IUI_Node* insanity_ui_node_cut_bottom(IUI_Node* parent, const char* name, f32 size);
 
 //TODO:
 // void madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
@@ -303,21 +382,21 @@ Insanity_UI_Node* insanity_ui_node_cut_bottom(Insanity_UI_Node* parent, const ch
 
 
 //Windows
-Insanity_UI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
-void scroll_end(Insanity_UI_Scroll* scroll);
+IUI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
+void scroll_end(IUI_Scroll* scroll);
 // might just want to have pos and size instead of node
-void scroll_advance(Insanity_UI_Scroll* scroll, Insanity_UI_Node* node);
-void scroll_advance_size(Insanity_UI_Scroll* scroll, vec2s size);
+void scroll_advance(IUI_Scroll* scroll, IUI_Node* node);
+void scroll_advance_size(IUI_Scroll* scroll, vec2s size);
 
 void pop_up_begin();
 void pop_up_end();
 
 
 //STRING
-Insanity_UI_Node* insanity_ui_text(const char* text);
-Insanity_UI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
+IUI_Node* insanity_ui_text(const char* text);
+IUI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
 
-Insanity_UI_Node* insanity_ui_text_wrapped(const char* text, Insanity_UI_Node* container);
+IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container);
 
 vec2s insanity_ui_text_calculate_size(const char* text);
 vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
@@ -330,39 +409,87 @@ vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
 //TEXTURES AND FONTS
 void insanity_ui_set_font(Texture_Handle handle);
 void insanity_ui_set_font_default();
-Insanity_UI_Node* insanity_ui_image(const char* name, Texture_Handle handle);
+IUI_Node* insanity_ui_image(const char* name, Texture_Handle handle);
 
 
 //LAYOUT and CONSTRAINTS
-void insanity_ui_node_offset_x(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+void insanity_ui_node_offset_x(IUI_Node* node_to_offset, IUI_Node* anchor_node,
                                float x_offset);
-void insanity_ui_node_offset_y(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node,
+void insanity_ui_node_offset_y(IUI_Node* node_to_offset, IUI_Node* anchor_node,
                                float y_offset);
-void insanity_ui_node_offset(Insanity_UI_Node* node_to_offset, Insanity_UI_Node* anchor_node, vec2s offset);
+void insanity_ui_node_offset(IUI_Node* node_to_offset, IUI_Node* anchor_node, vec2s offset);
+
+//TODO:
+// void insanity_ui_node_offset_from_end(IUI_Node* node_to_offset, IUI_Node* anchor_node, vec2s offset);
 
 
-void insanity_ui_node_align_x(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
+void insanity_ui_node_align_x(IUI_Node* node_to_align, IUI_Node* container,
                               UI_Alignment x_alignment);
-void insanity_ui_node_align_y(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
+void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
                               UI_Alignment y_alignment);
-void insanity_ui_node_align(Insanity_UI_Node* node_to_align, Insanity_UI_Node* container,
+void insanity_ui_node_align(IUI_Node* node_to_align, IUI_Node* container,
                             UI_Alignment x_alignment, UI_Alignment y_alignment);
 
-void insanity_ui_node_expand(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
-void insanity_ui_node_expand_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
-void insanity_ui_node_expand_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container);
+void insanity_ui_node_expand(IUI_Node* node_to_expand, IUI_Node* container);
+void insanity_ui_node_expand_x(IUI_Node* node_to_expand, IUI_Node* container);
+void insanity_ui_node_expand_y(IUI_Node* node_to_expand, IUI_Node* container);
 
-void insanity_ui_node_expand_percent_x(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
-void insanity_ui_node_expand_percent_y(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, float percent);
-void insanity_ui_node_expand_percent(Insanity_UI_Node* node_to_expand, Insanity_UI_Node* container, vec2s percent);
+void insanity_ui_node_expand_percent_x(IUI_Node* node_to_expand, IUI_Node* container, float percent);
+void insanity_ui_node_expand_percent_y(IUI_Node* node_to_expand, IUI_Node* container, float percent);
+void insanity_ui_node_expand_percent(IUI_Node* node_to_expand, IUI_Node* container, vec2s percent);
 
-void insanity_ui_node_expand_percent_screen(Insanity_UI_Node* node_to_expand, vec2s percent);
-
-
-vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent);
+void insanity_ui_node_expand_percent_screen(IUI_Node* node_to_expand, vec2s percent);
 
 
-void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insanity_UI_Node* container);
+vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent)
+{
+    return (vec2s){
+        .x = x_percent * insanity_ui->screen_size.x,
+        .y = y_percent * insanity_ui->screen_size.y
+    };
+}
+
+vec2s insanity_ui_node_align_to_screen_size(IUI_Node* node, UI_Alignment x_alignment, UI_Alignment y_alignment)
+{
+    vec2s out_pos = {0};
+    float horizontal_space_remaining = 0;
+    switch (x_alignment)
+    {
+    case UI_ALIGNMENT_LEFT:
+        node->pos.x = 0;
+        break;
+    case UI_ALIGNMENT_CENTER:
+        horizontal_space_remaining = insanity_ui->screen_size.x - node->size.x;
+        node->pos.x = (horizontal_space_remaining / 2.f);
+        break;
+    case UI_ALIGNMENT_RIGHT:
+        horizontal_space_remaining = insanity_ui->screen_size.x - node->size.x;
+        node->pos.x = horizontal_space_remaining;
+        break;
+    }
+
+    float vertical_space_remaining = 0;
+    switch (y_alignment)
+    {
+    case UI_ALIGNMENT_LEFT:
+        node->pos.y = 0;
+        break;
+    case UI_ALIGNMENT_CENTER:
+        vertical_space_remaining = insanity_ui->screen_size.y - node->size.y;
+        node->pos.y = (vertical_space_remaining / 2.f);
+        break;
+    case UI_ALIGNMENT_RIGHT:
+        vertical_space_remaining = insanity_ui->screen_size.y - node->size.y;
+        node->pos.y = vertical_space_remaining;
+        break;
+    }
+
+
+    return out_pos;
+}
+
+
+void insanity_ui_node_constraint_size(IUI_Node* node_to_constraint, IUI_Node* container);
 
 
 //TODO: going to need for auto sizing
@@ -370,12 +497,8 @@ void insanity_ui_node_constraint_size(Insanity_UI_Node* node_to_constraint, Insa
 // void insanity_ui_node_enforce_max_size(Insanity_UI_Node* node_to_constraint, vec2s max_size_pixels);
 
 
-//Styling
-void insanity_ui_node_node(Insanity_UI_Node* node);
-
-
 //Utility
-bool insanity_ui_rect_hit(Insanity_UI_Node* node);
+bool insanity_ui_rect_hit(IUI_Node* node);
 
 
 //Test
@@ -385,9 +508,9 @@ void insanity_ui_test(float dt, float elapsed_time);
 // void insanity_ui_autoplace_and_size(Insanity_UI_Node* node);
 
 
-Insanity_UI_Drag_State* insanity_ui_get_drag_state(Insanity_UI_Node* node)
+IUI_Drag_State* insanity_ui_get_drag_state(IUI_Node* node)
 {
-    Insanity_UI_Drag_State* drag_state = NULL;
+    IUI_Drag_State* drag_state = NULL;
     for (u32 i = 0; i < insanity_ui->drag_node_count; i++)
     {
         if (insanity_ui->drag_state[i].drag_id == node->hash_id)
@@ -406,10 +529,10 @@ Insanity_UI_Drag_State* insanity_ui_get_drag_state(Insanity_UI_Node* node)
     return drag_state;
 }
 
-void insanity_ui_drag(Insanity_UI_Node* node)
+void insanity_ui_drag(IUI_Node* node)
 {
     //find the drag state, then adjust position is it moves
-    Insanity_UI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
+    IUI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
     node->pos.x = drag_state->drag_position.x;
     node->pos.y = drag_state->drag_position.y;
 
@@ -421,10 +544,10 @@ void insanity_ui_drag(Insanity_UI_Node* node)
     }
 }
 
-void insanity_ui_drag_to_mouse_position(Insanity_UI_Node* node)
+void insanity_ui_drag_to_mouse_position(IUI_Node* node)
 {
     //find the drag state, then adjust position is it moves
-    Insanity_UI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
+    IUI_Drag_State* drag_state = insanity_ui_get_drag_state(node);
     node->pos.x = drag_state->drag_position.x;
     node->pos.y = drag_state->drag_position.y;
 
@@ -578,32 +701,271 @@ void insanity_ui_drag_to_mouse_position(Insanity_UI_Node* node)
 //       right.pos = thing3.pos.x + thing3.size.x + padding.x;
 
 
-struct node
+IUI_Auto_Node* insanity_ui_auto_node(const char* name)
 {
-    vec2s pos; // absolute
-    vec2s size; // absolute
-    UI_Alignment alignment; // none isn't needed
-};
+    IUI_Auto_Node* return_node = (IUI_Auto_Node*)_array_get(insanity_ui->ui_auto_nodes,
+                                                            insanity_ui->ui_auto_nodes->num_items++);
+    return_node->name_id = name;
+    insanity_ui->hash = hash_32_continous(insanity_ui->hash, (u8*)name, strlen(name));
+    return_node->hash_id = insanity_ui->hash;
+    // return_node->ui_flags;
+    return_node->color = insanity_ui->editor_style.error_color;
 
-typedef enum UI_Sizing
+    return return_node;
+}
+
+void insanity_ui_add_child(IUI_Auto_Node* parent, IUI_Auto_Node* child)
 {
-    UI_Sizing_Fit, //sizes to content
-    UI_Sizing_Grow, // sizes to take up remaining space
-    UI_Sizing_Fixed,
-} UI_Sizing;
+    parent->child[parent->child_count++] = child;
+    child->parent = parent;
+}
 
-struct node_auto
+void insanity_ui_fit_sizing(IUI_Auto_Node* root)
 {
-    vec2s pos; // relative (until layout step)
-    vec2s size;
-    UI_Sizing sizing_type; // fixed, percent, auto
-    UI_Alignment alignment; // for all directions
-    vec4s padding; // for all directions
-    f32 child_padding; // for all directions
+    //fit sizing widths
+    //get all fixed sized items and add them to any fit sized items
+    u32 pos_x_offset = root->padding.left;
+    u32 pos_y_offset = root->padding.top;
+    float total_gap = 0;
+    if (root->child > 0)
+    {
+        total_gap = (root->child_count - 1) * root->child_padding;
+    }
+    root->size.x += root->padding.left + root->padding.right;
+    root->size.y += root->padding.top + root->padding.bottom;
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        //assuming horizontal layout
+        IUI_Auto_Node* child = root->child[i];
+        switch (root->layout_direction)
+        {
+        case Insanity_UI_Layout_Horizontal:
 
-    vec2s max_size;
-    vec2s min_size;
-};
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_x_offset += child->size.x + root->child_padding;
+
+            //size the parent
+            if (root->sizing_type_x == UI_Sizing_Fit)
+            {
+                root->size.x += child->size.x;
+            }
+            if (root->sizing_type_y == UI_Sizing_Fit)
+            {
+                root->size.y = max_f(root->size.y, child->size.y + root->padding.top + root->padding.bottom);
+            }
+
+
+            break;
+        case Insanity_UI_Layout_Vertical:
+
+
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_y_offset += child->size.y + root->child_padding;
+            //size the parent
+            if (root->sizing_type_x == UI_Sizing_Fit)
+            {
+                root->size.x = max_f(root->size.x, child->size.x + root->padding.left + root->padding.right);
+            }
+            if (root->sizing_type_y == UI_Sizing_Fit)
+            {
+                root->size.y += child->size.y;
+            }
+
+            break;
+        }
+
+
+        insanity_ui_fit_sizing(child);
+    }
+
+    // add total gap once after the loop
+    if (root->layout_direction == Insanity_UI_Layout_Horizontal)
+    {
+        root->size.x += total_gap;
+    }
+    else if (root->layout_direction == Insanity_UI_Layout_Vertical)
+    {
+        root->size.y += total_gap;
+    }
+}
+
+
+
+void insanity_ui_layout_position(IUI_Auto_Node* root)
+{
+    //fit sizing widths
+    //get all fixed sized items and add them to any fit sized items
+    u32 pos_x_offset = root->padding.left;
+    u32 pos_y_offset = root->padding.top;
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        //assuming horizontal layout
+        IUI_Auto_Node* child = root->child[i];
+        switch (root->layout_direction)
+        {
+        case Insanity_UI_Layout_Horizontal:
+            child->pos.x = root->pos.x + (f32)pos_x_offset;
+            child->pos.y = root->pos.y + (f32)pos_y_offset;
+
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_x_offset += child->size.x + root->child_padding;
+            break;
+        case Insanity_UI_Layout_Vertical:
+            child->pos.x = root->pos.x + (f32)pos_x_offset;
+            child->pos.y = root->pos.y + (f32)pos_y_offset;
+
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_y_offset += child->size.y + root->child_padding;
+            break;
+        }
+
+
+        insanity_ui_layout_position(child);
+    }
+
+}
+
+void insanity_ui_grow_sizing(IUI_Auto_Node* root)
+{
+
+    //grow sizing
+    float remaining_width = root->size.x;
+    float remaining_height = root->size.y;
+    remaining_width -= root->padding.left + root->padding.right;
+    remaining_height -= root->padding.top + root->padding.bottom;
+
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        IUI_Auto_Node* child = root->child[i];
+        remaining_width -= child->size.x;
+    }
+    float total_gap = 0;
+    if (root->child_count > 0)
+    {
+        total_gap = (root->child_count - 1) * root->child_padding;
+    }
+    remaining_width -= total_gap;
+
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        IUI_Auto_Node* child = root->child[i];
+        if (child->sizing_type_x == UI_Sizing_Grow)
+        {
+            child->size.x += remaining_width;
+
+        }
+
+        if (child->sizing_type_y == UI_Sizing_Grow)
+        {
+            child->size.y += (remaining_height - child->size.y);
+        }
+    }
+
+
+
+}
+
+
+void insanity_ui_resolve_layout(IUI_Auto_Node* root)
+{
+
+    insanity_ui_fit_sizing(root);
+
+    insanity_ui_grow_sizing(root);
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        insanity_ui_grow_sizing(root->child[i]);
+    }
+
+    insanity_ui_layout_position(root);
+
+
+
+
+    /*//do the algo
+    //position the node
+    u32 pos_x_offset = root->padding.left;
+    u32 pos_y_offset = root->padding.top;
+    float total_gap = 0;
+    if (root->child > 0)
+    {
+        total_gap = (root->child_count - 1) * root->child_padding;
+    }
+    root->size.x += root->padding.left + root->padding.right;
+    root->size.y += root->padding.top + root->padding.bottom;
+
+    for (u32 i = 0; i < root->child_count; i++)
+    {
+        //assuming horizontal layout
+        IUI_Auto_Node* child = root->child[i];
+        float element_width = root->padding.left + root->padding.right;
+        float element_height = root->padding.top + root->padding.bottom;
+        switch (root->layout_direction)
+        {
+        case Insanity_UI_Layout_Horizontal:
+            child->pos.x = root->pos.x + (f32)pos_x_offset;
+            child->pos.y = root->pos.y + (f32)pos_y_offset;
+
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_x_offset += child->size.x + root->child_padding;
+
+            //size the parent
+            switch (root->sizing_type)
+            {
+            case UI_Sizing_Fit:
+                root->size.x += child->size.x;
+                root->size.y = max_f(root->size.y, child->size.y + root->padding.top + root->padding.bottom);
+                break;
+            case UI_Sizing_Grow:
+                break;
+            case UI_Sizing_Fixed:
+                //do nothing
+                break;
+            case UI_Sizing_Percent:
+                break;
+            }
+
+            break;
+        case Insanity_UI_Layout_Vertical:
+            child->pos.x = root->pos.x + (f32)pos_x_offset;
+            child->pos.y = root->pos.y + (f32)pos_y_offset;
+
+            // child->pos.y = root->pos.y + (f32)root->padding_top;
+            pos_y_offset += child->size.y + root->child_padding;
+            //size the parent
+            switch (root->sizing_type)
+            {
+            case UI_Sizing_Fit:
+                root->size.x = max_f(root->size.x, child->size.x + root->padding.left + root->padding.right);
+                root->size.y += child->size.y;
+                break;
+            case UI_Sizing_Grow:
+                break;
+            case UI_Sizing_Fixed:
+                //do nothing
+                break;
+            case UI_Sizing_Percent:
+
+                break;
+            }
+
+            break;
+        }
+
+
+        insanity_ui_resolve_layout(child);
+    }
+
+    // add total gap once after the loop
+    if (root->layout_direction == Insanity_UI_Layout_Horizontal)
+    {
+        root->size.x += total_gap;
+    }
+    else if (root->layout_direction == Insanity_UI_Layout_Vertical)
+    {
+        root->size.y += total_gap;
+    }*/
+}
 
 
 #endif //INSANITY_UI_H

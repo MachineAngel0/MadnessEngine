@@ -60,10 +60,15 @@ typedef enum UI_Layout_Direction
 
 typedef enum Madness_UI_Event_Flags
 {
-    //TODO:
+    //you want interactions in genereal
     Madness_UI_Event_Flags_Interaction = BITFLAG(0),
+    //you want to be navigatable by a controller or keyboard
     Madness_UI_Event_Flags_Navigation = BITFLAG(1),
-}Madness_UI_Event_Flags;
+    // ignores hot/active states and does an individual interaction test
+    Madness_UI_Event_Flags_Individual_Interaction = BITFLAG(2),
+    // just checks for hover ignoring other state
+    Madness_UI_Event_Flags_Individual_Hover = BITFLAG(3),
+} Madness_UI_Event_Flags;
 
 typedef struct UI_Editor_Style
 {
@@ -158,7 +163,6 @@ typedef enum UI_Window_Flag
 
     UI_Window_Flag_Pop_Up = BITFLAG(8),
     UI_Window_Flag_Auto_Resize_To_Min_Content = BITFLAG(9),
-
 } UI_Window_Flag;
 
 typedef enum Madness_UI_Window_Type
@@ -195,7 +199,6 @@ typedef struct Window_State
     UI_Window_Flag flags; // track how far down items have gone down relative to the window
 
 
-
     vec2s cursor_original_pos;
     bool collapsed;
 
@@ -203,7 +206,6 @@ typedef struct Window_State
     // UI_Node* header_node;
     UI_Node* scissor_start_node;
 } Window_State;
-
 
 
 typedef struct Combo_Box_String_State
@@ -237,7 +239,7 @@ typedef struct Madness_UI_Event
     bool pressed; //is this node active and bieng pressed
     bool clicked; // has the mouse been released while hovering over this node
 
-    bool mouse_wheel_scrolled;
+    bool mouse_scrolled;
     bool mouse_wheel_up;
     bool mouse_wheel_down;
     s32 mouse_wheel_delta;
@@ -245,6 +247,8 @@ typedef struct Madness_UI_Event
     float mouse_delta_x;
     float mouse_delta_y;
 
+    s16 mouse_pos_x;
+    s16 mouse_pos_y;
 
     //nagivation events
     bool nav_hovered;
@@ -253,8 +257,6 @@ typedef struct Madness_UI_Event
     bool nav_returned;
     // bool nav_up; ...etc for all directions
 } Madness_UI_Event;
-
-
 
 
 //meant to be used as an editor only UI, made for simplicity and fast iteration
@@ -402,9 +404,6 @@ typedef struct Madness_UI
     u32 output_pressed_id;
 
 
-
-
-
     // DRAW LIST
 
     //type,  type
@@ -439,18 +438,17 @@ void madness_ui_resolve_interaction(void);
 MAPI UI_Render_Packet madness_ui_get_ui_render_data(void);
 
 
-MAPI Madness_UI_Event madness_ui_event(UI_Node* node, bool interactable, bool navigatable);
+MAPI Madness_UI_Event madness_ui_event(UI_Node* node, Madness_UI_Event_Flags event_flags);
 
 
 //API START (besides init/shutdown, begin/end)
-
 
 
 bool madness_ui_pop_up_begin(String pop_up_name);
 bool madness_ui_pop_up_end(void);
 
 
-MAPI void madness_ui_window_begin(String header_name, UI_Window_Flag window_flags);
+MAPI void madness_ui_window_begin(String window_name, UI_Window_Flag window_flags);
 MAPI void madness_ui_window_end(void);
 
 
@@ -565,8 +563,8 @@ MAPI bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry
                                         void* passing_data, const char* id);
 
 MAPI bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Registry* reflection_registry,
-    Reflection_Runtime_Struct struct_info, void* passing_data, const char* id, Asset_List_Scan* texture_asset_list_scan);
-
+                                      Reflection_Runtime_Struct struct_info, void* passing_data, const char* id,
+                                      Asset_List_Scan* texture_asset_list_scan);
 
 
 // simple version
@@ -615,7 +613,6 @@ void madness_ui_set_padding_xy(float x, float y);
 MAPI void madness_ui_config_menu(void);
 
 
-
 //API END
 
 
@@ -641,9 +638,6 @@ void madness_ui_new_scissor_end(void);
 
 MAPI void madness_ui_center_child_node(vec2s parent_pos, vec2s parent_size, vec2s child_size, vec2s* out_pos);
 MAPI char* madness_ui_float_to_char(float value);
-
-
-
 
 
 MAPI bool region_hit(vec2s pos, vec2s size);
