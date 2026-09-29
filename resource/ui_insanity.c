@@ -258,10 +258,39 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
                 IUI_String_Slice* slice = &node_data->slice_pointer[slice_idx];
 
                 // vec2s text_current_pos = node_data->pos;
-                vec2s text_current_pos = slice->slice_pos;
+                vec2s text_current_pos = glms_vec2_zero();
+                switch (slice->alignment_x)
+                {
+                case UI_ALIGNMENT_LEFT_TOP:
+                    text_current_pos.x = node_data->pos.x ;
+                    break;
+                case UI_ALIGNMENT_CENTER:
+                    text_current_pos.x = node_data->pos.x + (node_data->size.x - slice->slice_width)/2;
+                    break;
+                case UI_ALIGNMENT_RIGHT_BOTTOM:
+                    text_current_pos.x = node_data->pos.x + node_data->size.x - slice->slice_width -1 ;
+                    break;
+                }
+
+                f32 remaining_height = (node_data->size.y - node_data->total_slice_height) / node_data->slice_count;
+                switch (slice->alignment_y)
+                {
+                case UI_ALIGNMENT_LEFT_TOP:
+                    text_current_pos.y = node_data->pos.y + slice->slice_height;
+                    break;
+                case UI_ALIGNMENT_CENTER:
+                    text_current_pos.y = node_data->pos.y + (remaining_height/2) + slice->slice_height;
+                    break;
+                case UI_ALIGNMENT_RIGHT_BOTTOM:
+                    text_current_pos.y = node_data->pos.y + remaining_height + slice->slice_height - 1;
+
+                    break;
+                }
+
 
                 //we start from the string slices offset, until we reach the end of the length we sliced
-                for (u64 text_idx = slice->slices.offset; text_idx < slice->slices.offset + slice->slices.length; text_idx++)
+                for (u64 text_idx = slice->slices.offset; text_idx < slice->slices.offset + slice->slices.length;
+                     text_idx++)
                 {
                     const char c = slice->slices.original_string->chars[text_idx];
 
@@ -280,11 +309,11 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
                         /*node_data->pos.x +*/ x_position, /*node_data->pos.y +*/ y_position
                     };
                     text_render_node->pos = glms_vec2_div(text_render_node->pos,
-                                                          insanity_ui->internal_screen_resolution);
+                                                          insanity_ui->screen_size);
 
                     text_render_node->size = (vec2s){x_width, y_height};
                     text_render_node->size = glms_vec2_div(text_render_node->size,
-                                                           insanity_ui->internal_screen_resolution);
+                                                           insanity_ui->screen_size);
 
 
                     text_render_node->rotation = deg_to_rad(node_data->rotation);
@@ -696,7 +725,7 @@ IUI_Node* insanity_ui_text(const char* text)
     IUI_Node* text_node = insanity_ui_node(text);
     text_node->type = Insanity_UI_Node_Type_Text;
     text_node->ui_flags |= UI_FLAG_TEXT;
-    text_node->color = COLOR_WHITE;
+    text_node->color = INSANITY_UI_DEFAULT_TEXT_COLOR;
     //we need to calculate the text size
     text_node->outline_thickness = insanity_ui->text_outline;
     text_node->outline_color = insanity_ui->text_outline_color;
@@ -709,7 +738,8 @@ IUI_Node* insanity_ui_text(const char* text)
     text_node->slice_pointer->slices.original_string = text_string;
     text_node->slice_pointer->slices.offset = 0;
     text_node->slice_pointer->slices.length = text_string->length;
-    text_node->slice_pointer->slice_pos = glms_vec2_zero();
+    text_node->slice_pointer->slice_height = 0;
+    text_node->total_slice_height = insanity_ui->editor_font_size;
 
     vec2s text_size = insanity_ui_text_calculate_size_fast(text, text_string->length);
     text_node->slice_pointer->slice_width = text_size.x;
@@ -719,18 +749,18 @@ IUI_Node* insanity_ui_text(const char* text)
     return text_node;
 }
 
-IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Text_Wrap wrap_mode)
+IUI_Node* insanity_ui_text_wrapped(const char* text, float max_width, UI_Text_Wrap wrap_mode)
 {
     IUI_Node* text_node = insanity_ui_node(text);
     // text_node->text = STRING_CREATE_FROM_BUFFER_ALLOCATOR(text, insanity_ui->frame_allocator);
     text_node->type = Insanity_UI_Node_Type_Text;
     text_node->ui_flags |= UI_FLAG_TEXT;
-    text_node->color = COLOR_WHITE;
+    text_node->color = INSANITY_UI_DEFAULT_TEXT_COLOR;
     //we need to calculate the text size
     text_node->outline_thickness = insanity_ui->text_outline;
     text_node->outline_color = insanity_ui->text_outline_color;
 
-    text_node->size.x = container->size.x;
+    text_node->size.x = max_width;
     text_node->size.y = 0;
 
 
@@ -819,7 +849,7 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Tex
         //loop till we hit a new line, then move down and keep going
         String* text_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(text, insanity_ui->frame_allocator);
         text_node->slice_pointer = &insanity_ui->string_slice_array[insanity_ui->string_slice_count++];
-        text_node->slice_count = 0;
+        text_node->slice_count = 1;
         // text_node->slice_count = 1;
         // text_node->slice_pointer->slices.original_string = text_string;
         // text_node->slice_pointer->slices.offset = 0;
@@ -830,9 +860,11 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Tex
         // text_node->slice_pointer->slice_width = text_size.x;
         // text_node->size = text_size;
 
+        u32 current_line = 0;
         u32 current_string_width = 0;
         u32 last_char_index = 0;
-        f32 previous_pos_y =  text_node->size.y;
+        u32 max_char_height = 0;
+        u32 accumulated_height = 0;
         for (u32 char_index = 0; char_index < text_string->length; char_index++)
         {
             const char c = text[char_index];
@@ -841,6 +873,7 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Tex
             {
                 Glyph* g = &font_data.glyphs[c - 32];
                 current_string_width += (g->advance) * font_scalar; // move offset forward
+                max_char_height = max_f(max_char_height, g->height * font_scalar);
             }
 
             //see if we hit a newline
@@ -850,21 +883,26 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Tex
                 text_node->size.y += insanity_ui->editor_font_size;
 
                 //create a new slice
+                IUI_String_Slice* new_slice = &insanity_ui->string_slice_array[insanity_ui->string_slice_count++];
                 text_node->slice_count++;
-                IUI_String_Slice* new_slice = &text_node->slice_pointer[text_node->slice_count-1];
+                // IUI_String_Slice* new_slice = &text_node->slice_pointer[text_node->slice_count - 1];
+                // text_node->slice_pointer = &insanity_ui->string_slice_array[insanity_ui->string_slice_count++];
                 new_slice->slices.original_string = text_string;
                 new_slice->slices.length = char_index - last_char_index;
                 new_slice->slices.offset = last_char_index;
                 new_slice->debug_string = text_string->chars + new_slice->slices.offset;
 
-                new_slice->slice_pos = (vec2s){
-                    text_node->pos.x, previous_pos_y + insanity_ui->editor_font_size
-                };
                 new_slice->slice_width = current_string_width;
-                previous_pos_y = new_slice->slice_pos.y;
 
-                last_char_index = char_index+1;
+                f32 intermediate = max_f(insanity_ui->editor_font_size, max_char_height );
+                new_slice->slice_height = accumulated_height;
+                accumulated_height += intermediate;
+                text_node->total_slice_height += intermediate;
+
+                max_char_height = 0;
+                last_char_index = char_index + 1;
                 current_string_width = 0;
+                current_line++;
             }
         }
 
@@ -873,6 +911,8 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Tex
 
     return text_node;
 }
+
+
 
 vec2s insanity_ui_text_calculate_size(const char* text)
 {
@@ -986,35 +1026,18 @@ void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
 void insanity_ui_node_align(IUI_Node* node_to_align, IUI_Node* container,
                             UI_Alignment x_alignment, UI_Alignment y_alignment)
 {
-
-    vec2s original_pos = node_to_align->pos;
     insanity_ui_node_align_x(node_to_align, container, x_alignment);
     insanity_ui_node_align_y(node_to_align, container, y_alignment);
     if (node_to_align->type == Insanity_UI_Node_Type_Text)
     {
-        vec2s diff = glms_vec2_sub(node_to_align->pos, original_pos);
-
-        //calculate string size, then align it
         for (u32 i = 0; i < node_to_align->slice_count; i++)
         {
-            node_to_align->slice_pointer[i].slice_pos = glms_vec2_add(node_to_align->slice_pointer[i].slice_pos, diff);
-            // = node_to_align->pos;
+            IUI_String_Slice* slice = &node_to_align->slice_pointer[i];
+            slice->alignment_x = x_alignment;
+            slice->alignment_y = y_alignment;
         }
-
-
-        /*node_to_align->slice_pointer->slice_pos.x = _insanity_ui_node_align_axis(node_to_align->size.x,
-                                                    container->pos.x,
-                                                    container->size.x,
-                                                    x_alignment);
-
-        node_to_align->slice_pointer->slice_pos.y = _insanity_ui_node_align_axis(node_to_align->size.y,
-                                                        container->pos.y,
-                                                        container->size.y,
-                                                        y_alignment);
-        //*/
-        // insanity_ui_node_align_x(node_to_align, container, x_alignment);
-        // insanity_ui_node_align_y(node_to_align, container, y_alignment);
     }
+
 }
 
 
@@ -1098,31 +1121,47 @@ void insanity_ui_test(float dt, float elapsed_time)
     PROFILE_ZONE(insanity_ui_test)
 
 
-    // insanity_ui_button("button", (vec2s){.x = 300.f, .y = 300.f});
+    insanity_ui_button("button", (vec2s){.x = 500.f, .y = 500.f});
+
 
 
 
     /*
-    //wrapped test
-    IUI_Node* test_container = insanity_ui_node("container");
-    test_container->pos = (vec2s){.x = 100.f, .y = 100.f};
-    test_container->size = (vec2s){.x = 100.f, .y = 100.f};
+    //normal text
+    IUI_Node* text_container = insanity_ui_node("container");
+    text_container->pos = (vec2s){.x = 300.f, .y = 300.f};
+    text_container->size = (vec2s){.x = 100.f, .y = 100.f};
+    text_container->color = COLOR_MAGENTA;
 
-    IUI_Node* test_text_wrapped = insanity_ui_text_wrapped("container, oahdoas asdoasdh aoshd oausdh asouh",
-                                                           test_container, UI_Text_Wrap_Wrap);
-    insanity_ui_node_align(test_text_wrapped, test_container, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
-    */
+    IUI_Node* text_align_container = insanity_ui_node("container2");
+    text_align_container->color = COLOR_RED;
+    text_align_container->size = (vec2s){.x = 50.f, .y = 50.f};
+    insanity_ui_node_align(text_align_container, text_container,
+                           UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+    IUI_Node* test_text = insanity_ui_text("a\nb\nc\n");
+    test_text->size = (vec2s){.x = 50.f, .y = 50.f};
+    insanity_ui_node_align(test_text, text_container,
+                           UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);*/
 
 
-    //new line
+    //new line wrapped
     IUI_Node* test_container2 = insanity_ui_node("container");
     test_container2->pos = (vec2s){.x = 100.f, .y = 100.f};
     test_container2->size = (vec2s){.x = 100.f, .y = 100.f};
+    test_container2->color = COLOR_MAGENTA;
 
+    IUI_Node* test_align_container = insanity_ui_node("container2");
+    test_align_container->color = COLOR_RED;
+    test_align_container->size = (vec2s){.x = 50.f, .y = 50.f};
+    insanity_ui_node_align(test_align_container, test_container2,
+                           UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
     IUI_Node* test_text_wrap_newline = insanity_ui_text_wrapped("a\nb\nc\n",
-                                                                test_container2, UI_Text_Wrap_Newline);
+                                                                test_container2->size.x, UI_Text_Wrap_Newline);
+    test_text_wrap_newline->size = (vec2s){.x = 50.f, .y = 50.f};
     insanity_ui_node_align(test_text_wrap_newline, test_container2,
                            UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+
+
 
 
     /*IUI_Node* rect_container = insanity_ui_node("container");
@@ -1174,7 +1213,7 @@ void insanity_ui_test(float dt, float elapsed_time)
     }
 
 
-   IUI_Node* container2 = insanity_ui_node("container2");
+    IUI_Node* container2 = insanity_ui_node("container2");
     insanity_ui_event(container2, Insanity_UI_Event_Flags_Interaction);
     container2->pos = (vec2s){.x = 200, 200};
     container2->size = (vec2s){.x = 200, .y = (sinf(elapsed_time) * 100.f) + 200.f};
@@ -1185,13 +1224,18 @@ void insanity_ui_test(float dt, float elapsed_time)
     }
 
 
+    IUI_Node* text = insanity_ui_text("image");
+    text->pos = (vec2s){container2->pos.x, container2->pos.y};
+    */
+
+
+
+    /*
     IUI_Node* image = insanity_ui_image("image", (Texture_Handle){0, 0});
     // insanity_ui_node_add_interaction(image, UI_EVENT_CLICK);
     image->pos = (vec2s){500, 500};
     image->size = (vec2s){100, 100};
 
-    IUI_Node* text = insanity_ui_text("image");
-    text->pos = (vec2s){container2->pos.x, container2->pos.y};
 
 
     IUI_Node* rect_cut = insanity_ui_node("rect");
@@ -1202,7 +1246,7 @@ void insanity_ui_test(float dt, float elapsed_time)
     {
         rect_cut->color = COLOR_BLUE;
     }
-    IUI_Node* rect_l = insanity_ui_node_cut_right(rect_cut, "rect_l", 0.5);
+    IUI_Node* rect_l = insanity_ui_node_cut_right_percent(rect_cut, "rect_l", 0.5);
     rect_l->color = COLOR_RED;
     // rect_l->size = glms_vec2_zero();
     if (insanity_ui_event(rect_l, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).hovered)
@@ -1213,6 +1257,7 @@ void insanity_ui_test(float dt, float elapsed_time)
     }
 
     insanity_ui_drag(rect_cut);
+    */
 
 
     IUI_Scroll* scroll = insanity_ui_scroll_begin("scroll", (vec2s){1200, 200}, (vec2s){400, 200});
@@ -1237,7 +1282,12 @@ void insanity_ui_test(float dt, float elapsed_time)
             icon->thickness = 1.0f;
             icon->ui_flags |= UI_FLAG_CIRCLE;
 
-            IUI_Node* text_ability = insanity_ui_text("ability x");
+            char a[1000];
+            size_t size = snprintf(NULL, 0, "ability %d", i);
+            snprintf(a, sizeof(a), "ability %d, %d", i, 10);
+
+
+            IUI_Node* text_ability = insanity_ui_text(a);
             insanity_ui_node_align(text_ability, button, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
 
             if (insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation).
@@ -1256,7 +1306,7 @@ void insanity_ui_test(float dt, float elapsed_time)
             insanity_ui_scroll_advance(scroll, button);
         }
     }
-    insanity_scroll_end(scroll);*/
+    insanity_scroll_end(scroll);
 
 
     PROFILE_ZONE_END(insanity_ui_test)

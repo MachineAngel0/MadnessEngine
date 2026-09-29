@@ -117,6 +117,9 @@ typedef struct UI_Render_Node
     vec3s color;
     vec3s background_color;
 
+    //opacity
+    // float opacity;
+
     // scissor data
     // vec2 scissor_pos;
     // vec2 scissor_size;

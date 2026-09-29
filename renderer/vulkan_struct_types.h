@@ -1050,6 +1050,7 @@ typedef struct Renderer
     vulkan_pipeline_cache* pipeline_cache;
 
     Vulkan_Shader_Pipeline ui_pipeline;
+    Vulkan_Shader_Pipeline ui_wireframe_pipeline;
     Vulkan_Shader_Pipeline text_pipeline;
     Vulkan_Shader_Pipeline sprite_pipeline;
 

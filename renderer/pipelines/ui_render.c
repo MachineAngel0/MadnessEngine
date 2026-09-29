@@ -273,6 +273,13 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->ui_pipeline.handle);
+
+    if (renderer->wireframe_mode)
+    {
+        vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                  renderer->ui_wireframe_pipeline.handle);
+    }
+
     vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
 
     //two pipelines are slower than one, and much much faster if I use instancing for them

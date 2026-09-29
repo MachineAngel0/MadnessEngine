@@ -194,7 +194,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
 
     //Pipelines
-    ui_shader_create(renderer, &renderer->ui_pipeline, renderer->pipeline_cache);
+    ui_shader_create(renderer, &renderer->ui_pipeline, &renderer->ui_wireframe_pipeline, renderer->pipeline_cache);
     text_shader_create(renderer, &renderer->text_pipeline, renderer->pipeline_cache);
     sprite_shader_create(renderer, &renderer->sprite_pipeline, renderer->pipeline_cache);
 

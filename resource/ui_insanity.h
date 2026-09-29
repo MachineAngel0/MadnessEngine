@@ -39,6 +39,8 @@
 #define INSANITY_UI_DEFAULT_RESOLUTION_WIDTH 1920llu
 #define INSANITY_UI_DEFAULT_RESOLUTION_HEIGHT 1080llu
 
+#define INSANITY_UI_DEFAULT_TEXT_COLOR COLOR_WHITE
+
 
 typedef enum UI_Text_Wrap
 {
@@ -105,10 +107,15 @@ typedef struct Insanity_UI_Event
 
 typedef struct IUI_String_Slice
 {
-    vec2s slice_pos;
+    // relative position from (0,0) resolved at the end to get proper positions
     f32 slice_width;
+    f32 slice_height;
+
     String_Slice slices;
     char* debug_string;
+
+    UI_Alignment alignment_x;
+    UI_Alignment alignment_y;
 }IUI_String_Slice;
 
 typedef struct IUI_Node
@@ -144,12 +151,20 @@ typedef struct IUI_Node
     //pointer to the first slice within the slices array
     IUI_String_Slice* slice_pointer;
     u32 slice_count; // how many of these we have
+    u32 total_slice_height; // height of all the slices
 
     //colors
     vec3s color;
 
     s32 z_order;
 } IUI_Node;
+
+typedef enum IUI_Scroll_Flags
+{
+    IUI_Scroll_Flags_Size_By_Screen_Size_Percent,
+    IUI_Scroll_Flags_Align, //use global state to align to something, if nothing will be the screen size
+} IUI_Scroll_Flags;
+
 
 typedef struct IUI_Scroll
 {
@@ -164,11 +179,19 @@ typedef struct IUI_Scroll
     IUI_Node* scroll_bar;
 } IUI_Scroll;
 
-typedef enum IUI_Scroll_Flags
+
+
+typedef struct IUI_Window
 {
-    IUI_Scroll_Flags_Size_By_Screen_Size_Percent,
-    IUI_Scroll_Flags_Align, //use global state to align to something, if nothing will be the screen size
-} IUI_Scroll_Flags;
+    u32 id;
+} IUI_Window;
+
+
+typedef struct IUI_Panel
+{
+    u32 id;
+
+} IUI_Panel;
 
 
 typedef struct IUI_Drag_State
@@ -348,6 +371,8 @@ IUI_Node* insanity_ui_node_cut_bottom_percent(IUI_Node* parent, const char* name
 
 
 //Windows
+IUI_Scroll* insanity_ui_window_begin(const char* name, vec2s pos, vec2s size);
+void insanity_ui_window_end(IUI_Scroll* window_state);
 
 //scroll
 IUI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size);
@@ -380,7 +405,7 @@ void pop_up_end();
 IUI_Node* insanity_ui_text(const char* text);
 IUI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
 
-IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Text_Wrap wrap_mode);
+IUI_Node* insanity_ui_text_wrapped(const char* text, float max_width, UI_Text_Wrap wrap_mode);
 
 
 
@@ -535,7 +560,7 @@ void insanity_ui_drag(IUI_Node* node)
     }
 }
 
-void insanity_ui_drag_to_mouse_position(IUI_Node* node)
+void insanity_ui_drag_and_snap_center_to_mouse_position(IUI_Node* node)
 {
     //find the drag state, then adjust position is it moves
     IUI_Drag_State* drag_state = insanity_ui_get_drag_state(node);

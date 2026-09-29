@@ -21,7 +21,7 @@ VkShaderModule create_shader_module(Renderer* renderer, const u8* shader_bytes, 
 
 
 
-bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache)
+bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, Vulkan_Shader_Pipeline* ui_wireframe_pipeline, vulkan_pipeline_cache* pipeline_cache)
 {
     // Pipeline layout creation
     VkDescriptorSetLayout set_layouts[3] = {
@@ -253,6 +253,28 @@ bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, v
     if (graphics_result != VK_SUCCESS)
     {
         FATAL("failed to create graphics pipeline!");
+    }
+
+    if (ui_wireframe_pipeline)
+    {
+        VkResult wireframe_pipeline_result = vkCreatePipelineLayout(renderer->logical_device,
+                                                                    &pipeline_layout_info,
+                                                                    NULL,
+                                                                    &ui_wireframe_pipeline->pipeline_layout);
+
+        VK_CHECK(wireframe_pipeline_result);
+
+
+        rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+
+        VkResult wireframe_graphics_result = vkCreateGraphicsPipelines(renderer->logical_device,
+                                                                       renderer->pipeline_cache->handle, 1,
+                                                                       &graphics_pipeline_info, NULL,
+                                                                       &ui_wireframe_pipeline->handle);
+        if (wireframe_graphics_result != VK_SUCCESS)
+        {
+            FATAL("VULKAN PIPELINE GRAPHICS CREATE: failed to create graphics pipeline for wireframe!");
+        }
     }
 
     //TODO: replace with scratch arena
@@ -532,6 +554,8 @@ bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipelin
         FATAL("failed to create graphics pipeline!");
     }
 
+
+
     //TODO: replace with scratch arena
     file_read_data_free(&vert_data);
     file_read_data_free(&frag_data);
@@ -789,10 +813,14 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
                                                          pipeline_cache->handle, 1,
                                                          &graphics_pipeline_info, NULL,
                                                          &sprite_pipeline->handle);
+
     if (graphics_result != VK_SUCCESS)
     {
         FATAL("failed to create graphics pipeline!");
     }
+
+
+
 
     //TODO: replace with scratch arena
     file_read_data_free(&vert_data);

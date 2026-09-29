@@ -389,13 +389,14 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
 
         VK_CHECK(wireframe_pipeline_result);
 
-
         rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
 
         VkResult wireframe_graphics_result = vkCreateGraphicsPipelines(renderer->logical_device,
                                                                        renderer->pipeline_cache->handle, 1,
                                                                        &graphics_pipeline_info, NULL,
                                                                        &out_wire_frame_pipeline->handle);
+        // VK_CHECK(wireframe_pipeline_result);
+
         if (wireframe_graphics_result != VK_SUCCESS)
         {
             FATAL("VULKAN PIPELINE GRAPHICS CREATE: failed to create graphics pipeline for wireframe!");

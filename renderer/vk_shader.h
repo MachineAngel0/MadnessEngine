@@ -23,7 +23,8 @@ bool sk_mesh_pipeline_create(Renderer* renderer, Vulkan_Shader_Pipeline* skinned
 
 
 //NOTE: Might be able to change these into more generic sprites
-bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, vulkan_pipeline_cache* pipeline_cache);
+bool ui_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* ui_pipeline, Vulkan_Shader_Pipeline* ui_wireframe_pipeline, vulkan_pipeline_cache* pipeline_cache);
+
 bool text_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* text_pipeline,
                         vulkan_pipeline_cache* pipeline_cache);
 bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pipeline,
