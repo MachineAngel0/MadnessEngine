@@ -47,8 +47,10 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     }
 
 
-    madness_ui->draw_command_list = dynamic_array_create_heap(UI_Draw_Command, MAX_UI_DRAW_COUNT,
-                                                              madness_ui->heap_allocator);
+    // madness_ui->draw_command_list = dynamic_array_create_heap(UI_Draw_Command, MAX_UI_DRAW_COUNT,
+    // madness_ui->heap_allocator);
+    madness_ui->draw_command_list = allocator_heap_alloc(madness_ui->heap_allocator,
+                                                         sizeof(UI_Draw_Command) * MAX_UI_DRAW_COUNT);
 
 
     madness_ui->window_type_stack = array_create(Madness_UI_Window_Type, 100, madness_ui->allocator);
@@ -423,8 +425,8 @@ void madness_ui_resolve_interaction(void)
     madness_ui->event_result.mouse_scrolled = madness_ui->mouse_wheel_down || madness_ui->mouse_wheel_up;
     madness_ui->event_result.mouse_wheel_up = madness_ui->mouse_wheel_up;
     madness_ui->event_result.mouse_wheel_down = madness_ui->mouse_wheel_down;
-    madness_ui->event_result.mouse_wheel_up =  madness_ui->mouse_wheel_up;
-    madness_ui->event_result.mouse_wheel_down =  madness_ui->mouse_wheel_down;
+    madness_ui->event_result.mouse_wheel_up = madness_ui->mouse_wheel_up;
+    madness_ui->event_result.mouse_wheel_down = madness_ui->mouse_wheel_down;
     madness_ui->event_result.mouse_wheel_delta = madness_ui->mouse_wheel_delta;
     madness_ui->event_result.mouse_pos_x = madness_ui->mouse_pos_x;
     madness_ui->event_result.mouse_pos_y = madness_ui->mouse_pos_y;
@@ -474,8 +476,8 @@ Madness_UI_Event madness_ui_event(UI_Node* node, Madness_UI_Event_Flags event_fl
             out_event.mouse_delta_x = madness_ui->mouse_delta_x;
             out_event.mouse_delta_y = madness_ui->mouse_delta_y;
             out_event.mouse_scrolled = madness_ui->mouse_wheel_down || madness_ui->mouse_wheel_up;
-            out_event.mouse_wheel_up =  madness_ui->mouse_wheel_up;
-            out_event.mouse_wheel_down =  madness_ui->mouse_wheel_down;
+            out_event.mouse_wheel_up = madness_ui->mouse_wheel_up;
+            out_event.mouse_wheel_down = madness_ui->mouse_wheel_down;
             out_event.mouse_wheel_delta = madness_ui->mouse_wheel_delta;
             out_event.mouse_pos_x = madness_ui->mouse_pos_x;
             out_event.mouse_pos_y = madness_ui->mouse_pos_y;
@@ -1440,7 +1442,8 @@ bool madness_ui_button(const String label)
     button_node->flags = UI_FLAG_CLICKABLE;
     button_node->color = madness_ui->editor_style.color;
 
-    madness_ui_string_internal(label, button_node->pos, button_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
+    madness_ui_string_internal(label, button_node->pos, button_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
 
     madness_ui_advance_cursor(button_size);
 
@@ -1637,7 +1640,8 @@ void madness_ui_slider_scroll(String id, float* slider_val, float min, float max
 
     char* float_char = madness_ui_float_to_char(*slider_val);
     String float_string = STRING_STRLEN(float_char);
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
+    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
 
 
     //update ui state for the next element
@@ -1673,7 +1677,8 @@ void madness_ui_slider_arrow(String id, float* slider_val, float min, float max)
     char* float_char = madness_ui_float_to_char(*slider_val);
     String float_string = STRING_STRLEN(float_char);
 
-    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
+    madness_ui_string_internal(float_string, quad_node->pos, quad_node->size, UI_ALIGNMENT_X_CENTER,
+                               UI_ALIGNMENT_X_CENTER);
 
 
     //update ui state for the next element
@@ -2033,7 +2038,7 @@ void madness_ui_text_box(String id)
     }
 
 
-    String* display_string = string_builder_to_string(string_state->active_menu_item);
+    String* display_string = string_builder_to_string(string_state->active_menu_item, madness_ui->frame_allocator);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
                                UI_ALIGNMENT_X_LEFT,
@@ -2115,7 +2120,7 @@ void madness_ui_file_picker(String id)
     text_box->color = madness_ui->editor_style.textbox_color;
 
 
-    String* display_string = string_builder_to_string(string_state->active_menu_item);
+    String* display_string = string_builder_to_string(string_state->active_menu_item, madness_ui->frame_allocator);
 
     madness_ui_string_internal(*display_string, madness_ui->cursor_pos, text_box->size,
                                UI_ALIGNMENT_X_LEFT,
@@ -2638,7 +2643,7 @@ bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array
     //basically we want to defer this draw after everything else
     if (string_compare(&madness_ui->active_combo_box, &id))
     {
-        String* pop_up_name = string_concat(&id, &STRING("combo_box"), madness_ui->frame_allocator);
+        String* pop_up_name = string_concat(&id, &STRING(": Combo Box"), madness_ui->frame_allocator);
         madness_ui_pop_up_begin(*pop_up_name);
 
         for (u32 i = 0; i < char_array_size; i++)
@@ -3062,7 +3067,7 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
         string_builder_append_c_string(builder, id);
         string_builder_append_c_string(builder, ": ");
 
-        String* custom_name = string_builder_to_string(builder);
+        String* custom_name = string_builder_to_string(builder, madness_ui->frame_allocator);
 
         switch (field_info.type)
         {
@@ -3138,7 +3143,8 @@ bool madness_ui_reflect_using_data(Reflection_Registry* reflection_registry, Ref
                     string_builder_append_c_string(builder, runtime_enum.enum_names[i]);
                     string_builder_append_c_string(builder, "_");
                     string_builder_append_c_string(builder, id);
-                    madness_ui_check_box(*string_builder_to_string(builder), &runtime_enum.bitflag_values[i]);
+                    madness_ui_check_box(*string_builder_to_string(builder, madness_ui->frame_allocator),
+                                         &runtime_enum.bitflag_values[i]);
                 }
 
                 break;
@@ -3196,7 +3202,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
         string_builder_append_c_string(builder, ": ");
         string_builder_append_c_string(builder, id);
         string_builder_append_c_string(builder, ": ");
-        String* custom_name = string_builder_to_string(builder);
+        String* custom_name = string_builder_to_string(builder, madness_ui->frame_allocator);
 
         switch (field_info.type)
         {
@@ -3271,7 +3277,8 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
                     string_builder_append_c_string(builder, runtime_enum.enum_names[i]);
                     string_builder_append_c_string(builder, "_");
                     string_builder_append_c_string(builder, id);
-                    madness_ui_check_box(*string_builder_to_string(builder), &runtime_enum.bitflag_values[i]);
+                    madness_ui_check_box(*string_builder_to_string(builder, madness_ui->frame_allocator),
+                                         &runtime_enum.bitflag_values[i]);
                 }
 
                 break;

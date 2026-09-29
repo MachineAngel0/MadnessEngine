@@ -47,6 +47,11 @@ void string_builder_append_c_string_length(String_Builder* str_builder, const ch
 void string_builder_append_char(String_Builder* str_builder, char character);
 void string_builder_append_u64(String_Builder* str_builder, u64 val, Allocator* allocator);
 
+
+//only use with string defines as such "string" and not none const strings
+#define string_builder_append_c_string_literal(builder, string) string_builder_append_c_string(builder, string, sizeof(string)-1)
+
+
 void string_builder_decrement(String_Builder* str_builder);
 
 
@@ -59,7 +64,7 @@ bool string_builder_strip_path_from_end(String_Builder* builder);
 String_Builder* string_builder_duplicate(const String_Builder* builder, Allocator* allocator);
 
 
-String* string_builder_to_string(const String_Builder* builder);
+String* string_builder_to_string(const String_Builder* builder, Allocator* allocator);
 String* string_builder_to_string_allocator(const String_Builder* builder, Allocator* allocator);
 String* string_builder_to_string_heap(const String_Builder* builder, Heap_Allocator* allocator);
 

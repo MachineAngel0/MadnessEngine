@@ -30,7 +30,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
+    editor->state = EDITOR_UI_STATE_CHAOS_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
 
     editor_generate_asset_lists(editor, memory_system);
@@ -151,6 +151,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_ANIMATION:
         editor_ui_animation(editor);
         break;
+    case EDITOR_UI_STATE_CHAOS_UI_TEST:
+        chaos_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
+        break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
         insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
         break;
@@ -216,6 +219,7 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_PARTICLE:
         editor_particle_view(editor);
         break;
+
     }
 }
 
@@ -756,7 +760,7 @@ void editor_render_view(Editor* editor)
     {
         madness_ui_check_box(STRING("DEBUG AXIS"), &renderer->draw_debug_axis);
 
-        madness_ui_combo_box_char(STRING("RENDER_MODE"), &renderer->mode, render_mode_enum_string,
+        madness_ui_combo_box_char(STRING("Render Mode"), &renderer->mode, render_mode_enum_string,
                                   ARRAY_SIZE(render_mode_enum_string));
     }
     madness_ui_window_end();

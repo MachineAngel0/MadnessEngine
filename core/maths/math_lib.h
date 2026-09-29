@@ -99,37 +99,36 @@ bool u32_sub_overflow(const u32 a, const u32 b, u32* out_subtraction_result)
 }
 
 
-
 static const vec3s COLOR_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
 static const vec3s COLOR_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f};
-static const vec3s COLOR_GREY = {0.5f, 0.5f, 0.5f};
-static const vec3s COLOR_WHITE = {1.0f, 1.0f, 1.0f};
-static const vec3s COLOR_RED = {1.0f, 0.0f, 0.0f};
-static const vec3s COLOR_GREEN = {0.0f, 1.0f, 0.0f};
-static const vec3s COLOR_BLUE = {0.0f, 0.0f, 1.0f};
-static const vec3s COLOR_YELLOW = {1.0f, 1.0f, 0.0f};
-static const vec3s COLOR_MAGENTA = {1.0f, 0.0f, 1.0f};
-static const vec3s COLOR_VIOLET = {0.5f, 0.0f, 1.0f};
-static const vec3s COLOR_HOT_PINK = {1.0f, 0.412f, 0.706f};
-static const vec3s COLOR_ORANGE = {1.0f, 0.5f, 0.0f};
+static const vec3s COLOR_GREY = {.x = 0.5f, 0.5f, 0.5f};
+static const vec3s COLOR_WHITE = {.x = 1.0f, 1.0f, 1.0f};
+static const vec3s COLOR_RED = {.x = 1.0f, 0.0f, 0.0f};
+static const vec3s COLOR_GREEN = {.x = 0.0f, 1.0f, 0.0f};
+static const vec3s COLOR_BLUE = {.x = 0.0f, 0.0f, 1.0f};
+static const vec3s COLOR_YELLOW = {.x = 1.0f, 1.0f, 0.0f};
+static const vec3s COLOR_MAGENTA = {.x = 1.0f, 0.0f, 1.0f};
+static const vec3s COLOR_VIOLET = {.x = 0.5f, 0.0f, 1.0f};
+static const vec3s COLOR_HOT_PINK = {.x = 1.0f, 0.412f, 0.706f};
+static const vec3s COLOR_ORANGE = {.x = 1.0f, 0.5f, 0.0f};
 
 //// COLORS4 ////
 
 static const vec4s COLOR4_BLACK = {.x = 0.0f, .y = 0.0f, .z = 0.0f, .w = 1.0f};
 static const vec4s COLOR4_BLACK_LIGHT = {.x = 3.f / 255.f, .y = 3.f / 255.f, .z = 7.f / 255.f, .w = 1.0f};
-static const vec4s COLOR4_GREY = {0.5f, 0.5f, 0.5f, .w = 1.0f};
-static const vec4s COLOR4_WHITE = {1.0f, 1.0f, 1.0f, .w = 1.0f};
-static const vec4s COLOR4_RED = {1.0f, 0.0f, 0.0f, .w = 1.0f};
-static const vec4s COLOR4_GREEN = {0.0f, 1.0f, 0.0f, .w = 1.0f};
-static const vec4s COLOR4_BLUE = {0.0f, 0.0f, 1.0f, .w = 1.0f};
-static const vec4s COLOR4_YELLOW = {1.0f, 1.0f, 0.0f, .w = 1.0f};
-static const vec4s COLOR4_MAGENTA = {1.0f, 0.0f, 1.0f, .w = 1.0f};
-static const vec4s COLOR4_VIOLET = {0.5f, 0.0f, 1.0f, .w = 1.0f};
-static const vec4s COLOR4_HOT_PINK = {1.0f, 0.412f, 0.706f, .w = 1.0f};
-static const vec4s COLOR4_ORANGE = {1.0f, 0.5f, 0.0f, .w = 1.0f};
-static const vec4s COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_GREY = {.x = 0.5f, 0.5f, 0.5f, .w = 1.0f};
+static const vec4s COLOR4_WHITE = {.x = 1.0f, 1.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_RED = {.x = 1.0f, 0.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_GREEN = {.x = 0.0f, 1.0f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_BLUE = {.x = 0.0f, .y = 0.0f, .z = 1.0f, .w = 1.0f};
+static const vec4s COLOR4_YELLOW = {.x = 1.0f, .y = 1.0f, .z = 0.0f, .w = 1.0f};
+static const vec4s COLOR4_MAGENTA = {.x = 1.0f, 0.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_VIOLET = {.x = 0.5f, 0.0f, 1.0f, .w = 1.0f};
+static const vec4s COLOR4_HOT_PINK = {.x = 1.0f, 0.412f, 0.706f, .w = 1.0f};
+static const vec4s COLOR4_ORANGE = {.x = 1.0f, 0.5f, 0.0f, .w = 1.0f};
+static const vec4s COLOR_TRANSPARENT = {.x = 0.0f, 0.0f, 0.0f, .w = 1.0f};
 
-//Purple Color Pallette
+//UI Color Pallette
 static const vec3s COLOR_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f};
 static const vec3s COLOR_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f};
 static const vec3s COLOR_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f};
@@ -138,7 +137,19 @@ static const vec3s COLOR_PURPLE_PALETTE_PURPLE_LIGHT = {.x = 183.f / 255.f, .y =
 static const vec3s COLOR_PURPLE_PALETTE_PURPLE_LIGHT2 = {.x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f};
 static const vec3s COLOR_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f};
 
-
+static const vec4s COLOR4_PURPLE_PALETTE_DARK = {.x = 33.f / 255.f, .y = 37.f / 255.f, .z = 49.f / 255.f, 1.f};
+static const vec4s COLOR4_PURPLE_PALETTE_DARK2 = {.x = 60.f / 255.f, .y = 19.f / 255.f, .z = 92.f / 255.f, 1.f};
+static const vec4s COLOR4_PURPLE_PALETTE_PURPLE = {.x = 75.f / 255.f, .y = 58.f / 255.f, .z = 112.f / 255.f, 1.f};
+static const vec4s COLOR4_PURPLE_PALETTE_PURPLE_STRONG = {
+    .x = 96.f / 255.f, .y = 31.f / 255.f, .z = 158.f / 255.f, 1.f
+};
+static const vec4s COLOR4_PURPLE_PALETTE_PURPLE_LIGHT = {
+    .x = 183.f / 255.f, .y = 162.f / 255.f, .z = 201.f / 255.f, 1.f
+};
+static const vec4s COLOR4_PURPLE_PALETTE_PURPLE_LIGHT2 = {
+    .x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f, 1.f
+};
+static const vec4s COLOR4_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f, 1.f};
 
 
 /*** RANDOM ***/
@@ -190,6 +201,26 @@ float rand_range_f(const float min, const float max)
 }
 
 
+//random color
+inline vec3s random_color3(void)
+{
+    return (vec3s){
+        .x = rand_range_f(0, 1),
+        .y = rand_range_f(0, 1),
+        .z = rand_range_f(0, 1)
+    };
+}
+
+inline vec4s random_color4(void)
+{
+    return (vec4s){
+        .x = rand_range_f(0, 1),
+        .y = rand_range_f(0, 1),
+        .z = rand_range_f(0, 1),
+        .w = 1.0,
+    };
+}
+
 /*** CLAMP ***/
 MINLINE u8 clamp_u8(const u8 cur_val, const u8 min, const u8 max)
 {
@@ -230,6 +261,7 @@ MINLINE u32 clamp_u32(const u32 cur_val, const u32 min, const u32 max)
     }
     return cur_val;
 }
+
 MINLINE u64 clamp_u64(const u64 cur_val, const u64 min, const u64 max)
 {
     if (cur_val > max)
@@ -281,6 +313,7 @@ MINLINE s32 clamp_s32(const s32 cur_val, const s32 min, const s32 max)
     }
     return cur_val;
 }
+
 MINLINE s64 clamp_s64(const s64 cur_val, const s64 min, const s64 max)
 {
     if (cur_val > max)

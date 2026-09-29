@@ -30,6 +30,7 @@
 
 #include "pipelines/sprite_render.h"
 #include "pipelines/ui_render.h"
+#include "pipelines/chaos_ui_render.h"
 #include "vulkan_mesh_system.h"
 #include "pipelines/particle_render.h"
 

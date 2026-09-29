@@ -31,7 +31,9 @@
 #include "ui_insanity.h"
 #include "ui_madness.h"
 
-// #include "ui_insanity_editor.h"
+#include "ui_chaos_structs_enums.h"
+#include "ui_chaos.h"
+
 
 
 

@@ -14,6 +14,7 @@
 #include "sprite_type.h"
 
 #include "transforms.h"
+#include "ui_chaos_structs_enums.h"
 #include "ui_types.h"
 #include "UUID.h"
 
@@ -1190,7 +1191,10 @@ typedef struct Render_Packet
 
     //rn we just have one of each,
     Render_Packet_Sprite sprite_data_packet;
+
     Render_Packet_UI ui_data_packet;
+    Chaos_UI_Render_Packet chaos_ui_render_packet;
+
     Render_Packet_3D draw_3d_data_packet;
     Render_Packet_Particle particle_packet;
 } Render_Packet;

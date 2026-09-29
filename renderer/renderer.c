@@ -183,8 +183,10 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Config platform
 
     // Sprite Backend
     renderer->sprite_renderer = sprite_render_init(renderer);
+
     // UI Backend
     renderer->ui_renderer = ui_render_init(renderer);
+    renderer->cui_renderer = chaos_ui_render_init(renderer);
 
 
     //debug draw utility
@@ -260,6 +262,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     allocator_clear(&renderer->frame_allocator);
 
+    if (input_key_released_unique(KEY_I))
+    {
+        renderer->wireframe_mode = !renderer->wireframe_mode;
+    }
+
     //
     if (renderer->draw_debug_axis && app_is_debug_build())
     {
@@ -274,7 +281,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         debug_draw_line(origin, y_axis, (vec4s){0.0f, 1.0f, 0.0f, 1.0f});
         debug_draw_line(origin, z_axis, (vec4s){0.0f, 0.0f, 1.0f, 1.0f});
     }
-
 
 
     // Begin recording commands.
@@ -347,6 +353,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     light_system_update(renderer, renderer->light_system, graphics_command_buffer);
 
     ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
+    chaos_ui_renderer_upload_draw_data(renderer->cui_renderer, renderer, &render_packets->chaos_ui_render_packet,
+                                       graphics_command_buffer);
 
 
     mesh_renderer_upload_draw_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
@@ -358,7 +366,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                        render_packets, graphics_command_buffer);
 
     debug_system_upload_frame_data(renderer);
-
 
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
@@ -375,7 +382,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         .width = (f32)renderer->framebuffer_width,
         .height = (f32)renderer->framebuffer_height,
         .minDepth = 0.0f,
-        .maxDepth =1.0f,
+        .maxDepth = 1.0f,
     };
 
     // Scissor
@@ -638,6 +645,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
     ui_renderer_insanity_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
+    chaos_ui_renderer_draw(renderer->cui_renderer, renderer, graphics_command_buffer);
 
 
     // Finish the current dynamic rendering section
@@ -687,7 +695,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     renderer->current_frame = (renderer->current_frame + 1) % renderer->max_frames_in_flight;
 
     PROFILE_ZONE_END(renderer_update)
-
 }
 
 
@@ -699,9 +706,7 @@ void renderer_shutdown(Renderer* renderer)
     vkDeviceWaitIdle(renderer->logical_device);
 
 
-
     debug_draw_system_deinit();
-
 
 
     // Destroy in the opposite order of creation.

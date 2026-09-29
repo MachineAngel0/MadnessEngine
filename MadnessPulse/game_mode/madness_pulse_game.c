@@ -100,7 +100,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
         IUI_Node* load_game = insanity_ui_text("Load Game");
         IUI_Node* new_game = insanity_ui_text("New Game");
 
-        background_menu->size = insanity_ui_node_get_screen_size_percent(0.2, 0.2);
+        background_menu->size = insanity_ui_screen_size_percent(0.2, 0.2);
         insanity_ui_node_align_to_screen_size(background_menu, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
         /*load_game->pos = */
         insanity_ui_node_align_to_screen_size(load_game, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);

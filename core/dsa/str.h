@@ -18,11 +18,14 @@ typedef struct String
 typedef String Path_String;
 
 
-typedef struct String_Tokenizer
+
+
+typedef struct String_Slice
 {
-    u64 number_of_strings;
-    String** strings;
-} String_Tokenizer;
+    u64 offset;
+    u64 length;
+    String* original_string;
+} String_Slice;
 
 //TODO: idk of i really want to implement this
 typedef enum DELIMITER_BEHAVIOR
@@ -34,7 +37,6 @@ typedef enum DELIMITER_BEHAVIOR
 
 
 //NOTE: do not call this, just use STRING_CREATE(string) unless you specifically need to pass in the size for some reason
-String* string_create(const char* word, const u64 length);
 bool string_free(String* string);
 
 String* string_create_allocator(const char* word, u64 length, Allocator* allocator);
@@ -47,9 +49,9 @@ bool string_free_allocator_heap(String* string, Heap_Allocator* allocator);
 
 #define STRING_STRLEN(string) ((String){.chars = (char*)(string), .length = strlen(string)})
 //will convert the string into the correct size, for some reason doesn't work after the string has been passed as a param
-#define STRING_CREATE(string) string_create(string, sizeof(string))
+#define STRING_CREATE(string, allocator) string_create_allocator(string, sizeof(string), allocator)
+#define STRING_CREATE_HEAP(string, allocator) string_create_allocator_heap(string, sizeof(string), allocator)
 //create a string from an already existing char[]/char* that excludes the null terminated string
-#define STRING_CREATE_FROM_BUFFER(string) string_create(string, strlen(string))
 #define STRING_CREATE_FROM_BUFFER_ALLOCATOR(string, allocator) string_create_allocator(string, strlen(string), allocator)
 #define STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(string, heap_allocator) string_create_allocator_heap(string, strlen(string), heap_allocator)
 
@@ -104,34 +106,28 @@ bool string_compare_c_string_length(const String* str1, const char* c_str, size_
 
 
 /*STRING SLICE*/
+String_Slice* string_slice_from(String* s, u64 slice_size, Allocator* allocator);
 
-String* string_slice_from(const String* s, u64 slice_size);
+String_Slice* string_slice_from_to(String* s, u64 slice_begin, u64 slice_end, Allocator* allocator);
 
-String* string_slice_from_to(const String* s, u64 slice_begin, u64 slice_end);
+String_Slice* string_strip_from_end(const String* str, char stop_character, Allocator* allocator);
 
-String* string_strip_from_end(const String* str, char stop_character);
+void string_slice_print(const String_Slice* slice);
 
 
-//creates a copy of the string/words passed in
-String_Tokenizer* string_tokenize_delimiter(const String* s, char delimiter);
 
-String_Tokenizer* string_tokenize_delimiter_array(const String* s, const String* delimiter_array,
-                                                  bool ignore_whitespace);
-
-void string_tokenizer_print(const String_Tokenizer* str_tokens);
-//returns copy of the strings
-#define STRING_TOKENIZE(s) string_tokenize_delimiter(s, ' ')
-
+//Serialization
 
 bool string_serialize(String* string, FILE* fptr);
 bool string_deserialize(String* string, FILE* fptr, Allocator* allocator);
 bool string_deserialize_heap(String* string, FILE* fptr, Heap_Allocator* allocator);
 
 
+//hash
 u32 string_hash_u32(String string);
 u64 string_hash_u64(String string);
 
-
+//test
 void string_test(void);
 
 

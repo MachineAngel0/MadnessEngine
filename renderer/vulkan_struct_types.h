@@ -737,6 +737,23 @@ typedef struct UI_Renderer
     u64 insanity_ui_draw_count;
 } UI_Renderer_Backend;
 
+typedef struct Chaos_UI_Backend
+{
+    Buffer_Handle ui_vertex_buffer_handle;
+    Buffer_Handle ui_index_buffer_handle;
+
+    Chaos_UI_Render_Packet* cui_render_packet;
+
+    //material buffers
+    Buffer_Frame_Handle cui_ssbo_handle;
+
+    //pipelines
+    Vulkan_Shader_Pipeline cui_pipeline;
+    Vulkan_Shader_Pipeline cui_wireframe_pipeline;
+
+
+    u64 chaos_ui_draw_count;
+} Chaos_UI_Renderer_Backend;
 
 typedef struct Sprite_Backend
 {
@@ -1026,6 +1043,7 @@ typedef struct Renderer
 
     //draw systems
     UI_Renderer_Backend* ui_renderer;
+    Chaos_UI_Renderer_Backend* cui_renderer;
 
 
     //pipelines

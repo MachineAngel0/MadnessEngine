@@ -29,8 +29,10 @@ void allocator_clear(Allocator* a)
 
 void allocator_clear_and_zero(Allocator* a)
 {
+    PROFILE_ZONE(allocator_clear_and_zero);
     a->current_offset = 0;
     memset(a->memory, 0, a->capacity); //NOTE: this is really fucking slow, dont call it every frame
+    PROFILE_ZONE_END(allocator_clear_and_zero);
 }
 
 //you can use align = 1, if you dont care about alignment, otherwise typically 4 or 8

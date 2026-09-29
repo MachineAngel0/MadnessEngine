@@ -127,7 +127,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                     application_core->input_system,
                     application_core->asset_system);
 
-
+    chaos_ui_init(&application_core->memory_system,
+                    application_core->input_system,
+                    application_core->asset_system);
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
 
@@ -216,7 +218,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                          renderer_plugin->renderer->framebuffer_height_new);
         insanity_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
                           renderer_plugin->renderer->framebuffer_height_new);
-
+        chaos_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
+                          renderer_plugin->renderer->framebuffer_height_new);
 
         //game and editor switch between
         if (input_key_released_unique(KEY_TAB))
@@ -250,12 +253,16 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         madness_ui_end();
 
 
-        //render packet
+        //render packets
         asset_system_update_and_create_render_packet(application_core->asset_system);
 
         application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet = insanity_ui_end();
         application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
             madness_ui_get_ui_render_data();
+
+        application_core->asset_system->render_packet->chaos_ui_render_packet = chaos_ui_end();
+
+
         //TODO:
         // application_core->resource_system->render_packet->ui_data_packet.insanity_ui_render_packet =
         // insanity_get_render_data();

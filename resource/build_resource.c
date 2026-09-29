@@ -18,3 +18,4 @@
 
 #include "ui_insanity.c"
 #include "ui_madness.c"
+#include "ui_chaos.c"

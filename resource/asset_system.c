@@ -27,8 +27,7 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->allocator = memory_system_allocator_create(memory_system, MB(16),
                                                              MEMORY_SUBSYSTEM_RESOURCE);
     asset_system->scratch_allocator = memory_system_allocator_create(memory_system, MB(16),
-                                                             MEMORY_SUBSYSTEM_RESOURCE);
-
+                                                                     MEMORY_SUBSYSTEM_RESOURCE);
 
 
     //texture memory
@@ -144,9 +143,6 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         skinned_mesh_instance_count;
 
 
-
-
-
     PROFILE_ZONE_END(asset_system_update_and_create_render_packet)
 
     return true;
@@ -179,7 +175,7 @@ Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* a
     string_builder_append_c_string(string_builder, ENGINE_TEXTURE_EXTENSION);
 
 
-    String* load_asset_path = string_builder_to_string(string_builder);
+    String* load_asset_path = string_builder_to_string(string_builder, scratch.allocator);
 
     Asset_MetaData* meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_MetaData));
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
@@ -311,32 +307,35 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
 
 
     Texture_Handle out_handle = (Texture_Handle){0};
-
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
 
     String_Builder* string_builder = string_builder_create(512, asset_system->frame_allocator);
     string_builder_append_c_string(string_builder, ENGINE_FONTS_PATH);
     string_builder_append_c_string(string_builder, engine_asset_path);
     string_builder_append_c_string(string_builder, ENGINE_FONTS_EXTENSION);
 
-    String* load_asset_path = string_builder_to_string(string_builder);
+    String* load_asset_path = string_builder_to_string(string_builder, scratch.allocator);
 
     Asset_MetaData* meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_MetaData));
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, load_asset_path, meta_data))
     {
         //TODO: try to load in the asset from the import path
         FATAL("ASSET NOT FOUND: %s", engine_asset_path);
+        scratch_allocator_end(scratch);
         return out_handle;
     }
 
     if (meta_data->hash == 0)
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
+        scratch_allocator_end(scratch);
         return out_handle;
     }
 
     //has asset already been loaded
     if (texture_system_exists(asset_system, &out_handle, meta_data->hash))
     {
+        scratch_allocator_end(scratch);
         return out_handle;
     }
 
@@ -375,6 +374,7 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
     PROFILE_ZONE_END(asset_load_font_path)
 
 
+    scratch_allocator_end(scratch);
     return out_handle;
 }
 
@@ -657,7 +657,6 @@ bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
 }
 
 
-
 bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data, Material_Handle* out_material_handle)
 {
     MASSERT(asset_system);
@@ -845,9 +844,9 @@ bool asset_unload_particle_effect(Asset_System* asset_system, Particle_Effect_Ha
 }
 
 bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_path,
-    Particle_Emitter_Handle* out_handle)
+                                 Particle_Emitter_Handle* out_handle)
 {
-     MASSERT(asset_system);
+    MASSERT(asset_system);
     MASSERT(asset_path);
     MASSERT(out_handle);
 
@@ -924,13 +923,11 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     }
 
 
-
     Madness_Asset* madness_asset = &asset_system->asset_registry->particle_emitter_asset[out_handle->handle];
     madness_asset->path_hash = out_meta_data->hash;
     madness_asset->engine_path = out_meta_data->engine_path;
     madness_asset->type = ASSET_PARTICLE_EMITTER;
     madness_asset->reference_count = 1;
-
 
 
     PROFILE_ZONE_END(asset_load_particle_emitter)

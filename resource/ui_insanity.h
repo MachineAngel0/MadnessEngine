@@ -34,16 +34,19 @@
 #define INSANITY_UI_MAX_NODE_COUNT 1000
 #define INSANITY_UI_MAX_WINDOW_COUNT 100
 #define INSANITY_MAX_UI_NODE_CHILD_COUNT 32
+#define INSANITY_UI_MAX_STRING_SLICE 10000
 
-
+#define INSANITY_UI_DEFAULT_RESOLUTION_WIDTH 1920llu
+#define INSANITY_UI_DEFAULT_RESOLUTION_HEIGHT 1080llu
 
 
 typedef enum UI_Text_Wrap
 {
-    UI_Text_Wrap_None,
     UI_Text_Wrap_Wrap,
     UI_Text_Wrap_Newline,
+    UI_Text_Wrap_None,
 } UI_Text_Wrap;
+
 
 
 
@@ -100,6 +103,14 @@ typedef struct Insanity_UI_Event
 } Insanity_UI_Event;
 
 
+typedef struct IUI_String_Slice
+{
+    vec2s slice_pos;
+    f32 slice_width;
+    String_Slice slices;
+    char* debug_string;
+}IUI_String_Slice;
+
 typedef struct IUI_Node
 {
     UI_Property_Flags ui_flags;
@@ -123,13 +134,16 @@ typedef struct IUI_Node
     const char* name_id;
     u32 hash_id;
 
+    vec2s min;
+    vec2s max;
+
     Texture_Handle texture_handle;
     vec2s uv_offset;
     vec2s uv_size;
 
-    //Text
-    String* text; //the full text string, also max height and width are stored in the vec2s size
-
+    //pointer to the first slice within the slices array
+    IUI_String_Slice* slice_pointer;
+    u32 slice_count; // how many of these we have
 
     //colors
     vec3s color;
@@ -152,7 +166,8 @@ typedef struct IUI_Scroll
 
 typedef enum IUI_Scroll_Flags
 {
-    Insanity_UI_Scroll_Flags_Scroll_When_Hovered_Over_Container,
+    IUI_Scroll_Flags_Size_By_Screen_Size_Percent,
+    IUI_Scroll_Flags_Align, //use global state to align to something, if nothing will be the screen size
 } IUI_Scroll_Flags;
 
 
@@ -188,7 +203,12 @@ typedef struct Insanity_UI
     //NOTE: this could be a context pointer with function ptr for getting what you need, if you wanted to make this a library
     Asset_System* asset_system; // does not own memory,
 
+    //whats gets used by the ui system, and then scaled by the actual screen size/resolution
+    vec2s internal_screen_resolution;
+
+
     vec2s screen_size; // this gets queried every frame in the begin effect
+    vec2s screen_resolution_scale; //calculated based on the screen size
 
     //for invalid states, pass this back instead of crashing
     IUI_Node dummy_node;
@@ -198,7 +218,14 @@ typedef struct Insanity_UI
     float default_font_size;
     float editor_font_size;
     float text_outline;
+    vec3s text_outline_color;
     // Font fonts[100];
+
+    IUI_String_Slice* string_slice_array;
+    u32 string_slice_count;
+    u32 string_slice_count_max;
+
+
 
     //Persistent Information
     IUI_Drag_State drag_state[100];
@@ -215,8 +242,6 @@ typedef struct Insanity_UI
     u32 navigation_node_count;
 
     ARRAY_TYPE(IUI_Node)* ui_nodes;
-
-
 
 
     //Render
@@ -299,17 +324,23 @@ UI_Render_Packet insanity_get_render_packet(void);
 
 
 //Building Blocks
-IUI_Node* insanity_ui_node_set_flags(const char* name); // has to be called before the node is created
 IUI_Node* insanity_ui_node(const char* name);
+// positions itself automatically based on the screen size
 /*inserts the node into an array for later resolving, and there is one frame of delay for getting the interaction*/
 Insanity_UI_Event insanity_ui_event(IUI_Node* node, IUI_Event_Flags event_flags);
 
 
-//rn these are percents
+
+// rect cut pixels
 IUI_Node* insanity_ui_node_cut_left(IUI_Node* parent, const char* name, f32 size);
 IUI_Node* insanity_ui_node_cut_right(IUI_Node* parent, const char* name, f32 size);
 IUI_Node* insanity_ui_node_cut_top(IUI_Node* parent, const char* name, f32 size);
 IUI_Node* insanity_ui_node_cut_bottom(IUI_Node* parent, const char* name, f32 size);
+// rect cut percents
+IUI_Node* insanity_ui_node_cut_left_percent(IUI_Node* parent, const char* name, f32 percent_size);
+IUI_Node* insanity_ui_node_cut_right_percent(IUI_Node* parent, const char* name, f32 percent_size);
+IUI_Node* insanity_ui_node_cut_top_percent(IUI_Node* parent, const char* name, f32 percent_size);
+IUI_Node* insanity_ui_node_cut_bottom_percent(IUI_Node* parent, const char* name, f32 percent_size);
 
 //TODO:
 // void madness_ui_new_scissor_start(vec2s scissor_pos, vec2s scissor_size);
@@ -317,21 +348,44 @@ IUI_Node* insanity_ui_node_cut_bottom(IUI_Node* parent, const char* name, f32 si
 
 
 //Windows
-IUI_Scroll* scroll_begin(const char* name, vec2s pos, vec2s size);
-void scroll_end(IUI_Scroll* scroll);
-// might just want to have pos and size instead of node
-void scroll_advance(IUI_Scroll* scroll, IUI_Node* node);
-void scroll_advance_size(IUI_Scroll* scroll, vec2s size);
 
+//scroll
+IUI_Scroll* insanity_ui_scroll_begin(const char* name, vec2s pos, vec2s size);
+void insanity_scroll_end(IUI_Scroll* scroll);
+// might just want to have pos and size instead of node
+void insanity_ui_scroll_advance(IUI_Scroll* scroll, IUI_Node* node);
+void insanity_ui_scroll_advance_size(IUI_Scroll* scroll, vec2s size);
+
+
+//tree view
+IUI_Scroll* insanity_ui_tree_view_begin(const char* name, vec2s pos, vec2s size);
+void insanity_ui_tree_view_push_indent(IUI_Scroll* scroll);
+void insanity_ui_tree_view_pop_indent(IUI_Scroll* scroll);
+void insanity_ui_tree_scroll_advance(IUI_Scroll* scroll, IUI_Node* node);
+IUI_Scroll* insanity_ui_tree_view_end(const char* name, vec2s pos, vec2s size);
+
+//combo box
+IUI_Scroll* insanity_ui_combo_begin(const char* name, vec2s pos, vec2s size);
+void insanity_ui_combo_advance(IUI_Scroll* scroll, IUI_Node* node);
+IUI_Scroll* insanity_ui_combo_end(const char* name, vec2s pos, vec2s size);
+
+
+//pop up
 void pop_up_begin();
 void pop_up_end();
 
+//combo box???? if yes, then nodes need to be fixed size
 
 //STRING
 IUI_Node* insanity_ui_text(const char* text);
 IUI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
 
-IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container);
+IUI_Node* insanity_ui_text_wrapped(const char* text, IUI_Node* container, UI_Text_Wrap wrap_mode);
+
+
+
+//NOTE: just an idea, so that text will resize (not wrap for now, you would have to think that through) to the containers size
+// IUI_Node* insanity_ui_text_resize(const char* text, IUI_Node* container, UI_Text_Wrap_Mode wrap_mode);
 
 vec2s insanity_ui_text_calculate_size(const char* text);
 vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size);
@@ -357,13 +411,17 @@ void insanity_ui_node_offset(IUI_Node* node_to_offset, IUI_Node* anchor_node, ve
 //TODO:
 // void insanity_ui_node_offset_from_end(IUI_Node* node_to_offset, IUI_Node* anchor_node, vec2s offset);
 
+//returns the new position
+float _insanity_ui_node_align_axis(float node_size_axis, float container_pos_axis,
+                                   float container_size_axis,
+                                   UI_Alignment alignment);
 
 void insanity_ui_node_align_x(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment_X x_alignment);
+                              UI_Alignment x_alignment);
 void insanity_ui_node_align_y(IUI_Node* node_to_align, IUI_Node* container,
-                              UI_Alignment_X y_alignment);
+                              UI_Alignment alignment);
 void insanity_ui_node_align(IUI_Node* node_to_align, IUI_Node* container,
-                            UI_Alignment_X x_alignment, UI_Alignment_Y y_alignment);
+                            UI_Alignment x_alignment, UI_Alignment y_alignment);
 
 void insanity_ui_node_expand(IUI_Node* node_to_expand, IUI_Node* container);
 void insanity_ui_node_expand_x(IUI_Node* node_to_expand, IUI_Node* container);
@@ -373,10 +431,8 @@ void insanity_ui_node_expand_percent_x(IUI_Node* node_to_expand, IUI_Node* conta
 void insanity_ui_node_expand_percent_y(IUI_Node* node_to_expand, IUI_Node* container, float percent);
 void insanity_ui_node_expand_percent(IUI_Node* node_to_expand, IUI_Node* container, vec2s percent);
 
-void insanity_ui_node_expand_percent_screen(IUI_Node* node_to_expand, vec2s percent);
 
-
-vec2s insanity_ui_node_get_screen_size_percent(float x_percent, float y_percent)
+vec2s insanity_ui_screen_size_percent(float x_percent, float y_percent)
 {
     return (vec2s){
         .x = x_percent * insanity_ui->screen_size.x,
@@ -604,13 +660,16 @@ void insanity_ui_drag_to_mouse_position(IUI_Node* node)
 //       text = Node_child(button)
 //       node_align_to_parent(text, center, center);
 //       node_resolve_layout(button(root node));
-//  //note but now you can moce just the parent, and its applied to the child
+//  //note but now you can move just the parent, and its applied to the child
 
 //scenarios - button3 - size button to the child plus some padding
 //       button = Node()
+//       (place buttom somewhere)
 //       text = Node_child(button)
 //       node_expand = Node(button, text)
 //       node_padding_with_clamp(button)
+//       node_align(text, button, center, center);
+
 //  //note but now you can moce just the parent, and its applied to the child
 
 //scenarios - scroll bar
@@ -636,6 +695,34 @@ void insanity_ui_drag_to_mouse_position(IUI_Node* node)
 //       right.pos = thing3.pos.x + thing3.size.x + padding.x;
 
 
+//nice utilities
+Insanity_UI_Event insanity_ui_button(const char* label, vec2s position)
+{
+    IUI_Node* button = insanity_ui_node("button");
+    button->pos = position;
+    button->color = insanity_ui->editor_style.color;
+    IUI_Node* button_text = insanity_ui_text(label);
+    insanity_ui_node_expand(button, button_text);
+    f32 x_padding = 10;
+    f32 y_padding = 10;
+    button->size.x += x_padding;
+    button->size.y += y_padding;
+
+    insanity_ui_node_align(button_text, button, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
+
+    Insanity_UI_Event event = insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation);
+    if (event.hovered)
+    {
+        button->color = insanity_ui->editor_style.hovered_color;
+    }
+    if (event.pressed)
+    {
+        button->color = insanity_ui->editor_style.pressed_color;
+    }
+
+
+    return event;
+}
 
 
 #endif //INSANITY_UI_H
