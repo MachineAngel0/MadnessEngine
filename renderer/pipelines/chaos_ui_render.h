@@ -72,7 +72,7 @@ void chaos_ui_renderer_upload_draw_data(Chaos_UI_Renderer_Backend* cui_renderer,
     vulkan_buffer_frame_reset(renderer, cui_renderer->cui_ssbo_handle);
 
 
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "CHAOS UI SSBO UPLOAD",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "CHAOS UI SSBO UPLOAD",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
 
 
@@ -133,7 +133,7 @@ void chaos_ui_renderer_upload_draw_data(Chaos_UI_Renderer_Backend* cui_renderer,
 void chaos_ui_renderer_draw(Chaos_UI_Renderer_Backend* ui_renderer, Renderer* renderer,
                             Vulkan_Command_Buffer* command_buffer)
 {
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "CHAOS UI DRAW",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "CHAOS UI DRAW",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
 
     //global uniform

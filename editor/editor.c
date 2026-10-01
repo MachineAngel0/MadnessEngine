@@ -1,6 +1,7 @@
 ﻿#include "editor.h"
 
 #include "asset_system.h"
+#include "profiler.h"
 #include "memory/memory_system.h"
 
 
@@ -30,9 +31,10 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
     editor->lowest_ms = INT_MAX;
     editor->highest_ms = 0;
-    editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
+    // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_CHAOS_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
+    editor->state = EDITOR_UI_STATE_PARTICLE;
 
     editor_generate_asset_lists(editor, memory_system);
 
@@ -46,6 +48,21 @@ bool editor_update(Editor* editor)
 
     allocator_clear(editor->frame_allocator);
 
+    madness_ui_menu_bar_begin(STRING("menu bar editor"));
+    {
+        if (madness_ui_menu_bar_item(STRING("Editor")))
+        {
+            madness_ui_window_begin(STRING("editor sub menus"), UI_Window_Flag_Pop_Up);
+            {
+                madness_ui_combo_box_char(STRING("editor states: "), &editor->state, Editor_UI_State_ENUM_String,
+                                          ARRAY_SIZE(Editor_UI_State_ENUM_String));
+            }
+            madness_ui_window_end();
+        }
+    }
+    madness_ui_menu_bar_end();
+
+
     //do the ui and stuff
     //manage a bunch of ui state
     if (input_key_released_unique(KEY_E))
@@ -57,7 +74,7 @@ bool editor_update(Editor* editor)
     {
         if (editor->state == 0)
         {
-            editor->state = EDITOR_UI_STATE_MAX-1;
+            editor->state = EDITOR_UI_STATE_MAX - 1;
         }
         else
         {
@@ -67,7 +84,7 @@ bool editor_update(Editor* editor)
 
     editor_ui(editor);
 
-    PROFILE_ZONE_END(editor_update)
+    PROFILE_ZONE_END(editor_update);
 
     return true;
 }
@@ -117,7 +134,6 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
                              "../z_assets_engine/particle/particle_emitter");
 
 
-
     editor->material_asset_list =
         asset_lists_generate(memory_system,
                              MAX_ASSETS_STRINGS,
@@ -152,9 +168,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_ANIMATION:
         editor_ui_animation(editor);
         break;
-    case EDITOR_UI_STATE_CHAOS_UI_TEST:
-        chaos_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
-        break;
+    // case EDITOR_UI_STATE_CHAOS_UI_TEST:
+    //     chaos_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
+    //     break;
     case EDITOR_UI_STATE_INSANITY_UI_TEST:
         insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
         break;
@@ -220,7 +236,6 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_PARTICLE:
         editor_particle_view(editor);
         break;
-
     }
 }
 
@@ -469,22 +484,21 @@ void editor_ui_scene(Editor* editor)
         }
 
         String mesh_path2 = STRING("Mesh Path2");
-        Path_String path_string;
-        madness_ui_combo_box_string(mesh_path2, &path_string,
-                                    editor->madness_mesh_list->strings,
-                                    editor->madness_mesh_list->count);
+        static u32 path_index;
+        madness_ui_combo_box(mesh_path2, &path_index,
+                             editor->madness_mesh_list->strings,
+                             editor->madness_mesh_list->count);
 
         String scene_name2 = STRING("SCENE LOAD2");
         if (madness_ui_button(STRING("LOAD MESH ASSET2")))
         {
             Mesh_Handle handle;
             asset_load_mesh_path(editor->asset_system,
-                                 string_to_c_string(&path_string), &handle);
+                                 string_to_c_string(&editor->madness_mesh_list->strings[path_index]), &handle);
         }
     }
     madness_ui_window_end();
 }
-
 
 
 void editor_texture_view(Editor* editor)
@@ -525,14 +539,56 @@ void editor_meta_data_view(Editor* editor)
         {
             Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
             madness_ui_string(STRING("UUID:"));
-            madness_ui_u64(STRING("id1"), &meta_data->uuid.high, 0);
-            madness_ui_u64(STRING("id2"), &meta_data->uuid.low, 0);
-            madness_ui_same_line();
+            madness_ui_u64(STRING("UUID HIGH:"), &meta_data->uuid.high, 0);
+            madness_ui_u64(STRING("UUID LOW:"), &meta_data->uuid.low, 0);
 
+            madness_ui_string(STRING("Type:"));
+            madness_ui_same_line();
             madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
 
+            madness_ui_string(STRING("Source Path:"));
+            madness_ui_same_line();
             madness_ui_string(*meta_data->source_file);
+
+            madness_ui_string(STRING("Engine Path:"));
+            madness_ui_same_line();
             madness_ui_string(*meta_data->engine_path);
+
+            madness_ui_padding();
+        }
+    }
+    madness_ui_window_end();
+
+    madness_ui_set_window_pos(500, 500);
+    madness_ui_window_begin(STRING("MetaData Asset Filter"), 0);
+    {
+        static Asset_Type asset_type_filter;
+        madness_ui_combo_box_char(STRING("Asset Filter Type"), &asset_type_filter, Asset_Type_enum_string,
+                             ARRAY_SIZE(Asset_Type_enum_string));
+
+        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+        {
+            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+
+            if (meta_data->type != asset_type_filter) { continue; }
+
+            madness_ui_string(STRING("UUID:"));
+            madness_ui_u64(STRING("UUID HIGH"), &meta_data->uuid.high, 0);
+            madness_ui_u64(STRING("UUID LOW:"), &meta_data->uuid.low, 0);
+
+            madness_ui_string(STRING("Type:"));
+            madness_ui_same_line();
+            madness_ui_c_string(ASSET_TYPE_LUT[meta_data->type]);
+
+            madness_ui_string(STRING("Source Path:"));
+            madness_ui_same_line();
+            madness_ui_string(*meta_data->source_file);
+
+            madness_ui_string(STRING("Engine Path:"));
+            madness_ui_same_line();
+            madness_ui_string(*meta_data->engine_path);
+
+            madness_ui_padding();
         }
     }
     madness_ui_window_end();
@@ -592,7 +648,6 @@ void editor_material_asset_view(Editor* editor)
                                     &material_memory,
                                     "mat",
                                     editor->texture_list);
-
     }
     madness_ui_window_end();
 
@@ -783,16 +838,18 @@ void editor_particle_view(Editor* editor)
     {
         madness_ui_string(STRING("EMITTER SELECTED"));
 
-        String emitter_path;
-        madness_ui_combo_box_string(STRING("selected emitter"), &emitter_path,
-                                    editor->particle_emitter_list->strings,
-                                    editor->particle_emitter_list->count);
+        static u32 emitter_path_index;
+        madness_ui_combo_box(STRING("selected emitter"), &emitter_path_index,
+                             editor->particle_emitter_list->strings,
+                             editor->particle_emitter_list->count);
 
         static Particle_Emitter_Handle emitter_to_edit_handle;
         if (madness_ui_button(STRING("LOAD EMITTER")))
         {
             asset_load_particle_emitter(editor->asset_system,
-                                        string_to_c_string_allocator(&emitter_path, editor->frame_allocator),
+                                        string_to_c_string_allocator(
+                                            &editor->particle_emitter_list->strings[emitter_path_index],
+                                            editor->frame_allocator),
                                         &emitter_to_edit_handle);
         }
         if (madness_ui_button(STRING("UNLOAD EMITTER")))
@@ -832,10 +889,10 @@ void editor_particle_view(Editor* editor)
         */
 
 
-        String material_path;
-        madness_ui_combo_box_string(STRING("selected material asset"), &material_path,
-                                    editor->material_asset_list->strings,
-                                    editor->material_asset_list->count);
+        static u32 material_path_index;
+        madness_ui_combo_box(STRING("selected material asset"), &material_path_index,
+                             editor->material_asset_list->strings,
+                             editor->material_asset_list->count);
 
 
         /*
@@ -851,7 +908,8 @@ void editor_particle_view(Editor* editor)
     madness_ui_window_end();
 
 
-    String effect_path;
+    static u32 effect_path_index;
+    static u32 emitter_path_index;
     static u32 effect_index;
     static u32 effect_emitter_index;
     madness_ui_window_begin(STRING("Particle Effects Editor"), 0);
@@ -903,15 +961,16 @@ void editor_particle_view(Editor* editor)
 
 
         madness_ui_string(STRING("EFFECT SELECTED"));
-        madness_ui_combo_box_string(STRING("selected effect"), &effect_path,
-                                    editor->particle_effect_list->strings,
-                                    editor->particle_effect_list->count);
+        madness_ui_combo_box(STRING("selected effect"), &effect_path_index,
+                             editor->particle_effect_list->strings,
+                             editor->particle_effect_list->count);
         if (madness_ui_button(STRING("LOAD EFFECT")))
         {
             Particle_Effect_Handle discard_handle;
             asset_load_particle_effect_by_path(editor->asset_system,
                                                string_to_c_string_allocator(
-                                                   &effect_path, editor->frame_allocator), &discard_handle);
+                                                   &editor->particle_effect_list->strings[effect_path_index],
+                                                   editor->frame_allocator), &discard_handle);
         }
 
 
@@ -920,10 +979,9 @@ void editor_particle_view(Editor* editor)
 
         madness_ui_string(STRING("EMITTER TO ADD"));
 
-        String effect_to_add_path;
-        madness_ui_combo_box_string(STRING("selected emitter to add"), &effect_to_add_path,
-                                    editor->particle_emitter_list->strings,
-                                    editor->particle_emitter_list->count);
+        madness_ui_combo_box(STRING("selected emitter to add"), &emitter_path_index,
+                             editor->particle_emitter_list->strings,
+                             editor->particle_emitter_list->count);
 
 
         //add from a global list
@@ -934,8 +992,9 @@ void editor_particle_view(Editor* editor)
             //load an emitter
             Particle_Emitter_Handle emitter_handle = {0};
             asset_load_particle_emitter(editor->asset_system,
-                                        string_to_c_string_allocator(&effect_to_add_path,
-                                                                     editor->frame_allocator),
+                                        string_to_c_string_allocator(
+                                            &editor->particle_emitter_list->strings[emitter_path_index],
+                                            editor->frame_allocator),
                                         &emitter_handle);
             particle_effect_add_emitter_by_handle(editor->asset_system->particle_system, particle_effect,
                                                   emitter_handle);

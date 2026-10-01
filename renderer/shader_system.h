@@ -13,10 +13,6 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer);
 void vulkan_shader_system_shutdown(Vulkan_Shader_System* system);
 
 
-void vulkan_shader_system_upload_frame_data(Renderer* renderer, Vulkan_Shader_System* shader_system,
-                                            Render_Packet* render_packet)
-{
-}
 
 void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shader_system, Render_Packet* render_packet);
 

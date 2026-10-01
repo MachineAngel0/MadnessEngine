@@ -779,7 +779,7 @@ void vulkan_command_buffer_debug_label_begin(Renderer* renderer, Vulkan_Command_
     renderer->debug_label_start(command_buffer->handle, &debug_label);
 }
 
-void vulkan_command_buffer_debug_label_color_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
+void vulkan_command_buffer_debug_label_begin_color(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
                                                    const char* name, float color[4])
 {
     VkDebugUtilsLabelEXT debug_label = {

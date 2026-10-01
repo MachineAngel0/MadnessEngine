@@ -58,7 +58,7 @@ void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* re
     vulkan_buffer_frame_reset(renderer, ui_renderer->ui_material_ssbo_handle);
     vulkan_buffer_frame_reset(renderer, ui_renderer->insanity_ui_material_ssbo_handle);
 
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "UI SSBO UPLOAD",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "UI SSBO UPLOAD",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
 
 
@@ -142,7 +142,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 {
     // Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
     // Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "MADNESS UI DRAW",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "MADNESS UI DRAW",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
 
     //uniform
@@ -231,7 +231,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
                                Vulkan_Command_Buffer* command_buffer)
 {
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "INSANITY UI DRAW",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "INSANITY UI DRAW",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
 
     //uniform

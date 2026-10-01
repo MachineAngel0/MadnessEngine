@@ -1,5 +1,7 @@
 ﻿#include "shader_system.h"
 
+#include "vk_command_buffer.h"
+
 
 Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
 {
@@ -49,22 +51,43 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
     }
 
 
-    Vulkan_Command_Buffer command_buffer;
+    Vulkan_Command_Buffer* command_buffer = NULL;
     vulkan_queue_system_get_graphics_command_buffer(renderer, &command_buffer);
 
-    vulkan_buffer_frame_staging_upload(renderer, shader_system->material_buffers, &command_buffer,
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Material Upload",
+                                                  (float[4]){0.0, 1.0, 0.0, 1.0}); // green color
+
+
+    vulkan_buffer_frame_staging_upload(renderer, shader_system->material_buffers, command_buffer,
                                        render_packet->draw_3d_data_packet.material_buffer,
                                        render_packet->draw_3d_data_packet.material_buffer_byte_size);
 
 
+    VkBufferMemoryBarrier2 material_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, shader_system->material_buffers)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+    vulkan_command_add_buffer_barrier(command_buffer, material_barrier);
+    vulkan_command_flush_barriers(command_buffer); // TODO: batch at one point
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     for (int i = 0; i < shader_system->material_batch_count; ++i)
     {
         Vulkan_Shader_Batch* current_batch = &renderer->shader_system->material_batch[i];
         current_batch->draw_count = 0;
     }
-
-
 }
 
 
@@ -91,9 +114,6 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
                                     &shader_batch->wireframe_pipeline);
 
 
-
-
-
     //TODO: change the sizing or allocate the draw amount per frame
     // or even better, use per frame, but source from a much larger per frame buffer, sized to the max draw count in general
     shader_batch->indirect_draw_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
@@ -116,4 +136,3 @@ Vulkan_Shader_Batch* vulkan_shader_system_shader_get_by_key(Renderer* renderer, 
     //TODO: make a loop for now, but use a hash map later
     MASSERT(false);
 }
-

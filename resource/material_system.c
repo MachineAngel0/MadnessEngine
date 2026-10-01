@@ -43,7 +43,7 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
         Scratch_Allocator scratch = scratch_allocator_begin(asset_system->frame_allocator);
 
         asset_load_shader_asset_path(asset_system,
-                                     string_to_c_string_allocator(list_scan->strings, scratch.allocator), &handle);
+                                     string_to_c_string_allocator(&list_scan->strings[i], scratch.allocator), &handle);
 
         scratch_allocator_end(scratch);
     }
@@ -351,7 +351,7 @@ void shader_get_or_create(Asset_System* asset_system, Shader_Info* shader_info, 
                                                                   asset_system->heap_allocator),
 
 
-        asset_converter_shader_asset(asset_system, shader_asset);
+    asset_converter_shader_asset(asset_system, shader_asset);
 
     //TODO:
     // ring_enqueue(asset_system->material_system->new_shaders, );

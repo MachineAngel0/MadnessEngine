@@ -612,6 +612,22 @@ void platform_get_cursor_pos(int* out_x, int* out_y)
     *out_y = lpPoint.y;
 }
 
+void platform_set_cursor_type(Platform_Cursor_Type cursor_type)
+{
+    switch (cursor_type)
+    {
+    case Platform_Cursor_Type_Default:
+        SetCursor(LoadCursor(NULL, IDC_ARROW));
+        break;
+    case Platform_Cursor_Type_Resize:
+        SetCursor(LoadCursor(NULL, IDC_SIZENWSE));
+        break;
+    case Platform_Cursor_Type_Move:
+        SetCursor(LoadCursor(NULL, IDC_SIZEALL));
+        break;
+    }
+}
+
 void platform_windows_resize(Platform_State* platform_state, int width, int height)
 {
     windows_internal_state* state = platform_state->internal_state;

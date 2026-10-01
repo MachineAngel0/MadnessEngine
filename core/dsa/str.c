@@ -350,7 +350,7 @@ String_Slice* string_slice_from_to(String* s, u64 slice_begin, u64 slice_end, Al
     return string_slice;
 }
 
-String_Slice* string_strip_from_end(const String* str, char stop_character, Allocator* allocator)
+String_Slice* string_strip_from_end(String* str, char stop_character, Allocator* allocator)
 {
     //mostly used for path string, so that the end value will be removed
     //includes the stop character in the final result

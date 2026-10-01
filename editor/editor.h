@@ -20,10 +20,26 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_MESH_VIEWER,
     EDITOR_UI_STATE_REFLECTION_ABILITY,
     EDITOR_UI_STATE_INSANITY_UI_TEST,
-    EDITOR_UI_STATE_CHAOS_UI_TEST,
+    // EDITOR_UI_STATE_CHAOS_UI_TEST,
     EDITOR_UI_STATE_MAX,
 } Editor_UI_State;
 
+const char* Editor_UI_State_ENUM_String[EDITOR_UI_STATE_MAX] = {
+    [EDITOR_UI_STATE_DEBUG] = "EDITOR_UI_STATE_DEBUG",
+    [EDITOR_UI_STATE_ENGINE_STATS] = "EDITOR_UI_STATE_ENGINE_STATS",
+    [EDITOR_UI_STATE_PARTICLE] = "EDITOR_UI_STATE_PARTICLE",
+    [EDITOR_UI_STATE_RENDERER] = "EDITOR_UI_STATE_RENDERER",
+    [EDITOR_UI_STATE_MATERIAL_CREATION] = "EDITOR_UI_STATE_MATERIAL_CREATION",
+    [EDITOR_UI_STATE_MADNESS_UI_TEST] = "EDITOR_UI_STATE_MADNESS_UI_TEST",
+    [EDITOR_UI_STATE_SCENE] = "EDITOR_UI_STATE_SCENE",
+    [EDITOR_UI_STATE_TEXTURE_VIEWER] = "EDITOR_UI_STATE_TEXTURE_VIEWER",
+    [EDITOR_UI_STATE_ANIMATION] = "EDITOR_UI_STATE_ANIMATION",
+    [EDITOR_UI_STATE_ASSET_METADATA] = "EDITOR_UI_STATE_ASSET_METADATA",
+    [EDITOR_UI_STATE_MESH_VIEWER] = "EDITOR_UI_STATE_MESH_VIEWER",
+    [EDITOR_UI_STATE_REFLECTION_ABILITY] = "EDITOR_UI_STATE_REFLECTION_ABILITY",
+    [EDITOR_UI_STATE_INSANITY_UI_TEST] = "EDITOR_UI_STATE_INSANITY_UI_TEST",
+    // [EDITOR_UI_STATE_CHAOS_UI_TEST] = "EDITOR_UI_STATE_CHAOS_UI_TEST",
+};
 
 typedef struct Editor
 {
@@ -62,13 +78,11 @@ typedef struct Editor
 
     //Material asset
     Asset_List_Scan* material_asset_list;
-
-
 } Editor;
 
 
 MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                    Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry);
+                         Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry);
 
 Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
                                       const char* relative_asset_path);
@@ -77,9 +91,6 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system);
 
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
-
-
-
 
 
 void editor_ui(Editor* editor);

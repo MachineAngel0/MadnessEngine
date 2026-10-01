@@ -91,7 +91,7 @@ VkCommandBufferSubmitInfo vulkan_command_buffer_get_submit_info(Vulkan_Command_B
 
 void vulkan_command_buffer_debug_label_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
                                              const char* name);
-void vulkan_command_buffer_debug_label_color_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
+void vulkan_command_buffer_debug_label_begin_color(Renderer* renderer, Vulkan_Command_Buffer* command_buffer,
                                              const char* name, float color[4]);
 void vulkan_command_buffer_debug_label_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
 

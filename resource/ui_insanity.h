@@ -50,8 +50,6 @@ typedef enum UI_Text_Wrap
 } UI_Text_Wrap;
 
 
-
-
 typedef struct Insanity_UI_Editor_Style
 {
     vec3s layout_color;
@@ -116,7 +114,7 @@ typedef struct IUI_String_Slice
 
     UI_Alignment alignment_x;
     UI_Alignment alignment_y;
-}IUI_String_Slice;
+} IUI_String_Slice;
 
 typedef struct IUI_Node
 {
@@ -180,7 +178,6 @@ typedef struct IUI_Scroll
 } IUI_Scroll;
 
 
-
 typedef struct IUI_Window
 {
     u32 id;
@@ -190,7 +187,6 @@ typedef struct IUI_Window
 typedef struct IUI_Panel
 {
     u32 id;
-
 } IUI_Panel;
 
 
@@ -247,7 +243,6 @@ typedef struct Insanity_UI
     IUI_String_Slice* string_slice_array;
     u32 string_slice_count;
     u32 string_slice_count_max;
-
 
 
     //Persistent Information
@@ -353,7 +348,6 @@ IUI_Node* insanity_ui_node(const char* name);
 Insanity_UI_Event insanity_ui_event(IUI_Node* node, IUI_Event_Flags event_flags);
 
 
-
 // rect cut pixels
 IUI_Node* insanity_ui_node_cut_left(IUI_Node* parent, const char* name, f32 size);
 IUI_Node* insanity_ui_node_cut_right(IUI_Node* parent, const char* name, f32 size);
@@ -406,7 +400,6 @@ IUI_Node* insanity_ui_text(const char* text);
 IUI_Node* insanity_ui_text_fast(const char* text, u32 string_size);
 
 IUI_Node* insanity_ui_text_wrapped(const char* text, float max_width, UI_Text_Wrap wrap_mode);
-
 
 
 //NOTE: just an idea, so that text will resize (not wrap for now, you would have to think that through) to the containers size
@@ -735,7 +728,8 @@ Insanity_UI_Event insanity_ui_button(const char* label, vec2s position)
 
     insanity_ui_node_align(button_text, button, UI_ALIGNMENT_CENTER, UI_ALIGNMENT_CENTER);
 
-    Insanity_UI_Event event = insanity_ui_event(button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation);
+    Insanity_UI_Event event = insanity_ui_event(
+        button, Insanity_UI_Event_Flags_Interaction | Insanity_UI_Event_Flags_Navigation);
     if (event.hovered)
     {
         button->color = insanity_ui->editor_style.hovered_color;
@@ -748,6 +742,57 @@ Insanity_UI_Event insanity_ui_button(const char* label, vec2s position)
 
     return event;
 }
+
+
+typedef struct Material_Link
+{
+    u32 slot_in;
+    u32 slot_out;
+} Material_Link;
+
+typedef struct Material_Slot
+{
+    //NOTE: for ergonomic reasons, im not making them SOA's
+    Shader_Type input_shader_types;
+    const char* input_names;
+} Material_Slot;
+
+typedef struct Material_node
+{
+    u32 id;
+    const char* node_name;
+
+    Material_Slot input_slots;
+    u32 input_count;
+
+    Material_Slot output_slots;
+    u32 output_count;
+} Material_node;
+
+void material_node_create(const char* node_name, Material_Slot* input_slots,
+                          u32 input_count,
+                          Material_Slot* output_slots,
+                          u32 output_count)
+{
+    //TODO: render
+    //TODO: add to a list of some kind to find out connections
+}
+
+
+void material_node_add()
+{
+    Material_Slot inputs[] = {
+        (Material_Slot){.input_shader_types = SHADER_TYPE_FLOAT, .input_names = "Float 1"},
+        (Material_Slot){.input_shader_types = SHADER_TYPE_FLOAT, .input_names = "Float 2"},
+    };
+
+    Material_Slot ouputs[] = {
+
+    };
+
+    material_node_create("add", inputs, ARRAY_SIZE(inputs), ouputs, ARRAY_SIZE(ouputs));
+}
+
 
 
 #endif //INSANITY_UI_H

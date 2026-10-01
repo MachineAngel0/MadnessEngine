@@ -83,7 +83,7 @@ void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_
     vulkan_buffer_frame_reset(renderer, light_system->spot_light_ssbo_handle);
 
 
-    vulkan_command_buffer_debug_label_color_begin(renderer, command_buffer, "Light SSBO Upload",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Light SSBO Upload",
                                                   (float[4]){0.0, 0.0, 1.0, 1.0});
 
     vulkan_buffer_frame_staging_upload(renderer,

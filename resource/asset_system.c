@@ -677,8 +677,8 @@ bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data,
 
     Material material = {0};
     asset_material_deserialize(&material, fptr, asset_system->heap_allocator);
-    Shader_Handle shader_handle;
-    asset_load_shader_asset_uuid(asset_system, material.meta_data.material_uuid, &shader_handle);
+    Shader_Handle shader_handle = {0};
+    asset_load_shader_asset_uuid(asset_system, material.meta_data.shader_uuid, &shader_handle);
 
     if (!material_acquire(asset_system, shader_handle, &material,
                           out_material_handle))
@@ -873,12 +873,15 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
         if (asset_system->asset_registry->particle_emitter_asset[asset_idx].path_hash == 0) { continue; }
         if (string_compare(asset_system->asset_registry->particle_emitter_asset[asset_idx].engine_path, path_string))
         {
+            DEBUG("ASSET LOAD PARTICLE EMITTER: asset already loaded %s", asset_path)
             asset_system->asset_registry->particle_emitter_asset[asset_idx].reference_count++;
 
             *out_handle = (Particle_Emitter_Handle){
                 .handle = asset_idx,
                 .gen = asset_system->particle_system->emitter_generation[asset_idx],
             };
+
+            scratch_allocator_end(scratch);
             PROFILE_ZONE_END(asset_load_particle_emitter)
 
             return true;
@@ -886,11 +889,15 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     }
 
     //the asset isn't loaded, so we load it in asset
-    FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
+    // FILE* fptr = fopen(string_to_c_string_allocator(path_string, scratch.allocator), "rb");
+    FILE* fptr = fopen(asset_path, "rb");
 
     if (!fptr)
     {
-        MASSERT(false);
+        MASSERT_FALSE();
+
+        scratch_allocator_end(scratch);
+
         PROFILE_ZONE_END(asset_load_particle_emitter)
 
         return false;
@@ -907,6 +914,7 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
         MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
 
         *out_handle = asset_system->particle_system->default_emitter_handle;
+        scratch_allocator_end(scratch);
         PROFILE_ZONE_END(asset_load_particle_emitter)
 
         return false;

@@ -808,7 +808,7 @@ void chaos_ui_test(float dt, float elapsed_time)
 
 
     CUI_Node* scroll = cui_node("scroll");
-    scroll->pos = (vec2s){100, 100};
+    scroll->pos = (vec2s){500, 500};
     scroll->size = (vec2s){200, 200};
     scroll->color = COLOR4_GREY;
     scroll->padding.top = 10;

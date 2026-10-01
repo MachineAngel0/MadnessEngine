@@ -11,6 +11,7 @@ typedef enum Shader_Type
     SHADER_TYPE_VEC3,
     SHADER_TYPE_MAT3,
     SHADER_TYPE_MAT4,
+    SHADER_TYPE_TEXTURE,
     SHADER_TYPE_MAX,
 } Shader_Type;
 

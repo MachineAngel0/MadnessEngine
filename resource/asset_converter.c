@@ -114,7 +114,7 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
                                                 string_to_c_string_allocator(particle_emitter->name, scratch.allocator),
                                                 output_path,
                                                 ASSET_PARTICLE_EMITTER, asset_system->heap_allocator, out_uuid);
@@ -155,7 +155,7 @@ void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
                                                 string_to_c_string_allocator(particle_effect->name, scratch.allocator),
                                                 output_path,
                                                 ASSET_PARTICLE_EFFECT, asset_system->heap_allocator, out_uuid);
@@ -184,7 +184,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     if (asset_registry_exists_by_source_path(asset_system->asset_registry,
                                              STRING_CREATE_FROM_BUFFER_ALLOCATOR(
                                                  file_path, scratch.allocator),
-                                             &meta_data))
+                                             ASSET_TEXTURE, &meta_data))
     {
         if (out_uuid)
         {
@@ -238,7 +238,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
 
@@ -448,7 +448,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     fclose(fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch);
@@ -579,7 +579,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
     fclose(fptr);
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, file_path, output_path,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch_allocator);
@@ -1250,7 +1250,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         fclose(fptr);
 
 
-        asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, gltf_path, output_path,
+        asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
                                                     ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
     }
     else
@@ -1286,7 +1286,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         // write out metadata
-        asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry, gltf_path, output_path,
+        asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
                                                     ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
     }
 
@@ -1309,7 +1309,7 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* mate
     MASSERT(material_asset->shader_info.shader_name)
 
 
-    //TODO: we only want to serialize the material asset if it does not exist
+    //TODO: we only want to serialize the shader if it does not exist
     //NOTE: we serialize material instances separately
 
     String_Builder* str_builder = shader_asset_construct_path(asset_system->material_system, material_asset,
@@ -1429,7 +1429,7 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
     asset_material_serialize(material, fptr);
 
 
-    asset_registry_add_asset_and_generated_uuid(asset_system->asset_registry,
+    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
                                                 string_to_c_string_allocator(
                                                     material->meta_data.name, scratch.allocator), output_path,
                                                 ASSET_MATERIAL_INSTANCE,

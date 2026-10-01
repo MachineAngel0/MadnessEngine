@@ -110,7 +110,7 @@ String_Slice* string_slice_from(String* s, u64 slice_size, Allocator* allocator)
 
 String_Slice* string_slice_from_to(String* s, u64 slice_begin, u64 slice_end, Allocator* allocator);
 
-String_Slice* string_strip_from_end(const String* str, char stop_character, Allocator* allocator);
+String_Slice* string_strip_from_end(String* str, char stop_character, Allocator* allocator);
 
 void string_slice_print(const String_Slice* slice);
 

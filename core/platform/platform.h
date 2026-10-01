@@ -148,6 +148,16 @@ void platform_get_window_pos(s32* x, s32* y);
 void platform_set_cursor_pos(int x, int y);
 void platform_get_cursor_pos(int* out_x, int* out_y);
 
+typedef enum Platform_Cursor_Type
+{
+   Platform_Cursor_Type_Default,
+   Platform_Cursor_Type_Resize,
+   Platform_Cursor_Type_Move,
+}Platform_Cursor_Type;
+
+void platform_set_cursor_type(Platform_Cursor_Type cursor_type);
+
+
 void platform_windows_resize(Platform_State* platform_state, int width, int height);
 
 void platform_copy_to_clipboard(const char* c_string);

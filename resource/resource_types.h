@@ -47,6 +47,8 @@
 #define ENGINE_PARTICLE_EFFECT_PATH "../z_assets_engine/particle/particle_effect"
 #define ENGINE_PARTICLE_EMITTER_PATH "../z_assets_engine/particle/particle_emitter"
 
+#define ENGINE_SCENE_PATH "../z_assets_engine/particle/particle_emitter"
+
 
 
 #define ENGINE_TEXTURE_EXTENSION ".mtex"

@@ -157,12 +157,14 @@ typedef enum UI_Window_Flag
     UI_Window_Flag_No_Move = BITFLAG(2),
     UI_Window_Flag_No_Scroll = BITFLAG(3),
     UI_Window_Flag_No_Scroll_Mouse = BITFLAG(4),
-    UI_Window_Flag_No_Collapse = BITFLAG(5), // you have to have a header to be able to collapse
+    // UI_Window_Flag_No_Collapse = BITFLAG(5), // you have to have a header to be able to collapse
     UI_Window_Flag_No_Background = BITFLAG(6),
     UI_Window_Flag_Dont_Save_Position = BITFLAG(7),
 
     UI_Window_Flag_Pop_Up = BITFLAG(8),
     UI_Window_Flag_Auto_Resize_To_Min_Content = BITFLAG(9),
+    UI_Window_Flag_No_Paneling = BITFLAG(10), // also referred to as tiling or docking
+    UI_Window_Flag_Menu_Bar = BITFLAG(11), // also referred to as tiling or docking
 } UI_Window_Flag;
 
 typedef enum Madness_UI_Window_Type
@@ -200,13 +202,38 @@ typedef struct Window_State
 
 
     vec2s cursor_original_pos;
-    bool collapsed;
+    // bool collapsed;
 
     UI_Node* window_node;
     // UI_Node* header_node;
     UI_Node* scissor_start_node;
 } Window_State;
 
+
+typedef struct Panel_Node
+{
+    u32 percent_of_parent;
+
+    UI_Layout_Direction layout_direction;
+
+    struct Panel_Node* parent;
+    struct Panel_Node* children[4];
+    u8 children_count;
+
+    Window_State* window_reference; //which window we are referencing
+
+    //TODO:
+    // Features:
+    // if we are dragging a window we want to show the panel spaces available
+    // hovering over a docking ui and releasing the cursor causes the window to snap to that panel
+    // hovering but not over any panel symbol will cause the item to snap back to where it was originally
+    // each panel gives us four directions to which we can dock a window
+    // honestly I would just want to auto dock all the panels, like how it works on my linux laptop
+    // Maybe features:
+    // we can allow each window to resize to take up a proportion of the current trees percent
+    // if we are moving to another doc, then it should be treated as thought it were not there, so the other windows render as thought the window we are moving is not there
+    // allow a window to stop docking
+} Panel_Node;
 
 typedef struct Combo_Box_String_State
 {
@@ -217,10 +244,8 @@ typedef struct Combo_Box_String_State
 
 typedef struct Menu_Bar_State
 {
-    vec2s menu_bar_pos;
-    vec2s menu_bar_size;
-
-    vec2s menu_cursor_position;
+    vec2s menu_item_pos;
+    vec2s menu_item_size;
 
     String active_menu_item;
 } Menu_Bar_State;
@@ -310,6 +335,7 @@ typedef struct Madness_UI
 
     String active_combo_box;
     Menu_Bar_State menu_bar_state;
+    u32 menu_item_size_accumulation;
 
     float text_outline;
     vec3s text_outline_color;
@@ -440,6 +466,19 @@ MAPI UI_Render_Packet madness_ui_get_ui_render_data(void);
 
 MAPI Madness_UI_Event madness_ui_event(UI_Node* node, Madness_UI_Event_Flags event_flags);
 
+MAPI vec2s madness_ui_event_drag(vec2s pos, Madness_UI_Event event)
+{
+    if (event.pressed)
+    {
+        return (vec2s){
+            .x = pos.x + (f32)madness_ui->mouse_delta_x,
+            .y = pos.y + (f32)madness_ui->mouse_delta_y,
+        };
+    }
+
+    return (vec2s){pos.x, pos.y};
+}
+
 
 //API START (besides init/shutdown, begin/end)
 
@@ -472,7 +511,9 @@ void madness_ui_file_picker(String id);
 
 MAPI UI_Node* madness_ui_string(String text);
 MAPI UI_Node* madness_ui_string_internal(String text, vec2s parent_pos, vec2s parent_size,
-                                         UI_Alignment_X alignment_x, UI_Alignment_X alignment_y); // TODO: pass in the pos
+                                         UI_Alignment_X alignment_x,
+                                         UI_Alignment_X alignment_y,
+                                         bool ignore_window_state);
 MAPI UI_Node* madness_ui_c_string(const char* text);
 
 
@@ -522,10 +563,13 @@ MAPI bool madness_ui_drop_down(String label, bool* state);
 // >thing2
 
 //TODO:
-MAPI bool madness_ui_drop_down_tree(String id, String text);
 // >thing
 //   >thing
 //   >thing
+MAPI bool madness_ui_drop_down_tree_begin(String id, String text);
+MAPI bool madness_ui_drop_down_tree_push(String id, String text);
+MAPI bool madness_ui_drop_down_tree_pop(String id, String text);
+MAPI bool madness_ui_drop_down_tree_end(String id, String text);
 
 MAPI bool madness_ui_combo_box(String id, u32* selected_value, String* string_array,
                                u32 string_array_size);
@@ -534,9 +578,12 @@ bool madness_ui_combo_box2(String id, u32* selected_value, String** string_array
 MAPI bool madness_ui_combo_box_char(String id, u32* selected_value, char** char_array,
                                     u32 char_array_size);
 
-//
-MAPI bool madness_ui_combo_box_string(String id, String* out_select_string, String* string_array,
-                                      u32 string_array_size);
+
+
+//menu bar
+void madness_ui_menu_bar_begin(String name);
+void madness_ui_menu_bar_end();
+bool madness_ui_menu_bar_item(String label);
 
 
 // MAPI bool madness_ui_combo_box_enum(Madness_UI* madness_ui, String id, int* selected_value, char** string_array);
@@ -654,6 +701,7 @@ MAPI void madness_ui_deserialize_windows();
 //test
 MAPI void madness_ui_test(void);
 MAPI void madness_ui_example(void);
+void madness_ui_menu_bar_test();
 
 
 #endif //UI_H

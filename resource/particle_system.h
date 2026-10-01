@@ -147,7 +147,7 @@ void particle_emitter_create_default(Asset_System* asset_system,
 
     // asset_load_material_uuid(asset_system, mat_uuid, &emitter.material_handle);
 
-    MADNESS_UUID uuid;
+    MADNESS_UUID uuid = {0};
     asset_converter_particle_emitter(asset_system, &emitter, &uuid);
 }
 

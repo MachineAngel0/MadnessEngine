@@ -32,7 +32,7 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
                                         const char* engine_path,
                                         Asset_Type asset_type, Heap_Allocator* allocator,
                                         MADNESS_UUID uuid);
-void asset_registry_add_asset_and_generated_uuid(Asset_Registry* asset_registry, const char* source_path,
+void asset_registry_add_asset_and_generate_uuid(Asset_Registry* asset_registry, const char* source_path,
                                                  const char* engine_path,
                                                  Asset_Type asset_type, Heap_Allocator* allocator,
                                                  MADNESS_UUID* out_uuid);
@@ -47,26 +47,13 @@ bool asset_registry_exists_by_engine_path(Asset_Registry* asset_registry, String
                                           Asset_MetaData* out_meta_data);
 
 bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String* source_path,
-                                          Asset_MetaData* out_meta_data);
+                                          Asset_Type asset_type, Asset_MetaData* out_meta_data);
 
 bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID uuid,
                                    Asset_MetaData* out_meta_data);
 
 
-Dynamic_Array* asset_registry_get_all_assets_of_type(Asset_Registry* asset_registry, Asset_Type type, Allocator* allocator)
-{
-    Dynamic_Array* array = dynamic_array_create_allocator(Asset_MetaData*, 128, allocator)
-    for (u32 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
-    {
-        Asset_MetaData* asset_meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
-        if (asset_meta_data->type == type)
-        {
-            dynamic_array_push(array, &asset_meta_data);
-        }
-
-    }
-    return array;
-}
+Dynamic_Array* asset_registry_get_all_assets_of_type(Asset_Registry* asset_registry, Asset_Type type, Allocator* allocator);
 
 
 #endif

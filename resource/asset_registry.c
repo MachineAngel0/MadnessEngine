@@ -15,6 +15,21 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
     memset(asset_registry->shader_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
 
 
+    //TODO: make sure all base paths exist
+
+    platform_create_directory(ENGINE_AUDIO_PATH);
+    platform_create_directory(ENGINE_FONTS_PATH);
+    platform_create_directory(ENGINE_SHADER_PATH);
+    platform_create_directory(ENGINE_MATERIAL_INSTANCE_PATH);
+    platform_create_directory(ENGINE_MESH_PATH);
+    platform_create_directory(ENGINE_PARTICLE_PATH);
+    platform_create_directory(ENGINE_PARTICLE_EFFECT_PATH);
+    platform_create_directory(ENGINE_PARTICLE_EMITTER_PATH);
+    platform_create_directory(ENGINE_SCENE_PATH);
+    platform_create_directory(ENGINE_SK_MESH_PATH);
+    platform_create_directory(ENGINE_TEXTURE_PATH);
+
+
 
     FILE* fptr = fopen(ASSET_REGISTRY_BIN_PATH, "rb");
 
@@ -115,7 +130,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
         Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
         const char* file_path = string_to_c_string_allocator(&list_scan->strings[i], scratch.allocator);
 
-        if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], NULL))
+        if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], asset_type, NULL))
         {
         scratch_allocator_end(scratch);
             continue;
@@ -229,8 +244,9 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
     String* str_engine_path = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(engine_path, allocator);
 
     Asset_MetaData meta_data = {0};
-    if (asset_registry_exists_by_source_path(asset_registry, str_source_file, &meta_data) ||
-        asset_registry_exists_by_engine_path(asset_registry, str_engine_path, &meta_data))
+    bool exists_by_source_path = asset_registry_exists_by_source_path(asset_registry, str_source_file, asset_type, &meta_data);
+    bool exists_by_engine_path = asset_registry_exists_by_engine_path(asset_registry, str_engine_path, &meta_data);
+    if (exists_by_source_path  || exists_by_engine_path)
     {
         //update these just in case
         *meta_data.source_file = *str_source_file;
@@ -252,7 +268,7 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
 }
 
 
-void asset_registry_add_asset_and_generated_uuid(Asset_Registry* asset_registry, const char* source_path,
+void asset_registry_add_asset_and_generate_uuid(Asset_Registry* asset_registry, const char* source_path,
                               const char* engine_path,
                               Asset_Type asset_type, Heap_Allocator* allocator, MADNESS_UUID* out_uuid)
 {
@@ -277,11 +293,14 @@ void asset_registry_remove(Asset_Registry* asset_registry)
 
 
 bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String* source_path,
-                                          Asset_MetaData* out_meta_data)
+                                          Asset_Type asset_type, Asset_MetaData* out_meta_data)
 {
     for (u64 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
     {
+
         Asset_MetaData* meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        if (meta_data->type != asset_type) {continue;};
+
         if (string_compare(meta_data->source_file, source_path))
         {
             //found
@@ -325,4 +344,20 @@ bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID 
         }
     }
     return false;
+}
+
+Dynamic_Array* asset_registry_get_all_assets_of_type(Asset_Registry* asset_registry, Asset_Type type,
+    Allocator* allocator)
+{
+    Dynamic_Array* array = dynamic_array_create_allocator(Asset_MetaData*, 128, allocator)
+    for (u32 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
+    {
+        Asset_MetaData* asset_meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        if (asset_meta_data->type == type)
+        {
+            dynamic_array_push(array, &asset_meta_data);
+        }
+
+    }
+    return array;
 }
