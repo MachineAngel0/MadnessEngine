@@ -16,7 +16,7 @@ void allocator_heap_free_all(Heap_Allocator* ha)
     // ha->free_cache_tail = NULL;
 }
 
-void allocator_heap_init(Heap_Allocator* ha, void* backing_memory, const size_t memory_size)
+void allocator_heap_init(Heap_Allocator* ha, void* backing_memory,  size_t memory_size, const char* name)
 {
     MASSERT(ha);
     MASSERT(backing_memory);
@@ -32,6 +32,7 @@ void allocator_heap_init(Heap_Allocator* ha, void* backing_memory, const size_t 
     ha->head->block_size = memory_size - sizeof(Heap_Block);
     ha->head->next = NULL;
     ha->head->prev = NULL;
+    ha->name = name;
 }
 
 void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t alignment)
@@ -149,7 +150,7 @@ void allocator_heap_test(void)
     Heap_Allocator* ha = malloc(sizeof(Heap_Allocator));
     u64 memory_amount = MB(1);
     void* backing_memory = malloc(memory_amount);
-    allocator_heap_init(ha, backing_memory, memory_amount);
+    allocator_heap_init(ha, backing_memory, memory_amount, "test heap allocator");
     allocator_heap_debug_print(ha);
 
 

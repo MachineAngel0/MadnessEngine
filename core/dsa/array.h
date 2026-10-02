@@ -3,6 +3,7 @@
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
+#include "allocator.h"
 
 //VOID* VERSION
 

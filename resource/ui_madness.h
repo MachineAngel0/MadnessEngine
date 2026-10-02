@@ -515,6 +515,7 @@ MAPI UI_Node* madness_ui_string_internal(String text, vec2s parent_pos, vec2s pa
                                          UI_Alignment_X alignment_y,
                                          bool ignore_window_state);
 MAPI UI_Node* madness_ui_c_string(const char* text);
+MAPI UI_Node* madness_ui_c_string_format(const char* text, ...);
 
 
 //

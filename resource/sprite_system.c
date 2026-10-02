@@ -6,19 +6,16 @@
 
 Sprite_System* sprite_system_init(Memory_System* memory_system)
 {
-    u64 memory_capacity = MB(1);
+    u64 allocator_memory = MB(1);
 
 
     Sprite_System* sprite_system = memory_system_alloc(memory_system, sizeof(Sprite_System), MEMORY_SUBSYSTEM_SPRITE);
 
-    sprite_system->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_SPRITE);
-    sprite_system->frame_arena = memory_system_alloc(memory_system, sizeof(Frame_Allocator), MEMORY_SUBSYSTEM_SPRITE);
 
-    void* arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
-    void* frame_arena_memory = memory_system_alloc(memory_system, memory_capacity, MEMORY_SUBSYSTEM_SPRITE);
-
-    allocator_init(sprite_system->allocator, arena_memory, memory_capacity);
-    allocator_init(sprite_system->allocator, frame_arena_memory, memory_capacity);
+    sprite_system->allocator =memory_system_allocator_create(
+        memory_system, allocator_memory, MEMORY_SUBSYSTEM_SPRITE, "sprite persistent");
+    sprite_system->frame_allocator = memory_system_allocator_create(
+        memory_system, allocator_memory, MEMORY_SUBSYSTEM_SPRITE, "sprite transient");
 
 
     //create one sprite, that will get transformed based on the instance
@@ -55,7 +52,7 @@ void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 sc
 
     array_clear(sprite_system->sprites_frame_data);
 
-    allocator_clear(sprite_system->frame_arena);
+    allocator_clear(sprite_system->frame_allocator);
     // Sprite_Data_array_clear(sprite_system->sprites_data);
 }
 

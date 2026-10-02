@@ -9,9 +9,9 @@ Reflection_System* reflection_system_init(Memory_System* memory_system)
 
     u64 mem_size = MB(4);
 
-    reflection_system->allocator = memory_system_allocator_create(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
+    reflection_system->allocator = memory_system_allocator_create(memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION, "reflection system persistent");
     reflection_system->frame_allocator = memory_system_allocator_create(
-        memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
+        memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION, "reflection system frame");
 
     reflection_system->header_file_list_capacity = REFLECTION_HEADER_FILE_LIST_COUNT;
     reflection_system->header_file_list_count = 0;

@@ -10,7 +10,7 @@
 
 Command_Handler* command_handler_init(Madness_Pulse_Game* game)
 {
-    Command_Handler* ch = allocator_alloc(&game->allocator, sizeof(Command_Handler));
+    Command_Handler* ch = allocator_alloc(game->allocator, sizeof(Command_Handler));
     return ch;
 }
 void command_handler_destroy(Madness_Pulse_Game* game)

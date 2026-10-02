@@ -6,7 +6,7 @@
 
 Unit* unit_create_default(Madness_Pulse_Game* game, Character_Name character_name)
 {
-    Unit* unit = allocator_alloc(&game->allocator, sizeof(Unit));
+    Unit* unit = allocator_alloc(game->allocator, sizeof(Unit));
     unit->name = character_name;
     unit->character_type = Character_Type_Player;
     unit->character_state = Character_State_Alive;

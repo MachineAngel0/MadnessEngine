@@ -418,7 +418,7 @@ u64 freelist_test()
     allocator_init(
         &allocator,
         backing_memory,
-        allocator_memory_size);
+        allocator_memory_size, "free list test");
 
     Free_List* free_list = free_list_init(
         &allocator,

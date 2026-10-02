@@ -144,7 +144,7 @@ typedef struct Event_System
 
     RING_QUEUE_TYPE(Event_Queue_Packet)* event_queue; // TODO:
 
-    Heap_Allocator heap_allocator;
+    Heap_Allocator* heap_allocator;
 
 } Event_System;
 

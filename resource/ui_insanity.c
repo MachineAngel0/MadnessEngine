@@ -12,9 +12,9 @@ bool insanity_ui_init(Memory_System* memory_system, Input_System* input_system,
     u64 ui_frame_arena_mem_size = MB(16);
 
 
-    insanity_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
+    insanity_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI, "Insanity UI Persistent");
     insanity_ui->frame_allocator = memory_system_allocator_create(memory_system, ui_frame_arena_mem_size,
-                                                                  MEMORY_SUBSYSTEM_UI);
+                                                                  MEMORY_SUBSYSTEM_UI, "Insanity UI Frame");
 
     insanity_ui->input_system = input_system;
     insanity_ui->asset_system = asset_system;

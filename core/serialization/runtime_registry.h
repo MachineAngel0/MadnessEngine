@@ -104,7 +104,7 @@ Reflection_Registry* reflection_registry_init(Memory_System* memory_system)
 
 
     reflection_registry->allocator = memory_system_heap_allocator_create(
-        memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION);
+        memory_system, mem_size, MEMORY_SUBSYSTEM_REFLECTION, "runtime registry");
 
 
     reflection_registry->enum_list = dynamic_array_create_heap(Reflection_Runtime_Enum, 100,

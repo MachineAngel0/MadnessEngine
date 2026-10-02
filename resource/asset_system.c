@@ -19,23 +19,23 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
                                                       MEMORY_SUBSYSTEM_RESOURCE);
 
     asset_system->heap_allocator = memory_system_heap_allocator_create(memory_system, MB(256),
-                                                                       MEMORY_SUBSYSTEM_RESOURCE);
+                                                                       MEMORY_SUBSYSTEM_RESOURCE, "asset heap");
 
     asset_system->frame_allocator = memory_system_allocator_create(memory_system, MB(4),
-                                                                   MEMORY_SUBSYSTEM_RESOURCE);
+                                                                   MEMORY_SUBSYSTEM_RESOURCE, "asset frame");
 
     asset_system->allocator = memory_system_allocator_create(memory_system, MB(16),
-                                                             MEMORY_SUBSYSTEM_RESOURCE);
+                                                             MEMORY_SUBSYSTEM_RESOURCE, "asset persistent");
     asset_system->scratch_allocator = memory_system_allocator_create(memory_system, MB(16),
-                                                                     MEMORY_SUBSYSTEM_RESOURCE);
+                                                                     MEMORY_SUBSYSTEM_RESOURCE, "asset scratch");
 
 
     //texture memory
     asset_system->texture_allocator = memory_system_heap_allocator_create(
-        memory_system, MAX_TEXTURE_MEMORY_CPU, MEMORY_SUBSYSTEM_TEXTURE);
+        memory_system, MAX_TEXTURE_MEMORY_CPU, MEMORY_SUBSYSTEM_TEXTURE, "texture");
     //mesh memory
     asset_system->mesh_allocator = memory_system_heap_allocator_create(
-        memory_system, MAX_MESH_MEMORY_CPU, MEMORY_SUBSYSTEM_MESH);
+        memory_system, MAX_MESH_MEMORY_CPU, MEMORY_SUBSYSTEM_MESH, "mesh");
 
 
     //Asset Registry

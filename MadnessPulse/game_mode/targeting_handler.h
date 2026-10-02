@@ -6,10 +6,10 @@
 
 Targeting_Handler* targeting_handler_init(Madness_Pulse_Game* game)
 {
-    Targeting_Handler* targeting_handler = allocator_alloc(&game->allocator, sizeof(Targeting_Handler));
+    Targeting_Handler* targeting_handler = allocator_alloc(game->allocator, sizeof(Targeting_Handler));
     u8 max_targets_available = 10; //TODO: completely abritrary value, will either set a hard limit or dynamic allocate
     targeting_handler->targets_available_array = dynamic_array_create_heap(Character_Name, max_targets_available,
-                                                                           &game->heap_allocator);
+                                                                           game->heap_allocator);
     return targeting_handler;
 }
 
@@ -123,19 +123,19 @@ ARRAY_TYPE(Unit*)* targeting_handler_create_targeting_for_component(Madness_Puls
         out_target_units = ability_target_info->ability_targets;
         break;
     case Ability_Component_Target_Type_Caster:
-        out_target_units = array_create(Unit*, 1, &game->frame_allocator);
+        out_target_units = array_create(Unit*, 1, game->frame_allocator);
         array_push(out_target_units, &ability_target_info->caster);
         break;
     case Ability_Component_Target_Type_Allies:
-        out_target_units = array_create(Unit*, ability_target_info->ally_count, &game->frame_allocator);
+        out_target_units = array_create(Unit*, ability_target_info->ally_count, game->frame_allocator);
         _array_push_c_array(out_target_units, ability_target_info->caster_allies, ability_target_info->ally_count);
         break;
     case Ability_Component_Target_Type_Enemies:
-        out_target_units = array_create(Unit*, ability_target_info->enemy_count, &game->frame_allocator);
+        out_target_units = array_create(Unit*, ability_target_info->enemy_count, game->frame_allocator);
         _array_push_c_array(out_target_units, ability_target_info->caster_enemies, ability_target_info->enemy_count);
         break;
     case Ability_Component_Target_Type_All:
-        out_target_units = array_create(Unit*, game->units_count, &game->frame_allocator);
+        out_target_units = array_create(Unit*, game->units_count, game->frame_allocator);
         _array_push_c_array(out_target_units, game->units, game->units_count);
         break;
     }
@@ -244,7 +244,7 @@ ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targe
     if (info.ability_target_area == Target_Area_Affect_Target_All)
     {
         ARRAY_TYPE(Unit*)* out_array = array_create(Unit*, targeting_handler->targets_available_array->num_items,
-                                                    &game->frame_allocator);
+                                                   game->frame_allocator);
         for (u32 i = 0; i < targeting_handler->targets_available_array->num_items; i++)
         {
             Unit* unit = madness_pulse_get_unit(
@@ -259,7 +259,7 @@ ARRAY_TYPE(Unit*)* target_handler_return_attack_targets(Targeting_Handler* targe
     //implied that this is single target if it reaches this point
     if (info.ability_target_area == Target_Area_Affect_Single_Target)
     {
-        Array* single_target_array = array_create(Unit*, 1, &game->frame_allocator);
+        Array* single_target_array = array_create(Unit*, 1, game->frame_allocator);
         Unit *unit = madness_pulse_get_unit(game, dynamic_array_get(targeting_handler->targets_available_array,
                                                                     targeting_handler->targeting_count, Character_Name));
         array_push(single_target_array, &unit);

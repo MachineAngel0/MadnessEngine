@@ -954,7 +954,7 @@ typedef struct Material_System
 typedef struct Sprite_System
 {
     Allocator* allocator;
-    Frame_Allocator* frame_arena;
+    Frame_Allocator* frame_allocator;
     vec2s screen_size; // grab every frame on start
 
 

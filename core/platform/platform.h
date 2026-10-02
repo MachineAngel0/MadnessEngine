@@ -59,7 +59,13 @@ bool platform_audio_init(Platform_State* plat_state, int32_t buffer_size, int32_
 bool platform_audio_shutdown(Platform_State* plat_state);
 
 //MEMORY
-void* platform_reserve_memory(u64 size, bool aligned);
+
+u64 platform_query_page_size(void);
+void* platform_virtual_allocate_reserve(u64 reserve_size);
+void platform_virtual_allocate_commit(void* memory, u64 commit_size);
+// void platform_virtual_allocate_decommit(u64 commit_size, u64 reserve_size);
+
+
 void* platform_allocate(u64 size, bool aligned);
 
 void platform_free(void* block);

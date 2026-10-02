@@ -380,7 +380,7 @@ void string_builder_test(void)
     Allocator allocator;
     u64 mem_size = MB(1);
     void* backing_memory = malloc(mem_size);
-    allocator_init(&allocator, backing_memory, mem_size);
+    allocator_init(&allocator, backing_memory, mem_size, "string buidler test");
 
     const char* HI = "HI";
 

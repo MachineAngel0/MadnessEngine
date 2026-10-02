@@ -20,11 +20,11 @@
 
 Madness_AI* madness_ai_init(Madness_Pulse_Game* game)
 {
-    Madness_AI* ai = allocator_alloc(&game->allocator, sizeof(Madness_AI));
+    Madness_AI* ai = allocator_alloc(game->allocator, sizeof(Madness_AI));
     ai->ai_count = 0;
     ai->ai_max = MAX_ENEMY_UNIT_COUNT;
 
-    ai->ai_decision = dynamic_array_create_heap(Madness_AI_Decision, 1, &game->heap_allocator);
+    ai->ai_decision = dynamic_array_create_heap(Madness_AI_Decision, 1, game->heap_allocator);
     return ai;
 }
 
@@ -149,7 +149,7 @@ void madness_ai_instantiate_enemy(Madness_Pulse_Game* game, Madness_AI* madness_
         madness_ai->ai_list[i].character_name = game->enemy_units[i]->name;
         madness_ai->ai_list[i].overflow_points = 0;
         //NOTE: completely abritratry number
-        madness_ai->ai_list[i].ability_list = dynamic_array_create_heap(AI_Ability, 12, &game->heap_allocator);
+        madness_ai->ai_list[i].ability_list = dynamic_array_create_heap(AI_Ability, 12, game->heap_allocator);
         madness_ai->ai_count++;
 
         madness_ai_create_from_table(madness_ai, game->enemy_units[i]->name, madness_ai->ai_list[i].ability_list);
@@ -185,7 +185,7 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
 
     madness_ai->ai_decision = dynamic_array_create_heap(Madness_AI_Decision,
                                                         current_ai_unit->action_component.actions_available,
-                                                        &game->heap_allocator);
+                                                        game->heap_allocator);
 
 
     //TODO: ai keeps taking actions as until they run out of moves
@@ -200,7 +200,7 @@ void madness_ai_take_turn(Madness_Pulse_Game* game)
 
         targeting_handler_create_targeting_info(game, selected_ability);
         ARRAY_TYPE(Unit*)* unit_targets = target_handler_return_copy_available_targets_for_ai(
-            game, game->targeting_handler, &game->frame_allocator);
+            game, game->targeting_handler, game->frame_allocator);
 
         Madness_AI_Decision decision = {0};
         decision.ability_info = ai_ability;

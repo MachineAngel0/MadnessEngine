@@ -422,7 +422,7 @@ void array_test(void)
     Allocator allocator;
     u64 memory_size = 10000;
     void* memory = malloc(memory_size);
-    allocator_init(&allocator, memory, memory_size);
+    allocator_init(&allocator, memory, memory_size, "array test");
 
 
     Array* balling_arr = array_create(int, 10, &allocator);

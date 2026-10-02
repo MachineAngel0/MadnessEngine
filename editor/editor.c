@@ -11,16 +11,13 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
 
-    editor->editor_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
     u64 editor_memory_size = MB(4);
 
-    void* editor_memory = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->editor_allocator, editor_memory, editor_memory_size);
+    editor->editor_allocator = memory_system_allocator_create(memory_system, editor_memory_size,
+                                                              MEMORY_SUBSYSTEM_EDITOR, "EDITOR PERSISTENT");
 
-
-    editor->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_EDITOR);
-    void* editor_memory_frame = memory_system_alloc(memory_system, editor_memory_size, MEMORY_SUBSYSTEM_EDITOR);
-    allocator_init(editor->frame_allocator, editor_memory_frame, editor_memory_size);
+    editor->frame_allocator = memory_system_allocator_create(memory_system, editor_memory_size,
+                                                              MEMORY_SUBSYSTEM_EDITOR, "EDITOR FRAME");
 
 
     editor->renderer = renderer;
@@ -156,6 +153,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_DEBUG:
         editor_ui_debug(editor);
         break;
+    case EDITOR_UI_STATE_ENGINE_STATS:
+        editor_ui_stats(editor);
+        break;
     case EDITOR_UI_STATE_RENDERER:
         editor_render_view(editor);
         break;
@@ -179,9 +179,7 @@ void editor_ui(Editor* editor)
         madness_ui_example();
         // madness_ui_window_testing();
         break;
-    case EDITOR_UI_STATE_ENGINE_STATS:
-        editor_ui_stats(editor);
-        break;
+
     case EDITOR_UI_STATE_REFLECTION_ABILITY:
         madness_ui_window_begin(STRING("RUNTIME TESTING"), 0);
         {
@@ -309,7 +307,6 @@ void editor_ui_stats(Editor* editor)
     Clock* clock = editor->clock;
 
     madness_ui_set_window_pos(50, 50);
-
     madness_ui_window_begin(STRING("Stats"), 0);
     {
         float ms = clock_delta_time_in_ms(clock);
@@ -322,6 +319,74 @@ void editor_ui_stats(Editor* editor)
 
         madness_ui_float(STRING("low ms"), &editor->lowest_ms, 1);
         madness_ui_float(STRING("high ms"), &editor->highest_ms, 1);
+    }
+    madness_ui_window_end();
+
+
+    Memory_System* memory_system = editor->memory_system;
+
+    madness_ui_set_window_pos(200, 50);
+    madness_ui_window_begin(STRING("Memory"), 0);
+    {
+        u64 MB_USED = memory_system->application_allocator.used / MB(1);
+        u64 MB_CAPACITY = memory_system->application_allocator.capacity / MB(1);
+        madness_ui_u64(STRING("application memory used MB:"), &MB_USED, 0);
+        madness_ui_u64(STRING("application memory capacity MB:"), &MB_CAPACITY, 0);
+        memory_system->application_allocator.capacity;
+
+        for (u32 i = 0; i < MEMORY_SUBSYSTEM_MAX; i++)
+        {
+            u64 memory_usage = memory_system->memory_subsystem_usage[i];
+            const char* subsystem_name = memory_subsystem_type_string[i];
+
+            u32 container_usage = 0;
+            if (memory_usage >= GB(1))
+            {
+                container_usage = memory_usage / GB(1);
+                madness_ui_c_string_format("%s, MEMORY: %llu GB", subsystem_name, container_usage);
+            }
+            else if (memory_usage >= MB(1))
+            {
+                container_usage = memory_usage / MB(1);
+                madness_ui_c_string_format("%s, MEMORY: %llu MB", subsystem_name, container_usage);
+            }
+            else if (memory_usage >= KB(1))
+            {
+                container_usage = memory_usage / KB(1);
+                madness_ui_c_string_format("%s : %llu KB", subsystem_name, container_usage);
+            }
+            else if (memory_usage < KB(1))
+            {
+                madness_ui_c_string_format("%s : %llu BYTES", subsystem_name, memory_usage);
+            }
+            else
+            {
+                MASSERT_MSG_FALSE("MEMORY SUBSYSTEM PRINT ERROR");
+            }
+        }
+
+
+        madness_ui_padding();
+        madness_ui_string(STRING("ALLOCATORS"));
+        for (u32 i = 0; i < memory_system->allocator_count; i++)
+        {
+            madness_ui_c_string(memory_system->allocator_list[i].name);
+            madness_ui_u64(STRING("used bytes:"), &memory_system->allocator_list[i].current_offset, 0);
+            madness_ui_u64(STRING("capacity bytes:"), &memory_system->allocator_list[i].capacity, 0);
+            madness_ui_padding();
+        }
+
+        madness_ui_padding();
+        madness_ui_string(STRING("HEAP ALLOCATORS"));
+        for (u32 i = 0; i < memory_system->heap_allocator_count; i++)
+        {
+            madness_ui_c_string(memory_system->heap_allocator_list[i].name);
+            madness_ui_u64(STRING("used bytes:"), &memory_system->heap_allocator_list[i].used, 0);
+            madness_ui_u64(STRING("capacity bytes:"), &memory_system->heap_allocator_list[i].capacity, 0);
+            madness_ui_padding();
+        }
+
+
     }
     madness_ui_window_end();
 }
@@ -564,7 +629,7 @@ void editor_meta_data_view(Editor* editor)
     {
         static Asset_Type asset_type_filter;
         madness_ui_combo_box_char(STRING("Asset Filter Type"), &asset_type_filter, Asset_Type_enum_string,
-                             ARRAY_SIZE(Asset_Type_enum_string));
+                                  ARRAY_SIZE(Asset_Type_enum_string));
 
         for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
         {

@@ -16,9 +16,10 @@ bool chaos_ui_init(Memory_System* memory_system, Input_System* input_system,
     u64 ui_frame_arena_mem_size = MB(16);
 
 
-    chaos_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
+    chaos_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI,
+                                                         "CHAOS UI PERSISTENT");
     chaos_ui->frame_allocator = memory_system_allocator_create(memory_system, ui_frame_arena_mem_size,
-                                                               MEMORY_SUBSYSTEM_UI);
+                                                               MEMORY_SUBSYSTEM_UI, "CHAOS UI FRAME");
 
     chaos_ui->input_system = input_system;
     chaos_ui->asset_system = asset_system;
@@ -531,7 +532,7 @@ void cui_layout_grow_shrink_sizing_height(CUI_Node* root)
         }
 
         break;
-     case CUI_Layout_Vertical:
+    case CUI_Layout_Vertical:
         //grow for height
         if (remaining_height > 0 && !dynamic_array_is_empty(growables_y_array))
         {
@@ -697,8 +698,6 @@ void cui_layout_view_offsets(CUI_Node* root)
 }
 
 
-
-
 void chaos_ui_resolve_layout(CUI_Node* root)
 {
     PROFILE_ZONE(chaos_ui_resolve_layout)
@@ -727,9 +726,6 @@ void chaos_ui_resolve_layout(CUI_Node* root)
 
     //layouts
     cui_layout_view_offsets(root);
-
-
-
 
 
     PROFILE_ZONE_END(chaos_ui_resolve_layout);
@@ -832,10 +828,14 @@ void chaos_ui_test(float dt, float elapsed_time)
     scroll_state.scroll_speed = 5;
 
     if (input_is_mouse_wheel_up())
-        {scroll_state.y_scroll -= scroll_state.scroll_speed;}
+    {
+        scroll_state.y_scroll -= scroll_state.scroll_speed;
+    }
 
     if (input_is_mouse_wheel_down())
-        {scroll_state.y_scroll += scroll_state.scroll_speed;}
+    {
+        scroll_state.y_scroll += scroll_state.scroll_speed;
+    }
     scroll_state.y_scroll = clamp_f32(scroll_state.y_scroll, 0.0f, scroll_state.max_scroll);
 
     // u32 item_count = 1000;
@@ -845,7 +845,7 @@ void chaos_ui_test(float dt, float elapsed_time)
 
 
     scroll_state.max_scroll =
-       max_f(0.0f, content_height - scroll_state.viewport_height);
+        max_f(0.0f, content_height - scroll_state.viewport_height);
 
     scroll_view->size.y = scroll_state.viewport_height;
 
@@ -888,7 +888,6 @@ void chaos_ui_test(float dt, float elapsed_time)
         if (i == 29)
         {
             item->color = COLOR4_GREEN;
-
         }
 
         cui_add_child(scroll_view, item);
@@ -917,15 +916,12 @@ void chaos_ui_test(float dt, float elapsed_time)
     chaos_ui_resolve_layout(scroll);
 
 
-
     /*
     for (u32 i = 0; i < scroll_view->child_count; i++)
     {
         scroll_view->child[i]->pos.y -= wheel * 10.f;
     }
     */
-
-
 
 
     PROFILE_ZONE_END(chaos_ui_test)

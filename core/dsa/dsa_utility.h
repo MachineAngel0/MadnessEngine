@@ -5,6 +5,10 @@
 
 #define TYPE_STRING(type) #type
 
+#ifndef DEFAULT_ALIGNMENT
+//most likely to be 4 (32bit) or 8 (64bit) (* 2)
+#define DEFAULT_ALIGNMENT (2*sizeof(void *))
+#endif
 
 bool is_power_of_two(uintptr_t x)
 {

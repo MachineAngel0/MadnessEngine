@@ -92,13 +92,13 @@ void turn_based_game_init(Madness_Pulse_Game* game)
 
     //TODO: replace with a proper free list allocator, also this is more than enough for testing
     u32 temp_unit_max_count = 20;
-    game->units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
-    game->player_units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
-    game->enemy_units = allocator_alloc(&game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->units = allocator_alloc(game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->player_units = allocator_alloc(game->allocator, sizeof(Unit*) * temp_unit_max_count);
+    game->enemy_units = allocator_alloc(game->allocator, sizeof(Unit*) * temp_unit_max_count);
 
-    game->unit_names = allocator_alloc(&game->allocator, sizeof(Character_Name) * temp_unit_max_count);
-    game->player_names = allocator_alloc(&game->allocator, sizeof(Character_Name) * temp_unit_max_count);
-    game->enemy_names = allocator_alloc(&game->allocator, sizeof(Character_Name) * temp_unit_max_count);
+    game->unit_names = allocator_alloc(game->allocator, sizeof(Character_Name) * temp_unit_max_count);
+    game->player_names = allocator_alloc(game->allocator, sizeof(Character_Name) * temp_unit_max_count);
+    game->enemy_names = allocator_alloc(game->allocator, sizeof(Character_Name) * temp_unit_max_count);
     //load player
     unit_create(game, Character_Name_Madness_Progenitor);
     unit_create(game, Character_Name_Madness_ButterFly);
@@ -359,8 +359,8 @@ void turn_update(Madness_Pulse_Game* game)
 
 
                     String* usage_id = string_concat(&(STRING("Usage")),
-                                                     &STRING_STRLEN(c_string_from_int(i,&game->frame_allocator)),
-                                                     &game->frame_allocator);
+                                                     &STRING_STRLEN(c_string_from_int(i, game->frame_allocator)),
+                                                     game->frame_allocator);
                     madness_ui_slider_arrow(*usage_id, &overflow_usage_count, 0, ability_count);
 
 
@@ -391,7 +391,7 @@ void turn_update(Madness_Pulse_Game* game)
             String* selected_target_string = string_concat(
                 &pretext, &STRING_STRLEN(
                     madness_pulse_get_unit_name(game, game->targeting_handler->current_lock_on_target)),
-                &game->frame_allocator);
+                game->frame_allocator);
 
 
             madness_ui_string(*selected_target_string);

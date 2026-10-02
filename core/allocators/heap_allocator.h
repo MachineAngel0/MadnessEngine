@@ -42,12 +42,12 @@ typedef struct Heap_Allocator
     // u8 free_cache_count;
     u64 allocation_calls;
     u64 free_calls;
-
+    const char* name;
 } Heap_Allocator;
 
 
 
-void allocator_heap_init(Heap_Allocator* ha, void* backing_memory,  size_t memory_size);
+void allocator_heap_init(Heap_Allocator* ha, void* backing_memory,  size_t memory_size, const char* name);
 
 void* allocator_heap_alloc(Heap_Allocator* ha,  size_t size);
 void* allocator_heap_alloc_aligned(Heap_Allocator* ha, size_t size, size_t alignment);
@@ -62,4 +62,4 @@ void allocator_heap_debug_print(Heap_Allocator* ha);
 void allocator_heap_test(void);
 
 
-#endif //FREE_LIST_ALLOCATOR_H
+#endif //HEAP_ALLOCATOR_H

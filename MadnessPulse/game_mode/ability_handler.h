@@ -9,24 +9,24 @@
 
 Ability_Handler* ability_handler_init(Madness_Pulse_Game* game)
 {
-    Ability_Handler* ability_handler = allocator_alloc(&game->allocator, sizeof(Ability_Handler));
+    Ability_Handler* ability_handler = allocator_alloc(game->allocator, sizeof(Ability_Handler));
 
     ability_handler->turn_start_components =
-        dynamic_array_create_heap(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
-    ability_handler->turn_end_components = dynamic_array_create_heap(Turn_Trigger_Component_Info, 1, &game->heap_allocator);
+        dynamic_array_create_heap(Turn_Trigger_Component_Info, 1, game->heap_allocator);
+    ability_handler->turn_end_components = dynamic_array_create_heap(Turn_Trigger_Component_Info, 1, game->heap_allocator);
     ability_handler->turn_start_end_components = dynamic_array_create_heap(Turn_Trigger_Component_Info, 1,
-                                                                      &game->heap_allocator);
+                                                                      game->heap_allocator);
     ability_handler->turn_first_start_components = dynamic_array_create_heap(Turn_Trigger_Component_Info, 1,
-                                                                        &game->heap_allocator);
+                                                                        game->heap_allocator);
     ability_handler->turn_final_end_components = dynamic_array_create_heap(Turn_Trigger_Component_Info, 1,
-                                                                      &game->heap_allocator);
+                                                                      game->heap_allocator);
 
 
-    ability_handler->reversal_once_components = dynamic_array_create_heap(Reversal_Component_Info, 1, &game->heap_allocator);
+    ability_handler->reversal_once_components = dynamic_array_create_heap(Reversal_Component_Info, 1, game->heap_allocator);
     ability_handler->reversal_units_turn_start_components = dynamic_array_create_heap(
-        Reversal_Component_Info, 1, &game->heap_allocator);
+        Reversal_Component_Info, 1, game->heap_allocator);
     ability_handler->reversal_permanent_components = dynamic_array_create_heap(
-        Reversal_Component_Info, 1, &game->heap_allocator);
+        Reversal_Component_Info, 1, game->heap_allocator);
 
     return ability_handler;
 }

@@ -1,6 +1,7 @@
 #ifndef ALLOCATOR_SEGREGATED_LIST_H
 #define ALLOCATOR_SEGREGATED_LIST_H
 
+#include "dsa_utility.h"
 #include "pool_allocator.h"
 
 typedef struct Allocator_Segragated_List

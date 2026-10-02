@@ -176,7 +176,7 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
 {
 
     //TODO: components need to show what their targets are
-    String_Builder* ability_text = string_builder_create(KB(1), &game->frame_allocator);
+    String_Builder* ability_text = string_builder_create(KB(1), game->frame_allocator);
 
     for (int i = 0; i < ability->normal_component_count; ++i)
     {
@@ -261,7 +261,7 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
             break;
         }
 
-        madness_ui_string(*string_builder_to_string(ability_text, &game->frame_allocator));
+        madness_ui_string(*string_builder_to_string(ability_text, game->frame_allocator));
         string_builder_clear(ability_text);
 
     }

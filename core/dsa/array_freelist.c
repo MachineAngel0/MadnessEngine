@@ -77,7 +77,7 @@ void free_list_array_test(void)
 
     Allocator allocator;
     u64 mem_size = 10000;
-    allocator_init(&allocator, malloc(mem_size), mem_size);
+    allocator_init(&allocator, malloc(mem_size), mem_size, "free list array");
 
 
     Freelist_Array* fl_array = freelist_array_create(testing_freelist_array_thing, 100, &allocator);

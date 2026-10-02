@@ -10,7 +10,7 @@ Animation_System* animation_init(Memory_System* memory_system)
     //NOTE: should be more than skinned mesh count in theory
     u64 animation_gpu_matrix_byte_size = MAX_SKINNED_MESH_COUNT * sizeof(mat4s);
     animation_system->frame_allocator = memory_system_allocator_create(memory_system, animation_gpu_matrix_byte_size,
-                                                                       MEMORY_SUBSYSTEM_ANIMATION);
+                                                                       MEMORY_SUBSYSTEM_ANIMATION, "animation");
 
     return animation_system;
 }

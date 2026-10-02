@@ -203,7 +203,7 @@ bool job_system_init(Memory_System* memory_system)
                         job_counter_string_size, 8);
 
 
-    u64 total_thread_allocator_memory = MB(64);
+    u64 total_thread_allocator_memory = MB(4);
     u64 per_thread_allocator_memory = total_thread_allocator_memory / job_system->thread_count;
 
     for (u32 i = 0; i < job_system->thread_count; i++)
@@ -211,9 +211,13 @@ bool job_system_init(Memory_System* memory_system)
         Job_Thread* job_thread = &job_system->job_threads[i];
         job_thread->job_thread_array_index = i;
 
+        size_t string_size = snprintf(NULL,0, "job thread #%d", i);
+        //NOTE: this technically leaks/if never freed, would be an issue if we do state restarts in the engine
+        char* string_buffer = memory_system_alloc(memory_system, string_size+1, MEMORY_SUBSYSTEM_THREAD);
+        snprintf(string_buffer,string_size+1, "job thread #%d", i);
 
         job_thread->allocator = memory_system_allocator_create(memory_system, per_thread_allocator_memory,
-                                                               MEMORY_SUBSYSTEM_THREAD);
+                                                               MEMORY_SUBSYSTEM_THREAD, string_buffer);
         switch (job_thread->jobs_can_run)
         {
         case JOB_TYPE_GENERAL:

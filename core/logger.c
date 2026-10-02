@@ -13,7 +13,7 @@ void logger_shutdown(void)
 }
 
 //variadic argument
-void log_output(log_level level, const char *message, ...)
+void log_output(Log_Level level, const char *message, ...)
 {
 
     //stack allocation

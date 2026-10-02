@@ -5,7 +5,7 @@
 #include "profiler.h"
 
 
-void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer_size)
+void allocator_init(Allocator* a, void* backing_buffer, u64 backing_buffer_size, const char* name)
 {
     MASSERT(a);
     MASSERT(backing_buffer);
@@ -15,8 +15,7 @@ void allocator_init(Allocator* a, void* backing_buffer, const u64 backing_buffer
     a->memory = (u8*) backing_buffer;
     a->current_offset = 0;
     a->capacity = backing_buffer_size;
-
-
+    a->name = name;
 }
 
 
@@ -106,7 +105,7 @@ void allocator_test(void)
     const u64 allocator_size = MB(1);
     void* mem = malloc(allocator_size);
     if (!mem) { MASSERT("ALLOCATOR ALLOC FAILED"); }
-    allocator_init(&a, mem, allocator_size);
+    allocator_init(&a, mem, allocator_size, "test");
     TEST_DEBUG(a.capacity == MB(1));
 
 

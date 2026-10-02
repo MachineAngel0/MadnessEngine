@@ -29,11 +29,11 @@ void battle_inventory_component_init(Madness_Pulse_Game* game, Battle_Inventory_
     memset(battle_inventory_component, 0, sizeof(Battle_Inventory_Component));
 
     battle_inventory_component->battle_list = dynamic_array_create_heap(Ability_Name, INVENTORY_MAX_BATTLE_LIST,
-                                                                        &game->heap_allocator);
+                                                                        game->heap_allocator);
     battle_inventory_component->ability_count = dynamic_array_create_heap(u16, INVENTORY_MAX_BATTLE_LIST,
-                                                                          &game->heap_allocator);
+                                                                          game->heap_allocator);
     battle_inventory_component->overflow_usage_count = dynamic_array_create_heap(
-        u16, INVENTORY_MAX_BATTLE_LIST, &game->heap_allocator);
+        u16, INVENTORY_MAX_BATTLE_LIST, game->heap_allocator);
     battle_inventory_component->current_overflow = 0;
     battle_inventory_component->overflow_threshold = OVERFLOW_MAX;
 }

@@ -161,7 +161,8 @@ bool platform_pump_messages(Platform_State* plat_state)
 }
 
 
-void* platform_reserve_memory(u64 size, bool aligned)
+//TODO: remove
+/*void* platform_reserve_memory(u64 size, bool aligned)
 {
     // 1. Declare the SYSTEM_INFO structure
     SYSTEM_INFO si;
@@ -176,18 +177,37 @@ void* platform_reserve_memory(u64 size, bool aligned)
     printf("The virtual memory allocation granularity is: %u bytes\n", si.dwAllocationGranularity);
 
     return VirtualAlloc(0, size, MEM_RESERVE, PAGE_READWRITE);
+}*/
+
+u64 platform_query_page_size(void)
+{
+    SYSTEM_INFO info;
+    GetSystemInfo(&info);
+    return info.dwPageSize;
+}
+
+void* platform_virtual_allocate_reserve(u64 reserve_size)
+{
+    return VirtualAlloc(0, reserve_size, MEM_RESERVE, PAGE_READWRITE);
+
+}
+
+void platform_virtual_allocate_commit(void* memory, u64 commit_size)
+{
+     VirtualAlloc(memory, commit_size, MEM_COMMIT, PAGE_READWRITE);
+
 }
 
 void* platform_allocate(u64 size, bool aligned)
 {
-    return VirtualAlloc(0, size, MEM_COMMIT, PAGE_READWRITE);
+    return VirtualAlloc(0, size, MEM_COMMIT , PAGE_READWRITE);
     // return malloc(size);
 }
 
 void platform_free(void* block)
 {
+    //spec states size has to be 0 if type is mem_release
     VirtualFree(block, 0, MEM_RELEASE);
-    // free(block);
 }
 
 void* platform_zero_memory(void* block, u64 size)

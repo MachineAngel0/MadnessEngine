@@ -277,7 +277,7 @@ Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asse
     asset_list->allocator = memory_system_allocator_create(memory_system,
                                                            (sizeof(String) * max_asset_count) + (256 /*string count*/
                                                                * max_asset_count),
-                                                           MEMORY_SUBSYSTEM_RESOURCE);
+                                                           MEMORY_SUBSYSTEM_RESOURCE, "asset list allocator");
     asset_list->strings = allocator_alloc(asset_list->allocator,
                                           sizeof(String) * max_asset_count);
     asset_list->max_count = max_asset_count;
@@ -328,7 +328,7 @@ bool filesystem_has_directory_changed(File_Watch_Handle file_handle)
 bool filewatcher_init(Memory_System* memory_system)
 {
     madness_file_watcher = memory_system_alloc(memory_system, sizeof(Madness_File_Watcher), MEMORY_SUBSYSTEM_MISC);
-    madness_file_watcher->allocator = memory_system_allocator_create(memory_system, KB(64), MEMORY_SUBSYSTEM_MISC);
+    madness_file_watcher->allocator = memory_system_allocator_create(memory_system, KB(64), MEMORY_SUBSYSTEM_MISC, "file watcher");
 
     MASSERT(madness_file_watcher);
     return true;

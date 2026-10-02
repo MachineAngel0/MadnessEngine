@@ -2,16 +2,15 @@
 #include "logger.h"
 
 
-
 Event_System* event_init(Memory_System* memory_system)
 {
     event_system = memory_system_alloc(memory_system, sizeof(Event_System), MEMORY_SUBSYSTEM_EVENT);
 
     u64 event_system_mem_requirement = MB(1);
-    void* event_system_mem = memory_system_alloc(memory_system, event_system_mem_requirement, MEMORY_SUBSYSTEM_EVENT);
-
-    allocator_heap_init(&event_system->heap_allocator, event_system_mem, event_system_mem_requirement);
-
+    event_system->heap_allocator = memory_system_heap_allocator_create(memory_system,
+                                                                       event_system_mem_requirement,
+                                                                       MEMORY_SUBSYSTEM_EVENT,
+                                                                       "EVENT SYSTEM");
 
     INFO("EVENT SYSTEM INIT")
     return event_system;
@@ -24,7 +23,7 @@ bool event_shutdown(Memory_System* memory_system)
     INFO("EVENT SYSTEM SHUTDOWN")
 
 
-    memory_system_memory_free(memory_system, event_system->heap_allocator.data, MEMORY_SUBSYSTEM_EVENT);
+    memory_system_memory_free(memory_system, event_system->heap_allocator->data, MEMORY_SUBSYSTEM_EVENT);
     memory_system_memory_free(memory_system, event_system, MEMORY_SUBSYSTEM_EVENT);
 
 
@@ -41,7 +40,7 @@ void event_register(Event_Type event, String subscriber, const event_callback ca
     if (event_system->events_table[event].subscriber_array == NULL)
     {
         event_system->events_table[event].subscriber_array = dynamic_array_create_heap(
-            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, event_system->heap_allocator);
     }
 
 
@@ -74,7 +73,7 @@ void event_unregister(Event_Type event, String subscriber, event_callback callba
     {
         // subscriber_data* sub_data = (subscriber_data *) _dynamic_array_get(event_system->events_table[event].subs_arr, i);
         Subscriber_Data* sub_data = dynamic_array_get(event_system->events_table[event].subscriber_array,
-                                                       i, Subscriber_Data*);
+                                                      i, Subscriber_Data*);
         if (string_compare(&sub_data->subscriber_name, &subscriber) && (sub_data->callback == callback))
         {
             dynamic_array_remove_swap(event_system->events_table[event].subscriber_array, i);
@@ -90,7 +89,7 @@ void event_fire(Event_Type event, String sender_name, Event_Data context)
     if (event_system->events_table[event].subscriber_array == NULL)
     {
         event_system->events_table[event].subscriber_array = dynamic_array_create_heap(
-            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, &event_system->heap_allocator);
+            Subscriber_Data, INITIAL_SUBSCRIBER_SIZE, event_system->heap_allocator);
     }
 
     for (uint32_t i = 0; i < event_system->events_table[event].subscriber_array->num_items; i++)
@@ -121,7 +120,8 @@ void event_flush_queue(void)
         for (uint32_t i = 0; i < event_system->events_table[data.event].subscriber_array->num_items; i++)
         {
             //trigger all the callbacks in the event table
-            Subscriber_Data a = dynamic_array_get(event_system->events_table[data.event].subscriber_array, i, Subscriber_Data);
+            Subscriber_Data a = dynamic_array_get(event_system->events_table[data.event].subscriber_array, i,
+                                                  Subscriber_Data);
             // subscriber_data a = *(subscriber_data*)_array_get(event_system->events_table[event].subs_arr, i);
             if (a.callback(data.event, data.sender_name, a.subscriber_name, data.context))
             {

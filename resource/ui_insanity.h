@@ -776,6 +776,11 @@ void material_node_create(const char* node_name, Material_Slot* input_slots,
 {
     //TODO: render
     //TODO: add to a list of some kind to find out connections
+
+    //create a container, scroll down placing each node at an appropritate spot
+    //make sure there is decent padding between the two sides,
+    //something like x fixed width spacing between the two largest elements
+
 }
 
 
@@ -787,12 +792,11 @@ void material_node_add()
     };
 
     Material_Slot ouputs[] = {
-
+        (Material_Slot){.input_shader_types = SHADER_TYPE_FLOAT, .input_names = "Float Output"},
     };
 
     material_node_create("add", inputs, ARRAY_SIZE(inputs), ouputs, ARRAY_SIZE(ouputs));
 }
-
 
 
 #endif //INSANITY_UI_H

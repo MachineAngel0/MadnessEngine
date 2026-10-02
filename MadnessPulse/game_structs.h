@@ -1527,9 +1527,9 @@ typedef struct Madness_Game_State
 //GAME
 typedef struct Madness_Pulse_Game
 {
-    Allocator allocator;
-    Frame_Allocator frame_allocator;
-    Heap_Allocator heap_allocator;
+    Allocator* allocator;
+    Frame_Allocator* frame_allocator;
+    Heap_Allocator* heap_allocator;
 
     //refs
     Asset_System* resource_system;

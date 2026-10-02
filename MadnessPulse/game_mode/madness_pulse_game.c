@@ -12,13 +12,16 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
     game->game_state = Game_State_Enum_Main_Menu;
 
 
-    u64 game_memory_size = MB(64);
-    void* game_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
-    void* game_frame_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
-    void* game_free_list_memory = memory_system_alloc(memory_system, game_memory_size, MEMORY_SUBSYSTEM_GAME);
-    allocator_init(&game->allocator, game_memory, game_memory_size);
-    allocator_init(&game->frame_allocator, game_frame_memory, game_memory_size);
-    allocator_heap_init(&game->heap_allocator, game_free_list_memory, game_memory_size);
+
+
+    u64 game_persistent_memory_size = MB(16);
+    u64 game_frame_memory_size = MB(16);
+    u64 game_dynamic_memory_size = MB(16);
+
+    game->allocator = memory_system_allocator_create(memory_system, game_persistent_memory_size, MEMORY_SUBSYSTEM_GAME, "game persistent");
+    game->frame_allocator = memory_system_allocator_create(memory_system, game_frame_memory_size, MEMORY_SUBSYSTEM_GAME, "game frame");
+    game->heap_allocator = memory_system_heap_allocator_create(memory_system, game_dynamic_memory_size, MEMORY_SUBSYSTEM_GAME, "game dynamic");
+
 
     game->resource_system = resource_system;
     game->input_system = input;
@@ -44,7 +47,7 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     PROFILE_ZONE(GAME)
 
 
-    allocator_clear(&game->frame_allocator);
+    allocator_clear(game->frame_allocator);
 
     //TODO: DEBUG CODE
     if (input_key_released_unique(KEY_Q))

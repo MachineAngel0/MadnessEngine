@@ -15,7 +15,7 @@ void memory_system_init(Memory_System* memory_system, u64 memory_request_size)
 
 
     //TODO: if freeing memory actually becomes a concern then we can replace this with a freelist allocator
-    allocator_heap_init(&memory_system->application_allocator, memory, memory_request_size);
+    allocator_heap_init(&memory_system->application_allocator, memory, memory_request_size, "application allocator");
 
 
     INFO("MEMORY SYSTEM SUCCESSFULLY ALLOCATED")
@@ -54,7 +54,8 @@ void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size,
     return allocator_heap_alloc(&memory_system->application_allocator, memory_request_size);
 }
 
-void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type)
+void memory_system_memory_free(Memory_System* memory_system, void* memory_block,
+                               Memory_Subsystem_Type memory_subsystem_type)
 {
     MASSERT(memory_system);
     MASSERT(memory_block);
@@ -62,30 +63,45 @@ void memory_system_memory_free(Memory_System* memory_system, void* memory_block,
     allocator_heap_free(&memory_system->application_allocator, memory_block);
 }
 
-Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type)
+Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size,
+                                          Memory_Subsystem_Type memory_subsystem_type, const char* allocator_name)
 {
-    Allocator* out_allocator = memory_system_alloc(memory_system, sizeof(Allocator), memory_subsystem_type);
+    MASSERT(memory_system->allocator_count < MEMORY_SYSTEM_MAX_ALLOCATOR_COUNT);
+
+    Allocator* out_allocator = &memory_system->allocator_list[memory_system->allocator_count++];
     void* allocator_memory = memory_system_alloc(memory_system, memory_request_size, memory_subsystem_type);
-    allocator_init(out_allocator, allocator_memory, memory_request_size);
+    allocator_init(out_allocator, allocator_memory, memory_request_size, allocator_name);
+
+    //track the memory
+    memory_system->memory_subsystem_usage[memory_subsystem_type] += memory_request_size;
 
     return out_allocator;
 }
 
-void memory_system_allocator_free(Memory_System* memory_system, Allocator* allocator, Memory_Subsystem_Type memory_subsystem_type)
+void memory_system_allocator_free(Memory_System* memory_system, Allocator* allocator,
+                                  Memory_Subsystem_Type memory_subsystem_type)
 {
+
+    //track the memory
+    memory_system->memory_subsystem_usage[memory_subsystem_type] -= allocator->capacity;
+
     allocator->current_offset = 0;
     allocator->capacity = 0;
     memory_system_memory_free(memory_system, allocator->memory, memory_subsystem_type);
-    memory_system_memory_free(memory_system, allocator, memory_subsystem_type);
+
+
+    //TODO: i could have a free list for this, but honestly it shouldn't be needed
 }
 
 Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size,
-                                                    Memory_Subsystem_Type memory_subsystem_type)
+                                                    Memory_Subsystem_Type memory_subsystem_type, const char* allocator_name)
 {
-
-    Heap_Allocator* out_allocator = memory_system_alloc(memory_system, sizeof(Heap_Allocator), memory_subsystem_type);
+    Heap_Allocator* out_allocator = &memory_system->heap_allocator_list[memory_system->heap_allocator_count++];
     void* allocator_memory = memory_system_alloc(memory_system, memory_request_size, memory_subsystem_type);
-    allocator_heap_init(out_allocator, allocator_memory, memory_request_size);
+    allocator_heap_init(out_allocator, allocator_memory, memory_request_size, allocator_name);
+
+    //track the memory
+    memory_system->memory_subsystem_usage[memory_subsystem_type] += memory_request_size;
 
     return out_allocator;
 }

@@ -97,7 +97,7 @@ bool save_game_load(Madness_Pulse_Game* game, const u32 selected_slot)
 {
     if (!game->save_game)
     {
-        game->save_game = allocator_alloc(&game->allocator, sizeof(Save_Game));
+        game->save_game = allocator_alloc(game->allocator, sizeof(Save_Game));
     }
     memset(game->save_game, 0, sizeof(Save_Game));
 

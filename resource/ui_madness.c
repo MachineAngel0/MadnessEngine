@@ -14,20 +14,11 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
     madness_ui = memory_system_alloc(memory_system, sizeof(Madness_UI), MEMORY_SUBSYSTEM_UI);
 
     u64 ui_arena_mem_size = MB(128);
-    u64 ui_frame_arena_mem_size = MB(128);
 
-    madness_ui->heap_allocator = memory_system_alloc(memory_system, sizeof(Heap_Allocator),
-                                                     MEMORY_SUBSYSTEM_UI);
-    madness_ui->allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
-    madness_ui->frame_allocator = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_UI);
+    madness_ui->heap_allocator = memory_system_heap_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI, "Madness UI Heap");
+    madness_ui->allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI, "Madness UI Persistent");
+    madness_ui->frame_allocator = memory_system_allocator_create(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI, "Madness UI Frame");
 
-    void* free_list_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
-    void* allocator_memory = memory_system_alloc(memory_system, ui_arena_mem_size, MEMORY_SUBSYSTEM_UI);
-    void* frame_allocator_memory = memory_system_alloc(memory_system, ui_frame_arena_mem_size, MEMORY_SUBSYSTEM_UI);
-
-    allocator_heap_init(madness_ui->heap_allocator, free_list_memory, ui_arena_mem_size);
-    allocator_init(madness_ui->allocator, allocator_memory, ui_arena_mem_size);
-    allocator_init(madness_ui->frame_allocator, frame_allocator_memory, ui_arena_mem_size);
 
     madness_ui->input_system_reference = input_system;
     madness_ui->asset_system = asset_system;
@@ -797,12 +788,13 @@ void madness_ui_window_begin(String window_name, UI_Window_Flag window_flags)
     }
 
     //if not found we create a new one
+
     if (!window_state)
     {
         window_state = &madness_ui->window_state_array[madness_ui->window_state_array_count++];
-
         vec2s pos = madness_ui_get_window_pos();
         vec2s size = madness_ui_get_window_size();
+
         size.x = clamp_f32(window_state->window_size.x, MIN_UI_NODE_WINDOW_SIZE,
                            madness_ui->screen_size.x);
         size.y = clamp_f32(window_state->window_size.y, MIN_UI_NODE_WINDOW_SIZE,
@@ -1444,6 +1436,31 @@ UI_Node* madness_ui_c_string(const char* text)
                                                   UI_ALIGNMENT_X_LEFT, false);
     madness_ui_advance_cursor(ui_node->size);
     return ui_node;
+}
+
+
+
+UI_Node* madness_ui_c_string_format(const char* text, ...)
+{
+    va_list args_ptr;
+    va_start(args_ptr, text);
+
+    //aparently you can reuse args_ptr once you use vsnprintf, so you have to do a copy
+    va_list args_copy;
+    va_copy(args_copy, args_ptr);
+
+    int size = vsnprintf(NULL, 0, text, args_copy);
+    va_end(args_copy);
+
+    MASSERT(size >= 0);
+
+    char* out_message = allocator_alloc(madness_ui->frame_allocator, (size_t)size + 1);
+
+    vsnprintf(out_message, (size_t)size + 1, text, args_ptr);
+
+    va_end(args_ptr);
+
+    madness_ui_c_string(out_message);
 }
 
 

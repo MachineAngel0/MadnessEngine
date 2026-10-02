@@ -96,12 +96,10 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 {
     Shader_Creation_System* shader_creation_system = memory_system_alloc(memory_system, sizeof(Shader_Creation_System),
                                                                          MEMORY_SUBSYSTEM_RESOURCE);
-    shader_creation_system->frame_arena = memory_system_alloc(memory_system, sizeof(Allocator), MEMORY_SUBSYSTEM_RESOURCE);
 
     u64 arena_memory_amount = KB(512);
-    void* mem = memory_system_alloc(memory_system, arena_memory_amount, MEMORY_SUBSYSTEM_RESOURCE);
-    allocator_init(shader_creation_system->frame_arena, mem, arena_memory_amount);
-
+    shader_creation_system->frame_arena = memory_system_allocator_create(
+        memory_system, arena_memory_amount, MEMORY_SUBSYSTEM_MISC, "shader creation");
 
 
     return shader_creation_system;
@@ -111,7 +109,8 @@ Shader_Creation_System* shader_creation_system_init(Memory_System* memory_system
 bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation_system,
                                          const char* shader_name, Shader_Stage shader_stage)
 {
-    allocator_clear(shader_creation_system->frame_arena); // really dumb but it does work, alternatively, we could use a stack arena
+    allocator_clear(shader_creation_system->frame_arena);
+    // really dumb but it does work, alternatively, we could use a stack arena
     shader_creation_system->input_count = 0;
     shader_creation_system->output_count = 0;
     shader_creation_system->param_count = 0;
@@ -120,10 +119,12 @@ bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation
     switch (shader_stage)
     {
     case SHADER_STAGE_VERTEX:
-        shader_creation_system->current_file_name = c_string_concat(file_name, ".vert", shader_creation_system->frame_arena);
+        shader_creation_system->current_file_name = c_string_concat(file_name, ".vert",
+                                                                    shader_creation_system->frame_arena);
         break;
     case SHADER_STAGE_FRAGMENT:
-        shader_creation_system->current_file_name = c_string_concat(file_name, ".frag", shader_creation_system->frame_arena);
+        shader_creation_system->current_file_name = c_string_concat(file_name, ".frag",
+                                                                    shader_creation_system->frame_arena);
         break;
     case SHADER_STAGE_TESSELATION:
         UNIMPLEMENTED();
@@ -147,7 +148,6 @@ bool shader_creation_system_shader_start(Shader_Creation_System* shader_creation
     fprintf(shader_creation_system->open_file, "#include \"shader_includes/test_uniform.glsl\"\n");
 
     return true;
-
 }
 
 
@@ -155,7 +155,6 @@ void shader_creation_system_shader_start_main(Shader_Creation_System* shader_cre
 {
     fprintf(shader_creation_system->open_file, "void main() {\n");
 }
-
 
 
 void shader_creation_system_shader_end(Shader_Creation_System* shader_system)
@@ -228,13 +227,11 @@ bool shader_creation_system_test(Shader_Creation_System* shader_creation_system)
     Shader_Param_Handle wind_direction = shader_creation_system_add_param(
         shader_creation_system, SHADER_TYPE_FLOAT, "wind_direction");
 
-    shader_creation_system_addition(shader_creation_system, "wind_output",  wind_speed, wind_direction);
+    shader_creation_system_addition(shader_creation_system, "wind_output", wind_speed, wind_direction);
 
     shader_creation_system_shader_end(shader_creation_system);
 
     return true;
-
-
 }
 
 

@@ -7,7 +7,7 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
 
     u64 heap_alloc_mem_size = MB(1);
     ps->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_alloc_mem_size,
-                                                             MEMORY_SUBSYSTEM_PARTICLE);
+                                                             MEMORY_SUBSYSTEM_PARTICLE, "particle system");
 
 
     ps->particles_count = MAX_PARTICLE_COUNT;

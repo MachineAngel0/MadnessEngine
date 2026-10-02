@@ -22,7 +22,7 @@
 #define LOG_TRACE_ENABLED 0
 #endif
 
-typedef enum log_level
+typedef enum Log_Level
 {
     LOG_LEVEL_FATAL = 0,
     LOG_LEVEL_ERROR = 1,
@@ -30,7 +30,7 @@ typedef enum log_level
     LOG_LEVEL_INFO = 3,
     LOG_LEVEL_DEBUG = 4,
     LOG_LEVEL_TRACE = 5,
-} log_level;
+} Log_Level;
 
 
 typedef struct Madness_Logger
@@ -43,15 +43,25 @@ void logger_shutdown(void);
 
 //log string lookup table
 static const char* log_level_string[] = {
-    "[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "
+    [LOG_LEVEL_FATAL] = "[FATAL]: ",
+    [LOG_LEVEL_ERROR] = "[ERROR]: ",
+    [LOG_LEVEL_WARN] = "[WARN]: ",
+    [LOG_LEVEL_INFO] = "[INFO]: ",
+    [LOG_LEVEL_DEBUG] = "[DEBUG]: ",
+    [LOG_LEVEL_TRACE] = "[TRACE]: "
 };
 
 static const char* colour_strings[] = {
-    "0;30;41", "1;31", "1;33", "1;32", "1;34", "1;30"
+    "0;30;41",
+    "1;31",
+    "1;33",
+    "1;32",
+    "1;34",
+    "1;30"
 };
 
 //variadic argument
-void log_output(log_level level, const char* message, ...);
+void log_output(Log_Level level, const char* message, ...);
 
 
 #define FATAL(message, ...) log_output(LOG_LEVEL_FATAL, message, ##__VA_ARGS__);

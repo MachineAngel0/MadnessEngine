@@ -64,6 +64,7 @@ typedef struct
 } Memory_System_Config;
 
 
+#define MEMORY_SYSTEM_MAX_ALLOCATOR_COUNT 128
 
 typedef struct Memory_System
 {
@@ -74,14 +75,12 @@ typedef struct Memory_System
 
     //TODO: it should be that everytime an allocator wants to get created it goes through here, and gets a tagged names
     // then the memory system can do a query on each allocator
-    Allocator allocator_list[128];
+    Allocator allocator_list[MEMORY_SYSTEM_MAX_ALLOCATOR_COUNT];
     u32 allocator_count;
-    Heap_Allocator* fl_allocator_list[128];
-    u32 freelist_allocator_count;
-    Pool_Allocator* pool_allocator_list[128];
+    Heap_Allocator heap_allocator_list[MEMORY_SYSTEM_MAX_ALLOCATOR_COUNT];
+    u32 heap_allocator_count;
+    Pool_Allocator pool_allocator_list[MEMORY_SYSTEM_MAX_ALLOCATOR_COUNT];
     u32 pool_allocator_count;
-
-
 } Memory_System;
 
 
@@ -90,15 +89,21 @@ MAPI void memory_system_init(Memory_System* memory_system, u64 memory_request_si
 //should be the last system shutdown
 MAPI void memory_system_shutdown(Memory_System* memory_system);
 
-//should only be called by larger subsystems like the renderer, game, or resource system
-MAPI void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
+//should only be called by larger subsystems like the renderer, game, or resource system, from there you suballocate
+MAPI void* memory_system_alloc(Memory_System* memory_system, u64 memory_request_size,
+                               Memory_Subsystem_Type memory_subsystem_type);
 
-MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block, Memory_Subsystem_Type memory_subsystem_type);
+
+MAPI void memory_system_memory_free(Memory_System* memory_system, void* memory_block,
+                                    Memory_Subsystem_Type memory_subsystem_type);
 
 
-MAPI Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
-MAPI void memory_system_allocator_free(Memory_System* memory_system, Allocator* allocator, Memory_Subsystem_Type memory_subsystem_type);
-MAPI Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size, Memory_Subsystem_Type memory_subsystem_type);
+MAPI Allocator* memory_system_allocator_create(Memory_System* memory_system, u64 memory_request_size,
+                                               Memory_Subsystem_Type memory_subsystem_type, const char* allocator_name);
+MAPI void memory_system_allocator_free(Memory_System* memory_system, Allocator* allocator,
+                                       Memory_Subsystem_Type memory_subsystem_type);
+MAPI Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size,
+                                                         Memory_Subsystem_Type memory_subsystem_type, const char* allocator_name);
 
 
 //TODO: not in use rn

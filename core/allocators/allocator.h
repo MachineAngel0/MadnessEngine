@@ -4,30 +4,28 @@
 #include <stdlib.h>
 #include "defines.h"
 
-#ifndef DEFAULT_ALIGNMENT
-//most likely to be 4 (32bit) or 8 (64bit) (* 2)
-#define DEFAULT_ALIGNMENT (2*sizeof(void *))
-#endif
+
 
 typedef struct Allocator
 {
     u8* memory;
     u64 current_offset; // where in our memory we are
-    u64 capacity; // how large our allocator is
+    u64 capacity; // how large our allocator is currently
 
-    /* idk about this rn, if its even needed or if we just want a single special allocator for this
-    u64 commited_memory;
-    u64 page_size;
-    bool uses_virtual_memory;
-*/
-    //u64 max_offset; // for debugging and memory management
+    //u64 max_memory_used; // for debugging and memory management
+
+    /*u64 reserved_virtual_address_space;
+    size_t page_size;
+    bool uses_virtual_memory;*/
+
+    const char* name;
 } Allocator;
 
 typedef Allocator Frame_Allocator;
 
 
 //NOTE: memory tracker is optional and can be NULL
-MAPI void allocator_init(Allocator* a, void* backing_buffer, u64 backing_buffer_size);
+MAPI void allocator_init(Allocator* a, void* backing_buffer, u64 backing_buffer_size, const char* name);
 
 MAPI void allocator_clear(Allocator* a);
 MAPI void allocator_clear_and_zero(Allocator* a);

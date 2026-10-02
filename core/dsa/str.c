@@ -437,7 +437,7 @@ void string_test(void)
 
     Allocator* string_allocator = malloc(sizeof(Allocator));
     void* memory_block = malloc(1024);
-    allocator_init(string_allocator, memory_block, 1024);
+    allocator_init(string_allocator, memory_block, 1024, "string test");
 
     String stack_string = STRING("I WAS BORN ON THE STACK, FREED BY IT");
     string_print(&stack_string);

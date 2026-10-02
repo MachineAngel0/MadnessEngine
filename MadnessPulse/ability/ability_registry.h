@@ -11,7 +11,7 @@
 
 Ability_Registry* ability_registry_init(Madness_Pulse_Game* game)
 {
-    Ability_Registry* ability_registry = allocator_alloc(&game->allocator, sizeof(Ability_Registry));
+    Ability_Registry* ability_registry = allocator_alloc(game->allocator, sizeof(Ability_Registry));
     //TODO: make this dynamic at some point
     ability_registry->registered_abilities = hash_set_init(sizeof(Ability_Name), 1000);
     return ability_registry;
