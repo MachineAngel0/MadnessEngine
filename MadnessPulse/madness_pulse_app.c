@@ -51,8 +51,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     INFO("APPLICATION MEMORY SUCCESSFULLY ALLOCATED")
     clock_init(&app_internal->application_core.clock);
 
-    Madness_txt* txt = madness_txt_init(&app_internal->application_core.memory_system);
-    madness_txt_test_schema(txt);
+    Madness_txt* madness_txt = madness_txt_init(&app_internal->application_core.memory_system);
+    madness_txt_test_schema(madness_txt);
 
 
     //TODO: testing lexer/parser stuff
@@ -170,7 +170,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Editor* editor = editor_init(&application_core->memory_system, renderer_plugin->renderer,
                                  application_core->asset_system,
-                                 &application_core->clock, global_reflection_registry);
+                                 &application_core->clock, global_reflection_registry, madness_txt);
 
     filewatcher_init(&application_core->memory_system);
     filewatcher_directory_register("../z_assets");

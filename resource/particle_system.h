@@ -30,10 +30,6 @@ void particle_update(Particle_System* ps, float dt);
 void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, float dt);
 
 
-bool particle_system_does_emitter_exist(Particle_System* ps, String* name);
-bool particle_system_does_effect_exist(Particle_System* ps, String* name);
-
-
 //RENDER
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps);
 
@@ -56,8 +52,12 @@ bool particle_system_is_dead(Particle_System* ps, u32 particle_index);
 
 /////////////// EMITTERS ///////////////
 
-Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter_Handle* out_handle);
-void particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handle);
+Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Asset_Record* record,
+                                           Particle_Emitter_Handle* out_handle);
+bool particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handle);
+
+bool particle_system_does_emitter_exist(Particle_System* ps, Asset_Record* record,
+                                        Particle_Emitter_Handle* out_emitter_handle);
 
 //should be moved to the asset system, and we should load by effect
 Particle_Emitter* particle_emitter_acquire_from_file(Particle_System* ps, const char* file_path);
@@ -68,13 +68,12 @@ void particle_system_emitter_spawn(Particle_System* ps, Particle_Emitter* emitte
 
 /////////////// Particle Effects ///////////////
 
-//TODO: for this it probably needs a file format saving configurations and an api to make creating one simple
 
-/**
- * both are optional but you should really get a reference to one of them
- */
-Particle_Effect* particle_effect_acquire(Particle_System* ps, Particle_Effect_Handle* out_handle);
-void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle);
+Particle_Effect* particle_effect_acquire(Particle_System* ps, Asset_Record* asset_record,
+                                         Particle_Effect_Handle* out_handle);
+bool particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle);
+bool particle_system_does_effect_exist(Particle_System* ps, Asset_Record* record,
+                                       Particle_Effect_Handle* out_effect_handle);
 
 
 void particle_effect_add_emitter(Particle_Effect* particle_effect, Particle_Emitter* emitter);
@@ -118,9 +117,8 @@ void particle_emitter_create_default(Asset_System* asset_system,
     MADNESS_UUID shader_uuid = {0};
     MADNESS_UUID mat_uuid = {0};
     asset_converter_material_from_shader_handle(asset_system, &shader_handle, emitter_name,
-                                       &shader_uuid,
-                                       &mat_uuid);
-
+                                                &shader_uuid,
+                                                &mat_uuid);
 
 
     Particle_Emitter emitter = {

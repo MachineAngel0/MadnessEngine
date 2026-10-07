@@ -7,8 +7,11 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
 
     u64 heap_alloc_mem_size = MB(1);
     ps->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_alloc_mem_size,
-                                                             MEMORY_SUBSYSTEM_PARTICLE, "particle system");
+                                                             MEMORY_SUBSYSTEM_PARTICLE, "particle system dynamic");
 
+    u64 alloc_mem_size = MB(1);
+    ps->allocator = memory_system_allocator_create(memory_system, alloc_mem_size, MEMORY_SUBSYSTEM_PARTICLE,
+                                                   "particle system");
 
     ps->particles_count = MAX_PARTICLE_COUNT;
     ps->dead_particles_count = MAX_PARTICLE_COUNT;
@@ -64,12 +67,6 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
                                                     MEMORY_SUBSYSTEM_PARTICLE);
 
 
-    ps->particle_generation = memory_system_alloc(memory_system, sizeof(u32) * ps->particle_effects_count_max,
-                                                  MEMORY_SUBSYSTEM_PARTICLE);
-    ps->emitter_generation = memory_system_alloc(memory_system, sizeof(u32) * ps->emitter_count_max,
-                                                 MEMORY_SUBSYSTEM_PARTICLE);
-
-
     asset_converter_texture(asset_system,
                             "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png", NULL);
     Texture_Handle handle =
@@ -98,37 +95,26 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->particle_effects = memory_system_alloc(memory_system, sizeof(Particle_Effect) * ps->particle_effects_count_max,
                                                MEMORY_SUBSYSTEM_PARTICLE);;
 
-    ps->free_particle_effects = memory_system_alloc(memory_system,
-                                                    sizeof(u32) * ps->particle_effects_count_max,
-                                                    MEMORY_SUBSYSTEM_PARTICLE);
-    ps->free_particle_effects_count = ps->particle_effects_count_max;
+    ps->free_effects_queue = ring_queue_create_allocator(sizeof(u32), ps->particle_effects_count_max, ps->allocator);
 
-    s64 temp_effect_idx = ps->particle_effects_count_max - 1;
-    s64 temp_effect_free = 0;
-    while (temp_effect_idx > 0)
-    {
-        //its a one to one when we start out
-        ps->free_particle_effects[temp_effect_idx] = temp_effect_free;
-        temp_effect_idx--;
-        temp_effect_free++;
-    }
+
 
 
     //emitters
     ps->emitters = memory_system_alloc(memory_system, sizeof(Particle_Emitter) * ps->emitter_count_max,
                                        MEMORY_SUBSYSTEM_PARTICLE);
-    ps->free_emitters_count = ps->emitter_count_max;
-    ps->free_emitters = memory_system_alloc(memory_system, sizeof(u32) * ps->emitter_count_max,
-                                            MEMORY_SUBSYSTEM_PARTICLE);
+    ps->free_emitters_queue = ring_queue_create_allocator(sizeof(u32), ps->emitter_count_max, ps->allocator);
 
-    s64 temp_idx = ps->emitter_count_max - 1;
-    s64 temp_free = 0;
-    while (temp_idx > 0)
+
+    //queues
+    // we start at 1 because our default emitters/effects take the 0 slot
+    for (u32 i = 1; i < ps->particle_effects_count_max; i++)
     {
-        //its a one to one when we start out
-        ps->free_emitters[temp_free] = temp_idx;
-        temp_idx--;
-        temp_free++;
+        ring_enqueue(ps->free_effects_queue, &i);
+    }
+    for (u32 i = 1; i < ps->emitter_count_max; i++)
+    {
+        ring_enqueue(ps->free_emitters_queue, &i);
     }
 
 
@@ -139,7 +125,7 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
 
 
     //create our default system and emitter
-    ps->default_emitter = particle_emitter_acquire(ps, &ps->default_emitter_handle);
+    ps->default_emitter = &ps->emitters[0];
     ps->default_emitter->data.emission_rate = 1;
     ps->default_emitter->data.particle_lifetime = 8.0f;
     ps->default_emitter->data.gravity = (vec3s){.x = 0.0f, .y = -9.8f, .z = 0.0f};
@@ -147,12 +133,22 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->default_emitter->particle = dynamic_array_create_heap(u32, 256, ps->heap_allocator);
     ps->default_emitter->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(
         "INVALID EMITTER", asset_system->heap_allocator);
+    ps->default_emitter->in_use = true;
 
-    ps->default_effect = particle_effect_acquire(ps, &ps->default_effect_handle);
+    ps->default_effect = &ps->particle_effects[0];
     ps->default_effect->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR("INVALID EFFECT", asset_system->heap_allocator);
     particle_effect_add_emitter(ps->default_effect, ps->default_emitter);
     ps->default_effect->emitters_start[0] = 0.0f;
     ps->default_effect->emitters_end[0] = 5.0f;
+
+    //default handles
+    ps->default_effect_handle = (Particle_Effect_Handle){0,0};
+    ps->default_emitter_handle = (Particle_Emitter_Handle){0,0};
+
+    u32 default_index = 0;
+    array_push(ps->active_effects, &default_index);
+    array_push(ps->active_emitters, &default_index);
+
     return ps;
 }
 
@@ -262,56 +258,71 @@ Render_Packet_Particle particle_system_generate_render_packet(Particle_System* p
     };
 }
 
-Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Particle_Emitter_Handle* out_handle)
+Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Asset_Record* record,
+                                           Particle_Emitter_Handle* out_handle)
 {
-    Particle_Emitter* particle_emitter = NULL;
-
-    if (ps->free_emitters_count <= 0)
+    u32 free_index;
+    if (!ring_dequeue(ps->free_emitters_queue, &free_index))
     {
-        WARN("particle_emitter_acquire: ran out of fre emitters")
+        WARN("particle_emitter_acquire: ran out of free emitters")
         return ps->default_emitter;
     }
 
-
-    u32 free_index = ps->free_emitters[--ps->free_emitters_count];
-
+    Particle_Emitter* particle_emitter = NULL;
     particle_emitter = &ps->emitters[free_index];
     particle_emitter->in_use = true;
 
+    //list of particles manage by the emitter
     if (!particle_emitter->particle)
     {
         particle_emitter->particle = dynamic_array_create_heap(u32, 256, ps->heap_allocator);
     }
 
-    *out_handle = (Particle_Emitter_Handle){
-        .handle = free_index,
-        .gen = ps->emitter_generation[free_index]
-    };
+
+    Asset_Runtime runtime = ps->particle_emitter_asset[free_index];
+    asset_runtime_set_info_from_record(&runtime, record, ASSET_PARTICLE_EMITTER);
+    runtime.asset_handles.particle_emitter_handle = (Particle_Emitter_Handle){free_index, runtime.generation};
+
+    //set emitter
+    *out_handle = runtime.asset_handles.particle_emitter_handle;
 
     array_push(ps->active_emitters, &free_index);
 
     return particle_emitter;
 }
 
-void particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handle)
+bool particle_emitter_release(Particle_System* ps, Particle_Emitter_Handle handle)
 {
-    ps->emitters[handle.handle].in_use = false;
-    // dynamic_array_free(ps->emitters[handle.handle].particle); //idk if i want to do this
-    // allocator_heap_free(ps->heap_allocator, ps->emitters[handle.handle].name); //idk if i want to do this
+    if (handle.handle == 0)
+    {
+        WARN("particle_emitter_release: trying to release default emitter");
+        return false;
+    }
 
+
+    ps->emitters[handle.handle].in_use = false;
     for (u32 i = 0; i < ps->active_emitters->num_items; i++)
     {
-        if (handle.handle == array_get(ps->active_emitters, i,u32))
+        if (handle.handle == array_get(ps->active_emitters, i, u32))
         {
             array_remove_swap(ps->active_emitters, i);
             break;
         }
     }
 
+    Asset_Runtime* runtime = &ps->particle_emitter_asset[handle.handle];
+    if (runtime->generation != handle.gen)
+    {
+        MASSERT_MSG_FALSE("particle_emitter_release: INVALID TEXTURE GENERATION SHOULD NEVER IDEALLY HAPPEN");
+        return false;
+    }
 
-    ps->emitter_generation[handle.handle]++; // bump the generation
-    ps->free_emitters[ps->free_emitters_count] = handle.handle;
-    ps->free_emitters_count++;
+    if (runtime_asset_release(runtime))
+    {
+        ring_enqueue(ps->free_emitters_queue, &handle.handle);
+    }
+
+    return true;
 }
 
 
@@ -386,14 +397,15 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
     }*/
 }
 
-bool particle_system_does_emitter_exist(Particle_System* ps, String* name)
+bool particle_system_does_emitter_exist(Particle_System* ps, Asset_Record* record,
+                                        Particle_Emitter_Handle* out_emitter_handle)
 {
-    for (u32 i = 0; i < ps->emitter_count_max; i++)
+    for (u32 i = 0; i < MAX_PARTICLE_EMITTER_COUNT; i++)
     {
-        if (!ps->emitters[i].name) { continue; }
-
-        if (string_compare(ps->emitters[i].name, name))
+        Asset_Runtime* asset_runtime = &ps->particle_emitter_asset[i];
+        if (madness_uuid_compare(asset_runtime->uuid, record->uuid))
         {
+            *out_emitter_handle = asset_runtime->asset_handles.particle_emitter_handle;
             return true;
         }
     }
@@ -401,13 +413,15 @@ bool particle_system_does_emitter_exist(Particle_System* ps, String* name)
     return false;
 }
 
-bool particle_system_does_effect_exist(Particle_System* ps, String* name)
+bool particle_system_does_effect_exist(Particle_System* ps, Asset_Record* record,
+                                       Particle_Effect_Handle* out_effect_handle)
 {
-    for (u32 i = 0; i < ps->particle_effects_count_max; i++)
+    for (u32 i = 0; i < MAX_PARTICLE_EFFECTS_COUNT; i++)
     {
-        if (!ps->particle_effects->name) { continue; }
-        if (string_compare(ps->particle_effects[i].name, name))
+        Asset_Runtime* asset_runtime = &ps->particle_effect_asset[i];
+        if (madness_uuid_compare(asset_runtime->uuid, record->uuid))
         {
+            *out_effect_handle = asset_runtime->asset_handles.particle_effect_handle;
             return true;
         }
     }
@@ -416,43 +430,64 @@ bool particle_system_does_effect_exist(Particle_System* ps, String* name)
 }
 
 
-Particle_Effect* particle_effect_acquire(Particle_System* ps, Particle_Effect_Handle* out_handle)
+Particle_Effect* particle_effect_acquire(Particle_System* ps, Asset_Record* asset_record,
+                                         Particle_Effect_Handle* out_handle)
 {
     MASSERT(out_handle);
 
-    if (ps->free_particle_effects_count <= 0)
+    u32 free_index;
+    if (!ring_dequeue(ps->free_effects_queue, &free_index))
     {
-        WARN("particle_effect_acquire: out of effects to give")
-        *out_handle = (Particle_Effect_Handle){0, 0};
+        WARN("particle_emitter_acquire: ran out of free emitters")
         return ps->default_effect;
     }
 
-    u32 free_index = ps->free_particle_effects[--ps->free_particle_effects_count];
     Particle_Effect* out_effect = &ps->particle_effects[free_index];
-    *out_handle = (Particle_Effect_Handle){
-        .handle = free_index,
-        .gen = ps->particle_generation[free_index]
-    };
+
+    Asset_Runtime runtime = ps->particle_emitter_asset[free_index];
+    asset_runtime_set_info_from_record(&runtime, asset_record, ASSET_PARTICLE_EMITTER);
+    runtime.asset_handles.particle_effect_handle = (Particle_Effect_Handle){free_index, runtime.generation};
+
+
+    *out_handle = runtime.asset_handles.particle_effect_handle;
+
     array_push(ps->active_effects, &free_index);
 
 
     return out_effect;
 }
 
-void particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle)
+bool particle_effect_release(Particle_System* ps, Particle_Effect_Handle handle)
 {
+    if (handle.handle == 0)
+    {
+        WARN("particle_effect_release: trying to release default effect");
+        return false;
+    }
+
+
     for (u32 i = 0; i < ps->active_effects->num_items; i++)
     {
-        if (handle.handle == array_get(ps->active_effects, i,u32))
+        if (handle.handle == array_get(ps->active_effects, i, u32))
         {
             array_remove_swap(ps->active_effects, i);
             break;
         }
     }
 
-    ps->particle_generation[handle.handle]++; // bump the generation
-    ps->free_particle_effects[ps->free_particle_effects_count] = handle.handle;
-    ps->free_particle_effects_count++;
+    Asset_Runtime* runtime = &ps->particle_emitter_asset[handle.handle];
+    if (runtime->generation != handle.gen)
+    {
+        MASSERT_MSG_FALSE("particle_effect_release: INVALID TEXTURE GENERATION SHOULD NEVER IDEALLY HAPPEN");
+        return false;
+    }
+
+    if (runtime_asset_release(runtime))
+    {
+        ring_enqueue(ps->free_effects_queue, &handle.handle);
+    }
+    return true;
+
 }
 
 

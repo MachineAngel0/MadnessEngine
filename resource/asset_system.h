@@ -2,9 +2,6 @@
 #define ASSET_SYSTEM_H
 
 #include <stdbool.h>
-#include "asset_converter.h"
-#include "asset_registry.h"
-#include "asset_serialization.h"
 #include "resource_types.h"
 
 
@@ -32,16 +29,6 @@
 //or just set a flag to not render and put the new one in,
 //basically just find the old data, update the mesh data and point it to the correct vertex spot, no unloading, just restart the engine
 
-
-
-typedef struct Asset_Load_Handle
-{
-    //for when we use a more generic load function call
-    //we use the type to get the type of handle we were given back
-    Asset_Type type;
-    void* handle;
-} Asset_Load_Handle;
-
 Asset_System* asset_system_init(Memory_System* memory_system,
                                 Reflection_Registry* global_reflection_registry,
                                 Reflection_Registry* material_reflection_registry);
@@ -55,11 +42,6 @@ MAPI void render_packet_clear(Render_Packet* renderer_packets);
 
 
 //ASSET MANAGER
-//NOTE: these only load from the engine path, as a fallback they will try to look for the import path file
-// you only need to pass in the asset name, like error_texture and not error_texture.mtex
-
-bool asset_system_does_source_already_exist(const char* import_file_path);
-bool asset_system_does_engine_already_exist(const char* engine_file_path);
 
 Texture_Handle asset_load_texture_path(Asset_System* asset_system, const char* asset_path);
 Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
@@ -78,7 +60,7 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
 
 
 //NOTE: we dont unload shaders
-bool _asset_load_shader_asset(Asset_System* asset_system, Asset_MetaData* meta_data,
+bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* meta_data,
                              Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator);
 bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_path,
                                   Shader_Handle* out_shader_handle);
@@ -86,7 +68,7 @@ bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
 
 
 
-bool _asset_load_material(Asset_System* asset_system, Asset_MetaData* meta_data, Material_Handle* out_material_handle);
+bool _asset_load_material(Asset_System* asset_system, Asset_Record* meta_data, Material_Handle* out_material_handle);
 bool asset_load_material_path(Asset_System* asset_system,  const char* asset_path,  Material_Handle* out_material);
 bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_uuid, Material_Handle* out_material);
 bool asset_unload_material(Asset_System* asset_system, const char* asset_path);
@@ -106,20 +88,25 @@ bool asset_unload_particle_emitter(Asset_System* asset_system, Particle_Emitter_
 
 
 
-void madness_asset_set_info(Madness_Asset* asset, Asset_MetaData* meta_data, Asset_Type asset_type)
+
+//NOTE: just make sure to fill out the asset handle
+void asset_runtime_set_info_from_record(Asset_Runtime* asset, Asset_Record* meta_data, Asset_Type asset_type)
 {
     asset->reference_count = 1;
     asset->engine_path = meta_data->engine_path;
     asset->path_hash = meta_data->hash;
     asset->type = asset_type;
+    asset->uuid = meta_data->uuid;
+
 }
 
 
 /**
  * check the bool, as that means we need to free this asset
  * decrements ref count
+ * also generation if we need to free it
  */
-bool madness_asset_release(Madness_Asset* asset)
+bool runtime_asset_release(Asset_Runtime* asset)
 {
     asset->reference_count--;
     if (asset->reference_count <= 0)
@@ -127,11 +114,25 @@ bool madness_asset_release(Madness_Asset* asset)
         //unload the asset
         asset->path_hash = 0;
         asset->engine_path = NULL;
+        asset->uuid = (MADNESS_UUID){0,0};
         asset->type = ASSET_TYPE_MAX;
+        asset->generation++;
         return true;
     }
 
     return false;
+}
+
+bool asset_runtime_compare_with_record(Asset_Runtime* asset, Asset_Record* record)
+{
+    // if (asset->path_hash == record->hash) // TODO: well want to use this eventually
+
+    if (madness_uuid_compare(asset->uuid, record->uuid))
+    {
+        return true;
+    }
+    return false;
+
 }
 
 
@@ -198,19 +199,7 @@ typedef struct Madness_Runtime_Level_Table
 } Madness_Runtime_Level_Table;
 
 
-void asset_system_read_registry(Asset_System* asset_system)
-{
-}
 
-void asset_system_update_registry(Asset_System* asset_system)
-{
-    //TODO:
-}
-
-
-void asset_system_convert_to_runtime_format(void)
-{
-}
 
 
 #endif //ASSET_SYSTEM_H

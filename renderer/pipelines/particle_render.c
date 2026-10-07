@@ -7,6 +7,8 @@
 
 Particle_Render* particle_renderer_init(Renderer* renderer)
 {
+    PROFILE_ZONE(particle_renderer_init);
+
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 
     u64 particle_material_buffer_data_size = sizeof(Material_Spherical_Billboard) * MAX_PARTICLE_COUNT;
@@ -86,6 +88,7 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
                                                      sizeof(Material_Spherical_Billboard),
                                                      1000); */
 
+    PROFILE_ZONE_END(particle_renderer_init);
     return particle_renderer;
 }
 
@@ -306,12 +309,13 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
 
     //TODO: issue a draw for material range in the particle draw
 
-    if (particle_render->particle_draw_count == 0) { return; }
+
 
     //TODO: remove when we finally want to test it
     bool do_it = false;
     if (do_it)
     {
+        if (particle_render->particle_draw_count == 0) { return; }
         u64 current_key = particle_render->particle_draw[0].shader_key;
         u64 last_idx = 0;
         u64 current_idx = 0;

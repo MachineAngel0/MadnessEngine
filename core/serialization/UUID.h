@@ -10,10 +10,12 @@ typedef struct MADNESS_UUID
     u64 low;
 } MADNESS_UUID;
 
+typedef u64 UUID_HASH;
+
 
 void madness_uuid_generate(MADNESS_UUID* uuid);
 MADNESS_UUID madness_uuid_generate_return(void);
-u64 madness_uuid_hash(MADNESS_UUID* uuid);
+UUID_HASH madness_uuid_hash(MADNESS_UUID* uuid);
 bool madness_uuid_compare(MADNESS_UUID uuid1, MADNESS_UUID uuid2);
 
 

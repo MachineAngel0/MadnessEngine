@@ -30,8 +30,10 @@ bool texture_system_init(Asset_System* asset_system, Texture_System* texture_sys
     }
 
 
-    //hash map
-    texture_system->texture_hash_map = HASH_MAP_CREATE(u64, u32, MAX_TEXTURE_COUNT*2);
+    memset(texture_system->texture_asset, 0, MAX_TEXTURE_COUNT * sizeof(Asset_Runtime));
+
+    // texture_system->hash_map_loaded_texture = HASH_MAP_CREATE(sizeof(UUID_HASH), sizeof(Texture_Handle), MAX_TEXTURE_COUNT*2, asset_system->allocator);
+
 
 
     //create our debug texture
@@ -57,6 +59,7 @@ bool texture_system_shutdown(Texture_System* texture_system, Memory_System* memo
 
     return true;
 }
+
 MADNESS_UUID texture_system_get_default_uuid(Asset_System* asset_system)
 {
     return asset_system->texture_system->default_texture_uuid;
@@ -65,7 +68,9 @@ MADNESS_UUID texture_system_get_default_uuid(Asset_System* asset_system)
 
 bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle handle, Madness_Texture* out_texture)
 {
-    if (texture_system->textures->generation != handle.generation)
+    Asset_Runtime* asset = &texture_system->texture_asset[handle.handle];
+
+    if (asset->generation != handle.generation)
     {
         WARN("texture_system_get_texture: trying to get a font. use get_font");
         // out_texture = &texture_system->textures[0];
@@ -73,7 +78,7 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
         return false;
     }
 
-    if (texture_system->textures[handle.handle].type != ASSET_TEXTURE)
+    if (texture_system->textures[handle.handle].type != TEXTURE_TYPE_TEXTURE)
     {
         WARN("texture_system_get_texture: trying to get a font. use get_font");
         MASSERT_FALSE();
@@ -97,11 +102,38 @@ Texture_Handle texture_system_get_default_texture(Texture_System* texture_system
     return texture_system->default_texture_handle;
 }
 
+bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Record* asset, Texture_Handle* out_handle)
+{
+    MASSERT(texture_system);
+    MASSERT(asset);
+
+
+    PROFILE_ZONE(texture_system_does_texture_exist)
+
+    //check the runtime assets
+    for (u32 i = 0; i < texture_system->max_textures; i++)
+    {
+        Asset_Runtime* runtime = &texture_system->texture_asset[i];
+        if (!runtime->in_use) { continue; }
+
+        if (string_compare(runtime->engine_path, asset->engine_path))
+        {
+            runtime->reference_count++;
+            *out_handle = runtime->asset_handles.texture_handle;
+            PROFILE_ZONE_END(texture_system_does_texture_exist)
+            return true;
+        }
+    }
+
+    PROFILE_ZONE_END(texture_system_does_texture_exist)
+    return false;
+}
+
 
 bool texture_system_get_font(Texture_System* texture_system, const Texture_Handle handle, Madness_Font* out_font)
 {
     Madness_Texture* texture = &texture_system->textures[handle.handle];
-    if (texture_system->textures[handle.handle].type != ASSET_FONT)
+    if (texture_system->textures[handle.handle].type != TEXTURE_TYPE_FONT)
     {
         WARN("texture_system_get_font: trying to get a normal texture. use get_font");
         MASSERT_FALSE();
@@ -112,30 +144,9 @@ bool texture_system_get_font(Texture_System* texture_system, const Texture_Handl
     return true;
 }
 
-bool texture_system_is_loaded(Texture_System* texture_system, Texture_Handle handle)
-{
-    return (texture_system->textures[handle.handle].texture_load_state == ASSET_LOAD_STATE_LOADED);
-}
 
-
-bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handle, u64 hash)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-    u32 texture_idx = 0;
-    if (hash_map_get(texture_system->texture_hash_map, &hash, &texture_idx))
-    {
-        *out_handle = (Texture_Handle){texture_idx, texture_system->textures[texture_idx].generation};
-        texture_system->texture_asset[texture_idx].reference_count++;
-        return true;
-    }
-
-    return false;
-}
-
-
-bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
-                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle,
-                                       String* engine_path)
+bool texture_system_acquire(Asset_System* asset_system, Asset_Record* record,
+                            Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle)
 {
     Texture_System* texture_system = asset_system->texture_system;
 
@@ -149,10 +160,8 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
         return false;
     }
 
-    texture_system->in_use_textures_count++;
     //set texture data
     Madness_Texture* texture = &texture_system->textures[free_index];
-    MASSERT(texture->texture_load_state == ASSET_LOAD_STATE_UNLOADED);
 
     texture->width = texture_data.width;
     texture->height = texture_data.height;
@@ -160,13 +169,7 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     texture->format = texture_data.format;
     texture->pixels_size = texture_data.pixels_size;
     texture->type = texture_data.type;
-    texture->texture_load_state = ASSET_LOAD_STATE_QUEUED;
-    //update generation
-    texture->generation++;
 
-    //fill out the handle
-    out_handle->handle = free_index;
-    out_handle->generation = texture->generation;
 
     //queue for upload on the gpu
     Texture_GPU_Upload upload_texture = {0};
@@ -177,24 +180,49 @@ bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash,
     ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
 
-    hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
+    Asset_Runtime* runtime = &texture_system->texture_asset[free_index];
+    asset_runtime_set_info_from_record(runtime, record, ASSET_TEXTURE);
 
+    //fill out the handle
+    out_handle->handle = free_index;
+    out_handle->generation = runtime->generation;
 
-    //update asset data
-    Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
-    meta_data->path_hash = hash;
-    meta_data->type = ASSET_TEXTURE;
-    meta_data->reference_count = 1;
+    texture_system->in_use_textures_count++;
 
 
     return out_handle;
 }
 
+bool texture_system_release(Asset_System* asset_system, Texture_Handle handle)
+{
+    Texture_System* texture_system = asset_system->texture_system;
 
-bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
-                                    Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data,
-                                    Texture_Handle* out_handle, String* engine_path)
+
+    Asset_Runtime* runtime = &texture_system->texture_asset[handle.handle];
+    if (runtime->generation != handle.generation)
+    {
+        MASSERT_MSG_FALSE("texture_system_release: INVALID TEXTURE GENERATION SHOULD NEVER IDEALLY HAPPEN");
+        return false;
+    }
+
+    //TODO: we could zero this but idk?
+    Madness_Texture* texture = &texture_system->textures[handle.handle];
+
+    if (runtime_asset_release(runtime))
+    {
+        ring_enqueue(texture_system->available_texture_queue, &handle.handle);
+
+        if (texture->type == TEXTURE_TYPE_FONT)
+        {
+            ring_enqueue(texture_system->available_font_queue, &texture->font_index);
+        }
+    }
+}
+
+
+bool texture_system_acquire_font(Asset_System* asset_system,
+                                 Asset_Record* record, Madness_Texture texture_data, Madness_Font texture_font_data,
+                                 u8* pixel_data, Texture_Handle* out_handle)
 {
     Texture_System* texture_system = asset_system->texture_system;
 
@@ -233,51 +261,24 @@ bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uui
     texture->type = texture_data.type;
     texture->font_index = free_font_index;
 
-    //update bindless and generation
-    texture->generation++;
-
-    //fill out the handle
-    out_handle->handle = free_index;
-    out_handle->generation = texture->generation;
 
     Texture_GPU_Upload upload_texture = {0};
     upload_texture.madness_texture = texture;
     upload_texture.pixel_data = pixel_data;
     upload_texture.texture_memory_allocator = asset_system->texture_allocator;
     upload_texture.texture_index = free_index;
-    // TODO: replace with texture memory allocator
 
 
     //send to renderer for upload
     ring_enqueue(texture_system->texture_gpu_upload_queue, &upload_texture);
 
-    hash_map_insert(texture_system->texture_hash_map, &hash, &free_index);
+    Asset_Runtime* runtime = &texture_system->texture_asset[free_index];
+    asset_runtime_set_info_from_record(runtime, record, ASSET_FONT);
 
+    runtime->asset_handles.texture_handle = (Texture_Handle){free_index, runtime->generation};
 
-    //update asset data
-    Madness_Asset* meta_data = &texture_system->texture_asset[free_index];
-    meta_data->engine_path = string_duplicate_heap(engine_path, asset_system->heap_allocator);
-    meta_data->path_hash = hash;
-    meta_data->type = ASSET_FONT;
-    meta_data->reference_count = 1;
-
-
-    return true;
-}
-
-bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle)
-{
-    Texture_System* texture_system = asset_system->texture_system;
-
-
-    texture_system->texture_asset[texture_handle.handle].reference_count--;
-    if (texture_system->texture_asset[texture_handle.handle].reference_count <= 0)
-    {
-        //unload the texture
-        //TODO: actually not even neccessary, we only need to delete the texture vulkan side if there is one there,
-        // which honestly should just get handled by default on upload
-        // vulkan_texture_system_free(asset_system->renderer, texture_handle);
-    }
+    //fill out the handle
+    *out_handle = (Texture_Handle){free_index, runtime->generation};
 
 
     return true;

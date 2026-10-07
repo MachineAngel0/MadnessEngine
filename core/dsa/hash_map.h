@@ -35,10 +35,10 @@ typedef struct hash_map
 } hash_map;
 
 
-hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity);
+hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator);
 
-#define HASH_MAP_CREATE(key_type, value_type, capacity)\
-         hash_map_init(sizeof(key_type), sizeof(value_type), capacity)
+#define HASH_MAP_CREATE(key_type, value_type, capacity, allocator)\
+         hash_map_init(sizeof(key_type), sizeof(value_type), capacity, allocator)
 
 
 //this version will have capacity will be increased until it is a power of two

@@ -69,7 +69,6 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
             vulkan_queue_system_get_transfer_semaphore(renderer),
             pending_upload.timeline_semaphore_value))
         {
-            pending_upload.madness_texture->texture_load_state = ASSET_LOAD_STATE_LOADED;
 
             vulkan_command_buffer_reset(pending_upload.command_buffer);
 

@@ -175,7 +175,6 @@ bool app_is_release_build()
 // #endif
 
 #if MPLATFORM_WINDOWS
-
 #elif MPLATFORM_LINUX
 #endif
 
@@ -194,6 +193,9 @@ bool app_is_release_build()
 
 // file = file_open()
 // scope(file_close()) {...}
+
+
+
 
 
 

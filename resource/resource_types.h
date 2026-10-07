@@ -50,7 +50,6 @@
 #define ENGINE_SCENE_PATH "../z_assets_engine/particle/particle_emitter"
 
 
-
 #define ENGINE_TEXTURE_EXTENSION ".mtex"
 #define ENGINE_FONTS_EXTENSION ".mfont"
 #define ENGINE_MESH_EXTENSION ".mmesh"
@@ -60,8 +59,6 @@
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 #define ENGINE_PARTICLE_EFFECT_EXTENSION ".mparticle"
 #define ENGINE_PARTICLE_EMITTER_EXTENSION ".memitter"
-
-
 
 
 #define MAX_ASSETS_STRINGS 5000u
@@ -80,7 +77,6 @@
 #define MATERIAL_BUFFER_SIZE MB(16)
 
 
-
 //FONT/TEXT
 //NOTE: this should realy be 40, but looks nicer as 32, im doing something wierd cause its casuing text padding
 #define DEFAULT_FONT_CREATION_SIZE 32.0f
@@ -95,91 +91,19 @@
 #define MAX_TEXTURE_COUNT 1024u
 #define MAX_FONT_COUNT 16u
 
-#define MAX_TEXTURE_MEMORY_CPU GB(0.5)
-#define MAX_MESH_MEMORY_CPU GB(0.5)
+#define MAX_TEXTURE_MEMORY_CPU MB(512)
+#define MAX_MESH_MEMORY_CPU MB(512)
 
 
 ///////////////// RESOURCES AND HANDLES //////////////////////
 
 #define INVALID_HANDLE 0
 
-
-typedef struct Handle
-{
-    u32 id;
-    u32 generation;
-} Handle;
-
-
-typedef enum Asset_Type
-{
-    ASSET_TEXTURE,
-    ASSET_FONT,
-    ASSET_SPRITE,
-    ASSET_STATIC_MESH,
-    ASSET_SKINNED_MESH,
-    ASSET_AUDIO,
-    ASSET_MATERIAL,
-    ASSET_MATERIAL_INSTANCE,
-    ASSET_SCENE,
-    ASSET_PARTICLE_EFFECT,
-    ASSET_PARTICLE_EMITTER,
-
-    ASSET_TYPE_MAX,
-} Asset_Type;
-
-const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
-    [ASSET_TEXTURE] = "ASSET_TEXTURE",
-    [ASSET_FONT] = "ASSET_FONT",
-    [ASSET_SPRITE] = "ASSET_SPRITE",
-    [ASSET_STATIC_MESH] = "ASSET_STATIC_MESH",
-    [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
-    [ASSET_AUDIO] = "ASSET_AUDIO",
-    [ASSET_MATERIAL] = "ASSET_MATERIAL",
-    [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
-    [ASSET_SCENE] = "ASSET_SCENE",
-    [ASSET_PARTICLE_EFFECT] = "ASSET_PARTICLE_EFFECT",
-    [ASSET_PARTICLE_EMITTER] = "ASSET_PARTICLE_EMITTER",
-
-};
-
-
-typedef enum Asset_Load_State
-{
-    ASSET_LOAD_STATE_UNLOADED,
-    ASSET_LOAD_STATE_QUEUED,
-    ASSET_LOAD_STATE_LOADED,
-} Asset_Load_State;
-
-
-typedef struct Asset_MetaData
-{
-    //meta data for our editor/debug builds
-    MADNESS_UUID uuid; // not in use rn, but will be useful if i ever integrate asset renaming
-    u64 hash; // hashes the engine_file
-    Asset_Type type;
-    String* source_file; //256 in length max
-    String* engine_path; //256 in length max
-} Asset_MetaData;
-
-typedef struct Madness_Asset
-{
-    //runtime format for assets
-    u64 path_hash;
-    u64 reference_count;
-    Asset_Type type;
-    String* engine_path; // should just be a reference, mainly for debugging
-} Madness_Asset;
-
-
 typedef struct Texture_Handle
 {
     u32 handle;
     u32 generation;
 } Texture_Handle;
-
-
-
 
 
 //Renderpass || translucency || Blend || Mesh Type
@@ -260,15 +184,98 @@ typedef struct Particle_Effect_Handle
     u32 gen;
 } Particle_Effect_Handle;
 
+///////////////// ASSETS  //////////////////////
+
+
+typedef enum Asset_Type
+{
+    ASSET_TEXTURE,
+    ASSET_FONT,
+    ASSET_SPRITE,
+    ASSET_STATIC_MESH,
+    ASSET_SKINNED_MESH,
+    ASSET_AUDIO,
+    ASSET_SHADER,
+    ASSET_MATERIAL_INSTANCE,
+    ASSET_SCENE,
+    ASSET_PARTICLE_EFFECT,
+    ASSET_PARTICLE_EMITTER,
+
+    ASSET_TYPE_MAX,
+} Asset_Type;
+
+const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
+    [ASSET_TEXTURE] = "ASSET_TEXTURE",
+    [ASSET_FONT] = "ASSET_FONT",
+    [ASSET_SPRITE] = "ASSET_SPRITE",
+    [ASSET_STATIC_MESH] = "ASSET_STATIC_MESH",
+    [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
+    [ASSET_AUDIO] = "ASSET_AUDIO",
+    [ASSET_SHADER] = "ASSET_SHADER",
+    [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
+    [ASSET_SCENE] = "ASSET_SCENE",
+    [ASSET_PARTICLE_EFFECT] = "ASSET_PARTICLE_EFFECT",
+    [ASSET_PARTICLE_EMITTER] = "ASSET_PARTICLE_EMITTER",
+
+};
+
+
+typedef struct Asset_Record
+{
+    //meta data for our editor/debug builds
+    MADNESS_UUID uuid;
+    u64 hash; // hashes the engine_file
+    Asset_Type type;
+    // u64 file_timestamp;
+    String* source_file; //256 in length max
+    String* engine_path; //256 in length max
+} Asset_Record;
+
+typedef union Asset_Handles
+{
+    Texture_Handle texture_handle;
+
+    Material_Handle material_handle;
+
+    Shader_Handle shader_handle;
+
+    Mesh_Handle mesh_handle;
+
+    // Skinned_Mesh_Handle;
+
+    // Madness_SkMesh_Handle_Internal;
+
+    Sprite_Handle sprite_handle;
+
+    Animation_Handle animation_handle;
+
+    Particle_Emitter_Handle particle_emitter_handle;
+
+    Particle_Effect_Handle particle_effect_handle;
+} Asset_Handles;
+
+typedef struct Asset_Runtime
+{
+    //runtime format for assets
+    MADNESS_UUID uuid;
+    u64 path_hash; //should change this into the uuid hash, it will be faster, and generally won't change
+    u64 generation;
+    s32 reference_count;
+    Asset_Type type;
+    String* engine_path; // should just be a reference, mainly for debugging
+    // bool auto_release;
+
+    Asset_Handles asset_handles;
+    bool in_use;
+} Asset_Runtime;
+
 ///////////////// Texture  //////////////////////
 
-/* TODO: replace asset type in madness texture
 typedef enum Texture_Type
 {
     TEXTURE_TYPE_TEXTURE,
     TEXTURE_TYPE_FONT,
 } Texture_Type;
-*/
 
 typedef enum Texture_Format
 {
@@ -283,8 +290,7 @@ typedef enum Texture_Filter
     Texture_Filter_Linear,
 } Texture_Filter;
 
-//TODO: wrap and sampler
-/*
+
 typedef enum Texture_Wrap
 {
     Texture_Wrap_Repeat,
@@ -301,7 +307,6 @@ typedef struct Texture_Sampler
     Texture_Wrap u_wrap;
     Texture_Wrap v_wrap;
 } Texture_Sampler;
-*/
 
 
 //Texture
@@ -312,16 +317,9 @@ typedef struct Madness_Texture
     u8 channels;
     Texture_Format format;
     u64 pixels_size;
-    Asset_Type type; // used to identify if we have are a font
+    Texture_Type type; // used to identify if we have are a font
     // runtime only data
     u32 font_index;
-    // what is queried when we get the bindless slot, so that we can use a temp texture until the actual texture loads
-    u32 generation;
-
-    Asset_Load_State texture_load_state;
-    //TODO:
-    //bool has_sampler;
-    // Texture_Sampler sampler;
 } Madness_Texture;
 
 typedef struct Texture_GPU_Upload
@@ -369,9 +367,6 @@ typedef struct Madness_Font_Runtime
 //////////////////////MATERIAL/SHADER/////////////////////////
 
 
-
-
-
 typedef enum Shader_Renderpass_Type
 {
     //only to be used internally and not by the material system
@@ -408,7 +403,6 @@ typedef enum Shader_Blend_Mode
     //NOTE: Requires sorting
     Shader_Blend_Mode_Alpha,
     Shader_Blend_Mode_PreMultiplied_Alpha,
-
 } Shader_Blend_Mode;
 
 
@@ -505,8 +499,6 @@ typedef struct Material
 } Material;
 
 
-
-
 ///////////////// Particle  //////////////////////
 
 typedef struct Particle
@@ -540,7 +532,6 @@ typedef struct Particle
 
     u64* material_key;
     u32* material_id;
-
 } Particle;
 
 typedef struct Particle_Mesh
@@ -648,8 +639,6 @@ typedef struct Particle_Emitter_Data
     vec3s velocity_variance;
 
     vec3s gravity;
-
-
 } Particle_Emitter_Data;
 
 
@@ -702,8 +691,6 @@ typedef struct Particle_Effect
 
     bool infinite;
     bool is_visible;
-
-
 } Particle_Effect;
 
 ///////////////// MESH  //////////////////////
@@ -854,7 +841,6 @@ typedef struct Mesh_GPU_Upload
 
 typedef struct Skinned_Mesh_GPU_Upload
 {
-
     Madness_Skinned_SubMesh* skinned_submesh;
     Madness_SkMesh_GPU_Data* skinned_gpu_data;
     //TODO: Heap_Allocator* mesh_memory_allocator; // ref
@@ -890,22 +876,22 @@ typedef struct Madness_SkMesh_Runtime
 
 ///////////////// Systems  //////////////////////
 
-typedef struct Shader_Mat_Mapping{
+typedef struct Shader_Mat_Mapping
+{
     String* shader_name[MAX_MATERIAL_COUNT];
     String* material_name[MAX_MATERIAL_COUNT];
     Material_Definition material_definition[MAX_MATERIAL_COUNT];
-}Shader_Mat_Mapping;
+} Shader_Mat_Mapping;
 
 typedef struct Material_Record
 {
     u64 offset;
     u64 size;
-}Material_Record;
+} Material_Record;
 
 
 typedef struct Material_System
 {
-
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
 
     //NOTE: each shader asset get its own material definition,
@@ -914,6 +900,8 @@ typedef struct Material_System
     Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
     u32 shader_asset_to_mapping[MAX_MATERIAL_COUNT];
     u32 shader_count;
+
+    // Asset_Runtime* shader_runtime_asset;
 
     //TODO:
     RING_QUEUE_TYPE(Shader_Asset)* new_shaders_pipeline_creation;
@@ -942,8 +930,6 @@ typedef struct Material_System
     uint8_t* material_buffer;
     u64 material_buffer_offset;
     u64 material_buffer_size;
-
-    //TODO: might not be a bad idea to have a cpu based buffer as well for development
 
 } Material_System;
 
@@ -983,11 +969,14 @@ typedef struct Texture_System
     RING_QUEUE_TYPE(u32)* available_texture_queue;
     RING_QUEUE_TYPE(u32)* available_font_queue;
 
-    HASH_MAP_TYPE(u64, u32)* texture_hash_map;
+
+    //TODO: test both of these and see which performs better
+    // HASH_MAP_TYPE(UUID_HASH, Texture_Handle)* hash_map_loaded_texture;
+    // struct{uuid/hash, texture_handle} texture_cache;
 
 
-    Madness_Asset texture_asset[MAX_TEXTURE_COUNT];
-    u32 texture_asset_count;
+    //loaded assets, indexed by the handle
+    Asset_Runtime texture_asset[MAX_TEXTURE_COUNT];
 
     RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_gpu_upload_queue;
 } Texture_System;
@@ -1050,8 +1039,6 @@ typedef struct Mesh_System
     //TODO:
     //anything that couldn't be loaded in this frame
     RING_QUEUE_TYPE(const char*)* load_queue;
-
-
 } Mesh_System;
 
 
@@ -1070,29 +1057,33 @@ typedef struct Animation_System
 
 typedef struct Particle_System
 {
+    //defaults/fallbacks
+    Particle_Effect* default_effect;
+    Particle_Effect_Handle default_effect_handle;
+
+    Particle_Emitter* default_emitter;
+    Particle_Emitter_Handle default_emitter_handle;
+
+
+
     //TODO: change the available effects and emitters to dynamic arrays to save on memory
 
     //TODO: reserve the particle effect and emitter 0 slots for defaults/invalid handles
 
     Particle_Effect* particle_effects;
-    u32* particle_generation;
     u32 particle_effects_count_max;
 
-    u32* free_particle_effects;
-    u32 free_particle_effects_count;
+    ring_queue* free_effects_queue;
 
     ARRAY_TYPE(u32)* active_effects;
 
 
     Particle_Emitter* emitters;
-    u32* emitter_generation;
     u32 emitter_count_max;
 
-    u32* free_emitters;
-    u32 free_emitters_count;
+    ring_queue* free_emitters_queue;
 
     ARRAY_TYPE(u32)* active_emitters;
-
 
 
     //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
@@ -1106,17 +1097,13 @@ typedef struct Particle_System
     u32 dead_particles_count;
 
 
-    //defaults/fallbacks
-    Particle_Effect* default_effect;
-    Particle_Effect_Handle default_effect_handle;
-
-    Particle_Emitter* default_emitter;
-    Particle_Emitter_Handle default_emitter_handle;
+    Asset_Runtime particle_emitter_asset[MAX_PARTICLE_EMITTER_COUNT];
+    Asset_Runtime particle_effect_asset[MAX_PARTICLE_EFFECTS_COUNT];
 
 
-
-    //TODO: might want to look into ways to use a pool allocator
+    //TODO: might want to look into ways to use a pool allocator or different allocations methods
     Heap_Allocator* heap_allocator;
+    Allocator* allocator;
 } Particle_System;
 
 
@@ -1125,7 +1112,6 @@ typedef struct Particle_System
 //these are all just references to the data, they do not own anything
 typedef struct Render_Packet_3D
 {
-
     Scene* scene;
 
 
@@ -1204,22 +1190,35 @@ typedef struct Render_Packet
 
 typedef struct Asset_Registry
 {
-    DYNAMIC_ARRAY_TYPE(Asset_MetaData)* asset_meta_data;
+    Heap_Allocator* meta_table_heap_allocator;
+    Allocator* asset_record_allocator;
+
+    DYNAMIC_ARRAY_TYPE(Asset_Record)* asset_record;
 
     //OPTIMIZE: a hash would make way more sense for this, profile to be sure
-    // HASH_TABLE_TYPE(Madness_Asset)* path_to_mesh_asset;
-
-    // DYNAMIC_ARRAY_TYPE(Madness_Asset) loaded_asset;
-    // ref counted asset
-    Madness_Asset particle_effect_asset[MAX_PARTICLE_EFFECTS_COUNT];
-
-    Madness_Asset particle_emitter_asset[MAX_PARTICLE_EMITTER_COUNT];
-
-    Madness_Asset shader_madness_asset[MAX_MATERIAL_COUNT];
-
-    Madness_Asset mesh_asset[MAX_PARTICLE_EFFECTS_COUNT];
+    // HASH_TABLE_TYPE(Asset_Runtime)* path_to_mesh_asset;
 
 
+    //metadata tables
+    DYNAMIC_ARRAY_TYPE(Texture_MetaData)* texture_table;
+    DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* mesh_table;
+    DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* skinned_mesh_table;
+    DYNAMIC_ARRAY_TYPE(Material_MetaData)* material_table;
+    DYNAMIC_ARRAY_TYPE(Shader_MetaData)* shader_table;
+
+
+    //TODO: test hashmap performance vs array perf
+    //runtime data
+
+    Asset_Runtime* texture_runtime[MAX_TEXTURE_COUNT];
+    u32 texture_runtime_count;
+
+    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* mesh_runtime;
+    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* skinned_runtime;
+    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* shader_runtime;
+    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* material_runtime;
+
+    // DYNAMIC_ARRAY_TYPE(Asset_Runtime) loaded_asset;
 } Asset_Registry;
 
 

@@ -790,14 +790,13 @@ void dynamic_array_resize(Dynamic_Array* array, u64 new_capacity)
                 array->capacity = new_capacity;
             }else
             {
+                MASSERT_FALSE();
                 WARN("DYNAMIC ARRAY: cant resize with allocator, no space left")
             }
-
-
-
         }
         else
         {
+                MASSERT_FALSE();
             WARN("DYNAMIC ARRAY: cant resize with allocator, allocator used elsewhere")
         }
 

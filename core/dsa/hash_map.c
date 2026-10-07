@@ -3,18 +3,18 @@
 #include <time.h>
 
 
-hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity)
+hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator)
 {
-    hash_map* h = malloc(sizeof(hash_map));
+    hash_map* h = allocator_alloc(allocator, sizeof(hash_map));
     h->num_entries = 0;
     h->capacity = capacity;
     h->key_data_size = key_data_size;
     h->value_data_size = value_data_size;
 
 
-    h->key_data = malloc(capacity * sizeof(void*));
+    h->key_data = allocator_alloc(allocator, capacity * sizeof(void*));
     memset(h->key_data, 0, capacity * sizeof(void*));
-    h->value_data = malloc(capacity * sizeof(void*));
+    h->value_data = allocator_alloc(allocator, capacity * sizeof(void*));
     memset(h->value_data, 0, capacity * sizeof(void*));
 
     h->state = malloc(capacity * sizeof(hash_map_state));
@@ -23,8 +23,8 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
     for (int i = 0; i < h->capacity; i++)
     {
         h->state[i] = HASH_MAP_EMPTY;
-        h->key_data[i] = malloc(h->key_data_size);
-        h->value_data[i] = malloc(h->value_data_size);
+        h->key_data[i] = allocator_alloc(allocator, h->key_data_size);
+        h->value_data[i] = allocator_alloc(allocator, h->value_data_size);
         memset(h->key_data[i], 0, key_data_size);
         memset(h->value_data[i], 0, value_data_size);
     }
@@ -32,8 +32,7 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
     return h;
 }
 
-#define HASH_MAP_CREATE(key_type, value_type, capacity)\
-         hash_map_init(sizeof(key_type), sizeof(value_type), capacity)
+
 
 
 //this version will have capacity will be increased until it is a power of two
@@ -58,6 +57,9 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
 
 void hash_map_free(hash_map* h)
 {
+    //TODO: doesn't free at all
+    return;
+
     if (!h)
     {
         WARN("FREEING INVALID HASH MAP")
@@ -206,7 +208,13 @@ uint64_t hash_map_size(hash_map* h)
 void hash_map_test(void)
 {
     TEST_START(HASH_MAP);
-    hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
+
+    Allocator allocator;
+    u64 memory_size = 10000;
+    void* memory = malloc(memory_size);
+    allocator_init(&allocator, memory, memory_size, "array test");
+
+    hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY, &allocator);
     // hash_map* h = hash_map_init(sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
 
     srand((u64)time(NULL));
@@ -245,7 +253,7 @@ void hash_map_test(void)
     };
 
     hash_map* hash_2 = hash_map_init(sizeof(struct hash_test_key), sizeof(struct hash_test_value),
-                                     HASH_MAP_DEFAULT_CAPACITY);
+                                     HASH_MAP_DEFAULT_CAPACITY, &allocator);
 
     struct hash_test_key hi = {10, true};
     struct hash_test_key hi1 = {12, false};
@@ -288,7 +296,7 @@ void hash_map_test(void)
 
 
     hash_map* hash_char = hash_map_init(sizeof(char), sizeof(int),
-                                        HASH_MAP_DEFAULT_CAPACITY);
+                                        HASH_MAP_DEFAULT_CAPACITY, &allocator);
     const char* char1 = "iahsdoi";
     const char* char2 = "whats up";
     const char* char3 = "down and out";

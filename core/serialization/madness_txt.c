@@ -33,98 +33,6 @@ Madness_Txt_Handle madness_txt_object_create(Madness_txt* txt, const char* name)
 }
 
 
-size_t madness_txt_str_to_type(char* str)
-{
-    if (strcmp(str, "bool") == 0)
-    {
-        return sizeof(bool);
-    }
-    if (strcmp(str, "char") == 0)
-    {
-        return sizeof(char);
-    }
-    if (strcmp(str, "str") == 0)
-    {
-        //TODO: special case, handle it differently
-        return sizeof(char*);
-    }
-    if (strcmp(str, "s32") == 0)
-    {
-        return sizeof(s32);
-    }
-    if (strcmp(str, "u32") == 0)
-    {
-        return sizeof(u32);
-    }
-    if (strcmp(str, "f32") == 0 || strcmp(str, "float") == 0)
-    {
-        return sizeof(f32);
-    }
-
-    return 0;
-}
-
-size_t madness_txt_type_size(Reflection_Type type)
-{
-    u32 size = 0;
-    switch (type)
-    {
-    case REFLECTION_TYPE_INVALID:
-        size = 0;
-        break;
-    case REFLECTION_TYPE_U8:
-        size = sizeof(u8);
-        break;
-    case REFLECTION_TYPE_U16:
-        size = sizeof(u16);
-        break;
-    case REFLECTION_TYPE_U32:
-        size = sizeof(u32);
-        break;
-    case REFLECTION_TYPE_U64:
-        size = sizeof(u64);
-        break;
-    case REFLECTION_TYPE_S8:
-        size = sizeof(s8);
-        break;
-    case REFLECTION_TYPE_S16:
-        size = sizeof(s16);
-        break;
-    case REFLECTION_TYPE_S32:
-        size = sizeof(s32);
-        break;
-    case REFLECTION_TYPE_S64:
-        size = sizeof(s32);
-        break;
-    case REFLECTION_TYPE_F32:
-        size = sizeof(f32);
-        break;
-    case REFLECTION_TYPE_F64:
-        size = sizeof(f64);
-        break;
-    case REFLECTION_TYPE_SIZE_T:
-        size = sizeof(size_t);
-        break;
-    case REFLECTION_TYPE_BOOL:
-        size = sizeof(bool);
-        break;
-    case REFLECTION_TYPE_STRING:
-        size = sizeof(char*);
-        break;
-    case REFLECTION_TYPE_CHAR:
-        size = sizeof(char);
-        break;
-    case REFLECTION_TYPE_ENUM:
-        size = sizeof(u32);
-        break;
-    case REFLECTION_TYPE_STRUCT:
-        size = 0;
-        break;
-    case REFLECTION_TYPE_MAX:
-        break;
-    }
-    return size;
-}
 
 
 Madness_Txt_Handle madness_txt_schema_create(Madness_txt* txt, const char* name)
@@ -344,6 +252,8 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
                 // fwrite(str, strlen(str), 1, fptr);
                 break;
             case REFLECTION_TYPE_ENUM:
+                snprintf(str, buffer_size, "%d", *(u32*)struct_pos);
+                fwrite(str, strlen(str), 1, fptr);
                 break;
             case REFLECTION_TYPE_STRUCT:
                 MASSERT(false);
@@ -408,6 +318,13 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
 void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void* out_data, const char* file_path)
 {
     FILE* fptr = fopen(file_path, "r");
+
+    if (!fptr)
+    {
+        //TODO: probably return a enum error value
+        MASSERT_FALSE();
+    }
+
     fseek(fptr, 0L, SEEK_END);
     size_t file_size = ftell(fptr);
     fseek(fptr, 0L, SEEK_SET);
@@ -471,12 +388,12 @@ void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void*
                 MASSERT(false);
             }
             size_t arr_size = c_string_to_number(array_count, sizeof(array_count));
-            size_t type_size = madness_txt_str_to_type(value_str);
+            size_t type_size = reflection_str_to_type(value_str);
             if (cur->array_count != arr_size != 0)
             {
                 MASSERT(false);
             }
-            if (type_size != madness_txt_type_size(cur->type))
+            if (type_size != reflection_type_get_size(cur->type))
             {
                 MASSERT(false);
             }
@@ -484,14 +401,17 @@ void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void*
 
             for (size_t arr_index = 0; arr_index < arr_size; arr_index++)
             {
-                if (line[0] == '-')
+                //the auto formatter makes me have to check for all white spaces like this
+                // NOTE: a better solution is to just skip all the white space first
+                if (line[0] == '-' || (line[0] == ' '  && line[1] == '-')
+                    || ((line[0] == ' '  && line[1] == ' ' && line[2] == '-')))
                 {
                     int i = 1;
                     char field_data[128];
                     u8 write_count = 0;
 
                     //skip white space
-                    while (line[i] == ' ')
+                    while (line[i] == ' ' || line[i] == '-')
                     {
                         i++;
                     }
@@ -564,12 +484,30 @@ void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void*
                     case REFLECTION_TYPE_SIZE_T:
                         break;
                     case REFLECTION_TYPE_ENUM:
+                        u32 enum_num = (u32)c_string_to_number(field_data, strlen(field_data));
+                        memcpy(struct_pos, &enum_num, reflection_type_get_size(cur->type));
                         break;
                     case REFLECTION_TYPE_STRUCT:
                         break;
                     case REFLECTION_TYPE_INVALID:
                         break;
                     case REFLECTION_TYPE_MAX:
+                        break;
+                    case REFLECTION_TYPE_CHAR_STRING:
+                        break;
+                    case REFLECTION_TYPE_PATH_STRING:
+                        break;
+                    case REFLECTION_TYPE_VEC2:
+                        break;
+                    case REFLECTION_TYPE_VEC3:
+                        break;
+                    case REFLECTION_TYPE_VEC4:
+                        break;
+                    case REFLECTION_TYPE_MAT3:
+                        break;
+                    case REFLECTION_TYPE_MAT4:
+                        break;
+                    case REFLECTION_TYPE_UUID:
                         break;
                     }
                 }

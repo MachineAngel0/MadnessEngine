@@ -9,7 +9,7 @@ const char* Asset_Type_enum_string[] = {
 	[ASSET_STATIC_MESH]= "ASSET_STATIC_MESH", 
 	[ASSET_SKINNED_MESH]= "ASSET_SKINNED_MESH", 
 	[ASSET_AUDIO]= "ASSET_AUDIO", 
-	[ASSET_MATERIAL]= "ASSET_MATERIAL", 
+	[ASSET_SHADER]= "ASSET_SHADER", 
 	[ASSET_MATERIAL_INSTANCE]= "ASSET_MATERIAL_INSTANCE", 
 	[ASSET_SCENE]= "ASSET_SCENE", 
 	[ASSET_PARTICLE_EFFECT]= "ASSET_PARTICLE_EFFECT", 
@@ -17,10 +17,9 @@ const char* Asset_Type_enum_string[] = {
 	[ASSET_TYPE_MAX]= "ASSET_TYPE_MAX", 
 };
 
-const char* Asset_Load_State_enum_string[] = {
-	[ASSET_LOAD_STATE_UNLOADED]= "ASSET_LOAD_STATE_UNLOADED", 
-	[ASSET_LOAD_STATE_QUEUED]= "ASSET_LOAD_STATE_QUEUED", 
-	[ASSET_LOAD_STATE_LOADED]= "ASSET_LOAD_STATE_LOADED", 
+const char* Texture_Type_enum_string[] = {
+	[TEXTURE_TYPE_TEXTURE]= "TEXTURE_TYPE_TEXTURE", 
+	[TEXTURE_TYPE_FONT]= "TEXTURE_TYPE_FONT", 
 };
 
 const char* Texture_Format_enum_string[] = {
@@ -30,6 +29,14 @@ const char* Texture_Format_enum_string[] = {
 const char* Texture_Filter_enum_string[] = {
 	[Texture_Filter_Nearest]= "Texture_Filter_Nearest", 
 	[Texture_Filter_Linear]= "Texture_Filter_Linear", 
+};
+
+const char* Texture_Wrap_enum_string[] = {
+	[Texture_Wrap_Repeat]= "Texture_Wrap_Repeat", 
+	[Texture_Wrap_Mirror_Repeat]= "Texture_Wrap_Mirror_Repeat", 
+	[Texture_Wrap_Clamp_Edge]= "Texture_Wrap_Clamp_Edge", 
+	[Texture_Wrap_Clamp_Border]= "Texture_Wrap_Clamp_Border", 
+	[Texture_Wrap_Mirror_Clamp_To_Edge]= "Texture_Wrap_Mirror_Clamp_To_Edge", 
 };
 
 const char* Shader_Renderpass_Type_enum_string[] = {
@@ -82,15 +89,15 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 	};
 	reflection_registry_add_enums(reflection_registry, Asset_Type_enum);
 
-	const Reflection_Runtime_Enum Asset_Load_State_enum =
+	const Reflection_Runtime_Enum Texture_Type_enum =
 	{
-		.name = "Asset_Load_State",
-		.enum_names = Asset_Load_State_enum_string,
-		.count = 3,
+		.name = "Texture_Type",
+		.enum_names = Texture_Type_enum_string,
+		.count = 2,
 		.type = Reflection_Enum_Type_Normal,
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
-	reflection_registry_add_enums(reflection_registry, Asset_Load_State_enum);
+	reflection_registry_add_enums(reflection_registry, Texture_Type_enum);
 
 	const Reflection_Runtime_Enum Texture_Format_enum =
 	{
@@ -111,6 +118,16 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
 	reflection_registry_add_enums(reflection_registry, Texture_Filter_enum);
+
+	const Reflection_Runtime_Enum Texture_Wrap_enum =
+	{
+		.name = "Texture_Wrap",
+		.enum_names = Texture_Wrap_enum_string,
+		.count = 5,
+		.type = Reflection_Enum_Type_Normal,
+		.bitflag_values = NULL, //filled in the function if applicable
+	};
+	reflection_registry_add_enums(reflection_registry, Texture_Wrap_enum);
 
 	const Reflection_Runtime_Enum Shader_Renderpass_Type_enum =
 	{

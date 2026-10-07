@@ -3,6 +3,9 @@
 #include "resource_types.h"
 
 
+// #define DEFAULT_TEXTURE_NAME "default"
+// #define ERROR_TEXTURE_NAME "error"
+
 //NOTE: since the image goes from cpu to gpu, the renderer takes care of freeing the pixel data, if loaded from a file
 
 MAPI bool texture_system_init(Asset_System* asset_system, Texture_System* texture_system, Memory_System* memory_system);
@@ -16,20 +19,30 @@ MAPI Texture_Handle texture_system_update_texture(Texture_System* texture_system
 MAPI Texture_Handle texture_system_get_default_texture(Texture_System* texture_system);
 
 
-MAPI bool texture_system_exists(Asset_System* asset_system, Texture_Handle* out_handle, u64 hash);
+
 
 MAPI bool texture_system_texture_free(Asset_System* asset_system, Texture_Handle handle);
 
 
-MAPI bool texture_system_upload_new_texture(Asset_System* asset_system, u64 hash, Madness_Texture texture_data,
-                                            u8* pixel_data, Texture_Handle* out_handle, String* engine_path);
+MAPI bool texture_system_acquire(Asset_System* asset_system, Asset_Record* record,
+                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle);
 
-MAPI bool texture_system_upload_new_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
+MAPI bool texture_system_release(Asset_System* asset_system, Texture_Handle handle);
+
+MAPI bool texture_system_acquire_font(Asset_System* asset_system,
+                                      Asset_Record* record, Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle);
+
+bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Record* asset, Texture_Handle* out_handle);
+
+//TODO:
+/*
+MAPI bool texture_system_release(Asset_System* asset_system, Asset_Record* record,
+                                       Madness_Texture texture_data, u8* pixel_data, Texture_Handle* out_handle);
+
+MAPI bool texture_system_release_font(Asset_System* asset_system, MADNESS_UUID uuid, u64 hash,
                                          Madness_Texture texture_data, Madness_Font texture_font_data, u8* pixel_data, Texture_Handle* out_handle, String*
                                          engine_path);
-
-
-MAPI bool texture_system_unload_texture(Asset_System* asset_system, Texture_Handle texture_handle);
+*/
 
 
 MADNESS_UUID texture_system_get_default_uuid(Asset_System* asset_system);
@@ -39,8 +52,6 @@ MAPI bool texture_system_get_texture(Texture_System* texture_system, Texture_Han
 
 MAPI bool texture_system_get_font(Texture_System* texture_system, Texture_Handle handle, Madness_Font* out_font);
 
-//TODO: probably want to use paths as well
-MAPI bool texture_system_is_loaded(Texture_System* texture_system, Texture_Handle handle);
 
 
 

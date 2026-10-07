@@ -12,7 +12,7 @@ MADNESS_UUID madness_uuid_generate_return(void)
     return uuid;
 }
 
-u64 madness_uuid_hash(MADNESS_UUID* uuid)
+UUID_HASH madness_uuid_hash(MADNESS_UUID* uuid)
 {
     return generate_hash_key_64bit((u8*)uuid, sizeof(MADNESS_UUID));
 }

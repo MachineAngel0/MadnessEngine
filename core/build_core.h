@@ -63,6 +63,7 @@
 #include "../core/memory/memory_system.h"
 
 //CORE - Compiler
+#include "../core/compiler/reflection_types.h"
 #include "../core/compiler/madness_lexer.h"
 #include "../core/compiler/reflection_system.h"
 

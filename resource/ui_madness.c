@@ -1460,7 +1460,7 @@ UI_Node* madness_ui_c_string_format(const char* text, ...)
 
     va_end(args_ptr);
 
-    madness_ui_c_string(out_message);
+    return madness_ui_c_string(out_message);
 }
 
 
@@ -1576,14 +1576,14 @@ bool madness_ui_check_box(String label, bool* check_box_state)
     return *check_box_state;
 }
 
-void madness_image(String id, Texture_System* texture_system, const char* icon_path)
+void madness_ui_image(String id, Texture_System* texture_system, const char* icon_path)
 {
     //TODO:
     FATAL("UNIMPLEMENTED")
     MASSERT_FALSE()
 }
 
-void madness_image_handle(Texture_Handle handle)
+void madness_ui_image_handle(Texture_Handle handle)
 {
     vec2s image_box_size = (vec2s){
         64, 64
@@ -3337,7 +3337,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
 
             u32 selected_texture = 0;
 
-            Asset_MetaData asset_meta_data = {0};
+            Asset_Record asset_meta_data = {0};
             if (asset_registry_exists_by_uuid(asset_registry,
                                               *uuid,
                                               &asset_meta_data))
@@ -3356,7 +3356,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
                                      texture_asset_list_scan->strings,
                                      texture_asset_list_scan->count))
             {
-                Asset_MetaData new_asset_metadata = {0};
+                Asset_Record new_asset_metadata = {0};
                 if (asset_registry_exists_by_engine_path(asset_registry,
                                                          &texture_asset_list_scan->strings[selected_texture],
                                                          &new_asset_metadata))
@@ -3927,6 +3927,9 @@ void madness_ui_example(void)
         static float progress_bar;
         madness_ui_float(STRING("Progress float"), &progress_bar, 10);
         madness_ui_progress_bar(STRING("Progress bar"), progress_bar, 100);
+
+        madness_ui_image_handle((Texture_Handle){0,0});
+
 
         static u32 selected_string;
         String string_array[20] = {

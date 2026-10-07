@@ -6,7 +6,8 @@
 
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                    Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry)
+                    Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry,
+                    Madness_txt* txt)
 {
     // editor // allocate memory for the editor
     Editor* editor = memory_system_alloc(memory_system, sizeof(Editor), MEMORY_SUBSYSTEM_EDITOR);
@@ -17,7 +18,7 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
                                                               MEMORY_SUBSYSTEM_EDITOR, "EDITOR PERSISTENT");
 
     editor->frame_allocator = memory_system_allocator_create(memory_system, editor_memory_size,
-                                                              MEMORY_SUBSYSTEM_EDITOR, "EDITOR FRAME");
+                                                             MEMORY_SUBSYSTEM_EDITOR, "EDITOR FRAME");
 
 
     editor->renderer = renderer;
@@ -31,13 +32,32 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     // editor->state = EDITOR_UI_STATE_INSANITY_UI_TEST;
     // editor->state = EDITOR_UI_STATE_CHAOS_UI_TEST;
     // editor->state = EDITOR_UI_STATE_MADNESS_UI_TEST;
-    editor->state = EDITOR_UI_STATE_PARTICLE;
+    // editor->state = EDITOR_UI_STATE_PARTICLE;
 
+    editor->madness_txt = txt;
     editor_generate_asset_lists(editor, memory_system);
+
+    //reads in editor state and writes it out as well
+    editor->editor_config_file_handle = madness_txt_schema_create(txt, "scheme a test");
+    madness_txt_schema_add_type(txt, editor->editor_config_file_handle, "editor state", REFLECTION_TYPE_ENUM, 1);
+
+    editor_deserialize_state(editor);
 
 
     return editor;
 }
+
+
+bool editor_deserialize_state(Editor* editor)
+{
+    madness_txt_schema_read(editor->madness_txt, &editor->editor_config_file_handle, &editor->state, "../editor.yaml");
+}
+
+bool editor_serialize_state(Editor* editor)
+{
+    madness_txt_schema_write(editor->madness_txt, &editor->editor_config_file_handle, &editor->state, "../editor.yaml");
+}
+
 
 bool editor_update(Editor* editor)
 {
@@ -65,6 +85,7 @@ bool editor_update(Editor* editor)
     if (input_key_released_unique(KEY_E))
     {
         editor->state = (editor->state + 1) % EDITOR_UI_STATE_MAX;
+        editor_serialize_state(editor);
     }
 
     if (input_key_released_unique(KEY_Q))
@@ -77,6 +98,7 @@ bool editor_update(Editor* editor)
         {
             editor->state = (editor->state - 1);
         }
+        editor_serialize_state(editor);
     }
 
     editor_ui(editor);
@@ -385,8 +407,6 @@ void editor_ui_stats(Editor* editor)
             madness_ui_u64(STRING("capacity bytes:"), &memory_system->heap_allocator_list[i].capacity, 0);
             madness_ui_padding();
         }
-
-
     }
     madness_ui_window_end();
 }
@@ -571,26 +591,27 @@ void editor_texture_view(Editor* editor)
     Asset_System* asset_system = editor->asset_system;
     madness_ui_window_begin(STRING("Texture View"), 0);
     {
-        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+        for (u32 i = 0; i < asset_system->asset_registry->asset_record->num_items; i++)
         {
-            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
-            if (meta_data->type != ASSET_TEXTURE && meta_data->type != ASSET_FONT)
+            Asset_Record* record = _dynamic_array_get(asset_system->asset_registry->asset_record, i);
+            if (record->type != ASSET_TEXTURE && record->type != ASSET_FONT)
             {
                 continue;
             }
 
 
             Texture_Handle texture_handle;
-            if (texture_system_exists(asset_system, &texture_handle, meta_data->hash))
+            if (texture_system_does_texture_exist(asset_system->texture_system, record, &texture_handle))
             {
-                madness_ui_string(*meta_data->source_file);
-                madness_ui_string(*meta_data->engine_path);
-                madness_image_handle(texture_handle);
+                madness_ui_string(*record->source_file);
+                madness_ui_string(*record->engine_path);
+                madness_ui_image_handle(texture_handle);
             }
 
 
             // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
+
     }
     madness_ui_window_end();
 }
@@ -600,9 +621,9 @@ void editor_meta_data_view(Editor* editor)
     Asset_System* asset_system = editor->asset_system;
     madness_ui_window_begin(STRING("MetaData View"), 0);
     {
-        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+        for (u32 i = 0; i < asset_system->asset_registry->asset_record->num_items; i++)
         {
-            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+            Asset_Record* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_record, i);
             madness_ui_string(STRING("UUID:"));
             madness_ui_u64(STRING("UUID HIGH:"), &meta_data->uuid.high, 0);
             madness_ui_u64(STRING("UUID LOW:"), &meta_data->uuid.low, 0);
@@ -631,9 +652,9 @@ void editor_meta_data_view(Editor* editor)
         madness_ui_combo_box_char(STRING("Asset Filter Type"), &asset_type_filter, Asset_Type_enum_string,
                                   ARRAY_SIZE(Asset_Type_enum_string));
 
-        for (u32 i = 0; i < asset_system->asset_registry->asset_meta_data->num_items; i++)
+        for (u32 i = 0; i < asset_system->asset_registry->asset_record->num_items; i++)
         {
-            Asset_MetaData* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_meta_data, i);
+            Asset_Record* meta_data = _dynamic_array_get(asset_system->asset_registry->asset_record, i);
 
             if (meta_data->type != asset_type_filter) { continue; }
 
@@ -1119,7 +1140,6 @@ void editor_particle_view(Editor* editor)
 
             madness_ui_u32(STRING("effect current time"), &effect->effect_current_time, 1);
             madness_ui_u32(STRING("effect length"), &effect->effect_length, 1);
-            madness_ui_u32(STRING("generation"), &particle_system->particle_generation[effect_index], 1);
             madness_ui_check_box(STRING("infinite duration"), &effect->infinite);
             madness_ui_check_box(STRING("is visible"), &effect->is_visible);
 

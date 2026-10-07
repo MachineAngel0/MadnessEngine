@@ -177,20 +177,22 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
         c_string_path_is_extension(file_path, ".jpg"))
     {
         WARN("asset_converter_texture: INVALID TEXTURE EXTENSION: %s", file_path);
+        PROFILE_ZONE_END(asset_converter_texture)
         return false;
     }
 
-    Asset_MetaData meta_data;
+    Asset_Record asset_record;
     if (asset_registry_exists_by_source_path(asset_system->asset_registry,
                                              STRING_CREATE_FROM_BUFFER_ALLOCATOR(
                                                  file_path, scratch.allocator),
-                                             ASSET_TEXTURE, &meta_data))
+                                             ASSET_TEXTURE, &asset_record))
     {
         if (out_uuid)
         {
-            *out_uuid = meta_data.uuid;
+            *out_uuid = asset_record.uuid;
         }
         INFO("asset_converter_texture: texture asset already exists: %s", file_path);
+        PROFILE_ZONE_END(asset_converter_texture)
         return true;
     }
 
@@ -205,6 +207,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     {
         INFO("STBI FAIL REASON %s: FILE_PATH: %s", stbi_failure_reason(), file_path);
         MASSERT_FALSE();
+        PROFILE_ZONE_END(asset_converter_texture)
         return false;
     }
 
@@ -214,7 +217,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     runtime_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
     runtime_texture.texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
     runtime_texture.texture.format = Texture_Format_Default;
-    runtime_texture.texture.type = ASSET_TEXTURE;
+    runtime_texture.texture.type = TEXTURE_TYPE_TEXTURE;
     runtime_texture.pixel_data = pixel_data;
 
     String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
@@ -228,6 +231,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     FILE* fptr = fopen(output_path, "wb");
     if (!fptr)
     {
+        PROFILE_ZONE_END(asset_converter_texture)
         MASSERT(false);
     }
 
@@ -241,7 +245,22 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
+    /*Texture_MetaData texture_metadata = {
+        .version = TEXTURE_VERSION,
+        .width = ,
+        .height = ,
+        .channels = ,
+        .format = ,
+        .filter = ,
+        .wrap = ,
+        .sampler = ,
+        .type = ,
+        .create_sampler = ,
+        .engine_path =
+    };
 
+    asset_registry_add_texture_metadata(asset_system->asset_registry,)
+    */
     scratch_allocator_end(scratch);
 
     PROFILE_ZONE_END(asset_converter_texture)
@@ -414,7 +433,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
     texture.height = atlas_height;
     texture.channels = 4;
     texture.pixels_size = atlasRGBA_size;
-    texture.type = ASSET_FONT;
+    texture.type = TEXTURE_TYPE_FONT;
 
 
     DEBUG("Font loaded successfully: %s\n", file_path);
@@ -496,7 +515,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     engine_texture.texture.height = texture_height; // 4 stride rgba
     engine_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
     engine_texture.texture.pixels_size = texture_width * texture_height * 4; // 4 stride rgba
-    engine_texture.texture.type = ASSET_FONT;
+    engine_texture.texture.type = TEXTURE_TYPE_FONT;
     engine_texture.pixel_data = pixel_data;
 
     const char* file_name = c_string_ext_strip(file_path, scratch_allocator.allocator);
@@ -1329,7 +1348,7 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* mate
         asset_shader_serialize(material_asset, fptr);
 
         asset_registry_add_asset_from_uuid(asset_system->asset_registry, output_path, output_path,
-                                           ASSET_MATERIAL, asset_system->heap_allocator, material_asset->uuid);
+                                           ASSET_SHADER, asset_system->heap_allocator, material_asset->uuid);
         fclose(fptr);
     }
 

@@ -258,6 +258,14 @@ bool shader_asset_acquire_load_data(Asset_System* asset_system, Shader_Asset* lo
         asset_converter_shader_asset(asset_system, shader_asset);
     }
 
+    //TODO: make sure only one unique texture is loaded at a time
+    /*Asset_Runtime* madness_asset = &material_system->shader_madness_asset[out_handle->handle];
+    madness_asset->path_hash = meta_data->hash;
+    madness_asset->engine_path = meta_data->engine_path;
+    madness_asset->type = ASSET_SHADER;
+    madness_asset->reference_count = 1;*/
+
+
     return true;
 }
 

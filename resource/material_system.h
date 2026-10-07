@@ -16,6 +16,7 @@ bool material_system_generate_render_packet(Material_System* material_system,
 
 
 
+
 //////////// SHADERS ////////////
 void material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
                                                  const char* shader_name, const char* material_name);

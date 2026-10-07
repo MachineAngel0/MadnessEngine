@@ -522,8 +522,8 @@ MAPI UI_Node* madness_ui_c_string_format(const char* text, ...);
 MAPI bool madness_ui_button(String label);
 MAPI bool madness_ui_check_box(String label, bool* check_box_state);
 
-MAPI void madness_image(String id, Texture_System* texture_system, const char* icon_path);
-MAPI void madness_image_handle(Texture_Handle handle);
+MAPI void madness_ui_image(String id, Texture_System* texture_system, const char* icon_path);
+MAPI void madness_ui_image_handle(Texture_Handle handle);
 
 //TODO: make the slider scroll and arrow use scalars
 MAPI void madness_ui_slider_scroll(String id, float* slider_val, float min, float max);

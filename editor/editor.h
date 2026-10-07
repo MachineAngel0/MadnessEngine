@@ -49,8 +49,13 @@ typedef struct Editor
     Reflection_Registry* reflection_registry; // ref
     Memory_System* memory_system; // ref
 
+
+    Madness_txt* madness_txt; // ref
+    Madness_Txt_Handle editor_config_file_handle;
+
     Allocator* editor_allocator;
     Frame_Allocator* frame_allocator;
+
 
     //checked by the applicaiton to see if we should run the game dll
     bool run_game_application;
@@ -82,12 +87,17 @@ typedef struct Editor
 
 
 MAPI Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
-                         Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry);
+                         Asset_System* asset_system, Clock* clock,
+                         Reflection_Registry* reflection_registry,
+                         Madness_txt* txt);
 
 Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
                                       const char* relative_asset_path);
 bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system);
 
+
+bool editor_deserialize_state(Editor* editor);
+bool editor_serialize_state(Editor* editor);
 
 MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);

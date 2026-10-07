@@ -238,6 +238,7 @@ void platform_sleep(u64 ms)
     Sleep(ms);
 }
 
+
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
     //all this code before actually processing the message is to make sure the input system is getting any inputs

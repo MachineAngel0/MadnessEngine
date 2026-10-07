@@ -5,18 +5,12 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
                          Memory_System* memory_system)
 {
 
-    //TODO: allocate them
-    // Madness_Asset particle_effect_asset[100];
-    // Particle_Effect_Handle particle_effect_handles[100];
+    asset_registry->asset_record_allocator = memory_system_allocator_create(
+        memory_system, MB(16), MEMORY_SUBSYSTEM_RESOURCE, "asset record");
+    asset_registry->meta_table_heap_allocator = memory_system_heap_allocator_create(
+        memory_system, MB(64), MEMORY_SUBSYSTEM_RESOURCE, "asset metadata tables");
 
-    // Madness_Asset particle_emitter_asset[100];
-    // Particle_Emitter_Handle particle_emitter_handles[100];
-
-    memset(asset_registry->shader_madness_asset, 0, MAX_MATERIAL_COUNT * sizeof(Madness_Asset));
-
-
-    //TODO: make sure all base paths exist
-
+    //make sure all base paths exist
     platform_create_directory(ENGINE_AUDIO_PATH);
     platform_create_directory(ENGINE_FONTS_PATH);
     platform_create_directory(ENGINE_SHADER_PATH);
@@ -35,12 +29,12 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
 
     if (!fptr)
     {
-        asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, 1024, allocator);
+        asset_registry->asset_record = dynamic_array_create_heap(Asset_Record, 1024, allocator);
         FILE* temp_file = fopen(ASSET_REGISTRY_BIN_PATH, "wb");
         Asset_Registry_Header header = {
             .magic = ASSET_REGISTRY_MAGIC_NUMBER,
-            .version = 1,
-            .asset_count = asset_registry->asset_meta_data->num_items,
+            .version = ASSET_REGISTRY_VERSION,
+            .asset_count = asset_registry->asset_record->num_items,
         };
         fwrite(&header, sizeof(Asset_Registry_Header), 1, temp_file);
         fclose(temp_file);
@@ -58,21 +52,14 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
         MASSERT(header.magic[3] == 'S')
 
 
-        if (header.asset_count < 1024)
-        {
-            asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, 1024, allocator);
-        }
-        else
-        {
-            asset_registry->asset_meta_data = dynamic_array_create_heap(Asset_MetaData, header.asset_count, allocator);
-        }
-        asset_registry->asset_meta_data->num_items = header.asset_count;
+        asset_registry->asset_record = dynamic_array_create_allocator(Asset_Record, header.asset_count, asset_registry->asset_record_allocator);
+        asset_registry->asset_record->num_items = header.asset_count;
         fseek(fptr, 0, SEEK_SET);
 
-        for (u64 asset_idx = 0; asset_idx < asset_registry->asset_meta_data->num_items; asset_idx++)
+        for (u64 asset_idx = 0; asset_idx < asset_registry->asset_record->num_items; asset_idx++)
         {
-            Asset_MetaData* asset = &dynamic_array_get(asset_registry->asset_meta_data,
-                                                       asset_idx, Asset_MetaData);
+            Asset_Record* asset = &dynamic_array_get(asset_registry->asset_record,
+                                                       asset_idx, Asset_Record);
             asset->source_file = allocator_heap_alloc(allocator, sizeof(String));
             asset->engine_path = allocator_heap_alloc(allocator, sizeof(String));
 
@@ -114,7 +101,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
         break;
     case ASSET_AUDIO:
         break;
-    case ASSET_MATERIAL:
+    case ASSET_SHADER:
         break;
     case ASSET_MATERIAL_INSTANCE:
         break;
@@ -155,7 +142,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
             break;
         case ASSET_AUDIO:
             break;
-        case ASSET_MATERIAL:
+        case ASSET_SHADER:
             break;
         case ASSET_MATERIAL_INSTANCE:
             break;
@@ -186,10 +173,10 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry)
     }
 
 
-    for (u64 asset_idx = 0; asset_idx < asset_registry->asset_meta_data->num_items; asset_idx++)
+    for (u64 asset_idx = 0; asset_idx < asset_registry->asset_record->num_items; asset_idx++)
     {
-        Asset_MetaData* asset = &dynamic_array_get(asset_registry->asset_meta_data,
-                                                   asset_idx, Asset_MetaData);
+        Asset_Record* asset = &dynamic_array_get(asset_registry->asset_record,
+                                                   asset_idx, Asset_Record);
 
         fwrite(&asset->uuid, sizeof(asset->uuid), 1, fptr);
         fwrite(&asset->hash, sizeof(asset->hash), 1, fptr);
@@ -201,8 +188,8 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry)
 
     Asset_Registry_Header header = {
         .magic = ASSET_REGISTRY_MAGIC_NUMBER,
-        .version = 1,
-        .asset_count = asset_registry->asset_meta_data->num_items,
+        .version = ASSET_REGISTRY_VERSION,
+        .asset_count = asset_registry->asset_record->num_items,
     };
     fwrite(&header, sizeof(Asset_Registry_Header), 1, fptr);
 
@@ -212,7 +199,7 @@ bool asset_registry_overwrite_file(Asset_Registry* asset_registry)
 }
 
 
-void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaData* asset_meta_data)
+void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_Record* asset_meta_data)
 {
     // ab = append binary
     FILE* fptr = fopen(ASSET_REGISTRY_BIN_PATH, "ab");
@@ -227,7 +214,7 @@ void asset_registry_append_to_file(Asset_Registry* asset_registry, Asset_MetaDat
     Asset_Registry_Header header = {
         .magic = ASSET_REGISTRY_MAGIC_NUMBER,
         .version = 1,
-        .asset_count = asset_registry->asset_meta_data->num_items,
+        .asset_count = asset_registry->asset_record->num_items,
     };
     fwrite(&header, sizeof(Asset_Registry_Header), 1, fptr);
 }
@@ -243,7 +230,7 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
     String* str_source_file = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(source_path, allocator);
     String* str_engine_path = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(engine_path, allocator);
 
-    Asset_MetaData meta_data = {0};
+    Asset_Record meta_data = {0};
     bool exists_by_source_path = asset_registry_exists_by_source_path(asset_registry, str_source_file, asset_type, &meta_data);
     bool exists_by_engine_path = asset_registry_exists_by_engine_path(asset_registry, str_engine_path, &meta_data);
     if (exists_by_source_path  || exists_by_engine_path)
@@ -260,7 +247,7 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
         meta_data.hash = madness_uuid_hash(&meta_data.uuid);
         meta_data.type = asset_type;
 
-        dynamic_array_push(asset_registry->asset_meta_data, &meta_data);
+        dynamic_array_push(asset_registry->asset_record, &meta_data);
         // asset_registry_append_to_file(asset_registry);
     }
 
@@ -286,27 +273,23 @@ void asset_registry_add_asset_and_generate_uuid(Asset_Registry* asset_registry, 
                                                          uuid);
 }
 
-void asset_registry_remove(Asset_Registry* asset_registry)
-{
-    //TODO: just do a remove swap
-}
 
 
 bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String* source_path,
-                                          Asset_Type asset_type, Asset_MetaData* out_meta_data)
+                                          Asset_Type asset_type, Asset_Record* out_record_data)
 {
-    for (u64 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
+    for (u64 i = 0; i < asset_registry->asset_record->num_items; i++)
     {
 
-        Asset_MetaData* meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        Asset_Record* meta_data = _dynamic_array_get(asset_registry->asset_record, i);
         if (meta_data->type != asset_type) {continue;};
 
         if (string_compare(meta_data->source_file, source_path))
         {
             //found
-            if (out_meta_data)
+            if (out_record_data)
             {
-                *out_meta_data = *meta_data;
+                *out_record_data = *meta_data;
             }
             return true;
         }
@@ -315,15 +298,15 @@ bool asset_registry_exists_by_source_path(Asset_Registry* asset_registry, String
 }
 
 bool asset_registry_exists_by_engine_path(Asset_Registry* asset_registry, String* engine_path,
-                                          Asset_MetaData* out_meta_data)
+                                          Asset_Record* out_record_data)
 {
-    for (u64 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
+    for (u64 i = 0; i < asset_registry->asset_record->num_items; i++)
     {
-        Asset_MetaData* meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        Asset_Record* meta_data = _dynamic_array_get(asset_registry->asset_record, i);
         if (string_compare(meta_data->engine_path, engine_path))
         {
             //found
-            *out_meta_data = *meta_data;
+            *out_record_data = *meta_data;
             return true;
         }
     }
@@ -331,15 +314,15 @@ bool asset_registry_exists_by_engine_path(Asset_Registry* asset_registry, String
 }
 
 
-bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID uuid, Asset_MetaData* out_meta_data)
+bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID uuid, Asset_Record* out_record_data)
 {
     //pass in a frame allocator
-    for (u64 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
+    for (u64 i = 0; i < asset_registry->asset_record->num_items; i++)
     {
-        Asset_MetaData* meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        Asset_Record* meta_data = _dynamic_array_get(asset_registry->asset_record, i);
         if (madness_uuid_compare(meta_data->uuid, uuid))
         {
-            *out_meta_data = *meta_data;
+            *out_record_data = *meta_data;
             return true;
         }
     }
@@ -349,10 +332,10 @@ bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID 
 Dynamic_Array* asset_registry_get_all_assets_of_type(Asset_Registry* asset_registry, Asset_Type type,
     Allocator* allocator)
 {
-    Dynamic_Array* array = dynamic_array_create_allocator(Asset_MetaData*, 128, allocator)
-    for (u32 i = 0; i < asset_registry->asset_meta_data->num_items; i++)
+    Dynamic_Array* array = dynamic_array_create_allocator(Asset_Record*, 128, allocator)
+    for (u32 i = 0; i < asset_registry->asset_record->num_items; i++)
     {
-        Asset_MetaData* asset_meta_data = _dynamic_array_get(asset_registry->asset_meta_data, i);
+        Asset_Record* asset_meta_data = _dynamic_array_get(asset_registry->asset_record, i);
         if (asset_meta_data->type == type)
         {
             dynamic_array_push(array, &asset_meta_data);

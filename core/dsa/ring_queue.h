@@ -5,8 +5,6 @@
 //circular queue / array based queue
 typedef struct ring_queue
 {
-    void* data;
-
     //you can also think of these as the head and tail
     s32 front;
     s32 back;
@@ -18,10 +16,14 @@ typedef struct ring_queue
     // total size of our queue, used to keep track of the memory size
     u32 capacity;
 
+    void* data;
 
 } ring_queue;
 
 #define RING_QUEUE_TYPE(type) ring_queue
+
+
+ring_queue* ring_queue_create_allocator(u32 data_size, u32 capacity, Allocator* allocator);
 
 
 ring_queue* ring_queue_create(u32 data_size, u32 capacity);
@@ -47,6 +49,8 @@ bool ring_queue_peek(const ring_queue* q, void* out_data);
 //
 void ring_queue_empty(ring_queue* q);
 u32 ring_queue_size(ring_queue* queue);
+
+
 
 
 void ring_queue_print(ring_queue* queue, void (*print_func)(void*));

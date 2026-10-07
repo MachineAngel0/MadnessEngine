@@ -137,9 +137,6 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
 void madness_txt_schema_read(Madness_txt* txt, Madness_Txt_Handle* handle, void* out_data, const char* file_path);
 
 
-//internal
-size_t madness_txt_str_to_type(char* str);
-
 
 
 

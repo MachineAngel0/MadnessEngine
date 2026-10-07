@@ -1,5 +1,36 @@
 ﻿#include "ring_queue.h"
 
+
+ring_queue* ring_queue_create_allocator(u32 data_size, u32 capacity, Allocator* allocator)
+{
+    /*void* memory = allocator_alloc(allocator, sizeof(ring_queue) + (data_size * capacity));
+
+
+    ring_queue* queue = (ring_queue*)memory;
+    queue->data_size = data_size;
+    queue->capacity = capacity;
+    queue->num_items = 0;
+    queue->front = 0;
+    queue->back = -1;
+
+    queue->data = (u8*)memory + sizeof(ring_queue);
+
+
+    return queue;*/
+
+    ring_queue* queue = (ring_queue*)allocator_alloc(allocator, sizeof(ring_queue));
+    queue->data = (ring_queue*)allocator_alloc(allocator, data_size * capacity);
+    queue->data_size = data_size;
+    queue->capacity = capacity;
+
+    queue->num_items = 0;
+
+    queue->front = 0;
+    queue->back = -1;
+
+    return queue;
+}
+
 ring_queue* ring_queue_create(u32 data_size, u32 capacity)
 {
     ring_queue* queue = (ring_queue*)malloc(sizeof(ring_queue));
@@ -64,7 +95,6 @@ bool ring_enqueue(ring_queue* q, void* data)
 }
 
 
-
 bool ring_dequeue(ring_queue* q, void* out_data)
 {
     MASSERT(q);
@@ -107,7 +137,7 @@ bool ring_queue_peek(const ring_queue* q, void* out_data)
         return false;
     }
 
-    memcpy( out_data,(u8*)q->data + (q->front * q->data_size), q->data_size);
+    memcpy(out_data, (u8*)q->data + (q->front * q->data_size), q->data_size);
 
     return true;
 }

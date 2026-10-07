@@ -676,15 +676,12 @@ void vulkan_texture_create_image_new(Renderer* renderer,
     image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
     switch (texture_data->madness_texture->type)
     {
-    case ASSET_TEXTURE:
+    case TEXTURE_TYPE_TEXTURE:
         image_create_info.format = VK_FORMAT_R8G8B8A8_SRGB;
         break;
-    case ASSET_FONT:
+    case TEXTURE_TYPE_FONT:
         //msdfs are not color data
         image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
-        break;
-    default:
-        MASSERT_FALSE();
         break;
     }
     image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -734,7 +731,7 @@ void vulkan_texture_create_image_new(Renderer* renderer,
     VkSamplerCreateInfo sampler_info = {0};
     switch (texture_data->madness_texture->type)
     {
-    case ASSET_TEXTURE:
+    case TEXTURE_TYPE_TEXTURE:
         sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sampler_info.magFilter = VK_FILTER_LINEAR;
         sampler_info.minFilter = VK_FILTER_LINEAR;
@@ -752,7 +749,7 @@ void vulkan_texture_create_image_new(Renderer* renderer,
         sampler_info.minLod = 0.0f;
         sampler_info.maxLod = 0.0f;
         break;
-    case ASSET_FONT:
+    case TEXTURE_TYPE_FONT:
         sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sampler_info.magFilter = VK_FILTER_LINEAR;
         sampler_info.minFilter = VK_FILTER_LINEAR;
