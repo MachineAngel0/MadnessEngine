@@ -990,7 +990,7 @@ float _insanity_ui_node_align_axis(const float node_size_axis, const float conta
     case UI_ALIGNMENT_LEFT_TOP:
         node_pos_axis = container_pos_axis;
         break;
-    case UI_ALIGNMENT_X_CENTER:
+    case UI_ALIGNMENT_CENTER:
         axis_space_remaining = container_size_axis - node_size_axis;
         node_pos_axis = container_pos_axis + (axis_space_remaining / 2.f);
         break;

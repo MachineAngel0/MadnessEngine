@@ -353,12 +353,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Asset_Record, uuid)
 		},
 		{
-			.name = "hash",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Asset_Record, hash)
-		},
-		{
 			.name = "type",
 			.type = REFLECTION_TYPE_ENUM,
 			.type_name = "Asset_Type",
@@ -382,7 +376,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Asset_Record",
 		.fields = Asset_Record_Fields,
-		.field_count = 5,
+		.field_count = 4,
 		.struct_size = sizeof(Asset_Record)
 	};
 
@@ -395,12 +389,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Asset_Runtime, uuid)
-		},
-		{
-			.name = "path_hash",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Asset_Runtime, path_hash)
 		},
 		{
 			.name = "generation",
@@ -426,19 +414,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "String",
 			.offset = offsetof(Asset_Runtime, engine_path)
 		},
-		{
-			.name = "in_use",
-			.type = REFLECTION_TYPE_BOOL,
-			.type_name = "bool",
-			.offset = offsetof(Asset_Runtime, in_use)
-		},
 	};
 
 	 Reflection_Runtime_Struct Asset_Runtime_Runtime_Struct =
 	{
 		.name = "Asset_Runtime",
 		.fields = Asset_Runtime_Fields,
-		.field_count = 7,
+		.field_count = 5,
 		.struct_size = sizeof(Asset_Runtime)
 	};
 
@@ -2300,13 +2282,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u64",
 			.offset = offsetof(Material_System, material_buffer_size)
 		},
+		{
+			.name = "default_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Material_System, default_handle)
+		},
+		{
+			.name = "default_data_blob",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Material_System, default_data_blob)
+		},
 	};
 
 	 Reflection_Runtime_Struct Material_System_Runtime_Struct =
 	{
 		.name = "Material_System",
 		.fields = Material_System_Fields,
-		.field_count = 12,
+		.field_count = 14,
 		.struct_size = sizeof(Material_System)
 	};
 
@@ -2870,25 +2864,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	Reflection_Runtime_Struct_Field Asset_Registry_Fields[] =
 	{
-		{
-			.name = "texture_runtime",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Asset_Runtime",
-			.offset = offsetof(Asset_Registry, texture_runtime)
-		},
-		{
-			.name = "texture_runtime_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Asset_Registry, texture_runtime_count)
-		},
 	};
 
 	 Reflection_Runtime_Struct Asset_Registry_Runtime_Struct =
 	{
 		.name = "Asset_Registry",
 		.fields = Asset_Registry_Fields,
-		.field_count = 2,
+		.field_count = 0,
 		.struct_size = sizeof(Asset_Registry)
 	};
 

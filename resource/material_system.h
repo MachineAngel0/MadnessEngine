@@ -16,8 +16,8 @@ bool material_system_generate_render_packet(Material_System* material_system,
 
 
 
+//////////// SHADERS TO MATERIAL MAPPING ////////////
 
-//////////// SHADERS ////////////
 void material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
                                                  const char* shader_name, const char* material_name);
 
@@ -39,6 +39,7 @@ bool shader_material_mapping_get_material_defintion(Asset_System* asset_system,
                                                              String* shader_name,
                                                              Material_Definition* out_definition);
 
+//////////// SHADERS ////////////
 String_Builder* shader_asset_construct_path(Material_System* material_system,
                                Shader_Asset* asset, Allocator* allocator);
 
@@ -62,8 +63,6 @@ void shader_purge_unused(Asset_System* asset_system,
 
 
 //////////// MATERIALS ////////////
-
-
 
 void material_upload(Asset_System* asset_system, void* data, u64 byte_size, Material_Handle* out_handle)
 {
@@ -106,7 +105,7 @@ void* material_get(Asset_System* asset_system, Material_Handle handle)
     {
         M_ERROR("MATERIAL GET: INVALID GENERTATION PASSING BACK DATA BLOB")
         MASSERT(false);
-        return NULL;
+        return material_system->default_data_blob ;
     }
 
     Material_Record* record = &material_system->material_record[handle.handle];
@@ -124,24 +123,11 @@ Material* material_get_metadata(Asset_System* asset_system,
     {
         M_ERROR("MATERIAL GET METADATA: INVALID GENERTATION PASSING BACK DATA BLOB")
         MASSERT(false);
-        return NULL;
+        return material_system->default_data_blob ;
     }
 
     return &material_system->materials[handle.handle];
 }
-
-
-//TODO:
-/*
-Material_Definition material_get_definition(Asset_System* asset_system, Material_Handle handle)
-{
-
-}
-
-Shader_Asset material_get_shader_asset(Asset_System* asset_system,Material_Handle handle)
-{
-}
-*/
 
 u64 material_create_sort_key(Asset_System* asset_system,
                              Material_Handle handle, float z_value)
@@ -278,4 +264,7 @@ void material_create_from_data(Asset_System* asset_system,
                                Material* out_material,
                                const char* material_asset_name,
                                void* data);
+
+
+
 #endif //MATERIAL_SYSTEM_H

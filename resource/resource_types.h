@@ -41,7 +41,8 @@
 #define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
 #define ENGINE_SHADER_PATH "../z_assets_engine/material/"
 #define ENGINE_SHADER_PATH_NO_SLASH "../z_assets_engine/material"
-#define ENGINE_MATERIAL_INSTANCE_PATH "../z_assets_engine/material_instance/"
+#define ENGINE_MATERIAL_PATH "../z_assets_engine/material_instance/"
+#define ENGINE_MATERIAL_PATH_NO_SLASH "../z_assets_engine/material_instance"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 #define ENGINE_PARTICLE_PATH "../z_assets_engine/particle/"
 #define ENGINE_PARTICLE_EFFECT_PATH "../z_assets_engine/particle/particle_effect"
@@ -196,7 +197,7 @@ typedef enum Asset_Type
     ASSET_SKINNED_MESH,
     ASSET_AUDIO,
     ASSET_SHADER,
-    ASSET_MATERIAL_INSTANCE,
+    ASSET_MATERIAL,
     ASSET_SCENE,
     ASSET_PARTICLE_EFFECT,
     ASSET_PARTICLE_EMITTER,
@@ -212,7 +213,7 @@ const char* ASSET_TYPE_LUT[ASSET_TYPE_MAX] = {
     [ASSET_SKINNED_MESH] = "ASSET_SKINNED_MESH",
     [ASSET_AUDIO] = "ASSET_AUDIO",
     [ASSET_SHADER] = "ASSET_SHADER",
-    [ASSET_MATERIAL_INSTANCE] = "ASSET_MATERIAL_INSTANCE",
+    [ASSET_MATERIAL] = "ASSET_MATERIAL_INSTANCE",
     [ASSET_SCENE] = "ASSET_SCENE",
     [ASSET_PARTICLE_EFFECT] = "ASSET_PARTICLE_EFFECT",
     [ASSET_PARTICLE_EMITTER] = "ASSET_PARTICLE_EMITTER",
@@ -224,7 +225,7 @@ typedef struct Asset_Record
 {
     //meta data for our editor/debug builds
     MADNESS_UUID uuid;
-    u64 hash; // hashes the engine_file
+    UUID_HASH hash; // hashes the engine_file
     Asset_Type type;
     // u64 file_timestamp;
     String* source_file; //256 in length max
@@ -258,7 +259,7 @@ typedef struct Asset_Runtime
 {
     //runtime format for assets
     MADNESS_UUID uuid;
-    u64 path_hash; //should change this into the uuid hash, it will be faster, and generally won't change
+    UUID_HASH hash; //should change this into the uuid hash, it will be faster, and generally won't change
     u64 generation;
     s32 reference_count;
     Asset_Type type;
@@ -266,7 +267,6 @@ typedef struct Asset_Runtime
     // bool auto_release;
 
     Asset_Handles asset_handles;
-    bool in_use;
 } Asset_Runtime;
 
 ///////////////// Texture  //////////////////////
@@ -931,12 +931,13 @@ typedef struct Material_System
     u64 material_buffer_offset;
     u64 material_buffer_size;
 
+    Material_Handle default_handle;
+    u8 default_data_blob[1024]; //passed back as data to be edited even if by mistake
+
 } Material_System;
 
 
 //SPRITE
-
-
 typedef struct Sprite_System
 {
     Allocator* allocator;
@@ -1083,7 +1084,7 @@ typedef struct Particle_System
 
     ring_queue* free_emitters_queue;
 
-    ARRAY_TYPE(u32)* active_emitters;
+    ARRAY_TYPE(u32)* active_emitters; // used for the editor, but could be useful despite that
 
 
     //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
@@ -1190,7 +1191,6 @@ typedef struct Render_Packet
 
 typedef struct Asset_Registry
 {
-    Heap_Allocator* meta_table_heap_allocator;
     Allocator* asset_record_allocator;
 
     DYNAMIC_ARRAY_TYPE(Asset_Record)* asset_record;
@@ -1201,24 +1201,14 @@ typedef struct Asset_Registry
 
     //metadata tables
     DYNAMIC_ARRAY_TYPE(Texture_MetaData)* texture_table;
-    DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* mesh_table;
-    DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* skinned_mesh_table;
-    DYNAMIC_ARRAY_TYPE(Material_MetaData)* material_table;
-    DYNAMIC_ARRAY_TYPE(Shader_MetaData)* shader_table;
+    Allocator* texture_table_allocator;
+
+    // DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* mesh_table;
+    // DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* skinned_mesh_table;
+    // DYNAMIC_ARRAY_TYPE(Material_MetaData)* material_table;
+    // DYNAMIC_ARRAY_TYPE(Shader_MetaData)* shader_table;
 
 
-    //TODO: test hashmap performance vs array perf
-    //runtime data
-
-    Asset_Runtime* texture_runtime[MAX_TEXTURE_COUNT];
-    u32 texture_runtime_count;
-
-    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* mesh_runtime;
-    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* skinned_runtime;
-    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* shader_runtime;
-    // DYNAMIC_ARRAY_TYPE(Asset_Runtime)* material_runtime;
-
-    // DYNAMIC_ARRAY_TYPE(Asset_Runtime) loaded_asset;
 } Asset_Registry;
 
 

@@ -286,6 +286,7 @@ Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asse
 
     return asset_list;
 }
+
 bool asset_list_regenerate(Asset_List_Scan* asset_list, const char* relative_asset_path)
 {
     allocator_clear(asset_list->allocator);

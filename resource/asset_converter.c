@@ -58,7 +58,7 @@ String_Builder* asset_converter_create_file_path(const Scratch_Allocator scratch
 
     String_Builder* str_builder = string_builder_create(256, scratch_allocator.allocator);
     string_builder_append_c_string(str_builder, engine_path);
-    string_builder_append_builder(str_builder, file_path_strip);
+    string_builder_append_string_builder(str_builder, file_path_strip);
     string_builder_append_c_string(str_builder, engine_ext);
 
 
@@ -200,8 +200,8 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     Madness_Texture_Runtime runtime_texture = {0};
     runtime_texture.version = 1;
     //load the image data from file
-    int texWidth, texHeight, texChannels;
-    u8* pixel_data = stbi_load(file_path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    int tex_width, tex_height, texChannels;
+    u8* pixel_data = stbi_load(file_path, &tex_width, &tex_height, &texChannels, STBI_rgb_alpha);
 
     if (!pixel_data)
     {
@@ -212,10 +212,10 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     }
 
     //The pixels are laid out row by row with 4 bytes per pixel in the case of STBI_rgb_alpha for a total of texWidth * texHeight * 4 values.
-    runtime_texture.texture.width = texWidth; // 4 stride rgba
-    runtime_texture.texture.height = texHeight; // 4 stride rgba
+    runtime_texture.texture.width = tex_width; // 4 stride rgba
+    runtime_texture.texture.height = tex_height; // 4 stride rgba
     runtime_texture.texture.channels = STBI_rgb_alpha; // 4 stride rgba
-    runtime_texture.texture.pixels_size = texWidth * texHeight * 4; // 4 stride rgba
+    runtime_texture.texture.pixels_size = tex_width * tex_height * 4; // 4 stride rgba
     runtime_texture.texture.format = Texture_Format_Default;
     runtime_texture.texture.type = TEXTURE_TYPE_TEXTURE;
     runtime_texture.pixel_data = pixel_data;
@@ -245,22 +245,24 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
                                                 ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
-    /*Texture_MetaData texture_metadata = {
+    /*//find if the asset exists already?
+
+    Texture_MetaData texture_metadata = {
         .version = TEXTURE_VERSION,
-        .width = ,
-        .height = ,
-        .channels = ,
-        .format = ,
-        .filter = ,
-        .wrap = ,
-        .sampler = ,
-        .type = ,
-        .create_sampler = ,
-        .engine_path =
+        .width = tex_width,
+        .height = tex_height,
+        .channels = STBI_rgb_alpha,
+        .format = Texture_Format_Default,
+        .filter = Texture_Filter_Linear,
+        .wrap = Texture_Wrap_Repeat,
+        .sampler = {0},
+        .type = TEXTURE_TYPE_TEXTURE,
+        .create_sampler = true,
+        .engine_path = string_builder_to_string_allocator(str_builder_output_path);
     };
 
-    asset_registry_add_texture_metadata(asset_system->asset_registry,)
-    */
+    asset_registry_add_texture_metadata(asset_system->asset_registry,)*/
+
     scratch_allocator_end(scratch);
 
     PROFILE_ZONE_END(asset_converter_texture)
@@ -984,7 +986,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_strip_path_to_base_name(base_name);
 
             String_Builder* string_mat_name = string_builder_create(256, scratch.allocator);
-            string_builder_append_builder(string_mat_name, base_name);
+            string_builder_append_string_builder(string_mat_name, base_name);
             string_builder_append_c_string(string_mat_name, "No_Mat_Name");
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
@@ -1378,7 +1380,7 @@ MAPI bool asset_converter_material(Asset_System* asset_system,
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
     string_builder_append_string(str_builder, material->meta_data.material_name);
     string_builder_append_c_string(str_builder, "_");
     string_builder_append_string(str_builder, material->meta_data.name);
@@ -1397,7 +1399,7 @@ MAPI bool asset_converter_material(Asset_System* asset_system,
     asset_registry_add_asset_from_uuid(asset_system->asset_registry,
                                        string_to_c_string_allocator(
                                            material->meta_data.name, scratch.allocator), output_path,
-                                       ASSET_MATERIAL_INSTANCE,
+                                       ASSET_MATERIAL,
                                        asset_system->heap_allocator, material->meta_data.material_uuid);
 
     fclose(fptr);
@@ -1432,7 +1434,7 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
 
     //write out the file
     String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_PATH);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
     string_builder_append_string(str_builder, material->meta_data.material_name);
     string_builder_append_c_string(str_builder, "_");
     string_builder_append_string(str_builder, material->meta_data.name);
@@ -1451,7 +1453,7 @@ MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
                                                 string_to_c_string_allocator(
                                                     material->meta_data.name, scratch.allocator), output_path,
-                                                ASSET_MATERIAL_INSTANCE,
+                                                ASSET_MATERIAL,
                                                 asset_system->heap_allocator, out_material_uuid);
 
     fclose(fptr);

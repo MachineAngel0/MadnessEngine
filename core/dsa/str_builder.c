@@ -44,8 +44,6 @@ void string_builder_free(String_Builder* builder)
         allocator_heap_free(builder->heap_allocator, builder->str);
         allocator_heap_free(builder->heap_allocator, builder);
     }
-
-
 }
 
 /*
@@ -60,7 +58,6 @@ void string_builder_print(String_Builder* builder)
 {
     printf("%.*s\n", (int)builder->current_length, builder->str);
 }
-
 
 
 void string_builder_append_string(String_Builder* str_builder, String* s)
@@ -90,7 +87,7 @@ void string_builder_append_string(String_Builder* str_builder, String* s)
 }
 
 
-void string_builder_append_builder(String_Builder* src, String_Builder* copy_str)
+void string_builder_append_string_builder(String_Builder* src, String_Builder* copy_str)
 {
     //check if we have enough space
     if (src->current_length + copy_str->current_length > src->capacity)
@@ -114,8 +111,6 @@ void string_builder_append_builder(String_Builder* src, String_Builder* copy_str
     //copy the word into the string
     memcpy(src->str + src->current_length, copy_str->str, copy_str->current_length);
     src->current_length += copy_str->current_length;
-
-
 }
 
 void string_builder_append_c_string(String_Builder* str_builder, const char* word)
@@ -123,7 +118,6 @@ void string_builder_append_c_string(String_Builder* str_builder, const char* wor
     //check if we have enough space
     u64 word_size = strlen(word);
     string_builder_append_c_string_length(str_builder, word, word_size);
-
 }
 
 void string_builder_append_c_string_length(String_Builder* str_builder, const char* word, const u64 length)
@@ -176,7 +170,6 @@ void string_builder_append_char(String_Builder* str_builder, const char characte
 
 void string_builder_append_u64(String_Builder* str_builder, const u64 val, Allocator* allocator)
 {
-
     u32 val_length = snprintf(NULL, 0, "%llu", val);
     char* str = allocator_alloc(allocator, val_length + 1);
     snprintf(str, val_length + 1, "%llu", val);
@@ -206,7 +199,7 @@ bool string_builder_strip_path_to_base_name(String_Builder* builder)
     {
         if (builder->str[new_length] == '/')
         {
-            memcpy(builder->str, builder->str + new_length+1, starting_length - new_length+1);
+            memcpy(builder->str, builder->str + new_length + 1, starting_length - new_length + 1);
             builder->current_length = starting_length - new_length;
             return true;
         }
@@ -255,15 +248,12 @@ bool string_builder_strip_path_from_beginning(String_Builder* builder)
             builder->current_length = new_length;
             return true;
         }
-
     }
 
 
     //basically was not a valid path string
     MASSERT_MSG(false, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
     return false;
-
-
 }
 
 bool string_builder_strip_path_from_end(String_Builder* builder)
@@ -278,24 +268,30 @@ bool string_builder_strip_path_from_end(String_Builder* builder)
             builder->current_length = i;
             return true;
         }
-
     }
 
 
     //basically was not a valid path string
     MASSERT_MSG(false, "C_STRING_PATH_STRIP: PATH STRING DOES NOT CONTAIN /");
     return false;
+}
 
-
-
+void string_builder_convert_path_to_proper_path(String_Builder* builder)
+{
+    for (u32 i = 0; i < builder->current_length; i++)
+    {
+        if (builder->str[i] == '\\')
+        {
+            builder->str[i] = '/';
+        }
+    }
 }
 
 String_Builder* string_builder_duplicate(const String_Builder* builder, Allocator* allocator)
 {
-
     String_Builder* out_builder = string_builder_create(builder->capacity, allocator);
+    out_builder->current_length = builder->current_length;
     memcpy(out_builder->str, builder->str, builder->current_length);
-
 
     return out_builder;
 }
@@ -308,7 +304,6 @@ String* string_builder_to_string(const String_Builder* builder, Allocator* alloc
 String* string_builder_to_string_allocator(const String_Builder* builder, Allocator* allocator)
 {
     return string_create_allocator(builder->str, builder->current_length, allocator);
-
 }
 
 String* string_builder_to_string_heap(const String_Builder* builder, Heap_Allocator* allocator)
@@ -370,7 +365,6 @@ u64 string_builder_hash_u64(const String_Builder* builder)
 {
     return generate_hash_key_64bit((u8*)builder->str, builder->current_length);
 }
-
 
 
 void string_builder_test(void)

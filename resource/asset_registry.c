@@ -7,14 +7,13 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
 
     asset_registry->asset_record_allocator = memory_system_allocator_create(
         memory_system, MB(16), MEMORY_SUBSYSTEM_RESOURCE, "asset record");
-    asset_registry->meta_table_heap_allocator = memory_system_heap_allocator_create(
-        memory_system, MB(64), MEMORY_SUBSYSTEM_RESOURCE, "asset metadata tables");
+
 
     //make sure all base paths exist
     platform_create_directory(ENGINE_AUDIO_PATH);
     platform_create_directory(ENGINE_FONTS_PATH);
     platform_create_directory(ENGINE_SHADER_PATH);
-    platform_create_directory(ENGINE_MATERIAL_INSTANCE_PATH);
+    platform_create_directory(ENGINE_MATERIAL_PATH);
     platform_create_directory(ENGINE_MESH_PATH);
     platform_create_directory(ENGINE_PARTICLE_PATH);
     platform_create_directory(ENGINE_PARTICLE_EFFECT_PATH);
@@ -74,6 +73,9 @@ bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_regis
     }
 
 
+    asset_registry->texture_table_allocator = memory_system_allocator_create(memory_system, MB(8), MEMORY_SUBSYSTEM_RESOURCE, "texture meta table");
+    asset_registry->texture_table = dynamic_array_create_allocator(Texture_MetaData, 1024, asset_registry->texture_table_allocator);
+
 
     return true;
 }
@@ -103,7 +105,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
         break;
     case ASSET_SHADER:
         break;
-    case ASSET_MATERIAL_INSTANCE:
+    case ASSET_MATERIAL:
         break;
     case ASSET_SCENE:
         break;
@@ -119,7 +121,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
 
         if (asset_registry_exists_by_source_path(asset_registry, &list_scan->strings[i], asset_type, NULL))
         {
-        scratch_allocator_end(scratch);
+            scratch_allocator_end(scratch);
             continue;
         }
 
@@ -144,11 +146,15 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
             break;
         case ASSET_SHADER:
             break;
-        case ASSET_MATERIAL_INSTANCE:
+        case ASSET_MATERIAL:
             break;
         case ASSET_SCENE:
             break;
         case ASSET_TYPE_MAX:
+            break;
+        case ASSET_PARTICLE_EFFECT:
+            break;
+        case ASSET_PARTICLE_EMITTER:
             break;
         }
 
@@ -316,7 +322,7 @@ bool asset_registry_exists_by_engine_path(Asset_Registry* asset_registry, String
 
 bool asset_registry_exists_by_uuid(Asset_Registry* asset_registry, MADNESS_UUID uuid, Asset_Record* out_record_data)
 {
-    //pass in a frame allocator
+
     for (u64 i = 0; i < asset_registry->asset_record->num_items; i++)
     {
         Asset_Record* meta_data = _dynamic_array_get(asset_registry->asset_record, i);

@@ -162,7 +162,7 @@ void particle_system_update(Particle_System* ps, float dt)
     PROFILE_ZONE(particle_system_update);
 
     PROFILE_ZONE(particle_update_emitter);
-    for (u32 i = 0; i < ps->emitter_count_max; i++)
+    for (u32 i = 0; i < ps->emitter_count_max; i++) // TODO: replace with the active emitters
     {
         if (!ps->emitters[i].in_use) { continue; }
         particle_emitter_update(ps, &ps->emitters[i], dt);

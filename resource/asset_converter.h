@@ -31,6 +31,7 @@ MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf
 
 MAPI bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset);
 
+
 MAPI bool asset_converter_material(Asset_System* asset_system,
                                    Material* material);
 MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,

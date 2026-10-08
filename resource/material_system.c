@@ -32,8 +32,6 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
 
 
     //load all shaders up front
-    // if (app_is_debug_build())
-    // {
     Asset_List_Scan* list_scan =
         asset_lists_generate(memory_system, MAX_ASSETS_STRINGS, ENGINE_SHADER_PATH_NO_SLASH);
 
@@ -47,7 +45,6 @@ bool material_system_init(Material_System* material_system, Asset_System* asset_
 
         scratch_allocator_end(scratch);
     }
-    // }
 
 
     return material_system;
@@ -67,7 +64,6 @@ bool material_system_generate_render_packet(Material_System* material_system,
 {
     render_packet_3d->shader_assets = material_system->shader_asset;
     render_packet_3d->shader_asset_count = material_system->shader_count;
-
 
     return true;
 }

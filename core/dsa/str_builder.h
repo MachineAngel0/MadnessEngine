@@ -39,7 +39,7 @@ void string_builder_print(String_Builder* builder);
 void string_builder_append_string(String_Builder* str_builder, String* s);
 void string_builder_append_string_format(String_Builder* str_builder, const char* format, ...);
 
-void string_builder_append_builder(String_Builder* src, String_Builder* copy_str);
+void string_builder_append_string_builder(String_Builder* src, String_Builder* copy_str);
 
 
 void string_builder_append_c_string(String_Builder* str_builder, const char* word);
@@ -59,6 +59,11 @@ bool string_builder_strip_path_to_base_name(String_Builder* builder);
 bool string_builder_strip_extension(String_Builder* builder);
 bool string_builder_strip_path_from_beginning(String_Builder* builder);
 bool string_builder_strip_path_from_end(String_Builder* builder);
+
+/**
+ * NOTE: converts from \ to / if applicable
+ */
+void string_builder_convert_path_to_proper_path(String_Builder* builder);
 
 
 String_Builder* string_builder_duplicate(const String_Builder* builder, Allocator* allocator);

@@ -260,33 +260,21 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     FILE* fptr = NULL;
 
     //load from individal binary
-    bool debug = true;
-    if (debug)
+    fptr = fopen(string_to_c_string_allocator(asset_record->engine_path, asset_system->frame_allocator), "rb");
+    if (!fptr)
     {
-        fptr = fopen(string_to_c_string_allocator(asset_record->engine_path, asset_system->frame_allocator), "rb");
-        if (!fptr)
-        {
-            //TODO: since were in the editor, we should at least try to find the asset in our asset folder
-            MASSERT(false)
-            return asset_system->texture_system->default_texture_handle;
-        }
-
-        Madness_Texture_Runtime engine_texture = {0};
-
-        asset_texture_deserialize(&engine_texture, fptr, asset_system->texture_allocator);
-
-        texture_system_acquire(asset_system, asset_record, engine_texture.texture,
-                               engine_texture.pixel_data, &texture_handle);
+        //TODO: since were in the editor, we should at least try to find the asset in our asset folder
+        MASSERT(false)
+        return asset_system->texture_system->default_texture_handle;
     }
-    /*else
-    {
-        //TODO:
-        MASSERT(false);
-        // search for asset by its hash name and its offset, then load it in with our format
-        // u64 asset_offset = asset_system_find_asset(asset_system, scene_id, hash_id);
-        // Madness_Texture_Runtime runtime_texture = {0};
-        // texture_system_upload_new_texture(asset_system, hash_id, editor_texture.texture, editor_texture.pixel_data, &texture_handle);
-    }*/
+
+    Madness_Texture_Runtime engine_texture = {0};
+
+    asset_texture_deserialize(&engine_texture, fptr, asset_system->texture_allocator);
+
+    texture_system_acquire(asset_system, asset_record, engine_texture.texture,
+                           engine_texture.pixel_data, &texture_handle);
+
     fclose(fptr);
 
     PROFILE_ZONE_END(asset_load_texture_uuid)
@@ -588,15 +576,15 @@ bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 
-    Asset_Record* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));
-    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
+    Asset_Record* record = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, record))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return false;
     }
 
 
-    bool load_result = _asset_load_shader_asset(asset_system, out_meta_data,
+    bool load_result = _asset_load_shader_asset(asset_system, record,
                                                 out_shader_handle, &scratch);
 
 
@@ -612,7 +600,7 @@ bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid,
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
-    Asset_Record* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));;
+    Asset_Record* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));
     if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, out_meta_data))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
@@ -702,15 +690,15 @@ bool asset_load_material_path(Asset_System* asset_system, const char* asset_path
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(asset_path, scratch.allocator);
 
-    Asset_Record* out_meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_Record));;
-    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
+    Asset_Record* record = allocator_alloc(scratch.allocator, sizeof(Asset_Record));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, record))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         return false;
     }
 
 
-    bool load_result = _asset_load_material(asset_system, out_meta_data, out_material);
+    bool load_result = _asset_load_material(asset_system, record, out_material);
 
 
     scratch_allocator_end(scratch);

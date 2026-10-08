@@ -12,6 +12,7 @@ typedef enum Editor_UI_State
     EDITOR_UI_STATE_PARTICLE,
     EDITOR_UI_STATE_RENDERER,
     EDITOR_UI_STATE_MATERIAL_CREATION,
+    EDITOR_UI_STATE_MATERIAL_EDITOR,
     EDITOR_UI_STATE_MADNESS_UI_TEST,
     EDITOR_UI_STATE_SCENE,
     EDITOR_UI_STATE_TEXTURE_VIEWER,
@@ -38,6 +39,7 @@ const char* Editor_UI_State_ENUM_String[EDITOR_UI_STATE_MAX] = {
     [EDITOR_UI_STATE_MESH_VIEWER] = "EDITOR_UI_STATE_MESH_VIEWER",
     [EDITOR_UI_STATE_REFLECTION_ABILITY] = "EDITOR_UI_STATE_REFLECTION_ABILITY",
     [EDITOR_UI_STATE_INSANITY_UI_TEST] = "EDITOR_UI_STATE_INSANITY_UI_TEST",
+    [EDITOR_UI_STATE_MATERIAL_EDITOR] = "EDITOR_UI_STATE_MATERIAL_EDITOR",
     // [EDITOR_UI_STATE_CHAOS_UI_TEST] = "EDITOR_UI_STATE_CHAOS_UI_TEST",
 };
 
@@ -115,6 +117,9 @@ void editor_material_asset_view(Editor* editor);
 void editor_mesh_view(Editor* editor);
 void editor_particle_view(Editor* editor);
 void editor_render_view(Editor* editor);
+
+
+void editor_material_editor(Editor* editor);
 
 
 #endif //MADNESSENGINE_EDITOR_H

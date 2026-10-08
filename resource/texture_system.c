@@ -114,9 +114,8 @@ bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Rec
     for (u32 i = 0; i < texture_system->max_textures; i++)
     {
         Asset_Runtime* runtime = &texture_system->texture_asset[i];
-        if (!runtime->in_use) { continue; }
 
-        if (string_compare(runtime->engine_path, asset->engine_path))
+        if (runtime->hash == asset->hash)
         {
             runtime->reference_count++;
             *out_handle = runtime->asset_handles.texture_handle;
@@ -182,6 +181,7 @@ bool texture_system_acquire(Asset_System* asset_system, Asset_Record* record,
 
     Asset_Runtime* runtime = &texture_system->texture_asset[free_index];
     asset_runtime_set_info_from_record(runtime, record, ASSET_TEXTURE);
+    runtime->asset_handles.texture_handle = (Texture_Handle){free_index, runtime->generation};
 
     //fill out the handle
     out_handle->handle = free_index;

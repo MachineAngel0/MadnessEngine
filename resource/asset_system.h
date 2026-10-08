@@ -94,7 +94,7 @@ void asset_runtime_set_info_from_record(Asset_Runtime* asset, Asset_Record* meta
 {
     asset->reference_count = 1;
     asset->engine_path = meta_data->engine_path;
-    asset->path_hash = meta_data->hash;
+    asset->hash = meta_data->hash;
     asset->type = asset_type;
     asset->uuid = meta_data->uuid;
 
@@ -112,7 +112,7 @@ bool runtime_asset_release(Asset_Runtime* asset)
     if (asset->reference_count <= 0)
     {
         //unload the asset
-        asset->path_hash = 0;
+        asset->hash = 0;
         asset->engine_path = NULL;
         asset->uuid = (MADNESS_UUID){0,0};
         asset->type = ASSET_TYPE_MAX;

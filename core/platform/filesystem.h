@@ -108,6 +108,10 @@ typedef struct Asset_List_Scan
 }Asset_List_Scan;
 
 
+//TODO: a more temporary version, where you pass in an allocator and have it allocate until full
+// Asset_List_Scan* asset_lists_generate(Allocator* memory_system, u32 max_asset_count,
+                                      // const char* relative_asset_path);
+
 Asset_List_Scan* asset_lists_generate(Memory_System* memory_system, u32 max_asset_count,
                                       const char* relative_asset_path);
 bool asset_lists_free(Asset_List_Scan* asset_list_scan, Memory_System* memory_system);

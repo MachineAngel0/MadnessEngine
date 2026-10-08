@@ -256,6 +256,9 @@ void editor_ui(Editor* editor)
     case EDITOR_UI_STATE_PARTICLE:
         editor_particle_view(editor);
         break;
+    case EDITOR_UI_STATE_MATERIAL_EDITOR:
+        editor_material_editor(editor);
+        break;
     }
 }
 
@@ -611,7 +614,19 @@ void editor_texture_view(Editor* editor)
 
             // madness_image_handle((Texture_Handle){.handle = meta_data.handle_lookup});
         }
+    }
+    madness_ui_window_end();
 
+    madness_ui_window_begin(STRING("Texture Metatable"), 0);
+    {
+        for (u32 i = 0; i < asset_system->asset_registry->texture_table->num_items; i++)
+        {
+            Texture_MetaData* meta_data = &dynamic_array_get(asset_system->asset_registry->texture_table, i,
+                                                             Texture_MetaData);
+
+            madness_ui_u32(STRING("width"), &meta_data->width, 0);
+            madness_ui_u32(STRING("height"), &meta_data->height, 0);
+        }
     }
     madness_ui_window_end();
 }
@@ -627,6 +642,9 @@ void editor_meta_data_view(Editor* editor)
             madness_ui_string(STRING("UUID:"));
             madness_ui_u64(STRING("UUID HIGH:"), &meta_data->uuid.high, 0);
             madness_ui_u64(STRING("UUID LOW:"), &meta_data->uuid.low, 0);
+
+            madness_ui_u64(STRING("UUID Hash:"), &meta_data->hash, 0);
+
 
             madness_ui_string(STRING("Type:"));
             madness_ui_same_line();
@@ -1199,4 +1217,122 @@ void editor_particle_view(Editor* editor)
 
 
     PROFILE_ZONE_END(editor_particle_view);
+}
+
+
+void editor_material_editor(Editor* editor)
+{
+    Asset_System* asset_system = editor->asset_system;
+
+    static Material_Handle handle;
+    madness_ui_window_begin(STRING("Material Table"), 0);
+    {
+        //
+        if (madness_ui_button(STRING("VALIDATE MATERIALS IN REGISTRY")))
+        {
+            asset_registry_validate_materials(asset_system);
+        }
+
+
+
+        String material_asset_name = STRING("material path");
+        madness_ui_file_picker(material_asset_name);
+        if (madness_ui_button(STRING("LOAD MATERIAL ASSET")))
+        {
+            String_Builder* string_builder = madness_ui_text_box_get_string(material_asset_name);
+
+            String_Builder* path = string_builder_duplicate(string_builder, editor->frame_allocator);
+            string_builder_convert_path_to_proper_path(path);
+            string_builder_strip_path_to_base_name(path);
+
+
+            String_Builder* final_path = string_builder_create(256, editor->frame_allocator);
+            string_builder_append_c_string(final_path, ENGINE_MATERIAL_PATH);
+            string_builder_append_string_builder(final_path, path);
+
+
+            asset_load_material_path(editor->asset_system,
+                                     string_builder_to_c_string(final_path),
+                                     &handle);
+        }
+
+        if (handle.handle != 0)
+        {
+            Material* mat = material_get_metadata(asset_system, handle);
+            void* mat_data = material_get(asset_system, handle);
+
+
+            Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
+                asset_system->global_reflection_registry,
+                string_to_c_string_allocator(mat->meta_data.material_name, editor->frame_allocator));
+
+            madness_ui_padding();
+
+            madness_ui_reflect_material(editor->asset_system->asset_registry,
+                                        asset_system->global_reflection_registry,
+                                        material_reflect_struct,
+                                        &mat_data,
+                                        "mat",
+                                        editor->texture_list);
+        }
+    }
+    madness_ui_window_end();
+
+
+    static Shader_Handle shader_handle;
+    madness_ui_window_begin(STRING("Shader Table"), 0);
+    {
+        //
+        if (madness_ui_button(STRING("VALIDATE SHADERS IN REGISTRY")))
+        {
+            asset_registry_validate_shaders(asset_system);
+        }
+
+        //
+        String shader_asset_id = STRING("shader path");
+        madness_ui_file_picker(shader_asset_id);
+        if (madness_ui_button(STRING("LOAD SHADER ASSET")))
+        {
+            String_Builder* string_builder = madness_ui_text_box_get_string(shader_asset_id);
+
+            String_Builder* path = string_builder_duplicate(string_builder, editor->frame_allocator);
+            string_builder_convert_path_to_proper_path(path);
+            string_builder_strip_path_to_base_name(path);
+
+
+            String_Builder* final_path = string_builder_create(256, editor->frame_allocator);
+            string_builder_append_c_string(final_path, ENGINE_SHADER_PATH);
+            string_builder_append_string_builder(final_path, path);
+
+            asset_load_shader_asset_path(editor->asset_system,
+                                         string_builder_to_c_string(final_path),
+                                         &shader_handle);
+        }
+
+        if (shader_handle.handle != 0)
+        {
+            Shader_Asset* asset = shader_asset_get(asset_system->material_system,
+                                                   shader_handle);
+
+            madness_ui_u32(STRING("VERSION"), &asset->version, 0);
+            madness_ui_u32(STRING("REFLECTION HASH"), &asset->reflection_hash, 0);
+            madness_ui_u64(STRING("UUID HIGH:"), &asset->uuid.high, 0);
+            madness_ui_u64(STRING("UUID LOW:"), &asset->uuid.low, 0);
+
+            madness_ui_string(STRING("shader name: "));
+            madness_ui_same_line();
+            madness_ui_string(*asset->shader_info.shader_name);
+
+            madness_ui_c_string(Shader_Blend_Mode_enum_string[asset->shader_info.blend_mode]);
+            madness_ui_same_line();
+            madness_ui_u32(STRING("SHADER INFO: BLEND_MODE"), &asset->shader_info.blend_mode, 0);
+            madness_ui_check_box(STRING("SHADER INFO: TWO_SIDED"), &asset->shader_info.two_sided);
+
+            madness_ui_u64(STRING("SHADER INFO: KEY"), &asset->shader_key, 0);
+
+        }
+
+
+    }
+    madness_ui_window_end();
 }
