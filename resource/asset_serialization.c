@@ -53,77 +53,11 @@ bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap_Allo
 }
 
 
-bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr)
-{
-    fwrite(&mat_asset->version, sizeof(mat_asset->version), 1, fptr);
-
-    fwrite(&mat_asset->reflection_hash, sizeof(mat_asset->reflection_hash), 1, fptr);
-
-    madness_uuid_serialize(mat_asset->uuid, fptr);
-
-    string_serialize(mat_asset->shader_info.shader_name, fptr);
-    fwrite(&mat_asset->shader_info.blend_mode, sizeof(mat_asset->shader_info.blend_mode), 1, fptr);
-    fwrite(&mat_asset->shader_info.two_sided, sizeof(mat_asset->shader_info.two_sided), 1, fptr);
 
 
 
-    return true;
-}
 
 
-bool asset_shader_deserialize(Shader_Asset* mat_asset, FILE* fptr,
-                              Allocator* allocator)
-{
-    fread(&mat_asset->version, sizeof(mat_asset->version), 1, fptr);
-    fread(&mat_asset->reflection_hash, sizeof(mat_asset->reflection_hash), 1, fptr);
-
-    madness_uuid_deserialize(&mat_asset->uuid, fptr);
-
-    mat_asset->shader_info.shader_name = allocator_alloc(allocator, sizeof(String));
-
-    string_deserialize(mat_asset->shader_info.shader_name, fptr, allocator);
-    fread(&mat_asset->shader_info.blend_mode, sizeof(mat_asset->shader_info.blend_mode), 1, fptr);
-    fread(&mat_asset->shader_info.two_sided, sizeof(mat_asset->shader_info.two_sided), 1, fptr);
-
-
-
-    return true;
-}
-
-bool asset_material_serialize(Material* material, FILE* fptr)
-{
-    madness_uuid_serialize(material->meta_data.shader_uuid, fptr);
-    madness_uuid_serialize(material->meta_data.material_uuid, fptr);
-    string_serialize(material->meta_data.material_name, fptr);
-    string_serialize(material->meta_data.name, fptr);
-
-
-    fwrite(&material->cpu_data.data_size, sizeof(material->cpu_data.data_size), 1, fptr);
-    fwrite(material->cpu_data.material_data, material->cpu_data.data_size, 1, fptr);
-
-
-    return true;
-}
-
-
-bool asset_material_deserialize(Material* material, FILE* fptr, Heap_Allocator* allocator)
-{
-    madness_uuid_deserialize(&material->meta_data.shader_uuid, fptr);
-    madness_uuid_deserialize(&material->meta_data.material_uuid, fptr);
-
-    material->meta_data.material_name = allocator_heap_alloc(allocator, sizeof(String));
-    material->meta_data.name = allocator_heap_alloc(allocator, sizeof(String));
-
-    string_deserialize_heap(material->meta_data.material_name, fptr, allocator);
-    string_deserialize_heap(material->meta_data.name, fptr, allocator);
-
-    fread(&material->cpu_data.data_size, sizeof(material->cpu_data.data_size), 1, fptr);
-    material->cpu_data.material_data = allocator_heap_alloc(allocator, material->cpu_data.data_size);
-    fread(material->cpu_data.material_data, material->cpu_data.data_size, 1, fptr);
-
-
-    return true;
-}
 
 
 bool asset_mesh_serialize(Madness_Mesh_Runtime* runtime, FILE* fptr)

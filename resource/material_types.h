@@ -72,7 +72,7 @@ typedef struct Material_Black_Hole
     u32 padding;
 } Material_Black_Hole;
 
-//this is mostly a test material
+//this is a test material
 typedef struct Material_Flat_Color
 {
     vec4 color;

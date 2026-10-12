@@ -1,6 +1,7 @@
 ﻿#include "editor.h"
 
 #include "asset_system.h"
+#include "material_system.h"
 #include "profiler.h"
 #include "memory/memory_system.h"
 
@@ -702,7 +703,8 @@ void editor_material_asset_view(Editor* editor)
 {
     PROFILE_ZONE(editor_material_asset_view)
     Asset_System* asset_system = editor->asset_system;
-    Material_System* material_system = editor->asset_system->material_system;
+    Material_System2* material_system = editor->asset_system->material_system;
+    Shader_System* shader_system = editor->asset_system->shader_system;
 
 
     static Shader_Handle handle;
@@ -712,8 +714,8 @@ void editor_material_asset_view(Editor* editor)
     madness_ui_window_begin(STRING("Shader Creation"), 0);
     {
         madness_ui_combo_box2(STRING("Shader: "), &selected_shader,
-                              material_system->shader_to_material_mapping.shader_name,
-                              material_system->shader_to_material_count);
+                              shader_system->shader_to_material_mapping.shader_name,
+                              shader_system->shader_to_material_mapping.count);
 
         madness_ui_combo_box_char(STRING("Blend Mode: "), &selected_blend_mode, Shader_Blend_Mode_enum_string,
                                   ARRAY_SIZE(Shader_Blend_Mode_enum_string));
@@ -723,13 +725,13 @@ void editor_material_asset_view(Editor* editor)
 
         if (madness_ui_button(STRING("CREATE SHADER")))
         {
-            Shader_Info shader_info = {
-                .shader_name = material_system->shader_to_material_mapping.shader_name[selected_shader],
+            Shader_PSO shader_info = {
+                .shader_name = shader_system->shader_to_material_mapping.shader_name[selected_shader],
                 .blend_mode = selected_blend_mode,
                 .two_sided = double_sided,
 
             };
-            shader_get_or_create(asset_system, &shader_info, &handle);
+            shader_create_or_get(asset_system, &shader_info, &handle);
         }
 
 
@@ -737,12 +739,12 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_string(STRING("Material Name: "));
         madness_ui_same_line();
-        madness_ui_string(*material_system->shader_to_material_mapping.material_name[selected_shader]);
+        madness_ui_string(*shader_system->shader_to_material_mapping.material_name[selected_shader]);
 
         static u8 material_memory[1024];
         Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, string_to_c_string_allocator(
-                material_system->shader_to_material_mapping.material_name[selected_shader], editor->frame_allocator));
+                shader_system->shader_to_material_mapping.material_name[selected_shader], editor->frame_allocator));
         madness_ui_padding();
 
 
@@ -762,17 +764,17 @@ void editor_material_asset_view(Editor* editor)
 
         madness_ui_string(STRING("MATERIAL NAME: "));
         madness_ui_same_line();
-        madness_ui_string(*material_system->shader_to_material_mapping.material_name[selected_shader]);
+        madness_ui_string(*shader_system->shader_to_material_mapping.material_name[selected_shader]);
 
         Reflection_Runtime_Struct mat_def_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, TYPE_STRING(Material_Definition));
         // shader_asset
         madness_ui_reflect_using_data(asset_system->global_reflection_registry, mat_def_reflect_struct,
-                                      &material_system->shader_to_material_mapping.material_definition[selected_shader],
+                                      &shader_system->shader_to_material_mapping.material_definition[selected_shader],
                                       "Mat");
 
 
-        Shader_Asset* shader_asset = shader_asset_get(material_system, handle);
+        Shader_Asset* shader_asset = shader_asset_get(shader_system, handle);
         Reflection_Runtime_Struct shader_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, TYPE_STRING(Shader_Asset));
         // shader_asset
@@ -1258,22 +1260,27 @@ void editor_material_editor(Editor* editor)
 
         if (handle.handle != 0)
         {
-            Material* mat = material_get_metadata(asset_system, handle);
-            void* mat_data = material_get(asset_system, handle);
-
+            Material_Asset* mat = material_system_get_asset(asset_system->material_system, handle);
+            material_system_get_asset(asset_system->material_system, handle);
 
             Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
                 asset_system->global_reflection_registry,
-                string_to_c_string_allocator(mat->meta_data.material_name, editor->frame_allocator));
+                string_to_c_string_allocator(mat->material_name, editor->frame_allocator));
 
             madness_ui_padding();
 
             madness_ui_reflect_material(editor->asset_system->asset_registry,
                                         asset_system->global_reflection_registry,
                                         material_reflect_struct,
-                                        &mat_data,
+                                        &mat->data,
                                         "mat",
                                         editor->texture_list);
+
+
+            //TODO: show gpu data
+            Material_Definition material_definition =  material_system_get_material_definition(asset_system, handle);
+            void* mat_data = material_system_get_material_data(asset_system->material_system, handle);
+
         }
     }
     madness_ui_window_end();
@@ -1311,23 +1318,23 @@ void editor_material_editor(Editor* editor)
 
         if (shader_handle.handle != 0)
         {
-            Shader_Asset* asset = shader_asset_get(asset_system->material_system,
+            Shader_Asset* asset = shader_asset_get(asset_system->shader_system,
                                                    shader_handle);
 
             madness_ui_u32(STRING("VERSION"), &asset->version, 0);
-            madness_ui_u32(STRING("REFLECTION HASH"), &asset->reflection_hash, 0);
             madness_ui_u64(STRING("UUID HIGH:"), &asset->uuid.high, 0);
             madness_ui_u64(STRING("UUID LOW:"), &asset->uuid.low, 0);
 
             madness_ui_string(STRING("shader name: "));
             madness_ui_same_line();
-            madness_ui_string(*asset->shader_info.shader_name);
+            madness_ui_string(*asset->shader_pipeline_state.shader_name);
 
-            madness_ui_c_string(Shader_Blend_Mode_enum_string[asset->shader_info.blend_mode]);
+            madness_ui_c_string(Shader_Blend_Mode_enum_string[asset->shader_pipeline_state.blend_mode]);
             madness_ui_same_line();
-            madness_ui_u32(STRING("SHADER INFO: BLEND_MODE"), &asset->shader_info.blend_mode, 0);
-            madness_ui_check_box(STRING("SHADER INFO: TWO_SIDED"), &asset->shader_info.two_sided);
+            madness_ui_u32(STRING("SHADER INFO: BLEND_MODE"), &asset->shader_pipeline_state.blend_mode, 0);
+            madness_ui_check_box(STRING("SHADER INFO: TWO_SIDED"), &asset->shader_pipeline_state.two_sided);
 
+            madness_ui_u64(STRING("SHADER PIPELINE HASH:"), &asset->shader_pipeline_hash, 0);
             madness_ui_u64(STRING("SHADER INFO: KEY"), &asset->shader_key, 0);
 
         }

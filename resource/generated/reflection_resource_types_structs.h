@@ -5,6 +5,7 @@
 const char* resources_struct_string_list[] = {
 	"Texture_Handle", 
 	"Material_Handle", 
+	"Material_Record_Handle", 
 	"Shader_Handle", 
 	"Mesh_Handle", 
 	"Skinned_Mesh_Handle", 
@@ -26,13 +27,12 @@ const char* resources_struct_string_list[] = {
 	"PC_General", 
 	"PC_Particle", 
 	"PC_Shadow_Mapping", 
-	"Shader_Info", 
+	"Shader_PSO", 
 	"Shader_Asset", 
 	"Material_GPU_Definition", 
 	"Material_Definition", 
-	"Material_Meta_Data", 
-	"Material_Data", 
-	"Material", 
+	"Material_Asset", 
+	"Madness_Material", 
 	"Particle", 
 	"Particle_Mesh", 
 	"Particle_Animation_vec3", 
@@ -56,16 +56,18 @@ const char* resources_struct_string_list[] = {
 	"Skinned_Mesh_GPU_Upload", 
 	"Madness_Mesh_Runtime", 
 	"Madness_SkMesh_Runtime", 
-	"Shader_Mat_Mapping", 
+	"Shader_Material_Mapping", 
+	"Shader_System", 
 	"Material_Record", 
-	"Material_System", 
 	"Sprite_System", 
 	"Texture_System", 
 	"Scene", 
 	"Mesh_System", 
 	"Animation_System", 
 	"Particle_System", 
+	"Material_System2", 
 	"Render_Packet_3D", 
+	"Render_Packet_Material", 
 	"Render_Packet_UI", 
 	"Render_Packet_Sprite", 
 	"Render_Packet_Particle", 
@@ -127,6 +129,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Handle_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Material_Record_Handle_Fields[] =
+	{
+		{
+			.name = "handle",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Record_Handle, handle)
+		},
+		{
+			.name = "generation",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Record_Handle, generation)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_Record_Handle_Runtime_Struct =
+	{
+		.name = "Material_Record_Handle",
+		.fields = Material_Record_Handle_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Material_Record_Handle)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_Record_Handle_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Shader_Handle_Fields[] =
 	{
@@ -728,37 +756,37 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, PC_Shadow_Mapping_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Shader_Info_Fields[] =
+	Reflection_Runtime_Struct_Field Shader_PSO_Fields[] =
 	{
 		{
 			.name = "shader_name",
 			.type = REFLECTION_TYPE_PATH_STRING,
 			.type_name = "Path_String",
-			.offset = offsetof(Shader_Info, shader_name)
+			.offset = offsetof(Shader_PSO, shader_name)
 		},
 		{
 			.name = "blend_mode",
 			.type = REFLECTION_TYPE_ENUM,
 			.type_name = "Shader_Blend_Mode",
-			.offset = offsetof(Shader_Info, blend_mode)
+			.offset = offsetof(Shader_PSO, blend_mode)
 		},
 		{
 			.name = "two_sided",
 			.type = REFLECTION_TYPE_BOOL,
 			.type_name = "bool",
-			.offset = offsetof(Shader_Info, two_sided)
+			.offset = offsetof(Shader_PSO, two_sided)
 		},
 	};
 
-	 Reflection_Runtime_Struct Shader_Info_Runtime_Struct =
+	 Reflection_Runtime_Struct Shader_PSO_Runtime_Struct =
 	{
-		.name = "Shader_Info",
-		.fields = Shader_Info_Fields,
+		.name = "Shader_PSO",
+		.fields = Shader_PSO_Fields,
 		.field_count = 3,
-		.struct_size = sizeof(Shader_Info)
+		.struct_size = sizeof(Shader_PSO)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Shader_Info_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Shader_PSO_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Shader_Asset_Fields[] =
 	{
@@ -769,22 +797,16 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Shader_Asset, version)
 		},
 		{
-			.name = "reflection_hash",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Shader_Asset, reflection_hash)
-		},
-		{
 			.name = "uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
 			.offset = offsetof(Shader_Asset, uuid)
 		},
 		{
-			.name = "shader_info",
+			.name = "shader_pipeline_state",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Shader_Info",
-			.offset = offsetof(Shader_Asset, shader_info)
+			.type_name = "Shader_PSO",
+			.offset = offsetof(Shader_Asset, shader_pipeline_state)
 		},
 	};
 
@@ -792,7 +814,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Shader_Asset",
 		.fields = Shader_Asset_Fields,
-		.field_count = 4,
+		.field_count = 3,
 		.struct_size = sizeof(Shader_Asset)
 	};
 
@@ -839,10 +861,10 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Material_Definition_Fields[] =
 	{
 		{
-			.name = "reflection_hash",
+			.name = "runtime_reflection_hash",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Material_Definition, reflection_hash)
+			.offset = offsetof(Material_Definition, runtime_reflection_hash)
 		},
 		{
 			.name = "material_gpu_definition",
@@ -862,101 +884,105 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Material_Definition_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Material_Meta_Data_Fields[] =
+	Reflection_Runtime_Struct_Field Material_Asset_Fields[] =
 	{
 		{
 			.name = "shader_uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Meta_Data, shader_uuid)
+			.offset = offsetof(Material_Asset, shader_uuid)
 		},
 		{
 			.name = "material_uuid",
 			.type = REFLECTION_TYPE_UUID,
 			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Material_Meta_Data, material_uuid)
+			.offset = offsetof(Material_Asset, material_uuid)
 		},
 		{
-			.name = "shader_id",
-			.type = REFLECTION_TYPE_U16,
-			.type_name = "u16",
-			.offset = offsetof(Material_Meta_Data, shader_id)
-		},
-		{
-			.name = "permutation",
-			.type = REFLECTION_TYPE_U16,
-			.type_name = "u16",
-			.offset = offsetof(Material_Meta_Data, permutation)
+			.name = "reflection_hash",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_Asset, reflection_hash)
 		},
 		{
 			.name = "material_name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Material_Meta_Data, material_name)
+			.offset = offsetof(Material_Asset, material_name)
 		},
 		{
 			.name = "name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Material_Meta_Data, name)
+			.offset = offsetof(Material_Asset, name)
 		},
-	};
-
-	 Reflection_Runtime_Struct Material_Meta_Data_Runtime_Struct =
-	{
-		.name = "Material_Meta_Data",
-		.fields = Material_Meta_Data_Fields,
-		.field_count = 6,
-		.struct_size = sizeof(Material_Meta_Data)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Material_Meta_Data_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Material_Data_Fields[] =
-	{
 		{
 			.name = "data_size",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u64",
-			.offset = offsetof(Material_Data, data_size)
+			.offset = offsetof(Material_Asset, data_size)
 		},
 	};
 
-	 Reflection_Runtime_Struct Material_Data_Runtime_Struct =
+	 Reflection_Runtime_Struct Material_Asset_Runtime_Struct =
 	{
-		.name = "Material_Data",
-		.fields = Material_Data_Fields,
-		.field_count = 1,
-		.struct_size = sizeof(Material_Data)
+		.name = "Material_Asset",
+		.fields = Material_Asset_Fields,
+		.field_count = 6,
+		.struct_size = sizeof(Material_Asset)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Material_Data_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Material_Asset_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Material_Fields[] =
+	Reflection_Runtime_Struct_Field Madness_Material_Fields[] =
 	{
 		{
-			.name = "meta_data",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Meta_Data",
-			.offset = offsetof(Material, meta_data)
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Material, material_uuid)
 		},
 		{
-			.name = "cpu_data",
+			.name = "shader_handle",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Data",
-			.offset = offsetof(Material, cpu_data)
+			.type_name = "Shader_Handle",
+			.offset = offsetof(Madness_Material, shader_handle)
+		},
+		{
+			.name = "reflection_hash",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Material, reflection_hash)
+		},
+		{
+			.name = "material_record_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Record_Handle",
+			.offset = offsetof(Madness_Material, material_record_handle)
+		},
+		{
+			.name = "material_name",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Madness_Material, material_name)
+		},
+		{
+			.name = "name",
+			.type = REFLECTION_TYPE_STRING,
+			.type_name = "String",
+			.offset = offsetof(Madness_Material, name)
 		},
 	};
 
-	 Reflection_Runtime_Struct Material_Runtime_Struct =
+	 Reflection_Runtime_Struct Madness_Material_Runtime_Struct =
 	{
-		.name = "Material",
-		.fields = Material_Fields,
-		.field_count = 2,
-		.struct_size = sizeof(Material)
+		.name = "Madness_Material",
+		.fields = Madness_Material_Fields,
+		.field_count = 6,
+		.struct_size = sizeof(Madness_Material)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Material_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Madness_Material_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Particle_Fields[] =
 	{
@@ -2150,37 +2176,87 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_SkMesh_Runtime_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Shader_Mat_Mapping_Fields[] =
+	Reflection_Runtime_Struct_Field Shader_Material_Mapping_Fields[] =
 	{
 		{
 			.name = "shader_name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Shader_Mat_Mapping, shader_name)
+			.offset = offsetof(Shader_Material_Mapping, shader_name)
 		},
 		{
 			.name = "material_name",
 			.type = REFLECTION_TYPE_STRING,
 			.type_name = "String",
-			.offset = offsetof(Shader_Mat_Mapping, material_name)
+			.offset = offsetof(Shader_Material_Mapping, material_name)
 		},
 		{
 			.name = "material_definition",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Material_Definition",
-			.offset = offsetof(Shader_Mat_Mapping, material_definition)
+			.offset = offsetof(Shader_Material_Mapping, material_definition)
+		},
+		{
+			.name = "count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Shader_Material_Mapping, count)
 		},
 	};
 
-	 Reflection_Runtime_Struct Shader_Mat_Mapping_Runtime_Struct =
+	 Reflection_Runtime_Struct Shader_Material_Mapping_Runtime_Struct =
 	{
-		.name = "Shader_Mat_Mapping",
-		.fields = Shader_Mat_Mapping_Fields,
-		.field_count = 3,
-		.struct_size = sizeof(Shader_Mat_Mapping)
+		.name = "Shader_Material_Mapping",
+		.fields = Shader_Material_Mapping_Fields,
+		.field_count = 4,
+		.struct_size = sizeof(Shader_Material_Mapping)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Shader_Mat_Mapping_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Shader_Material_Mapping_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Shader_System_Fields[] =
+	{
+		{
+			.name = "shader_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Shader_Asset",
+			.offset = offsetof(Shader_System, shader_asset)
+		},
+		{
+			.name = "shader_asset_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Shader_System, shader_asset_count)
+		},
+		{
+			.name = "runtime_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Asset_Runtime",
+			.offset = offsetof(Shader_System, runtime_asset)
+		},
+		{
+			.name = "runtime_asset_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Shader_System, runtime_asset_count)
+		},
+		{
+			.name = "shader_to_material_mapping",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Shader_Material_Mapping",
+			.offset = offsetof(Shader_System, shader_to_material_mapping)
+		},
+	};
+
+	 Reflection_Runtime_Struct Shader_System_Runtime_Struct =
+	{
+		.name = "Shader_System",
+		.fields = Shader_System_Fields,
+		.field_count = 5,
+		.struct_size = sizeof(Shader_System)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Shader_System_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Material_Record_Fields[] =
 	{
@@ -2207,104 +2283,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Material_Record_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Material_System_Fields[] =
-	{
-		{
-			.name = "shader_asset",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Shader_Asset",
-			.offset = offsetof(Material_System, shader_asset)
-		},
-		{
-			.name = "shader_asset_to_mapping",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_System, shader_asset_to_mapping)
-		},
-		{
-			.name = "shader_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_System, shader_count)
-		},
-		{
-			.name = "shader_to_material_mapping",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Shader_Mat_Mapping",
-			.offset = offsetof(Material_System, shader_to_material_mapping)
-		},
-		{
-			.name = "shader_to_material_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_System, shader_to_material_count)
-		},
-		{
-			.name = "material_record",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Record",
-			.offset = offsetof(Material_System, material_record)
-		},
-		{
-			.name = "materials",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material",
-			.offset = offsetof(Material_System, materials)
-		},
-		{
-			.name = "generation",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Material_System, generation)
-		},
-		{
-			.name = "material_record_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Material_System, material_record_count)
-		},
-		{
-			.name = "material_buffer",
-			.type = REFLECTION_TYPE_U8,
-			.type_name = "uint8_t",
-			.offset = offsetof(Material_System, material_buffer)
-		},
-		{
-			.name = "material_buffer_offset",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Material_System, material_buffer_offset)
-		},
-		{
-			.name = "material_buffer_size",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Material_System, material_buffer_size)
-		},
-		{
-			.name = "default_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Handle",
-			.offset = offsetof(Material_System, default_handle)
-		},
-		{
-			.name = "default_data_blob",
-			.type = REFLECTION_TYPE_U8,
-			.type_name = "u8",
-			.offset = offsetof(Material_System, default_data_blob)
-		},
-	};
-
-	 Reflection_Runtime_Struct Material_System_Runtime_Struct =
-	{
-		.name = "Material_System",
-		.fields = Material_System_Fields,
-		.field_count = 14,
-		.struct_size = sizeof(Material_System)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Material_System_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Sprite_System_Fields[] =
 	{
@@ -2654,6 +2632,92 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Particle_System_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field Material_System2_Fields[] =
+	{
+		{
+			.name = "material_assets",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Asset",
+			.offset = offsetof(Material_System2, material_assets)
+		},
+		{
+			.name = "materials",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Madness_Material",
+			.offset = offsetof(Material_System2, materials)
+		},
+		{
+			.name = "material_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_System2, material_count)
+		},
+		{
+			.name = "material_record",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Record",
+			.offset = offsetof(Material_System2, material_record)
+		},
+		{
+			.name = "material_record_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Material_System2, material_record_count)
+		},
+		{
+			.name = "material_buffer",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "uint8_t",
+			.offset = offsetof(Material_System2, material_buffer)
+		},
+		{
+			.name = "material_buffer_offset",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Material_System2, material_buffer_offset)
+		},
+		{
+			.name = "material_buffer_max_byte_size",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Material_System2, material_buffer_max_byte_size)
+		},
+		{
+			.name = "default_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Material_System2, default_handle)
+		},
+		{
+			.name = "default_data_blob",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Material_System2, default_data_blob)
+		},
+		{
+			.name = "runtime_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Asset_Runtime",
+			.offset = offsetof(Material_System2, runtime_asset)
+		},
+		{
+			.name = "runtime_asset_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Material_System2, runtime_asset_count)
+		},
+	};
+
+	 Reflection_Runtime_Struct Material_System2_Runtime_Struct =
+	{
+		.name = "Material_System2",
+		.fields = Material_System2_Fields,
+		.field_count = 12,
+		.struct_size = sizeof(Material_System2)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Material_System2_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field Render_Packet_3D_Fields[] =
 	{
 		{
@@ -2745,6 +2809,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Render_Packet_3D_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Render_Packet_Material_Fields[] =
+	{
+		{
+			.name = "material_buffer",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Render_Packet_Material, material_buffer)
+		},
+		{
+			.name = "material_buffer_byte_size",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Render_Packet_Material, material_buffer_byte_size)
+		},
+	};
+
+	 Reflection_Runtime_Struct Render_Packet_Material_Runtime_Struct =
+	{
+		.name = "Render_Packet_Material",
+		.fields = Render_Packet_Material_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Render_Packet_Material)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Render_Packet_Material_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Render_Packet_UI_Fields[] =
 	{
@@ -2850,13 +2940,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Render_Packet_Particle",
 			.offset = offsetof(Render_Packet, particle_packet)
 		},
+		{
+			.name = "material_packet",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Render_Packet_Material",
+			.offset = offsetof(Render_Packet, material_packet)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Runtime_Struct =
 	{
 		.name = "Render_Packet",
 		.fields = Render_Packet_Fields,
-		.field_count = 4,
+		.field_count = 5,
 		.struct_size = sizeof(Render_Packet)
 	};
 
@@ -2879,6 +2975,24 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Asset_System_Fields[] =
 	{
 		{
+			.name = "material_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_System2",
+			.offset = offsetof(Asset_System, material_system)
+		},
+		{
+			.name = "shader_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Shader_System",
+			.offset = offsetof(Asset_System, shader_system)
+		},
+		{
+			.name = "texture_system",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Texture_System",
+			.offset = offsetof(Asset_System, texture_system)
+		},
+		{
 			.name = "sprite_system",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Sprite_System",
@@ -2889,18 +3003,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Mesh_System",
 			.offset = offsetof(Asset_System, mesh_system)
-		},
-		{
-			.name = "texture_system",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Texture_System",
-			.offset = offsetof(Asset_System, texture_system)
-		},
-		{
-			.name = "material_system",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_System",
-			.offset = offsetof(Asset_System, material_system)
 		},
 		{
 			.name = "scene",
@@ -2938,7 +3040,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Asset_System",
 		.fields = Asset_System_Fields,
-		.field_count = 9,
+		.field_count = 10,
 		.struct_size = sizeof(Asset_System)
 	};
 

@@ -3,6 +3,7 @@
 
 #include "asset_converter.h"
 #include "resource_types.h"
+#include "shader_system.h"
 
 
 //requirements:
@@ -104,7 +105,7 @@ void particle_emitter_create_default(Asset_System* asset_system,
     MASSERT(emitter_name);
     MASSERT(strlen(emitter_name) > 0);
 
-    Shader_Info default_particle_material_info = {
+    Shader_PSO default_particle_material_info = {
         .shader_name = &STRING("billboard_spherical"),
         .blend_mode = Shader_Blend_Mode_Default,
         .two_sided = false,
@@ -112,14 +113,12 @@ void particle_emitter_create_default(Asset_System* asset_system,
 
 
     Shader_Handle shader_handle;
-    shader_get_or_create(asset_system, &default_particle_material_info, &shader_handle);
+    shader_create_or_get(asset_system, &default_particle_material_info, &shader_handle);
 
-    MADNESS_UUID shader_uuid = {0};
-    MADNESS_UUID mat_uuid = {0};
-    asset_converter_material_from_shader_handle(asset_system, &shader_handle, emitter_name,
-                                                &shader_uuid,
-                                                &mat_uuid);
+    Material_Handle material_handle;
+    material_create(asset_system, shader_handle, emitter_name, &material_handle);
 
+    Material_Asset* asset = material_system_get_asset(asset_system->material_system, material_handle);
 
     Particle_Emitter emitter = {
         .data = {
@@ -137,7 +136,7 @@ void particle_emitter_create_default(Asset_System* asset_system,
             .gravity = {0},
         },
         .name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(emitter_name, asset_system->heap_allocator),
-        .material_uuid = mat_uuid,
+        .material_uuid = asset->material_uuid,
         .material_handle = {0},
         .position = {0},
         .particle = {0},

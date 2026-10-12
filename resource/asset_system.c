@@ -2,6 +2,7 @@
 
 #include "animation_system.h"
 #include "material_system.h"
+#include "shader_system.h"
 #include "mesh_system.h"
 #include "sprite_system.h"
 #include "texture_system.h"
@@ -54,9 +55,13 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
 
     asset_system->scene = scene_init(memory_system);
 
-    asset_system->material_system = memory_system_alloc(memory_system, sizeof(Material_System),
+    asset_system->shader_system = memory_system_alloc(memory_system, sizeof(Shader_System),
+                                                    MEMORY_SUBSYSTEM_RESOURCE);
+    shader_system_init(asset_system->shader_system, asset_system, memory_system);
+
+    asset_system->material_system = memory_system_alloc(memory_system, sizeof(Material_System2),
                                                         MEMORY_SUBSYSTEM_RESOURCE);
-    material_system_init(asset_system->material_system, asset_system, memory_system);
+    material_system_init(asset_system->material_system, memory_system);
 
     asset_system->sprite_system = sprite_system_init(memory_system);
     asset_system->mesh_system = mesh_system_init(asset_system, memory_system);
@@ -91,7 +96,7 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
     sprite_system_shutdown(resource_system->sprite_system, memory_system);
     texture_system_shutdown(resource_system->texture_system, memory_system);
     scene_shutdown(resource_system->scene, memory_system);
-    material_system_shutdown(resource_system->material_system, memory_system);
+    material_system_deinit(resource_system->material_system, memory_system);
     return true;
 }
 
@@ -109,8 +114,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     sprite_system_generate_render_packet(asset_system->sprite_system,
                                          &asset_system->render_packet->sprite_data_packet);
 
-    material_system_generate_render_packet(asset_system->material_system,
-                                           &asset_system->render_packet->draw_3d_data_packet);
+    material_system_render_packet(asset_system->material_system, asset_system->render_packet);
 
     scene_update(asset_system->scene, asset_system);
 
@@ -538,10 +542,10 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
     return out_handle;
 }
 
-bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* meta_data,
+bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* record,
                               Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator)
 {
-    FILE* fptr = fopen(string_to_c_string_allocator(meta_data->engine_path, scratch_allocator->allocator), "rb");
+    FILE* fptr = fopen(string_to_c_string_allocator(record->engine_path, scratch_allocator->allocator), "rb");
 
     if (!fptr)
     {
@@ -549,16 +553,10 @@ bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* meta_dat
         return false;
     }
 
+    shader_acquire(asset_system->shader_system, record, fptr, out_handle);
 
-    Shader_Asset* shader_asset = allocator_alloc(scratch_allocator->allocator, sizeof(Shader_Asset));
-    asset_shader_deserialize(shader_asset, fptr, scratch_allocator->allocator);
 
     fclose(fptr);
-
-
-    shader_asset_acquire_load_data(asset_system, shader_asset, out_handle);
-
-
     return true;
 }
 
@@ -639,13 +637,8 @@ bool _asset_load_material(Asset_System* asset_system, Asset_Record* meta_data, M
         return false;
     }
 
-    Material material = {0};
-    asset_material_deserialize(&material, fptr, asset_system->heap_allocator);
-    Shader_Handle shader_handle = {0};
-    asset_load_shader_asset_uuid(asset_system, material.meta_data.shader_uuid, &shader_handle);
 
-    if (!material_acquire(asset_system, shader_handle, &material,
-                          out_material_handle))
+    if (!material_acquire(asset_system, asset_system->material_system, fptr, meta_data, out_material_handle))
     {
         MASSERT(false);
     }

@@ -29,30 +29,15 @@ MAPI bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path
 MAPI bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path);
 
 
-MAPI bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset);
+MAPI bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shader_asset);
 
 
 MAPI bool asset_converter_material(Asset_System* asset_system,
-                                   Material* material);
-MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
-                                   Material* material, MADNESS_UUID* out_material_uuid);
+                                   Material_Asset* material_asset);
 
 
 
 
-
-MAPI bool asset_converter_material_from_shader_handle(Asset_System* asset_system,
-                                                   Shader_Handle* shader_handle,
-                                                   const char* mat_inst_name,
-                                                   MADNESS_UUID* out_shader_uuid,
-                                                   MADNESS_UUID* out_material_uuid);
-
-MAPI bool asset_converter_material_from_data(Asset_System* asset_system,
-                                                   Shader_Handle* shader_handle,
-                                                   const char* mat_inst_name,
-                                                   void* data,
-                                                   MADNESS_UUID* out_shader_uuid,
-                                                   MADNESS_UUID* out_material_uuid);
 
 
 

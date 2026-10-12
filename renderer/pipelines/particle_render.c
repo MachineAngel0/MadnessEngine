@@ -2,7 +2,7 @@
 #include "particle_render.h"
 
 
-#include "shader_system.h"
+#include "vulkan_shader_system.h"
 #include "vk_buffer.h"
 
 Particle_Render* particle_renderer_init(Renderer* renderer)

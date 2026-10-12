@@ -2,7 +2,7 @@
 #include "camera.h"
 #include "debug_draw.h"
 #include "lights.h"
-#include "shader_system.h"
+#include "vulkan_shader_system.h"
 #include "vk_command_buffer.h"
 #include "vk_descriptors.h"
 #include "vk_image.h"

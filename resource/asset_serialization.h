@@ -14,15 +14,6 @@ MAPI bool asset_font_serialize(Madness_Font_Runtime* runtime, FILE* fptr);
 MAPI bool asset_font_deserialize(Madness_Font_Runtime* runtime, FILE* fptr, Heap_Allocator* texture_memory_allocator);
 
 
-//
-//material defines the layout and shader definition of the object, instance is the specific data/params of that material
-MAPI bool asset_shader_serialize(Shader_Asset* mat_asset, FILE* fptr);
-MAPI bool asset_shader_deserialize(Shader_Asset* mat_asset, FILE* fptr,
-                                           Allocator* allocator);
-
-MAPI bool asset_material_serialize(Material* material, FILE* fptr);
-MAPI bool asset_material_deserialize(Material* material, FILE* fptr, Heap_Allocator* allocator);
-
 
 //
 MAPI bool asset_mesh_serialize(Madness_Mesh_Runtime* runtime, FILE* fptr);

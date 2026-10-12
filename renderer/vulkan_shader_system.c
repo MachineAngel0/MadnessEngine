@@ -1,5 +1,6 @@
-﻿#include "shader_system.h"
+﻿#include "vulkan_shader_system.h"
 
+#include "logger.h"
 #include "vk_command_buffer.h"
 
 
@@ -22,7 +23,7 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
                                                                  BUFFER_TYPE_STORAGE_GPU, MATERIAL_BUFFER_SIZE);
 
 
-    INFO("SHADER SYSTEM CREATED")
+    INFO("SHADER SYSTEM CREATED");
 
 
     return shader_system;
@@ -100,10 +101,10 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
 
 
     shader_batch->material_key = shader_asset->shader_key;
-    shader_batch->shader_name = string_to_c_string_alloc_heap(shader_asset->shader_info.shader_name,
+    shader_batch->shader_name = string_to_c_string_alloc_heap(shader_asset->shader_pipeline_state.shader_name,
                                                               renderer->heap_allocator);
 
-    shader_batch->blend_mode = shader_asset->shader_info.blend_mode;
+    shader_batch->blend_mode = shader_asset->shader_pipeline_state.blend_mode;
     shader_batch->draw_count = 0;
 
 

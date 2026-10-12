@@ -25,6 +25,7 @@ typedef enum memory_subsystem_type
     MEMORY_SUBSYSTEM_ANIMATION,
     MEMORY_SUBSYSTEM_MISC,
     MEMORY_SUBSYSTEM_MATERIAL,
+    MEMORY_SUBSYSTEM_SHADER,
 
 
     MEMORY_SUBSYSTEM_MAX,
@@ -50,6 +51,7 @@ static const char* memory_subsystem_type_string[MEMORY_SUBSYSTEM_MAX] =
     [MEMORY_SUBSYSTEM_ANIMATION] = "MEMORY_SUBSYSTEM_ANIMATION",
     [MEMORY_SUBSYSTEM_MISC] = "MEMORY_SUBSYSTEM_MISC",
     [MEMORY_SUBSYSTEM_MATERIAL] = "MEMORY_SUBSYSTEM_MATERIAL",
+    [ MEMORY_SUBSYSTEM_SHADER] = "MEMORY_SUBSYSTEM_SHADER",
 };
 
 
@@ -103,7 +105,8 @@ MAPI Allocator* memory_system_allocator_create(Memory_System* memory_system, u64
 MAPI void memory_system_allocator_free(Memory_System* memory_system, Allocator* allocator,
                                        Memory_Subsystem_Type memory_subsystem_type);
 MAPI Heap_Allocator* memory_system_heap_allocator_create(Memory_System* memory_system, u64 memory_request_size,
-                                                         Memory_Subsystem_Type memory_subsystem_type, const char* allocator_name);
+                                                         Memory_Subsystem_Type memory_subsystem_type,
+                                                         const char* allocator_name);
 
 
 //TODO: not in use rn

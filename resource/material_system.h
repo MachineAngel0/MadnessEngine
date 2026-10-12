@@ -4,161 +4,229 @@
 
 #include "asset_system.h"
 #include "resource_types.h"
+#include "shader_system.h"
 
 
+//ideal api
+void material_upload_data(Material_System2* material_system, void* data, u64 data_size,
+                          Material_Record_Handle* out_handle);
 
-bool material_system_init(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system);
-
-bool material_system_shutdown(Material_System* material_system, Memory_System* memory_system);
-
-bool material_system_generate_render_packet(Material_System* material_system,
-                                            Render_Packet_3D* render_packet_3d);
+void material_system_init(Material_System2* material_system, Memory_System* memory_system)
+{
+    memset(material_system->materials, 0, sizeof(Madness_Material) * MAX_MATERIAL_COUNT);
+    material_system->material_count = 0;
 
 
+    u64 material_memory = MB(8);
+    material_system->material_allocator = memory_system_allocator_create(
+        memory_system, material_memory, MEMORY_SUBSYSTEM_MATERIAL, "material");
 
-//////////// SHADERS TO MATERIAL MAPPING ////////////
+    material_system->material_buffer = allocator_alloc(material_system->material_allocator, MATERIAL_BUFFER_SIZE);
+    material_system->material_buffer_offset = 0;
+    material_system->material_buffer_max_byte_size = MATERIAL_BUFFER_SIZE;
 
-void material_system_add_shader_material_mapping(Asset_System* asset_system, Material_System* material_system,
-                                                 const char* shader_name, const char* material_name);
+
+    memset(material_system->material_record, 0, sizeof(Material_Record) * MAX_MATERIAL_COUNT);
+    material_system->default_handle = (Material_Handle){0, 0};
+    memset(material_system->default_data_blob, 0, MATERIAL_FALLBACK_BLOB_SIZE);
+}
+
+
+void material_system_deinit(Material_System2* material_system2, Memory_System* memory_system)
+{
+    return;
+}
+
+void material_system_update()
+{
+    //TODO: defrag the material buffer
+}
+
+void material_system_render_packet(Material_System2* material_system, Render_Packet* render_packet)
+{
+    render_packet->material_packet.material_buffer = material_system->material_buffer;
+    render_packet->material_packet.material_buffer_byte_size = material_system->material_buffer_offset;
+}
+
+
+bool material_asset_serialize(Material_Asset* material, FILE* fptr)
+{
+    madness_uuid_serialize(material->shader_uuid, fptr);
+    madness_uuid_serialize(material->material_uuid, fptr);
+    fwrite(&material->reflection_hash, sizeof(material->reflection_hash), 1, fptr);
+    string_serialize(material->material_name, fptr);
+    string_serialize(material->name, fptr);
+
+    fwrite(&material->data_size, sizeof(material->data_size), 1, fptr);
+    fwrite(material->data, material->data_size, 1, fptr);
+    return true;
+}
+
+bool material_asset_deserialize(Material_Asset* material, FILE* fptr, Allocator* allocator)
+{
+    material->name = allocator_alloc(allocator, sizeof(String));
+    material->material_name = allocator_alloc(allocator, sizeof(String));
+
+    madness_uuid_deserialize(&material->shader_uuid, fptr);
+    madness_uuid_deserialize(&material->material_uuid, fptr);
+
+    fread(&material->reflection_hash, sizeof(material->reflection_hash), 1, fptr);
+
+    string_deserialize(material->material_name, fptr, allocator);
+    string_deserialize(material->name, fptr, allocator);
+
+    fread(&material->data_size, sizeof(material->data_size), 1, fptr);
+
+    material->data = allocator_alloc(allocator, material->data_size);
+    fread(material->data, material->data_size, 1, fptr);
+    return true;
+}
+
+
+String_Builder* material_asset_construct_path(Material_Asset* material_asset, Allocator* allocator)
+{
+    //write out the file
+    String_Builder* str_builder = string_builder_create(256, allocator);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
+    string_builder_append_string(str_builder, material_asset->material_name);
+    string_builder_append_c_string(str_builder, "_");
+    string_builder_append_string(str_builder, material_asset->name);
+    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_EXTENSION);
+
+    return str_builder;
+}
+
 
 /**
- * @note expects a null string
+ * @brief: sets any uuids in the materials to the default texture uuid
  */
-bool shader_material_mapping_get_material_name_and_defintion(Asset_System* asset_system,
-                                                             String* shader_name,
-                                                             String* out_string,
-                                                             Material_Definition* out_definition,
-                                                             Allocator* allocator);
-bool shader_material_mapping_get_index(Asset_System* asset_system, String* shader_name,
-                                                    u32* index);
-
-
-
-
-bool shader_material_mapping_get_material_defintion(Asset_System* asset_system,
-                                                             String* shader_name,
-                                                             Material_Definition* out_definition);
-
-//////////// SHADERS ////////////
-String_Builder* shader_asset_construct_path(Material_System* material_system,
-                               Shader_Asset* asset, Allocator* allocator);
-
-
-Shader_Key shader_generate_key(Shader_Info* shader_info);
-
-Shader_Asset* shader_asset_get(Material_System* material_system,
-                               Shader_Handle out_shader_handle);
-
-bool shader_asset_acquire_load_data(Asset_System* asset_system, Shader_Asset* loaded_asset, Shader_Handle* out_handle);
-
-
-void shader_get_or_create(Asset_System* asset_system,
-                          Shader_Info* shader_info,
-                          Shader_Handle* out_handle);
-
-//TODO: basically scan all our material instances and remove any shaders we dont find
-void shader_purge_unused(Asset_System* asset_system,
-                         Shader_Info* material_info,
-                         Shader_Handle* out_handle);
-
-
-//////////// MATERIALS ////////////
-
-void material_upload(Asset_System* asset_system, void* data, u64 byte_size, Material_Handle* out_handle)
+void material_asset_set_default_textures(Asset_System* asset_system,
+                                         Material_Asset* material,
+                                         Material_Definition* material_definition)
 {
-    Material_System* material_system = asset_system->material_system;
+    MASSERT(asset_system);
+    MASSERT(material);
+    MASSERT(material->material_name);
+    MASSERT(material->name);
+    MASSERT(material->data);
+    MASSERT(material_definition->reflection_material_data.name);
 
 
-    u32 handle_index = material_system->material_record_count++;
-    Material_Record* material_record = &material_system->material_record[handle_index];
-    *material_record = (Material_Record){
-        .offset = handle_index,
-        .size = byte_size,
+    for (u32 i = 0; i < material_definition->reflection_material_data.field_count; i++)
+    {
+        if (material_definition->reflection_material_data.fields[i].type == REFLECTION_TYPE_UUID)
+        {
+            MADNESS_UUID* uuid_data = (MADNESS_UUID*)((u8*)material->data + material_definition->
+                                                                            reflection_material_data.fields[i].offset);
+            *uuid_data = asset_system->texture_system->default_texture_uuid;
+        }
+    }
+}
+
+
+void material_create(Asset_System* asset_system, Shader_Handle shader_handle,
+                     const char* name, Material_Handle* out_handle)
+{
+    //TODO: check that this material, with the same material name and user defined name has not been create already
+
+    //get the shader
+    Shader_Asset* shader_asset = shader_asset_get(asset_system->shader_system, shader_handle);
+
+
+    Material_Definition material_definition;
+    shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, shader_asset, &material_definition);
+    //I guess we would want to create both the material asset and the runtime material
+
+
+    Material_Asset material_asset = {
+        .shader_uuid = shader_asset->uuid,
+        .material_uuid = madness_uuid_generate_return(),
+        .reflection_hash = material_definition.runtime_reflection_hash,
+        .material_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_definition.reflection_material_data.name,
+                                                             asset_system->material_system->material_allocator),
+        .name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(name, asset_system->material_system->material_allocator),
+        .data_size = material_definition.reflection_material_data.struct_size,
+        .data = allocator_alloc(asset_system->material_system->material_allocator,
+                                material_definition.reflection_material_data.struct_size),
     };
 
-    *out_handle = (Material_Handle){
-        .handle = handle_index,
-        .generation = material_system->generation[handle_index],
+
+    //set default cpu data
+    material_asset_set_default_textures(asset_system,
+                                        &material_asset,
+                                        &material_definition);
+
+    asset_converter_material(asset_system,
+                             &material_asset);
+
+
+    //load it in ??
+    asset_load_material_uuid(asset_system, material_asset.material_uuid, out_handle);
+}
+
+
+//it expects a cpu based material
+void material_create_from_data(Asset_System* asset_system, Shader_Handle shader_handle,
+                               const char* name, void* data, u64 data_size, Material_Handle* out_handle)
+{
+    //TODO: check that this material, with the same name has not been create already
+
+
+    //get the shader
+    Shader_Asset* shader_asset = shader_asset_get(asset_system->shader_system, shader_handle);
+
+
+    Material_Definition material_definition;
+    shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, shader_asset, &material_definition);
+    //I guess we would want to create both the material asset and the runtime material
+
+    MASSERT(data_size == material_definition.reflection_material_data.struct_size);
+
+
+    Material_Asset material_asset = {
+        .shader_uuid = shader_asset->uuid,
+        .material_uuid = madness_uuid_generate_return(),
+        .reflection_hash = material_definition.runtime_reflection_hash,
+        .material_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_definition.reflection_material_data.name,
+                                                             asset_system->material_system->material_allocator),
+        .name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(name, asset_system->material_system->material_allocator),
+        .data_size = material_definition.reflection_material_data.struct_size,
+        .data = data,
     };
 
-    memcpy(material_system->material_buffer + material_system->material_buffer_offset, data, byte_size);
-    material_system->material_buffer_offset += byte_size;
-}
 
-void material_free(Asset_System* asset_system, Material_Handle handle)
-{
-    MASSERT(false);
-    Material_System* material_system = asset_system->material_system;
-
-    material_system->material_record[handle.handle];
-    material_system->generation[handle.handle]++;
-    //TODO: add to a free list
-}
-
-void* material_get(Asset_System* asset_system, Material_Handle handle)
-{
-    Material_System* material_system = asset_system->material_system;
-    //TODO: if generation fails or some other reason, pass back a blob of data
-    u32 generation[MAX_MATERIAL_COUNT];
-
-    if (asset_system->material_system->generation[handle.handle] != handle.generation)
+    String_Builder* material_path = material_asset_construct_path(&material_asset, asset_system->frame_allocator);
+    const char* path = string_builder_to_c_string(material_path);
+    //if it exists load it in, otherwise create it
+    if (filesystem_does_file_exists(path))
     {
-        M_ERROR("MATERIAL GET: INVALID GENERTATION PASSING BACK DATA BLOB")
-        MASSERT(false);
-        return material_system->default_data_blob ;
+        asset_load_material_path(asset_system, path, out_handle);
     }
-
-    Material_Record* record = &material_system->material_record[handle.handle];
-    return ((u8*)material_system->material_buffer + record->offset);
-}
-
-
-Material* material_get_metadata(Asset_System* asset_system,
-                                Material_Handle handle)
-{
-    Material_System* material_system = asset_system->material_system;
-
-    //TODO: if generation fails or some other reason, pass back a blob of data
-    if (asset_system->material_system->generation[handle.handle] != handle.generation)
+    else
     {
-        M_ERROR("MATERIAL GET METADATA: INVALID GENERTATION PASSING BACK DATA BLOB")
-        MASSERT(false);
-        return material_system->default_data_blob ;
+        material_asset_set_default_textures(asset_system,
+                                            &material_asset,
+                                            &material_definition);
+
+        asset_converter_material(asset_system,
+                                 &material_asset);
+
+        asset_load_material_uuid(asset_system, material_asset.material_uuid, out_handle);
     }
-
-    return &material_system->materials[handle.handle];
 }
 
-u64 material_create_sort_key(Asset_System* asset_system,
-                             Material_Handle handle, float z_value)
+bool material_convert_and_upload_gpu_data(Asset_System* asset_system, Material_Asset* material_asset,
+                                          Madness_Material* material,
+                                          Material_Definition* material_definition,
+                                          Scratch_Allocator* scratch_allocator)
 {
-    Material* material = material_get_metadata(asset_system, handle);
+    Material_System2* material_system = asset_system->material_system;
 
-    return sort_key_make_opaque(material->meta_data.shader_id, material->meta_data.permutation, z_value);
-}
+    //NOTE: as an optimization, instead of allocating, we just get the back of the material buffer modify the data there
 
+    u32 data_size = material_definition->material_gpu_definition.struct_size;
+    void* gpu_data = allocator_alloc(scratch_allocator->allocator, data_size);
 
-//TODO: update the material buffer
-// bool material_system_update(Material_System* material_system, Asset_System* asset_system, Memory_System* memory_system);
-
-
-
-
-
-
-bool material_load_gpu_data(Asset_System* asset_system, Shader_Handle handle, Material* material,
-                            Material_Data* out_gpu_data, Scratch_Allocator* scratch_allocator)
-{
-    Material_System* material_system = asset_system->material_system;
-
-
-    // Shader_Asset* material_asset = &material_system->shader_asset[handle.handle];
-    u32 def_index = asset_system->material_system->shader_asset_to_mapping[handle.handle];
-    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.material_definition[def_index];
-
-    out_gpu_data->material_data = allocator_alloc(scratch_allocator->allocator,
-                                                  material_definition->material_gpu_definition.struct_size);
-    out_gpu_data->data_size = material_definition->material_gpu_definition.struct_size;
 
     //resolve any uuid for texture loading
     for (u32 i = 0; i < material_definition->reflection_material_data.field_count; i++)
@@ -170,33 +238,27 @@ bool material_load_gpu_data(Asset_System* asset_system, Shader_Handle handle, Ma
             MASSERT(material_definition->material_gpu_definition.types[i] == REFLECTION_TYPE_U32);
 
             //load in texture and use the bindless index
-            MADNESS_UUID uuid_data = *(MADNESS_UUID*)((u8*)material->cpu_data.material_data + field->offset);
-            //sometimes we dont have a texture so we just set the value to zero
+            MADNESS_UUID uuid_data = *(MADNESS_UUID*)((u8*)material_asset->data + field->offset);
+
+            //sometimes we dont have a texture so we just set the value to the default texture
             if (uuid_data.high == 0 && uuid_data.low == 0)
             {
-                u32 default_texture = 0;
-                //copy into the gpu struct
-                memcpy(
-                    ((u8*)out_gpu_data->material_data + material_definition->material_gpu_definition.field_offsets[i]),
-                    &default_texture,
-                    sizeof(u32));
+                uuid_data = texture_system_get_default_uuid(asset_system);
             }
-            else
-            {
-                Texture_Handle texture_handle = asset_load_texture_uuid(asset_system, uuid_data);
+            Texture_Handle texture_handle = asset_load_texture_uuid(asset_system, uuid_data);
 
-                //copy into the gpu struct
-                memcpy(
-                    ((u8*)out_gpu_data->material_data + material_definition->material_gpu_definition.field_offsets[i]),
-                    &texture_handle.handle,
-                    sizeof(u32));
-            }
+            //copy into the gpu struct
+            memcpy(
+                ((u8*)gpu_data + material_definition->material_gpu_definition.field_offsets[
+                    i]),
+                &texture_handle.handle,
+                sizeof(u32));
         }
         else if (material_definition->material_gpu_definition.types[i] == field->type)
         {
             //copy into the gpu struct
-            memcpy((u8*)out_gpu_data->material_data + material_definition->material_gpu_definition.field_offsets[i],
-                   (u8*)material->cpu_data.material_data + field->offset,
+            memcpy((u8*)gpu_data + material_definition->material_gpu_definition.field_offsets[i],
+                   (u8*)material_asset->data + field->offset,
                    reflection_type_get_size(material_definition->material_gpu_definition.types[i]));
         }
         else
@@ -205,66 +267,132 @@ bool material_load_gpu_data(Asset_System* asset_system, Shader_Handle handle, Ma
         }
     }
 
+    material_upload_data(material_system, gpu_data, data_size, &material->material_record_handle);
+
     return true;
 }
 
-/**
- * the shader asset needs to be loaded or given back a handle before fully loading the material instance,
- * you can assume that the shader is loaded, as long as it was valid
- * you have to load the material
- */
-bool material_acquire(Asset_System* asset_system, Shader_Handle shader_handle, Material* in_material,
-                      Material_Handle* out_material_handle)
+bool material_acquire(Asset_System* asset_system, Material_System2* material_system, FILE* fptr,
+                      Asset_Record* asset_record,
+                      Material_Handle* out_handle)
 {
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
-    Material_System* material_system = asset_system->material_system;
+    //deserialize the data
+    //check to see if the shader is loaded
+    Material_Asset* material_asset = &material_system->material_assets[material_system->material_count];
+    material_asset_deserialize(material_asset, fptr, material_system->material_allocator);
+
+    //set material data from the file
+    Madness_Material* material = &material_system->materials[material_system->material_count];
+    material->material_name = material_asset->material_name;
+    material->name = material_asset->name;
+    material->material_uuid = material_asset->material_uuid;
+
+    //get the shader handle and set the shader key
+    asset_load_shader_asset_uuid(asset_system, material_asset->shader_uuid, &material->shader_handle);
+    Shader_Asset* asset = shader_asset_get(asset_system->shader_system, material->shader_handle);
+    material->shader_key = asset->shader_key;
+
+    Material_Definition definition;
+    shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, asset, &definition);
 
 
-    //load in the gpu data/representation of our struct, also loads any textures needed
-    Material_Data gpu_data;
-    material_load_gpu_data(asset_system, shader_handle, in_material, &gpu_data, &scratch);
+    //TODO: chech the hash and change the data to ensure its valid
+    if (definition.runtime_reflection_hash != material_asset->reflection_hash)
+    {
+        MASSERT(false);
+    }
 
-    material_upload(asset_system, gpu_data.material_data, gpu_data.data_size, out_material_handle);
-    Material* mat = &material_system->materials[out_material_handle->handle];
-    mat = in_material;
-
-
+    //convert to gpu format and upload the data, and get material gets a handle back to the asset record
+    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->allocator);
+    material_convert_and_upload_gpu_data(asset_system, material_asset, material,
+                                         &definition,
+                                         &scratch);
     scratch_allocator_end(scratch);
 
 
+    //NOTE: the only we would want to check is an asset reloaded
+    Asset_Runtime* runtime = &material_system->runtime_asset[material_system->runtime_asset_count++];
+    asset_runtime_set_info_from_record(runtime, asset_record, ASSET_MATERIAL);
+    runtime->asset_handles.material_handle = (Material_Handle){material_system->material_count, 0};
+
+    //fill out the handle
+    *out_handle = (Material_Handle){material_system->material_count, runtime->generation};
+
+
+    //todo: push into the material buffer
+    material_system->material_count++;
+
     return true;
 }
 
 
+void material_release(Material_System2* material_system, Material_Handle handle)
+{
+}
 
 
-
-void material_create_gpu_definition(Asset_System* asset_system, Reflection_Runtime_Struct* reflection_material,
-                                    Material_GPU_Definition* out_material_gpu_definition);
-/**
- * @brief: sets any uuids in the materials to the default texture uuid
- */
-void material_instance_set_default_textures(Asset_System* asset_system,
-                                            Material* material,
-                                            Material_Definition* material_definition);
+void material_upload_data(Material_System2* material_system, void* data, u64 data_size,
+                          Material_Record_Handle* out_handle)
+{
+    Material_Record* record = &material_system->material_record[material_system->material_record_count];
 
 
+    record->offset = material_system->material_buffer_offset;
+    record->size = data_size;
+
+    memcpy(material_system->material_buffer + material_system->material_buffer_offset, data, data_size);
+
+    material_system->material_buffer_offset += data_size;
+
+    *out_handle = (Material_Record_Handle){material_system->material_record_count, 0};
 
 
-void material_definition_create(Asset_System* asset_system,
-                                Material_Definition* material_definition,
-                                const char* material_name, Allocator* allocator);
-/**
- * @note: allocates for a material instance with all values to 0, user has to fill it out
- * @note: its required that there be a material asset for creating an instance
- */
+    material_system->material_record_count++;
+}
 
-void material_create_from_data(Asset_System* asset_system,
-                               Shader_Handle* shader_handle,
-                               Material* out_material,
-                               const char* material_asset_name,
-                               void* data);
 
+Madness_Material* material_system_get_material(Material_System2* material_system, Material_Handle handle)
+{
+    return &material_system->materials[handle.handle];
+}
+
+Material_Asset* material_system_get_asset(Material_System2* material_system, Material_Handle handle)
+{
+    return &material_system->material_assets[handle.handle];
+}
+
+//TODO: it would make sense to add a macro for this to ensure we are getting the struct we think we are getting
+//also would allow us to cast to our material type for easy modification
+//NOTE: do not keep a reference to the pointer
+void* material_system_get_material_data(Material_System2* material_system, Material_Handle handle)
+{
+    Madness_Material* material = &material_system->materials[handle.handle];
+    Material_Record_Handle record_handle = material->material_record_handle;
+
+    Material_Record* record = &material_system->material_record[record_handle.handle];
+
+    return material_system->material_buffer + record->offset;
+}
+
+Material_Definition material_system_get_material_definition(Asset_System* asset_system, Material_Handle handle)
+{
+    Material_System2* material_system = asset_system->material_system;
+    Shader_System* shader_system = asset_system->shader_system;
+
+    Madness_Material* material = &material_system->materials[handle.handle];
+
+    //get the shader handle and set the shader key
+    Shader_Asset* asset = shader_asset_get(shader_system, material->shader_handle);
+
+    Material_Definition definition;
+    shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, asset, &definition);
+
+    return definition;
+}
+
+
+void material_change_param(Material_System2* material_system, Material_Handle handle);
+void material_change_texture(Material_System2* material_system, Material_Handle handle);
 
 
 #endif //MATERIAL_SYSTEM_H

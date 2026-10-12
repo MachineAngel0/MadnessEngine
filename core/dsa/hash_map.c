@@ -3,9 +3,9 @@
 #include <time.h>
 
 
-hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator)
+Hash_Map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator)
 {
-    hash_map* h = allocator_alloc(allocator, sizeof(hash_map));
+    Hash_Map* h = allocator_alloc(allocator, sizeof(Hash_Map));
     h->num_entries = 0;
     h->capacity = capacity;
     h->key_data_size = key_data_size;
@@ -17,8 +17,8 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
     h->value_data = allocator_alloc(allocator, capacity * sizeof(void*));
     memset(h->value_data, 0, capacity * sizeof(void*));
 
-    h->state = malloc(capacity * sizeof(hash_map_state));
-    memset(h->state, 0, capacity * sizeof(hash_map_state));
+    h->state = malloc(capacity * sizeof(Hash_Map_State));
+    memset(h->state, 0, capacity * sizeof(Hash_Map_State));
 
     for (int i = 0; i < h->capacity; i++)
     {
@@ -31,8 +31,6 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
 
     return h;
 }
-
-
 
 
 //this version will have capacity will be increased until it is a power of two
@@ -55,7 +53,7 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
 // }
 
 
-void hash_map_free(hash_map* h)
+void hash_map_free(Hash_Map* h)
 {
     //TODO: doesn't free at all
     return;
@@ -79,7 +77,7 @@ void hash_map_free(hash_map* h)
 }
 
 
-void hash_map_insert(hash_map* h, void* key, void* value)
+void hash_map_insert(Hash_Map* h, void* key, void* value)
 {
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
     uint64_t hash_key = hash_index % h->capacity;
@@ -106,7 +104,7 @@ void hash_map_insert(hash_map* h, void* key, void* value)
     }
 }
 
-void hash_map_remove(hash_map* h, void* key)
+void hash_map_remove(Hash_Map* h, void* key)
 {
     //get an index
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
@@ -131,7 +129,7 @@ void hash_map_remove(hash_map* h, void* key)
     }
 }
 
-bool hash_map_get(hash_map* h, void* key, void* out_data)
+bool hash_map_get(Hash_Map* h, void* key, void* out_data)
 {
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
     uint64_t hash_key = hash_index % h->capacity;
@@ -155,7 +153,7 @@ bool hash_map_get(hash_map* h, void* key, void* out_data)
     return false;
 }
 
-bool hash_map_contains(hash_map* h, void* key)
+bool hash_map_contains(Hash_Map* h, void* key)
 {
     uint64_t hash_index = generate_hash_key_64bit(key, h->key_data_size);
     uint64_t hash_key = hash_index % h->capacity;
@@ -180,9 +178,9 @@ bool hash_map_contains(hash_map* h, void* key)
 }
 
 
-void hash_map_rehash(hash_map* h);
+void hash_map_rehash(Hash_Map* h);
 
-void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_func_value)(void*))
+void hash_map_print(Hash_Map* h, void (*print_func_key)(void*), void (*print_func_value)(void*))
 {
     for (uint64_t i = 0; i < h->capacity; i++)
     {
@@ -199,7 +197,7 @@ void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_fun
     printf("\n");
 }
 
-uint64_t hash_map_size(hash_map* h)
+uint64_t hash_map_size(Hash_Map* h)
 {
     return h->capacity;
 }
@@ -214,7 +212,7 @@ void hash_map_test(void)
     void* memory = malloc(memory_size);
     allocator_init(&allocator, memory, memory_size, "array test");
 
-    hash_map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY, &allocator);
+    Hash_Map* h = hash_map_init(sizeof(int), sizeof(int), HASH_MAP_DEFAULT_CAPACITY, &allocator);
     // hash_map* h = hash_map_init(sizeof(int), HASH_MAP_DEFAULT_CAPACITY);
 
     srand((u64)time(NULL));
@@ -239,7 +237,8 @@ void hash_map_test(void)
     hash_map_print(h, print_int, print_int);
 
 
-    hash_map_free(h);
+    allocator_clear_and_zero(&allocator);
+
 
     struct hash_test_key
     {
@@ -252,7 +251,7 @@ void hash_map_test(void)
         u64 c;
     };
 
-    hash_map* hash_2 = hash_map_init(sizeof(struct hash_test_key), sizeof(struct hash_test_value),
+    Hash_Map* hash_2 = hash_map_init(sizeof(struct hash_test_key), sizeof(struct hash_test_value),
                                      HASH_MAP_DEFAULT_CAPACITY, &allocator);
 
     struct hash_test_key hi = {10, true};
@@ -270,32 +269,14 @@ void hash_map_test(void)
     hash_map_insert(h, &hi2, &bye2);
 
 
-    if (hash_map_contains(h, &hi))
-    {
-        printf("contains hi 0\n");
-    };
-    if (hash_map_contains(h, &hi1))
-    {
-        printf("contains hi 1\n");
-    };
-    if (hash_map_contains(h, &hi2))
-    {
-        printf("contains hi 2\n");
-    };
-    if (hash_map_contains(h, &hi3))
-    {
-        //should not contain
-        printf("contains hi 3\n");
-    }
-    else
-    {
-        printf("test passed does not contain hi 3\n");
-    }
+    TEST_DEBUG(hash_map_contains(h, &hi));
+    TEST_DEBUG(hash_map_contains(h, &hi1));
+    TEST_DEBUG(hash_map_contains(h, &hi2));
+    TEST_DEBUG(hash_map_contains(h, &hi3) == false);
 
-    free(hash_2);
+    allocator_clear_and_zero(&allocator);
 
-
-    hash_map* hash_char = hash_map_init(sizeof(char), sizeof(int),
+    Hash_Map* hash_char = hash_map_init(sizeof(char), sizeof(int),
                                         HASH_MAP_DEFAULT_CAPACITY, &allocator);
     const char* char1 = "iahsdoi";
     const char* char2 = "whats up";
@@ -309,27 +290,11 @@ void hash_map_test(void)
     hash_map_insert(hash_char, &char2, &val2);
     hash_map_insert(hash_char, &char3, &val3);
 
-    if (hash_map_contains(hash_char, &char1))
-    {
-        printf("contains char 1\n");
-    }
-    if (hash_map_contains(hash_char, &char2))
-    {
-        printf("contains char 2\n");
-    }
-    if (hash_map_contains(hash_char, &char3))
-    {
-        printf("contains char 3\n");
-    }
+    TEST_DEBUG(hash_map_contains(hash_char, &char1));
+    TEST_DEBUG(hash_map_contains(hash_char, &char2));
+    TEST_DEBUG(hash_map_contains(hash_char, &char3));
 
-    if (hash_map_contains(hash_char, &char10))
-    {
-        printf("TEST FAILED contains char 10\n");
-    }
-    else
-    {
-        printf("TEST PASSED does not contain char 10\n");
-    }
+    TEST_DEBUG(hash_map_contains(hash_char, &char10) == false);
 
 
     TEST_REPORT(HASH_MAP);

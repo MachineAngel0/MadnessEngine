@@ -181,6 +181,8 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     push_constant_info_ui.pValues = &pc_ui;
     push_constant_info_ui.pNext = NULL;
 
+
+
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->ui_pipeline.handle);
     vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);

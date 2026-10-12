@@ -5,23 +5,23 @@
 #define HASH_MAP_DEFAULT_CAPACITY 100
 
 
-//NOTE: rn im just using open addressing,
-// until i have the need for larger data sets, then I will implement a closed addressing hash
+//NOTE: rn im just using open addressing, its generally faster in most cases,
+// my hash map isn't very fast so room for optimization
 
 
 
-typedef enum hash_map_state
+typedef enum Hash_Map_State
 {
     HASH_MAP_EMPTY,
     HASH_MAP_DELETED,
     HASH_MAP_USING,
-} hash_map_state;
+} Hash_Map_State;
 
 
 
-#define HASH_MAP_TYPE(key, value) hash_map
+#define HASH_MAP_TYPE(key, value) Hash_Map
 
-typedef struct hash_map
+typedef struct Hash_Map
 {
     u64 key_data_size;
     u64 value_data_size;
@@ -29,13 +29,13 @@ typedef struct hash_map
     u64 num_entries;
 
     //SOA
-    hash_map_state* state;
+    Hash_Map_State* state;
     void** key_data;
     void** value_data;
-} hash_map;
+} Hash_Map;
 
 
-hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator);
+Hash_Map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64_t capacity, Allocator* allocator);
 
 #define HASH_MAP_CREATE(key_type, value_type, capacity, allocator)\
          hash_map_init(sizeof(key_type), sizeof(value_type), capacity, allocator)
@@ -60,20 +60,20 @@ hash_map* hash_map_init(uint64_t key_data_size, uint64_t value_data_size, uint64
 //     return h;
 // }
 
-void hash_map_free(hash_map* h);
+void hash_map_free(Hash_Map* h);
 
-void hash_map_insert(hash_map* h, void* key, void* value);
+void hash_map_insert(Hash_Map* h, void* key, void* value);
 
-void hash_map_remove(hash_map* h, void* key);
+void hash_map_remove(Hash_Map* h, void* key);
 
-bool hash_map_get(hash_map* h, void* key, void* out_data);
+bool hash_map_get(Hash_Map* h, void* key, void* out_data);
 
-bool hash_map_contains(hash_map* h, void* key);
+bool hash_map_contains(Hash_Map* h, void* key);
 
-void hash_map_rehash(hash_map* h);
+void hash_map_rehash(Hash_Map* h);
 
-void hash_map_print(hash_map* h, void (*print_func_key)(void*), void (*print_func_value)(void*));
-uint64_t hash_map_size(hash_map* h);
+void hash_map_print(Hash_Map* h, void (*print_func_key)(void*), void (*print_func_value)(void*));
+uint64_t hash_map_size(Hash_Map* h);
 
 //TODO:
 // void hash_table_copy(hash_map* h1, hash_map* h2);

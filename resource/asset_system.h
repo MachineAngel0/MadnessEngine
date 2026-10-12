@@ -60,8 +60,8 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
 
 
 //NOTE: we dont unload shaders
-bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* meta_data,
-                             Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator);
+bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* record,
+                              Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator);
 bool asset_load_shader_asset_path(Asset_System* asset_system, const char* asset_path,
                                   Shader_Handle* out_shader_handle);
 bool asset_load_shader_asset_uuid(Asset_System* asset_system, MADNESS_UUID uuid, Shader_Handle* out_handle);

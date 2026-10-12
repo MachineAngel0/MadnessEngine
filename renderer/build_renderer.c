@@ -12,7 +12,7 @@
 #include "vulkan_allocator.c"
 #include "camera.c"
 #include "lights.c"
-#include "shader_system.c"
+#include "vulkan_shader_system.c"
 #include "vulkan_texture_system.c"
 #include "vk_buffer.c"
 #include "vk_command_buffer.c"

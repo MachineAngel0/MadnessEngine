@@ -10,6 +10,7 @@
 #include "texture_system.h"
 #include "sprite_system.h"
 #include "mesh_system.h"
+#include "shader_system.h"
 #include "material_system.h"
 #include "animation_system.h"
 

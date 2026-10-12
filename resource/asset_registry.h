@@ -18,15 +18,7 @@ typedef struct Asset_Registry_Header
 } Asset_Registry_Header;
 
 
-#define TEXTURE_VERSION 1
-#define FONTS_VERSION 1
-#define MESH_VERSION 1
-#define SKMESH_VERSION 1
-#define SHADER_VERSION 1
-#define MATERIAL_INSTANCE_VERSION 1
-#define AUDIO_EXTENSION_VERSION 1
-#define PARTICLE_EFFECT_VERSION 1
-#define PARTICLE_EMITTER_VERSION 1
+
 
 
 typedef struct Texture_MetaData
@@ -103,7 +95,7 @@ typedef struct Shader_MetaData
     Path_String* shader_name;
     String* material_name;
 
-    Shader_Info shader_info;
+    Shader_PSO shader_info;
 } Shader_MetaData;
 
 
@@ -222,7 +214,7 @@ void asset_registry_validate_shaders(Asset_System* asset_system)
         MASSERT(fptr);
 
         Shader_Asset asset;
-        asset_shader_deserialize(&asset, fptr, scratch.allocator);
+        shader_asset_deserialize(&asset, fptr, scratch.allocator);
 
         Asset_Record record = {0};
         if (asset_registry_exists_by_engine_path(asset_system->asset_registry, &list_scan.strings[i], &record))
@@ -271,20 +263,20 @@ void asset_registry_validate_materials(Asset_System* asset_system)
         FILE* fptr = fopen(file_path, "rb");
         MASSERT(fptr);
 
-        Material asset = {0};
-        asset_material_deserialize(&asset, fptr, asset_system->heap_allocator);
+        Material_Asset asset = {0};
+        material_asset_deserialize(&asset, fptr, scratch.allocator);
 
         Asset_Record record = {0};
         if (asset_registry_exists_by_engine_path(asset_system->asset_registry, &list_scan.strings[i], &record))
         {
             //validate all the information like uuid's and if source files exist
             // MASSERT_FALSE();
-            if (!madness_uuid_compare(record.uuid, asset.meta_data.material_uuid))
+            if (!madness_uuid_compare(record.uuid, asset.material_uuid))
             {
                 //NOTE: basically this is really bad if you hit this
                 // MASSERT_FALSE();
 
-                record.uuid = asset.meta_data.material_uuid;
+                record.uuid = asset.material_uuid;
 
             }
         }
@@ -294,7 +286,7 @@ void asset_registry_validate_materials(Asset_System* asset_system)
             //i want to manually check this
             MASSERT_FALSE();
             asset_registry_add_asset_from_uuid(asset_system->asset_registry, file_path, file_path, ASSET_MATERIAL,
-                                               asset_system->heap_allocator, asset.meta_data.material_uuid);
+                                               asset_system->heap_allocator, asset.material_uuid);
         }
 
         fclose(fptr);

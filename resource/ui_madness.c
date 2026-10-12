@@ -3272,7 +3272,6 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             madness_ui_text_box(*custom_name);
             break;
         case REFLECTION_TYPE_PATH_STRING:
-            static u32 selected_string;
             madness_ui_string(*custom_name);
             madness_ui_same_line();
             Path_String* path_string = *(Path_String**)data;
@@ -3280,6 +3279,13 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             /*madness_ui_combo_box_string(*custom_name, *(Path_String**)data,
                                         madness_ui->asset_list_scan_reference->strings,
                                         madness_ui->asset_list_scan_reference->count);*/
+
+            // TODO: probably would make sense to use a file picker at some point
+            // madness_ui_file_picker(*custom_name);
+
+
+
+
             break;
         case REFLECTION_TYPE_CHAR:
             madness_ui_text_box(*custom_name);
@@ -3331,6 +3337,10 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             MASSERT(false);
             break;
         case REFLECTION_TYPE_UUID:
+
+            //TODO: this is just an idea, you would want to get the name first before changing it
+            // madness_ui_file_picker(*custom_name);
+
             MADNESS_UUID* uuid = data;
             // madness_ui_string(*asset_meta_data.engine_path);
 

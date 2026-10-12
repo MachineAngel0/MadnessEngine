@@ -26,7 +26,7 @@
 
 #include "vk_descriptors.h"
 #include "vk_buffer.h"
-#include "shader_system.h"
+#include "vulkan_shader_system.h"
 
 
 Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)

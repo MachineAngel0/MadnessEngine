@@ -1,5 +1,5 @@
-﻿#ifndef SHADER_SYSTEM_H
-#define SHADER_SYSTEM_H
+﻿#ifndef VULKAN_SHADER_SYSTEM_H
+#define VULKAN_SHADER_SYSTEM_H
 
 
 //TODO: increase later when it becomes relevant
@@ -28,4 +28,4 @@ void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_Sy
 Vulkan_Shader_Batch* vulkan_shader_system_shader_get_by_key(Renderer* renderer,
                                                             u64 sort_key);
 
-#endif //SHADER_SYSTEM_H
+#endif //VULKAN_SHADER_SYSTEM_H

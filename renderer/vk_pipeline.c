@@ -329,14 +329,18 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     //viewport_state.pScissors;
 
 
+    //TODO: cull mode, depth tests, stencil tests are dynamic states
+    //blend modes are still not available, as of 1.4
+
     //for resizing the viewport, can be used for blend constants
-    VkDynamicState dynamicStates[2] = {
+    VkDynamicState dynamicStates[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
+        VK_DYNAMIC_STATE_SCISSOR,
+        // VK_DYNAMIC_STATE_CULL_MODE,
     };
     VkPipelineDynamicStateCreateInfo dynamicState = {0};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = 2;
+    dynamicState.dynamicStateCount = ARRAY_SIZE(dynamicStates);
     dynamicState.pDynamicStates = dynamicStates;
 
     // Attachment information for dynamic rendering

@@ -115,9 +115,9 @@ void asset_converter_particle_emitter(Asset_System* asset_system, Particle_Emitt
 
 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
-                                                string_to_c_string_allocator(particle_emitter->name, scratch.allocator),
-                                                output_path,
-                                                ASSET_PARTICLE_EMITTER, asset_system->heap_allocator, out_uuid);
+                                               string_to_c_string_allocator(particle_emitter->name, scratch.allocator),
+                                               output_path,
+                                               ASSET_PARTICLE_EMITTER, asset_system->heap_allocator, out_uuid);
 
     scratch_allocator_end(scratch);
 
@@ -156,9 +156,9 @@ void asset_converter_particle_effect(Asset_System* asset_system, Particle_Effect
 
 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
-                                                string_to_c_string_allocator(particle_effect->name, scratch.allocator),
-                                                output_path,
-                                                ASSET_PARTICLE_EFFECT, asset_system->heap_allocator, out_uuid);
+                                               string_to_c_string_allocator(particle_effect->name, scratch.allocator),
+                                               output_path,
+                                               ASSET_PARTICLE_EFFECT, asset_system->heap_allocator, out_uuid);
 
     scratch_allocator_end(scratch);
     PROFILE_ZONE_END(asset_converter_particle_effect)
@@ -243,7 +243,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
 
 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
-                                                ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
+                                               ASSET_TEXTURE, asset_system->heap_allocator, out_uuid);
 
     /*//find if the asset exists already?
 
@@ -470,7 +470,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
-                                                ASSET_FONT, asset_system->heap_allocator, NULL);
+                                               ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch);
 
@@ -601,7 +601,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
     fclose(fptr);
 
     asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, file_path, output_path,
-                                                ASSET_FONT, asset_system->heap_allocator, NULL);
+                                               ASSET_FONT, asset_system->heap_allocator, NULL);
 
     scratch_allocator_end(scratch_allocator);
 
@@ -951,33 +951,32 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                                                                 emissive_strength;
         }
 
-        Shader_Info default_shader_info = {0};
+        Shader_PSO default_shader_info = {0};
         if (data->skins_count > 0)
         {
-            default_shader_info = (Shader_Info){
+            default_shader_info = (Shader_PSO){
                 .shader_name = &STRING_STRLEN(SKINNED_MESH_DEFAULT_SHADER),
                 .blend_mode = Shader_Blend_Mode_Default,
             };
         }
         else
         {
-            default_shader_info = (Shader_Info){
+            default_shader_info = (Shader_PSO){
                 .shader_name = &STRING_STRLEN(MESH_DEFAULT_SHADER),
                 .blend_mode = Shader_Blend_Mode_Default,
             };
         }
 
         Shader_Handle handle;
-        shader_get_or_create(asset_system, &default_shader_info, &handle);
+        shader_create_or_get(asset_system, &default_shader_info, &handle);
 
+        Material_Handle material_handle;
 
-        MADNESS_UUID shader_uuid;
         if (data->meshes[mesh_idx].primitives->material->name)
         {
-            asset_converter_material_from_data(asset_system, &handle,
+            material_create_from_data(asset_system, handle,
                                                data->meshes[mesh_idx].primitives->material->name, cur_mat,
-                                               &shader_uuid,
-                                               &material_uuids[mesh_idx]);
+                                               sizeof(*cur_mat), &material_handle);
         }
         else
         {
@@ -990,11 +989,14 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_c_string(string_mat_name, "No_Mat_Name");
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
-            asset_converter_material_from_data(asset_system,  &handle,
-                                               string_builder_to_c_string(string_mat_name), cur_mat,
-                                               &shader_uuid,
-                                               &material_uuids[mesh_idx]);
+            material_create_from_data(asset_system, handle,
+                                              string_builder_to_c_string(string_mat_name), cur_mat,
+                                              sizeof(*cur_mat), &material_handle);
         }
+
+        //set the uuid for the mesh
+        material_uuids[mesh_idx] = material_system_get_asset(asset_system->material_system, material_handle)->material_uuid;
+
     }
 
 
@@ -1272,7 +1274,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
-                                                    ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
+                                                   ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
     }
     else
     {
@@ -1308,7 +1310,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
         // write out metadata
         asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
-                                                    ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
+                                                   ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
     }
 
     cgltf_free(data);
@@ -1322,35 +1324,31 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     return true;
 }
 
-bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* material_asset)
+bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shader_asset)
 {
     PROFILE_ZONE(asset_converter_material_asset)
-    MASSERT(material_asset)
-    madness_uuid_validate(material_asset->uuid);
-    MASSERT(material_asset->shader_info.shader_name)
+    MASSERT(shader_asset)
+    madness_uuid_validate(shader_asset->uuid);
+    MASSERT(shader_asset->shader_pipeline_state.shader_name)
 
 
     //TODO: we only want to serialize the shader if it does not exist
     //NOTE: we serialize material instances separately
 
-    String_Builder* str_builder = shader_asset_construct_path(asset_system->material_system, material_asset,
-                                                              asset_system->frame_allocator);
-
-    if (!filesystem_does_file_exists(string_builder_to_c_string(str_builder)))
+    String_Builder* str_builder = shader_asset_construct_path(shader_asset, asset_system->frame_allocator);
+    const char* output_path = string_builder_to_c_string(str_builder);
+    if (!filesystem_does_file_exists(output_path))
     {
-        const char* output_path = string_builder_to_c_string(str_builder);
         FILE* fptr = fopen(output_path, "wb");
         if (!fptr)
         {
             MASSERT(false);
         }
 
-
-        material_asset->version = 1.0f;
-        asset_shader_serialize(material_asset, fptr);
+        shader_asset_serialize(shader_asset, fptr);
 
         asset_registry_add_asset_from_uuid(asset_system->asset_registry, output_path, output_path,
-                                           ASSET_SHADER, asset_system->heap_allocator, material_asset->uuid);
+                                           ASSET_SHADER, asset_system->heap_allocator, shader_asset->uuid);
         fclose(fptr);
     }
 
@@ -1361,30 +1359,21 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* mate
 }
 
 MAPI bool asset_converter_material(Asset_System* asset_system,
-                                   Material* material)
+                                   Material_Asset* material_asset)
 {
     PROFILE_ZONE(asset_converter_material_instance)
 
-
-    MASSERT(material)
-    MASSERT(material->meta_data.material_uuid.high != 0);
-    MASSERT(material->meta_data.material_uuid.high != 0);
-
-    MASSERT(material->meta_data.shader_uuid.high != 0);
-    MASSERT(material->meta_data.shader_uuid.low != 0);
-
-    MASSERT(material->cpu_data.material_data);
-    MASSERT(material->cpu_data.data_size != 0);
+    MASSERT(material_asset)
+    madness_uuid_validate(material_asset->material_uuid);
+    madness_uuid_validate(material_asset->shader_uuid);
+    MASSERT(material_asset->data);
+    MASSERT(material_asset->data_size > 0);
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     //write out the file
-    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material->meta_data.material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material->meta_data.name);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
+    String_Builder* str_builder =  material_asset_construct_path( material_asset, scratch.allocator);
+
 
     const char* output_path = string_builder_to_c_string(str_builder);
     FILE* fptr = fopen(output_path, "wb");
@@ -1393,14 +1382,14 @@ MAPI bool asset_converter_material(Asset_System* asset_system,
         MASSERT(false);
     }
 
-    asset_material_serialize(material, fptr);
+    material_asset_serialize(material_asset, fptr);
 
 
     asset_registry_add_asset_from_uuid(asset_system->asset_registry,
                                        string_to_c_string_allocator(
-                                           material->meta_data.name, scratch.allocator), output_path,
+                                           material_asset->name, scratch.allocator), output_path,
                                        ASSET_MATERIAL,
-                                       asset_system->heap_allocator, material->meta_data.material_uuid);
+                                       asset_system->heap_allocator, material_asset->material_uuid);
 
     fclose(fptr);
 
@@ -1412,130 +1401,6 @@ MAPI bool asset_converter_material(Asset_System* asset_system,
     return true;
 }
 
-MAPI bool asset_converter_material_and_generate_uuid(Asset_System* asset_system,
-                                                     Material* material, MADNESS_UUID* out_material_uuid)
-{
-    PROFILE_ZONE(asset_converter_material_instance)
 
 
-    MASSERT(material)
-    MASSERT(material->meta_data.material_uuid.high != 0);
-    MASSERT(material->meta_data.material_uuid.high != 0);
 
-    MASSERT(material->meta_data.shader_uuid.high != 0);
-    MASSERT(material->meta_data.shader_uuid.low != 0);
-
-    MASSERT(material->cpu_data.material_data);
-    MASSERT(material->cpu_data.data_size != 0);
-
-    MASSERT(out_material_uuid);
-
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
-
-    //write out the file
-    String_Builder* str_builder = string_builder_create(256, scratch.allocator);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_PATH);
-    string_builder_append_string(str_builder, material->meta_data.material_name);
-    string_builder_append_c_string(str_builder, "_");
-    string_builder_append_string(str_builder, material->meta_data.name);
-    string_builder_append_c_string(str_builder, ENGINE_MATERIAL_INSTANCE_EXTENSION);
-
-    const char* output_path = string_builder_to_c_string(str_builder);
-    FILE* fptr = fopen(output_path, "wb");
-    if (!fptr)
-    {
-        MASSERT(false);
-    }
-
-    asset_material_serialize(material, fptr);
-
-
-    asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry,
-                                                string_to_c_string_allocator(
-                                                    material->meta_data.name, scratch.allocator), output_path,
-                                                ASSET_MATERIAL,
-                                                asset_system->heap_allocator, out_material_uuid);
-
-    fclose(fptr);
-
-    scratch_allocator_end(scratch);
-
-    PROFILE_ZONE_END(asset_converter_material_instance)
-
-
-    return true;
-}
-
-bool asset_converter_material_from_shader_handle(Asset_System* asset_system, Shader_Handle* shader_handle,
-                                                 const char* mat_inst_name, MADNESS_UUID* out_shader_uuid,
-                                                 MADNESS_UUID* out_material_uuid)
-{
-    MASSERT(out_shader_uuid)
-    MASSERT(out_material_uuid)
-
-    PROFILE_ZONE(asset_converter_material)
-
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
-
-    u32 def_index = asset_system->material_system->shader_asset_to_mapping[shader_handle->handle];
-    Material_Definition* material_definition = &asset_system->material_system->shader_to_material_mapping.
-                                                              material_definition[def_index];
-
-    u64 data_size = material_definition->reflection_material_data.struct_size;
-    void* data = allocator_alloc(asset_system->frame_allocator, data_size);
-
-    Material material;
-    material_create_from_data(asset_system,
-                              shader_handle,
-                              &material,
-                              mat_inst_name,
-                              data);
-
-    Shader_Asset* shader_asset = shader_asset_get(asset_system->material_system, *shader_handle);
-    *out_shader_uuid = shader_asset->uuid;
-    *out_material_uuid = material.meta_data.material_uuid;
-
-
-    scratch_allocator_end(scratch);
-
-    PROFILE_ZONE_END(asset_converter_material)
-
-
-    return true;
-}
-
-
-bool asset_converter_material_from_data(Asset_System* asset_system,
-                                        Shader_Handle* shader_handle,
-                                        const char* mat_inst_name,
-                                        void* data,
-                                        MADNESS_UUID* out_shader_uuid,
-                                        MADNESS_UUID* out_material_uuid)
-{
-    MASSERT(out_shader_uuid)
-    MASSERT(out_material_uuid)
-
-    PROFILE_ZONE(asset_converter_material)
-
-    Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
-
-
-    Material material;
-    material_create_from_data(asset_system,
-                              shader_handle,
-                              &material,
-                              mat_inst_name,
-                              data);
-
-    Shader_Asset* shader_asset = shader_asset_get(asset_system->material_system, *shader_handle);
-    *out_shader_uuid = shader_asset->uuid;
-    *out_material_uuid = material.meta_data.material_uuid;
-
-
-    scratch_allocator_end(scratch);
-
-    PROFILE_ZONE_END(asset_converter_material)
-
-
-    return true;
-}

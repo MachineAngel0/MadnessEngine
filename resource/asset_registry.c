@@ -242,8 +242,18 @@ void asset_registry_add_asset_from_uuid(Asset_Registry* asset_registry,
     if (exists_by_source_path  || exists_by_engine_path)
     {
         //update these just in case
-        *meta_data.source_file = *str_source_file;
-        *meta_data.engine_path = *str_engine_path;
+        if (!string_compare(meta_data.source_file, str_source_file))
+        {
+            M_ERROR("CHANGING ASSET SOURCE FILE")
+            string_print(meta_data.source_file);
+            string_print(str_source_file);
+        }
+        if (!string_compare(meta_data.engine_path, str_engine_path))
+        {
+            M_ERROR("CHANGING ASSET ENGINE FILE")
+            string_print(meta_data.engine_path);
+            string_print(str_engine_path);
+        }
     }
     else
     {

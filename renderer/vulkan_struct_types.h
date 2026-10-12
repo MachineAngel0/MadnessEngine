@@ -413,7 +413,7 @@ typedef struct Vulkan_Shader_Batch
 #define AVAILABLE_TEXTURES 100
 #define RENDERPASS_TEXTURES 20
 
-typedef struct Shader_System
+typedef struct Vulkan_Shader_System
 {
     Vulkan_Shader_Pipeline pipeline_references[AVAILABLE_TEXTURES];
     u32 pipeline_indexes;

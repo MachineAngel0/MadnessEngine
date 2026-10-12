@@ -39,10 +39,10 @@
 #define ENGINE_FONTS_PATH "../z_assets_engine/fonts/"
 #define ENGINE_MESH_PATH "../z_assets_engine/mesh/"
 #define ENGINE_SK_MESH_PATH "../z_assets_engine/skinned_mesh/"
-#define ENGINE_SHADER_PATH "../z_assets_engine/material/"
-#define ENGINE_SHADER_PATH_NO_SLASH "../z_assets_engine/material"
-#define ENGINE_MATERIAL_PATH "../z_assets_engine/material_instance/"
-#define ENGINE_MATERIAL_PATH_NO_SLASH "../z_assets_engine/material_instance"
+#define ENGINE_SHADER_PATH "../z_assets_engine/shader/"
+#define ENGINE_SHADER_PATH_NO_SLASH "../z_assets_engine/shader"
+#define ENGINE_MATERIAL_PATH "../z_assets_engine/material/"
+#define ENGINE_MATERIAL_PATH_NO_SLASH "../z_assets_engine/material"
 #define ENGINE_AUDIO_PATH "../z_assets_engine/audio/"
 #define ENGINE_PARTICLE_PATH "../z_assets_engine/particle/"
 #define ENGINE_PARTICLE_EFFECT_PATH "../z_assets_engine/particle/particle_effect"
@@ -55,13 +55,26 @@
 #define ENGINE_FONTS_EXTENSION ".mfont"
 #define ENGINE_MESH_EXTENSION ".mmesh"
 #define ENGINE_SKMESH_EXTENSION ".mskin"
-#define ENGINE_SHADER_EXTENSION ".mmat"
-#define ENGINE_MATERIAL_INSTANCE_EXTENSION ".mmi"
+#define ENGINE_SHADER_EXTENSION ".mshade"
+#define ENGINE_MATERIAL_EXTENSION ".mmat"
 #define ENGINE_AUDIO_EXTENSION ".maudio"
 #define ENGINE_PARTICLE_EFFECT_EXTENSION ".mparticle"
 #define ENGINE_PARTICLE_EMITTER_EXTENSION ".memitter"
 
 
+///////////////// RESOURCES VERSIONS //////////////////////
+#define TEXTURE_VERSION 1
+#define FONTS_VERSION 1
+#define MESH_VERSION 1
+#define SKMESH_VERSION 1
+#define SHADER_VERSION 1
+#define MATERIAL_VERSION 1
+#define MATERIAL_INSTANCE_VERSION 1
+#define AUDIO_EXTENSION_VERSION 1
+#define PARTICLE_EFFECT_VERSION 1
+#define PARTICLE_EMITTER_VERSION 1
+
+//
 #define MAX_ASSETS_STRINGS 5000u
 
 ///////////////// RESOURCES COUNTS //////////////////////
@@ -75,7 +88,8 @@
 #define MAX_PARTICLE_EFFECTS_COUNT 10
 
 
-#define MATERIAL_BUFFER_SIZE MB(16)
+#define MATERIAL_BUFFER_SIZE MB(4)
+#define MATERIAL_FALLBACK_BLOB_SIZE 1024
 
 
 //FONT/TEXT
@@ -110,6 +124,9 @@ typedef struct Texture_Handle
 //Renderpass || translucency || Blend || Mesh Type
 typedef u64 Shader_Key;
 
+typedef u64 Shader_Pipeline_Hash;
+
+
 typedef struct Material_Handle
 {
     // Material_Key material_id;
@@ -117,6 +134,13 @@ typedef struct Material_Handle
     u32 generation;
 } Material_Handle;
 
+
+typedef struct Material_Record_Handle
+{
+    // Material_Key material_id;
+    u32 handle;
+    u32 generation;
+} Material_Record_Handle;
 
 typedef struct Shader_Handle
 {
@@ -310,6 +334,29 @@ typedef struct Texture_Sampler
 
 
 //Texture
+
+typedef struct Texture_Asset
+{
+    u8 version;
+    MADNESS_UUID uuid;
+
+    Texture_Type type; // used to identify if we have are a font or a texture
+
+    //
+    u32 width;
+    u32 height;
+    u8 channels;
+
+    //unused for rn
+    Texture_Format format;
+    Texture_Filter filter;
+    Texture_Wrap wrap;
+    Texture_Sampler sampler;
+    bool create_sampler;
+
+    u8* pixel_data;
+} Texture_Asset;
+
 typedef struct Madness_Texture
 {
     u32 width;
@@ -438,20 +485,22 @@ typedef struct PC_Shadow_Mapping
 } PC_Shadow_Mapping;
 
 
-typedef struct Shader_Info
+typedef struct Shader_PSO
 {
     Path_String* shader_name;
     Shader_Blend_Mode blend_mode;
     bool two_sided;
-} Shader_Info;
+
+} Shader_PSO;
 
 typedef struct Shader_Asset
 {
     //information about the material structure, think of it like the definition of a material/shader
     u32 version;
-    u32 reflection_hash;
     MADNESS_UUID uuid;
-    Shader_Info shader_info;
+    Shader_PSO shader_pipeline_state;
+    //both below are u64
+    Shader_Pipeline_Hash shader_pipeline_hash;
     Shader_Key shader_key;
 } Shader_Asset;
 
@@ -467,36 +516,44 @@ typedef struct Material_GPU_Definition
 
 typedef struct Material_Definition
 {
-    u32 reflection_hash;
+    u32 runtime_reflection_hash;
     Reflection_Runtime_Struct reflection_material_data;
     Material_GPU_Definition material_gpu_definition;
 } Material_Definition;
 
-typedef struct Material_Meta_Data
+
+typedef struct Material_Asset
 {
-    // NOTE: the material data is the serialized data containing the UUID for textures
+    //NOTE: this is what needs to get edited at any given time, which eventually gets turned in the material struct
+    //if this gets reloaded we need to find the material with the same material name and name
     MADNESS_UUID shader_uuid;
     MADNESS_UUID material_uuid;
+    u32 reflection_hash;
 
-    u16 shader_id;
-    u16 permutation;
+    String* material_name; // name of the struct
+    String* name; // custom name given by the user
 
-    String* material_name;
-    String* name;
-} Material_Meta_Data;
-
-typedef struct Material_Data
-{
-    //we load this in and then unload it once copied into the material array
+    //cpu represention
     u64 data_size;
-    void* material_data;
-} Material_Data;
+    void* data;
 
-typedef struct Material
+    //TODO: this might make sense and make it easy to add and remove textures, without fucking up the material
+    //texture slot -> uuid
+} Material_Asset;
+
+typedef struct Madness_Material
 {
-    Material_Meta_Data meta_data;
-    Material_Data cpu_data;
-} Material;
+    MADNESS_UUID material_uuid;
+
+    Shader_Handle shader_handle;
+    u32 reflection_hash;
+    Shader_Key shader_key;
+
+    Material_Record_Handle material_record_handle;
+
+    String* material_name; // name of the struct
+    String* name; // custom name given by the user
+} Madness_Material;
 
 
 ///////////////// Particle  //////////////////////
@@ -876,12 +933,42 @@ typedef struct Madness_SkMesh_Runtime
 
 ///////////////// Systems  //////////////////////
 
-typedef struct Shader_Mat_Mapping
+typedef struct Shader_Material_Mapping
 {
     String* shader_name[MAX_MATERIAL_COUNT];
     String* material_name[MAX_MATERIAL_COUNT];
     Material_Definition material_definition[MAX_MATERIAL_COUNT];
-} Shader_Mat_Mapping;
+    u32 count;
+} Shader_Material_Mapping;
+
+
+
+typedef struct Shader_System
+{
+    Allocator* shader_asset_allocator;
+    //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
+    Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
+    u32 shader_asset_count;
+
+    Asset_Runtime runtime_asset[MAX_MATERIAL_COUNT];
+    u32 runtime_asset_count;
+
+
+    //TODO:
+    // RING_QUEUE_TYPE(Shader_Asset)* new_shaders_pipeline_creation;
+    // RING_QUEUE_TYPE(Shader_Asset)* shaders_to_hot_reload;
+
+    //tells us the mapping between shader and material, as well as the material definition
+    Shader_Material_Mapping shader_to_material_mapping;
+    Allocator* shader_mapping_allocator;
+
+    Reflection_Registry* material_reflection_registry;
+
+
+    //TODO:
+    //Shader_Handle default_shader_handle;
+} Shader_System;
+
 
 typedef struct Material_Record
 {
@@ -890,51 +977,6 @@ typedef struct Material_Record
 } Material_Record;
 
 
-typedef struct Material_System
-{
-    //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
-
-    //NOTE: each shader asset get its own material definition,
-    // this is technically duplicating what should only exist once but rn its fine
-
-    Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
-    u32 shader_asset_to_mapping[MAX_MATERIAL_COUNT];
-    u32 shader_count;
-
-    // Asset_Runtime* shader_runtime_asset;
-
-    //TODO:
-    RING_QUEUE_TYPE(Shader_Asset)* new_shaders_pipeline_creation;
-
-    //tells us the mapping between shader and material, as well as the material definition
-    Shader_Mat_Mapping shader_to_material_mapping;
-    u32 shader_to_material_count;
-
-
-    //TODO: some way to get the shader information by using the material handle
-    //all use the same index
-    Material_Record material_record[MAX_MATERIAL_COUNT];
-    Material materials[MAX_MATERIAL_COUNT];
-    u32 generation[MAX_MATERIAL_COUNT];
-    u64 material_record_count;
-    // u32 material_index_to_shader_index[MAX_MATERIAL_COUNT];
-
-    //TODO:
-    // u32* record_freelist[MAX_MATERIAL_COUNT];
-    // u64 record_freelist_count;
-
-    //we can have two buffers, the active one gets uploaded into the cpu,
-    // the second one, gets cleared then, traverses the material record and uploads data into it from the active buffer, updating the offsets
-    // then the next frame, we do a swap
-
-    uint8_t* material_buffer;
-    u64 material_buffer_offset;
-    u64 material_buffer_size;
-
-    Material_Handle default_handle;
-    u8 default_data_blob[1024]; //passed back as data to be edited even if by mistake
-
-} Material_System;
 
 
 //SPRITE
@@ -1107,6 +1149,31 @@ typedef struct Particle_System
     Allocator* allocator;
 } Particle_System;
 
+typedef struct Material_System2
+{
+    Allocator* material_allocator;
+
+    //the asset and material use the same handles for simplicity
+    Material_Asset material_assets[MAX_MATERIAL_COUNT]; // only kept loaded during development, TODO: heap allocate
+    Madness_Material materials[MAX_MATERIAL_COUNT];
+    u32 material_count;
+
+
+    Material_Record material_record[MAX_MATERIAL_COUNT];
+    u64 material_record_count;
+
+    uint8_t* material_buffer;
+    u64 material_buffer_offset;
+    u64 material_buffer_max_byte_size;
+
+    //fallback
+    Material_Handle default_handle;
+    u8 default_data_blob[MATERIAL_FALLBACK_BLOB_SIZE]; //passed back as data to be edited, but will do nothing
+
+
+    Asset_Runtime runtime_asset[MAX_MATERIAL_COUNT];
+    u32 runtime_asset_count;
+} Material_System2;
 
 //RENDER PACKET
 
@@ -1143,6 +1210,11 @@ typedef struct Render_Packet_3D
     ARRAY_TYPE(mat4)* skinned_matrix;
 } Render_Packet_3D;
 
+typedef struct Render_Packet_Material
+{
+    u8* material_buffer;
+    u64 material_buffer_byte_size;
+}Render_Packet_Material;
 
 typedef struct Render_Packet_UI
 {
@@ -1186,6 +1258,8 @@ typedef struct Render_Packet
 
     Render_Packet_3D draw_3d_data_packet;
     Render_Packet_Particle particle_packet;
+
+    Render_Packet_Material material_packet;
 } Render_Packet;
 
 
@@ -1236,16 +1310,20 @@ typedef struct Asset_System
     Reflection_Registry* global_reflection_registry; // ref
     Reflection_Registry* material_reflection_registry; // ref
 
-    // Shader_System* shader_system;
-    // Material_System* shader_system; //probably want a material system, but not a shader system here, but in the renderer
+    Material_System2* material_system;
+    Shader_System* shader_system;
+
+    Texture_System* texture_system;
+
     Sprite_System* sprite_system;
     Mesh_System* mesh_system;
-    Texture_System* texture_system;
-    Material_System* material_system;
     Scene* scene;
+
     Animation_System* animation_system;
 
     Particle_System* particle_system;
+
+
 
     //Render Packet
     Render_Packet* render_packet;
