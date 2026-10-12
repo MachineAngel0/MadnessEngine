@@ -641,12 +641,13 @@ bool _asset_load_material(Asset_System* asset_system, Asset_Record* meta_data, M
     if (!material_acquire(asset_system, asset_system->material_system, fptr, meta_data, out_material_handle))
     {
         MASSERT(false);
+        return false;
     }
 
 
     scratch_allocator_end(scratch);
 
-    return false;
+    return true;
 }
 
 bool asset_load_material_uuid(Asset_System* asset_system, MADNESS_UUID madness_uuid, Material_Handle* out_material)

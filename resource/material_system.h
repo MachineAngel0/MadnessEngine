@@ -124,44 +124,57 @@ void material_asset_set_default_textures(Asset_System* asset_system,
 }
 
 
-void material_create(Asset_System* asset_system, Shader_Handle shader_handle,
-                     const char* name, Material_Handle* out_handle)
+void material_create_or_get(Asset_System* asset_system, Shader_Handle shader_handle,
+                            const char* name, Material_Handle* out_handle)
 {
-    //TODO: check that this material, with the same material name and user defined name has not been create already
+    //TODO: check that this material, with the same material name and user defined name has not been create already, if it has just load that and return the handle
 
     //get the shader
     Shader_Asset* shader_asset = shader_asset_get(asset_system->shader_system, shader_handle);
-
 
     Material_Definition material_definition;
     shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, shader_asset, &material_definition);
     //I guess we would want to create both the material asset and the runtime material
 
-
+    // create the asset
     Material_Asset material_asset = {
         .shader_uuid = shader_asset->uuid,
         .material_uuid = madness_uuid_generate_return(),
         .reflection_hash = material_definition.runtime_reflection_hash,
         .material_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_definition.reflection_material_data.name,
-                                                             asset_system->material_system->material_allocator),
-        .name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(name, asset_system->material_system->material_allocator),
+                                                                asset_system->frame_allocator),
+        .name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(name, asset_system->frame_allocator),
         .data_size = material_definition.reflection_material_data.struct_size,
         .data = allocator_alloc(asset_system->material_system->material_allocator,
                                 material_definition.reflection_material_data.struct_size),
     };
 
+    String_Builder* str_builder =
+        material_asset_construct_path(&material_asset, asset_system->frame_allocator);
+    const char* path = string_builder_to_c_string(str_builder);
+    //if it exists load it in, otherwise create it
+    if (filesystem_does_file_exists(path))
+    {
+        asset_load_material_path(asset_system, path, out_handle);
+    }
+    else
+    {
 
-    //set default cpu data
-    material_asset_set_default_textures(asset_system,
-                                        &material_asset,
-                                        &material_definition);
+        //set default cpu data
+        material_asset_set_default_textures(asset_system,
+                                            &material_asset,
+                                            &material_definition);
+        // save it
+        asset_converter_material(asset_system,
+                                 &material_asset);
 
-    asset_converter_material(asset_system,
-                             &material_asset);
+
+        //load it in
+        asset_load_material_uuid(asset_system, material_asset.material_uuid, out_handle);
+    }
 
 
-    //load it in ??
-    asset_load_material_uuid(asset_system, material_asset.material_uuid, out_handle);
+
 }
 
 

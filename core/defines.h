@@ -21,7 +21,7 @@ typedef float f32;
 typedef double f64;
 
 // Boolean types
-typedef int b32;
+typedef uint32_t b32;
 
 
 // Properly define static assertions.

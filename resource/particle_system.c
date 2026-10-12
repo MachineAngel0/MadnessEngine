@@ -71,6 +71,7 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
                             "../z_assets/textures/kenney_particle-pack/PNG (Transparent)/circle_05.png", NULL);
     Texture_Handle handle =
         asset_load_texture_path(asset_system, "kenney_particle-pack/PNG (Transparent)/circle_05");
+
     for (u32 i = 0; i < ps->particles_count; i++)
     {
         ps->particles.texture_handle[i] = handle;

@@ -151,10 +151,12 @@ bool shader_mapping_get_definition(Shader_System* shader_system, const char* sha
 bool shader_mapping_get_definition_from_shader_asset(Shader_System* shader_system, Shader_Asset* shader_asset,
                                                      Material_Definition* out_defintion)
 {
+    Scratch_Allocator scratch_allocator = scratch_allocator_begin(shader_system->shader_asset_allocator);
     shader_mapping_get_definition(shader_system,
                                   string_to_c_string_allocator(shader_asset->shader_pipeline_state.shader_name,
-                                                               shader_system->shader_asset_allocator),
+                                                               scratch_allocator.allocator),
                                   out_defintion);
+     scratch_allocator_end(scratch_allocator);
 }
 
 

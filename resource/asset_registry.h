@@ -1,7 +1,6 @@
 ﻿#ifndef ASSET_REGISTRY_H
 #define ASSET_REGISTRY_H
 
-#include "asset_serialization.h"
 #include "resource_types.h"
 
 //AR = madness asset registry

@@ -337,6 +337,7 @@ typedef struct Texture_Sampler
 
 typedef struct Texture_Asset
 {
+    //TODO:
     u8 version;
     MADNESS_UUID uuid;
 

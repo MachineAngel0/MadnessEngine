@@ -116,7 +116,7 @@ void particle_emitter_create_default(Asset_System* asset_system,
     shader_create_or_get(asset_system, &default_particle_material_info, &shader_handle);
 
     Material_Handle material_handle;
-    material_create(asset_system, shader_handle, emitter_name, &material_handle);
+    material_create_or_get(asset_system, shader_handle, emitter_name, &material_handle);
 
     Material_Asset* asset = material_system_get_asset(asset_system->material_system, material_handle);
 
