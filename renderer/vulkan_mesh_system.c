@@ -411,10 +411,10 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
 }
 
 
-int vulkan_mesh_sort_key(void* const render_item1, Mesh_Render_Item* render_item2)
+int vulkan_mesh_sort_key(const void*  render_item1, const void*  render_item2)
 {
-    Mesh_Render_Item* p1 = render_item1;
-    Mesh_Render_Item* p2 = render_item2;
+    Mesh_Render_Item* p1 = (Mesh_Render_Item*)render_item1;
+    Mesh_Render_Item* p2 = (Mesh_Render_Item*)render_item2;
     return cmp_u64(&p1->sort_key, &p2->sort_key);
 }
 

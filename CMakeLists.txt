@@ -206,8 +206,8 @@ if (UNIX)
             X11-xcb
             xcb
             m #linux math library
-            libpthread # required for tracy
-            libdl # required for tracy
+            pthread # required for tracy
+            dl # required for tracy
     )
     foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
         target_link_libraries(${tgt} PRIVATE ${MADNESS_UNIX_LIBS})

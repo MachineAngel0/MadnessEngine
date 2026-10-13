@@ -56,15 +56,9 @@ static Platform_State* linux_plat_state;
 
 bool platform_startup(
     Platform_State* plat_state,
-    Input_System* input_system,
-    Event_System* event_system,
     Platform_Config platform_config)
 {
     //set pointers needed by the platform
-    MASSERT(event_system);
-    MASSERT(input_system);
-    plat_state->event_system = event_system;
-    plat_state->input_system = input_system;
 
     const char* session = getenv("XDG_SESSION_TYPE");
     if (session && strcmp(session, "wayland") == 0)
@@ -95,6 +89,8 @@ bool platform_startup(
         return false;
     }
 
+    INFO("linux wayland connected to display");
+
     struct wl_registry* registry = wl_display_get_registry(state->display);
     const struct wl_registry_listener* listener;
     int result_listener = wl_registry_add_listener(registry, listener, NULL);
@@ -109,7 +105,7 @@ bool platform_startup(
     wl_compositor_create_surface(compositor);
 
     // xdg_toplevel_set_title()
-    xdg
+    // xdg
 
     return true;
 }
@@ -118,8 +114,6 @@ void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
     Linux_Wawyland_Internal_State* state = (Linux_Wawyland_Internal_State*)plat_state->internal_state;
-
-
 }
 
 bool platform_pump_messages(Platform_State* plat_state)
@@ -130,7 +124,6 @@ bool platform_pump_messages(Platform_State* plat_state)
 
 
     bool quit_flagged = false;
-
 
 
     return !quit_flagged;
@@ -325,19 +318,20 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, vulkan_context* 
 
 void platform_get_window_size(s32* width, s32* height)
 {
-    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->internal_state;
-
+    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->
+        internal_state;
 }
 
 void platform_get_window_pos(s32* x, s32* y)
 {
-    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->internal_state;
-
+    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->
+        internal_state;
 }
 
 void platform_set_cursor_pos(int x, int y)
 {
-    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->internal_state;
+    Linux_Wawyland_Internal_State* linux_internal_state = (Linux_Wawyland_Internal_State*)linux_plat_state->
+        internal_state;
 }
 
 void platform_generate_uuid(u64* high, u64* low)
@@ -361,7 +355,6 @@ void platform_generate_uuid(u64* high, u64* low)
 // Key translation
 keys translate_keycode(u32 x_keycode)
 {
-
 }
 
 

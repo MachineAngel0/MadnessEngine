@@ -1,5 +1,6 @@
 ﻿#include "defines.h"
 #include "memory_system.h"
+#include "reflection_system.h"
 
 int main(void)
 {

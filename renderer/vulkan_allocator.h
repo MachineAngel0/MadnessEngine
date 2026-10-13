@@ -47,7 +47,9 @@ void* vulkan_malloc_alloc(void* pUserData,
     printf("malloc - size: %zu alignment: %zu, scope: %s\n", size, alignment,
            vulkan_malloc_describe_scope(allocationScope));
 
-    return _aligned_malloc(size, alignment);
+    //NOTE: doesn't work on linux
+    // return _aligned_malloc(size, alignment);
+    return malloc(size);
 }
 
 void* vulkan_malloc_realloc(void* pUserData,
@@ -58,14 +60,18 @@ void* vulkan_malloc_realloc(void* pUserData,
 {
     printf("remalloc - size: %zu alignment: %zu, scope: %s", size, alignment,
            vulkan_malloc_describe_scope(allocationScope));
-    return _aligned_realloc(pOriginal, size, alignment);
+    //NOTE: doesn't work on linux
+    // return _aligned_realloc(pOriginal, size, alignment);
+    return realloc(pOriginal, size);
 }
 
 void vulkan_malloc_free(void* pUserData,
                         void* pMemory)
 {
     printf("free\n");
-    _aligned_free(pMemory);
+    //NOTE: doesn't work on linux
+    // _aligned_free(pMemory);
+    return free(pMemory);
 }
 
 void vulkan_malloc_internal_alloc_notification(void* pUserData,

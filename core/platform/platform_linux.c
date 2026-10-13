@@ -31,6 +31,8 @@
 #include "input.h"
 #include "event.h"
 #include "c_string.h"
+#include "logger.h"
+
 
 #include <sys/sendfile.h>
 #include <dlfcn.h>
@@ -399,6 +401,12 @@ void platform_get_cursor_pos(int* out_x, int* out_y)
 {
 }
 
+void platform_set_cursor_type(Platform_Cursor_Type cursor_type)
+{
+    //does nothing rn
+    return;
+}
+
 void platform_windows_resize(Platform_State* platform_state, int width, int height)
 {
 }
@@ -677,7 +685,8 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
     VkResult result = vkCreateXcbSurfaceKHR(
         renderer->instance,
         &create_info,
-        renderer->vulkan_allocator,
+        // renderer->vulkan_allocator,
+        NULL,
         &state->surface);
     if (result != VK_SUCCESS)
     {

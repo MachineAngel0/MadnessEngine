@@ -1,4 +1,6 @@
 ﻿#include "asset_registry.h"
+#include "asserts.h"
+#include "asset_converter.h"
 
 
 bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_registry, Heap_Allocator* allocator,
@@ -128,7 +130,7 @@ void asset_registry_scan_for_new_assets(Asset_System* asset_system, Asset_Regist
         switch (asset_type)
         {
         case ASSET_TEXTURE:
-            MADNESS_UUID uuid;
+            MADNESS_UUID uuid = {0};
             asset_converter_texture(asset_system, file_path, &uuid);
             break;
         case ASSET_FONT:
