@@ -3236,7 +3236,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             madness_ui_u8(*custom_name, data, 1);
             break;
         case REFLECTION_TYPE_U16:
-            madness_ui_u16(*custom_name, data, 1);
+            madness_ui_u16(*custom_name, (u16*)data, 1);
             break;
         case REFLECTION_TYPE_U32:
             madness_ui_u32(*custom_name, data, 1);
@@ -3341,7 +3341,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             //TODO: this is just an idea, you would want to get the name first before changing it
             // madness_ui_file_picker(*custom_name);
 
-            MADNESS_UUID* uuid = data;
+            MADNESS_UUID uuid = *(MADNESS_UUID*)data;
             // madness_ui_string(*asset_meta_data.engine_path);
 
 
@@ -3349,7 +3349,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
 
             Asset_Record asset_meta_data = {0};
             if (asset_registry_exists_by_uuid(asset_registry,
-                                              *uuid,
+                                              uuid,
                                               &asset_meta_data))
             {
                 for (u32 i = 0; i < texture_asset_list_scan->count; i++)
@@ -3378,9 +3378,9 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
                     madness_ui_string(STRING("ERROR, TEXTURE NOT FOUND IN ASSET REGISTRY"));
                 }
             }
-            madness_ui_u64(STRING("high"), &uuid->high, 0);
+            madness_ui_u64(STRING("high"), &uuid.high, 0);
             madness_ui_same_line();
-            madness_ui_u64(STRING("low"), &uuid->low, 0);
+            madness_ui_u64(STRING("low"), &uuid.low, 0);
 
             break;
         case REFLECTION_TYPE_MAX:

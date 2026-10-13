@@ -1358,7 +1358,7 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shad
     return true;
 }
 
-MAPI bool asset_converter_material(Asset_System* asset_system,
+ bool asset_converter_material(Asset_System* asset_system,
                                    Material_Asset* material_asset)
 {
     PROFILE_ZONE(asset_converter_material_instance)

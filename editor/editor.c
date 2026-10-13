@@ -1236,7 +1236,6 @@ void editor_material_editor(Editor* editor)
         }
 
 
-
         String material_asset_name = STRING("material path");
         madness_ui_file_picker(material_asset_name);
         if (madness_ui_button(STRING("LOAD MATERIAL ASSET")))
@@ -1262,6 +1261,14 @@ void editor_material_editor(Editor* editor)
         {
             Material_Asset* mat = material_system_get_asset(asset_system->material_system, handle);
             material_system_get_asset(asset_system->material_system, handle);
+            // Material_Spherical_Billboard_CPU* mat_cast = mat->data;
+            if (madness_ui_button(STRING("SAVE MATERIAL ASSET")))
+            {
+                asset_converter_material(asset_system, mat);
+            }
+
+
+
 
             Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
                 asset_system->global_reflection_registry,
@@ -1272,15 +1279,14 @@ void editor_material_editor(Editor* editor)
             madness_ui_reflect_material(editor->asset_system->asset_registry,
                                         asset_system->global_reflection_registry,
                                         material_reflect_struct,
-                                        &mat->data,
+                                        mat->data,
                                         "mat",
                                         editor->texture_list);
 
 
             //TODO: show gpu data
-            Material_Definition material_definition =  material_system_get_material_definition(asset_system, handle);
+            Material_Definition material_definition = material_system_get_material_definition(asset_system, handle);
             void* mat_data = material_system_get_material_data(asset_system->material_system, handle);
-
         }
     }
     madness_ui_window_end();
@@ -1336,10 +1342,7 @@ void editor_material_editor(Editor* editor)
 
             madness_ui_u64(STRING("SHADER PIPELINE HASH:"), &asset->shader_pipeline_hash, 0);
             madness_ui_u64(STRING("SHADER INFO: KEY"), &asset->shader_key, 0);
-
         }
-
-
     }
     madness_ui_window_end();
 }

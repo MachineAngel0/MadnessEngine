@@ -88,13 +88,9 @@ typedef struct Material_Spherical_Billboard
 
 typedef struct Material_Spherical_Billboard_CPU
 {
-    vec3s point;
     MADNESS_UUID texture_idx;
-    vec2s size; //also a radius
-    vec2s rotation;
-    vec4s color; //tint basically
-    // vec2s tex_offset;
-    // vec2s tex_size;
+    vec2 uv_offset;
+    vec2 uv_size;
 } Material_Spherical_Billboard_CPU;
 
 #endif //MATERIAL_TYPES_H
