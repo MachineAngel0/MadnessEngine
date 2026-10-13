@@ -11,62 +11,19 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 
-    u64 particle_material_buffer_data_size = sizeof(Material_Spherical_Billboard) * MAX_PARTICLE_COUNT;
+    u64 particle_renderable_size = sizeof(Particle) * MAX_PARTICLE_COUNT;
+    u64 particle_draw_data_size = sizeof(Vulkan_Particle_Draw) * MAX_PARTICLE_COUNT;
 
 
-    particle_renderer->spherical_billboard_material_buffer_handle = vulkan_buffer_create_frame(
+    particle_renderer->particle_render_data_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        particle_material_buffer_data_size);
-
-    particle_renderer->spherical_billboard_material_buffer_handle_new = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        particle_material_buffer_data_size);
-
-
-    particle_renderer->particle_pos_x_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-    particle_renderer->particle_pos_y_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-    particle_renderer->particle_pos_z_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-
-
-    particle_renderer->particle_rot_x_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-    particle_renderer->particle_rot_y_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-
-    particle_renderer->particle_scale_x_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-    particle_renderer->particle_scale_y_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(f32) * MAX_PARTICLE_COUNT);
-
-
-    particle_renderer->particle_color_buffer_handle = vulkan_buffer_create_frame(
-        renderer, renderer->buffer_system,
-        BUFFER_TYPE_STORAGE_GPU,
-        sizeof(vec4) * MAX_PARTICLE_COUNT);
+        particle_renderable_size);
 
     particle_renderer->particle_draw_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Vulkan_Particle_Draw) * MAX_PARTICLE_COUNT);
+        particle_draw_data_size);
 
 
     //default blend for now
@@ -101,11 +58,13 @@ int vulkan_particle_sort_key(const void* draw1, const void* draw2)
     return cmp_u64(&p1.shader_key, &p2.shader_key);
 }
 
+
 void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* particle_render,
                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
 {
     PROFILE_ZONE(particle_renderer_upload_data_draw)
 
+    Render_Packet_Particle* particle_packet = &render_packet->particle_packet;
 
     Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
 
@@ -114,110 +73,53 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
 
     //update the particle buffer every frame
     //OPTIMIZE: make particles material shader friendly, but obv it can wait
-    particle_render->draw_count = render_packet->particle_packet.particle_count;
 
 
-    Material_Spherical_Billboard* mat_array = allocator_alloc(scratch.allocator,
-                                                              sizeof(Material_Spherical_Billboard) * render_packet->
-                                                              particle_packet.particle_count);
+    //NOTE: WE COULD SORT BY EMITTERS FOR TRANSPARNECY AND USE THE DYNAMIC ARRAY TO APPEND TO THE DRAW LIST
 
-    Render_Packet_Particle* render_packet_particle = &render_packet->particle_packet;
-    Particle* particle = render_packet->particle_packet.particles;
+    //we could try getting the alive count to properly size this if memory is an issue
+    Vulkan_Particle_Draw* particle_draw_data = allocator_alloc(&renderer->frame_allocator,
+                                                          sizeof(Vulkan_Particle_Draw) * particle_packet->
+                                                          particle_count);
+    particle_render->particle_draw_count = 0;
 
-    for (u32 i = 0; i < render_packet_particle->particle_count; i++)
+    for (u32 i = 0; i < particle_packet->particle_count; i++)
     {
-        mat_array[i].point = (vec3s){
-            .x = particle->pos_x[i],
-            .y = particle->pos_y[i],
-            .z = particle->pos_z[i]
+        Particle* particle = &particle_packet->particles[i];
+        if (particle->life_left <= 0) { continue; }
+
+        particle_draw_data[particle_render->particle_draw_count++] = (Vulkan_Particle_Draw){
+            .shader_key = particle_packet->particles[i].shader_key,
+            .material_index = particle_packet->particles[i].material_idx,
+            .particle_index = i,
         };
-        mat_array[i].rotation = (vec2s){.x = particle->rot_x[i], .y = particle->rot_y[i]};
-        mat_array[i].size = (vec2s){.x = particle->scale_x[i], .y = particle->scale_y[i]};
-        mat_array[i].texture_idx = particle->texture_handle[i].handle;
-        mat_array[i].color = particle->color[i];
-        // TODO:
-        // billboard_spherical_material.color
-        // render_packet->particle_packet.particles[i].tex_size;
-        // render_packet->particle_packet.particles[i].tex_offset;
     }
 
+    MASSERT(particle_render->particle_draw_count <= particle_packet->particle_count);
 
-    //
+
+    //TODO: sort the particles by shader key
+    // qsort(particle_render->particle_draw, particle_render->particle_draw_count, sizeof(Vulkan_Particle_Draw), vulkan_particle_sort_key);
+
+
+    //upload render data
     vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->spherical_billboard_material_buffer_handle,
+        renderer, particle_render->particle_render_data_buffer_handle,
         command_buffer,
-        mat_array,
-        sizeof(Material_Spherical_Billboard) * render_packet->particle_packet.particle_count);
+        particle_packet->particles,
+        sizeof(Particle) * particle_packet->particle_count);
 
+
+    //upload particle draw data
     vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_pos_x_buffer_handle,
+        renderer, particle_render->particle_draw_buffer_handle,
         command_buffer,
-        particle->pos_x,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_pos_y_buffer_handle,
-        command_buffer,
-        particle->pos_y,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_pos_z_buffer_handle,
-        command_buffer,
-        particle->pos_z,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_rot_x_buffer_handle,
-        command_buffer,
-        particle->rot_x,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_rot_y_buffer_handle,
-        command_buffer,
-        particle->rot_y,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_scale_x_buffer_handle,
-        command_buffer,
-        particle->scale_x,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_scale_y_buffer_handle,
-        command_buffer,
-        particle->scale_y,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
-
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_color_buffer_handle,
-        command_buffer,
-        particle->color,
-        sizeof(f32) * render_packet->particle_packet.particle_count);
+        particle_draw_data,
+        // sizeof(Vulkan_Particle_Draw) * particle_packet->particle_count);
+        sizeof(Vulkan_Particle_Draw) * particle_render->particle_draw_count);
 
 
-    Vulkan_Buffer* spherical_material_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->spherical_billboard_material_buffer_handle);
-
-    Vulkan_Buffer* pos_x_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_pos_x_buffer_handle);
-    Vulkan_Buffer* pos_y_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_pos_y_buffer_handle);
-    Vulkan_Buffer* pos_z_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_pos_z_buffer_handle);
-
-    Vulkan_Buffer* rot_x_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_rot_x_buffer_handle);
-    Vulkan_Buffer* rot_y_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_rot_y_buffer_handle);
-
-    Vulkan_Buffer* scale_x_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_scale_x_buffer_handle);
-    Vulkan_Buffer* scale_y_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_scale_y_buffer_handle);
-
-    Vulkan_Buffer* color_buffer = vulkan_buffer_get_frame(
-        renderer, particle_render->particle_color_buffer_handle);
-
-    VkBufferMemoryBarrier2 particle_barrier = {
+    VkBufferMemoryBarrier2 particle_render_data_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
         .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
         .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -227,66 +129,29 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
-        .buffer = spherical_material_buffer->handle,
+        .buffer = vulkan_buffer_get_frame(renderer, particle_render->particle_render_data_buffer_handle)->handle,
         .offset = 0,
         .size = VK_WHOLE_SIZE,
     };
 
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    VkBufferMemoryBarrier2 particle_draw_data_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, particle_render->particle_draw_buffer_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
 
 
-    particle_barrier.buffer = pos_x_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-    particle_barrier.buffer = pos_y_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-    particle_barrier.buffer = pos_z_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-
-    particle_barrier.buffer = rot_x_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-    particle_barrier.buffer = rot_y_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-
-    particle_barrier.buffer = scale_x_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-    particle_barrier.buffer = scale_y_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-
-    particle_barrier.buffer = color_buffer->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
-
-
-    //OPTIMIZE: technically since we have a dead list with a count we know the size of the particles alive
-    //  and we can also keep an alive list during emission if we really wnt
-    //construct the alive particle list
-    particle_render->particle_draw = allocator_alloc(&renderer->frame_allocator,
-                                                     sizeof(Vulkan_Particle_Draw) * render_packet->
-                                                     particle_packet.particle_count);
-    particle_render->particle_draw_count = 0;
-    for (u32 i = 0; i < render_packet_particle->particle_count; i++)
-    {
-        if (render_packet->particle_packet.particles->life_left[i] > 0)
-        {
-            // particle_draw[particle_draw_count].material_key = render_packet->particle_packet.particles->material_key[i];
-            particle_render->particle_draw[particle_render->particle_draw_count].shader_key = rand_range_i(0, 789);
-            particle_render->particle_draw[particle_render->particle_draw_count].material_index = render_packet->
-                particle_packet.particles->material_id[i];
-            particle_render->particle_draw[particle_render->particle_draw_count].particle_index = i;
-            particle_render->particle_draw_count++;
-        }
-    }
-    //sort the particles by material key
-    qsort(particle_render->particle_draw, particle_render->particle_draw_count, sizeof(Vulkan_Particle_Draw),
-          vulkan_particle_sort_key);
-
-    vulkan_buffer_frame_staging_upload(
-        renderer, particle_render->particle_draw_buffer_handle,
-        command_buffer,
-        particle_render->particle_draw,
-        sizeof(Vulkan_Particle_Draw) * particle_render->particle_draw_count);
-
-    particle_barrier.buffer = vulkan_buffer_get_frame(renderer, particle_render->particle_draw_buffer_handle)->handle;
-    vulkan_command_add_buffer_barrier(command_buffer, particle_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, particle_render_data_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, particle_draw_data_barrier);
 
 
     vulkan_command_flush_barriers(command_buffer);
@@ -300,92 +165,85 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
     PROFILE_ZONE_END(particle_renderer_upload_data_draw)
 }
 
+
 void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_render,
                                   Vulkan_Command_Buffer* command_buffer)
 {
-    // particle_ssbo[]
-    // material_ssbo[] - material2_ssbo[]
-    // e1|e2 (mat instance) - e1 (mat instance 2)
+    if (particle_render->particle_draw_count == 0) { return; }
 
-    //TODO: issue a draw for material range in the particle draw
+    vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "PARTICLE DRAW");
 
+    /*
+     u64 current_key = particle_render->particle_draw[0].shader_key;
+    u64 last_idx = 0;
+    u64 current_idx = 0;
 
-
-    //TODO: remove when we finally want to test it
-    bool do_it = false;
-    if (do_it)
+    while (last_idx <= particle_render->particle_draw_count)
     {
-        if (particle_render->particle_draw_count == 0) { return; }
-        u64 current_key = particle_render->particle_draw[0].shader_key;
-        u64 last_idx = 0;
-        u64 current_idx = 0;
-        while (last_idx <= particle_render->particle_draw_count)
+        if (current_key != particle_render->particle_draw[current_idx].shader_key)
         {
-            if (current_key != particle_render->particle_draw[current_idx].shader_key)
-            {
-                //find the batch and do a draw over the range
-                Vulkan_Shader_Batch* batch = vulkan_shader_system_shader_get_by_key(
-                    renderer, current_key);
+            //find the batch and do a draw over the range
+            Vulkan_Shader_Batch* batch = vulkan_shader_system_shader_get_by_key(
+                renderer, current_key);
 
-                //uniform
-                vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        batch->pipeline.pipeline_layout, 0, 1,
-                                        &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
-                                            current_frame],
-                                        0, 0);
+            //uniform
+            vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    batch->pipeline.pipeline_layout, 0, 1,
+                                    &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
+                                        current_frame],
+                                    0, 0);
 
-                //textures
-                vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        batch->pipeline.pipeline_layout, 1, 1,
-                                        &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
+            //textures
+            vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    batch->pipeline.pipeline_layout, 1, 1,
+                                    &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
 
-                //storage buffers
-                vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        batch->pipeline.pipeline_layout, 2, 1,
-                                        &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
-                                            current_frame],
-                                        0, 0);
+            //storage buffers
+            vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    batch->pipeline.pipeline_layout, 2, 1,
+                                    &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
+                                        current_frame],
+                                    0, 0);
 
 
-                PC_Particle pc_particle = {
-                    //TODO: set the proper material buffer
-                    .material_buffer = get_buffer_device_address(renderer->logical_device,
-                                                                 vulkan_buffer_get_frame(
-                                                                     renderer,
-                                                                     particle_render->
-                                                                     spherical_billboard_material_buffer_handle)->
-                                                                 handle),
-                    .particle_draw_buffer = get_buffer_device_address(renderer->logical_device,
-                                                                      vulkan_buffer_get_frame(
-                                                                          renderer,
-                                                                          particle_render->particle_draw_buffer_handle)
-                                                                      ->
-                                                                      handle),
-                };
+            PC_Particle pc_particle = {
+                //TODO: set the proper material buffer
+                .material_buffer = get_buffer_device_address(renderer->logical_device,
+                                                             vulkan_buffer_get_frame(
+                                                                 renderer,
+                                                                 particle_render->
+                                                                 spherical_billboard_material_buffer_handle)->
+                                                             handle),
+                .particle_draw_buffer = get_buffer_device_address(renderer->logical_device,
+                                                                  vulkan_buffer_get_frame(
+                                                                      renderer,
+                                                                      particle_render->particle_draw_buffer_handle)
+                                                                  ->
+                                                                  handle),
+            };
 
-                VkPushConstantsInfo push_constant_info_ui = {0};
-                push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-                push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-                push_constant_info_ui.layout = particle_render->spherical_billboard_pipeline.pipeline_layout;
-                push_constant_info_ui.offset = 0;
-                push_constant_info_ui.size = sizeof(PC_Particle);
-                push_constant_info_ui.pValues = &pc_particle;
-                push_constant_info_ui.pNext = NULL;
-
-
-                vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                  batch->pipeline.handle);
-                vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
+            VkPushConstantsInfo push_constant_info_ui = {0};
+            push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+            push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            push_constant_info_ui.layout = particle_render->spherical_billboard_pipeline.pipeline_layout;
+            push_constant_info_ui.offset = 0;
+            push_constant_info_ui.size = sizeof(PC_Particle);
+            push_constant_info_ui.pValues = &pc_particle;
+            push_constant_info_ui.pNext = NULL;
 
 
-                vkCmdDraw(command_buffer->handle, 6,
-                          current_idx - last_idx, 0,
-                          0);
-            }
-            current_idx++;
+            vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              batch->pipeline.handle);
+            vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
+
+
+            vkCmdDraw(command_buffer->handle, 6,
+                      current_idx - last_idx, 0,
+                      0);
         }
+        current_idx++;
     }
-    //TODO: we want to issue a draw for the last bit of data left
+    //TODO: we want to issue a draw for the last bit of data left*/
 
 
     //uniform
@@ -406,17 +264,16 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
                             0, 0);
 
     PC_Particle pc_particle = {
-        .material_buffer = get_buffer_device_address(renderer->logical_device,
-                                                     vulkan_buffer_get_frame(
-                                                         renderer,
-                                                         particle_render->
-                                                         spherical_billboard_material_buffer_handle)->
-                                                     handle),
+        .particle_render_data_buffer = get_buffer_device_address(renderer->logical_device,
+                                                                 vulkan_buffer_get_frame(
+                                                                     renderer,
+                                                                     particle_render->
+                                                                     particle_render_data_buffer_handle)->
+                                                                 handle),
         .particle_draw_buffer = get_buffer_device_address(renderer->logical_device,
                                                           vulkan_buffer_get_frame(
                                                               renderer,
-                                                              particle_render->
-                                                              spherical_billboard_material_buffer_handle)->
+                                                              particle_render->particle_draw_buffer_handle)->
                                                           handle),
     };
 
@@ -436,6 +293,9 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
 
 
     vkCmdDraw(command_buffer->handle, 6,
-              particle_render->draw_count, 0,
+              particle_render->particle_draw_count, 0,
               0);
+
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 }

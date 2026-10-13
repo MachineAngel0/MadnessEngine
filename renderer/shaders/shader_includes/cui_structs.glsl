@@ -53,8 +53,7 @@ layout(buffer_reference, scalar) readonly buffer CUI_Data_Buffer
 layout(push_constant, scalar) uniform PushConstant_CUI
 {
     CUI_Data_Buffer cui_ssbo;
-    uint padding1;
-    uint padding2;
+    uint64_t padding1;
 } PC_CUI;
 
 

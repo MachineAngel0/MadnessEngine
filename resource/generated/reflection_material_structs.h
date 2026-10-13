@@ -288,34 +288,22 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	Reflection_Runtime_Struct_Field Material_Spherical_Billboard_Fields[] =
 	{
 		{
-			.name = "point",
-			.type = REFLECTION_TYPE_VEC3,
-			.type_name = "vec3s",
-			.offset = offsetof(Material_Spherical_Billboard, point)
-		},
-		{
 			.name = "texture_idx",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
 			.offset = offsetof(Material_Spherical_Billboard, texture_idx)
 		},
 		{
-			.name = "size",
+			.name = "uv_offset",
 			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Material_Spherical_Billboard, size)
+			.type_name = "vec2",
+			.offset = offsetof(Material_Spherical_Billboard, uv_offset)
 		},
 		{
-			.name = "rotation",
+			.name = "uv_size",
 			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Material_Spherical_Billboard, rotation)
-		},
-		{
-			.name = "color",
-			.type = REFLECTION_TYPE_VEC4,
-			.type_name = "vec4s",
-			.offset = offsetof(Material_Spherical_Billboard, color)
+			.type_name = "vec2",
+			.offset = offsetof(Material_Spherical_Billboard, uv_size)
 		},
 	};
 
@@ -323,7 +311,7 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	{
 		.name = "Material_Spherical_Billboard",
 		.fields = Material_Spherical_Billboard_Fields,
-		.field_count = 5,
+		.field_count = 3,
 		.struct_size = sizeof(Material_Spherical_Billboard)
 	};
 

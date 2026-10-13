@@ -771,6 +771,8 @@ bool vulkan_device_create2(Renderer* renderer)
         .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
         .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
         .descriptorBindingVariableDescriptorCount = VK_TRUE,
+        .shaderInt8 = VK_TRUE,
+        .storageBuffer8BitAccess = VK_TRUE,
         .pNext = &enable_vulkan13_features,
     };
     VkPhysicalDeviceVulkan11Features enable_vulkan11_features =
@@ -786,6 +788,7 @@ bool vulkan_device_create2(Renderer* renderer)
         .samplerAnisotropy = VK_TRUE,
         .multiDrawIndirect = VK_TRUE,
         .fillModeNonSolid = VK_TRUE,
+        .shaderInt64 = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures2 enable_device_features2 = {

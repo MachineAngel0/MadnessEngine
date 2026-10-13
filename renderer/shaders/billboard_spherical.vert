@@ -6,7 +6,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_buffer_reference : require
-
+#extension GL_EXT_buffer_reference2 : require
 
 #include "shader_includes/test_uniform.glsl"
 //#include "shader_includes/particle.glsl"
@@ -15,17 +15,33 @@
 
 
 
-
 struct Spherical_Billboard{
-    vec3 position;
     uint texture_idx;
-    vec2 size;//also a radius
-    vec2 rotation;// should be one rotation in radians
-    vec4 color; //tint basically
+    vec2 uv_offset;
+    vec2 uv_size;
 };
 
-layout(buffer_reference, scalar) readonly buffer Spherical_Billboard_Buffer{
-    Spherical_Billboard data[];
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Spherical_Billboard_Buffer {
+    Spherical_Billboard data;
+};
+
+
+
+struct Particle_Renderable{
+    vec3 position;
+    vec2 rotation;
+    vec2 size;
+    vec4 color;
+
+    float life_left;
+    vec3 velocity;
+    vec3 gravity;
+    uint material_idx;
+    uint64_t shader_key;
+};
+
+layout(buffer_reference, scalar) readonly buffer Particle_Renderable_Buffer{
+    Particle_Renderable data[];
 };
 
 
@@ -41,8 +57,8 @@ layout(buffer_reference, scalar) readonly buffer Particle_Draw_Buffer{
 
 
 layout(push_constant, scalar) uniform PC_PARTICLE{
-    Spherical_Billboard_Buffer material_buffer;
-    Particle_Draw particle_draw_data;
+    Particle_Renderable_Buffer particle_renderable;
+    Particle_Draw_Buffer particle_draw;
 }pc;
 
 const vec2 corners[4] = vec2[](
@@ -71,13 +87,23 @@ layout(location = 2) out flat uint out_texture_idx;
 void main() {
 
     uint instance_idx = gl_InstanceIndex;
-    Spherical_Billboard billboard_data = pc.material_buffer.data[instance_idx];
+
+    Particle_Draw draw_data = pc.particle_draw.data[instance_idx];
+
+    Particle_Renderable renderable = pc.particle_renderable.data[draw_data.particle_index];
+
+    Material_Record record = ubo.material_record_buffer.data[draw_data.material_id];
+
+    Spherical_Billboard billboard_data =
+    Spherical_Billboard_Buffer(uint64_t(ubo.material_buffer) + record.offset).data;
+
+
     out_texture_idx = billboard_data.texture_idx;
 
-    out_color = billboard_data.color;
+    out_color = renderable.color;
 
-    float half_size_x = billboard_data.size.x * 0.5;
-    float half_size_y = billboard_data.size.y * 0.5;
+    float half_size_x = renderable.size.x * 0.5;
+    float half_size_y = renderable.size.y * 0.5;
 
 
     int idx = indices[gl_VertexIndex];
@@ -90,19 +116,19 @@ void main() {
     //    vec3 cameraRight = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
     vec3 world_up = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
 
-    vec3 to_camera = normalize(ubo.camera_position.xyz - billboard_data.position.xyz);
+    vec3 to_camera = normalize(ubo.camera_position.xyz - renderable.position.xyz);
 
     vec3 vector_right = normalize(cross(world_up, to_camera));// right
     vec3 vector_up = normalize(cross(to_camera, vector_right));// up
 
-    float c = cos(billboard_data.rotation.x);
-    float s = sin(billboard_data.rotation.x);
+    float c = cos(renderable.rotation.x);
+    float s = sin(renderable.rotation.x);
 
     vec3 rotated_right = vector_right * c + vector_up * s;
     vec3 rotated_up = -vector_right * s + vector_up * c;
 
     vec3 world_pos =
-    billboard_data.position +
+    renderable.position +
     rotated_right * corner.x * half_size_x +
     rotated_up * corner.y * half_size_y;
 

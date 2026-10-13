@@ -2,7 +2,10 @@
 #extension GL_EXT_scalar_block_layout: require
 #extension GL_EXT_buffer_reference : require
 #extension GL_ARB_shader_draw_parameters : enable
-
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int8  : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference2 : require
 
 //NOTE: ambient can also refer to color
 struct directional_light_data{
@@ -87,6 +90,29 @@ layout(buffer_reference, scalar) readonly buffer Transform_Buffer{
 };
 
 
+//material
+struct Material_Record{
+    uint64_t offset;
+    uint64_t size;
+};
+
+layout(buffer_reference, scalar) readonly buffer Material_Record_Buffer{
+    Material_Record data[];
+};
+
+
+layout(buffer_reference, scalar) readonly buffer Material_Buffer{
+    uint8_t material_data[];
+};
+
+
+
+
+
+
+
+
+
 //Set 0 = global data
 //Set 1 = textures
 //Set 2 = buffers (not in use)
@@ -128,6 +154,10 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
     Skinned_Matrix_Buffer skinned_matrix_buffer;
 
     Transform_Buffer transform_buffer;
+
+
+    Material_Buffer material_buffer;
+    Material_Record_Buffer material_record_buffer;
 
 
 }ubo;

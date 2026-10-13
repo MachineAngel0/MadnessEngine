@@ -18,6 +18,7 @@ const char* resources_struct_string_list[] = {
 	"Asset_Record", 
 	"Asset_Runtime", 
 	"Texture_Sampler", 
+	"Texture_Asset", 
 	"Madness_Texture", 
 	"Texture_GPU_Upload", 
 	"Madness_Texture_Runtime", 
@@ -491,6 +492,92 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Texture_Sampler_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Texture_Asset_Fields[] =
+	{
+		{
+			.name = "version",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Texture_Asset, version)
+		},
+		{
+			.name = "uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Texture_Asset, uuid)
+		},
+		{
+			.name = "type",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Texture_Type",
+			.offset = offsetof(Texture_Asset, type)
+		},
+		{
+			.name = "width",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Texture_Asset, width)
+		},
+		{
+			.name = "height",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Texture_Asset, height)
+		},
+		{
+			.name = "channels",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Texture_Asset, channels)
+		},
+		{
+			.name = "format",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Texture_Format",
+			.offset = offsetof(Texture_Asset, format)
+		},
+		{
+			.name = "filter",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Texture_Filter",
+			.offset = offsetof(Texture_Asset, filter)
+		},
+		{
+			.name = "wrap",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Texture_Wrap",
+			.offset = offsetof(Texture_Asset, wrap)
+		},
+		{
+			.name = "sampler",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Texture_Sampler",
+			.offset = offsetof(Texture_Asset, sampler)
+		},
+		{
+			.name = "create_sampler",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Texture_Asset, create_sampler)
+		},
+		{
+			.name = "pixel_data",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Texture_Asset, pixel_data)
+		},
+	};
+
+	 Reflection_Runtime_Struct Texture_Asset_Runtime_Struct =
+	{
+		.name = "Texture_Asset",
+		.fields = Texture_Asset_Fields,
+		.field_count = 12,
+		.struct_size = sizeof(Texture_Asset)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Texture_Asset_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Texture_Fields[] =
 	{
@@ -987,46 +1074,22 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Particle_Fields[] =
 	{
 		{
-			.name = "pos_x",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, pos_x)
+			.name = "position",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle, position)
 		},
 		{
-			.name = "pos_y",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, pos_y)
+			.name = "rotation",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Particle, rotation)
 		},
 		{
-			.name = "pos_z",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, pos_z)
-		},
-		{
-			.name = "rot_x",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, rot_x)
-		},
-		{
-			.name = "rot_y",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, rot_y)
-		},
-		{
-			.name = "scale_x",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, scale_x)
-		},
-		{
-			.name = "scale_y",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, scale_y)
+			.name = "scale",
+			.type = REFLECTION_TYPE_VEC2,
+			.type_name = "vec2s",
+			.offset = offsetof(Particle, scale)
 		},
 		{
 			.name = "color",
@@ -1035,76 +1098,28 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle, color)
 		},
 		{
-			.name = "texture_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Texture_Handle",
-			.offset = offsetof(Particle, texture_handle)
-		},
-		{
-			.name = "tex_offset",
-			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Particle, tex_offset)
-		},
-		{
-			.name = "tex_size",
-			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Particle, tex_size)
-		},
-		{
 			.name = "life_left",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "f32",
 			.offset = offsetof(Particle, life_left)
 		},
 		{
-			.name = "vel_x",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, vel_x)
+			.name = "velocity",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle, velocity)
 		},
 		{
-			.name = "vel_y",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, vel_y)
+			.name = "gravity",
+			.type = REFLECTION_TYPE_VEC3,
+			.type_name = "vec3s",
+			.offset = offsetof(Particle, gravity)
 		},
 		{
-			.name = "vel_z",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, vel_z)
-		},
-		{
-			.name = "gravity_x",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, gravity_x)
-		},
-		{
-			.name = "gravity_y",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, gravity_y)
-		},
-		{
-			.name = "gravity_z",
-			.type = REFLECTION_TYPE_F32,
-			.type_name = "f32",
-			.offset = offsetof(Particle, gravity_z)
-		},
-		{
-			.name = "material_key",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Particle, material_key)
-		},
-		{
-			.name = "material_id",
+			.name = "material_idx",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Particle, material_id)
+			.offset = offsetof(Particle, material_idx)
 		},
 	};
 
@@ -1112,7 +1127,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle",
 		.fields = Particle_Fields,
-		.field_count = 20,
+		.field_count = 8,
 		.struct_size = sizeof(Particle)
 	};
 
@@ -2739,18 +2754,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Render_Packet_3D, shader_asset_count)
 		},
 		{
-			.name = "material_buffer",
-			.type = REFLECTION_TYPE_U8,
-			.type_name = "u8",
-			.offset = offsetof(Render_Packet_3D, material_buffer)
-		},
-		{
-			.name = "material_buffer_byte_size",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Render_Packet_3D, material_buffer_byte_size)
-		},
-		{
 			.name = "mesh_instances",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Mesh_Instance",
@@ -2804,7 +2807,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Render_Packet_3D",
 		.fields = Render_Packet_3D_Fields,
-		.field_count = 13,
+		.field_count = 11,
 		.struct_size = sizeof(Render_Packet_3D)
 	};
 
@@ -2824,13 +2827,31 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u64",
 			.offset = offsetof(Render_Packet_Material, material_buffer_byte_size)
 		},
+		{
+			.name = "material_records",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Record",
+			.offset = offsetof(Render_Packet_Material, material_records)
+		},
+		{
+			.name = "material_records_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Render_Packet_Material, material_records_count)
+		},
+		{
+			.name = "material_records_byte_size",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Render_Packet_Material, material_records_byte_size)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Material_Runtime_Struct =
 	{
 		.name = "Render_Packet_Material",
 		.fields = Render_Packet_Material_Fields,
-		.field_count = 2,
+		.field_count = 5,
 		.struct_size = sizeof(Render_Packet_Material)
 	};
 

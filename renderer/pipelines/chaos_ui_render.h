@@ -9,7 +9,6 @@ typedef struct PC_Chaos_UI
 {
     VkDeviceAddress quad_ssbo_handle;
     u64 padding1;
-    u64 padding2;
 } PC_Chaos_UI;
 
 
@@ -158,7 +157,6 @@ void chaos_ui_renderer_draw(Chaos_UI_Renderer_Backend* ui_renderer, Renderer* re
         get_buffer_device_address(renderer->logical_device,
                                   vulkan_buffer_get_frame(renderer, ui_renderer->cui_ssbo_handle)->handle),
         .padding1 = 0,
-        .padding2 = 0,
 
     };
 

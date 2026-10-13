@@ -436,7 +436,8 @@ typedef struct Vulkan_Shader_System
     HASH_SET(Material_Key)* shader_batch_hash_set;
 
 
-    Buffer_Frame_Handle material_buffers;
+    Buffer_Frame_Handle material_buffer;
+    Buffer_Frame_Handle material_record_buffer;
 
 
 } Vulkan_Shader_System;
@@ -601,6 +602,12 @@ typedef struct global_ubo
 
     //global transforms
     VkDeviceAddress transform_buffer;
+
+    //materials
+    VkDeviceAddress material_buffer;
+    VkDeviceAddress material_record_buffer;
+
+
 } Global_Ubo;
 
 
@@ -811,35 +818,19 @@ typedef struct Vulkan_Mesh_System
 
 typedef struct Particle_Render
 {
-    Buffer_Frame_Handle spherical_billboard_material_buffer_handle;
-
     //particle render data
-    Buffer_Frame_Handle particle_pos_x_buffer_handle;
-    Buffer_Frame_Handle particle_pos_y_buffer_handle;
-    Buffer_Frame_Handle particle_pos_z_buffer_handle;
+    Buffer_Frame_Handle particle_render_data_buffer_handle;
 
-    Buffer_Frame_Handle particle_rot_x_buffer_handle;
-    Buffer_Frame_Handle particle_rot_y_buffer_handle;
-
-    Buffer_Frame_Handle particle_scale_x_buffer_handle;
-    Buffer_Frame_Handle particle_scale_y_buffer_handle;
-
-    Buffer_Frame_Handle particle_color_buffer_handle;
 
     //draw buffer
     Buffer_Frame_Handle particle_draw_buffer_handle;
 
-    //material
-    Buffer_Frame_Handle spherical_billboard_material_buffer_handle_new;
-
-    u32 draw_count;
-
-    Vulkan_Shader_Pipeline spherical_billboard_pipeline;
-    Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
-
 
     Vulkan_Particle_Draw* particle_draw;
     u32 particle_draw_count;
+
+    Vulkan_Shader_Pipeline spherical_billboard_pipeline;
+    Vulkan_Shader_Pipeline wireframe_spherical_billboard_pipeline;
 
 } Particle_Render;
 

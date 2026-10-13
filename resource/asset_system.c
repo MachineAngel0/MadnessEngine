@@ -723,7 +723,7 @@ bool asset_load_particle_effect_by_path(Asset_System* asset_system, const char* 
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, path_string, record))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
-        *out_handle = asset_system->particle_system->default_effect_handle;
+        // *out_handle = asset_system->particle_system->default_effect_handle;
         return false;
     }
 
@@ -830,7 +830,7 @@ bool asset_load_particle_emitter(Asset_System* asset_system, const char* asset_p
     {
         MASSERT_MSG_FALSE("COULD NOT FIND A PARTICLE EFFECT NOT LOADING IN PARTICLE");
 
-        *out_handle = asset_system->particle_system->default_emitter_handle;
+        // *out_handle = asset_system->particle_system->default_emitter_handle;
         scratch_allocator_end(scratch);
         PROFILE_ZONE_END(asset_load_particle_emitter)
 

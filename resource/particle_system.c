@@ -19,52 +19,7 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->emitter_count_max = MAX_PARTICLE_EMITTER_COUNT;
 
 
-    ps->particles.pos_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.pos_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.pos_z = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-
-    ps->particles.rot_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.rot_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-
-
-    ps->particles.scale_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.scale_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                MEMORY_SUBSYSTEM_PARTICLE);
-
-    ps->particles.color = memory_system_alloc(memory_system, sizeof(vec4s) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-
-    ps->particles.texture_handle = memory_system_alloc(memory_system, sizeof(Texture_Handle) * ps->particles_count,
-                                                       MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.tex_offset = memory_system_alloc(memory_system, sizeof(vec2s) * ps->particles_count,
-                                                   MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.tex_size = memory_system_alloc(memory_system, sizeof(vec2s) * ps->particles_count,
-                                                 MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.life_left = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                  MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.vel_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.vel_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.vel_z = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                              MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.gravity_x = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                  MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.gravity_y = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                  MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.gravity_z = memory_system_alloc(memory_system, sizeof(f32) * ps->particles_count,
-                                                  MEMORY_SUBSYSTEM_PARTICLE);
-
-    ps->particles.material_key = memory_system_alloc(memory_system, sizeof(u64) * ps->particles_count,
-                                                     MEMORY_SUBSYSTEM_PARTICLE);
-    ps->particles.material_id = memory_system_alloc(memory_system, sizeof(u32) * ps->particles_count,
-                                                    MEMORY_SUBSYSTEM_PARTICLE);
+    ps->particles = memory_system_alloc(memory_system, sizeof(Particle) * ps->particles_count, MEMORY_SUBSYSTEM_PARTICLE);
 
 
     asset_converter_texture(asset_system,
@@ -74,12 +29,11 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
 
     for (u32 i = 0; i < ps->particles_count; i++)
     {
-        ps->particles.texture_handle[i] = handle;
-        ps->particles.scale_x[i] = 10.0f;
-        ps->particles.scale_y[i] = 10.0f;
+        ps->particles[i].scale.x = 10.0f;
+        ps->particles[i].scale.y = 10.0f;
 
-        ps->particles.color[i].a = 1.0f;
-        ps->particles.color[i].x = 1.0f;
+        ps->particles[i].color.a = 1.0f;
+        ps->particles[i].color.x = 1.0f;
     }
 
     //instantiate our dead particle lists with all the particles
@@ -124,7 +78,6 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->active_emitters = array_create_heap(u32, ps->emitter_count_max, ps->heap_allocator);
     ps->active_effects = array_create_heap(u32, ps->particle_effects_count_max, ps->heap_allocator);
 
-
     //create our default system and emitter
     ps->default_emitter = &ps->emitters[0];
     ps->default_emitter->data.emission_rate = 1;
@@ -135,6 +88,17 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     ps->default_emitter->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR(
         "INVALID EMITTER", asset_system->heap_allocator);
     ps->default_emitter->in_use = true;
+
+    Shader_Handle shader_handle = {};
+    Shader_PSO default_particle_material_info = {
+        .shader_name = &STRING("billboard_spherical"),
+        .blend_mode = Shader_Blend_Mode_Default,
+        .two_sided = false,
+    };
+    shader_create_or_get(asset_system, &default_particle_material_info, &shader_handle );
+
+    material_create_or_get(asset_system, shader_handle, "default_emitter", &ps->default_emitter->material_handle);
+
 
     ps->default_effect = &ps->particle_effects[0];
     ps->default_effect->name = STRING_CREATE_FROM_BUFFER_HEAP_ALLOCATOR("INVALID EFFECT", asset_system->heap_allocator);
@@ -149,6 +113,8 @@ Particle_System* particle_system_init(Asset_System* asset_system, Memory_System*
     u32 default_index = 0;
     array_push(ps->active_effects, &default_index);
     array_push(ps->active_emitters, &default_index);
+
+
 
     return ps;
 }
@@ -213,38 +179,38 @@ bool particle_system_free_particle(Particle_System* ps, u32 particle_index)
 
 bool particle_system_is_alive(Particle_System* ps, u32 particle_index)
 {
-    return ps->particles.life_left[particle_index] > 0;
+    return ps->particles[particle_index].life_left > 0;
 }
 
 bool particle_system_is_dead(Particle_System* ps, u32 particle_index)
 {
-    return ps->particles.life_left[particle_index] <= 0;
+    return ps->particles[particle_index].life_left <= 0;
 }
 
 void particle_update(Particle_System* ps, float dt)
 {
     for (u32 i = 0; i < ps->particles_count; i++)
     {
-        if (ps->particles.life_left[i] <= 0)
+        if (ps->particles[i].life_left <= 0)
         {
             continue;
         }
 
         //apply acceleration
         // ps->particles[i].position.y += sinf(1.f) * dt;
-        ps->particles.vel_x[i] += ps->particles.gravity_x[i] * dt;
-        ps->particles.vel_y[i] += ps->particles.gravity_y[i] * dt;
-        ps->particles.vel_z[i] += ps->particles.gravity_z[i] * dt;
+        ps->particles[i].velocity.x += ps->particles[i].gravity.x * dt;
+        ps->particles[i].velocity.y += ps->particles[i].gravity.y * dt;
+        ps->particles[i].velocity.z += ps->particles[i].gravity.z * dt;
 
 
         // ps->particles.vel_x[i] *=  1.0f - ps->particles.drag[i] * dt;
 
 
         //apply velocity
-        ps->particles.pos_x[i] += ps->particles.vel_x[i] * dt;
-        ps->particles.pos_y[i] += ps->particles.vel_y[i] * dt;
-        ps->particles.pos_z[i] += ps->particles.vel_z[i] * dt;
-        ps->particles.life_left[i] -= 1.0f * dt;
+        ps->particles[i].position.x += ps->particles[i].velocity.x * dt;
+        ps->particles[i].position.y += ps->particles[i].velocity.y * dt;
+        ps->particles[i].position.z += ps->particles->velocity.z * dt;
+        ps->particles[i].life_left -= 1.0f * dt;
     }
 }
 
@@ -252,7 +218,7 @@ void particle_update(Particle_System* ps, float dt)
 Render_Packet_Particle particle_system_generate_render_packet(Particle_System* ps)
 {
     return (Render_Packet_Particle){
-        .particles = &ps->particles,
+        .particles = ps->particles,
         .particle_count = ps->particles_count,
         .emitters = ps->emitters,
         .emitter_count = ps->emitter_count_max,
@@ -266,7 +232,8 @@ Particle_Emitter* particle_emitter_acquire(Particle_System* ps, Asset_Record* re
     if (!ring_dequeue(ps->free_emitters_queue, &free_index))
     {
         WARN("particle_emitter_acquire: ran out of free emitters")
-        return ps->default_emitter;
+        MASSERT_FALSE()
+        return NULL;
     }
 
     Particle_Emitter* particle_emitter = NULL;
@@ -363,29 +330,29 @@ void particle_emitter_update(Particle_System* ps, Particle_Emitter* emitter, flo
 
             dynamic_array_push(emitter->particle, &particle_index);
 
-            ps->particles.life_left[particle_index] = emitter->data.particle_lifetime +
+            ps->particles[particle_index].life_left = emitter->data.particle_lifetime +
                 rand_range_f(-emitter->data.particle_lifetime_variance, emitter->data.particle_lifetime_variance);
-            ps->particles.vel_x[particle_index] = emitter->data.velocity.x + rand_range_f(
+            ps->particles[particle_index].velocity.x = emitter->data.velocity.x + rand_range_f(
                 -emitter->data.velocity_variance.x, emitter->data.velocity_variance.x);
-            ps->particles.vel_y[particle_index] = emitter->data.velocity.y + rand_range_f(
+            ps->particles[particle_index].velocity.y = emitter->data.velocity.y + rand_range_f(
                 -emitter->data.velocity_variance.y, emitter->data.velocity_variance.y);
-            ps->particles.vel_z[particle_index] = emitter->data.velocity.z + rand_range_f(
+            ps->particles[particle_index].velocity.z = emitter->data.velocity.z + rand_range_f(
                 -emitter->data.velocity_variance.z, emitter->data.velocity_variance.z);
 
 
-            ps->particles.pos_x[particle_index] = emitter->position.x;
-            ps->particles.pos_y[particle_index] = emitter->position.y;
-            ps->particles.pos_z[particle_index] = emitter->position.z;
+            ps->particles[particle_index].position.x = emitter->position.x;
+            ps->particles[particle_index].position.y = emitter->position.y;
+            ps->particles[particle_index].position.z = emitter->position.z;
 
-            ps->particles.color[particle_index] = emitter->data.particle_color;
+            ps->particles[particle_index].color = emitter->data.particle_color;
 
-            ps->particles.gravity_x[particle_index] = emitter->data.gravity.x;
-            ps->particles.gravity_y[particle_index] = emitter->data.gravity.y;
-            ps->particles.gravity_z[particle_index] = emitter->data.gravity.z;
+            ps->particles[particle_index].gravity.x = emitter->data.gravity.x;
+            ps->particles[particle_index].gravity.y = emitter->data.gravity.y;
+            ps->particles[particle_index].gravity.z = emitter->data.gravity.z;
 
 
-            ps->particles.material_key[particle_index] = emitter->material_handle.handle;
-            ps->particles.material_id[particle_index] = emitter->material_handle.handle;
+
+            ps->particles[particle_index].material_idx = emitter->material_handle.handle;
         }
     }
 
@@ -440,7 +407,9 @@ Particle_Effect* particle_effect_acquire(Particle_System* ps, Asset_Record* asse
     if (!ring_dequeue(ps->free_effects_queue, &free_index))
     {
         WARN("particle_emitter_acquire: ran out of free emitters")
-        return ps->default_effect;
+        MASSERT_FALSE()
+        return NULL;
+        // return ps->default_effect;
     }
 
     Particle_Effect* out_effect = &ps->particle_effects[free_index];

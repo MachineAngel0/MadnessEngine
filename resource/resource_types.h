@@ -474,7 +474,7 @@ typedef struct PC_General
 
 typedef struct PC_Particle
 {
-    VkDeviceAddress material_buffer;
+    VkDeviceAddress particle_render_data_buffer;
     VkDeviceAddress particle_draw_buffer;
 } PC_Particle;
 
@@ -562,34 +562,20 @@ typedef struct Madness_Material
 typedef struct Particle
 {
     //render data
-    f32* pos_x;
-    f32* pos_y;
-    f32* pos_z;
+    vec3s position;
+    vec2s rotation;
+    vec2s scale;
+    vec4s color;
 
-    f32* rot_x;
-    f32* rot_y;
-
-    f32* scale_x;
-    f32* scale_y;
-
-    vec4s* color;
-
-    Texture_Handle* texture_handle; // TODO: change to a u32 and leave the handle on the emitter
-    vec2s* tex_offset;
-    vec2s* tex_size;
+    //maybe material handle????
 
     //non render data
-    f32* life_left;
-    f32* vel_x;
-    f32* vel_y;
-    f32* vel_z;
-    f32* gravity_x;
-    f32* gravity_y;
-    f32* gravity_z;
+    f32 life_left;
+    vec3s velocity;
+    vec3s gravity;
     // f32* drag;
-
-    u64* material_key;
-    u32* material_id;
+    u32 material_idx;
+    Shader_Key shader_key;
 } Particle;
 
 typedef struct Particle_Mesh
@@ -709,12 +695,14 @@ typedef struct Particle_Emitter
 
     //runtime data
     Material_Handle material_handle;
+    Shader_Key shader_key;
 
     vec3s position; // given to us by the effect
 
     bool in_use; // for the editor
 
     // u32 Maximum_Particles; // it would be good to have a limit for many reasons
+    //particle type - mesh, quad, ribbon etc
     DYNAMIC_ARRAY_TYPE(u32)* particle;
 } Particle_Emitter;
 
@@ -1101,10 +1089,10 @@ typedef struct Animation_System
 
 typedef struct Particle_System
 {
-    //defaults/fallbacks
+    //defaults/fallbacks TODO:
     Particle_Effect* default_effect;
     Particle_Effect_Handle default_effect_handle;
-
+    //
     Particle_Emitter* default_emitter;
     Particle_Emitter_Handle default_emitter_handle;
 
@@ -1133,7 +1121,7 @@ typedef struct Particle_System
     //OPTIMIZE: read/consume buffers, agnis square enix article, for compute updates
     //NOTE: for multithreading, we can have each thread manage their own particles pools,
     // each emitter/system(up to me how fine grain i want to be) belongs to a thread and only updated on that thread
-    Particle particles;
+    Particle* particles;
     u32 particles_count;
 
     u32* dead_particles;
@@ -1190,9 +1178,6 @@ typedef struct Render_Packet_3D
     Shader_Asset* shader_assets;
     u32 shader_asset_count;
 
-    u8* material_buffer;
-    u64 material_buffer_byte_size;
-
 
     Madness_Mesh_Instance* mesh_instances;
     u32 mesh_instances_count;
@@ -1215,6 +1200,12 @@ typedef struct Render_Packet_Material
 {
     u8* material_buffer;
     u64 material_buffer_byte_size;
+
+    Material_Record* material_records;
+    u64 material_records_count;
+    u64 material_records_byte_size;
+
+
 }Render_Packet_Material;
 
 typedef struct Render_Packet_UI

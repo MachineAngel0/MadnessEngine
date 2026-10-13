@@ -81,13 +81,9 @@ typedef struct Material_Flat_Color
 
 typedef struct Material_Spherical_Billboard
 {
-    vec3s point;
     u32 texture_idx;
-    vec2s size; //also a radius
-    vec2s rotation;
-    vec4s color; //tint basically
-    // vec2s tex_offset;
-    // vec2s tex_size;
+    vec2 uv_offset;
+    vec2 uv_size;
 } Material_Spherical_Billboard;
 
 typedef struct Material_Spherical_Billboard_CPU

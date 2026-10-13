@@ -19,8 +19,11 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
     //we store the pointer, we dont want a copy
     shader_system->shader_batch_hash_set = hash_set_init(sizeof(Shader_Key), 100);
 
-    shader_system->material_buffers = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+    shader_system->material_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                  BUFFER_TYPE_STORAGE_GPU, MATERIAL_BUFFER_SIZE);
+
+    shader_system->material_record_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                 BUFFER_TYPE_STORAGE_GPU,  sizeof(Material_Record) * MAX_MATERIAL_COUNT);
 
 
     INFO("SHADER SYSTEM CREATED");
@@ -59,9 +62,9 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
                                                   (float[4]){0.0, 1.0, 0.0, 1.0}); // green color
 
 
-    vulkan_buffer_frame_staging_upload(renderer, shader_system->material_buffers, command_buffer,
-                                       render_packet->draw_3d_data_packet.material_buffer,
-                                       render_packet->draw_3d_data_packet.material_buffer_byte_size);
+    vulkan_buffer_frame_staging_upload(renderer, shader_system->material_buffer, command_buffer,
+                                       render_packet->material_packet.material_buffer,
+                                       render_packet->material_packet.material_buffer_byte_size);
 
 
     VkBufferMemoryBarrier2 material_barrier = {
@@ -74,7 +77,7 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
-        .buffer = vulkan_buffer_get_frame(renderer, shader_system->material_buffers)->handle,
+        .buffer = vulkan_buffer_get_frame(renderer, shader_system->material_buffer)->handle,
         .offset = 0,
         .size = VK_WHOLE_SIZE,
     };

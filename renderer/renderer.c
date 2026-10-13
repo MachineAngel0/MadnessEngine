@@ -341,7 +341,10 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer, renderer->mesh_system->skinned_matrix_buffer);
     ubo.transform_buffer = vulkan_buffer_get_frame_device_address(
         renderer, renderer->mesh_system->transform_buffer_handle);
-
+    ubo.material_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->shader_system->material_buffer);
+    ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->shader_system->material_record_buffer);
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
