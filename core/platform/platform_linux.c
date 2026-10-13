@@ -63,6 +63,9 @@ bool platform_startup(
     Platform_State* plat_state,
     Platform_Config platform_config)
 {
+
+
+
     const char* session = getenv("XDG_SESSION_TYPE");
     if (session && strcmp(session, "wayland") == 0)
     {

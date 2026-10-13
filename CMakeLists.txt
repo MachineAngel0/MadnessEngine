@@ -181,12 +181,13 @@ target_sources(MadnessEngine_renderer PRIVATE)
 #option ( TRACY_ON_DEMAND " " ON)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy)
 
-
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/glfw/glfw-master)
 
 if (WIN32)
     SET(MADNESS_WIN_LIBS
             Vulkan::Vulkan
             Tracy::TracyClient
+            glfw
             Xinput
             winmm
             ole32
@@ -200,6 +201,7 @@ if (UNIX)
     SET(MADNESS_UNIX_LIBS
             Vulkan::Vulkan
             Tracy::TracyClient
+            glfw
             X11
             X11-xcb
             xcb

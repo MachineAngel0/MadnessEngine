@@ -18,6 +18,8 @@
 #include "ufbx/ufbx.h"
 #include "ufbx/ufbx.c"
 
+#define GLFW_INCLUDE_VULKAN //SPEC: makes the GLFW header include the Vulkan vulkan/vulkan.h header in addition to any selected OpenGL or OpenGL ES header.
+#include <glfw/glfw-master/include/GLFW/glfw3.h>
 
 
 #include "tracy_lib/tracy/public/tracy/TracyC.h"
