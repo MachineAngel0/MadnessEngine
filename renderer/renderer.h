@@ -6,7 +6,7 @@
 #include "vulkan_struct_types.h"
 
 typedef Renderer* (*renderer_initialize)(
-    Platform_State* platform_state, Platform_Config platform_config,
+    Platform_State* platform_state, Platform_Window_Config platform_config,
     Memory_System* memory_system, Input_System* input_system);
 typedef void (*renderer_run)(Renderer* renderer, float delta_time);
 typedef void (*renderer_terminate)(Renderer* renderer);
@@ -14,7 +14,7 @@ typedef void (*renderer_resize)(Renderer* renderer, u32, u32);
 
 
 MAPI Renderer* renderer_init(Platform_State* platform_state,
-                             Platform_Config platform_config,
+                             Platform_Window_Config platform_config,
                              Memory_System* memory_system,
                              Input_System* input_system);
 

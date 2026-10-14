@@ -30,7 +30,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
     renderer_plugin_set_default_fpn(renderer_plugin);
 
 
-    Platform_Config platform_config;
+    Platform_Window_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Tetris";
 

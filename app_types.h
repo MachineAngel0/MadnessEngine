@@ -10,7 +10,7 @@
 
 typedef struct Application_Core
 {
-    Platform_Config plat_config;
+    Platform_Window_Config plat_config;
     Platform_State plat_state;
     Clock clock;
 

@@ -41,7 +41,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 #endif
 
 
-    Platform_Config platform_config;
+    Platform_Window_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Madness Engine Editor";
 
@@ -108,6 +108,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         &application_core->plat_state,
         platform_config);
 
+    Madness_Window main_window = {0};
+    if (!platform_create_window(&application_core->plat_state,
+                                                     platform_config, &main_window))
+    {
+        MASSERT_FALSE();
+    }
 
 
     //Renderer
@@ -128,8 +134,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                     application_core->asset_system);
 
     chaos_ui_init(&application_core->memory_system,
-                    application_core->input_system,
-                    application_core->asset_system);
+                  application_core->input_system,
+                  application_core->asset_system);
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
 
@@ -219,7 +225,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         insanity_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
                           renderer_plugin->renderer->framebuffer_height_new);
         chaos_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
-                          renderer_plugin->renderer->framebuffer_height_new);
+                       renderer_plugin->renderer->framebuffer_height_new);
 
         //game and editor switch between
         if (input_key_released_unique(KEY_TAB))

@@ -20,9 +20,9 @@ typedef struct Platform_Config
 
     // The application name used in windowing, if applicable.
     char* name;
-} Platform_Config;
+} Platform_Window_Config;
 
-void platform_config_use_defaults(Platform_Config* config)
+void platform_config_use_defaults(Platform_Window_Config* config)
 {
     config->start_pos_x = 100;
     config->start_pos_y = 100;
@@ -36,21 +36,40 @@ void platform_config_use_defaults(Platform_Config* config)
 }
 
 
+
 typedef struct Platform_State
 {
     void* internal_state;
 } Platform_State;
 
+#define MAX_MADNESS_WINDOW_COUNT 4
+
+typedef struct Madness_Window
+{
+    u32 handle;
+}Madness_Window;
+
 
 bool platform_startup(
     Platform_State* plat_state,
-    Platform_Config platform_config);
+    Platform_Window_Config platform_config);
 
 
 void platform_shutdown(Platform_State* plat_state);
 
 
 bool platform_pump_messages(Platform_State* plat_state);
+
+
+//windowing
+bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config, Madness_Window* out_window_handle);
+
+void platform_get_window_size(s32* width, s32* height);
+void platform_get_window_pos(s32* x, s32* y);
+
+void platform_set_window_pos(Platform_State* platform_state, s32 x, s32 y);
+void platform_set_windows_size(Platform_State* platform_state, int width, int height);
+//TODO: fullscreen support
 
 
 //AUDIO
@@ -147,12 +166,12 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
 bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer);
 
-void platform_get_window_size(s32* width, s32* height);
-void platform_get_window_pos(s32* x, s32* y);
+
 
 //Misc
 void platform_set_cursor_pos(int x, int y);
-void platform_get_cursor_pos(int* out_x, int* out_y);
+void platform_get_absolute_cursor_pos(int* out_x, int* out_y);
+void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y);
 
 typedef enum Platform_Cursor_Type
 {
@@ -164,7 +183,6 @@ typedef enum Platform_Cursor_Type
 void platform_set_cursor_type(Platform_Cursor_Type cursor_type);
 
 
-void platform_windows_resize(Platform_State* platform_state, int width, int height);
 
 void platform_copy_to_clipboard(const char* c_string);
 

@@ -5,12 +5,20 @@
 
 #include "logger.h"
 
+
+// #define GLFW_EXPOSE_NATIVE_WIN32
+// #include <GLFW/glfw3.h>
+// #include <GLFW/glfw3native.h>
+
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>  // param input extraction
 #include <timeapi.h>
 #include <stdlib.h>
 #include <mmsystem.h>
 #include <shellapi.h> // for urls
+#include <commdlg.h> // file picker
+#include <bcrypt.h> // uuids
 
 //renderer
 #include <vulkan/vulkan.h>
@@ -20,26 +28,36 @@
 #include "vk_device.h"
 
 
-typedef struct windows_internal_state
+typedef struct Windows_Internal_State
 {
     HINSTANCE h_instance;
     HWND hwnd;
+
+
+    HWND window_handles[MAX_MADNESS_WINDOW_COUNT];
+    bool in_use[MAX_MADNESS_WINDOW_COUNT];
+    u8 window_count;
+
+
     VkSurfaceKHR surface;
-} windows_internal_state;
+} Windows_Internal_State;
 
 // Clock
 static f64 clock_frequency;
 static LARGE_INTEGER start_time;
 
+#define MADNESS_WINDOW_CLASS_NAME "madness_window_class"
+
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param);
 
 bool platform_startup(
     Platform_State* plat_state,
-    Platform_Config platform_config)
+    Platform_Window_Config platform_config)
 {
-    plat_state->internal_state = malloc(sizeof(windows_internal_state));
-    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
+    plat_state->internal_state = malloc(sizeof(Windows_Internal_State));
+    Windows_Internal_State* state = (Windows_Internal_State*)plat_state->internal_state;
 
+    state->window_count = 0;
 
     state->h_instance = GetModuleHandleA(0);
 
@@ -55,7 +73,7 @@ bool platform_startup(
     wc.hIcon = icon;
     wc.hCursor = LoadCursor(NULL, IDC_ARROW); // NULL; // Manage the cursor manually
     wc.hbrBackground = NULL; // Transparent
-    wc.lpszClassName = "kohi_window_class";
+    wc.lpszClassName = MADNESS_WINDOW_CLASS_NAME;
 
     if (!RegisterClassA(&wc))
     {
@@ -94,7 +112,7 @@ bool platform_startup(
     window_height += border_rect.bottom - border_rect.top;
 
     HWND handle = CreateWindowExA(
-        window_ex_style, "kohi_window_class", platform_config.name,
+        window_ex_style, MADNESS_WINDOW_CLASS_NAME, platform_config.name,
         window_style, window_x, window_y, window_width, window_height,
         0, 0, state->h_instance, plat_state);
 
@@ -133,7 +151,7 @@ bool platform_startup(
 void platform_shutdown(Platform_State* plat_state)
 {
     // Simply cold-cast to the known type.
-    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
+    Windows_Internal_State* state = (Windows_Internal_State*)plat_state->internal_state;
     timeEndPeriod(1);; // Set system timer resolution to 1 ms
 
     if (state->hwnd)
@@ -158,6 +176,78 @@ bool platform_pump_messages(Platform_State* plat_state)
     PROFILE_ZONE_END(WIN32_PLATFORM)
 
     return true;
+}
+
+bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config, Madness_Window* out_window_handle)
+{
+    Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
+
+    if (state->window_count >= MAX_MADNESS_WINDOW_COUNT)
+    {
+        return false;
+    }
+
+
+    // Create window
+    u32 client_x = window_config.start_pos_x;
+    u32 client_y = window_config.start_pos_y;
+    u32 client_width = window_config.start_width;
+    u32 client_height = window_config.start_height;
+
+    u32 window_x = client_x;
+    u32 window_y = client_y;
+    u32 window_width = client_width;
+    u32 window_height = client_height;
+
+    u32 window_style = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
+    u32 window_ex_style = WS_EX_APPWINDOW;
+
+    window_style |= WS_MAXIMIZEBOX;
+    window_style |= WS_MINIMIZEBOX;
+    window_style |= WS_THICKFRAME;
+
+    // Obtain the size of the border.
+    RECT border_rect = {0, 0, 0, 0};
+    AdjustWindowRectEx(&border_rect, window_style, 0, window_ex_style);
+
+    // In this case, the border rectangle is negative.
+    window_x += border_rect.left;
+    window_y += border_rect.top;
+
+    // Grow by the size of the OS border.
+    window_width += border_rect.right - border_rect.left;
+    window_height += border_rect.bottom - border_rect.top;
+
+    HWND handle = CreateWindowExA(
+        window_ex_style, MADNESS_WINDOW_CLASS_NAME, window_config.name,
+        window_style, window_x, window_y, window_width, window_height,
+        0, 0, state->h_instance, state);
+
+    if (handle == 0)
+    {
+        MessageBoxA(NULL, "Window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
+
+        FATAL("Window creation failed!");
+        *out_window_handle = (Madness_Window){0};
+        return false;
+    }
+
+    //successful creation
+    state->window_handles[state->window_count] = handle;
+    state->in_use[state->window_count] = true;
+    state->hwnd = handle;
+    *out_window_handle = (Madness_Window){state->window_count};
+    state->window_count++;
+
+    // Show the window
+    b32 should_activate = 1; // TODO: if the window should not accept input, this should be false.
+    s32 show_window_command_flags = should_activate ? SW_SHOW : SW_SHOWNOACTIVATE;
+    // If initially minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVE;
+    // If initially maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
+    ShowWindow(state->hwnd, show_window_command_flags);
+
+    return true;
+
 }
 
 
@@ -256,6 +346,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
     if (!plat_state)
     {
+        FATAL("win32_process_message: INVALID PLATFORM STATE")
         return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 
@@ -581,7 +672,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
     DEBUG("Creating Vulkan WINDOWS PLATFORM surface...");
 
     // Simply cold-cast to the known type.
-    windows_internal_state* state = (windows_internal_state*)plat_state->internal_state;
+    Windows_Internal_State* state = (Windows_Internal_State*)plat_state->internal_state;
 
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -625,10 +716,23 @@ void platform_set_cursor_pos(int x, int y)
     SetCursorPos(x, y);
 }
 
-void platform_get_cursor_pos(int* out_x, int* out_y)
+void platform_get_absolute_cursor_pos(int* out_x, int* out_y)
 {
     struct tagPOINT lpPoint; // this is a pointer
     GetCursorPos(&lpPoint);
+    *out_x = lpPoint.x;
+    *out_y = lpPoint.y;
+
+
+}
+
+void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y)
+{
+    Windows_Internal_State* state = platform_state->internal_state;
+
+    struct tagPOINT lpPoint; // this is a pointer
+    GetCursorPos(&lpPoint);
+    ScreenToClient(state->hwnd, &lpPoint); // transform the point into the windows coordinates
     *out_x = lpPoint.x;
     *out_y = lpPoint.y;
 }
@@ -649,13 +753,23 @@ void platform_set_cursor_type(Platform_Cursor_Type cursor_type)
     }
 }
 
-void platform_windows_resize(Platform_State* platform_state, int width, int height)
+void platform_set_window_pos(Platform_State* platform_state, s32 x, s32 y)
 {
-    windows_internal_state* state = platform_state->internal_state;
+    Windows_Internal_State* state = platform_state->internal_state;
 
     //change the size but does not move due to no move flag
-    SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE);
+    SetWindowPos(state->hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 }
+
+void platform_set_windows_size(Platform_State* platform_state, int width, int height)
+{
+    Windows_Internal_State* state = platform_state->internal_state;
+
+    //change the size but does not move due to no move flag
+    SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE| SWP_NOZORDER);
+}
+
+
 
 void platform_copy_to_clipboard(const char* c_string)
 {

@@ -30,7 +30,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
     renderer_plugin_set_default_fpn(renderer_plugin);
 
-    Platform_Config platform_config;
+    Platform_Window_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Madness Engine Editor";
 

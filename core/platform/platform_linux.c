@@ -63,7 +63,7 @@ static Platform_State* linux_plat_state;
 
 bool platform_startup(
     Platform_State* plat_state,
-    Platform_Config platform_config)
+    Platform_Window_Config platform_config)
 {
 
 

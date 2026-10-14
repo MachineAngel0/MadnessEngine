@@ -28,7 +28,7 @@ bool renderer_dev_run(Renderer_Dev_Application* render_dev_app)
 
     renderer_plugin_set_default_fpn(renderer_plugin);
 
-    Platform_Config platform_config;
+    Platform_Window_Config platform_config;
     platform_config_use_defaults(&platform_config);
     platform_config.name = "Madness Engine Renderer Dev";
 
