@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -91,6 +92,222 @@ void glfw_window_close(GLFWwindow* window)
     event_fire(EVENT_APP_QUIT, STRING("glfw linux platform"), context);
 }
 
+void glfw_window_focus_callback(GLFWwindow* window, int focused)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)glfwGetWindowUserPointer(window);
+
+    Event_Data context = {0};
+    if (focused)
+    {
+        // The window gained input focus
+        context.data.event_data_window_focus.focused = true;
+    }
+    else
+    {
+        // The window lost input focus
+        context.data.event_data_window_focus.focused = false;
+    }
+
+    event_fire(EVENT_APP_WINDOW_FOCUS_CHANGE, STRING("glfw linux platform window focus"), context);
+}
+
+// keys glfw_key_translation[KEYS_MAX_KEYS] = {
+keys glfw_key_translation[GLFW_KEY_LAST + 1] = {
+    // [0] is zero-initialized, so every unlisted GLFW code reads as 0.
+    // Your enum has no KEY_UNKNOWN, and 0 isn't used by any key, so treat 0 as "unmapped".
+
+    [GLFW_KEY_SPACE] = KEY_SPACE,
+    //[GLFW_KEY_APOSTROPHE]  = KEY_APOSTROPHE,   // no equivalent
+    [GLFW_KEY_COMMA] = KEY_COMMA,
+    [GLFW_KEY_MINUS] = KEY_MINUS,
+    [GLFW_KEY_PERIOD] = KEY_PERIOD,
+    [GLFW_KEY_SLASH] = KEY_SLASH,
+
+    [GLFW_KEY_0] = KEY_0,
+    [GLFW_KEY_1] = KEY_1,
+    [GLFW_KEY_2] = KEY_2,
+    [GLFW_KEY_3] = KEY_3,
+    [GLFW_KEY_4] = KEY_4,
+    [GLFW_KEY_5] = KEY_5,
+    [GLFW_KEY_6] = KEY_6,
+    [GLFW_KEY_7] = KEY_7,
+    [GLFW_KEY_8] = KEY_8,
+    [GLFW_KEY_9] = KEY_9,
+
+    [GLFW_KEY_SEMICOLON] = KEY_SEMICOLON,
+    [GLFW_KEY_EQUAL] = KEY_PLUS, // VK_OEM_PLUS is the '=' / '+' key
+
+    [GLFW_KEY_A] = KEY_A,
+    [GLFW_KEY_B] = KEY_B,
+    [GLFW_KEY_C] = KEY_C,
+    [GLFW_KEY_D] = KEY_D,
+    [GLFW_KEY_E] = KEY_E,
+    [GLFW_KEY_F] = KEY_F,
+    [GLFW_KEY_G] = KEY_G,
+    [GLFW_KEY_H] = KEY_H,
+    [GLFW_KEY_I] = KEY_I,
+    [GLFW_KEY_J] = KEY_J,
+    [GLFW_KEY_K] = KEY_K,
+    [GLFW_KEY_L] = KEY_L,
+    [GLFW_KEY_M] = KEY_M,
+    [GLFW_KEY_N] = KEY_N,
+    [GLFW_KEY_O] = KEY_O,
+    [GLFW_KEY_P] = KEY_P,
+    [GLFW_KEY_Q] = KEY_Q,
+    [GLFW_KEY_R] = KEY_R,
+    [GLFW_KEY_S] = KEY_S,
+    [GLFW_KEY_T] = KEY_T,
+    [GLFW_KEY_U] = KEY_U,
+    [GLFW_KEY_V] = KEY_V,
+    [GLFW_KEY_W] = KEY_W,
+    [GLFW_KEY_X] = KEY_X,
+    [GLFW_KEY_Y] = KEY_Y,
+    [GLFW_KEY_Z] = KEY_Z,
+
+    //[GLFW_KEY_LEFT_BRACKET]  = KEY_LEFT_BRACKET,   // no equivalent
+    //[GLFW_KEY_BACKSLASH]     = KEY_BACKSLASH,      // no equivalent
+    //[GLFW_KEY_RIGHT_BRACKET] = KEY_RIGHT_BRACKET,  // no equivalent
+    [GLFW_KEY_GRAVE_ACCENT] = KEY_GRAVE,
+    //[GLFW_KEY_WORLD_1]       = KEY_WORLD_1,        // no equivalent
+    //[GLFW_KEY_WORLD_2]       = KEY_WORLD_2,        // no equivalent
+
+    [GLFW_KEY_ESCAPE] = KEY_ESCAPE,
+    [GLFW_KEY_ENTER] = KEY_ENTER,
+    [GLFW_KEY_TAB] = KEY_TAB,
+    [GLFW_KEY_BACKSPACE] = KEY_BACKSPACE,
+    [GLFW_KEY_INSERT] = KEY_INSERT,
+    [GLFW_KEY_DELETE] = KEY_DELETE,
+    [GLFW_KEY_RIGHT] = KEY_RIGHT,
+    [GLFW_KEY_LEFT] = KEY_LEFT,
+    [GLFW_KEY_DOWN] = KEY_DOWN,
+    [GLFW_KEY_UP] = KEY_UP,
+    [GLFW_KEY_PAGE_UP] = KEY_PRIOR,
+    [GLFW_KEY_PAGE_DOWN] = KEY_NEXT,
+    [GLFW_KEY_HOME] = KEY_HOME,
+    [GLFW_KEY_END] = KEY_END,
+
+    [GLFW_KEY_CAPS_LOCK] = KEY_CAPITAL,
+    [GLFW_KEY_SCROLL_LOCK] = KEY_SCROLL,
+    [GLFW_KEY_NUM_LOCK] = KEY_NUMLOCK,
+    [GLFW_KEY_PRINT_SCREEN] = KEY_SNAPSHOT,
+    [GLFW_KEY_PAUSE] = KEY_PAUSE,
+
+    [GLFW_KEY_F1] = KEY_F1,
+    [GLFW_KEY_F2] = KEY_F2,
+    [GLFW_KEY_F3] = KEY_F3,
+    [GLFW_KEY_F4] = KEY_F4,
+    [GLFW_KEY_F5] = KEY_F5,
+    [GLFW_KEY_F6] = KEY_F6,
+    [GLFW_KEY_F7] = KEY_F7,
+    [GLFW_KEY_F8] = KEY_F8,
+    [GLFW_KEY_F9] = KEY_F9,
+    [GLFW_KEY_F10] = KEY_F10,
+    [GLFW_KEY_F11] = KEY_F11,
+    [GLFW_KEY_F12] = KEY_F12,
+    [GLFW_KEY_F13] = KEY_F13,
+    [GLFW_KEY_F14] = KEY_F14,
+    [GLFW_KEY_F15] = KEY_F15,
+    [GLFW_KEY_F16] = KEY_F16,
+    [GLFW_KEY_F17] = KEY_F17,
+    [GLFW_KEY_F18] = KEY_F18,
+    [GLFW_KEY_F19] = KEY_F19,
+    [GLFW_KEY_F20] = KEY_F20,
+    [GLFW_KEY_F21] = KEY_F21,
+    [GLFW_KEY_F22] = KEY_F22,
+    [GLFW_KEY_F23] = KEY_F23,
+    [GLFW_KEY_F24] = KEY_F24,
+    //[GLFW_KEY_F25] = KEY_F25,                  // no equivalent
+
+    [GLFW_KEY_KP_0] = KEY_NUMPAD0,
+    [GLFW_KEY_KP_1] = KEY_NUMPAD1,
+    [GLFW_KEY_KP_2] = KEY_NUMPAD2,
+    [GLFW_KEY_KP_3] = KEY_NUMPAD3,
+    [GLFW_KEY_KP_4] = KEY_NUMPAD4,
+    [GLFW_KEY_KP_5] = KEY_NUMPAD5,
+    [GLFW_KEY_KP_6] = KEY_NUMPAD6,
+    [GLFW_KEY_KP_7] = KEY_NUMPAD7,
+    [GLFW_KEY_KP_8] = KEY_NUMPAD8,
+    [GLFW_KEY_KP_9] = KEY_NUMPAD9,
+    [GLFW_KEY_KP_DECIMAL] = KEY_DECIMAL,
+    [GLFW_KEY_KP_DIVIDE] = KEY_DIVIDE,
+    [GLFW_KEY_KP_MULTIPLY] = KEY_MULTIPLY,
+    [GLFW_KEY_KP_SUBTRACT] = KEY_SUBTRACT,
+    [GLFW_KEY_KP_ADD] = KEY_ADD,
+    [GLFW_KEY_KP_ENTER] = KEY_ENTER, // no separate numpad enter; shares KEY_ENTER
+    [GLFW_KEY_KP_EQUAL] = KEY_NUMPAD_EQUAL,
+
+    [GLFW_KEY_LEFT_SHIFT] = KEY_LSHIFT,
+    [GLFW_KEY_LEFT_CONTROL] = KEY_LCONTROL,
+    [GLFW_KEY_LEFT_ALT] = KEY_LALT,
+    [GLFW_KEY_LEFT_SUPER] = KEY_LWIN,
+    [GLFW_KEY_RIGHT_SHIFT] = KEY_RSHIFT,
+    [GLFW_KEY_RIGHT_CONTROL] = KEY_RCONTROL,
+    [GLFW_KEY_RIGHT_ALT] = KEY_RALT,
+    [GLFW_KEY_RIGHT_SUPER] = KEY_RWIN,
+    [GLFW_KEY_MENU] = KEY_APPS,
+};
+
+
+void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    // #define GLFW_RELEASE   0
+    // #define GLFW_PRESS   1
+    // #define GLFW_REPEAT   2
+    // #define GLFW_KEY_UNKNOWN   -1
+
+    bool pressed = false;
+    if (GLFW_RELEASE)
+    {
+        pressed = false;
+    }
+    if (GLFW_PRESS == action || GLFW_REPEAT == action)
+    {
+        pressed = true;
+    }
+    if (action == GLFW_KEY_UNKNOWN) { return; }
+
+    input_process_key(glfw_key_translation[key], pressed);
+}
+
+mouse_buttons glfw_mouse_translation[MOUSE_BUTTON_MAX_BUTTONS] = {
+    // [GLFW_MOUSE_BUTTON_LAST] =
+    [GLFW_MOUSE_BUTTON_LEFT ] = MOUSE_BUTTON_LEFT,
+    [GLFW_MOUSE_BUTTON_RIGHT] = MOUSE_BUTTON_RIGHT,
+    [GLFW_MOUSE_BUTTON_MIDDLE] = MOUSE_BUTTON_MIDDLE,
+};
+
+void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    bool pressed = false;
+    if (GLFW_RELEASE)
+    {
+        pressed = false;
+    }
+    if (GLFW_PRESS == action || GLFW_REPEAT == action)
+    {
+        pressed = true;
+    }
+    if (action == GLFW_KEY_UNKNOWN) { return; }
+
+    input_process_mouse_button(glfw_mouse_translation[button], pressed);
+}
+
+void glfw_mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    input_process_mouse_wheel(xoffset);
+    input_process_mouse_wheel(yoffset);
+}
+
+void glfw_joystick_callback(int jid, int event)
+{
+}
+
+void glfw_cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    input_process_mouse_move(xpos, ypos);
+}
+
+
 bool platform_startup(
     Platform_State* plat_state,
     Platform_Window_Config platform_config)
@@ -173,10 +390,22 @@ bool platform_startup(
 
 
     // after glfwCreateWindow succeeds
+
+    //sets user pointer for use in callbacks
     glfwSetWindowUserPointer(state->main_window, state);
+
     glfwSetFramebufferSizeCallback(state->main_window, glfw_frambuffer_window_resize);
     glfwSetWindowSizeCallback(state->main_window, glfw_frambuffer_window_resize);
     glfwSetWindowCloseCallback(state->main_window, glfw_window_close);
+    glfwSetWindowFocusCallback(state->main_window, glfw_window_focus_callback);
+
+    glfwSetKeyCallback(state->main_window, glfw_key_callback);
+    glfwSetMouseButtonCallback(state->main_window, glfw_mouse_button_callback);
+    glfwSetScrollCallback(state->main_window, glfw_mouse_scroll_callback);
+    glfwSetCursorPosCallback(state->main_window, glfw_cursor_position_callback);
+
+    glfwSetJoystickCallback(glfw_joystick_callback);
+
 
     return true;
 }
@@ -294,6 +523,49 @@ bool platform_create_window(Platform_State* platform_state, Platform_Window_Conf
 
     *out_window_handle = (Madness_Window){state->count};
     state->count++;
+}
+
+
+void platform_get_window_size(Platform_State* platform_state, s32* width, s32* height)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwGetWindowSize(state->main_window, width, height);
+}
+
+void platform_get_window_pos(Platform_State* platform_state, s32* x, s32* y)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwGetWindowPos(state->main_window, x, y);
+}
+
+void platform_set_window_pos(Platform_State* platform_state, s32 x, s32 y)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwSetWindowPos(state->main_window, x, y);
+}
+
+void platform_set_windows_size(Platform_State* platform_state, int width, int height)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwSetWindowSize(state->main_window, width, height);
+}
+
+void platform_set_cursor_pos(Platform_State* platform_state, int x, int y)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwSetCursorPos(state->main_window, x, y);
+}
+
+void platform_get_absolute_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y)
+{
+    //TODO: figure out how to get the absolute position
+    platform_get_window_cursor_pos(platform_state, out_x, out_y);
+}
+
+void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)platform_state->internal_state;
+    glfwGetCursorPos(state->main_window, out_x, out_y);
 }
 
 
@@ -641,15 +913,6 @@ bool platform_does_directory_exist(const char* path)
 
     FATAL("PLATFORM FILE EXISTS: unintended code reached");
     return false;
-}
-
-
-void platform_get_window_size(s32* width, s32* height)
-{
-}
-
-void platform_get_window_pos(s32* x, s32* y)
-{
 }
 
 

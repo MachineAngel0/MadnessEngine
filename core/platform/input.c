@@ -264,7 +264,8 @@ void input_set_cursor_pos(int x, int y)
 {
     //TODO: have a check to make sure we are within the window coordinates
     //otherwise, this can set the position to anywhere it wants on the screen, even outside the window
-    platform_set_cursor_pos(x,y);
+    // platform_set_cursor_pos(x,y);
+    MASSERT_FALSE()
 }
 
 

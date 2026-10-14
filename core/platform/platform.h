@@ -36,10 +36,11 @@ void platform_config_use_defaults(Platform_Window_Config* config)
 }
 
 
-
 typedef struct Platform_State
 {
     void* internal_state;
+    // Input_System* input_system; //ref
+    // Event_System* event_system; //ref
 } Platform_State;
 
 #define MAX_MADNESS_WINDOW_COUNT 4
@@ -47,7 +48,7 @@ typedef struct Platform_State
 typedef struct Madness_Window
 {
     u32 handle;
-}Madness_Window;
+} Madness_Window;
 
 
 bool platform_startup(
@@ -62,14 +63,19 @@ bool platform_pump_messages(Platform_State* plat_state);
 
 
 //windowing
-bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config, Madness_Window* out_window_handle);
+bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config,
+                            Madness_Window* out_window_handle);
 
-void platform_get_window_size(s32* width, s32* height);
-void platform_get_window_pos(s32* x, s32* y);
+void platform_get_window_size(Platform_State* platform_state, s32* width, s32* height);
+void platform_get_window_pos(Platform_State* platform_state, s32* x, s32* y);
 
 void platform_set_window_pos(Platform_State* platform_state, s32 x, s32 y);
 void platform_set_windows_size(Platform_State* platform_state, int width, int height);
 //TODO: fullscreen support
+
+void platform_set_cursor_pos(Platform_State* platform_state, int x, int y);
+void platform_get_absolute_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y);
+void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y);
 
 
 //AUDIO
@@ -108,8 +114,6 @@ typedef struct DLL_HANDLE
     uint64_t handle;
     const char* file_name;
 } DLL_HANDLE;
-
-
 
 
 //DLL
@@ -160,28 +164,20 @@ bool platform_does_file_exist(const char* file_path);
 bool platform_does_directory_exist(const char* path);
 
 
-
 // RENDERER
 void platform_get_vulkan_extension_names(const char*** extension_name_array);
 
 bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer);
 
 
-
-//Misc
-void platform_set_cursor_pos(int x, int y);
-void platform_get_absolute_cursor_pos(int* out_x, int* out_y);
-void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y);
-
 typedef enum Platform_Cursor_Type
 {
-   Platform_Cursor_Type_Default,
-   Platform_Cursor_Type_Resize,
-   Platform_Cursor_Type_Move,
-}Platform_Cursor_Type;
+    Platform_Cursor_Type_Default,
+    Platform_Cursor_Type_Resize,
+    Platform_Cursor_Type_Move,
+} Platform_Cursor_Type;
 
 void platform_set_cursor_type(Platform_Cursor_Type cursor_type);
-
 
 
 void platform_copy_to_clipboard(const char* c_string);
@@ -197,7 +193,6 @@ bool platform_open_url(const char* url);
 
 
 void platform_error_message(const char* error_message);
-
 
 
 #endif //PLATFORM_H
