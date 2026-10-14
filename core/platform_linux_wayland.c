@@ -10,6 +10,8 @@
 #include "xdg-shell-client-protocol.h"
 
 #include <sys/time.h>
+
+#include "logger.h"
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h>  // nanosleep
 #else

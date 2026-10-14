@@ -18,6 +18,9 @@
 #include "ufbx/ufbx.h"
 #include "ufbx/ufbx.c"
 
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #define GLFW_INCLUDE_VULKAN //SPEC: makes the GLFW header include the Vulkan vulkan/vulkan.h header in addition to any selected OpenGL or OpenGL ES header.
 #include <glfw/glfw-master/include/GLFW/glfw3.h>
 
