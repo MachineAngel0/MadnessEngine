@@ -16,6 +16,7 @@
 #include "../core/dsa/darray.h"
 #include "input.h"
 #include "misc_util.h"
+#include "platform.h"
 #include "../resource/resource_types.h"
 
 //RESOURCE COUNTS
@@ -1015,7 +1016,6 @@ typedef struct Renderer
     Allocator allocator; // total memory for the entire renderer
     Allocator frame_allocator;
     Heap_Allocator* heap_allocator;
-
 
     Input_System* input_system; //meant only to be used for debugging
     //general resources taken from the resource system

@@ -12,9 +12,13 @@
 #include "vk_sync.h"
 #include "maths/math_lib.h"
 #include "pipelines/sprite_render.h"
-#include "../renderer/pipelines/ui_render.h"
+#include "pipelines/ui_render.h"
 #include "vulkan_mesh_system.h"
-#include "../renderer/pipelines/particle_render.h"
+#include "vulkan_texture_system.h"
+#include "pipelines/chaos_ui_render.h"
+#include "pipelines/particle_render.h"
+#include "profiler.h"
+#include "logger.h"
 
 bool renderer_on_key(const Event_Type code, String sender, String listener_inst, Event_Data context)
 {
@@ -28,7 +32,8 @@ bool renderer_on_key(const Event_Type code, String sender, String listener_inst,
 }
 
 
-Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config platform_config, Memory_System* memory_system,
+Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config platform_config,
+                        Memory_System* memory_system,
                         Input_System* input_system)
 {
     MASSERT(platform_state);
@@ -65,7 +70,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
 
     void* frame_arena_mem = memory_system_alloc(memory_system, allocator_renderer_mem_size,
                                                 MEMORY_SUBSYSTEM_RENDERER);
-    allocator_init(&renderer->frame_allocator, frame_arena_mem, frame_arena_mem_size,  "Renderer Frame");
+    allocator_init(&renderer->frame_allocator, frame_arena_mem, frame_arena_mem_size, "Renderer Frame");
 
 
     renderer->heap_allocator = memory_system_heap_allocator_create(memory_system, heap_mem_size,
@@ -91,6 +96,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     //set this as well
     renderer->framebuffer_width_new = renderer->framebuffer_width;
     renderer->framebuffer_height_new = renderer->framebuffer_height;
+
 
     renderer->mode = RENDER_MODE_NONE;
 
@@ -135,6 +141,19 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
                                                      height;
     }
 
+    if (renderer->framebuffer_height > renderer->properties2.properties.limits.maxFramebufferHeight)
+    {
+        renderer->framebuffer_height = renderer->properties2.properties.limits.maxFramebufferHeight;
+        renderer->framebuffer_height_new = renderer->properties2.properties.limits.maxFramebufferHeight;
+    }
+    if (renderer->framebuffer_width > renderer->properties2.properties.limits.maxFramebufferWidth)
+    {
+        renderer->framebuffer_width = renderer->properties2.properties.limits.maxFramebufferWidth;
+        renderer->framebuffer_width_new = renderer->properties2.properties.limits.maxFramebufferWidth;
+    }
+
+
+
 
     //NOTE: semaphores must be per swapchain image, fence is per frame in flight
     renderer->current_frame = 0;
@@ -147,7 +166,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
         renderer->framebuffer_height,
         &renderer->swapchain);
 
-    vulkan_renderpass_create_new(renderer);
+    // vulkan_renderpass_create_new(renderer);
 
     //SHADOW PASS TEXTURE
     vulkan_texture_create_shadowmap(renderer, 1024, 1024, renderer->depth_format,

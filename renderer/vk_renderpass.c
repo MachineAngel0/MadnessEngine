@@ -1,5 +1,10 @@
 ﻿#include "vk_renderpass.h"
 
+#include "asserts.h"
+#include "logger.h"
+#include "vk_buffer.h"
+#include "vk_command_buffer.h"
+#include "vk_image.h"
 
 void vulkan_renderpass_create_new(Renderer* renderer)
 {
@@ -97,6 +102,7 @@ Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* ren
         .usage = usage,
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
+
 
     VkResult create_image_result = vkCreateImage(renderer->logical_device, &image_create_info,
                                                  renderer->vk_allocator_callback,

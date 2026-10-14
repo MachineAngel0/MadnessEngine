@@ -61,6 +61,36 @@ typedef struct Linux_Internal_State
 } Linux_Internal_State;
 
 
+void glfw_frambuffer_window_resize(GLFWwindow* window, int width, int height)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)glfwGetWindowUserPointer(window);
+
+    // Fire the event. The application layer should pick this up, but not handle it
+    // as it shouldn't be visible to other parts of the application.
+    Event_Data context;
+    context.data.event_data_window_resize.width = (u16)width;
+    context.data.event_data_window_resize.height = (u16)height;
+    event_fire(EVENT_APP_RESIZE, STRING("glfw linux platform"), context);
+}
+
+void glfw_window_resize(GLFWwindow* window, int width, int height)
+{
+    Linux_Internal_State* state = (Linux_Internal_State*)glfwGetWindowUserPointer(window);
+
+    // Fire the event. The application layer should pick this up, but not handle it
+    // as it shouldn't be visible to other parts of the application.
+    Event_Data context;
+    context.data.event_data_window_resize.width = (u16)width;
+    context.data.event_data_window_resize.height = (u16)height;
+    event_fire(EVENT_APP_RESIZE, STRING("glfw linux platform"), context);
+}
+
+void glfw_window_close(GLFWwindow* window)
+{
+    Event_Data context = {0};
+    event_fire(EVENT_APP_QUIT, STRING("glfw linux platform"), context);
+}
+
 bool platform_startup(
     Platform_State* plat_state,
     Platform_Window_Config platform_config)
@@ -127,6 +157,9 @@ bool platform_startup(
     glfwWindowHint(GLFW_POSITION_X, platform_config.start_pos_x);
     glfwWindowHint(GLFW_POSITION_Y, platform_config.start_pos_y);
 
+    // no GL context, Vulkan owns the surface
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
     state->main_window = glfwCreateWindow(platform_config.start_width, platform_config.start_height,
                                           platform_config.name,
                                           NULL,
@@ -137,6 +170,14 @@ bool platform_startup(
         MASSERT_MSG_FALSE("LINUX BACKEND: GLFW window creation failed");
         return false;
     }
+
+
+    // after glfwCreateWindow succeeds
+    glfwSetWindowUserPointer(state->main_window, state);
+    glfwSetFramebufferSizeCallback(state->main_window, glfw_frambuffer_window_resize);
+    glfwSetWindowSizeCallback(state->main_window, glfw_frambuffer_window_resize);
+    glfwSetWindowCloseCallback(state->main_window, glfw_window_close);
+
     return true;
 }
 
@@ -178,9 +219,32 @@ void platform_get_vulkan_extension_names(const char*** extension_name_array)
     // darray_push(*extension_name_array, &"VK_KHR_xcb_surface"); // VK_KHR_xlib_surface?
 }
 
-// Surface creation for Vulkan
+// Surface creation for Vulkan, uses the main window for now
 bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* renderer)
 {
+    DEBUG("Creating Vulkan LINUX PLATFORM surface...");
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
+
+    VkSurfaceKHR surface;
+    VkResult result = glfwCreateWindowSurface(renderer->instance, state->main_window, NULL, &surface);
+    if (result != VK_SUCCESS)
+    {
+        // Window surface creation failed
+        FATAL("Linux vulkan surface creation failed.");
+        return false;
+    }
+
+
+    renderer->surface = surface;
+    if (renderer->surface == VK_NULL_HANDLE)
+    {
+        FATAL("Vulkan surface handle is null!");
+        return false;
+    }
+
+    INFO("Vulkan surface handle has been aqcuired from the platform layer!");
+
+    return true;
 }
 
 bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config,
@@ -213,6 +277,9 @@ bool platform_create_window(Platform_State* platform_state, Platform_Window_Conf
     //position
     glfwWindowHint(GLFW_POSITION_X, window_config.start_pos_x);
     glfwWindowHint(GLFW_POSITION_Y, window_config.start_pos_y);
+
+    // no GL context, Vulkan owns the surface
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     state->window[state->count] = glfwCreateWindow(window_config.start_width, window_config.start_height,
                                                    window_config.name,

@@ -998,7 +998,7 @@ void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surf
     VkPhysicalDeviceProperties2 physical_device_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = 0,
-        .properties = 0
+        .properties = {0},
     };
     physical_device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
@@ -1006,7 +1006,7 @@ void vulkan_device_print_info(VkPhysicalDevice current_device, VkSurfaceKHR surf
     VkPhysicalDeviceMemoryProperties2 physical_device_memory_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2,
         .pNext = 0,
-        .memoryProperties = 0
+        .memoryProperties = {0}
     };
 
     vkGetPhysicalDeviceProperties2(current_device, &physical_device_properties);

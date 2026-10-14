@@ -697,7 +697,7 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
 
     INFO("Vulkan surface handle has been aqcuired from the platform layer!");
 
-    return TRUE;
+    return true;
 }
 
 void platform_get_window_size(s32* width, s32* height)

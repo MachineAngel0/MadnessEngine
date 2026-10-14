@@ -1,7 +1,7 @@
 ﻿#include "vk_image.h"
-#include "stb_image.h"
-
+#include "vk_buffer.h"
 #include "vk_command_buffer.h"
+#include "logger.h"
 
 
 void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
@@ -21,7 +21,7 @@ void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
     image_create_info.extent.width = width;
     image_create_info.extent.height = height;
     image_create_info.extent.depth = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels = 4; // TODO: Support mip mapping
+    image_create_info.mipLevels = 1; // TODO: Support mip mapping
     image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
     image_create_info.format = format;
     image_create_info.tiling = tiling;

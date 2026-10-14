@@ -5,6 +5,8 @@
 #include "madness_txt.h"
 #include "ui_madness.h"
 #include "ui_insanity.h"
+#include "ui_chaos.h"
+#include "profiler.h"
 #include "sprite_system.h"
 #include "../app_types.h"
 #include "clock.h"
