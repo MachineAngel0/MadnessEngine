@@ -192,6 +192,7 @@ typedef struct Input_System
     mouse_state mouse_current;
     mouse_state mouse_previous;
 
+    bool focused;
 
 } Input_System;
 

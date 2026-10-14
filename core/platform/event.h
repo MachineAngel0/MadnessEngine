@@ -12,6 +12,7 @@ typedef enum Event_Type
 {
     EVENT_APP_QUIT,
     EVENT_APP_RESIZE,
+    EVENT_APP_WINDOW_FOCUS_CHANGE,
     EVENT_HOT_RELOAD,
 
     //INPUT
@@ -88,6 +89,11 @@ typedef struct Event_Data_Gamepad_Button
     u32 button;
 } Event_Data_Gamepad_Button;
 
+typedef struct Event_Data_Window_Focus
+{
+    bool focused;
+} Event_Data_Window_Focus;
+
 typedef struct Event_Data
 {
     //TODO: just use a proper struct type for the union data, we are not writing a generic engine anyway
@@ -103,6 +109,7 @@ typedef struct Event_Data
         Event_Data_Input_Mouse_Wheel event_data_input_mouse_wheel;
         Event_Data_Input_Button event_data_input_button;
         Event_Data_Gamepad_Button event_data_gamepad_button;
+        Event_Data_Window_Focus event_data_window_focus;
     } data;
 } Event_Data;
 

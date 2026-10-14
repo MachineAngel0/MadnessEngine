@@ -6,6 +6,9 @@
 #include "str.h"
 #include "compiler/reflection_system.h"
 #include "maths/math_lib.h"
+#include "asset_system.h"
+#include "stack.h"
+#include "asset_converter.h"
 
 
 void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
@@ -113,8 +116,12 @@ void madness_ui_init(Memory_System* memory_system, Input_System* input_system,
 
     madness_ui->default_font_handle = asset_load_font_path(asset_system, "arial_msdf");
 
+    platform_create_directory("../z_assets_engine/ui");
 
     madness_ui_deserialize_windows();
+
+
+
 
     INFO("MADNESS UI SYSTEM CREATED");
 }

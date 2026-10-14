@@ -40,6 +40,8 @@ void platform_config_use_defaults(Platform_Window_Config* config)
 typedef struct Platform_State
 {
     void* internal_state;
+    // Input_System* input_system; //ref
+    // Event_System* event_system; //ref
 } Platform_State;
 
 #define MAX_MADNESS_WINDOW_COUNT 4
