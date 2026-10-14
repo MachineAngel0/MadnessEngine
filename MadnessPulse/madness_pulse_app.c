@@ -104,13 +104,16 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     event_register(EVENT_APP_RESIZE, STRING("application"), application_on_resized);
 
     //start the platform
-    platform_startup(
+    if (!platform_startup(
         &application_core->plat_state,
-        platform_config);
+        platform_config))
+    {
+        MASSERT_FALSE();
+    }
 
     Madness_Window main_window = {0};
     if (!platform_create_window(&application_core->plat_state,
-                                                     platform_config, &main_window))
+                                platform_config, &main_window))
     {
         MASSERT_FALSE();
     }

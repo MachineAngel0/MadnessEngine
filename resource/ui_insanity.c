@@ -296,7 +296,7 @@ Insanity_UI_Render_Packet insanity_ui_end(void)
 
                     if (c < 32 || c >= 128) continue; // skip unsupported characters
 
-                    Glyph* g = &font_data.glyphs[c - 32];
+                    Madness_Glyph* g = &font_data.glyphs[c - 32];
 
                     f32 x_position = text_current_pos.x + ((float)g->xoff * font_scalar);
                     f32 y_position = text_current_pos.y + ((float)g->yoff * font_scalar);
@@ -871,7 +871,7 @@ IUI_Node* insanity_ui_text_wrapped(const char* text, float max_width, UI_Text_Wr
 
             if (c < 32 || c >= 128) // skip unsupported characters
             {
-                Glyph* g = &font_data.glyphs[c - 32];
+                Madness_Glyph* g = &font_data.glyphs[c - 32];
                 current_string_width += (g->advance) * font_scalar; // move offset forward
                 max_char_height = max_f(max_char_height, g->height * font_scalar);
             }
@@ -935,7 +935,7 @@ vec2s insanity_ui_text_calculate_size_fast(const char* text, u32 string_size)
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
 
-        Glyph* g = &font_data.glyphs[c - 32];
+        Madness_Glyph* g = &font_data.glyphs[c - 32];
 
         f32 y_height = ((f32)g->height * font_scalar);
 

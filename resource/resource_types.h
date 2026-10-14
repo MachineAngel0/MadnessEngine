@@ -386,13 +386,13 @@ typedef struct Madness_Texture_Runtime
 } Madness_Texture_Runtime;
 
 
-typedef struct Glyph
+typedef struct Madness_Glyph
 {
     float width, height;
     float xoff, yoff;
     float advance;
     float u0, v0, u1, v1; // UV coordinates in atlas
-} Glyph;
+} Madness_Glyph;
 
 
 typedef struct Madness_Font
@@ -400,7 +400,7 @@ typedef struct Madness_Font
     //called Madness font cause a linux library uses the struct font
     // float font_creation_size; // the larger the more clear the text looks
     //NOTE: this will have to be larger if i support other languages or non standard characters
-    Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
+    Madness_Glyph glyphs[GLYPH_LENGTH]; //all ascii characters (that we would actually want to present) 128-32 = 96
 } Madness_Font;
 
 typedef struct Madness_Font_Runtime

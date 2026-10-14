@@ -3,6 +3,7 @@
 #include "platform.h"
 #include "hash_set.h"
 #include "math_lib.h"
+#include "logger.h"
 
 bool get_vulkan_api_version(u32* apiVersion,
                             u32* variant,

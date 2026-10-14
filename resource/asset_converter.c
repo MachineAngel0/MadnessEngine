@@ -352,7 +352,7 @@ bool asset_converter_font(Asset_System* asset_system, const char* file_path)
 
 
         // Store glyph metrics
-        Glyph* g = &font_structure.glyphs[c - 32];
+        Madness_Glyph* g = &font_structure.glyphs[c - 32];
         g->width = width;
         g->height = height;
         g->xoff = xoff;
@@ -555,7 +555,7 @@ bool asset_converter_msdf_font(Asset_System* asset_system, const char* file_path
 
         if (bound_top < ascender) { ascender = bound_top; };
 
-        Glyph* g = &engine_texture.font_texture.glyphs[index - GLYPH_START];
+        Madness_Glyph* g = &engine_texture.font_texture.glyphs[index - GLYPH_START];
 
         g->advance = advance * glyph_size;
         g->xoff = bound_left * glyph_size;

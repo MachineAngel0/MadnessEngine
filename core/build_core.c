@@ -51,6 +51,8 @@
 #include "../core/platform/filesystem_win32.c"
 #elif MPLATFORM_LINUX
 #include "../core/platform/platform_linux.c"
+// #include "../core/platform/platform_linux_wayland.c"
+#include "../core/platform/platform_linux_x11.c"
 #include "../core/platform/gamepad_linux.c"
 #include "../core/platform/thread_linux.c"
 #include "../core/platform/filesystem_linux.c"

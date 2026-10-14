@@ -1206,7 +1206,7 @@ vec2s madness_ui_get_text_size(String text)
         if (c < 32 || c >= 128) continue; // skip unsupported characters
 
 
-        Glyph* g = &font_data.glyphs[c - 32];
+        Madness_Glyph* g = &font_data.glyphs[c - 32];
 
         f32 y_height = ((f32)g->height * font_scalar);
 
@@ -1243,7 +1243,7 @@ void madness_calculate_text_size(String text, vec2s screen_position, vec2s* out_
         if (c < 32 || c >= 128) continue; // skip unsupported characters
 
 
-        Glyph* g = &font_data.glyphs[c - 32];
+        Madness_Glyph* g = &font_data.glyphs[c - 32];
 
         f32 y_height = ((f32)g->height * font_scalar);
 
@@ -1402,7 +1402,7 @@ UI_Node* madness_ui_string_internal(String text, vec2s parent_pos,
 
         if (c < 32 || c >= 128) continue; // skip unsupported characters
 
-        Glyph* g = &font_data.glyphs[c - 32];
+        Madness_Glyph* g = &font_data.glyphs[c - 32];
 
         f32 x_position = text_current_pos.x + ((float)g->xoff * font_scalar);
         f32 y_position = text_current_pos.y + ((float)g->yoff * font_scalar);

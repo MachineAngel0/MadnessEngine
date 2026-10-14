@@ -705,25 +705,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.name = "width",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "float",
-			.offset = offsetof(Glyph, width)
+			.offset = offsetof(Madness_Glyph, width)
 		},
 		{
 			.name = "xoff",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "float",
-			.offset = offsetof(Glyph, xoff)
+			.offset = offsetof(Madness_Glyph, xoff)
 		},
 		{
 			.name = "advance",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "float",
-			.offset = offsetof(Glyph, advance)
+			.offset = offsetof(Madness_Glyph, advance)
 		},
 		{
 			.name = "u0",
 			.type = REFLECTION_TYPE_F32,
 			.type_name = "float",
-			.offset = offsetof(Glyph, u0)
+			.offset = offsetof(Madness_Glyph, u0)
 		},
 	};
 
@@ -732,7 +732,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		.name = "Glyph",
 		.fields = Glyph_Fields,
 		.field_count = 4,
-		.struct_size = sizeof(Glyph)
+		.struct_size = sizeof(Madness_Glyph)
 	};
 
 	reflection_registry_add_struct(reflection_registry, Glyph_Runtime_Struct);
