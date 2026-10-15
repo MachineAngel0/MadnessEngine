@@ -144,10 +144,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
 
-    s32 width;
-    s32 height;
-    platform_get_window_size(&application_core->plat_state, &width, &height);
-    platform_windows_resize(&application_core->plat_state, width, height);
 
 
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");

@@ -72,6 +72,10 @@ typedef struct Vulkan_Texture
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
     // vk_image_type image_type;
+
+    //TODO: probably ifdef this out for release builds
+    VkDescriptorSet imgui_descriptor_set;
+    bool ready_for_read_by_imgui;
 } Vulkan_Texture;
 
 

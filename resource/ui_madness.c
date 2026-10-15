@@ -3249,7 +3249,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             madness_ui_u32(*custom_name, data, 1);
             break;
         case REFLECTION_TYPE_U64:
-            madness_ui_float(*custom_name, data, 1.0);
+            madness_ui_u64(*custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S8:
             madness_ui_float(*custom_name, data, 1.0);
@@ -3261,7 +3261,7 @@ bool madness_ui_reflect_material(Asset_Registry* asset_registry, Reflection_Regi
             madness_ui_s32(*custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_S64:
-            madness_ui_float(*custom_name, data, 1.0);
+            madness_ui_s64(*custom_name, data, 1.0);
             break;
         case REFLECTION_TYPE_F32:
             madness_ui_float(*custom_name, data, 1.0);

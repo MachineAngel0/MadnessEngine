@@ -74,6 +74,11 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
             array_remove_swap(texture_system->texture_pending_array, i);
 
+            //TODO: flip off if not using vulkan
+            //create a descriptor for imgui if using it
+            pending_upload.vulkan_texture->ready_for_read_by_imgui = true;
+            pending_upload.vulkan_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(pending_upload.vulkan_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
             // Don't increment i.
             // The swapped-in element now occupies index i.
             continue;
