@@ -4,7 +4,7 @@
 #include "material_system.h"
 #include "profiler.h"
 #include "memory/memory_system.h"
-#include "madness_imgui.h"
+#include "../madness_imgui.h"
 
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
@@ -1092,7 +1092,7 @@ void editor_particle_view(Editor* editor)
 
 
         static char effect_name_text_box[1024];
-        ImGui_InputText("EFFECT NAME", emitter_name_text_box, 1024, 0);
+        ImGui_InputText("EFFECT NAME", effect_name_text_box, 1024, 0);
 
         if (ImGui_Button("PARTICLE EFFECT CREATE ASSET"))
         {
@@ -1184,40 +1184,38 @@ void editor_particle_view(Editor* editor)
     ImGui_End();
 
 
-    madness_ui_window_begin(STRING("Particle Effect View"), 0);
+    ImGui_Begin("Particle Effect View", 0, 0);
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
         if (effect->name)
         {
-            if (madness_ui_button(STRING("SAVE EFFECT")))
+            if (ImGui_Button("SAVE EFFECT"))
             {
                 asset_converter_particle_effect(editor->asset_system, effect, NULL);
             }
 
-            madness_ui_string(*effect->name);
+            ImGui_String(effect->name);
 
 
-            madness_ui_u32(STRING("effect current time"), &effect->effect_current_time, 1);
-            madness_ui_u32(STRING("effect length"), &effect->effect_length, 1);
-            madness_ui_check_box(STRING("infinite duration"), &effect->infinite);
-            madness_ui_check_box(STRING("is visible"), &effect->is_visible);
+            ImGui_DragScalar("effect current time", ImGuiDataType_U32, &effect->effect_current_time);
+            ImGui_DragScalar("effect length", ImGuiDataType_U32, &effect->effect_length);
+            ImGui_Checkbox("infinite duration", &effect->infinite);
+            ImGui_Checkbox("is visible", &effect->is_visible);
 
 
-            madness_ui_u32(STRING("Emitter Count"), &effect->emitter_count, 0);
+            ImGui_DragScalar("Emitter Count", ImGuiDataType_U32, &effect->emitter_count);
             for (u32 emitter_idx = 0; emitter_idx < effect->emitter_count; emitter_idx++)
             {
-                madness_ui_string(*effect->emitters[emitter_idx]->name);
-                madness_ui_u32(*string_format(editor->frame_allocator, "emitter_start %d", emitter_idx),
-                               &effect->emitters_start[emitter_idx], 1);
-                madness_ui_u32(*string_format(editor->frame_allocator, "emitter_end %d", emitter_idx),
-                               &effect->emitters_end[emitter_idx], 1);
+                ImGui_String(effect->emitters[emitter_idx]->name);
+                ImGui_DragScalar("emitter_start", ImGuiDataType_U32, &effect->emitters_start[emitter_idx]);
+                ImGui_DragScalar("emitter_end", ImGuiDataType_U32, &effect->emitters_end[emitter_idx]);
             }
         }
     }
-    madness_ui_window_end();
+    ImGui_End();
 
 
-    madness_ui_window_begin(STRING("Particle Effect Emitter View"), 0);
+    ImGui_Begin("Particle Effect Emitter View", 0, 0);
     {
         Particle_Effect* effect = &particle_system->particle_effects[effect_index];
 
@@ -1226,35 +1224,35 @@ void editor_particle_view(Editor* editor)
         {
             Particle_Emitter* emitter = effect->emitters[effect_emitter_index];
 
-            madness_ui_string(STRING("NAME: "));
-            madness_ui_same_line();
-            madness_ui_string(*emitter->name);
+            ImGui_Text("NAME: ");
+            ImGui_SameLine();
+            ImGui_String(emitter->name);
 
             Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
                 editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
-            madness_ui_reflect_using_data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
-                                          &emitter->data, "emitter");
+            Imgui_Reflect_Using_Data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
+                                          &emitter->data, "emitter", editor->frame_allocator);
         }
     }
-    madness_ui_window_end();
+    ImGui_End();
 
-    madness_ui_window_begin(STRING("Particle Active View"), 0);
+    ImGui_Begin("Particle Active View", 0, 0);
     {
         for (u32 i = 0; i < particle_system->active_emitters->num_items; i++)
         {
             u32 index = array_get(particle_system->active_emitters, i, u32);
 
-            madness_ui_string(*particle_system->emitters[index].name);
+            ImGui_String(particle_system->emitters[index].name);
         }
 
         for (u32 i = 0; i < particle_system->active_effects->num_items; i++)
         {
             u32 index = array_get(particle_system->active_effects, i, u32);
 
-            madness_ui_string(*particle_system->particle_effects[index].name);
+            ImGui_String(particle_system->particle_effects[index].name);
         }
     }
-    madness_ui_window_end();
+    ImGui_End();
 
 
     PROFILE_ZONE_END(editor_particle_view);
