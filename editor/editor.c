@@ -1,11 +1,21 @@
 ﻿#include "editor.h"
 
+#include "resource_types.h"
 #include "asset_system.h"
+#include "asset_registry.h"
+#include "scene.h"
 #include "material_system.h"
+#include "texture_system.h"
+#include "particle_system.h"
 #include "profiler.h"
 #include "memory/memory_system.h"
+#include "ui_madness.h"
+#include "ui_insanity.h"
 #include "../madness_imgui.h"
+#include "filesystem.h"
 
+#include "madness_txt.h"
+#include "clock.h"
 
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
                     Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry,
