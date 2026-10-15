@@ -141,10 +141,11 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     chaos_ui_init(&application_core->memory_system,
                   application_core->input_system,
                   application_core->asset_system);
+
+    madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
+
+
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
-
-
-
 
     for (u32 i = 0; i < 100; i++)
     {
@@ -232,6 +233,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         chaos_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
                        renderer_plugin->renderer->framebuffer_height_new);
 
+        //imgui
+        madness_imgui_frame_start();
+
         //game and editor switch between
         if (input_key_released_unique(KEY_TAB))
         {
@@ -292,11 +296,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     //look at memory before shutdown
 
+
     filewatcher_deinit();
     editor_shutdown(editor);
     madness_pulse_game_shutdown(madness_pulse_game, &application_core->memory_system);
 
 
+    madness_imgui_shutdown();
     madness_ui_shutdown();
 
     renderer_shutdown(renderer_plugin->renderer);

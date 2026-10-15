@@ -669,6 +669,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     ui_renderer_insanity_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
     chaos_ui_renderer_draw(renderer->cui_renderer, renderer, graphics_command_buffer);
 
+    madness_imgui_render(graphics_command_buffer);
+
 
     // Finish the current dynamic rendering section
     vkCmdEndRendering(graphics_command_buffer->handle);

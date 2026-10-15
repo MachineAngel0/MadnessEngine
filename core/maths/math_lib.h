@@ -126,6 +126,7 @@ static const vec4s COLOR4_MAGENTA = {.x = 1.0f, 0.0f, 1.0f, .w = 1.0f};
 static const vec4s COLOR4_VIOLET = {.x = 0.5f, 0.0f, 1.0f, .w = 1.0f};
 static const vec4s COLOR4_HOT_PINK = {.x = 1.0f, 0.412f, 0.706f, .w = 1.0f};
 static const vec4s COLOR4_ORANGE = {.x = 1.0f, 0.5f, 0.0f, .w = 1.0f};
+static const vec4s COLOR4_ORANGE_PRESSED = {.x = 251.0f/255.f, 78.f/255.f, 0.0f, .w = 1.0f};
 static const vec4s COLOR_TRANSPARENT = {.x = 0.0f, 0.0f, 0.0f, .w = 1.0f};
 
 //UI Color Pallette
@@ -150,6 +151,9 @@ static const vec4s COLOR4_PURPLE_PALETTE_PURPLE_LIGHT2 = {
     .x = 194.f / 255.f, .y = 142.f / 255.f, .z = 237.f / 255.f, 1.f
 };
 static const vec4s COLOR4_PURPLE_PALETTE_LIGHT = {.x = 197.f / 255.f, .y = 195.f / 255.f, .z = 196.f / 255.f, 1.f};
+static const vec4s COLOR4_PURPLE_HEADER = {.x = 1.000f, .y =0.000f, .z =0.571f, .w =0.482f};
+static const vec4s COLOR4_PURPLE_HEADER_HOVERED = {.x = 0.991f, .y =0.356f, .z =0.851f, .w =0.643f};
+static const vec4s COLOR4_PURPLE_HEADER_ACTIVE = {.x = 0.980f, .y = 0.541f, .z =0.260f,.w =  0.800f};
 
 
 /*** RANDOM ***/

@@ -28,3 +28,10 @@
 #include <GLFW/glfw3native.h>
 
 #include "tracy_lib/tracy/public/tracy/TracyC.h"
+
+//imgui
+#include "dcimgui.h"
+#include "dcimgui_impl_glfw.h"
+#include "dcimgui_impl_win32.h"
+#define VK_USE_PLATFORM_WIN32_KHR
+#include "dcimgui_impl_vulkan.h"

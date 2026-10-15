@@ -56,10 +56,14 @@ bool platform_startup(
     Platform_Window_Config platform_config);
 
 
+
 void platform_shutdown(Platform_State* plat_state);
 
 
 bool platform_pump_messages(Platform_State* plat_state);
+
+//imgui
+bool platform_init_imgui(Platform_State* plat_state);
 
 
 //windowing

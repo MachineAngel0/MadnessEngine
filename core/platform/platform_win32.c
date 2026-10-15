@@ -27,6 +27,9 @@
 #include "profiler.h"
 #include "vk_device.h"
 
+//imgui
+#include "dcimgui_impl_win32.h"
+
 
 typedef struct Windows_Internal_State
 {
@@ -177,6 +180,7 @@ bool platform_pump_messages(Platform_State* plat_state)
 
     return true;
 }
+
 
 bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config, Madness_Window* out_window_handle)
 {
@@ -329,6 +333,45 @@ void platform_sleep(u64 ms)
 }
 
 
+static int imgui_win32_create_vk_surface(
+    ImGuiViewport* viewport,
+    ImU64 vk_instance,
+    const void* vk_allocator,
+    ImU64* out_vk_surface)
+{
+    VkWin32SurfaceCreateInfoKHR create_info = {0};
+    create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    create_info.hwnd = (HWND)viewport->PlatformHandleRaw;
+    create_info.hinstance = GetModuleHandleW(NULL);
+
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+    VkResult result = vkCreateWin32SurfaceKHR(
+        (VkInstance)(uintptr_t)vk_instance,
+        &create_info,
+        (const VkAllocationCallbacks*)vk_allocator,
+        &surface
+    );
+
+    *out_vk_surface = (ImU64)(uintptr_t)surface;
+
+    return (int)result;
+}
+
+bool platform_init_imgui(Platform_State* plat_state)
+{
+
+    //TODO: move to the platform layer
+    ImGuiPlatformIO* platform_io = ImGui_GetPlatformIO();
+    platform_io->Platform_CreateVkSurface =
+        imgui_win32_create_vk_surface;
+
+    Windows_Internal_State* state = (Windows_Internal_State*)plat_state->internal_state;
+    cImGui_ImplWin32_Init(state->hwnd);
+}
+
+
+
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
 {
     //all this code before actually processing the message is to make sure the input system is getting any inputs
@@ -346,7 +389,20 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
 
     if (!plat_state)
     {
-        FATAL("win32_process_message: INVALID PLATFORM STATE")
+        WARN("win32_process_message: INVALID PLATFORM STATE")
+        // return DefWindowProcA(hwnd, msg, w_param, l_param);
+    }
+
+
+    // Forward messages to ImGui even for windows without Platform_State.
+    bool imgui_handled = cImGui_ImplWin32_WndProcHandler(
+        hwnd, msg, w_param, l_param);
+
+    if (!plat_state)
+    {
+        if (imgui_handled)
+            // return 1;
+
         return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 

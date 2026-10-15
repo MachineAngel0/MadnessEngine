@@ -5,6 +5,9 @@ set(CMAKE_C_STANDARD 11) #i like alignas() so its staying as 11, 99 if I really 
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
+# only here for imgui
+set(CMAKE_CXX_STANDARD 17)
+
 #generate a compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -87,6 +90,14 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/cgltf-master)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/ufbx)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/freetype)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib/dear_bindings-main)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib/dear_bindings-main/generated)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib/dear_bindings-main/generated/backends)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib/imgui)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/imgui_lib/imgui/backends)
+
+
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/ability)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/ability_components)
@@ -96,6 +107,7 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/game_mode)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/unit_component)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/game_serialization)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
+
 
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
@@ -169,6 +181,31 @@ add_executable(MadnessEngine
 )
 
 
+add_library(imgui_c STATIC
+        # Dear ImGui core
+        lib/imgui_lib/imgui/imgui.cpp
+        lib/imgui_lib/imgui/imgui_draw.cpp
+        lib/imgui_lib/imgui/imgui_tables.cpp
+        lib/imgui_lib/imgui/imgui_widgets.cpp
+        lib/imgui_lib/imgui/imgui_demo.cpp
+
+        # Original platform and renderer backends
+        lib/imgui_lib/imgui/backends/imgui_impl_glfw.cpp
+        lib/imgui_lib/imgui/backends/imgui_impl_win32.cpp
+        lib/imgui_lib/imgui/backends/imgui_impl_vulkan.cpp
+
+        # Generated C bindings
+        lib/imgui_lib/dear_bindings-main/generated/dcimgui.cpp
+        lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_glfw.cpp
+        lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_win32.cpp
+        lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_vulkan.cpp
+)
+
+
+
+target_link_libraries(imgui_c PUBLIC Vulkan::Vulkan glfw)
+
+
 #libstdc
 
 target_sources(MadnessEngine_renderer PRIVATE)
@@ -188,6 +225,7 @@ if (WIN32)
             Vulkan::Vulkan
             Tracy::TracyClient
             glfw
+            imgui_c
             Xinput
             winmm
             ole32
@@ -202,6 +240,7 @@ if (UNIX)
             Vulkan::Vulkan
             Tracy::TracyClient
             glfw
+            imgui_c
             X11
             X11-xcb
             xcb

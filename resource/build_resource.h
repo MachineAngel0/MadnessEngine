@@ -35,6 +35,8 @@
 #include "ui_chaos_structs_enums.h"
 #include "ui_chaos.h"
 
+#include "madness_imgui.h"
+
 
 
 

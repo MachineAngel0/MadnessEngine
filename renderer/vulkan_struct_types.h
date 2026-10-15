@@ -1128,6 +1128,10 @@ typedef struct Renderer
     Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
     Vulkan_Swapchain swapchain;
     bool recreating_swapchain;
+
+
+    //IMGUI STUFF
+    // VkDescriptorPool imgui_descriptor_pool;
 } Renderer;
 
 
