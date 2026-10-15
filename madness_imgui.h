@@ -3,9 +3,16 @@
 
 
 #include "dcimgui.h"
+
+#if MPLATFORM_WINDOWS
 #include "dcimgui_impl_win32.h"
-// #include "dcimgui_impl_glfw.h"
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
+#if MPLATFORM_LINUX
+#include "dcimgui_impl_glfw.h"
+#endif
+
 #include "dcimgui_impl_vulkan.h"
 
 #include "vulkan_struct_types.h"
@@ -140,7 +147,12 @@ void madness_imgui_init(Platform_State* platform_state, Renderer* renderer)
 void madness_imgui_shutdown(void)
 {
     cImGui_ImplVulkan_Shutdown();
+#if MPLATFORM_WINDOWS
     cImGui_ImplWin32_Shutdown();
+#endif
+#if MPLATFORM_LINUX
+    cImGui_ImplGlfw_Shutdown();
+#endif
 
     ImGui_DestroyContext(NULL);
 }
@@ -150,8 +162,13 @@ void madness_imgui_frame_start()
 {
     // (Your code process and dispatch Win32 messages)
     // Start the Dear ImGui frame
-    // cImGui_ImplGlfw_NewFrame();
+
+#if MPLATFORM_WINDOWS
     cImGui_ImplWin32_NewFrame();
+#endif
+#if MPLATFORM_LINUX
+    cImGui_ImplGlfw_NewFrame();
+#endif
     cImGui_ImplVulkan_NewFrame();
     ImGui_NewFrame();
 
@@ -163,6 +180,7 @@ void madness_imgui_render(Vulkan_Command_Buffer* command_buffer)
 {
     ImGui_Render();
     cImGui_ImplVulkan_RenderDrawData(ImGui_GetDrawData(), command_buffer->handle);
+
 
     ImGui_UpdatePlatformWindows();
     ImGui_RenderPlatformWindowsDefault();

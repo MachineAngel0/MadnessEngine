@@ -128,33 +128,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
         return false;
     }
 
-
-    if (renderer->framebuffer_width != renderer->swapchain_capabilities.capabilities.currentExtent.width)
-    {
-        renderer->framebuffer_width = renderer->swapchain_capabilities.capabilities.currentExtent.width;
-        renderer->framebuffer_width_new = renderer->swapchain_capabilities.capabilities.currentExtent.width;
-    }
-    if (renderer->framebuffer_height != renderer->swapchain_capabilities.capabilities.currentExtent.height)
-    {
-        renderer->framebuffer_height = renderer->swapchain_capabilities.capabilities.currentExtent.height;
-        renderer->framebuffer_height_new = renderer->swapchain_capabilities.capabilities.currentExtent.
-                                                     height;
-    }
-
-    if (renderer->framebuffer_height > renderer->properties2.properties.limits.maxFramebufferHeight)
-    {
-        renderer->framebuffer_height = renderer->properties2.properties.limits.maxFramebufferHeight;
-        renderer->framebuffer_height_new = renderer->properties2.properties.limits.maxFramebufferHeight;
-    }
-    if (renderer->framebuffer_width > renderer->properties2.properties.limits.maxFramebufferWidth)
-    {
-        renderer->framebuffer_width = renderer->properties2.properties.limits.maxFramebufferWidth;
-        renderer->framebuffer_width_new = renderer->properties2.properties.limits.maxFramebufferWidth;
-    }
-
-
-
-
     //NOTE: semaphores must be per swapchain image, fence is per frame in flight
     renderer->current_frame = 0;
     renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT;
@@ -165,6 +138,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
         renderer->framebuffer_width,
         renderer->framebuffer_height,
         &renderer->swapchain);
+
+
 
     // vulkan_renderpass_create_new(renderer);
 

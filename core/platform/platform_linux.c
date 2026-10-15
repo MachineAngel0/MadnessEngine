@@ -13,6 +13,9 @@
 #include <sys/stat.h>
 
 #include <sys/time.h>
+
+#include "dcimgui.h"
+#include "dcimgui_impl_glfw.h"
 #if _POSIX_C_SOURCE >= 199309L
 #include <time.h>  // nanosleep
 #else
@@ -312,6 +315,8 @@ bool platform_startup(
     Platform_State* plat_state,
     Platform_Window_Config platform_config)
 {
+
+
     // Create the internal state.
     plat_state->internal_state = malloc(sizeof(Linux_Internal_State));
     memset(plat_state->internal_state, 0, (sizeof(Linux_Internal_State)));
@@ -351,6 +356,7 @@ bool platform_startup(
     // default window behaviours
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+
     // create hidden, show after setup (no white flash)
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
     glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
@@ -377,8 +383,26 @@ bool platform_startup(
     // no GL context, Vulkan owns the surface
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+    // get the primary window so we are not creating a width/height larget than the screen
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primary);
+    int max_width = mode->width;
+    int max_height = mode->height;
+
+    if (platform_config.start_height > max_height)
+    {
+        platform_config.start_height = max_height;
+    }
+    if (platform_config.start_width > max_width)
+    {
+        platform_config.start_width = max_width;
+    }
+
+
+    //TODO: the window size is that is open is incorrect
     state->main_window = glfwCreateWindow(platform_config.start_width, platform_config.start_height,
                                           platform_config.name,
+                                          // glfwGetPrimaryMonitor(),
                                           NULL,
                                           NULL);
 
@@ -407,6 +431,7 @@ bool platform_startup(
     glfwSetJoystickCallback(glfw_joystick_callback);
 
 
+
     return true;
 }
 
@@ -422,6 +447,19 @@ bool platform_pump_messages(Platform_State* plat_state)
 {
     /* Poll for and process events */
     glfwPollEvents();
+}
+
+bool platform_init_imgui(Platform_State* plat_state)
+{
+    // ImGuiPlatformIO* platform_io = ImGui_GetPlatformIO();
+    // platform_io.
+    Linux_Internal_State* state = (Linux_Internal_State*)plat_state->internal_state;
+    if (!cImGui_ImplGlfw_InitForVulkan(state->main_window, true))
+    {
+        MASSERT_FALSE()
+        return false;
+    }
+    return true;
 }
 
 
@@ -484,6 +522,7 @@ bool platform_create_window(Platform_State* platform_state, Platform_Window_Conf
     // default window behaviours
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+
     // create hidden, show after setup (no white flash)
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
     glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
@@ -504,16 +543,19 @@ bool platform_create_window(Platform_State* platform_state, Platform_Window_Conf
     glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "madness_engine");
 
     //position
-    glfwWindowHint(GLFW_POSITION_X, window_config.start_pos_x);
-    glfwWindowHint(GLFW_POSITION_Y, window_config.start_pos_y);
+    // glfwWindowHint(GLFW_POSITION_X, window_config.start_pos_x);
+    // glfwWindowHint(GLFW_POSITION_Y, window_config.start_pos_y);
 
     // no GL context, Vulkan owns the surface
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+
+
     state->window[state->count] = glfwCreateWindow(window_config.start_width, window_config.start_height,
                                                    window_config.name,
-                                                   NULL,
+                                                   glfwGetPrimaryMonitor(),
                                                    NULL);
+
 
     if (!state->main_window)
     {
@@ -637,9 +679,6 @@ bool platform_file_write_async()
 {
 }
 
-void platform_get_cursor_pos(int* out_x, int* out_y)
-{
-}
 
 void platform_set_cursor_type(Platform_Cursor_Type cursor_type)
 {
@@ -916,9 +955,6 @@ bool platform_does_directory_exist(const char* path)
 }
 
 
-void platform_set_cursor_pos(int x, int y)
-{
-}
 
 void platform_generate_uuid(u64* high, u64* low)
 {
