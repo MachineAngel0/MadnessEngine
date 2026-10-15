@@ -22,7 +22,8 @@ void vulkan_pipeline_destroy(Renderer* renderer, Vulkan_Shader_Pipeline* pipelin
 
 bool vulkan_pipeline_compute_create(void);
 
-const char* pipeline_cache_file_path = "../renderer/pipeline_cache.bin";
+const char* pipeline_cache_file_path_win32 = "../renderer/pipeline_cache_win32.bin";
+const char* pipeline_cache_file_path_linux = "../renderer/pipeline_cache_linux.bin";
 
 #define pipeline_cache_magic_number 79846
 

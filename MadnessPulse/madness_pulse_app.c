@@ -113,12 +113,12 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
         MASSERT_FALSE();
     }
 
-    Madness_Window main_window = {0};
-    if (!platform_create_window(&application_core->plat_state,
-                                platform_config, &main_window))
-    {
-        MASSERT_FALSE();
-    }
+    // Madness_Window main_window = {0};
+    // if (!platform_create_window(&application_core->plat_state,
+    //                             platform_config, &main_window))
+    // {
+    //     MASSERT_FALSE();
+    // }
 
 
     //Renderer

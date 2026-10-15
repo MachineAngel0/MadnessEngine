@@ -664,7 +664,16 @@ void vulkan_pipeline_cache_read_from_file(Renderer* renderer, vulkan_pipeline_ca
 {
     pipeline_cache_file_header pipeline_cache_prefix_header;
     //TODO: load data from file if any are available, and verify if the pipeline caches are the same
-    FILE* fptr = fopen(pipeline_cache_file_path, "rb");
+
+
+#if MPLATFORM_WINDOWS
+    FILE* fptr = fopen(pipeline_cache_file_path_win32, "rb");
+#endif
+#if MPLATFORM_LINUX
+    FILE* fptr = fopen(pipeline_cache_file_path_linux, "rb");
+#endif
+
+
     if (!fptr)
     {
         WARN("VULKAN_PIPELINE_CACHE_READ_FROM_FILE: COULD NOT OPEN FILE")
@@ -728,6 +737,40 @@ vulkan_pipeline_cache* vulkan_pipeline_cache_initialize(Renderer* renderer)
 {
     vulkan_pipeline_cache* pipeline_info = allocator_alloc(&renderer->allocator, sizeof(vulkan_pipeline_cache));
 
+
+
+    //ensure the file exists
+#if MPLATFORM_WINDOWS
+    if (!filesystem_does_file_exists(pipeline_cache_file_path_win32))
+    {
+        FILE* fptr = fopen(pipeline_cache_file_path_win32, "wb");
+        pipeline_cache_file_header new_file_header;
+        new_file_header.magic = pipeline_cache_magic_number;
+        new_file_header.data_size = 0;
+        new_file_header.device_id = renderer->properties2.properties.deviceID;
+        new_file_header.driver_version = renderer->properties2.properties.driverVersion;
+        new_file_header.driver_abi = sizeof(void*);
+        new_file_header.vendor_id = renderer->properties2.properties.vendorID;
+        memcpy(new_file_header.uuid, renderer->properties2.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
+        fclose(fptr);
+    }
+#endif
+#if MPLATFORM_LINUX
+    if (!filesystem_does_file_exists(pipeline_cache_file_path_linux))
+    {
+        FILE* fptr = fopen(pipeline_cache_file_path_linux, "wb");
+        pipeline_cache_file_header new_file_header;
+        new_file_header.magic = pipeline_cache_magic_number;
+        new_file_header.data_size = 0;
+        new_file_header.device_id = renderer->properties2.properties.deviceID;
+        new_file_header.driver_version = renderer->properties2.properties.driverVersion;
+        new_file_header.driver_abi = sizeof(void*);
+        new_file_header.vendor_id = renderer->properties2.properties.vendorID;
+        memcpy(new_file_header.uuid, renderer->properties2.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
+        fclose(fptr);
+    }
+#endif
+
     u8* pipeline_cache_data = NULL;
     size_t pipeline_cache_data_size = 0;
 
@@ -787,7 +830,13 @@ void vulkan_pipeline_cache_write_to_file(Renderer* renderer, vulkan_pipeline_cac
     memcpy(new_file_header.uuid, renderer->properties2.properties.pipelineCacheUUID, sizeof(new_file_header.uuid));
 
     //write into the file
-    FILE* fptr = fopen(pipeline_cache_file_path, "wb");
+#if MPLATFORM_WINDOWS
+    FILE* fptr = fopen(pipeline_cache_file_path_win32, "wb");
+#endif
+#if MPLATFORM_LINUX
+    FILE* fptr = fopen(pipeline_cache_file_path_linux, "wb");
+#endif
+
     if (!fptr)
     {
         WARN("VULKAN PIPELINE CACHE WRITE TO FILE: COULDNT OPEN FILE")

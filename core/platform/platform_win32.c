@@ -700,29 +700,60 @@ bool platform_create_vulkan_surface(Platform_State* plat_state, Renderer* render
     return true;
 }
 
-void platform_get_window_size(s32* width, s32* height)
+
+void platform_get_window_pos(Platform_State* platform_state, s32* x, s32* y)
 {
-    MASSERT(false);
+    Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
+    POINT client_origin = {0, 0};
+    ClientToScreen(state->hwnd, &client_origin);   // client_origin.x/y is now the screen position
+
+    //the area which you render into, not including the title bar or any borders
+    RECT window_render_rect;
+    GetClientRect(state->hwnd, &window_render_rect);
+    *x = window_render_rect.right;
+    *y = window_render_rect.bottom;
+
+    //NOTE: the windows message callbacks give you client area
+
+    //NOTE: if needed this includes the title bar and borders of the window
+    // RECT rect;
+    // GetWindowRect(hwnd, &rect);
+    // int x = rect.left;
+    // int y = rect.top;
+    // int width = rect.right - rect.left;
+    // int height = rect.bottom - rect.top;
+
+}
+void platform_get_window_size(Platform_State* platform_state, s32* width, s32* height)
+{
+    Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
+
+    //the area which you render into, not including the title bar or any borders
+    RECT rect;
+    GetClientRect(state->hwnd, &rect);
+    *width = rect.right - rect.left;   // left/top are always 0, so rect.right works too
+    *height = rect.bottom - rect.top;
+
+    //NOTE: the windows message callbacks give you client area
+
+    //NOTE: if needed this includes the title bar and borders of the window
+    // RECT rect;
+    // GetWindowRect(hwnd, &rect);
+    // int outer_width = rect.right - rect.left;
+    // int outer_height = rect.bottom - rect.top;
 }
 
-void platform_get_window_pos(s32* x, s32* y)
-{
-    MASSERT(false);
-}
-
-
-void platform_set_cursor_pos(int x, int y)
+void platform_set_cursor_pos(Platform_State* platform_state, int x, int y)
 {
     SetCursorPos(x, y);
 }
 
-void platform_get_absolute_cursor_pos(int* out_x, int* out_y)
+void platform_get_absolute_cursor_pos(Platform_State* platform_state,int* out_x, int* out_y)
 {
     struct tagPOINT lpPoint; // this is a pointer
     GetCursorPos(&lpPoint);
     *out_x = lpPoint.x;
     *out_y = lpPoint.y;
-
 
 }
 
