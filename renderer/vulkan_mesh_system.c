@@ -287,7 +287,6 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
-
         mesh_system_upload_data(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
@@ -413,8 +412,8 @@ void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System*
 
 int vulkan_mesh_sort_key(const void*  render_item1, const void*  render_item2)
 {
-    Mesh_Render_Item* p1 = (Mesh_Render_Item*)render_item1;
-    Mesh_Render_Item* p2 = (Mesh_Render_Item*)render_item2;
+    Vulkan_Mesh_Render_Item* p1 = (Vulkan_Mesh_Render_Item*)render_item1;
+    Vulkan_Mesh_Render_Item* p2 = (Vulkan_Mesh_Render_Item*)render_item2;
     return cmp_u64(&p1->sort_key, &p2->sort_key);
 }
 
@@ -429,11 +428,11 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     // loop through our meshes and create render items for each
 
     //TODO: TEMP
-    Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator, 100 * sizeof(Mesh_Render_Item));
+    Vulkan_Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator, 100 * sizeof(Vulkan_Mesh_Render_Item));
     u32 render_item_count = 0;
 
-    Skinned_Render_Item* skinned_render_items = allocator_alloc(&renderer->frame_allocator,
-                                                                100 * sizeof(Skinned_Render_Item));
+    Vulkan_Skinned_Render_Item* skinned_render_items = allocator_alloc(&renderer->frame_allocator,
+                                                                100 * sizeof(Vulkan_Skinned_Render_Item));
     u32 skinned_render_item_count = 0;
 
 
@@ -464,13 +463,13 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         }
 
         //TODO: check if material upload is valid yet, when we get around to that
-        Mesh_Render_Item* render_inst = &render_items[render_item_count++];
+        Vulkan_Mesh_Render_Item* render_inst = &render_items[render_item_count++];
 
 
         Transform* transform = scene_get_transform(render_packet->draw_3d_data_packet.scene,
                                                    submesh_instance->parent_transform_handle);
 
-        *render_inst = (Mesh_Render_Item){
+        *render_inst = (Vulkan_Mesh_Render_Item){
             //TODO:
             // .sort_key = material_create_sort_key(submesh_instance->material_handle.handle, transform->position.z),
 
@@ -486,7 +485,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     }
 
     //TODO: sort the meshes by sort key
-    qsort(render_items, render_item_count, sizeof(Mesh_Render_Item), vulkan_mesh_sort_key);
+    qsort(render_items, render_item_count, sizeof(Vulkan_Mesh_Render_Item), vulkan_mesh_sort_key);
 
 
     /*
@@ -522,7 +521,7 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 
 
     VkDrawIndexedIndirectCommand indirect_draw = {0};
-    Vulkan_Mesh_Draw mesh_draw = {0};
+    Vulkan_Mesh_Render_Item mesh_draw = {0};
 
     for (u32 i = 0; i < render_item_count; i++)
     {

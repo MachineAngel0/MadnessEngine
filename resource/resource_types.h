@@ -1011,6 +1011,11 @@ typedef struct Texture_System
     Asset_Runtime texture_asset[MAX_TEXTURE_COUNT];
 
     RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_gpu_upload_queue;
+
+    //this should be for things we want loaded right away, like on startup
+    // RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_gpu_upload_rn_queue;
+
+
 } Texture_System;
 
 typedef struct Scene

@@ -18,6 +18,7 @@
 #include "misc_util.h"
 #include "platform.h"
 #include "../resource/resource_types.h"
+#include "vulkan_struct_draw_types.h"
 
 //RESOURCE COUNTS
 #define MAX_VULKAN_COMMAND_BUFFERS 32
@@ -226,63 +227,22 @@ typedef struct Vulkan_Shader_Pipeline
     VkPipeline handle;
 } Vulkan_Shader_Pipeline;
 
-typedef struct Vulkan_Particle_Draw
-{
-    u64 shader_key;
-    u32 material_index;
-    u32 particle_index;
-} Vulkan_Particle_Draw;
 
 
 
-typedef struct Mesh_Render_Item
-{
-    u64 sort_key; // pipeline, permutation <-> depth(if needed for transparency)
 
-    u32 material_idx;
-    u32 mesh_instance_idx;
-    u32 mesh_asset_idx;
-    // u32 submesh_idx;
-    u32 transform_handle;
-    // u32 cull_bounds_handle;
-    u32 index_count;
-    u32 index_offset;
-    u32 vertex_offset;
-} Mesh_Render_Item;
-
-typedef struct Vulkan_Mesh_Draw
-{
-    u32 transform_idx;
-    u32 material_instance_handle;
-} Vulkan_Mesh_Draw;
-
-typedef struct Skinned_Render_Item
-{
-    u64 material_key;
-    u32 mesh_handle;
-    u32 submesh_handle;
-    u32 material_handle;
-    u32 transform_handle;
-    // u32 cull_bounds_handle;
-    u32 index_count;
-    u32 index_offset;
-    u32 vertex_offset;
-
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 skinned_matrix_idx;
-} Skinned_Render_Item;
 
 
 typedef struct Vulkan_SKMesh_Draw
 {
     u32 transform_idx;
-    u32 material_instance_handle;
+    u32 material_idk;
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
     u32 vertex_offset_count;
 } Vulkan_Skinned_Draw;
+
 
 
 typedef struct Mesh_Render_Record
@@ -831,7 +791,7 @@ typedef struct Particle_Render
     Buffer_Frame_Handle particle_draw_buffer_handle;
 
 
-    Vulkan_Particle_Draw* particle_draw;
+    Vulkan_Particle_Render_Item* particle_draw;
     u32 particle_draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;

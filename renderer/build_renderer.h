@@ -7,6 +7,7 @@
 
 
 #include "vulkan_enum_types.h"
+#include "vulkan_struct_draw_types.h"
 #include "vulkan_struct_types.h"
 #include "spv_reflect.h"
 
