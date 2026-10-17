@@ -353,7 +353,8 @@ bool Imgui_Reflect_Using_Data(Reflection_Registry* reflection_registry, Reflecti
 
             break;
         case REFLECTION_TYPE_STRUCT:
-            madness_ui_reflection_runtime_registry(reflection_registry, field_info.type_name, id);
+            Reflection_Runtime_Struct reflection_struct = reflection_registry_get_struct(reflection_registry, field_info.type_name);
+            Imgui_Reflect_Using_Data(reflection_registry, reflection_struct, data, id, allocator);
             break;
 
         case REFLECTION_TYPE_VEC2:
@@ -374,7 +375,9 @@ bool Imgui_Reflect_Using_Data(Reflection_Registry* reflection_registry, Reflecti
         case REFLECTION_TYPE_UUID:
             MADNESS_UUID* uuid = data;
             ImGui_DragScalar(custom_name, ImGuiDataType_U64, &uuid->high);
+            ImGui_PushID("high");
             ImGui_DragScalar(custom_name, ImGuiDataType_U64, &uuid->low);
+            ImGui_PopID();
 
             break;
         case REFLECTION_TYPE_MAX:

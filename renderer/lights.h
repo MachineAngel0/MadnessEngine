@@ -4,7 +4,7 @@
 
 Light_System* light_system_init(Renderer* renderer);
 
-void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer);
+void light_system_update_upload_frame_data(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer);
 
 
 void directional_light_init(Directional_Light* light);

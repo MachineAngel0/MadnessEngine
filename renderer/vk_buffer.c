@@ -226,7 +226,7 @@ bool vulkan_buffer_frame_staging_upload(Renderer* renderer, Buffer_Frame_Handle 
 
     //copy staging buffer data (host visible) into the buffer that for the GPU (device local)
 
-    // Buffer copies have to be submitted to a queue, so we need a command buffer for them
+    //Buffer copies have to be submitted to a queue, so we need a command buffer for them
     //Copy all the data in the staging buffer into the device local buffer
     VkBufferCopy copyRegion = {0};
     copyRegion.size = data_byte_size;

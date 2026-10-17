@@ -14,6 +14,7 @@
 #include "debug_draw.h"
 
 #include "vulkan_allocator.h"
+#include "vulkan_frame_data.h"
 #include "camera.h"
 #include "lights.h"
 #include "vulkan_shader_system.h"

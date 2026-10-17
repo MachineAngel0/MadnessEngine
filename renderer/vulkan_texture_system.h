@@ -7,7 +7,11 @@
 //TODO: pass in texture config amount
 Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer);
 
-void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet);
+void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet);
+void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet* packet);
+
+
+
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index);
 

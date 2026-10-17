@@ -229,10 +229,6 @@ typedef struct Vulkan_Shader_Pipeline
 
 
 
-
-
-
-
 typedef struct Vulkan_SKMesh_Draw
 {
     u32 transform_idx;
@@ -401,8 +397,6 @@ typedef struct Vulkan_Shader_System
     HASH_SET(Material_Key)* shader_batch_hash_set;
 
 
-    Buffer_Frame_Handle material_buffer;
-    Buffer_Frame_Handle material_record_buffer;
 
 
 } Vulkan_Shader_System;
@@ -572,6 +566,8 @@ typedef struct global_ubo
     VkDeviceAddress material_buffer;
     VkDeviceAddress material_record_buffer;
 
+    VkDeviceAddress texture_table;
+
 
 } Global_Ubo;
 
@@ -591,6 +587,7 @@ typedef struct Descriptor_System
 } Descriptor_System;
 
 
+
 typedef struct Vulkan_Texture_System
 {
     Vulkan_Texture default_texture;
@@ -602,6 +599,13 @@ typedef struct Vulkan_Texture_System
 
     // Vulkan_Texture renderpass_textures[100];
     // u32 renderpass_texture_indexes;
+
+
+    // maps a texture index to the texture slot
+    // we do this so that textures that have not finished uploading yet will use the default or fallback texture
+    // it also makes it easier to stream in mipmaps or texture levels
+    Buffer_Handle texture_table_buffer;
+    u32 texture_table[MAX_TEXTURE_COUNT]; // the texture index maps to the texture index we want to use either 0 or the actual index
 
 
     // hash_table* texture_file_to_handle; //TODO:
@@ -755,10 +759,6 @@ typedef struct Vulkan_Mesh_System
     Buffer_Handle joint_buffer_handle;
     Buffer_Handle weight_buffer_handle;
 
-
-    //per frame
-    Buffer_Frame_Handle skinned_matrix_buffer;
-    Buffer_Frame_Handle transform_buffer_handle;
 
     //TODO: TEMP CODE, need a free list for this
     u32 vertex_offset_count;
@@ -995,10 +995,15 @@ typedef struct Renderer
     Light_System* light_system;
     Descriptor_System* descriptor_system;
 
-
-    //draw systems
     UI_Renderer_Backend* ui_renderer;
     Chaos_UI_Renderer_Backend* cui_renderer;
+
+    //Per Frame Data
+    Buffer_Frame_Handle skinned_matrix_buffer;
+    Buffer_Frame_Handle transform_buffer_handle;
+    Buffer_Frame_Handle material_buffer;
+    Buffer_Frame_Handle material_record_buffer;
+    Buffer_Frame_Handle texture_table_buffer;
 
 
     //pipelines

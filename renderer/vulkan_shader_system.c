@@ -19,12 +19,6 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer)
     //we store the pointer, we dont want a copy
     shader_system->shader_batch_hash_set = hash_set_init(sizeof(Shader_Key), 100);
 
-    shader_system->material_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_STORAGE_GPU, MATERIAL_BUFFER_SIZE);
-
-    shader_system->material_record_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_STORAGE_GPU,  sizeof(Material_Record) * MAX_MATERIAL_COUNT);
-
 
     INFO("SHADER SYSTEM CREATED");
 
@@ -54,38 +48,6 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
                                                  &render_packet->draw_3d_data_packet.shader_assets[i]);
     }
 
-
-    Vulkan_Command_Buffer* command_buffer = NULL;
-    vulkan_queue_system_get_graphics_command_buffer(renderer, &command_buffer);
-
-    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Material Upload",
-                                                  (float[4]){0.0, 1.0, 0.0, 1.0}); // green color
-
-
-    vulkan_buffer_frame_staging_upload(renderer, shader_system->material_buffer, command_buffer,
-                                       render_packet->material_packet.material_buffer,
-                                       render_packet->material_packet.material_buffer_byte_size);
-
-
-    VkBufferMemoryBarrier2 material_barrier = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-
-        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-        .buffer = vulkan_buffer_get_frame(renderer, shader_system->material_buffer)->handle,
-        .offset = 0,
-        .size = VK_WHOLE_SIZE,
-    };
-
-    vulkan_command_add_buffer_barrier(command_buffer, material_barrier);
-    vulkan_command_flush_barriers(command_buffer); // TODO: batch at one point
-
-    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
     for (int i = 0; i < shader_system->material_batch_count; ++i)
     {

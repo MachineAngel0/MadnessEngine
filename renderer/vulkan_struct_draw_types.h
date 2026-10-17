@@ -75,7 +75,7 @@ typedef struct Vulkan_Render_Item
     u64 shader_hash;
     u8 pipeline_masks;
     Render_Item_Type type;
-    union
+    union render_item
     {
         Vulkan_Mesh_Render_Item mesh_render_item;
         Vulkan_Skinned_Render_Item skinned_render_item;
@@ -89,7 +89,7 @@ struct Vulkan_Render_List
     Vulkan_Render_Item opaque[1000];
     Vulkan_Render_Item transparent[1000];
     Vulkan_Render_Item shadow_list[1000];
-    //etc other passes and what not
+    //etc. other passes and what not
 };
 
 //mesh item -> mesh draw item

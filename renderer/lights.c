@@ -76,11 +76,11 @@ Light_System* light_system_init(Renderer* renderer)
     return out_light_system;
 }
 
-void light_system_update(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer)
+void light_system_update_upload_frame_data(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer)
 {
-    vulkan_buffer_frame_reset(renderer, light_system->point_light_ssbo_handle);
-    vulkan_buffer_frame_reset(renderer, light_system->directional_light_ssbo_handle);
-    vulkan_buffer_frame_reset(renderer, light_system->spot_light_ssbo_handle);
+    // vulkan_buffer_frame_reset(renderer, light_system->point_light_ssbo_handle);
+    // vulkan_buffer_frame_reset(renderer, light_system->directional_light_ssbo_handle);
+    // vulkan_buffer_frame_reset(renderer, light_system->spot_light_ssbo_handle);
 
 
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Light SSBO Upload",

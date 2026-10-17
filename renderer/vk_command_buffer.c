@@ -286,6 +286,7 @@ bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_
     if (command_buffer->state != VULKAN_COMMAND_BUFFER_STATE_BEGIN)
     {
         WARN("vulkan_queue_get_graphics_command_buffer: trying to get graphics command buffer before frame has started")
+        MASSERT_FALSE();
         return false;
     }
 

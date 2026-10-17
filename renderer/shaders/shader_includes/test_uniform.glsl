@@ -108,6 +108,10 @@ layout(buffer_reference, scalar) readonly buffer Material_Buffer{
 
 
 
+layout(buffer_reference, scalar) readonly buffer Texture_Table_Buffer{
+    uint texture_table[];
+};
+
 
 
 
@@ -158,7 +162,7 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 
     Material_Buffer material_buffer;
     Material_Record_Buffer material_record_buffer;
-
+    Texture_Table_Buffer texture_table_buffer;
 
 }ubo;
 

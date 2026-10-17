@@ -17,6 +17,8 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
     memset(texture_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
     texture_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
+    //we start every index off at 0
+    memset(texture_system->texture_table, 0, MAX_TEXTURE_COUNT * sizeof(u32));
 
     //OPTIMIZE: definetly dont need this much memory for this
     texture_system->texture_pending_array = array_create(Vulkan_Texture_Pending_Upload, MAX_TEXTURE_COUNT,
@@ -31,13 +33,19 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
                                          renderer->graphics_queue);
 
 
+
+
+
     return texture_system;
 }
 
-void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
+
+void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet)
 {
     Vulkan_Texture_System* texture_system = renderer->texture_system;
 
+    //TODO: we want to wait the same number of frames in flight before deleting the texture, meaning we need to increment every value
+    // you could also do a semaphore signal, based on which frame we are on, and use that, but that seems messy
 
     //free any textures not in use
     Vulkan_Texture* texture;
@@ -72,9 +80,12 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
             vulkan_command_buffer_reset(pending_upload.command_buffer);
 
+
             array_remove_swap(texture_system->texture_pending_array, i);
 
-            //TODO: flip off if not using vulkan
+            texture_system->texture_table[pending_upload.bindless_index] = pending_upload.bindless_index;
+
+            //TODO: flip off if not using imgui
             //create a descriptor for imgui if using it
             pending_upload.vulkan_texture->ready_for_read_by_imgui = true;
             pending_upload.vulkan_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(pending_upload.vulkan_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -86,6 +97,14 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
 
         i++;
     }
+
+
+}
+
+void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet* packet)
+{
+    Vulkan_Texture_System* texture_system = renderer->texture_system;
+
 
 
     if (ring_queue_is_empty(packet->texture_upload_queue))
@@ -152,6 +171,9 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
         //unload texture data - safe to do so here, but we cant use it yet until the upload is complete
         allocator_heap_free(texture_upload.texture_memory_allocator, texture_upload.pixel_data);
 
+        //set the texture to point to the default location until the actual texture is loaded
+        texture_system->texture_table[texture_upload.texture_index] = 0;
+
         Vulkan_Texture_Pending_Upload new_pending_upload = {
             .madness_texture = texture_upload.madness_texture,
             .vulkan_texture = vulkan_texture,
@@ -189,6 +211,8 @@ void vulkan_texture_system_update(Renderer* renderer, Render_Packet* packet)
     vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
     vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
 }
+
+
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index)
 {

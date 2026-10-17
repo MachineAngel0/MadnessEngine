@@ -147,6 +147,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     vulkan_texture_create_shadowmap(renderer, 1024, 1024, renderer->depth_format,
                                     &renderer->shadowpass_texture);
 
+
+
     // Create command buffers.
     renderer->queue_system = vulkan_queue_system_init(renderer);
 
@@ -161,6 +163,9 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
 
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
+    vulkan_frame_data_init(renderer);
+
+
     // Texture System
     renderer->texture_system = vulkan_texture_system_init(renderer);
     //Shader System
@@ -170,7 +175,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
 
     //System specific draws
     // Mesh System
-    renderer->mesh_system = mesh_renderer_init(renderer);
+    renderer->mesh_system = vulkan_mesh_system_init(renderer);
 
     //Particle System
     renderer->particle_render = particle_renderer_init(renderer);
@@ -210,7 +215,59 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
 }
 
 
-void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packets)
+void renderer_update_global_ubo(Renderer* renderer)
+{
+    Global_Ubo ubo = {0};
+    // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
+    // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
+    // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    // ubo.view = camera_get_view_matrix(&main_camera);
+    ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
+    // Perspective
+    ubo.proj = camera_get_projection(&renderer->main_camera, renderer->framebuffer_width,
+                                     renderer->framebuffer_height);
+
+
+    ubo.directional_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->directional_light_ssbo_handle);;
+    ubo.point_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->point_light_ssbo_handle);
+    ubo.point_lights_count = renderer->light_system->point_light_count;
+    ubo.spot_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->spot_light_ssbo_handle);
+    ubo.spot_lights_count = renderer->light_system->spot_light_count;
+    ubo.camera_position = camera_get_world_position(&renderer->main_camera);
+    ubo.screen_dimensions = (vec2s){renderer->framebuffer_width, renderer->framebuffer_height};
+    ubo.time = platform_get_absolute_time();
+    ubo.render_mode = renderer->mode;
+
+    //global bda's
+    //meshes
+    ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->vertex_buffer_handle);
+    ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->normal_buffer_handle);
+    ubo.tangent_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->tangent_buffer_handle);
+    ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->uv_buffer_handle);
+    ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->joint_buffer_handle);
+    ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->weight_buffer_handle);
+    ubo.skinned_matrix_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->skinned_matrix_buffer);
+    ubo.transform_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->transform_buffer_handle);
+    ubo.material_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->material_buffer);
+    ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->material_record_buffer);
+    ubo.texture_table = vulkan_buffer_get_frame_device_address(
+    renderer, renderer->texture_table_buffer);
+
+    // Copy the current matrices to the current frame's uniform buffer.
+    // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
+    Vulkan_Buffer* ubo_buffer = &renderer->buffer_system->global_ubo[renderer->current_frame];
+    memcpy(ubo_buffer->mapped_data, &ubo,
+           sizeof(Global_Ubo));
+}
+
+void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packet)
 {
     PROFILE_ZONE(renderer_update)
 
@@ -283,90 +340,86 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
     vulkan_command_buffer_begin(graphics_command_buffer);
-    // vulkan_command_buffer_begin_old(graphics_command_buffer, false, false, false);
 
     vulkan_queue_frame_begin(renderer, renderer->current_frame);
 
 
-    //free textures and any other texture/shader updated
+    //steps:
+    // 1. Process any semaphore values that have finished, adding them to our draw list
+    // 2. make any buffer updates like material and transforms, skinned mesh etc,
+    // 3. use remaining staging buffer space to upload new resources
+    // 4. cull draw data
+    // 5. build draw lists
+    // 6. render
+
+    //TODO: new implementation
+
+    // vulkan_mesh_update_async_resources();
+    // vulkan_texture_system_update_async_resources();
+
+    // buffer_update (clears the per frame staging buffers)
+    // lights  - per frame
+    // transform - per frame
+    // material - one buffer (dirty table)
+    // texture table - one buffer (dirty table)
+    // mesh and skinned (all of them) - (skinned calculation is once per frame, everything else is one buffer)
+    // debug draw -  per frame
+
+    // upload per frame data into buffers
+    // upload our dirty flag tables into buffers
+
+    // vulkan_mesh_upload_new_resources;
+    // vulkan_texture_system_upload_new_resources;
+
+    // mesh system and particle system create draw lists
+
+
     buffer_system_frame_start(renderer, renderer->buffer_system, renderer->current_frame);
 
-    vulkan_texture_system_update(renderer, render_packets);
+    //async resources
+    vulkan_mesh_system_update_async_resources(renderer, renderer->mesh_system);
+    vulkan_texture_update_async_resources( renderer, render_packet);
 
-    vulkan_shader_system_update(renderer, renderer->shader_system, render_packets);
+
+    //frame data
+    vulkan_upload_frame_data(renderer, render_packet, graphics_command_buffer);
+
+    light_system_update_upload_frame_data(renderer, renderer->light_system, graphics_command_buffer);
+
+
+    //new data uplaods
+    vulkan_texture_system_upload_new_textures(renderer, render_packet);
+    vulkan_mesh_system_upload_new_resources(renderer, renderer->mesh_system, render_packet);
+
+    vulkan_shader_system_update(renderer, renderer->shader_system, render_packet);
 
 
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
 
-
-    Global_Ubo ubo = {0};
-    // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
-    // ubo.model = quat_to_rotation_matrix(quat_identity(), (vec3){0.0f, 0.0f, 0.0f});
-    // glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    // ubo.view = camera_get_view_matrix(&main_camera);
-    ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
-    // Perspective
-    ubo.proj = camera_get_projection(&renderer->main_camera, renderer->framebuffer_width,
-                                     renderer->framebuffer_height);
+    //at this point we should have everything needed for the ubo
+    renderer_update_global_ubo(renderer);
 
 
-    ubo.directional_lights_address = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->light_system->directional_light_ssbo_handle);;
-    ubo.point_lights_address = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->light_system->point_light_ssbo_handle);
-    ubo.point_lights_count = renderer->light_system->point_light_count;
-    ubo.spot_lights_address = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->light_system->spot_light_ssbo_handle);
-    ubo.spot_lights_count = renderer->light_system->spot_light_count;
-    ubo.camera_position = camera_get_world_position(&renderer->main_camera);
-    ubo.screen_dimensions = (vec2s){renderer->framebuffer_width, renderer->framebuffer_height};
-    ubo.time = platform_get_absolute_time();
-    ubo.render_mode = renderer->mode;
-
-    //global bda's
-    //meshes
-    ubo.vertex_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->vertex_buffer_handle);
-    ubo.normal_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->normal_buffer_handle);
-    ubo.tangent_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->tangent_buffer_handle);
-    ubo.uv_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->uv_buffer_handle);
-    ubo.joint_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->joint_buffer_handle);
-    ubo.weight_buffer = vulkan_buffer_get_device_address(renderer, renderer->mesh_system->weight_buffer_handle);
-    ubo.skinned_matrix_buffer = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->mesh_system->skinned_matrix_buffer);
-    ubo.transform_buffer = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->mesh_system->transform_buffer_handle);
-    ubo.material_buffer = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->shader_system->material_buffer);
-    ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->shader_system->material_record_buffer);
-
-    // Copy the current matrices to the current frame's uniform buffer.
-    // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    Vulkan_Buffer* ubo_buffer = &renderer->buffer_system->global_ubo[renderer->current_frame];
-    memcpy(ubo_buffer->mapped_data, &ubo,
-           sizeof(Global_Ubo));
 
 
-    light_system_update(renderer, renderer->light_system, graphics_command_buffer);
-
-    ui_renderer_upload_draw_data(renderer->ui_renderer, renderer, render_packets, graphics_command_buffer);
-    chaos_ui_renderer_upload_draw_data(renderer->cui_renderer, renderer, &render_packets->chaos_ui_render_packet,
+    ui_renderer_upload_frame_data(renderer->ui_renderer, renderer, render_packet, graphics_command_buffer);
+    chaos_ui_renderer_upload_frame_data(renderer->cui_renderer, renderer, &render_packet->chaos_ui_render_packet,
                                        graphics_command_buffer);
 
 
-    mesh_renderer_upload_draw_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
-    mesh_renderer_upload_per_frame_data(renderer, renderer->mesh_system, render_packets, graphics_command_buffer);
-    mesh_renderer_construct_batch_draw(renderer, render_packets, graphics_command_buffer);
+    //
+    mesh_renderer_construct_batch_draw(renderer, render_packet, graphics_command_buffer);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
-                                       render_packets, graphics_command_buffer);
+                                       render_packet, graphics_command_buffer);
 
     debug_system_upload_frame_data(renderer);
 
 
     // sprite_upload_draw_data(renderer, renderer->sprite_renderer, &render_packets->sprite_data_packet,graphics_command_buffer);
 
+    //TODO: remove at some point
     //NOTE: buffer copies not allowed in a render pass
     //do all our write transfer/cpu->gpu uploads first, then we put a barrier for them
     transfer_barrier_catch_all(renderer, graphics_command_buffer);
@@ -695,6 +748,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     PROFILE_ZONE_END(renderer_update)
 }
+
+
+
 
 
 void renderer_shutdown(Renderer* renderer)

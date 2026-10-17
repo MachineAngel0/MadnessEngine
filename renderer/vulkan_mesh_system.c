@@ -5,7 +5,7 @@
 #include "vulkan_struct_types.h"
 
 
-Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
+Vulkan_Mesh_System* vulkan_mesh_system_init(Renderer* renderer)
 {
     Vulkan_Mesh_System* mesh_system = allocator_alloc(&renderer->allocator, sizeof(Vulkan_Mesh_System));
 
@@ -34,16 +34,7 @@ Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
                                                              mesh_buffer_data_size);
 
 
-    //DRAW DATA
-    mesh_system->skinned_matrix_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_STORAGE_GPU,
-                                                                    mesh_buffer_data_size);
 
-    u64 transform_buffer_memory_size = MAX_TRANSFORM_COUNT * sizeof(mat4s);
-
-    mesh_system->transform_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                      BUFFER_TYPE_STORAGE_GPU,
-                                                                      transform_buffer_memory_size);
 
 
     //
@@ -57,7 +48,7 @@ Vulkan_Mesh_System* mesh_renderer_init(Renderer* renderer)
 }
 
 
-bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system,
+bool mesh_system_upload_data_into_buffers(Renderer* renderer, Vulkan_Mesh_System* mesh_system,
                              Vulkan_Command_Buffer* transfer_command_buffer,
                              Buffer_Handle handle,
                              Vulkan_Mesh_Data_Type type,
@@ -114,11 +105,9 @@ bool mesh_system_upload_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system
     }
 }
 
-void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh_system, Render_Packet* render_packet,
-                                    Vulkan_Command_Buffer* graphics_command_buffer)
+
+void vulkan_mesh_system_update_async_resources(Renderer* renderer, Vulkan_Mesh_System* mesh_system)
 {
-    // return;
-    //
     //mesh gpu uploads we are waiting on, checked once a frame
     u64 i = 0;
 
@@ -153,8 +142,12 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
 
         i++;
     }
+}
 
 
+void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_System* mesh_system,
+                                             Render_Packet* render_packet)
+{
     if (mesh_system->mesh_pending_upload_array->num_items == 0 && ring_queue_is_empty(render_packet->mesh_queue))
     {
         return;
@@ -185,7 +178,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];
 
         //if upload successful remove it from the array
-        if (mesh_system_upload_data(renderer,
+        if (mesh_system_upload_data_into_buffers(renderer,
                                     mesh_system,
                                     transfer_command_buffer,
                                     unfinished_upload.buffer_handle,
@@ -244,7 +237,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
         mesh_system->vertex_offset_count += submesh_upload_data.submesh->vertex_count;
         mesh_system->index_offset_count += submesh_upload_data.submesh->index_count;
 
-        mesh_system_upload_data(renderer,
+        mesh_system_upload_data_into_buffers(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->vertex_buffer_handle,
@@ -255,7 +248,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 mesh_upload_semaphore_value,
                                 record, true);
 
-        mesh_system_upload_data(renderer,
+        mesh_system_upload_data_into_buffers(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->index_buffer_handle,
@@ -266,7 +259,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 mesh_upload_semaphore_value,
                                 record, true);
 
-        mesh_system_upload_data(renderer,
+        mesh_system_upload_data_into_buffers(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->normal_buffer_handle,
@@ -277,7 +270,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 mesh_upload_semaphore_value,
                                 record, true);
 
-        mesh_system_upload_data(renderer,
+        mesh_system_upload_data_into_buffers(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->uv_buffer_handle,
@@ -287,7 +280,7 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
                                 submesh_upload_data.submesh_id,
                                 mesh_upload_semaphore_value,
                                 record, true);
-        mesh_system_upload_data(renderer,
+        mesh_system_upload_data_into_buffers(renderer,
                                 mesh_system,
                                 transfer_command_buffer,
                                 mesh_system->tangent_buffer_handle,
@@ -343,74 +336,9 @@ void mesh_renderer_upload_draw_data(Renderer* renderer, Vulkan_Mesh_System* mesh
     }*/
 }
 
-void mesh_renderer_upload_per_frame_data(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                         Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer)
-{
-    //transform data
-    vulkan_buffer_frame_reset(renderer, mesh_renderer->transform_buffer_handle);
-    if (vulkan_buffer_frame_staging_upload(
-        renderer, mesh_renderer->transform_buffer_handle,
-        command_buffer, render_packet->draw_3d_data_packet.world_space_matrix_array,
-        sizeof(mat4s) * render_packet->draw_3d_data_packet.
-                                       world_space_matrix_count))
-    {
-        Vulkan_Buffer* transform_buffer = vulkan_buffer_get_frame(renderer, mesh_renderer->transform_buffer_handle);
-        VkBufferMemoryBarrier2 transform_buffer_barrier = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-
-            //barrier so that we finish our transfer before our shaders read the data
-            .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-
-            .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-            .buffer = transform_buffer->handle,
-            .offset = 0,
-            .size = transform_buffer->current_offset,
-        };
-        vulkan_command_add_buffer_barrier(command_buffer, transform_buffer_barrier);
-    }
 
 
-    //skinned matrix
-    vulkan_buffer_frame_reset(renderer, mesh_renderer->skinned_matrix_buffer);
-    if (vulkan_buffer_frame_staging_upload(renderer, mesh_renderer->skinned_matrix_buffer,
-                                           command_buffer,
-                                           render_packet->draw_3d_data_packet.skinned_matrix->data,
-                                           array_get_byte_size(render_packet->draw_3d_data_packet.skinned_matrix)))
-    {
-        //successful data uploads need a barrier
-        Vulkan_Buffer* skinned_buffer = vulkan_buffer_get_frame(renderer, mesh_renderer->skinned_matrix_buffer);
-        VkBufferMemoryBarrier2 skinned_buffer_barrier = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-
-            .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-
-            .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
-            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-            .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-            .buffer = skinned_buffer->handle,
-            .offset = 0,
-            .size = skinned_buffer->current_offset,
-        };
-        vulkan_command_add_buffer_barrier(command_buffer, skinned_buffer_barrier);
-    }
-
-    vulkan_command_flush_barriers(command_buffer);
-}
-
-
-int vulkan_mesh_sort_key(const void*  render_item1, const void*  render_item2)
+int vulkan_mesh_sort_key(const void* render_item1, const void* render_item2)
 {
     Vulkan_Mesh_Render_Item* p1 = (Vulkan_Mesh_Render_Item*)render_item1;
     Vulkan_Mesh_Render_Item* p2 = (Vulkan_Mesh_Render_Item*)render_item2;
@@ -428,11 +356,12 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     // loop through our meshes and create render items for each
 
     //TODO: TEMP
-    Vulkan_Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator, 100 * sizeof(Vulkan_Mesh_Render_Item));
+    Vulkan_Mesh_Render_Item* render_items = allocator_alloc(&renderer->frame_allocator,
+                                                            100 * sizeof(Vulkan_Mesh_Render_Item));
     u32 render_item_count = 0;
 
     Vulkan_Skinned_Render_Item* skinned_render_items = allocator_alloc(&renderer->frame_allocator,
-                                                                100 * sizeof(Vulkan_Skinned_Render_Item));
+                                                                       100 * sizeof(Vulkan_Skinned_Render_Item));
     u32 skinned_render_item_count = 0;
 
 

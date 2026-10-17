@@ -58,7 +58,7 @@ Chaos_UI_Renderer_Backend* chaos_ui_render_init(Renderer* renderer)
     return cui_renderer;
 }
 
-void chaos_ui_renderer_upload_draw_data(Chaos_UI_Renderer_Backend* cui_renderer, Renderer* renderer,
+void chaos_ui_renderer_upload_frame_data(Chaos_UI_Renderer_Backend* cui_renderer, Renderer* renderer,
                                         Chaos_UI_Render_Packet* cui_render_packet,
                                         Vulkan_Command_Buffer* command_buffer)
 {

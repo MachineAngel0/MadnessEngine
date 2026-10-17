@@ -766,19 +766,40 @@ void editor_material_asset_view(Editor* editor)
     static u32 selected_shader;
     static u32 selected_blend_mode;
     static bool double_sided;
-    madness_ui_window_begin(STRING("Shader Creation"), 0);
+    ImGui_Begin("Shader Creation", 0, 0);
     {
-        madness_ui_combo_box2(STRING("Shader: "), &selected_shader,
-                              shader_system->shader_to_material_mapping.shader_name,
-                              shader_system->shader_to_material_mapping.count);
+        // madness_ui_combo_box2(STRING("Shader: "), &selected_shader,
+        //                       shader_system->shader_to_material_mapping.shader_name,
+        //                       shader_system->shader_to_material_mapping.count);
 
-        madness_ui_combo_box_char(STRING("Blend Mode: "), &selected_blend_mode, Shader_Blend_Mode_enum_string,
+        const char* combo_preview_value = shader_system->shader_to_material_mapping.shader_name[selected_shader]->chars;
+        if (ImGui_BeginCombo("Shader", combo_preview_value, 0))
+        {
+            for (u32 i = 0; i < shader_system->shader_to_material_mapping.count; i++)
+            {
+                const bool is_selected = (selected_shader == i);
+                if (ImGui_SelectableEx(shader_system->shader_to_material_mapping.shader_name[i]->chars, is_selected, 0, (ImVec2){0, 0}))
+                {
+                    selected_shader = i;
+                }
+
+                // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                if (is_selected)
+                {
+                    ImGui_SetItemDefaultFocus();
+                }
+            }
+            ImGui_EndCombo();
+        }
+
+
+        ImGui_ComboChar("Blend Mode: ", &selected_blend_mode, Shader_Blend_Mode_enum_string,
                                   ARRAY_SIZE(Shader_Blend_Mode_enum_string));
 
-        madness_ui_check_box(STRING("Double Sided"), &double_sided);
+        ImGui_Checkbox("Double Sided", &double_sided);
 
 
-        if (madness_ui_button(STRING("CREATE SHADER")))
+        if (ImGui_Button("CREATE SHADER"))
         {
             Shader_PSO shader_info = {
                 .shader_name = shader_system->shader_to_material_mapping.shader_name[selected_shader],
@@ -790,53 +811,54 @@ void editor_material_asset_view(Editor* editor)
         }
 
 
-        madness_ui_padding();
+        ImGui_NewLine();
 
-        madness_ui_string(STRING("Material Name: "));
-        madness_ui_same_line();
-        madness_ui_string(*shader_system->shader_to_material_mapping.material_name[selected_shader]);
+        ImGui_Text("Material Name: ");
+        ImGui_NewLine();
+        ImGui_String(shader_system->shader_to_material_mapping.material_name[selected_shader]);
 
         static u8 material_memory[1024];
         Reflection_Runtime_Struct material_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, string_to_c_string_allocator(
                 shader_system->shader_to_material_mapping.material_name[selected_shader], editor->frame_allocator));
-        madness_ui_padding();
 
+        ImGui_NewLine();
 
-        madness_ui_reflect_material(editor->asset_system->asset_registry,
+        ImGui_Reflect_Material(editor->asset_system->asset_registry,
                                     asset_system->global_reflection_registry,
                                     material_reflect_struct,
                                     &material_memory,
                                     "mat",
-                                    editor->texture_list);
+                                    editor->texture_list, editor->frame_allocator);
     }
-    madness_ui_window_end();
+    ImGui_End();
 
-    madness_ui_window_begin(STRING("Additional Shader Info"), 0);
+    ImGui_Begin("Additional Shader Info",0, 0);
     {
-        madness_ui_string(STRING("ADDITIONAL INFO"));
-        madness_ui_padding();
+        ImGui_Text("ADDITIONAL INFO");
+        ImGui_NewLine();
 
-        madness_ui_string(STRING("MATERIAL NAME: "));
-        madness_ui_same_line();
-        madness_ui_string(*shader_system->shader_to_material_mapping.material_name[selected_shader]);
+
+        ImGui_Text("MATERIAL NAME: ");
+        ImGui_NewLine();
+        ImGui_String(shader_system->shader_to_material_mapping.material_name[selected_shader]);
 
         Reflection_Runtime_Struct mat_def_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, TYPE_STRING(Material_Definition));
         // shader_asset
-        madness_ui_reflect_using_data(asset_system->global_reflection_registry, mat_def_reflect_struct,
+        Imgui_Reflect_Using_Data(asset_system->global_reflection_registry, mat_def_reflect_struct,
                                       &shader_system->shader_to_material_mapping.material_definition[selected_shader],
-                                      "Mat");
+                                      "Mat", editor->frame_allocator);
 
 
         Shader_Asset* shader_asset = shader_asset_get(shader_system, handle);
         Reflection_Runtime_Struct shader_reflect_struct = reflection_registry_get_struct(
             asset_system->global_reflection_registry, TYPE_STRING(Shader_Asset));
         // shader_asset
-        madness_ui_reflect_using_data(asset_system->global_reflection_registry, shader_reflect_struct, shader_asset,
-                                      "Shader");
+        Imgui_Reflect_Using_Data(asset_system->global_reflection_registry, shader_reflect_struct, shader_asset,
+                                      "Shader", editor->frame_allocator);
     }
-    madness_ui_window_end();
+    ImGui_End();
 
 
     /*static Shader_Handle handle;
@@ -963,24 +985,24 @@ void editor_mesh_view(Editor* editor)
 {
     editor->asset_system->mesh_system;
 
-    madness_ui_window_begin(STRING("Mesh View"), 0);
+    ImGui_Begin("Mesh View", 0, 0);
     {
     }
-    madness_ui_window_end();
+    ImGui_End();
 }
 
 void editor_render_view(Editor* editor)
 {
     Renderer* renderer = editor->renderer;
 
-    madness_ui_window_begin(STRING("Renderer View"), 0);
+    ImGui_Begin("Renderer View", 0, 0);
     {
-        madness_ui_check_box(STRING("DEBUG AXIS"), &renderer->draw_debug_axis);
+        ImGui_Checkbox("DEBUG AXIS", &renderer->draw_debug_axis);
 
-        madness_ui_combo_box_char(STRING("Render Mode"), &renderer->mode, render_mode_enum_string,
+        ImGui_ComboChar("Render Mode", &renderer->mode, render_mode_enum_string,
                                   ARRAY_SIZE(render_mode_enum_string));
     }
-    madness_ui_window_end();
+    ImGui_End();
 }
 
 

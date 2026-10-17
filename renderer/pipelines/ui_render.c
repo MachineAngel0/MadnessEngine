@@ -44,7 +44,7 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
 }
 
 
-void ui_renderer_upload_draw_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
+void ui_renderer_upload_frame_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
                                   Render_Packet* render_packet,
                                   Vulkan_Command_Buffer* command_buffer)
 {

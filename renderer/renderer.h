@@ -18,7 +18,7 @@ MAPI Renderer* renderer_init(Platform_State* platform_state,
                              Memory_System* memory_system,
                              Input_System* input_system);
 
-MAPI void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packets);
+MAPI void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render_packet);
 
 MAPI void renderer_shutdown(Renderer* renderer);
 
