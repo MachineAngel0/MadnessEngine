@@ -17,8 +17,8 @@ void generate_runtime_structs_material(Reflection_Registry* reflection_registry)
 	{
 		{
 			.name = "flags",
-			.type = REFLECTION_TYPE_ENUM,
-			.type_name = "Permutation_PBR",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
 			.offset = offsetof(Material_Default, flags)
 		},
 		{

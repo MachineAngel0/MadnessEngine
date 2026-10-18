@@ -12,13 +12,13 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
     u32 ui_buffer_sizes = MB(1);
 
     ui_renderer->ui_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_VERTEX, ui_buffer_sizes, "UI Vertex");
+                                                                BUFFER_TYPE_VERTEX, ui_buffer_sizes);
     ui_renderer->ui_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                               BUFFER_TYPE_INDEX, ui_buffer_sizes, "UI Index");
+                                                               BUFFER_TYPE_INDEX, ui_buffer_sizes);
 
     ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                       BUFFER_TYPE_STORAGE_GPU,
-                                                                      ui_buffer_sizes, "UI Material SBBO");
+                                                                      ui_buffer_sizes);
     /*ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                       BUFFER_TYPE_STORAGE_GPU, ui_buffer_sizes);*/
 
@@ -38,7 +38,7 @@ UI_Renderer_Backend* ui_render_init(Renderer* renderer)
     //insanity ui
     ui_renderer->insanity_ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                                BUFFER_TYPE_STORAGE_GPU,
-                                                                               ui_buffer_sizes, "Insanity UI Material SSBO");
+                                                                               ui_buffer_sizes);
 
     return ui_renderer;
 }

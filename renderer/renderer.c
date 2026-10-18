@@ -718,7 +718,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
 
-    // Lighint Pass End //
+    // Lighting Pass End //
 
     //Rendering End and Move onto Sumbit
 

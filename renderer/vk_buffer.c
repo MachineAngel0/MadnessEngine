@@ -141,7 +141,7 @@ uint32_t find_memory_type(Renderer* renderer, uint32_t type_filter, VkMemoryProp
 }
 
 Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system, Vulkan_Buffer_Type buffer_type,
-                                   u64 buffer_size, const char* name)
+                                   u64 buffer_size)
 {
     MASSERT(buffer_size > 0);
 
@@ -150,7 +150,6 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_sys
     //grab an available buffer
     Vulkan_Buffer* buffer_to_create = &buffer_system->static_buffers[buffer_system->buffer_current_count];
     _vulkan_buffer_create_internal_new(renderer, buffer_type, buffer_size, buffer_to_create);
-    buffer_to_create->name = name;
     buffer_system->buffer_current_count++;
     buffer_system->buffers_size += buffer_size;
 
@@ -159,7 +158,7 @@ Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_sys
 
 Buffer_Frame_Handle vulkan_buffer_create_frame(Renderer* renderer, Buffer_System* buffer_system,
                                                Vulkan_Buffer_Type buffer_type,
-                                               u64 buffer_size, const char* name)
+                                               u64 buffer_size)
 {
     MASSERT(buffer_size > 0);
 
@@ -169,7 +168,6 @@ Buffer_Frame_Handle vulkan_buffer_create_frame(Renderer* renderer, Buffer_System
     {
         Vulkan_Buffer* buffer_to_create = &buffer_system->per_frame_buffers[buffer_system->
             frame_buffer_current_count + i];
-        buffer_to_create->name = name;
         _vulkan_buffer_create_internal_new(renderer, buffer_type, buffer_size, buffer_to_create);
     }
 

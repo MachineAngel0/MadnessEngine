@@ -14,24 +14,24 @@ void vulkan_frame_data_init(Renderer* renderer)
 
     renderer->skinned_matrix_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                  BUFFER_TYPE_STORAGE_GPU,
-                                                                 skinned_buffer_data_size, "Skinned");
+                                                                 skinned_buffer_data_size);
 
 
     renderer->transform_buffer_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                    BUFFER_TYPE_STORAGE_GPU,
-                                                                   transform_buffer_memory_size, "Transform");
+                                                                   transform_buffer_memory_size);
 
     renderer->texture_table_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                 BUFFER_TYPE_STORAGE_GPU,
-                                                                sizeof(u32) * MAX_TEXTURE_COUNT, "Texture Table");
+                                                                sizeof(u32) * MAX_TEXTURE_COUNT);
 
 
     renderer->material_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                           BUFFER_TYPE_STORAGE_GPU, MATERIAL_BUFFER_SIZE, "Material");
+                                                           BUFFER_TYPE_STORAGE_GPU, MATERIAL_BUFFER_SIZE);
 
     renderer->material_record_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                   BUFFER_TYPE_STORAGE_GPU,
-                                                                  sizeof(Material_Record) * MAX_MATERIAL_COUNT, "Material Buffer");
+                                                                  sizeof(Material_Record) * MAX_MATERIAL_COUNT);
 
 
 }

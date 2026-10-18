@@ -48,15 +48,15 @@ Light_System* light_system_init(Renderer* renderer)
     //TODO: allocate larger sizes for the buffers
     out_light_system->directional_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Directional_Light) * out_light_system->directional_light_count, "Directional Light");
+        sizeof(Directional_Light) * out_light_system->directional_light_count);
 
     out_light_system->point_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Point_Light) * out_light_system->point_light_count, "Point Light");
+        sizeof(Point_Light) * out_light_system->point_light_count);
 
     out_light_system->spot_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Spot_Light) * out_light_system->point_light_count, "Spot Light");
+        sizeof(Spot_Light) * out_light_system->point_light_count);
 
 
     // vulkan_buffer_data_copy_and_upload(renderer,
