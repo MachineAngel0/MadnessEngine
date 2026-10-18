@@ -16,7 +16,7 @@ void debug_draw_system_init(Renderer* renderer, Memory_System* memory_system)
 
     debug_draw_system.debug_ssbo = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                               BUFFER_TYPE_STORAGE_GPU,
-                                                              DEFAULT_DEBUG_DRAW_COUNT * sizeof(Debug_Line));
+                                                              DEFAULT_DEBUG_DRAW_COUNT * sizeof(Debug_Line), "DEBUG DRAW");
 }
 
 void debug_draw_system_deinit()

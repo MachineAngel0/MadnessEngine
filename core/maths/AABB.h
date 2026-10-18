@@ -5,7 +5,6 @@
 
 #include "math_types.h"
 #include "math_lib.h"
-#include "../../../../../AppData/Local/Programs/CLion/bin/mingw/x86_64-w64-mingw32/include/stdlib.h"
 
 //NOTE: i could rename this to bounding box
 typedef struct AABB3
@@ -41,14 +40,14 @@ inline void aabb_add(AABB3* aabb, const vec3s* p)
 inline vec3s aabb_center(const AABB3* aabb)
 {
     vec3s intermediate = glms_vec3_add(aabb->min, aabb->max);
-    vec3s center = vec3_div_scalar(intermediate, 2.0f);
+    vec3s center = glms_vec3_divs(intermediate, 2.0f);
 
     return center;
 }
 
 inline vec3s aabb_size(const AABB3* aabb)
 {
-    return vec3_sub(aabb->max, aabb->min);
+    return glms_vec3_sub(aabb->max, aabb->min);
 }
 
 inline vec3s aabb_radius_vector(const AABB3* aabb)

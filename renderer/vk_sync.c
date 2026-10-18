@@ -1,6 +1,8 @@
 ﻿#include "vk_sync.h"
 
 
+#include "vulkan_struct_types.h"
+
 void vulkan_fence_create(Renderer* renderer, VkFence* fence)
 {
     VkFenceCreateInfo fence_create_info = {

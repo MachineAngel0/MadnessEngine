@@ -145,18 +145,14 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
 
 
+    Mesh_Handle mesh_handle;
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
 
-    /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
-
-    for (u32 i = 0; i < 100; i++)
-    {
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh", &handle);
-
-    }*/
 
     // asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/cube_gltf/Cube.gltf");
-    /*Madness_Mesh_Handle handle =
-        asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/Cube.mmesh");*/
+
 
     /*asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/FlightHelmet_gltf/FlightHelmet.gltf");
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh");*/
@@ -207,7 +203,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     {
         clock_update_frame_start(&application_core->clock);
         PROFILE_FRAME();
-
 
 
         // clock_print_info(&application_core->clock);

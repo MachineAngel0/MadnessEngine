@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 #generate a compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_UNITY_BUILD OFF) # UNITY BUILD
+set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
 
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
@@ -214,7 +214,9 @@ add_library(imgui_c STATIC
         lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_vulkan.cpp)
 endif ()
 
-
+set_target_properties(imgui_c PROPERTIES
+        UNITY_BUILD OFF
+)
 target_link_libraries(imgui_c PUBLIC Vulkan::Vulkan glfw)
 
 

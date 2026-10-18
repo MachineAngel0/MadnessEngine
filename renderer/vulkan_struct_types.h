@@ -177,6 +177,9 @@ typedef struct Vulkan_Buffer
     u64 capacity;
     Vulkan_Buffer_Type type;
     u8* mapped_data; // optional
+
+    const char* name;
+
 } Vulkan_Buffer;
 
 
@@ -310,7 +313,7 @@ typedef struct Skinned_Render_Record
     bool is_in_use;
 } Skinned_Render_Record;
 
-typedef struct Vulkan_Shader_Batch
+typedef struct Vulkan_Shader
 {
     const char* shader_name;
 
@@ -319,27 +322,23 @@ typedef struct Vulkan_Shader_Batch
     //TODO: you should really just use shader_info
     // Shader_Info shader_info;
 
-    u64 material_key;
+    Shader_Pipeline_Hash pipeline_hash;
 
 
     Vulkan_Shader_Pipeline pipeline;
     Vulkan_Shader_Pipeline wireframe_pipeline;
-
-    Buffer_Frame_Handle indirect_draw_buffer_handle;
-    u32 draw_count;
-
-    Buffer_Frame_Handle draw_data_buffer_handle;
 
     PC_General pc_data;
 
 
     // u32 pc_size;
     // void* pc_data;
-} Vulkan_Shader_Batch;
+} Vulkan_Shader;
 
 
 #define AVAILABLE_TEXTURES 100
 #define RENDERPASS_TEXTURES 20
+
 
 typedef struct Vulkan_Shader_System
 {
@@ -354,14 +353,14 @@ typedef struct Vulkan_Shader_System
     // https://realtimecollisiondetection.net/blog/?p=86
 
     //TODO: temp value for now, should probably be a dynamic array
-    Vulkan_Shader_Batch material_batch[100];
-    u32 material_batch_count;
+    Vulkan_Shader vulkan_shader[MAX_SHADER_COUNT];
+    u32 vulkan_shader_count;
 
 
-
+    //TODO:
     //the shader name is the lookup
     //we want the pointer to the shader batch,
-    HASH_SET(Material_Key)* shader_batch_hash_set;
+    HASH_SET(Shader_Pipeline_Hash)* shader_batch_hash_set;
 
 
 
@@ -758,7 +757,7 @@ typedef struct Particle_Render
     Buffer_Frame_Handle particle_draw_buffer_handle;
 
 
-    Vulkan_Particle_Renderable* particle_draw;
+    Particle_Renderable* particle_draw;
     u32 particle_draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;
@@ -942,6 +941,7 @@ typedef struct Renderer
     Camera main_camera;
     Render_Mode mode;
     bool draw_debug_axis;
+    bool should_cull;
 
 
     Allocator allocator; // total memory for the entire renderer
@@ -973,7 +973,7 @@ typedef struct Renderer
     Buffer_Frame_Handle texture_table_buffer;
 
 
-
+    Vulkan_Mesh_Render_List render_list;
 
     //pipelines
     vulkan_pipeline_cache* pipeline_cache;

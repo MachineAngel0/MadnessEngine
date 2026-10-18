@@ -140,13 +140,11 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
         &renderer->swapchain);
 
 
-
     // vulkan_renderpass_create_new(renderer);
 
     //SHADOW PASS TEXTURE
     vulkan_texture_create_shadowmap(renderer, 1024, 1024, renderer->depth_format,
                                     &renderer->shadowpass_texture);
-
 
 
     // Create command buffers.
@@ -164,6 +162,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
     vulkan_frame_data_init(renderer);
+    vulkan_render_list_init(renderer, &renderer->render_list);
 
 
     // Texture System
@@ -258,7 +257,7 @@ void renderer_update_global_ubo(Renderer* renderer)
     ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
         renderer, renderer->material_record_buffer);
     ubo.texture_table = vulkan_buffer_get_frame_device_address(
-    renderer, renderer->texture_table_buffer);
+        renderer, renderer->texture_table_buffer);
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
@@ -378,7 +377,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //async resources
     vulkan_mesh_system_update_async_resources(renderer, renderer->mesh_system);
-    vulkan_texture_update_async_resources( renderer, render_packet);
+    vulkan_texture_update_async_resources(renderer, render_packet);
 
 
     //frame data
@@ -400,15 +399,13 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     renderer_update_global_ubo(renderer);
 
 
-
-
     ui_renderer_upload_frame_data(renderer->ui_renderer, renderer, render_packet, graphics_command_buffer);
     chaos_ui_renderer_upload_frame_data(renderer->cui_renderer, renderer, &render_packet->chaos_ui_render_packet,
-                                       graphics_command_buffer);
+                                        graphics_command_buffer);
 
 
     //
-    mesh_renderer_construct_batch_draw(renderer, render_packet, graphics_command_buffer);
+    mesh_renderer_construct_draw_lists(renderer, render_packet, graphics_command_buffer, &renderer->render_list);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
@@ -485,17 +482,13 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &default_scissor);
 
 
-    //draw geometry into depth buffer
+    //draw opaque geometry into depth buffer
+    /*
     mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
-                                             renderer->shader_system->material_batch,
-                                             renderer->shader_system->material_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline);
+                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline,
+                                             &renderer->render_list);
+                                             */
 
-    //TODO:
-    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
-                                             renderer->shader_system->skinned_batch,
-                                             renderer->shader_system->skinned_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);*/
 
     vkCmdEndRendering(graphics_command_buffer->handle);
     vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
@@ -673,13 +666,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // SET 1 GLOBAL TEXTURES: Textures
     // SET 2 NOTHING RN:
 
-    mesh_renderer_batch_draw(renderer, renderer->mesh_system,
-                             renderer->shader_system->material_batch, renderer->shader_system->material_batch_count,
-                             graphics_command_buffer);
-    //TODO:
-    /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
-                             renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
-                             graphics_command_buffer);*/
+    // mesh_renderer_batch_draw(renderer, renderer->mesh_system, graphics_command_buffer, &renderer->render_list);
+
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
@@ -748,9 +736,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     PROFILE_ZONE_END(renderer_update)
 }
-
-
-
 
 
 void renderer_shutdown(Renderer* renderer)

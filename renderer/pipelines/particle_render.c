@@ -12,18 +12,18 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
     Particle_Render* particle_renderer = allocator_alloc(&renderer->allocator, sizeof(Particle_Render));
 
     u64 particle_renderable_size = sizeof(Particle) * MAX_PARTICLE_COUNT;
-    u64 particle_draw_data_size = sizeof(Vulkan_Particle_Renderable) * MAX_PARTICLE_COUNT;
+    u64 particle_draw_data_size = sizeof(Particle_Renderable) * MAX_PARTICLE_COUNT;
 
 
     particle_renderer->particle_render_data_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        particle_renderable_size);
+        particle_renderable_size, "Particle Render Data");
 
     particle_renderer->particle_draw_buffer_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system,
         BUFFER_TYPE_STORAGE_GPU,
-        particle_draw_data_size);
+        particle_draw_data_size, "Particle Draw Data");
 
 
     //default blend for now
@@ -52,8 +52,8 @@ Particle_Render* particle_renderer_init(Renderer* renderer)
 
 int vulkan_particle_sort_key(const void* draw1, const void* draw2)
 {
-    Vulkan_Particle_Renderable p1 = *(Vulkan_Particle_Renderable*)draw1;
-    Vulkan_Particle_Renderable p2 = *(Vulkan_Particle_Renderable*)draw2;
+    Particle_Renderable p1 = *(Particle_Renderable*)draw1;
+    Particle_Renderable p2 = *(Particle_Renderable*)draw2;
 
     return cmp_u64(&p1.shader_key, &p2.shader_key);
 }
@@ -78,9 +78,10 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
     //NOTE: WE COULD SORT BY EMITTERS FOR TRANSPARNECY AND USE THE DYNAMIC ARRAY TO APPEND TO THE DRAW LIST
 
     //we could try getting the alive count to properly size this if memory is an issue
-    Vulkan_Particle_Renderable* particle_draw_data = allocator_alloc(&renderer->frame_allocator,
-                                                          sizeof(Vulkan_Particle_Renderable) * particle_packet->
-                                                          particle_count);
+    Particle_Renderable* particle_draw_data = allocator_alloc(&renderer->frame_allocator,
+                                                                     sizeof(Particle_Renderable) *
+                                                                     particle_packet->
+                                                                     particle_count);
     particle_render->particle_draw_count = 0;
 
     for (u32 i = 0; i < particle_packet->particle_count; i++)
@@ -88,7 +89,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         Particle* particle = &particle_packet->particles[i];
         if (particle->life_left <= 0) { continue; }
 
-        particle_draw_data[particle_render->particle_draw_count++] = (Vulkan_Particle_Renderable){
+        particle_draw_data[particle_render->particle_draw_count++] = (Particle_Renderable){
             .shader_key = particle_packet->particles[i].shader_key,
             .material_index = particle_packet->particles[i].material_idx,
             .particle_index = i,
@@ -116,7 +117,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         command_buffer,
         particle_draw_data,
         // sizeof(Vulkan_Particle_Draw) * particle_packet->particle_count);
-        sizeof(Vulkan_Particle_Renderable) * particle_render->particle_draw_count);
+        sizeof(Particle_Renderable) * particle_render->particle_draw_count);
 
 
     VkBufferMemoryBarrier2 particle_render_data_barrier = {
@@ -273,8 +274,7 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
         .particle_draw_buffer = get_buffer_device_address(renderer->logical_device,
                                                           vulkan_buffer_get_frame(
                                                               renderer,
-                                                              particle_render->particle_draw_buffer_handle)->
-                                                          handle),
+                                                              particle_render->particle_draw_buffer_handle)->handle),
     };
 
 

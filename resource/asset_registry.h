@@ -18,8 +18,6 @@ typedef struct Asset_Registry_Header
 
 
 
-
-
 typedef struct Texture_MetaData
 {
     u32 version;
@@ -45,57 +43,6 @@ typedef struct Texture_MetaData
 } Texture_MetaData;
 
 
-typedef struct Mesh_MetaData
-{
-    u32 version;
-    //
-    u32 mesh_count;
-    String* mesh_names;
-    MADNESS_UUID* material_uuids;
-
-    vec3s initial_pos;
-    vec3s initial_rotation;
-    vec3s initial_scale;
-} Mesh_MetaData;
-
-typedef struct Skinned_Mesh_MetaData
-{
-    u32 version;
-    //
-    u32 mesh_count;
-    String* mesh_names;
-    MADNESS_UUID* material_uuids;
-
-    vec3s initial_pos;
-    vec3s initial_rotation;
-    vec3s initial_scale;
-} Skinned_Mesh_MetaData;
-
-typedef struct Material_MetaData
-{
-    u32 version;
-    //
-    MADNESS_UUID shader_uuid;
-    MADNESS_UUID material_uuid;
-
-    String* material_name;
-    String* instance_name;
-} Material_MetaData;
-
-
-typedef struct Shader_MetaData
-{
-    u32 version;
-    //
-    u32 reflection_hash;
-    MADNESS_UUID uuid;
-    Shader_Key shader_key;
-
-    Path_String* shader_name;
-    String* material_name;
-
-    Shader_PSO shader_info;
-} Shader_MetaData;
 
 
 bool asset_registry_init(Asset_System* asset_system, Asset_Registry* asset_registry, Heap_Allocator* allocator,

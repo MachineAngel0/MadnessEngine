@@ -21,6 +21,8 @@
 
 #include "scene.h"
 
+#include "sort_key.h"
+
 
 #include "asset_registry.h"
 #include "asset_serialization.h"

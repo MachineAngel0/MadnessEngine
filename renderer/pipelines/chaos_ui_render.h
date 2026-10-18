@@ -21,9 +21,9 @@ Chaos_UI_Renderer_Backend* chaos_ui_render_init(Renderer* renderer)
     u32 ui_quad_index_size = sizeof(u16) * 6;
 
     cui_renderer->ui_vertex_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                 BUFFER_TYPE_VERTEX, ui_quad_vertex_size);
+                                                                 BUFFER_TYPE_VERTEX, ui_quad_vertex_size, "CUI Vertex Buffer");
     cui_renderer->ui_index_buffer_handle = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_INDEX, ui_quad_index_size);
+                                                                BUFFER_TYPE_INDEX, ui_quad_index_size, "CUI Index Buffer");
 
 
     /*ui_renderer->ui_material_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
@@ -47,7 +47,7 @@ Chaos_UI_Renderer_Backend* chaos_ui_render_init(Renderer* renderer)
 
     cui_renderer->cui_ssbo_handle = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                BUFFER_TYPE_STORAGE_GPU,
-                                                               ui_buffer_sizes);
+                                                               ui_buffer_sizes, "CUI SSBO");
 
 
     vulkan_pipeline_graphics_create(renderer, "CUI", Shader_Blend_Mode_Alpha,false,

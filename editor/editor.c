@@ -1001,6 +1001,7 @@ void editor_render_view(Editor* editor)
 
         ImGui_ComboChar("Render Mode", &renderer->mode, render_mode_enum_string,
                                   ARRAY_SIZE(render_mode_enum_string));
+        ImGui_Checkbox("Should Cull", &renderer->should_cull);
     }
     ImGui_End();
 }
@@ -1409,7 +1410,6 @@ void editor_material_editor(Editor* editor)
             ImGui_EndDisabled();
 
             ImGui_Text("SHADER PIPELINE HASH: %llu", &asset->shader_pipeline_hash, 0);
-            ImGui_Text("SHADER INFO: KEY %llu", &asset->shader_key, 0);
         }
     }
     ImGui_End();

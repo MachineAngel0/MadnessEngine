@@ -62,16 +62,6 @@ const char* Shader_Blend_Mode_enum_string[] = {
 	[Shader_Blend_Mode_PreMultiplied_Alpha]= "Shader_Blend_Mode_PreMultiplied_Alpha", 
 };
 
-const char* Mesh_PBR_Flags_enum_string[] = {
-	"MESH_PIPELINE_COLOR", 
-	"MESH_PIPELINE_NORMAL", 
-	"MESH_PIPELINE_EMISSIVE", 
-	"MESH_PIPELINE_ROUGHNESS", 
-	"MESH_PIPELINE_METALLIC", 
-	"MESH_PIPELINE_AO", 
-	"MESH_PIPELINE_ENUM_MAX", 
-};
-
 const char* Index_Type_enum_string[] = {
 	[INDEX_TYPE_U16]= "INDEX_TYPE_U16", 
 	[INDEX_TYPE_U32]= "INDEX_TYPE_U32", 
@@ -148,16 +138,6 @@ void generate_runtime_enums_resources(Reflection_Registry* reflection_registry)
 		.bitflag_values = NULL, //filled in the function if applicable
 	};
 	reflection_registry_add_enums(reflection_registry, Shader_Blend_Mode_enum);
-
-	const Reflection_Runtime_Enum Mesh_PBR_Flags_enum =
-	{
-		.name = "Mesh_PBR_Flags",
-		.enum_names = Mesh_PBR_Flags_enum_string,
-		.count = 7,
-		.type = Reflection_Enum_Type_Bitflag,
-		.bitflag_values = NULL, //filled in the function if applicable
-	};
-	reflection_registry_add_enums(reflection_registry, Mesh_PBR_Flags_enum);
 
 	const Reflection_Runtime_Enum Index_Type_enum =
 	{

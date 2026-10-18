@@ -13,7 +13,6 @@ Vulkan_Shader_System* vulkan_shader_system_init(Renderer* renderer);
 void vulkan_shader_system_shutdown(Vulkan_Shader_System* system);
 
 
-
 void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shader_system, Render_Packet* render_packet);
 
 
@@ -25,7 +24,8 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
 void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system,
                                             const char* shader_name);
 
-Vulkan_Shader_Batch* vulkan_shader_system_shader_get_by_key(Renderer* renderer,
-                                                            u64 sort_key);
+
+bool vulkan_shader_system_get_by_pipeline_hash(Renderer* renderer, u64 pipeline_hash, Vulkan_Shader* out_shader);
+
 
 #endif //VULKAN_SHADER_SYSTEM_H

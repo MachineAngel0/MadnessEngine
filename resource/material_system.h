@@ -303,7 +303,6 @@ bool material_acquire(Asset_System* asset_system, Material_System2* material_sys
     //get the shader handle and set the shader key
     asset_load_shader_asset_uuid(asset_system, material_asset->shader_uuid, &material->shader_handle);
     Shader_Asset* asset = shader_asset_get(asset_system->shader_system, material->shader_handle);
-    material->shader_key = asset->shader_key;
 
     Material_Definition definition;
     shader_mapping_get_definition_from_shader_asset(asset_system->shader_system, asset, &definition);
@@ -363,6 +362,11 @@ void material_upload_data(Material_System2* material_system, void* data, u64 dat
     material_system->material_record_count++;
 }
 
+Shader_Asset* material_system_get_shader_asset(Asset_System* asset_system, Material_Handle handle)
+{
+    Shader_Handle shader_handle = asset_system->material_system->materials[handle.handle].shader_handle;
+    return shader_asset_get(asset_system->shader_system, shader_handle);
+}
 
 Madness_Material* material_system_get_material(Material_System2* material_system, Material_Handle handle)
 {
