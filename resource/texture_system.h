@@ -63,6 +63,8 @@ bool texture_reload(Asset_System* asset_system, Texture_System* texture_system,
     //send it off to the gpu
 
 
+    return true;
+
 }
 
 

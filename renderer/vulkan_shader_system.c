@@ -69,13 +69,13 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
     shader_batch->shader_name = string_to_c_string_alloc_heap(shader_asset->shader_pipeline_state.shader_name,
                                                               renderer->heap_allocator);
 
-    shader_batch->blend_mode = shader_asset->shader_pipeline_state.blend_mode;
+    shader_batch->shader_pso.blend_mode = shader_asset->shader_pipeline_state.blend_mode;
     shader_batch->draw_count = 0;
 
 
     //load pipeline from our configs
     //TODO: add more configs when neccessary
-    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->blend_mode, false,
+    vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->shader_pso.blend_mode, false,
                                     &shader_batch->pipeline,
                                     &shader_batch->wireframe_pipeline);
 

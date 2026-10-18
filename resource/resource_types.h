@@ -160,24 +160,6 @@ typedef struct Skinned_Mesh_Handle
     u32 handle;
 } Skinned_Mesh_Handle;
 
-typedef struct Madness_SkMesh_Handle_Internal
-{
-    u32 handle;
-} Madness_SkMesh_Handle_Internal;
-
-/*//used by the game/editor to modify meshes
-typedef struct Mesh_Handle
-{
-   u32 handle;
-   u32 submesh_idx;
-} Mesh_Handle;
-
-typedef struct Sk_Mesh_Handle
-{
-   u32 handle;
-   u32 submesh_idx;
-} Sk_Mesh_Handle;*/
-
 
 typedef struct Transform_Handle
 {
@@ -748,6 +730,89 @@ typedef enum Index_Type
 } Index_Type;
 
 
+
+
+typedef struct Madness_SubMesh2
+{
+    u64 tangent_bytes;
+    u64 vertex_color_bytes;
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 uv_bytes;
+    u64 indices_bytes;
+
+    u32 vertex_count; // this is also the count for basically every field except the index
+    u32 index_count;
+    Index_Type index_type;
+} Madness_SubMesh2;
+
+
+typedef struct Madness_Mesh2{
+    u32 mesh_count;
+    Madness_SubMesh2* mesh_data;
+    MADNESS_UUID* material_uuid;
+    Material_Handle* material_handles;
+    MADNESS_UUID mesh_uuid; // just a single value
+}Madness_Mesh2;
+
+typedef struct Madness_Mesh_Instance2{
+    u32 madness_mesh_index;
+    Transform_Handle transform_handle; // only need one
+
+    u32 submesh_count;
+    Material_Handle* material_handles; // overrides for each submesh
+}Madness_Mesh_Instance2;
+
+
+
+
+
+typedef struct Madness_SubMesh_Instance
+{
+    u32 mesh_asset_index;
+    u32 parent_instance_index;
+    // Shader_Handle shader_handle;
+    Material_Handle material_handle;
+    Transform_Handle parent_transform_handle; // here for easy gpu usage, without the indirect lookup into the parent
+} Madness_SubMesh_Instance;
+
+typedef struct Madness_Mesh_Instance
+{
+    u32 mesh_count;
+    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
+    //this generally is only for changing materials and transforms, and not for the renderer
+    u32 mesh_asset_index;
+    Transform_Handle transform_handle;
+} Madness_Mesh_Instance;
+
+
+typedef struct Madness_SubMesh
+{
+    u64 tangent_bytes;
+    u64 vertex_color_bytes;
+    u64 vertex_bytes;
+    u64 normal_bytes;
+    u64 uv_bytes;
+    u64 indices_bytes;
+
+    u32 vertex_count; // this is also the count for basically every field except the index
+    u32 index_count;
+    Index_Type index_type;
+} Madness_SubMesh;
+
+
+typedef struct Madness_Mesh
+{
+    u32 mesh_count;
+    Madness_SubMesh* mesh_data;
+    MADNESS_UUID* material_uuid;
+    Material_Handle* material_handles;
+    MADNESS_UUID mesh_uuid; // just a single value
+} Madness_Mesh;
+
+
+
+
 typedef struct Madness_Animation
 {
     GLTF_Animation_Data* animation_data; // pointer to the anim data
@@ -789,25 +854,6 @@ typedef struct Madness_Skinned_Mesh_Instance
     u32 skinned_matrix_count_offset;
 } Madness_Skinned_Mesh_Instance;
 
-
-typedef struct Madness_SubMesh_Instance
-{
-    u32 mesh_asset_index;
-    u32 parent_instance_index;
-    Material_Handle material_handle;
-    Transform_Handle parent_transform_handle; // here for easy gpu usage, without the indirect lookup into the parent
-} Madness_SubMesh_Instance;
-
-typedef struct Madness_Mesh_Instance
-{
-    u32 mesh_count;
-    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
-    //this generally is only for changing materials and transforms, and not for the renderer
-    u32 mesh_asset_index;
-    Transform_Handle transform_handle;
-} Madness_Mesh_Instance;
-
-
 typedef struct Madness_Skinned_SubMesh
 {
     u64 joint_bytes;
@@ -822,28 +868,6 @@ typedef struct Madness_Skinned_SubMesh
     u64 weight_offset_bytes;
 } Madness_Skinned_SubMesh;
 
-typedef struct Madness_SubMesh
-{
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
-
-    u32 vertex_count; // this is also the count for basically every field except the index
-    u32 index_count;
-    Index_Type index_type;
-} Madness_SubMesh;
-
-
-typedef struct Madness_Mesh
-{
-    u32 mesh_count;
-    Madness_SubMesh* mesh_data;
-    MADNESS_UUID* material_uuid;
-    Material_Handle* material_handles;
-} Madness_Mesh;
 
 
 typedef struct Madness_Skinned_Mesh
@@ -889,7 +913,6 @@ typedef struct Skinned_Mesh_GPU_Upload
 {
     Madness_Skinned_SubMesh* skinned_submesh;
     Madness_SkMesh_GPU_Data* skinned_gpu_data;
-    //TODO: Heap_Allocator* mesh_memory_allocator; // ref
 
     Heap_Allocator* mesh_memory_allocator; // ref
 } Skinned_Mesh_GPU_Upload;
@@ -1046,7 +1069,6 @@ typedef struct Mesh_System
 
     //mesh_asset (has all the data) -> mesh_parent_instance (contains pointers to all the submeshes, is the thing we want the game to manipulate, also allows us to make material changes quickly)
     //-> mesh_instance (inside the material batches)
-
 
     //mesh
     Madness_Mesh madness_mesh[MAX_MESH_COUNT];

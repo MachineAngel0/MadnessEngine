@@ -57,3 +57,13 @@ void main() {
 //vec4 world_pos  = model * local_pos;       // local → world
 //vec4 view_pos   = view * world_pos;        // world → camera/eye space
 //vec4 clip_pos   = proj * view_pos;         // eye → clip space
+
+
+
+
+
+
+
+
+
+

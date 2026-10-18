@@ -217,6 +217,8 @@ bool texture_system_release(Asset_System* asset_system, Texture_Handle handle)
             ring_enqueue(texture_system->available_font_queue, &texture->font_index);
         }
     }
+
+    return true;
 }
 
 

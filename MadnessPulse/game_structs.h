@@ -41,11 +41,6 @@ typedef struct Reflection_Test_Struct
 } Reflection_Test_Struct;
 
 
-
-
-
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //SAVE GAME
 
@@ -1051,7 +1046,6 @@ typedef struct Character_Flags_Component
 {
     bool death_animation_flag;
     bool revive_animation_flag;
-
 } Character_Flags_Component;
 
 
@@ -1090,9 +1084,7 @@ typedef struct Battle_Inventory_Component
     //Overflow stuff
     u32 current_overflow;
     u32 overflow_threshold;
-
 } Battle_Inventory_Component;
-
 
 
 typedef struct Status_Effect_List_Component
@@ -1110,12 +1102,7 @@ typedef struct Status_Effect_List_Component
     u32 regeneration_points;
     u32 reflection_points;
     u32 spread_points;
-
-
 } Status_Effect_List_Component;
-
-
-
 
 
 typedef struct Conjure_List_Component
@@ -1236,8 +1223,9 @@ typedef struct Unit
     */
 
 
-    //Mesh_Handle mesh_handle;
-    Transform_Handle unit_transform;
+    // Mesh_Handle unit_mesh_handle;
+    Skinned_Mesh_Handle unit_mesh_handle;
+
 
     //pop up locations
     Transform_Handle pop_up_transform;
@@ -1250,7 +1238,7 @@ typedef struct Unit
 
 
     /*
-     //TODO: these should be stored in a list somewhere else
+     //TODO: these should be stored in a list somewhere else or have a way to query these, like tags on the animations
     UAnimMontage* AttackAnimation;
     UAnimMontage* DamagedAnimation;
     UAnimMontage* FusionAnimation;
@@ -1429,7 +1417,6 @@ typedef struct AI_Consideration
 } AI_Consideration;
 
 
-
 typedef struct AI_Ability
 {
     Ability_Name ability_name;
@@ -1450,7 +1437,6 @@ typedef struct Madness_AI_Unit_Info
     u32 overflow_points;
 
     DYNAMIC_ARRAY_TYPE(AI_Ability)* ability_list;
-
 } Madness_AI_Unit_Info;
 
 typedef struct Madness_AI_Decision
@@ -1459,7 +1445,6 @@ typedef struct Madness_AI_Decision
     AI_Ability* ability_info;
     Unit* chosen_targets[MAX_UNITS_COUNT];
     u8 chosen_units_count;
-
 } Madness_AI_Decision;
 
 typedef struct Madness_AI
@@ -1470,7 +1455,6 @@ typedef struct Madness_AI
 
 
     DYNAMIC_ARRAY_TYPE(Madness_AI_Decision)* ai_decision;
-
 } Madness_AI;
 
 
@@ -1518,8 +1502,6 @@ typedef struct Madness_Game_State
 
     u32 picked_ability;
     Turn_Initiative starting_turn_initiative;
-
-
 } Madness_Game_State;
 
 

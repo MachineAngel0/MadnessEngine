@@ -15,8 +15,6 @@
 #include "camera.h"
 #include "../core/dsa/darray.h"
 #include "input.h"
-#include "misc_util.h"
-#include "platform.h"
 #include "../resource/resource_types.h"
 #include "vulkan_struct_draw_types.h"
 
@@ -26,36 +24,6 @@
 
 /// HANDLES ///
 
-
-typedef struct Vulkan_Shader_Handle
-{
-    u32 handle;
-} Vulkan_Shader_Handle;
-
-typedef struct Pipeline_Handle
-{
-    u32 handle;
-} Pipeline_Handle;
-
-typedef struct Buffer_Handle
-{
-    u32 handle;
-} Buffer_Handle;
-
-typedef struct Buffer_Per_Frame_Handle
-{
-    u32 handle;
-} Buffer_Frame_Handle;
-
-typedef struct Staging_Buffer_Handle
-{
-    u32 handle;
-} Staging_Buffer_Handle;
-
-typedef struct Descriptor_Handle
-{
-    u32 handle;
-} Descriptor_Handle;
 
 
 typedef struct Vulkan_Texture
@@ -346,8 +314,7 @@ typedef struct Vulkan_Shader_Batch
 {
     const char* shader_name;
 
-    Shader_Blend_Mode blend_mode;
-    bool two_sided;
+    Shader_PSO shader_pso;
 
     //TODO: you should really just use shader_info
     // Shader_Info shader_info;
@@ -791,7 +758,7 @@ typedef struct Particle_Render
     Buffer_Frame_Handle particle_draw_buffer_handle;
 
 
-    Vulkan_Particle_Render_Item* particle_draw;
+    Vulkan_Particle_Renderable* particle_draw;
     u32 particle_draw_count;
 
     Vulkan_Shader_Pipeline spherical_billboard_pipeline;
@@ -1004,6 +971,8 @@ typedef struct Renderer
     Buffer_Frame_Handle material_buffer;
     Buffer_Frame_Handle material_record_buffer;
     Buffer_Frame_Handle texture_table_buffer;
+
+
 
 
     //pipelines
