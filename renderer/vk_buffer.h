@@ -18,10 +18,10 @@ bool vulkan_buffer_free(Renderer* renderer, Vulkan_Buffer* vk_buffer);
 
 
 Buffer_Handle vulkan_buffer_create(Renderer* renderer, Buffer_System* buffer_system, Vulkan_Buffer_Type buffer_type,
-                                   u64 buffer_size);
+                                   u64 buffer_size, const char* name);
 Buffer_Frame_Handle vulkan_buffer_create_frame(Renderer* renderer, Buffer_System* buffer_system,
                                                Vulkan_Buffer_Type buffer_type,
-                                               u64 buffer_size);
+                                               u64 buffer_size, const char* name);
 
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
 Vulkan_Buffer* vulkan_buffer_get_frame(Renderer* renderer,

@@ -11,10 +11,10 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer)
 
     sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
                                                                              BUFFER_TYPE_STORAGE_GPU,
-                                                                             buffer_memory_size);
+                                                                             buffer_memory_size, "Sprite SSBO");
 
     sprite_backend->sprite_indirect_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_INDIRECT, buffer_memory_size);
+                                                                        BUFFER_TYPE_INDIRECT, buffer_memory_size, "Sprite Indirect");
 
     //only needs to happen once
     Sprite sprites[4];
@@ -25,11 +25,11 @@ Sprite_Renderer* sprite_render_init(Renderer* renderer)
     sprite_backend->index_type = VK_INDEX_TYPE_UINT16;
 
     sprite_backend->sprite_vertex_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                    BUFFER_TYPE_VERTEX,
-                                                                    sizeof(default_sprite));
+                                                                BUFFER_TYPE_VERTEX,
+                                                                sizeof(default_sprite), "Sprite Vertex");
 
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
-                                                                   sizeof(default_sprite_indices));
+                                                               sizeof(default_sprite_indices), "Sprite Index");
 
 
     vulkan_buffer_startup_uploads(renderer, sprite_backend->sprite_vertex_buffer,

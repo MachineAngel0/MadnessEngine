@@ -15,6 +15,19 @@
 
 typedef u32 Permutation_Mask;
 
+typedef enum Permutation_PBR
+{
+    PBR_PIPELINE_SKINNED = BITFLAG(0), // will save me a lot of headache by using one shader for this
+    PBR_PIPELINE_COLOR = BITFLAG(1),
+    PBR_PIPELINE_NORMAL = BITFLAG(2),
+    PBR_PIPELINE_EMISSIVE = BITFLAG(3),
+    PBR_PIPELINE_ROUGHNESS = BITFLAG(4),
+    PBR_PIPELINE_METALLIC = BITFLAG(5),
+    PBR_PIPELINE_AO = BITFLAG(6),
+    PBR_PIPELINE_ENUM_MAX,
+} Permutation_PBR;
+
+
 typedef struct Material_Default
 {
     u32 flags;

@@ -115,8 +115,6 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
                                          &asset_system->render_packet->sprite_data_packet);
 
     material_system_render_packet(asset_system->material_system, asset_system->render_packet);
-    shader_system_render_packet(asset_system->shader_system, asset_system->render_packet);
-
 
     scene_update(asset_system->scene, asset_system);
 
@@ -151,6 +149,10 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     PROFILE_ZONE_END(asset_system_update_and_create_render_packet)
 
     return true;
+}
+
+bool asset_unload_material(Asset_System* asset_system, const char* asset_path)
+{
 }
 
 

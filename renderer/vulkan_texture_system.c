@@ -107,7 +107,7 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
 
 
 
-    if (ring_queue_is_empty(packet->texture_upload_queue))
+    if (ring_queue_is_empty(packet->texture_async_upload_queue))
     {
         return;
     }
@@ -127,9 +127,9 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
 
     //NOTE: each texture needs its own image memory barrier
     vulkan_command_buffer_debug_label_begin(renderer, transfer_command_buffer, "texture upload");
-    while (!ring_queue_is_empty(packet->texture_upload_queue) && transfer_command_buffer)
+    while (!ring_queue_is_empty(packet->texture_async_upload_queue) && transfer_command_buffer)
     {
-        ring_dequeue(packet->texture_upload_queue, &texture_upload);
+        ring_dequeue(packet->texture_async_upload_queue, &texture_upload);
 
         Vulkan_Texture* vulkan_texture = &renderer->texture_system->textures[texture_upload.texture_index];
 
