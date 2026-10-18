@@ -55,7 +55,7 @@ int vulkan_particle_sort_key(const void* draw1, const void* draw2)
     Vulkan_Particle_Renderable p1 = *(Vulkan_Particle_Renderable*)draw1;
     Vulkan_Particle_Renderable p2 = *(Vulkan_Particle_Renderable*)draw2;
 
-    return cmp_u64(&p1.shader_key, &p2.shader_key);
+    return cmp_u64(&p1.sort_key, &p2.sort_key);
 }
 
 
@@ -89,7 +89,7 @@ void particle_renderer_upload_data_draw(Renderer* renderer, Particle_Render* par
         if (particle->life_left <= 0) { continue; }
 
         particle_draw_data[particle_render->particle_draw_count++] = (Vulkan_Particle_Renderable){
-            .shader_key = particle_packet->particles[i].shader_key,
+            .sort_key = particle_packet->particles[i].shader_key,
             .material_index = particle_packet->particles[i].material_idx,
             .particle_index = i,
         };

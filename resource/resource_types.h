@@ -100,6 +100,7 @@
 #define GLYPH_END 128u
 
 #define MAX_MATERIAL_COUNT 100u
+#define MAX_SHADER_COUNT 100u
 
 #define MAX_SPRITE_COUNT 1024u
 
@@ -122,10 +123,9 @@ typedef struct Texture_Handle
 
 
 //Renderpass || translucency || Blend || Mesh Type
-typedef u64 Shader_Key;
+typedef u64 Shader_Sort_Key;
 
-typedef u64 Shader_Pipeline_Hash;
-
+typedef u32 Shader_Pipeline_Hash;
 
 typedef struct Material_Handle
 {
@@ -484,7 +484,6 @@ typedef struct Shader_Asset
     Shader_PSO shader_pipeline_state;
     //both below are u64
     Shader_Pipeline_Hash shader_pipeline_hash;
-    Shader_Key shader_key;
 } Shader_Asset;
 
 typedef struct Material_GPU_Definition
@@ -530,7 +529,7 @@ typedef struct Madness_Material
 
     Shader_Handle shader_handle;
     u32 reflection_hash;
-    Shader_Key shader_key;
+    Shader_Sort_Key shader_key;
 
     Material_Record_Handle material_record_handle;
 
@@ -557,7 +556,7 @@ typedef struct Particle
     vec3s gravity;
     // f32* drag;
     u32 material_idx;
-    Shader_Key shader_key;
+    Shader_Sort_Key shader_key;
 } Particle;
 
 typedef struct Particle_Mesh
@@ -677,7 +676,12 @@ typedef struct Particle_Emitter
 
     //runtime data
     Material_Handle material_handle;
-    Shader_Key shader_key;
+    Shader_Sort_Key shader_key;
+
+    Permutation_Mask permutation;
+    Shader_Pipeline_Hash pipeline_hash;
+    bool visible;
+
 
     vec3s position; // given to us by the effect
 
@@ -730,62 +734,6 @@ typedef enum Index_Type
 } Index_Type;
 
 
-
-
-typedef struct Madness_SubMesh2
-{
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
-
-    u32 vertex_count; // this is also the count for basically every field except the index
-    u32 index_count;
-    Index_Type index_type;
-} Madness_SubMesh2;
-
-
-typedef struct Madness_Mesh2{
-    u32 mesh_count;
-    Madness_SubMesh2* mesh_data;
-    MADNESS_UUID* material_uuid;
-    Material_Handle* material_handles;
-    MADNESS_UUID mesh_uuid; // just a single value
-}Madness_Mesh2;
-
-typedef struct Madness_Mesh_Instance2{
-    u32 madness_mesh_index;
-    Transform_Handle transform_handle; // only need one
-
-    u32 submesh_count;
-    Material_Handle* material_handles; // overrides for each submesh
-}Madness_Mesh_Instance2;
-
-
-
-
-
-typedef struct Madness_SubMesh_Instance
-{
-    u32 mesh_asset_index;
-    u32 parent_instance_index;
-    // Shader_Handle shader_handle;
-    Material_Handle material_handle;
-    Transform_Handle parent_transform_handle; // here for easy gpu usage, without the indirect lookup into the parent
-} Madness_SubMesh_Instance;
-
-typedef struct Madness_Mesh_Instance
-{
-    u32 mesh_count;
-    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
-    //this generally is only for changing materials and transforms, and not for the renderer
-    u32 mesh_asset_index;
-    Transform_Handle transform_handle;
-} Madness_Mesh_Instance;
-
-
 typedef struct Madness_SubMesh
 {
     u64 tangent_bytes;
@@ -801,14 +749,33 @@ typedef struct Madness_SubMesh
 } Madness_SubMesh;
 
 
+typedef struct Madness_Mesh_Instance{
+    u32 madness_mesh_index;
+    Transform_Handle transform_handle; // only need one
+
+    u32 submesh_count;
+    Material_Handle* material_handles; // overrides for each submesh
+    Shader_Pipeline_Hash* pipeline_hash;
+    Permutation_Mask* permutation;
+    // Shader_Renderpass_Type* renderpass_mask:  TODO:
+}Madness_Mesh_Instance;
+
+
 typedef struct Madness_Mesh
 {
     u32 mesh_count;
     Madness_SubMesh* mesh_data;
     MADNESS_UUID* material_uuid;
     Material_Handle* material_handles;
-    MADNESS_UUID mesh_uuid; // just a single value
+    //TODO:
+    // MADNESS_UUID mesh_uuid; // just a single value
+    // Permutation_Mask* permutation; // set to a default from an dcc, but manually changed by us
+
 } Madness_Mesh;
+
+
+
+
 
 
 
@@ -922,10 +889,11 @@ typedef struct Madness_Mesh_Runtime
 {
     u32 version;
     u32 mesh_count;
+    MADNESS_UUID mesh_uuid;
+    MADNESS_UUID* material_uuid;
+
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-    MADNESS_UUID* material_uuid;
-    MADNESS_UUID mesh_uuid;
 } Madness_Mesh_Runtime;
 
 typedef struct Madness_SkMesh_Runtime
@@ -959,10 +927,10 @@ typedef struct Shader_System
 {
     Allocator* shader_asset_allocator;
     //for now all the push constants are going to be hardcoded, there shouldn't be much varation between them most likely
-    Shader_Asset shader_asset[MAX_MATERIAL_COUNT];
+    Shader_Asset shader_asset[MAX_SHADER_COUNT];
     u32 shader_asset_count;
 
-    Asset_Runtime runtime_asset[MAX_MATERIAL_COUNT];
+    Asset_Runtime runtime_asset[MAX_SHADER_COUNT];
     u32 runtime_asset_count;
 
 
@@ -1076,9 +1044,6 @@ typedef struct Mesh_System
 
     Madness_Mesh_Instance mesh_instance[MAX_MESH_COUNT];
     u32 mesh_instance_count;
-
-    Madness_SubMesh_Instance submesh_instances[MAX_MESH_COUNT];
-    u32 submesh_instance_count;
 
     //skinned
     Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
@@ -1209,9 +1174,6 @@ typedef struct Render_Packet_3D
     Madness_Mesh_Instance* mesh_instances;
     u32 mesh_instances_count;
 
-    Madness_SubMesh_Instance* submesh_instances;
-    u32 submesh_instances_count;
-
 
     Madness_Skinned_Mesh_Instance* skinned_instances;
     u32 skinned_instances_count;
@@ -1234,6 +1196,16 @@ typedef struct Render_Packet_Material
 
 
 }Render_Packet_Material;
+
+
+typedef struct Render_Packet_Shaders
+{
+    //TODO: we should have a dirty bit for generating any new batches
+    Shader_Asset* shader_assets;
+    u32 shader_asset_count;
+
+}Render_Packet_Shaders;
+
 
 typedef struct Render_Packet_UI
 {
@@ -1279,6 +1251,7 @@ typedef struct Render_Packet
     Render_Packet_Particle particle_packet;
 
     Render_Packet_Material material_packet;
+    Render_Packet_Shaders shaders_packet;
 } Render_Packet;
 
 

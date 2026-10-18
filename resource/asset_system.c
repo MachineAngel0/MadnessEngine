@@ -115,6 +115,8 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
                                          &asset_system->render_packet->sprite_data_packet);
 
     material_system_render_packet(asset_system->material_system, asset_system->render_packet);
+    shader_system_render_packet(asset_system->shader_system, asset_system->render_packet);
+
 
     scene_update(asset_system->scene, asset_system);
 
@@ -137,10 +139,7 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.mesh_instances_count = asset_system->mesh_system->
         mesh_instance_count;
-    asset_system->render_packet->draw_3d_data_packet.submesh_instances = asset_system->mesh_system->
-        submesh_instances;
-    asset_system->render_packet->draw_3d_data_packet.submesh_instances_count = asset_system->mesh_system->
-        submesh_instance_count;
+
 
 
     asset_system->render_packet->draw_3d_data_packet.skinned_instances = asset_system->mesh_system->

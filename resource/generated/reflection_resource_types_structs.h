@@ -9,7 +9,6 @@ const char* resources_struct_string_list[] = {
 	"Shader_Handle", 
 	"Mesh_Handle", 
 	"Skinned_Mesh_Handle", 
-	"Madness_SkMesh_Handle_Internal", 
 	"Transform_Handle", 
 	"Sprite_Handle", 
 	"Animation_Handle", 
@@ -22,7 +21,7 @@ const char* resources_struct_string_list[] = {
 	"Madness_Texture", 
 	"Texture_GPU_Upload", 
 	"Madness_Texture_Runtime", 
-	"Glyph", 
+	"Madness_Glyph", 
 	"Madness_Font", 
 	"Madness_Font_Runtime", 
 	"PC_General", 
@@ -42,14 +41,13 @@ const char* resources_struct_string_list[] = {
 	"Particle_Emitter_Data", 
 	"Particle_Emitter", 
 	"Particle_Effect", 
+	"Madness_SubMesh", 
+	"Madness_Mesh_Instance", 
+	"Madness_Mesh", 
 	"Madness_Animation", 
 	"Madness_Skinned_Submesh_Instance", 
 	"Madness_Skinned_Mesh_Instance", 
-	"Madness_SubMesh_Instance", 
-	"Madness_Mesh_Instance", 
 	"Madness_Skinned_SubMesh", 
-	"Madness_SubMesh", 
-	"Madness_Mesh", 
 	"Madness_Skinned_Mesh", 
 	"Madness_Mesh_GPU_Data", 
 	"Madness_SkMesh_GPU_Data", 
@@ -69,6 +67,7 @@ const char* resources_struct_string_list[] = {
 	"Material_System2", 
 	"Render_Packet_3D", 
 	"Render_Packet_Material", 
+	"Render_Packet_Shaders", 
 	"Render_Packet_UI", 
 	"Render_Packet_Sprite", 
 	"Render_Packet_Particle", 
@@ -222,26 +221,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Skinned_Mesh_Handle_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_SkMesh_Handle_Internal_Fields[] =
-	{
-		{
-			.name = "handle",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SkMesh_Handle_Internal, handle)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_SkMesh_Handle_Internal_Runtime_Struct =
-	{
-		.name = "Madness_SkMesh_Handle_Internal",
-		.fields = Madness_SkMesh_Handle_Internal_Fields,
-		.field_count = 1,
-		.struct_size = sizeof(Madness_SkMesh_Handle_Internal)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_SkMesh_Handle_Internal_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Transform_Handle_Fields[] =
 	{
@@ -699,7 +678,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_Texture_Runtime_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Glyph_Fields[] =
+	Reflection_Runtime_Struct_Field Madness_Glyph_Fields[] =
 	{
 		{
 			.name = "width",
@@ -727,22 +706,22 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		},
 	};
 
-	 Reflection_Runtime_Struct Glyph_Runtime_Struct =
+	 Reflection_Runtime_Struct Madness_Glyph_Runtime_Struct =
 	{
-		.name = "Glyph",
-		.fields = Glyph_Fields,
+		.name = "Madness_Glyph",
+		.fields = Madness_Glyph_Fields,
 		.field_count = 4,
 		.struct_size = sizeof(Madness_Glyph)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Glyph_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Madness_Glyph_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Font_Fields[] =
 	{
 		{
 			.name = "glyphs",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Glyph",
+			.type_name = "Madness_Glyph",
 			.offset = offsetof(Madness_Font, glyphs)
 		},
 	};
@@ -1422,6 +1401,12 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Particle_Emitter, material_handle)
 		},
 		{
+			.name = "visible",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Particle_Emitter, visible)
+		},
+		{
 			.name = "position",
 			.type = REFLECTION_TYPE_VEC3,
 			.type_name = "vec3s",
@@ -1439,7 +1424,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Particle_Emitter",
 		.fields = Particle_Emitter_Fields,
-		.field_count = 6,
+		.field_count = 7,
 		.struct_size = sizeof(Particle_Emitter)
 	};
 
@@ -1524,6 +1509,150 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Particle_Effect_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Madness_SubMesh_Fields[] =
+	{
+		{
+			.name = "tangent_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, tangent_bytes)
+		},
+		{
+			.name = "vertex_color_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, vertex_color_bytes)
+		},
+		{
+			.name = "vertex_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, vertex_bytes)
+		},
+		{
+			.name = "normal_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, normal_bytes)
+		},
+		{
+			.name = "uv_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, uv_bytes)
+		},
+		{
+			.name = "indices_bytes",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(Madness_SubMesh, indices_bytes)
+		},
+		{
+			.name = "vertex_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_SubMesh, vertex_count)
+		},
+		{
+			.name = "index_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_SubMesh, index_count)
+		},
+		{
+			.name = "index_type",
+			.type = REFLECTION_TYPE_ENUM,
+			.type_name = "Index_Type",
+			.offset = offsetof(Madness_SubMesh, index_type)
+		},
+	};
+
+	 Reflection_Runtime_Struct Madness_SubMesh_Runtime_Struct =
+	{
+		.name = "Madness_SubMesh",
+		.fields = Madness_SubMesh_Fields,
+		.field_count = 9,
+		.struct_size = sizeof(Madness_SubMesh)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Madness_SubMesh_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Madness_Mesh_Instance_Fields[] =
+	{
+		{
+			.name = "madness_mesh_index",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Mesh_Instance, madness_mesh_index)
+		},
+		{
+			.name = "transform_handle",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Transform_Handle",
+			.offset = offsetof(Madness_Mesh_Instance, transform_handle)
+		},
+		{
+			.name = "submesh_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Mesh_Instance, submesh_count)
+		},
+		{
+			.name = "material_handles",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Madness_Mesh_Instance, material_handles)
+		},
+	};
+
+	 Reflection_Runtime_Struct Madness_Mesh_Instance_Runtime_Struct =
+	{
+		.name = "Madness_Mesh_Instance",
+		.fields = Madness_Mesh_Instance_Fields,
+		.field_count = 4,
+		.struct_size = sizeof(Madness_Mesh_Instance)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Instance_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Madness_Mesh_Fields[] =
+	{
+		{
+			.name = "mesh_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Madness_Mesh, mesh_count)
+		},
+		{
+			.name = "mesh_data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Madness_SubMesh",
+			.offset = offsetof(Madness_Mesh, mesh_data)
+		},
+		{
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Mesh, material_uuid)
+		},
+		{
+			.name = "material_handles",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Material_Handle",
+			.offset = offsetof(Madness_Mesh, material_handles)
+		},
+	};
+
+	 Reflection_Runtime_Struct Madness_Mesh_Runtime_Struct =
+	{
+		.name = "Madness_Mesh",
+		.fields = Madness_Mesh_Fields,
+		.field_count = 4,
+		.struct_size = sizeof(Madness_Mesh)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Animation_Fields[] =
 	{
@@ -1669,82 +1798,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_Skinned_Mesh_Instance_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Madness_SubMesh_Instance_Fields[] =
-	{
-		{
-			.name = "mesh_asset_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh_Instance, mesh_asset_index)
-		},
-		{
-			.name = "parent_instance_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh_Instance, parent_instance_index)
-		},
-		{
-			.name = "material_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Handle",
-			.offset = offsetof(Madness_SubMesh_Instance, material_handle)
-		},
-		{
-			.name = "parent_transform_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Transform_Handle",
-			.offset = offsetof(Madness_SubMesh_Instance, parent_transform_handle)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_SubMesh_Instance_Runtime_Struct =
-	{
-		.name = "Madness_SubMesh_Instance",
-		.fields = Madness_SubMesh_Instance_Fields,
-		.field_count = 4,
-		.struct_size = sizeof(Madness_SubMesh_Instance)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_SubMesh_Instance_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_Mesh_Instance_Fields[] =
-	{
-		{
-			.name = "mesh_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Mesh_Instance, mesh_count)
-		},
-		{
-			.name = "start_submesh_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Mesh_Instance, start_submesh_index)
-		},
-		{
-			.name = "mesh_asset_index",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Mesh_Instance, mesh_asset_index)
-		},
-		{
-			.name = "transform_handle",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Transform_Handle",
-			.offset = offsetof(Madness_Mesh_Instance, transform_handle)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_Mesh_Instance_Runtime_Struct =
-	{
-		.name = "Madness_Mesh_Instance",
-		.fields = Madness_Mesh_Instance_Fields,
-		.field_count = 4,
-		.struct_size = sizeof(Madness_Mesh_Instance)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Instance_Runtime_Struct);
-
 	Reflection_Runtime_Struct_Field Madness_Skinned_SubMesh_Fields[] =
 	{
 		{
@@ -1794,112 +1847,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Madness_Skinned_SubMesh_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_SubMesh_Fields[] =
-	{
-		{
-			.name = "tangent_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, tangent_bytes)
-		},
-		{
-			.name = "vertex_color_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, vertex_color_bytes)
-		},
-		{
-			.name = "vertex_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, vertex_bytes)
-		},
-		{
-			.name = "normal_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, normal_bytes)
-		},
-		{
-			.name = "uv_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, uv_bytes)
-		},
-		{
-			.name = "indices_bytes",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u64",
-			.offset = offsetof(Madness_SubMesh, indices_bytes)
-		},
-		{
-			.name = "vertex_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, vertex_count)
-		},
-		{
-			.name = "index_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_SubMesh, index_count)
-		},
-		{
-			.name = "index_type",
-			.type = REFLECTION_TYPE_ENUM,
-			.type_name = "Index_Type",
-			.offset = offsetof(Madness_SubMesh, index_type)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_SubMesh_Runtime_Struct =
-	{
-		.name = "Madness_SubMesh",
-		.fields = Madness_SubMesh_Fields,
-		.field_count = 9,
-		.struct_size = sizeof(Madness_SubMesh)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_SubMesh_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field Madness_Mesh_Fields[] =
-	{
-		{
-			.name = "mesh_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Madness_Mesh, mesh_count)
-		},
-		{
-			.name = "mesh_data",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_SubMesh",
-			.offset = offsetof(Madness_Mesh, mesh_data)
-		},
-		{
-			.name = "material_uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Madness_Mesh, material_uuid)
-		},
-		{
-			.name = "material_handles",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Material_Handle",
-			.offset = offsetof(Madness_Mesh, material_handles)
-		},
-	};
-
-	 Reflection_Runtime_Struct Madness_Mesh_Runtime_Struct =
-	{
-		.name = "Madness_Mesh",
-		.fields = Madness_Mesh_Fields,
-		.field_count = 4,
-		.struct_size = sizeof(Madness_Mesh)
-	};
-
-	reflection_registry_add_struct(reflection_registry, Madness_Mesh_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Madness_Skinned_Mesh_Fields[] =
 	{
@@ -2094,6 +2041,18 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Madness_Mesh_Runtime, mesh_count)
 		},
 		{
+			.name = "mesh_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Mesh_Runtime, mesh_uuid)
+		},
+		{
+			.name = "material_uuid",
+			.type = REFLECTION_TYPE_UUID,
+			.type_name = "MADNESS_UUID",
+			.offset = offsetof(Madness_Mesh_Runtime, material_uuid)
+		},
+		{
 			.name = "submeshes",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_SubMesh",
@@ -2104,18 +2063,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Mesh_GPU_Data",
 			.offset = offsetof(Madness_Mesh_Runtime, mesh_gpu_upload)
-		},
-		{
-			.name = "material_uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Madness_Mesh_Runtime, material_uuid)
-		},
-		{
-			.name = "mesh_uuid",
-			.type = REFLECTION_TYPE_UUID,
-			.type_name = "MADNESS_UUID",
-			.offset = offsetof(Madness_Mesh_Runtime, mesh_uuid)
 		},
 	};
 
@@ -2452,18 +2399,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Mesh_System, mesh_instance_count)
 		},
 		{
-			.name = "submesh_instances",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_SubMesh_Instance",
-			.offset = offsetof(Mesh_System, submesh_instances)
-		},
-		{
-			.name = "submesh_instance_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Mesh_System, submesh_instance_count)
-		},
-		{
 			.name = "madness_skinned_mesh",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Skinned_Mesh",
@@ -2505,7 +2440,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Mesh_System",
 		.fields = Mesh_System_Fields,
-		.field_count = 12,
+		.field_count = 10,
 		.struct_size = sizeof(Mesh_System)
 	};
 
@@ -2766,18 +2701,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Render_Packet_3D, mesh_instances_count)
 		},
 		{
-			.name = "submesh_instances",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_SubMesh_Instance",
-			.offset = offsetof(Render_Packet_3D, submesh_instances)
-		},
-		{
-			.name = "submesh_instances_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Render_Packet_3D, submesh_instances_count)
-		},
-		{
 			.name = "skinned_instances",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Skinned_Mesh_Instance",
@@ -2807,7 +2730,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Render_Packet_3D",
 		.fields = Render_Packet_3D_Fields,
-		.field_count = 11,
+		.field_count = 9,
 		.struct_size = sizeof(Render_Packet_3D)
 	};
 
@@ -2856,6 +2779,32 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, Render_Packet_Material_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field Render_Packet_Shaders_Fields[] =
+	{
+		{
+			.name = "shader_assets",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Shader_Asset",
+			.offset = offsetof(Render_Packet_Shaders, shader_assets)
+		},
+		{
+			.name = "shader_asset_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Render_Packet_Shaders, shader_asset_count)
+		},
+	};
+
+	 Reflection_Runtime_Struct Render_Packet_Shaders_Runtime_Struct =
+	{
+		.name = "Render_Packet_Shaders",
+		.fields = Render_Packet_Shaders_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(Render_Packet_Shaders)
+	};
+
+	reflection_registry_add_struct(reflection_registry, Render_Packet_Shaders_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Render_Packet_UI_Fields[] =
 	{
@@ -2967,13 +2916,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Render_Packet_Material",
 			.offset = offsetof(Render_Packet, material_packet)
 		},
+		{
+			.name = "shaders_packet",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Render_Packet_Shaders",
+			.offset = offsetof(Render_Packet, shaders_packet)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Runtime_Struct =
 	{
 		.name = "Render_Packet",
 		.fields = Render_Packet_Fields,
-		.field_count = 5,
+		.field_count = 6,
 		.struct_size = sizeof(Render_Packet)
 	};
 

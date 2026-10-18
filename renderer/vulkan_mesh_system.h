@@ -17,15 +17,17 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
                                         Vulkan_Command_Buffer* command_buffer);
 
 void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                              Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                              Vulkan_Command_Buffer* command_buffer);
+                              Vulkan_Command_Buffer* command_buffer, Vulkan_Mesh_Render_List* render_list);
 
 
 //TODO: should be pass in a custom push constant??? since we will likely need it
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                              Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                                               Vulkan_Command_Buffer* command_buffer,
-                                              Vulkan_Shader_Pipeline* shader_pipeline);
+                                              Vulkan_Shader_Pipeline* vulkan_pipeline,
+                                              Vulkan_Mesh_Render_List* render_list);
+
+
+
 
 bool mesh_system_upload_data_into_buffers(Renderer* renderer, Vulkan_Mesh_System* mesh_system,
                              Vulkan_Command_Buffer* transfer_command_buffer,

@@ -3,6 +3,9 @@
 #include "scene.h"
 #include "vk_buffer.h"
 #include "vulkan_struct_types.h"
+#include "logger.h"
+#include "sort_key.h"
+#include "vulkan_shader_system.h"
 
 
 Vulkan_Mesh_System* vulkan_mesh_system_init(Renderer* renderer)
@@ -334,37 +337,43 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
 }
 
 
-int vulkan_mesh_sort_key(const void* render_item1, const void* render_item2)
-{
-    Vulkan_Mesh_Renderable* p1 = (Vulkan_Mesh_Renderable*)render_item1;
-    Vulkan_Mesh_Renderable* p2 = (Vulkan_Mesh_Renderable*)render_item2;
-    return cmp_u64(&p1->sort_key, &p2->sort_key);
-}
-
-void mesh_renderer_construct_batch_draw(Renderer* renderer,
+void mesh_renderer_construct_draw_lists(Renderer* renderer,
                                         Render_Packet* render_packet,
-                                        Vulkan_Command_Buffer* command_buffer)
+                                        Vulkan_Command_Buffer* command_buffer, Vulkan_Mesh_Render_List* render_list)
 {
     //TODO: were going to assume we have already done culling,
     // but we would need to pass in another structure for actually culled data
     // or even cull and create the render format at the same time, instead of two seperate arrays
 
+
+    //steps:
+    // 1. cull // TODO:
+    // 2. add items into each appropriate renderpass list
+    // 3. sort each renderpass lists and their items
+    // 4. batch the instances
+    // 5. add the draws into the buffer
+
+
     // loop through our meshes and create render items for each
 
     //TODO: TEMP
     Vulkan_Mesh_Renderable* render_items = allocator_alloc(&renderer->frame_allocator,
-                                                           100 * sizeof(Vulkan_Mesh_Renderable));
-    u32 render_item_count = 0;
+                                                           1000 * sizeof(Vulkan_Mesh_Renderable));
 
+    u32 render_item_count = 0;
+    render_list->draw_count = 0; // TODO: move out to a frame start
 
     // Vulkan_Mesh_Draw draw_data = {
     // .transform_idx = sub_mesh_instance->parent_transform_handle.handle,
     // .material_instance_handle = sub_mesh_instance->material_handle.buffer_handle,
     // };
-    for (u32 i = 0; i < render_packet->draw_3d_data_packet.submesh_instances_count; i++)
+    render_list->mesh_renderable_count = render_packet->draw_3d_data_packet.mesh_instances_count;
+
+    for (u32 i = 0; i < render_packet->draw_3d_data_packet.mesh_instances_count; i++)
     {
-        Madness_SubMesh_Instance* submesh_instance = &render_packet->draw_3d_data_packet.submesh_instances[i];
-        Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[i];
+        Madness_Mesh_Instance* mesh_instance = &render_packet->draw_3d_data_packet.mesh_instances[i];
+        Mesh_Render_Record* render_record = &renderer->mesh_system->mesh_render_record[mesh_instance->
+            madness_mesh_index];
 
         //check if its valid for uploading
         if (!render_record->is_uploaded || !render_record->is_in_use)
@@ -374,27 +383,39 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 
         //TODO: check if material upload is valid yet, when we get around to that,
         //NOTE: YOU CAN JUST ASSUME MATERIALS and TEXTURES ARE VALID
-        Vulkan_Mesh_Renderable* render_inst = &render_items[render_item_count++];
 
 
-        *render_inst = (Vulkan_Mesh_Renderable){
-            //TODO:
-            // .sort_key = material_create_sort_key(submesh_instance->material_handle.handle, transform->position.z),
-            .sort_key = submesh_instance->material_handle,
+        for (u32 submesh_idx = 0; submesh_idx < mesh_instance->submesh_count; submesh_idx++)
+        {
+            Vulkan_Mesh_Renderable* render_inst = &render_items[render_item_count++];
 
-            .material_idx = submesh_instance->material_handle.handle,
-            .mesh_instance_idx = submesh_instance->parent_instance_index,
-            .mesh_asset_idx = submesh_instance->mesh_asset_index,
-            // .submesh_idx = submesh_idx,
-            .transform_handle = submesh_instance->parent_transform_handle.handle,
-            .index_count = render_record->index_count,
-            .index_offset = render_record->index_offset_count,
-            .vertex_offset = render_record->vertex_count_offset,
-            .joint_idx = 0,
-            .weight_idx = 0,
-            .skinned_matrix_idx = 0,
-        };
+            *render_inst = (Vulkan_Mesh_Renderable){
+                //TODO: each sort key should vary based on pass, as they are being added into the list
+                // .shader_sort_key = sort_key_create_oqaque(mesh_instance->pipeline_hash[i], mesh_instance->permutation[i]),
+                .pipeline_hash = mesh_instance->pipeline_hash[i],
+                .permutation = mesh_instance->permutation[i],
+                .render_pass_masks = 0,
+                .mesh_id = mesh_instance->madness_mesh_index,
+                .visible = true,
+                .index_count = render_record->index_count,
+                .index_offset = render_record->index_offset_count,
+                .vertex_offset = render_record->vertex_count_offset,
+                .mesh_render_item = {
+                    .material_idx = mesh_instance->material_handles[i].handle,
+                    .transform_idx = mesh_instance->transform_handle.handle,
+                    .normal_offset = render_record->normal_bytes_offset,
+                    .uv_offset = render_record->uv_bytes_offset,
+                    .tangent_offset = render_record->tangent_bytes_offset,
+                    .joint_idx = 0,
+                    .weight_idx = 0,
+                    .skinned_matrix_idx = 0,
+                }
+            };
+        }
     }
+
+    //TODO: append to each render pass type
+
 
     //TODO: sort the meshes by sort key
     qsort(render_items, render_item_count, sizeof(Vulkan_Mesh_Renderable), vulkan_mesh_sort_key);
@@ -403,27 +424,16 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
     //TODO/ OPTIMIZE : when a render item doesn't match, that means we move onto the next batch
     // we can also upload based on that range instead of individual uploads
 
-
     VkDrawIndexedIndirectCommand indirect_draw = {0};
-    Vulkan_Mesh_Renderable mesh_draw = {0};
 
     for (u32 i = 0; i < render_item_count; i++)
     {
         //TODO: check if material upload is valid yet, when we get around to that
-        Vulkan_Mesh_Renderable* mesh_item = &render_items[render_item_count++];
+        Vulkan_Mesh_Renderable* mesh_item = &render_items[i];
 
-        mesh_item->mesh_instance_idx;
-        Vulkan_Shader_Batch* current_batch = &renderer->shader_system->material_batch->mesh_batch[mesh_item->
-            material_batch_idx];
+        // Vulkan_Shader* shader = vulkan_shader_system_get_by_pipeline_hash(renderer, mesh_item->pipeline_hash);
 
-
-        mesh_draw = (Vulkan_Mesh_Draw)
-        {
-            .
-            transform_idx = mesh_item->transform_handle,
-            .
-            material_instance_handle = mesh_item->material_idx,
-        };
+        //TODO: batch instances, basically figure it out
         indirect_draw = (VkDrawIndexedIndirectCommand){
             .indexCount = mesh_item->index_count,
             .firstIndex = mesh_item->index_offset,
@@ -433,20 +443,19 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
         };
 
         vulkan_buffer_frame_staging_upload(
-            renderer, current_batch->draw_data_buffer_handle,
+            renderer, render_list->mesh_draw_data,
             command_buffer,
-            &mesh_draw,
-            sizeof(Vulkan_Mesh_Draw));
+            &mesh_item->mesh_render_item,
+            sizeof(Vulkan_Mesh_GPU_Renderable));
 
 
         vulkan_buffer_frame_staging_upload(
-            renderer, current_batch->indirect_draw_buffer_handle,
+            renderer, render_list->indirect_buffer,
             command_buffer,
             &indirect_draw,
             sizeof(VkDrawIndexedIndirectCommand));
 
-
-        current_batch->draw_count++;
+        render_list->draw_count++; // TODO: modify it later to count each instance draw
     }
 
 
@@ -548,30 +557,29 @@ void mesh_renderer_construct_batch_draw(Renderer* renderer,
 
 
 void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                              Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
-                              Vulkan_Command_Buffer* command_buffer)
+                              Vulkan_Command_Buffer* command_buffer, Vulkan_Mesh_Render_List* render_list)
 {
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
-    for (u32 batch_idx = 0; batch_idx < batch_draw_count; ++batch_idx)
-    {
-        Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
+    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);
 
-        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, draw_data->indirect_draw_buffer_handle);
+    for (u32 draw_idx = 0; draw_idx < render_list->draw_count; ++draw_idx)
+    {
+        Vulkan_Shader_Batch* vulkan_shader = vulkan_shader_system_get_by_pipeline_hash(
+            renderer, render_list->mesh_renderable[draw_idx].pipeline_hash);
+
+
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
+        //get pipeline
+        VkPipeline pipeline = vulkan_shader->pipeline.handle;
+        VkPipelineLayout layout = vulkan_shader->pipeline.pipeline_layout;
+
         //check if we are using wireframe_mode
-        VkPipeline pipeline = draw_data->pipeline.handle;
-        VkPipelineLayout layout = draw_data->pipeline.pipeline_layout;
         if (renderer->wireframe_mode)
         {
-            pipeline = draw_data->wireframe_pipeline.handle;
-            layout = draw_data->wireframe_pipeline.pipeline_layout;;
-        }
-        else
-        {
-            pipeline = draw_data->pipeline.handle;
-            layout = draw_data->pipeline.pipeline_layout;
+            pipeline = vulkan_shader->wireframe_pipeline.handle;
+            layout = vulkan_shader->wireframe_pipeline.pipeline_layout;;
         }
 
 
@@ -602,11 +610,10 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
                              VK_INDEX_TYPE_UINT16);
 
 
-        draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
-            renderer, draw_data->draw_data_buffer_handle);
-        //TODO:
-        // draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
-        // renderer, draw_data->material_data_buffer_handle);
+        PC_General pc_data = {
+            .draw_data_buffer = vulkan_buffer_get_frame_device_address(renderer, render_list->mesh_draw_data),
+            .material_buffer = 0,
+        };
 
 
         VkPushConstantsInfo push_constant_info = {0};
@@ -616,7 +623,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         push_constant_info.offset = 0;
         push_constant_info.size = sizeof(PC_General);
         // push_constant_info.size = sizeof(draw_data->general); // make sure its not a pointer if i use this
-        push_constant_info.pValues = &draw_data->pc_data;
+        push_constant_info.pValues = &pc_data;
         push_constant_info.pNext = NULL;
         vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 
@@ -625,13 +632,13 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      indirect_buffer->handle, 0,
-                                     draw_data->draw_count,
+                                     render_list->draw_count,
                                      sizeof(VkDrawIndexedIndirectCommand));
         }
         else
         {
             // If multi draw is not available, we must issue separate draw commands
-            for (u64 j = 0; j < draw_data->draw_count; j++)
+            for (u64 j = 0; j < render_list->draw_count; j++)
             {
                 vkCmdDrawIndexedIndirect(command_buffer->handle,
                                          indirect_buffer->handle,
@@ -644,24 +651,28 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 
 
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                              Vulkan_Shader_Batch* batch_draw_data, u32 batch_draw_count,
                                               Vulkan_Command_Buffer* command_buffer,
-                                              Vulkan_Shader_Pipeline* shader_pipeline)
+                                              Vulkan_Shader_Pipeline* vulkan_pipeline,
+                                              Vulkan_Mesh_Render_List* render_list)
 {
-    MASSERT(shader_pipeline);
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
-    VkPipeline pipeline = shader_pipeline->handle;
-    VkPipelineLayout layout = shader_pipeline->pipeline_layout;
 
-    for (u32 batch_idx = 0; batch_idx < batch_draw_count; ++batch_idx)
+    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);
+
+    for (u32 draw_idx = 0; draw_idx < render_list->draw_count; ++draw_idx)
     {
-        Vulkan_Shader_Batch* draw_data = &batch_draw_data[batch_idx];
-
-
-        Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, draw_data->indirect_draw_buffer_handle);
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
-        //figure out the shadow pass type we are using
+        //get pipeline
+        VkPipeline pipeline = vulkan_pipeline->handle;
+        VkPipelineLayout layout = vulkan_pipeline->pipeline_layout;
+
+        /*//check if we are using wireframe_mode
+        if (renderer->wireframe_mode)
+        {
+            pipeline = vulkan_pipeline->handle;
+            layout = vulkan_pipeline->pipeline_layout;;
+        }*/
 
 
         //UBER SHADER MESH INDIRECT DRAW
@@ -690,11 +701,11 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
                              VK_INDEX_TYPE_UINT16);
 
-        draw_data->pc_data.draw_data_buffer = vulkan_buffer_get_frame_device_address(
-            renderer, draw_data->draw_data_buffer_handle);
-        //TODO:
-        /*draw_data->pc_data.material_buffer = vulkan_buffer_get_frame_device_address(
-                   renderer, draw_data->material_data_buffer_handle);*/
+
+        PC_General pc_data = {
+            .draw_data_buffer = vulkan_buffer_get_frame_device_address(renderer, render_list->mesh_draw_data),
+            .material_buffer = 0,
+        };
 
 
         VkPushConstantsInfo push_constant_info = {0};
@@ -704,7 +715,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         push_constant_info.offset = 0;
         push_constant_info.size = sizeof(PC_General);
         // push_constant_info.size = sizeof(draw_data->general); // make sure its not a pointer if i use this
-        push_constant_info.pValues = &draw_data->pc_data;
+        push_constant_info.pValues = &pc_data;
         push_constant_info.pNext = NULL;
         vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 
@@ -713,13 +724,13 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         {
             vkCmdDrawIndexedIndirect(command_buffer->handle,
                                      indirect_buffer->handle, 0,
-                                     draw_data->draw_count,
+                                     render_list->draw_count,
                                      sizeof(VkDrawIndexedIndirectCommand));
         }
         else
         {
             // If multi draw is not available, we must issue separate draw commands
-            for (u64 j = 0; j < draw_data->draw_count; j++)
+            for (u64 j = 0; j < render_list->draw_count; j++)
             {
                 vkCmdDrawIndexedIndirect(command_buffer->handle,
                                          indirect_buffer->handle,

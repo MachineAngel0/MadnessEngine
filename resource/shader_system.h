@@ -42,7 +42,6 @@ Shader_Asset* shader_asset_get(Shader_System* shader_system,
                                Shader_Handle shader_handle);
 
 Shader_Pipeline_Hash shader_pipeline_hash_create(Shader_PSO* shader_pso);
-Shader_Key shader_key_create(Shader_PSO* shader_info);
 
 
 //mapping

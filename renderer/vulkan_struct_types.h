@@ -319,19 +319,11 @@ typedef struct Vulkan_Shader_Batch
     //TODO: you should really just use shader_info
     // Shader_Info shader_info;
 
-    u64 material_key;
+    Shader_Pipeline_Hash pipeline_hash;
 
 
     Vulkan_Shader_Pipeline pipeline;
     Vulkan_Shader_Pipeline wireframe_pipeline;
-
-    Buffer_Frame_Handle indirect_draw_buffer_handle;
-    u32 draw_count;
-
-    Buffer_Frame_Handle draw_data_buffer_handle;
-
-    PC_General pc_data;
-
 
     // u32 pc_size;
     // void* pc_data;
@@ -354,8 +346,8 @@ typedef struct Vulkan_Shader_System
     // https://realtimecollisiondetection.net/blog/?p=86
 
     //TODO: temp value for now, should probably be a dynamic array
-    Vulkan_Shader_Batch material_batch[100];
-    u32 material_batch_count;
+    Vulkan_Shader_Batch shader_batch[100];
+    u32 shader_batch_count;
 
 
 
@@ -942,6 +934,7 @@ typedef struct Renderer
     Camera main_camera;
     Render_Mode mode;
     bool draw_debug_axis;
+    bool should_cull;
 
 
     Allocator allocator; // total memory for the entire renderer

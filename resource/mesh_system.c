@@ -19,7 +19,6 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
 
     out_mesh_system->madness_mesh_count = 0;
     out_mesh_system->mesh_instance_count = 0;
-    out_mesh_system->submesh_instance_count = 0;
 
     out_mesh_system->madness_sk_mesh_count = 0;
     out_mesh_system->skinned_mesh_instance_count = 0;

@@ -1251,6 +1251,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         sk_mesh_runtime.skmesh_gpu_upload = skinned_gpu_data;
         sk_mesh_runtime.skinned_submeshes = skinned_mesh;
         sk_mesh_runtime.animation_data = animation_data;
+        sk_mesh_runtime.skinned_mesh_uuid = madness_uuid_generate_return();
 
 
         String_Builder* str_builder = asset_converter_create_file_path(scratch, gltf_path,
@@ -1274,7 +1275,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
-                                                   ASSET_SKINNED_MESH, asset_system->heap_allocator, NULL);
+                                                   ASSET_SKINNED_MESH, asset_system->heap_allocator,
+                                                   &sk_mesh_runtime.skinned_mesh_uuid);
+
     }
     else
     {
@@ -1285,6 +1288,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         engine_format.submeshes = madness_mesh->mesh_data;
         engine_format.mesh_gpu_upload = gpu_data;
         engine_format.material_uuid = material_uuids;
+        engine_format.mesh_uuid = madness_uuid_generate_return();
 
 
         String_Builder* str_builder_output_path = asset_converter_create_file_path(scratch,
@@ -1309,8 +1313,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         // write out metadata
-        asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
-                                                   ASSET_STATIC_MESH, asset_system->heap_allocator, NULL);
+        asset_registry_add_asset_from_uuid(asset_system->asset_registry, gltf_path, output_path,
+                                           ASSET_STATIC_MESH, asset_system->heap_allocator, engine_format.mesh_uuid);
     }
 
     cgltf_free(data);

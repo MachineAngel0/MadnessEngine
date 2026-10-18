@@ -30,6 +30,8 @@
 #include "vk_swapchain.h"
 #include "vk_sync.h"
 
+#include "vulkan_render_list.h"
+
 #include "pipelines/sprite_render.h"
 #include "pipelines/ui_render.h"
 #include "pipelines/chaos_ui_render.h"

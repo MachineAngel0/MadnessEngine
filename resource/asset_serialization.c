@@ -64,9 +64,16 @@ bool asset_mesh_serialize(Madness_Mesh_Runtime* runtime, FILE* fptr)
 {
     fwrite(&runtime->version, sizeof(runtime->version), 1, fptr);
     fwrite(&runtime->mesh_count, sizeof(runtime->mesh_count), 1, fptr);
-    fwrite(runtime->submeshes, sizeof(Madness_SubMesh) * runtime->mesh_count, 1, fptr);
     //submesh contains the material uuid
 
+    madness_uuid_serialize(runtime->mesh_uuid, fptr);
+
+    for (u32 i = 0; i < runtime->mesh_count; ++i)
+    {
+        madness_uuid_serialize(runtime->material_uuid[i], fptr);
+    }
+
+    fwrite(runtime->submeshes, sizeof(Madness_SubMesh) * runtime->mesh_count, 1, fptr);
     //mesh data
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
@@ -79,10 +86,7 @@ bool asset_mesh_serialize(Madness_Mesh_Runtime* runtime, FILE* fptr)
         fwrite(runtime->mesh_gpu_upload[i].indices, sub_mesh->indices_bytes, 1, fptr);
     }
 
-    for (u32 i = 0; i < runtime->mesh_count; ++i)
-    {
-        madness_uuid_serialize(runtime->material_uuid[i], fptr);
-    }
+
     return true;
 }
 
@@ -92,9 +96,19 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Heap_Allo
     fread(&runtime->version, sizeof(runtime->version), 1, fptr);
     fread(&runtime->mesh_count, sizeof(runtime->mesh_count), 1, fptr);
 
+    madness_uuid_deserialize(&runtime->mesh_uuid, fptr);
+
+
+    runtime->material_uuid = allocator_heap_alloc(allocator, sizeof(MADNESS_UUID) * runtime->mesh_count);
+    for (u32 i = 0; i < runtime->mesh_count; ++i)
+    {
+        madness_uuid_deserialize(&runtime->material_uuid[i], fptr);
+    }
+
+
+
     runtime->submeshes = allocator_heap_alloc(allocator, sizeof(Madness_SubMesh) * runtime->mesh_count);
     runtime->mesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Mesh_GPU_Data) * runtime->mesh_count);
-    runtime->material_uuid = allocator_heap_alloc(allocator, sizeof(MADNESS_UUID) * runtime->mesh_count);
 
 
     fread(runtime->submeshes, sizeof(Madness_SubMesh) * runtime->mesh_count, 1, fptr);
@@ -122,10 +136,7 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Heap_Allo
     }
 
 
-    for (u32 i = 0; i < runtime->mesh_count; ++i)
-    {
-        madness_uuid_deserialize(&runtime->material_uuid[i], fptr);
-    }
+
     return true;
 }
 

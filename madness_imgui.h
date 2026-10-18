@@ -125,6 +125,7 @@ void madness_imgui_init(Platform_State* platform_state, Renderer* renderer)
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats =
         &renderer->swapchain.surface_format.format;
+    init_info.PipelineInfoMain.PipelineRenderingCreateInfo.depthAttachmentFormat = renderer->depth_format;
 
     init_info.CheckVkResultFn = check_vk_result;
 

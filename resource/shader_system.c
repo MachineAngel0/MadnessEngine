@@ -57,6 +57,8 @@ void shader_system_update(Shader_System* shader_system)
 
 void shader_system_render_packet(Shader_System* shader_system, Render_Packet* render_packet)
 {
+    render_packet->shaders_packet.shader_assets = shader_system->shader_asset;
+    render_packet->shaders_packet.shader_asset_count = shader_system->shader_asset_count;
 }
 
 void shader_create_material_definition_struct(Reflection_Registry* reflection_registry,
@@ -156,7 +158,7 @@ bool shader_mapping_get_definition_from_shader_asset(Shader_System* shader_syste
                                   string_to_c_string_allocator(shader_asset->shader_pipeline_state.shader_name,
                                                                scratch_allocator.allocator),
                                   out_defintion);
-     scratch_allocator_end(scratch_allocator);
+    scratch_allocator_end(scratch_allocator);
 }
 
 
@@ -202,7 +204,6 @@ bool shader_asset_serialize(Shader_Asset* shader_asset, FILE* fptr)
            fptr);
 
     fwrite(&shader_asset->shader_pipeline_hash, sizeof(shader_asset->shader_pipeline_hash), 1, fptr);
-    fwrite(&shader_asset->shader_key, sizeof(shader_asset->shader_key), 1, fptr);
 
 
     return true;
@@ -224,7 +225,6 @@ bool shader_asset_deserialize(Shader_Asset* shader_asset, FILE* fptr,
           fptr);
 
     fread(&shader_asset->shader_pipeline_hash, sizeof(shader_asset->shader_pipeline_hash), 1, fptr);
-    fread(&shader_asset->shader_key, sizeof(shader_asset->shader_key), 1, fptr);
 
 
     return true;
@@ -280,18 +280,6 @@ Shader_Pipeline_Hash shader_pipeline_hash_create(Shader_PSO* shader_pso)
 }
 
 
-Shader_Key shader_key_create(Shader_PSO* shader_info)
-{
-    //TODO: this should create a key based on the pso state
-    u64 hash = hash_64_continous_start();
-    hash = hash_64_continous(hash, (u8*)&shader_info->blend_mode, sizeof(shader_info->blend_mode));
-    hash = hash_64_continous(hash, (u8*)&shader_info->two_sided, sizeof(shader_info->two_sided));
-    // hash = hash_64_continous(hash, (u8*)shader_info->material_name->chars, shader_info->material_name->length);
-    hash = hash_64_continous(hash, (u8*)shader_info->shader_name->chars, shader_info->shader_name->length);
-
-    return hash;
-}
-
 Shader_Asset* shader_asset_get(Shader_System* shader_system,
                                Shader_Handle shader_handle)
 {
@@ -325,7 +313,6 @@ void shader_create_or_get(Asset_System* asset_system, Shader_PSO* shader_pso,
     }
 
     //create a new shader asset, if it doesn't exist, and serialize it out
-    Shader_Key shader_key = shader_key_create(shader_pso);
 
     //find a free shader asset slot
     Shader_Asset* shader_asset = &shader_system->shader_asset[shader_system->shader_asset_count];
@@ -334,7 +321,6 @@ void shader_create_or_get(Asset_System* asset_system, Shader_PSO* shader_pso,
         .uuid = madness_uuid_generate_return(),
         .shader_pipeline_state = *shader_pso,
         .shader_pipeline_hash = pipeline_hash,
-        .shader_key = shader_key,
     };
 
     asset_converter_shader_asset(asset_system, shader_asset);

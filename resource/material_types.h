@@ -13,6 +13,8 @@
 // MADNESS_UUID these are texture id's which get converted into u32 for bindless at runtime
 // NOTE: MADNESS_UUID must always be last in the structure
 
+typedef u32 Permutation_Mask;
+
 typedef struct Material_Default
 {
     u32 flags;

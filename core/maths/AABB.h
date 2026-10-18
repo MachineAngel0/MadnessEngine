@@ -5,7 +5,6 @@
 
 #include "math_types.h"
 #include "math_lib.h"
-#include "../../../../../AppData/Local/Programs/CLion/bin/mingw/x86_64-w64-mingw32/include/stdlib.h"
 
 //NOTE: i could rename this to bounding box
 typedef struct AABB3

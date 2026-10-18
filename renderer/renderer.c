@@ -408,7 +408,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //
-    mesh_renderer_construct_batch_draw(renderer, render_packet, graphics_command_buffer);
+    // mesh_renderer_construct_batch_draw(renderer, render_packet, graphics_command_buffer);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
@@ -486,10 +486,10 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //draw geometry into depth buffer
-    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
-                                             renderer->shader_system->material_batch,
-                                             renderer->shader_system->material_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline);
+    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
+                                             renderer->shader_system->shader_batch,
+                                             renderer->shader_system->shader_batch_count,
+                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline);*/
 
     //TODO:
     /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
@@ -673,9 +673,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // SET 1 GLOBAL TEXTURES: Textures
     // SET 2 NOTHING RN:
 
-    mesh_renderer_batch_draw(renderer, renderer->mesh_system,
-                             renderer->shader_system->material_batch, renderer->shader_system->material_batch_count,
-                             graphics_command_buffer);
+    /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
+                             renderer->shader_system->shader_batch, renderer->shader_system->shader_batch_count,
+                             graphics_command_buffer);*/
     //TODO:
     /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,

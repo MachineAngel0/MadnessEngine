@@ -89,7 +89,7 @@ typedef struct Shader_MetaData
     //
     u32 reflection_hash;
     MADNESS_UUID uuid;
-    Shader_Key shader_key;
+    Shader_Sort_Key shader_key;
 
     Path_String* shader_name;
     String* material_name;
