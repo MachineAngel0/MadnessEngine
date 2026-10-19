@@ -18,14 +18,16 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     // u8 swapchain_image_count = renderer->swapchain.image_count; // TODO: remove when your certain you dont need it
 
 
-    graphics_render_queue->frame_submit_fence = allocator_alloc(
-        &renderer->allocator, sizeof(VkFence) * frames_in_flight);
     graphics_render_queue->graphics_command_buffer = allocator_alloc(
         &renderer->allocator, sizeof(Vulkan_Command_Buffer) * frames_in_flight);
-    graphics_render_queue->render_complete_semaphore = allocator_alloc(
-        &renderer->allocator, sizeof(VkSemaphore) * frames_in_flight);
+
+
+
     graphics_render_queue->image_available_semaphore = allocator_alloc(
         &renderer->allocator, sizeof(VkSemaphore) * frames_in_flight);
+
+
+
 
     //Transfer
     //TODO: temp for testing
@@ -33,19 +35,18 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
     queue_system->transfer_pool = renderer->transfer_command_pool;
     queue_system->transfer_queue_index = renderer->transfer_queue_index;
     Vulkan_Transfer_Queue* transfer_render_queue = &queue_system->transfer_render_queue;
-    timeline_semaphore_create(renderer, &transfer_render_queue->timeline_semaphore);
+    timeline_semaphore_create(renderer, &transfer_render_queue->timeline_semaphore, 0);
     transfer_render_queue->semaphore_value = 0;
 
     transfer_render_queue->transfer_command_buffer_in_flight = array_create(Transfer_Command_Buffer_In_Flight,
                                                                             MAX_VULKAN_COMMAND_BUFFERS,
                                                                             &renderer->allocator);
 
+    timeline_semaphore_create(renderer, &graphics_render_queue->frame_complete_timeline_semaphore, renderer->max_frames_in_flight);
 
     //anything needed per frame in flight
     for (size_t i = 0; i < frames_in_flight; i++)
     {
-        //fences
-        vulkan_fence_create(renderer, &queue_system->graphics_render_queue.frame_submit_fence[i]);
 
         //command buffers
         vulkan_command_buffer_allocate(&queue_system->graphics_render_queue.graphics_command_buffer[i],
@@ -53,9 +54,10 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
                                        queue_system->graphics_pool, renderer);
 
 
-        binary_semaphore_create(renderer, &graphics_render_queue->render_complete_semaphore[i]);
         binary_semaphore_create(renderer, &graphics_render_queue->image_available_semaphore[i]);
     }
+
+
 
     //command buffers
     transfer_render_queue->command_buffer_count = MAX_VULKAN_COMMAND_BUFFERS;
@@ -111,7 +113,7 @@ void vulkan_queue_frame_begin(Renderer* renderer, u32 current_frame)
     transfer_queue->semaphore_incremented_this_frame = false;
 }
 
-void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_index)
+void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_index, u64 frame_signal_value)
 {
     //TODO: assume we have a thread sync point here before executing the rest
     Scratch_Allocator scratch = scratch_allocator_begin(&renderer->allocator);
@@ -182,20 +184,27 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
     VkCommandBufferSubmitInfo cb_submit_info = vulkan_command_buffer_get_submit_info(graphics_cb);
 
     //easiest way of adding the swapchain semaphores
-    VkSemaphoreSubmitInfo swapchain_wait_semaphore = {0};
-    swapchain_wait_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_wait_semaphore.semaphore = graphics_queue->image_available_semaphore[current_frame];
-    swapchain_wait_semaphore.value = 0; // not needed for binary semaphores
-    swapchain_wait_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSemaphoreSubmitInfo image_available_semaphore_info = {0};
+    image_available_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    image_available_semaphore_info.semaphore = graphics_queue->image_available_semaphore[current_frame];
+    image_available_semaphore_info.value = 0; // not needed for binary semaphores
+    image_available_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    VkSemaphoreSubmitInfo swapchain_signal_semaphore = {0};
-    swapchain_signal_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_signal_semaphore.semaphore = graphics_queue->render_complete_semaphore[current_frame];
-    swapchain_signal_semaphore.value = 0; // not needed for binary semaphores
-    swapchain_signal_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSemaphoreSubmitInfo render_complete_semaphore_info = {0};
+    render_complete_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    render_complete_semaphore_info.semaphore = renderer->swapchain.render_complete_semaphore[image_index];
+    render_complete_semaphore_info.value = 0; // not needed for binary semaphores
+    render_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, swapchain_wait_semaphore);
-    vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, swapchain_signal_semaphore);
+    VkSemaphoreSubmitInfo frame_complete_semaphore_info = {0};
+    frame_complete_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    frame_complete_semaphore_info.semaphore = graphics_queue->frame_complete_timeline_semaphore;
+    frame_complete_semaphore_info.value = renderer->frame_signal_value; // not needed for binary semaphores
+    frame_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, image_available_semaphore_info);
+    vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, render_complete_semaphore_info);
+    vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, frame_complete_semaphore_info);
 
     VkSubmitInfo2 submit_info = {0};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -210,7 +219,7 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
 
 
     VkResult graphics_result = vkQueueSubmit2(queue_system->graphics_queue, 1, &submit_info,
-                                              graphics_queue->frame_submit_fence[current_frame]);
+                                              NULL);
 
     VK_CHECK(graphics_result);
     scratch_allocator_end(scratch);
@@ -238,21 +247,7 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
     queue_system->compute_render_queue.wait_semaphore_count = 0;
 }
 
-void vulkan_queue_system_graphics_fence_wait(Renderer* renderer, u32 current_frame)
-{
-    Vulkan_Queue_System* queue_system = renderer->queue_system;
-    if (!vulkan_fence_wait(
-        renderer,
-        &queue_system->graphics_render_queue.frame_submit_fence[current_frame],
-        UINT64_MAX))
-    {
-        WARN("GRAPHICS START FRAME: In-flight fence wait failure!");
-        return;
-    }
 
-    queue_system->graphics_render_queue.graphics_command_buffer[current_frame].state =
-        VULKAN_COMMAND_BUFFER_STATE_USABLE;
-}
 
 bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
                                 Vulkan_Command_Buffer** out_cb)
@@ -268,7 +263,7 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
         break;
     case VULKAN_QUEUE_TYPE_COMPUTE:
         MASSERT_FALSE()
-        *out_cb = &system->compute_render_queue.command_buffer[renderer->current_frame];
+        *out_cb = &system->compute_render_queue.command_buffer[renderer->current_frame_index];
         break;
     }
 
@@ -280,8 +275,7 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
 bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb)
 {
     Vulkan_Queue_System* system = renderer->queue_system;
-    Vulkan_Command_Buffer* command_buffer = &system->graphics_render_queue.graphics_command_buffer[renderer->
-        current_frame];
+    Vulkan_Command_Buffer* command_buffer = &system->graphics_render_queue.graphics_command_buffer[renderer->current_frame_index];
 
     if (command_buffer->state != VULKAN_COMMAND_BUFFER_STATE_BEGIN)
     {
@@ -352,7 +346,7 @@ VkSemaphore vulkan_queue_system_get_transfer_semaphore(Renderer* renderer)
 bool vulkan_queue_system_get_primary_command_buffer(Renderer* renderer, Vulkan_Queue_Type type,
                                                     Vulkan_Command_Buffer** out_cb)
 {
-    *out_cb = &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->current_frame];
+    *out_cb = &renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->current_frame_index];
     return true;
 }
 

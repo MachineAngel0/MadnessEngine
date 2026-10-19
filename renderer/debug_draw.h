@@ -72,7 +72,7 @@ void debug_draw_capsule(const vec3s base, const vec3s tip,
 
 
 void debug_system_upload_frame_data(Renderer* renderer);
-void debug_system_draw(Renderer* renderer);
+void debug_system_draw(Renderer* renderer, u64 current_frame_index);
 
 
 /* TODO: support these at another time, the ones above are generally more essential

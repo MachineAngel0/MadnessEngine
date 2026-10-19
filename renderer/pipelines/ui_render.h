@@ -9,7 +9,7 @@ MAPI UI_Renderer_Backend* ui_render_init(Renderer* renderer);
 void ui_renderer_upload_frame_data(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
                                   Render_Packet* render_packet, Vulkan_Command_Buffer* command_buffer);
 
-void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
+void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u64 current_frame_index);
 void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                              Vulkan_Command_Buffer* command_buffer);
+                              Vulkan_Command_Buffer* command_buffer, u64 current_frame_index);
 #endif //UI_RENDERER_H

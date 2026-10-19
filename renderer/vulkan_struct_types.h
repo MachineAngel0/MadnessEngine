@@ -59,6 +59,9 @@ typedef struct Vulkan_Swapchain
     VkImageView* image_views;
 
     Vulkan_Texture depth_attachment;
+
+    VkSemaphore* render_complete_semaphore; // render work is complete
+
 } Vulkan_Swapchain;
 
 
@@ -625,6 +628,7 @@ typedef struct Buffer_System
 
     VkSemaphore timeline_transfer_upload_semaphore;
 
+    u32 current_frame_index;
 
     //TODO: queries for size
     /*
@@ -844,17 +848,15 @@ typedef struct Vulkan_Graphics_Queue
 
     Vulkan_Queue_Type type;
     VkCommandPool pool;
-    VkFence* frame_submit_fence;
-    u32 frame_submit_fence_count;
+
 
     //one per frame in flight
     Vulkan_Command_Buffer* graphics_command_buffer;
     u32 graphics_command_buffer_count;
 
-    //one per swapchain image
-    u32 swapchain_semaphore_count;
-    VkSemaphore* image_available_semaphore;
-    VkSemaphore* render_complete_semaphore;
+
+    VkSemaphore* image_available_semaphore; // lets us know when an image is available
+    VkSemaphore frame_complete_timeline_semaphore; // entire frame is complete
 
 
     //example: if the transfer and graphics are the same then, we simple dont do the transfer queue operations
@@ -1042,10 +1044,14 @@ typedef struct Renderer
     ////// Swapchain and Surface //////
 
     VkFormat depth_format;
-#define VULKAN_MAX_FRAMES_IN_FLIGHT 2
+#define VULKAN_MAX_FRAMES_IN_FLIGHT 2 //
     u8 max_frames_in_flight;
-    u32 current_frame;
+    u32 frame_idx; // = 0;
+    u64 next_signal_value; // = MaxFramesInFlight + 1;
 
+    //used by the current frame
+    u32 current_frame_index;
+    u64 frame_signal_value;
 
     //Surface
     VkSurfaceKHR surface;
@@ -1059,6 +1065,7 @@ typedef struct Renderer
     Vulkan_Swapchain_Capabilities_Info swapchain_capabilities;
     Vulkan_Swapchain swapchain;
     bool recreating_swapchain;
+    bool recreate_swapchain;
 
 
     //IMGUI STUFF

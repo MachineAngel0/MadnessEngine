@@ -138,7 +138,7 @@ void ui_renderer_upload_frame_data(UI_Renderer_Backend* ui_renderer, Renderer* r
 }
 
 void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                              Vulkan_Command_Buffer* command_buffer)
+                              Vulkan_Command_Buffer* command_buffer, u64 current_frame_index)
 {
     // Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_vertex_buffer_handle);
     // Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, ui_renderer->ui_index_buffer_handle);
@@ -148,7 +148,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     //textures
@@ -159,7 +159,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     PC_UI pc_ui = {
@@ -231,7 +231,7 @@ void ui_renderer_madness_draw(UI_Renderer_Backend* ui_renderer, Renderer* render
 
 
 void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                               Vulkan_Command_Buffer* command_buffer)
+                               Vulkan_Command_Buffer* command_buffer, u64 current_frame_index)
 {
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "INSANITY UI DRAW",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
@@ -239,7 +239,7 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     //textures
@@ -250,7 +250,7 @@ void ui_renderer_insanity_draw(UI_Renderer_Backend* ui_renderer, Renderer* rende
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     PC_UI pc_ui = {

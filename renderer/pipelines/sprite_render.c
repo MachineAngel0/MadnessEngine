@@ -94,7 +94,7 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
 }
 
 
-void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer)
+void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer, u64 current_frame_index)
 {
     MASSERT(sprite_backend)
 
@@ -112,7 +112,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     //textures
@@ -123,7 +123,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
 
@@ -150,8 +150,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
 
     vkCmdBindIndexBuffer(command_buffer->handle,
                          index_buffer->handle, 0,
-                         sprite_backend->index_type
-    );
+                         sprite_backend->index_type    );
 
 
 

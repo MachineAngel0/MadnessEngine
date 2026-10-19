@@ -24,8 +24,7 @@ Buffer_Frame_Handle vulkan_buffer_create_frame(Renderer* renderer, Buffer_System
                                                u64 buffer_size);
 
 Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle);
-Vulkan_Buffer* vulkan_buffer_get_frame(Renderer* renderer,
-                                       Buffer_Frame_Handle frame_buffer_handle);
+Vulkan_Buffer* vulkan_buffer_get_frame(Renderer* renderer, Buffer_Frame_Handle frame_buffer_handle);
 
 void vulkan_buffer_reset(Renderer* renderer, Buffer_Handle buffer_handle);
 void vulkan_buffer_frame_reset(Renderer* renderer, Buffer_Frame_Handle frame_buffer_handle);

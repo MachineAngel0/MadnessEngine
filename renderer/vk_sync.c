@@ -66,7 +66,6 @@ bool vulkan_fence_reset(Renderer* renderer, VkFence* fence)
     VK_CHECK(reset_result);
 
     return true;
-
 }
 
 void binary_semaphore_create(Renderer* renderer, VkSemaphore* semaphore)
@@ -87,13 +86,13 @@ void binary_semaphore_destroy(Renderer* renderer, VkSemaphore* semaphore)
     vkDestroySemaphore(renderer->logical_device, *semaphore, NULL);
 }
 
-void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore)
+void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore, u64 initial_value)
 {
     // SPEC: A timeline semaphore is still a semaphore, but it is of TIMELINE type rather than BINARY.
     VkSemaphoreTypeCreateInfo type_create_info = {0};
     type_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
     type_create_info.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    type_create_info.initialValue = 0;
+    type_create_info.initialValue = initial_value;
 
     VkSemaphoreCreateInfo create_info = {0};
     create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -125,4 +124,16 @@ bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSema
     VK_CHECK(result);
 
     return compare_value <= out_counter_value;
+}
+
+void timeline_semaphore_wait(Renderer* renderer, VkSemaphore* timeline_semaphore, uint64_t wait_value)
+{
+    VkSemaphoreWaitInfo waitInfo =
+    {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .semaphoreCount = 1,
+        .pSemaphores = timeline_semaphore,
+        .pValues = &wait_value
+    };
+    vkWaitSemaphores(renderer->logical_device, &waitInfo, UINT64_MAX);
 }

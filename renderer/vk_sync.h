@@ -14,11 +14,12 @@ void binary_semaphore_create(Renderer* renderer, VkSemaphore* semaphore);
 void binary_semaphore_destroy(Renderer* renderer, VkSemaphore* semaphore);
 
 //timeline semaphore
-void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore);
+void timeline_semaphore_create(Renderer* renderer, VkSemaphore* timeline_semaphore, u64 initial_value);
 void timeline_semaphore_destroy(Renderer* renderer, VkSemaphore* timeline_semaphore);
 void timeline_semaphore_query(Renderer* renderer, VkSemaphore* timeline_semaphore, u64* out_counter_value);
 bool timeline_semaphore_query_and_compare(const Renderer* renderer, const VkSemaphore timeline_semaphore,
                                           const u64 compare_value);
+void timeline_semaphore_wait(Renderer* renderer, VkSemaphore* timeline_semaphore, uint64_t wait_value);
 
 
 

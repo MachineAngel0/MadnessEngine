@@ -72,6 +72,9 @@ void buffer_system_frame_start(Renderer* renderer, Buffer_System* buffer_system,
 {
     PROFILE_ZONE(buffer_system_frame_start)
 
+
+    buffer_system->current_frame_index = current_frame;
+
     //rn just clears the staging buffer
     Vulkan_Buffer* current_frame_staging_buffer = &buffer_system->per_frame_staging_buffers[
         current_frame];
@@ -184,7 +187,7 @@ Vulkan_Buffer* vulkan_buffer_get(Renderer* renderer, Buffer_Handle buffer_handle
 
 Vulkan_Buffer* vulkan_buffer_get_frame(Renderer* renderer, Buffer_Frame_Handle frame_buffer_handle)
 {
-    return &renderer->buffer_system->per_frame_buffers[frame_buffer_handle.handle + renderer->current_frame];
+    return &renderer->buffer_system->per_frame_buffers[frame_buffer_handle.handle + renderer->buffer_system->current_frame_index];
 }
 
 void vulkan_buffer_reset(Renderer* renderer, Buffer_Handle buffer_handle)
@@ -208,7 +211,7 @@ bool vulkan_buffer_frame_staging_upload(Renderer* renderer, Buffer_Frame_Handle 
 
     //get buffer from handle
     Vulkan_Buffer* device_local_buffer = vulkan_buffer_get_frame(renderer, buffer_handle);
-    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_staging_buffers[renderer->current_frame];
+    Vulkan_Buffer* staging_buffer = &renderer->buffer_system->per_frame_staging_buffers[renderer->buffer_system->current_frame_index];
 
 
     //make sure its a staging buffer

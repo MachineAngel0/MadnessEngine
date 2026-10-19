@@ -249,7 +249,7 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             particle_render->spherical_billboard_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame_index],
                             0, 0);
 
     //textures
@@ -260,7 +260,7 @@ void particle_renderer_batch_draw(Renderer* renderer, Particle_Render* particle_
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             particle_render->spherical_billboard_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame_index],
                             0, 0);
 
     PC_Particle pc_particle = {

@@ -128,12 +128,16 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
         return false;
     }
 
+
     //NOTE: semaphores must be per swapchain image, fence is per frame in flight
-    renderer->current_frame = 0;
-    renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT;
+    renderer->frame_idx = 0;
+    renderer->current_frame_index = 0;
+    renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT; // TODO: this has to be the minimum whatever the swapchain count it
+    renderer->next_signal_value =     renderer->max_frames_in_flight + 1;
 
     // Swapchain
-    vulkan_swapchain_create(
+
+ vulkan_swapchain_create(
         renderer,
         renderer->framebuffer_width,
         renderer->framebuffer_height,
@@ -215,7 +219,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
 }
 
 
-void renderer_update_global_ubo(Renderer* renderer)
+void renderer_update_global_ubo(Renderer* renderer, u64 current_frame_index)
 {
     Global_Ubo ubo = {0};
     // quat q = quat_from_axis_angle(vec3_up(), deg_to_rad(90.0f) * clock->time_elapsed, true);
@@ -262,7 +266,7 @@ void renderer_update_global_ubo(Renderer* renderer)
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
-    Vulkan_Buffer* ubo_buffer = &renderer->buffer_system->global_ubo[renderer->current_frame];
+    Vulkan_Buffer* ubo_buffer = &renderer->buffer_system->global_ubo[renderer->current_frame_index];
     memcpy(ubo_buffer->mapped_data, &ubo,
            sizeof(Global_Ubo));
 }
@@ -291,9 +295,21 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
 
-    // Wait for the execution of the current frame to complete on the cpu. The fence being free will allow this one to move on.
-    vulkan_queue_system_graphics_fence_wait(renderer, renderer->current_frame);
 
+    // first check if our swapchain is still valid
+    // if (renderer->recreate_swapchain)
+    // {
+    //     recreate_swapchain(renderer);
+    // }
+
+    renderer->current_frame_index = renderer->frame_idx++ % renderer->max_frames_in_flight;
+    renderer->frame_signal_value = renderer->next_signal_value++;
+    const uint64_t frame_wait_value = renderer->frame_signal_value - renderer->max_frames_in_flight;
+
+    // Wait for the execution of the frame - max_frame to complete on the cpu, making it available for use to for this frame
+    timeline_semaphore_wait(renderer, &renderer->queue_system->graphics_render_queue.frame_complete_timeline_semaphore, frame_wait_value);
+    renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->current_frame_index].state =
+        VULKAN_COMMAND_BUFFER_STATE_USABLE;
 
     /* Acquire an image from the swap chain */
     // Pass along the semaphore that should signal when this completes.
@@ -303,7 +319,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         &renderer->swapchain,
         UINT64_MAX,
-        renderer->queue_system->graphics_render_queue.image_available_semaphore[renderer->current_frame],
+        renderer->queue_system->graphics_render_queue.image_available_semaphore[renderer->current_frame_index],
         0,
         &image_index))
     {
@@ -336,12 +352,12 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     // Begin recording commands.
     Vulkan_Command_Buffer* graphics_command_buffer = &renderer->queue_system->graphics_render_queue.
-                                                                graphics_command_buffer[renderer->current_frame];
+                                                                graphics_command_buffer[renderer->current_frame_index];
 
     vkResetCommandBuffer(graphics_command_buffer->handle, 0);
     vulkan_command_buffer_begin(graphics_command_buffer);
 
-    vulkan_queue_frame_begin(renderer, renderer->current_frame);
+    vulkan_queue_frame_begin(renderer, renderer->current_frame_index);
 
 
     //steps:
@@ -374,7 +390,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // mesh system and particle system create draw lists
 
 
-    buffer_system_frame_start(renderer, renderer->buffer_system, renderer->current_frame);
+    buffer_system_frame_start(renderer, renderer->buffer_system, renderer->current_frame_index);
 
     //async resources
     vulkan_mesh_system_update_async_resources(renderer, renderer->mesh_system);
@@ -397,7 +413,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     camera_update(renderer->input_system, &renderer->main_camera, delta_time);
 
     //at this point we should have everything needed for the ubo
-    renderer_update_global_ubo(renderer);
+    renderer_update_global_ubo(renderer, renderer->current_frame_index);
 
 
 
@@ -683,7 +699,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
-    debug_system_draw(renderer);
+    debug_system_draw(renderer, renderer->current_frame_index);
 
 
     // sprite_renderer_draw(renderer, renderer->sprite_renderer, graphics_command_buffer);
@@ -693,9 +709,9 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // pScissors.extent = (VkExtent2D){200, 150};
     // vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &pScissors);
 
-    ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
-    ui_renderer_insanity_draw(renderer->ui_renderer, renderer, graphics_command_buffer);
-    chaos_ui_renderer_draw(renderer->cui_renderer, renderer, graphics_command_buffer);
+    ui_renderer_madness_draw(renderer->ui_renderer, renderer, graphics_command_buffer, renderer->current_frame_index);
+    ui_renderer_insanity_draw(renderer->ui_renderer, renderer, graphics_command_buffer, renderer->current_frame_index);
+    chaos_ui_renderer_draw(renderer->cui_renderer, renderer, graphics_command_buffer, renderer->current_frame_index);
 
     madness_imgui_render(graphics_command_buffer);
 
@@ -732,19 +748,19 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vulkan_command_buffer_end(graphics_command_buffer);
 
 
-    vulkan_queue_frame_end(renderer, renderer->current_frame, image_index);
+    vulkan_queue_frame_end(renderer, renderer->current_frame_index, image_index, renderer->frame_signal_value);
 
     // Give the image back to the swapchain.
     vulkan_swapchain_present_image(
         renderer,
         &renderer->swapchain,
         renderer->present_queue,
-        renderer->queue_system->graphics_render_queue.render_complete_semaphore[image_index],
+        renderer->swapchain.render_complete_semaphore[image_index],
         image_index);
 
 
     // Increment (and loop) the frame index.
-    renderer->current_frame = (renderer->current_frame + 1) % renderer->max_frames_in_flight;
+    // renderer->current_frame = (renderer->current_frame + 1) % renderer->max_frames_in_flight;
 
     PROFILE_ZONE_END(renderer_update)
 }

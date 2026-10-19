@@ -9,11 +9,11 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer);
 bool vulkan_queue_system_deinit(Renderer* renderer, Vulkan_Queue_System* queue_system);
 
 void vulkan_queue_frame_begin(Renderer* renderer, u32 current_frame);
-void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_index);
+
+void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_index, u64 frame_signal_value);
 
 void vulkan_queue_system_flush_queues(Renderer* renderer, Vulkan_Queue_System* queue_system);
 
-void vulkan_queue_system_graphics_fence_wait(Renderer* renderer, u32 current_frame);
 
 
 

@@ -40,7 +40,7 @@ Vulkan_Mesh_System* vulkan_mesh_system_init(Renderer* renderer)
     //
     mesh_system->mesh_submitted_upload_array = array_create(Mesh_Gpu_Upload_Pending, 1024, &renderer->allocator);
     mesh_system->mesh_pending_upload_array = array_create(Mesh_Unfinished_Upload, 1024, &renderer->allocator);
-    timeline_semaphore_create(renderer, &mesh_system->mesh_upload_timeline_semaphore);
+    timeline_semaphore_create(renderer, &mesh_system->mesh_upload_timeline_semaphore, 0);
     mesh_system->mesh_upload_semaphore_value = 0;
 
 
@@ -591,7 +591,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 0, 1,
                                 &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
-                                    current_frame], 0, 0);
+                                    current_frame_index], 0, 0);
         //texturess
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 1, 1,
@@ -601,7 +601,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 2, 1,
                                 &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
-                                    current_frame], 0, 0);
+                                    current_frame_index], 0, 0);
 
         // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
         // pOffsets);
@@ -683,7 +683,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 0, 1,
                                 &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
-                                    current_frame], 0, 0);
+                                    current_frame_index], 0, 0);
         //texturess
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 1, 1,
@@ -693,7 +693,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
         vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 layout, 2, 1,
                                 &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
-                                    current_frame], 0, 0);
+                                    current_frame_index], 0, 0);
 
         // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
         // pOffsets);

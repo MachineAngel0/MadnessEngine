@@ -59,8 +59,8 @@ Chaos_UI_Renderer_Backend* chaos_ui_render_init(Renderer* renderer)
 }
 
 void chaos_ui_renderer_upload_frame_data(Chaos_UI_Renderer_Backend* cui_renderer, Renderer* renderer,
-                                        Chaos_UI_Render_Packet* cui_render_packet,
-                                        Vulkan_Command_Buffer* command_buffer)
+                                         Chaos_UI_Render_Packet* cui_render_packet,
+                                         Vulkan_Command_Buffer* command_buffer)
 {
     PROFILE_ZONE(ui_renderer_upload_draw_data)
 
@@ -130,7 +130,7 @@ void chaos_ui_renderer_upload_frame_data(Chaos_UI_Renderer_Backend* cui_renderer
 }
 
 void chaos_ui_renderer_draw(Chaos_UI_Renderer_Backend* ui_renderer, Renderer* renderer,
-                            Vulkan_Command_Buffer* command_buffer)
+                            Vulkan_Command_Buffer* command_buffer, u64 current_frame_index)
 {
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "CHAOS UI DRAW",
                                                   (float[4]){1.0, 0.0, 1.0, 1.0});
@@ -138,7 +138,7 @@ void chaos_ui_renderer_draw(Chaos_UI_Renderer_Backend* ui_renderer, Renderer* re
     //global uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     //textures
@@ -149,7 +149,7 @@ void chaos_ui_renderer_draw(Chaos_UI_Renderer_Backend* ui_renderer, Renderer* re
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->ui_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->current_frame],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index],
                             0, 0);
 
     PC_Chaos_UI pc_cui = {

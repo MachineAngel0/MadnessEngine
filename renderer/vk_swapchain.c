@@ -185,6 +185,19 @@ void vulkan_swapchain_create(Renderer* renderer, u32 width, u32 height,
         VK_IMAGE_ASPECT_DEPTH_BIT,
         &swapchain_out->depth_attachment);
 
+
+    if (!renderer->swapchain.render_complete_semaphore)
+    {
+        renderer->swapchain.render_complete_semaphore = allocator_alloc(
+            &renderer->allocator, sizeof(VkSemaphore) * renderer->swapchain.image_count);
+    }
+
+    for (u32 i = 0; i < renderer->swapchain.image_count; ++i)
+    {
+        binary_semaphore_create(renderer, &renderer->swapchain.render_complete_semaphore[i]);
+    }
+
+
     INFO("SWAPCHAIN CREATED");
 }
 
@@ -197,8 +210,11 @@ void vulkan_swapchain_destroy(Renderer* renderer, Vulkan_Swapchain* swapchain)
     for (u32 i = 0; i < swapchain->image_count; ++i)
     {
         vkDestroyImageView(renderer->logical_device, swapchain->image_views[i], renderer->vk_allocator_callback);
+        binary_semaphore_destroy(renderer, &swapchain->render_complete_semaphore[i]);
     }
     vkDestroySwapchainKHR(renderer->logical_device, swapchain->swapchain_handle, renderer->vk_allocator_callback);
+
+
     INFO("SWAPCHAIN DESTROYED");
 }
 
@@ -248,7 +264,8 @@ void vulkan_swapchain_present_image(Renderer* renderer,
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
+        renderer->recreate_swapchain = true;
+        // vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
     }
     else if (result != VK_SUCCESS)
     {
@@ -288,7 +305,6 @@ bool recreate_swapchain(Renderer* renderer)
     renderer->framebuffer_height = renderer->framebuffer_height_new;
 
 
-
     // cleanup swapchain
 
     /*NOTE:  idk why this is here in the old code?
@@ -301,10 +317,8 @@ bool recreate_swapchain(Renderer* renderer)
     */
 
 
-
-
     // Clear the recreating flag.
     renderer->recreating_swapchain = false;
-
+    renderer->recreate_swapchain = false;
     return true;
 }

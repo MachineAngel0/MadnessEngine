@@ -273,7 +273,7 @@ void debug_system_upload_frame_data(Renderer* renderer)
 
 }
 
-void debug_system_draw(Renderer* renderer)
+void debug_system_draw(Renderer* renderer, u64 current_frame_index)
 {
     if (dynamic_array_is_empty(debug_draw_system.debug_lines))
     {
@@ -289,8 +289,8 @@ void debug_system_draw(Renderer* renderer)
     //uniform
     vkCmdBindDescriptorSets(graphics_command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             debug_draw_system.debug_line_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
+                            0, 0);
     //texturess
     vkCmdBindDescriptorSets(graphics_command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             debug_draw_system.debug_line_pipeline.pipeline_layout, 1, 1,
@@ -299,8 +299,7 @@ void debug_system_draw(Renderer* renderer)
     //storage buffers
     vkCmdBindDescriptorSets(graphics_command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             debug_draw_system.debug_line_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
-                                current_frame], 0, 0);
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index], 0, 0);
 
 
 
