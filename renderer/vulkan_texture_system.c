@@ -24,23 +24,26 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
     texture_system->texture_pending_array = array_create(Vulkan_Texture_Pending_Upload, MAX_TEXTURE_COUNT,
                                                          &renderer->allocator);
 
-    //TODO: we really should create a default texture here at slot 0
+    /*//TODO: we really should create a default texture here at slot 0, or just have a seperate queue appended to at startup for all resources needed
     Vulkan_Command_Buffer command_buffer;
     vulkan_command_buffer_begin_single_use(renderer, renderer->graphics_command_pool, &command_buffer);
 
 
     vulkan_command_buffer_end_single_use(renderer, renderer->graphics_command_pool, &command_buffer,
-                                         renderer->graphics_queue);
+                                         renderer->graphics_queue);*/
 
 
-
+    texture_system->texture_table_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                                BUFFER_TYPE_STORAGE_GPU,
+                                                                sizeof(u32) * MAX_TEXTURE_COUNT);
+    texture_system->texture_table_max_size = MAX_TEXTURE_COUNT;
 
 
     return texture_system;
 }
 
 
-void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet)
+void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet,  Vulkan_Command_Buffer* command_buffer)
 {
     Vulkan_Texture_System* texture_system = renderer->texture_system;
 
@@ -97,6 +100,45 @@ void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* pa
 
         i++;
     }
+
+    //for now were just going to upload the texture table here every frame,
+    //but realistically we want to batch the upload
+
+
+    vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "texture table");
+
+    //texture table
+    if (vulkan_buffer_frame_staging_upload(
+        renderer, texture_system->texture_table_buffer,
+        command_buffer, texture_system->texture_table, sizeof(u32) * MAX_TEXTURE_COUNT))
+    {
+        Vulkan_Buffer* transform_buffer = vulkan_buffer_get_frame(renderer, texture_system->texture_table_buffer);
+        VkBufferMemoryBarrier2 texture_table_buffer_barrier = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+            //barrier so that we finish our transfer before our shaders read the data
+            .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+            .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+            .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+            .buffer = transform_buffer->handle,
+            .offset = 0,
+            .size = transform_buffer->current_offset,
+        };
+        vulkan_command_add_buffer_barrier(command_buffer, texture_table_buffer_barrier);
+    }
+
+    vulkan_command_flush_barriers(command_buffer);
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
+
 
 
 }

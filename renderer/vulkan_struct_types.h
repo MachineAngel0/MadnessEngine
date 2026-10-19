@@ -559,8 +559,10 @@ typedef struct Vulkan_Texture_System
     // maps a texture index to the texture slot
     // we do this so that textures that have not finished uploading yet will use the default or fallback texture
     // it also makes it easier to stream in mipmaps or texture levels
-    Buffer_Handle texture_table_buffer;
+    //TODO: this should really be a
+    Buffer_Frame_Handle texture_table_buffer;
     u32 texture_table[MAX_TEXTURE_COUNT]; // the texture index maps to the texture index we want to use either 0 or the actual index
+    u64 texture_table_max_size;
 
 
     // hash_table* texture_file_to_handle; //TODO:
@@ -959,7 +961,6 @@ typedef struct Renderer
     Buffer_Frame_Handle transform_buffer_handle;
     Buffer_Frame_Handle material_buffer;
     Buffer_Frame_Handle material_record_buffer;
-    Buffer_Frame_Handle texture_table_buffer;
 
     Vulkan_Mesh_Render_List mesh_render_list;
 

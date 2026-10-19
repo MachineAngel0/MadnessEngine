@@ -46,6 +46,11 @@ void material_system_render_packet(Material_System2* material_system, Render_Pac
 {
     render_packet->material_packet.material_buffer = material_system->material_buffer;
     render_packet->material_packet.material_buffer_byte_size = material_system->material_buffer_offset;
+
+    render_packet->material_packet.material_records = material_system->material_record;
+    render_packet->material_packet.material_records_count = material_system->material_record_count;
+    render_packet->material_packet.material_records_byte_size = material_system->material_record_count * sizeof(
+        Material_Record);
 }
 
 
@@ -118,7 +123,10 @@ void material_asset_set_default_textures(Asset_System* asset_system,
         {
             MADNESS_UUID* uuid_data = (MADNESS_UUID*)((u8*)material->data + material_definition->
                                                                             reflection_material_data.fields[i].offset);
-            *uuid_data = asset_system->texture_system->default_texture_uuid;
+            if (uuid_data->high == 0 && uuid_data->low == 0)
+            {
+                *uuid_data = asset_system->texture_system->default_texture_uuid;
+            }
         }
     }
 }
@@ -142,7 +150,7 @@ void material_create_or_get(Asset_System* asset_system, Shader_Handle shader_han
         .material_uuid = madness_uuid_generate_return(),
         .reflection_hash = material_definition.runtime_reflection_hash,
         .material_name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(material_definition.reflection_material_data.name,
-                                                                asset_system->frame_allocator),
+                                                             asset_system->frame_allocator),
         .name = STRING_CREATE_FROM_BUFFER_ALLOCATOR(name, asset_system->frame_allocator),
         .data_size = material_definition.reflection_material_data.struct_size,
         .data = allocator_alloc(asset_system->material_system->material_allocator,
@@ -159,7 +167,6 @@ void material_create_or_get(Asset_System* asset_system, Shader_Handle shader_han
     }
     else
     {
-
         //set default cpu data
         material_asset_set_default_textures(asset_system,
                                             &material_asset,
@@ -172,9 +179,6 @@ void material_create_or_get(Asset_System* asset_system, Shader_Handle shader_han
         //load it in
         asset_load_material_uuid(asset_system, material_asset.material_uuid, out_handle);
     }
-
-
-
 }
 
 

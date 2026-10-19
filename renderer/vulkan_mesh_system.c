@@ -620,7 +620,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 {
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
-    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "mesh",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "MESH",
                                                   (float[4]){1.0, 1.0, 0.0, 1.0});
 
     Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);

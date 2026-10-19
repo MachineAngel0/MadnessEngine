@@ -21,9 +21,6 @@ void vulkan_frame_data_init(Renderer* renderer)
                                                                    BUFFER_TYPE_STORAGE_GPU,
                                                                    transform_buffer_memory_size);
 
-    renderer->texture_table_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_STORAGE_GPU,
-                                                                sizeof(u32) * MAX_TEXTURE_COUNT);
 
 
     renderer->material_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,

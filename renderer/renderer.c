@@ -262,7 +262,7 @@ void renderer_update_global_ubo(Renderer* renderer, u64 current_frame_index)
     ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
         renderer, renderer->material_record_buffer);
     ubo.texture_table = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->texture_table_buffer);
+        renderer, renderer->texture_system->texture_table_buffer);
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
@@ -396,7 +396,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //async resources
     vulkan_mesh_system_update_async_resources(renderer, renderer->mesh_system);
-    vulkan_texture_update_async_resources(renderer, render_packet);
+    vulkan_texture_update_async_resources(renderer, render_packet, graphics_command_buffer);
 
 
     //frame data
