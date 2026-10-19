@@ -94,6 +94,33 @@ bool editor_update(Editor* editor)
         ImGui_EndMainMenuBar();
     }
 
+    const float PAD = 10.0f;
+    const ImGuiViewport* vp = ImGui_GetMainViewport();
+
+    ImVec2 pos = {vp->WorkPos.x + vp->WorkSize.x - PAD,   // top-right corner
+                  vp->WorkPos.y + PAD};
+    ImVec2 pivot = {1.0f, 0.0f};                          // anchor window's top-right to pos
+    ImGui_SetNextWindowPosEx(pos, ImGuiCond_Always, pivot);
+    ImGui_SetNextWindowBgAlpha(0.35f);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration |        // no title bar, resize, scrollbar, collapse
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings |     // don't write it to imgui.ini
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav |
+        ImGuiWindowFlags_NoMove;               // drop this if you want it draggable
+
+    if (ImGui_Begin("Overlay", 0, flags))
+    {
+        ImGui_Text("FPS: %.1f", ImGui_GetIO()->Framerate);
+        ImGui_Text("Frame: %.2f ms", 1000.0f / ImGui_GetIO()->Framerate);
+        ImGui_Separator();
+        // ImGui_Text("Wireframe: %s", renderer->wireframe_mode ? "on" : "off");
+    }
+    ImGui_End();
+
+
 
     //do the ui and stuff
     //manage a bunch of ui state
