@@ -23,15 +23,15 @@ layout(location = 19) out mat4 out_model;
 
 void main() {
 
-    uint draw_idx = gl_VertexIndex;
+    uint vertex_idx = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
 //    uint instance_idx = gl_InstanceIndex;
 
     //global mesh data
-    vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
-    out_normal = ubo.normal_buffer.normal_data[nonuniformEXT(draw_idx)];
-    out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(draw_idx)];
-    out_tangent = ubo.tangent_buffer.tangent_data[nonuniformEXT(draw_idx)];
+    vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(vertex_idx)];
+    out_normal = ubo.normal_buffer.normal_data[nonuniformEXT(vertex_idx)];
+    out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(vertex_idx)];
+    out_tangent = ubo.tangent_buffer.tangent_data[nonuniformEXT(vertex_idx)];
 
 
     //get object draw data

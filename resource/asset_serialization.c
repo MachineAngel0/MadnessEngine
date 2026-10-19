@@ -231,7 +231,7 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
     runtime->mesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Mesh_GPU_Data) * runtime->mesh_count);
     runtime->material_uuid = allocator_heap_alloc(allocator, sizeof(MADNESS_UUID) * runtime->mesh_count);
     runtime->skinned_submeshes = allocator_heap_alloc(allocator, sizeof(Madness_Skinned_SubMesh) * runtime->mesh_count);
-    runtime->skmesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_SkMesh_GPU_Data) * runtime->mesh_count);
+    runtime->skmesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Skinned_GPU_Data) * runtime->mesh_count);
     runtime->animation_data = allocator_heap_alloc(allocator, sizeof(GLTF_Animation_Data));
 
 
@@ -272,7 +272,7 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
     for (u32 i = 0; i < runtime->mesh_count; ++i)
     {
         Madness_Skinned_SubMesh* sk_sub_mesh = &runtime->skinned_submeshes[i];
-        Madness_SkMesh_GPU_Data* gpu_data = &runtime->skmesh_gpu_upload[i];
+        Madness_Skinned_GPU_Data* gpu_data = &runtime->skmesh_gpu_upload[i];
         gpu_data->joints = allocator_heap_alloc(allocator, sk_sub_mesh->joint_bytes);
         gpu_data->weights = allocator_heap_alloc(allocator, sk_sub_mesh->weight_bytes);
         fread(gpu_data->joints, sk_sub_mesh->joint_bytes, 1, fptr);

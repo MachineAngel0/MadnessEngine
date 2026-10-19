@@ -37,15 +37,15 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
 {
     //TODO: ideally load all our pipelines (at least for the level) at the start but keep the material data empty
     //TODO: we should call this at start up once
-    for (int i = 0; i < render_packet->draw_3d_data_packet.shader_asset_count; ++i)
+    for (int i = 0; i < render_packet->shaders_packet.shader_asset_count; ++i)
     {
         if (hash_set_contains(shader_system->shader_batch_hash_set,
-                              &render_packet->draw_3d_data_packet.shader_assets[i].shader_pipeline_hash))
+                              &render_packet->shaders_packet.shader_assets[i].shader_pipeline_hash))
         {
             continue;
         }
-        vulkan_shader_system_shader_batch_create(renderer, shader_system,
-                                                 &render_packet->draw_3d_data_packet.shader_assets[i]);
+        vulkan_shader_system_shader_create(renderer, shader_system,
+                                                 &render_packet->shaders_packet.shader_assets[i]);
     }
 
 
@@ -53,12 +53,10 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
 }
 
 
-void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
+void vulkan_shader_system_shader_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
                                               Shader_Asset* shader_asset)
 {
     Vulkan_Shader_Batch* shader_batch = &shader_system->shader_batch[shader_system->shader_batch_count++];
-
-    MASSERT(shader_batch)
 
 
     shader_batch->pipeline_hash = shader_asset->shader_pipeline_hash;
@@ -79,21 +77,17 @@ void vulkan_shader_system_shader_batch_create(Renderer* renderer, Vulkan_Shader_
     hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->pipeline_hash);
 }
 
-void vulkan_shader_system_shader_batch_free(Renderer* renderer, Vulkan_Shader_System* shader_system,
+void vulkan_shader_system_shader_free(Renderer* renderer, Vulkan_Shader_System* shader_system,
                                             const char* shader_name)
 {
     //TODO:
 }
 
-Vulkan_Shader_Batch* vulkan_shader_system_shader_get_by_key(Renderer* renderer, u64 sort_key)
-{
-    //TODO: make a loop for now, but use a hash map later
-    MASSERT(false);
-}
 
 
 Vulkan_Shader_Batch* vulkan_shader_system_get_by_pipeline_hash(Renderer* renderer, Shader_Pipeline_Hash pipeline_hash)
 {
+    //TODO: use the hash map
     Vulkan_Shader_System* shader_system = renderer->shader_system;
 
     for (u32 i = 0; i < shader_system->shader_batch_count; i++)

@@ -132,17 +132,17 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     //NOTE: semaphores must be per swapchain image, fence is per frame in flight
     renderer->frame_idx = 0;
     renderer->current_frame_index = 0;
-    renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT; // TODO: this has to be the minimum whatever the swapchain count it
-    renderer->next_signal_value =     renderer->max_frames_in_flight + 1;
+    renderer->max_frames_in_flight = VULKAN_MAX_FRAMES_IN_FLIGHT;
+    // TODO: this has to be the minimum whatever the swapchain count it
+    renderer->next_signal_value = renderer->max_frames_in_flight + 1;
 
     // Swapchain
 
- vulkan_swapchain_create(
+    vulkan_swapchain_create(
         renderer,
         renderer->framebuffer_width,
         renderer->framebuffer_height,
         &renderer->swapchain);
-
 
 
     // vulkan_renderpass_create_new(renderer);
@@ -150,7 +150,6 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     //SHADOW PASS TEXTURE
     vulkan_texture_create_shadowmap(renderer, 1024, 1024, renderer->depth_format,
                                     &renderer->shadowpass_texture);
-
 
 
     // Create command buffers.
@@ -168,6 +167,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
     vulkan_frame_data_init(renderer);
+    vulkan_render_list_init(renderer, &renderer->mesh_render_list);
 
 
     // Texture System
@@ -262,7 +262,7 @@ void renderer_update_global_ubo(Renderer* renderer, u64 current_frame_index)
     ubo.material_record_buffer = vulkan_buffer_get_frame_device_address(
         renderer, renderer->material_record_buffer);
     ubo.texture_table = vulkan_buffer_get_frame_device_address(
-    renderer, renderer->texture_table_buffer);
+        renderer, renderer->texture_table_buffer);
 
     // Copy the current matrices to the current frame's uniform buffer.
     // As we requested a host coherent memory type for the uniform buffer, the write is instantly visible to the GPU.
@@ -295,21 +295,23 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //fences waits until all operations on the GPU are done, meant to sync CPU and GPU
 
 
-
     // first check if our swapchain is still valid
-    // if (renderer->recreate_swapchain)
-    // {
-    //     recreate_swapchain(renderer);
-    // }
+    if (renderer->recreate_swapchain)
+    {
+        // Wait for any operations to complete.
+        vkDeviceWaitIdle(renderer->logical_device);
+        recreate_swapchain(renderer);
+        renderer->recreate_swapchain = false;
+    }
 
     renderer->current_frame_index = renderer->frame_idx++ % renderer->max_frames_in_flight;
     renderer->frame_signal_value = renderer->next_signal_value++;
     const uint64_t frame_wait_value = renderer->frame_signal_value - renderer->max_frames_in_flight;
 
     // Wait for the execution of the frame - max_frame to complete on the cpu, making it available for use to for this frame
-    timeline_semaphore_wait(renderer, &renderer->queue_system->graphics_render_queue.frame_complete_timeline_semaphore, frame_wait_value);
-    renderer->queue_system->graphics_render_queue.graphics_command_buffer[renderer->current_frame_index].state =
-        VULKAN_COMMAND_BUFFER_STATE_USABLE;
+    timeline_semaphore_wait(renderer, &renderer->queue_system->graphics_render_queue.frame_complete_timeline_semaphore,
+                            frame_wait_value);
+
 
     /* Acquire an image from the swap chain */
     // Pass along the semaphore that should signal when this completes.
@@ -354,7 +356,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     Vulkan_Command_Buffer* graphics_command_buffer = &renderer->queue_system->graphics_render_queue.
                                                                 graphics_command_buffer[renderer->current_frame_index];
 
-    vkResetCommandBuffer(graphics_command_buffer->handle, 0);
+    vulkan_command_buffer_reset(graphics_command_buffer);
     vulkan_command_buffer_begin(graphics_command_buffer);
 
     vulkan_queue_frame_begin(renderer, renderer->current_frame_index);
@@ -394,7 +396,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //async resources
     vulkan_mesh_system_update_async_resources(renderer, renderer->mesh_system);
-    vulkan_texture_update_async_resources( renderer, render_packet);
+    vulkan_texture_update_async_resources(renderer, render_packet);
 
 
     //frame data
@@ -416,15 +418,13 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     renderer_update_global_ubo(renderer, renderer->current_frame_index);
 
 
-
-
     ui_renderer_upload_frame_data(renderer->ui_renderer, renderer, render_packet, graphics_command_buffer);
     chaos_ui_renderer_upload_frame_data(renderer->cui_renderer, renderer, &render_packet->chaos_ui_render_packet,
-                                       graphics_command_buffer);
+                                        graphics_command_buffer);
 
 
-    //
-    // mesh_renderer_construct_batch_draw(renderer, render_packet, graphics_command_buffer);
+    // We are ready to start preparing our draw data
+    mesh_renderer_construct_draw_lists(renderer, render_packet, graphics_command_buffer, &renderer->mesh_render_list);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
@@ -460,6 +460,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     //Depth Prepass//
     vulkan_command_buffer_debug_label_begin(renderer, graphics_command_buffer, "Depth Prepass");
 
+    //transition depth attachment for writing
     image_insert_memory_barrier(graphics_command_buffer->handle,
                                 renderer->swapchain.depth_attachment.texture_image,
                                 VK_ACCESS_NONE,
@@ -516,23 +517,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     vkCmdEndRendering(graphics_command_buffer->handle);
     vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
-    //transition to be read by the later stages
-    image_insert_memory_barrier(
-        graphics_command_buffer->handle, renderer->swapchain.depth_attachment.texture_image,
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
 
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-        //want to sample in all sorts of shaders
-
-        (VkImageSubresourceRange){
-            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
-        }
-    );
     //Depth Prepass END //
 
     //Shadow Pass//
@@ -632,6 +617,25 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     //Lighting PASS//
 
+
+    //transition depth to be read by the color pass
+    image_insert_memory_barrier(
+        graphics_command_buffer->handle, renderer->swapchain.depth_attachment.texture_image,
+        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+        //want to sample in all sorts of shaders
+
+        (VkImageSubresourceRange){
+            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1
+        }
+    );
+
     // With dynamic rendering we need to explicitly add layout transitions by using barriers, this set of barriers prepares the color and depth images for output
     image_insert_memory_barrier(graphics_command_buffer->handle,
                                 renderer->swapchain.images[image_index], 0,
@@ -648,7 +652,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     VkRenderingAttachmentInfo color_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = renderer->swapchain.image_views[image_index],
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the image
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //keep for presenting
         .clearValue.color = {0.0f, 0.0f, 0.2f, 0.0f},
@@ -689,6 +693,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // SET 1 GLOBAL TEXTURES: Textures
     // SET 2 NOTHING RN:
 
+
+
+    mesh_renderer_batch_draw(renderer, renderer->mesh_system,
+                              graphics_command_buffer, &renderer->mesh_render_list);
+
     /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->shader_batch, renderer->shader_system->shader_batch_count,
                              graphics_command_buffer);*/
@@ -696,6 +705,8 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
                              graphics_command_buffer);*/
+
+
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);
 
@@ -725,11 +736,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // This barrier prepares the color image for presentation, we don't need to care for the depth image
     image_insert_memory_barrier(graphics_command_buffer->handle,
                                 renderer->swapchain.images[image_index],
-                                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                                 0,
                                 VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
                                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                 VK_PIPELINE_STAGE_2_NONE,
                                 (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
@@ -764,9 +775,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
     PROFILE_ZONE_END(renderer_update)
 }
-
-
-
 
 
 void renderer_shutdown(Renderer* renderer)
@@ -837,6 +845,7 @@ void renderer_on_resize(Renderer* renderer, u32 width, u32 height)
     INFO("VULKAN RENDERER RESIZE HAS BEEN CALLED: new width: %d, height: %d", width, height);
     renderer->framebuffer_width_new = width;
     renderer->framebuffer_height_new = height;
+    renderer->recreate_swapchain = true;
 
-    recreate_swapchain(renderer);
+    // recreate_swapchain(renderer);
 }

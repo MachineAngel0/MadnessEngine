@@ -14,6 +14,7 @@ layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_uv;
 layout(location = 3) in vec3 in_world_position;
 layout(location = 4) in flat Pbr material;
+layout(location = 19) in mat4 out_model;
 
 
 //look into subpasses/renderpasses for more/different out values

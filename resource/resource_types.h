@@ -861,28 +861,37 @@ typedef struct Madness_Mesh_GPU_Data
     u8* indices;
 } Madness_Mesh_GPU_Data;
 
-typedef struct Madness_SkMesh_GPU_Data
+typedef struct Madness_Skinned_GPU_Data
 {
     vec4s* joints;
     vec4s* weights;
-} Madness_SkMesh_GPU_Data;
+} Madness_Skinned_GPU_Data;
 
 typedef struct Mesh_GPU_Upload
 {
-    u32 submesh_id;
-    Madness_SubMesh* submesh;
-    Madness_Mesh_GPU_Data* gpu_data;
+    u32 mesh_id;
+    u32 submesh_count;
+    Madness_SubMesh* submesh; // reference to an array
+    Madness_Mesh_GPU_Data* gpu_data; // data you need to deallocate when done uploading
+
 
     Heap_Allocator* mesh_memory_allocator; // ref
 } Mesh_GPU_Upload;
 
 typedef struct Skinned_Mesh_GPU_Upload
 {
-    Madness_Skinned_SubMesh* skinned_submesh;
-    Madness_SkMesh_GPU_Data* skinned_gpu_data;
+    u32 mesh_id;
+
+    u32 submesh_count;
+    Madness_SubMesh* submesh; // reference to an array
+    Madness_Mesh_GPU_Data* gpu_data; // array you need to deallocate when done
+
+    Madness_Skinned_SubMesh* skinned_submesh_data; // reference to an array
+    Madness_Skinned_GPU_Data* skinned_gpu_data;  // data you need to deallocate when done uploading
 
     Heap_Allocator* mesh_memory_allocator; // ref
 } Skinned_Mesh_GPU_Upload;
+
 
 
 typedef struct Madness_Mesh_Runtime
@@ -906,7 +915,7 @@ typedef struct Madness_SkMesh_Runtime
     MADNESS_UUID skinned_mesh_uuid;
 
     Madness_Skinned_SubMesh* skinned_submeshes;
-    Madness_SkMesh_GPU_Data* skmesh_gpu_upload;
+    Madness_Skinned_GPU_Data* skmesh_gpu_upload;
     GLTF_Animation_Data* animation_data;
 } Madness_SkMesh_Runtime;
 
@@ -1166,9 +1175,6 @@ typedef struct Render_Packet_3D
 
     //geometry data for indirect draws
 
-    //TODO: we should have a dirty bit for generating any new batches
-    Shader_Asset* shader_assets;
-    u32 shader_asset_count;
 
 
     Madness_Mesh_Instance* mesh_instances;

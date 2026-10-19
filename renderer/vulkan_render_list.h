@@ -15,7 +15,7 @@ void vulkan_render_list_init(Renderer* renderer, Vulkan_Mesh_Render_List* render
                                                               sizeof(VkDrawIndexedIndirectCommand) * 1000);
 
     render_list->mesh_draw_data = vulkan_buffer_create_frame(renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-                                                             sizeof(Vulkan_Mesh_GPU_Renderable) * 1000);
+                                                             sizeof(Mesh_GPU_Renderable) * 1000);
 
 
 

@@ -22,11 +22,8 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
         &renderer->allocator, sizeof(Vulkan_Command_Buffer) * frames_in_flight);
 
 
-
     graphics_render_queue->image_available_semaphore = allocator_alloc(
         &renderer->allocator, sizeof(VkSemaphore) * frames_in_flight);
-
-
 
 
     //Transfer
@@ -42,12 +39,12 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
                                                                             MAX_VULKAN_COMMAND_BUFFERS,
                                                                             &renderer->allocator);
 
-    timeline_semaphore_create(renderer, &graphics_render_queue->frame_complete_timeline_semaphore, renderer->max_frames_in_flight);
+    timeline_semaphore_create(renderer, &graphics_render_queue->frame_complete_timeline_semaphore,
+                              renderer->max_frames_in_flight);
 
     //anything needed per frame in flight
     for (size_t i = 0; i < frames_in_flight; i++)
     {
-
         //command buffers
         vulkan_command_buffer_allocate(&queue_system->graphics_render_queue.graphics_command_buffer[i],
                                        VULKAN_COMMAND_BUFFER_LEVEL_PRIMARY,
@@ -56,7 +53,6 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
 
         binary_semaphore_create(renderer, &graphics_render_queue->image_available_semaphore[i]);
     }
-
 
 
     //command buffers
@@ -194,13 +190,15 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
     render_complete_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     render_complete_semaphore_info.semaphore = renderer->swapchain.render_complete_semaphore[image_index];
     render_complete_semaphore_info.value = 0; // not needed for binary semaphores
-    render_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //NOTE: i have no clue what its suppose to be other than all commands bits
+    render_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
     VkSemaphoreSubmitInfo frame_complete_semaphore_info = {0};
     frame_complete_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     frame_complete_semaphore_info.semaphore = graphics_queue->frame_complete_timeline_semaphore;
     frame_complete_semaphore_info.value = renderer->frame_signal_value; // not needed for binary semaphores
     frame_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    // frame_complete_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
 
     vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, image_available_semaphore_info);
     vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, render_complete_semaphore_info);
@@ -248,7 +246,6 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
 }
 
 
-
 bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
                                 Vulkan_Command_Buffer** out_cb)
 {
@@ -275,7 +272,8 @@ bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
 bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb)
 {
     Vulkan_Queue_System* system = renderer->queue_system;
-    Vulkan_Command_Buffer* command_buffer = &system->graphics_render_queue.graphics_command_buffer[renderer->current_frame_index];
+    Vulkan_Command_Buffer* command_buffer = &system->graphics_render_queue.graphics_command_buffer[renderer->
+        current_frame_index];
 
     if (command_buffer->state != VULKAN_COMMAND_BUFFER_STATE_BEGIN)
     {

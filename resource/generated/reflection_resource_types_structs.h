@@ -50,7 +50,7 @@ const char* resources_struct_string_list[] = {
 	"Madness_Skinned_SubMesh", 
 	"Madness_Skinned_Mesh", 
 	"Madness_Mesh_GPU_Data", 
-	"Madness_SkMesh_GPU_Data", 
+	"Madness_Skinned_GPU_Data", 
 	"Mesh_GPU_Upload", 
 	"Skinned_Mesh_GPU_Upload", 
 	"Madness_Mesh_Runtime", 
@@ -1942,39 +1942,45 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, Madness_Mesh_GPU_Data_Runtime_Struct);
 
-	Reflection_Runtime_Struct_Field Madness_SkMesh_GPU_Data_Fields[] =
+	Reflection_Runtime_Struct_Field Madness_Skinned_GPU_Data_Fields[] =
 	{
 		{
 			.name = "joints",
 			.type = REFLECTION_TYPE_VEC4,
 			.type_name = "vec4s",
-			.offset = offsetof(Madness_SkMesh_GPU_Data, joints)
+			.offset = offsetof(Madness_Skinned_GPU_Data, joints)
 		},
 		{
 			.name = "weights",
 			.type = REFLECTION_TYPE_VEC4,
 			.type_name = "vec4s",
-			.offset = offsetof(Madness_SkMesh_GPU_Data, weights)
+			.offset = offsetof(Madness_Skinned_GPU_Data, weights)
 		},
 	};
 
-	 Reflection_Runtime_Struct Madness_SkMesh_GPU_Data_Runtime_Struct =
+	 Reflection_Runtime_Struct Madness_Skinned_GPU_Data_Runtime_Struct =
 	{
-		.name = "Madness_SkMesh_GPU_Data",
-		.fields = Madness_SkMesh_GPU_Data_Fields,
+		.name = "Madness_Skinned_GPU_Data",
+		.fields = Madness_Skinned_GPU_Data_Fields,
 		.field_count = 2,
-		.struct_size = sizeof(Madness_SkMesh_GPU_Data)
+		.struct_size = sizeof(Madness_Skinned_GPU_Data)
 	};
 
-	reflection_registry_add_struct(reflection_registry, Madness_SkMesh_GPU_Data_Runtime_Struct);
+	reflection_registry_add_struct(reflection_registry, Madness_Skinned_GPU_Data_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Mesh_GPU_Upload_Fields[] =
 	{
 		{
-			.name = "submesh_id",
+			.name = "mesh_id",
 			.type = REFLECTION_TYPE_U32,
 			.type_name = "u32",
-			.offset = offsetof(Mesh_GPU_Upload, submesh_id)
+			.offset = offsetof(Mesh_GPU_Upload, mesh_id)
+		},
+		{
+			.name = "submesh_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Mesh_GPU_Upload, submesh_count)
 		},
 		{
 			.name = "submesh",
@@ -1994,7 +2000,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Mesh_GPU_Upload",
 		.fields = Mesh_GPU_Upload_Fields,
-		.field_count = 3,
+		.field_count = 4,
 		.struct_size = sizeof(Mesh_GPU_Upload)
 	};
 
@@ -2003,15 +2009,39 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Skinned_Mesh_GPU_Upload_Fields[] =
 	{
 		{
-			.name = "skinned_submesh",
+			.name = "mesh_id",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Skinned_Mesh_GPU_Upload, mesh_id)
+		},
+		{
+			.name = "submesh_count",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(Skinned_Mesh_GPU_Upload, submesh_count)
+		},
+		{
+			.name = "submesh",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Madness_SubMesh",
+			.offset = offsetof(Skinned_Mesh_GPU_Upload, submesh)
+		},
+		{
+			.name = "gpu_data",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Madness_Mesh_GPU_Data",
+			.offset = offsetof(Skinned_Mesh_GPU_Upload, gpu_data)
+		},
+		{
+			.name = "skinned_submesh_data",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Skinned_SubMesh",
-			.offset = offsetof(Skinned_Mesh_GPU_Upload, skinned_submesh)
+			.offset = offsetof(Skinned_Mesh_GPU_Upload, skinned_submesh_data)
 		},
 		{
 			.name = "skinned_gpu_data",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_SkMesh_GPU_Data",
+			.type_name = "Madness_Skinned_GPU_Data",
 			.offset = offsetof(Skinned_Mesh_GPU_Upload, skinned_gpu_data)
 		},
 	};
@@ -2020,7 +2050,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Skinned_Mesh_GPU_Upload",
 		.fields = Skinned_Mesh_GPU_Upload_Fields,
-		.field_count = 2,
+		.field_count = 6,
 		.struct_size = sizeof(Skinned_Mesh_GPU_Upload)
 	};
 
@@ -2123,7 +2153,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 		{
 			.name = "skmesh_gpu_upload",
 			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Madness_SkMesh_GPU_Data",
+			.type_name = "Madness_Skinned_GPU_Data",
 			.offset = offsetof(Madness_SkMesh_Runtime, skmesh_gpu_upload)
 		},
 	};
@@ -2677,18 +2707,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.offset = offsetof(Render_Packet_3D, scene)
 		},
 		{
-			.name = "shader_assets",
-			.type = REFLECTION_TYPE_STRUCT,
-			.type_name = "Shader_Asset",
-			.offset = offsetof(Render_Packet_3D, shader_assets)
-		},
-		{
-			.name = "shader_asset_count",
-			.type = REFLECTION_TYPE_U32,
-			.type_name = "u32",
-			.offset = offsetof(Render_Packet_3D, shader_asset_count)
-		},
-		{
 			.name = "mesh_instances",
 			.type = REFLECTION_TYPE_STRUCT,
 			.type_name = "Madness_Mesh_Instance",
@@ -2730,7 +2748,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Render_Packet_3D",
 		.fields = Render_Packet_3D_Fields,
-		.field_count = 9,
+		.field_count = 7,
 		.struct_size = sizeof(Render_Packet_3D)
 	};
 

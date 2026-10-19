@@ -115,7 +115,7 @@ typedef struct Vulkan_Mesh_GPU_Renderable
     u32 joint_idx;
     u32 weight_idx;
     u32 skinned_matrix_idx;
-} Vulkan_Mesh_GPU_Renderable;
+} Mesh_GPU_Renderable;
 
 
 typedef enum Renderable_Type
@@ -140,7 +140,7 @@ typedef struct Vulkav_Mesh_Renderable
     u32 index_count;
     u32 index_offset;
     u32 vertex_offset;
-    Vulkan_Mesh_GPU_Renderable mesh_render_item;
+    Mesh_GPU_Renderable mesh_render_item;
 } Vulkan_Mesh_Renderable;
 
 int vulkan_mesh_sort_key(const void* render_item1, const void* render_item2)
@@ -181,8 +181,9 @@ typedef struct Vulkan_Mesh_Render_List
     //etc. other passes and what not
 
     //TODO: you can condense these all down to one giant buffer with starting offsets for each renderpass
-    Vulkan_Mesh_Renderable mesh_renderable[1000];
+    Vulkan_Mesh_Renderable* mesh_renderable;
     u32 mesh_renderable_count;
+    u32 mesh_renderable_count_max;
 
     Buffer_Frame_Handle indirect_buffer;
     Buffer_Frame_Handle mesh_draw_data;

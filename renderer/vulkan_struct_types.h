@@ -214,39 +214,32 @@ typedef struct Vulkan_SKMesh_Draw
 
 typedef struct Mesh_Render_Record
 {
-    //passed in by the cpu mesh system
-    //size of data
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
+    //passed in by the cpu mesh system, is a reference
+    Madness_SubMesh* submesh_data;
 
 
     //data managed by the mesh system, to know where it is in the buffer and likely to change due to defragging
-    u64 tangent_bytes_offset;
-    u64 vertex_color_bytes_offset;
-    u64 vertex_bytes_offset;
-    u64 normal_bytes_offset;
-    u64 uv_bytes_offset;
-    u64 indices_bytes_offset;
+    u64* vertex_color_bytes_offset;
+    u64* tangent_bytes_offset;
+    u64* vertex_bytes_offset;
+    u64* normal_bytes_offset;
+    u64* uv_bytes_offset;
+    u64* indices_bytes_offset;
 
 
     //indirect draw data
-    u32 index_count; // how large is the data
-    u32 vertex_count_offset; //in vec3
-    u32 index_offset_count; //offset into the index buffer
-    Index_Type index_type;
+    u32* index_count; // how large is the data
+    u32* vertex_count_offset; //in vec3
+    u32* index_offset_count; //offset into the index buffer
+    Index_Type* index_type;
 
-    u32 submesh_id;
-
+    u32 mesh_id;
+    u32 submesh_count;
 
     //when this hits zero the asset is ready for usage
     u8 pending_uploads;
 
     bool is_uploaded;
-    bool is_in_use; // NOTE: IDK WHY THIS IS HERE, im guessing for when we want to delete the asset
 } Mesh_Render_Record;
 
 typedef struct Mesh_Unfinished_Upload
@@ -349,7 +342,7 @@ typedef struct Vulkan_Shader_System
     // https://realtimecollisiondetection.net/blog/?p=86
 
     //TODO: temp value for now, should probably be a dynamic array
-    Vulkan_Shader_Batch shader_batch[100];
+    Vulkan_Shader_Batch shader_batch[MAX_SHADER_COUNT];
     u32 shader_batch_count;
 
 
@@ -717,6 +710,7 @@ typedef struct Vulkan_Mesh_System
     Buffer_Handle normal_buffer_handle;
     Buffer_Handle uv_buffer_handle;
     Buffer_Handle tangent_buffer_handle;
+    // Buffer_Handle vertex_color_handle; // TODO:
 
     //using these to test the global staging buffer
     Buffer_Handle joint_buffer_handle;
@@ -967,7 +961,7 @@ typedef struct Renderer
     Buffer_Frame_Handle material_record_buffer;
     Buffer_Frame_Handle texture_table_buffer;
 
-
+    Vulkan_Mesh_Render_List mesh_render_list;
 
 
     //pipelines

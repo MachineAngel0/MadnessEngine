@@ -108,13 +108,13 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
     allocator_clear(asset_system->frame_allocator);
     render_packet_clear(asset_system->render_packet);
     asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
-    asset_system->render_packet->skinned_mesh_queue = asset_system->mesh_system->skinned_mesh_ring_queue;
     asset_system->render_packet->texture_upload_queue = asset_system->texture_system->texture_gpu_upload_queue;
 
     sprite_system_generate_render_packet(asset_system->sprite_system,
                                          &asset_system->render_packet->sprite_data_packet);
 
     material_system_render_packet(asset_system->material_system, asset_system->render_packet);
+    shader_system_render_packet(asset_system->shader_system, asset_system->render_packet);
 
     scene_update(asset_system->scene, asset_system);
 

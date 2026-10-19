@@ -235,10 +235,17 @@ bool vulkan_swapchain_acquire_next_image_index(Renderer* renderer, Vulkan_Swapch
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
+        renderer->recreate_swapchain = true;
+        // vulkan_swapchain_recreate(renderer, renderer->framebuffer_width, renderer->framebuffer_height, swapchain);
         return false;
     }
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        INFO("SUBOPTIMAL SWAPCHAIN IMAGE!")
+        renderer->recreate_swapchain = true;
+        return false;
+    }
+    if (result != VK_SUCCESS)
     {
         FATAL("FAILED TO ACQUIRE SWAPCHAIN IMAGE!")
         return false;
@@ -275,6 +282,7 @@ void vulkan_swapchain_present_image(Renderer* renderer,
 
 bool recreate_swapchain(Renderer* renderer)
 {
+    INFO("RECREATING SWAPCHAIN")
     // If already being recreated, do not try again.
     if (renderer->recreating_swapchain)
     {
@@ -285,8 +293,6 @@ bool recreate_swapchain(Renderer* renderer)
     // Mark as recreating if the dimensions are valid.
     renderer->recreating_swapchain = true;
 
-    // Wait for any operations to complete.
-    vkDeviceWaitIdle(renderer->logical_device);
 
 
     // Requery support
@@ -319,6 +325,5 @@ bool recreate_swapchain(Renderer* renderer)
 
     // Clear the recreating flag.
     renderer->recreating_swapchain = false;
-    renderer->recreate_swapchain = false;
     return true;
 }

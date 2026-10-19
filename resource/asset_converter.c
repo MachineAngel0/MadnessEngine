@@ -671,8 +671,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     //check if we are loading a skinned or normal mesh
     Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(scratch.allocator,
                                                             sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
-    Madness_SkMesh_GPU_Data* skinned_gpu_data = allocator_alloc(scratch.allocator,
-                                                                sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
+    Madness_Skinned_GPU_Data* skinned_gpu_data = allocator_alloc(scratch.allocator,
+                                                                sizeof(Madness_Skinned_GPU_Data) * data->meshes_count);
     GLTF_Animation_Data* animation_data = allocator_alloc(scratch.allocator,
                                                           sizeof(GLTF_Animation_Data));
     if (data->skins_count > 0)
@@ -680,7 +680,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         skinned_mesh = allocator_alloc(scratch.allocator,
                                        sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
         skinned_gpu_data = allocator_alloc(scratch.allocator,
-                                           sizeof(Madness_SkMesh_GPU_Data) * data->meshes_count);
+                                           sizeof(Madness_Skinned_GPU_Data) * data->meshes_count);
         animation_data = allocator_alloc(scratch.allocator,
                                          sizeof(GLTF_Animation_Data));
     }
@@ -1008,7 +1008,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         for (u32 skmesh_idx = 0; skmesh_idx < data->meshes_count; skmesh_idx++)
         {
             Madness_Skinned_SubMesh* skinned_submesh = &skinned_mesh[skmesh_idx];
-            Madness_SkMesh_GPU_Data* skinned_submesh_gpu = &skinned_gpu_data[skmesh_idx];
+            Madness_Skinned_GPU_Data* skinned_submesh_gpu = &skinned_gpu_data[skmesh_idx];
 
             const cgltf_accessor* joint_accessor = cgltf_find_accessor(data->meshes[skmesh_idx].primitives,
                                                                        cgltf_attribute_type_joints,
