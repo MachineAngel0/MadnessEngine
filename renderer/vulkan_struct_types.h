@@ -853,8 +853,8 @@ typedef struct Vulkan_Graphics_Queue
 
     //one per swapchain image
     u32 swapchain_semaphore_count;
-    VkSemaphore* swapchain_wait_semaphore;
-    VkSemaphore* swapchain_signal_semaphore;
+    VkSemaphore* image_available_semaphore;
+    VkSemaphore* render_complete_semaphore;
 
 
     //example: if the transfer and graphics are the same then, we simple dont do the transfer queue operations

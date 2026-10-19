@@ -22,9 +22,9 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
         &renderer->allocator, sizeof(VkFence) * frames_in_flight);
     graphics_render_queue->graphics_command_buffer = allocator_alloc(
         &renderer->allocator, sizeof(Vulkan_Command_Buffer) * frames_in_flight);
-    graphics_render_queue->swapchain_signal_semaphore = allocator_alloc(
+    graphics_render_queue->render_complete_semaphore = allocator_alloc(
         &renderer->allocator, sizeof(VkSemaphore) * frames_in_flight);
-    graphics_render_queue->swapchain_wait_semaphore = allocator_alloc(
+    graphics_render_queue->image_available_semaphore = allocator_alloc(
         &renderer->allocator, sizeof(VkSemaphore) * frames_in_flight);
 
     //Transfer
@@ -53,8 +53,8 @@ Vulkan_Queue_System* vulkan_queue_system_init(Renderer* renderer)
                                        queue_system->graphics_pool, renderer);
 
 
-        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_signal_semaphore[i]);
-        binary_semaphore_create(renderer, &graphics_render_queue->swapchain_wait_semaphore[i]);
+        binary_semaphore_create(renderer, &graphics_render_queue->render_complete_semaphore[i]);
+        binary_semaphore_create(renderer, &graphics_render_queue->image_available_semaphore[i]);
     }
 
     //command buffers
@@ -184,13 +184,13 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
     //easiest way of adding the swapchain semaphores
     VkSemaphoreSubmitInfo swapchain_wait_semaphore = {0};
     swapchain_wait_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_wait_semaphore.semaphore = graphics_queue->swapchain_wait_semaphore[current_frame];
+    swapchain_wait_semaphore.semaphore = graphics_queue->image_available_semaphore[current_frame];
     swapchain_wait_semaphore.value = 0; // not needed for binary semaphores
     swapchain_wait_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     VkSemaphoreSubmitInfo swapchain_signal_semaphore = {0};
     swapchain_signal_semaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    swapchain_signal_semaphore.semaphore = graphics_queue->swapchain_signal_semaphore[current_frame];
+    swapchain_signal_semaphore.semaphore = graphics_queue->render_complete_semaphore[current_frame];
     swapchain_signal_semaphore.value = 0; // not needed for binary semaphores
     swapchain_signal_semaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 

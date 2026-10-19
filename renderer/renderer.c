@@ -303,7 +303,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         &renderer->swapchain,
         UINT64_MAX,
-        renderer->queue_system->graphics_render_queue.swapchain_wait_semaphore[renderer->current_frame],
+        renderer->queue_system->graphics_render_queue.image_available_semaphore[renderer->current_frame],
         0,
         &image_index))
     {
@@ -739,7 +739,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
         renderer,
         &renderer->swapchain,
         renderer->present_queue,
-        renderer->queue_system->graphics_render_queue.swapchain_signal_semaphore[renderer->current_frame],
+        renderer->queue_system->graphics_render_queue.render_complete_semaphore[image_index],
         image_index);
 
 
