@@ -16,6 +16,7 @@ layout(set = 2, binding = 0, scalar) readonly buffer MATERIAL_INSTANCE_BUFFER{
     Material_Instance material_instance[];
 }MATERIAL_INSTANCE[];
 
+#define MESH_PIPELINE_SKINNED  BITFLAG(0)
 #define MESH_PIPELINE_COLOR  BITFLAG(1)
 #define MESH_PIPELINE_NORMAL  BITFLAG(2)
 #define MESH_PIPELINE_EMISSIVE  BITFLAG(3)
@@ -49,15 +50,12 @@ struct Pbr{
 
 };
 
-
-
-layout(set = 2, binding = 0, scalar) readonly buffer PBR_BUFFER{
-    Pbr pbr[];
-}PBR[];
-
-layout(buffer_reference, scalar) readonly buffer PRB_Buffer{
-    Pbr pbr_data[];
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Pbr_Buffer {
+    Pbr data;
 };
+
+
+
 
 
 

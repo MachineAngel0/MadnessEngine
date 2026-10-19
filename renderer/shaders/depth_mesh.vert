@@ -25,7 +25,7 @@ void main() {
     vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
 
     //get object draw data
-    Mesh_Draw_Data cur_mesh_data = pc_mesh.mesh_draw_data_buffer.mesh_data[nonuniformEXT(instance_idx)];
+    Mesh_Renderable cur_mesh_data = pc_mesh.mesh_renderable_buffer.mesh_data[nonuniformEXT(instance_idx)];
 
     //get transform data
     mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];

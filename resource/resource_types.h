@@ -451,7 +451,7 @@ typedef enum Mesh_PBR_Flags
 typedef struct PC_General
 {
     VkDeviceAddress draw_data_buffer;
-    VkDeviceAddress material_buffer;
+    VkDeviceAddress extra_buffer;
 } PC_General;
 
 typedef struct PC_Particle

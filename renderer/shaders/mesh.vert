@@ -17,8 +17,8 @@ layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out vec3 out_world_position;
-layout(location = 4) out flat Pbr out_material;
-layout(location = 19) out mat4 out_model;
+layout(location = 4) out flat uint64_t material_offset;
+layout(location = 5) out mat4 out_model;
 
 
 void main() {
@@ -35,17 +35,18 @@ void main() {
 
 
     //get object draw data
-    Mesh_Draw_Data cur_mesh_data = pc_mesh.mesh_draw_data_buffer.mesh_data[nonuniformEXT(instance_idx)];
+    Mesh_Renderable mesh_renderable = pc_mesh.mesh_renderable_buffer.mesh_data[nonuniformEXT(instance_idx)];
     //get transform data
-    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
+    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(mesh_renderable.transform_idx)];
     out_model = model;
 
     gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
 
     //Material
     //if(material_instance.flags & PBR){};
-    Pbr mat_data = pc_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
-    out_material = mat_data;
+
+    Material_Record record = ubo.material_record_buffer.data[mesh_renderable.material_idx];
+    material_offset = record.offset;
 
 
     out_world_position = vec3(model * vec4(vertex, 1.0));

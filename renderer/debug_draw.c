@@ -282,6 +282,9 @@ void debug_system_draw(Renderer* renderer, u64 current_frame_index)
 
     Vulkan_Command_Buffer* graphics_command_buffer = NULL;
     vulkan_queue_system_get_graphics_command_buffer(renderer, &graphics_command_buffer);
+    vulkan_command_buffer_debug_label_begin_color(renderer, graphics_command_buffer, "debug draw", (float[4]){1.0,1.0,1.0,0.0});
+
+
     //draw
     vkCmdBindPipeline(graphics_command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS, debug_draw_system.debug_line_pipeline.handle);
 
@@ -325,5 +328,7 @@ void debug_system_draw(Renderer* renderer, u64 current_frame_index)
 
 
     dynamic_array_clear(debug_draw_system.debug_lines);
+
+    vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
 }

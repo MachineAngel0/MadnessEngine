@@ -65,6 +65,7 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
         //send to the gpu
         Mesh_GPU_Upload upload = {
             .mesh_id = mesh_inst->madness_mesh_index,
+            .submesh_count = mesh_inst->submesh_count,
             .submesh = &mesh_asset->submeshes[submesh_idx],
             .gpu_data = &mesh_asset->mesh_gpu_upload[submesh_idx],
             .mesh_memory_allocator = asset_system->mesh_allocator,

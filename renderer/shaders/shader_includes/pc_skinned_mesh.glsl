@@ -9,7 +9,7 @@
 
 layout(push_constant, std430) uniform PC_SKINNED_MESH{
     Skinned_Mesh_Draw_Data_Buffer skinned_draw_data_buffer;
-    PRB_Buffer material_buffer; // use a default for now
+    Pbr_Buffer material_buffer; // use a default for now
 }pc_skinned_mesh;
 
 

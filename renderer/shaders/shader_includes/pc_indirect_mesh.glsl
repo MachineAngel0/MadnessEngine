@@ -8,8 +8,9 @@
 
 
 layout(push_constant, std430) uniform PC_MESH{
-    Mesh_Draw_Data_Buffer mesh_draw_data_buffer;
-    PRB_Buffer material_buffer; // use a default for now
+    Mesh_Renderable_Buffer mesh_renderable_buffer;
+    uint padding1;
+    uint padding2;
 }pc_mesh;
 
 

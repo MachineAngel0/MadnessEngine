@@ -234,6 +234,15 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
                                                            sizeof(u64) * record->submesh_count);
         record->uv_bytes_offset = allocator_heap_alloc(renderer->heap_allocator, sizeof(u64) * record->submesh_count);
 
+        //makes indirect draw easier to use
+        record->index_count = allocator_heap_alloc(renderer->heap_allocator, sizeof(u32) * record->submesh_count);
+        record->vertex_count_offset = allocator_heap_alloc(renderer->heap_allocator,
+                                                           sizeof(u32) * record->submesh_count);
+        record->index_offset_count =
+            allocator_heap_alloc(renderer->heap_allocator, sizeof(u32) * record->submesh_count);
+
+        record->index_type = allocator_heap_alloc(renderer->heap_allocator, sizeof(Index_Type) * record->submesh_count);
+
 
         for (u32 i = 0; i < submesh_upload_data.submesh_count; i++)
         {
@@ -611,6 +620,9 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 {
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "mesh",
+                                                  (float[4]){1.0, 1.0, 0.0, 1.0});
+
     Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);
 
     for (u32 draw_idx = 0; draw_idx < render_list->draw_count; ++draw_idx)
@@ -667,7 +679,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 
         PC_General pc_data = {
             .draw_data_buffer = vulkan_buffer_get_frame_device_address(renderer, render_list->mesh_draw_data),
-            .material_buffer = 0,
+            .extra_buffer = 0,
         };
 
 
@@ -702,6 +714,9 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
             }
         }
     }
+
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 }
 
 
@@ -759,7 +774,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
 
         PC_General pc_data = {
             .draw_data_buffer = vulkan_buffer_get_frame_device_address(renderer, render_list->mesh_draw_data),
-            .material_buffer = 0,
+            .extra_buffer = 0,
         };
 
 

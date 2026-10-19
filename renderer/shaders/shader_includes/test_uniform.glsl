@@ -106,8 +106,6 @@ layout(buffer_reference, scalar) readonly buffer Material_Buffer{
 };
 
 
-
-
 layout(buffer_reference, scalar) readonly buffer Texture_Table_Buffer{
     uint texture_table[];
 };
