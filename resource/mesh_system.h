@@ -9,9 +9,10 @@ Mesh_System* mesh_system_init(Asset_System* resource_system, Memory_System* memo
 bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system);
 
 
-bool mesh_is_loaded(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, Mesh_Handle* out_handle)
+bool mesh_is_loaded(Asset_System* asset_system, Asset_Record* asset_record, Mesh_Handle* out_handle)
 {
-    MASSERT_FALSE()
+    //TODO:
+    return false;
 }
 
 
@@ -62,17 +63,18 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
             asset_system, mesh_inst->material_handles[submesh_idx])->shader_pipeline_hash;;
         mesh_inst->permutation[submesh_idx] = 0;
 
-        //send to the gpu
-        Mesh_GPU_Upload upload = {
-            .mesh_id = mesh_inst->madness_mesh_index,
-            .submesh_count = mesh_inst->submesh_count,
-            .submesh = &mesh_asset->submeshes[submesh_idx],
-            .gpu_data = &mesh_asset->mesh_gpu_upload[submesh_idx],
-            .mesh_memory_allocator = asset_system->mesh_allocator,
-
-        };
-        ring_enqueue(mesh_system->mesh_ring_queue, &upload);
     }
+
+    //send to the gpu
+    Mesh_GPU_Upload upload = {
+        .mesh_id = mesh_inst->madness_mesh_index,
+        .submesh_count = mesh_inst->submesh_count,
+        .submesh = mesh_asset->submeshes,
+        .gpu_data = mesh_asset->mesh_gpu_upload,
+        .mesh_memory_allocator = asset_system->mesh_allocator,
+    };
+    ring_enqueue(mesh_system->mesh_ring_queue, &upload);
+
 
     return true;
 }

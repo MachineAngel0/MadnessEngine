@@ -456,8 +456,8 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, scratch.allocator);
 
-    Asset_Record* out_meta_data = allocator_alloc(scratch.allocator, sizeof(Asset_Record));
-    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
+    Asset_Record* asset_record = allocator_alloc(scratch.allocator, sizeof(Asset_Record));
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, asset_record))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         *out_handle = (Mesh_Handle){0, 0};
@@ -465,6 +465,7 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     }
 
     //TODO: has asset already been loaded
+    // mesh_is_loaded(asset_system, asset_record, out_handle);
 
 
     //steps:
