@@ -232,7 +232,7 @@ target_sources(MadnessEngine_renderer PRIVATE)
 #option ( TRACY_ON_DEMAND " " ON)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy-0.14.1)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib/glfw/glfw-master)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/glfw-3.5.1)
 
 if (WIN32)
     SET(MADNESS_WIN_LIBS

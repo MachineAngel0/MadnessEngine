@@ -8,7 +8,7 @@ write my own in Vulkan.
 
 ### Features:
 
-- Platform Layer - Windows and Linux
+- Platform Layer - Windows and Linux (No plans for MacOS)
 - Handwritten Data Structures
     - DSA Types: Array, Dynamic Arrays, Linear/Stack/Pool/Free-List Allocators, Linked List, Binary Tree, Stack, Ring
       Queue. Strings, String Builders, C_Strings
@@ -17,28 +17,28 @@ write my own in Vulkan.
       opportunity to learn how these things are created in the first place. It also means there are no hidden/unknown
       allocations happening like might happen with a std::vector<> resize.
 - Memory System (w/Custom Allocators)
-- Unit Tests and Custom Loggers/Asserts.
-- Asset System (and Engine specific Format): Meshes, Skinned Meshes, Sprites, UI Sprites, Particles
-- Custom Immediate Mode UI
-- Runtime Reflection System and Reflection Registry
+- Unit Tests
+- Custom Logging and Asserts.
+- Asset System (and Engine specific Formats): Meshes, Skinned Meshes, Sprites, UI Sprites, Particles, Materials, Textures
+- Custom Immediate Mode UI For Gameplay
+- Runtime Reflection System
 - GLTF File Loading (using cgltf)
 - Tracy Profiler
+- ImGui For the Editor
 - Renderer
-    - GPU Driven Rendering
+    - GPU Driven Rendering (Indirect Draw, Instancing, SSBO's, vertex pulling)
     - Bling Phong Shading
-    - Transfer Queue Mesh and Texture Data Upload
+    - Asyc Transfer Queue Mesh and Texture Data Upload
     - Mesh/Skeletal Mesh Rendering
-    - Material System and Material Batching
+    - Material System
     - Particle Rendering
     - UI Rendering
     - Sprite Rendering
-    - Pipeline Cache
+    - Pipeline Caching
 - Editor
     - Engine stats (ms timing per frame)
-    - Object Transforms editing
-    - Texture Viewer
-    - Particle Editor
-    - Scene and Resource Loader
+    - Asset Editor (Meshes, Particles, Mateiral, Texture)
+    - Scene View and Editor
 
 ### Current Todo's:
 
@@ -46,7 +46,7 @@ write my own in Vulkan.
     - Extend Animation API
     - Level File Format
 - Multithreading
-    - multi-thread the asset system
+    - multi-thread and make asset loading async
     - multi-thread the renderer
     - multi-thread the particle simulation (or move to compute shaders)
 - Renderer
@@ -54,16 +54,20 @@ write my own in Vulkan.
     - Shadows
     - Instancing
     - Compute Shaders
+      - skinning
+      - potentially particle system
     - Culling
 - Work on the Linux Platform Layer
 - Editor
-    - Level Editor
-    - Asset Editor
+    - Scene Editor
+      - 3d widget for transformations
+      - Add and Delete Objects
+      - Per Object Material Overrides
+      - Scene Serialization
 - Game
-  - File Format for Abilties
-  - Integrate Asset Handles for game to renderer/resource manager communication
+  - File Format for Abilties (I plan to have a lot of unique abilities probably 500+)
   - Expand enemy AI functionality
-  - Game specific UI System (Current UI system is simple and only meant for the editor)
+  - Expand UI System to Handle Custom Mateirals
 
 ### Extra Info:
 
