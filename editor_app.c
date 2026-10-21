@@ -145,7 +145,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
 
 
-        asset_system_update_and_create_render_packet(application_core->asset_system);
+        asset_system_generate_render_packet(application_core->asset_system);
 
 
         //render

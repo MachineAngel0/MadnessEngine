@@ -122,7 +122,7 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
     {
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; //discard back facing triangles
     }
-    // rasterizer.frontFace = VK_FRONT_FALlCE_CLOCKWISE;
+    // rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     // NOTE: it seems everything just gets flipped for some reason
     rasterizer.depthClampEnable = VK_FALSE; //useful for shadow maps, turn it on but need gpu features

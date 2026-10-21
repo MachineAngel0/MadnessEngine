@@ -99,7 +99,7 @@ typedef struct Particle_Renderable
 } Particle_Renderable;
 
 
-typedef struct Vulkan_Mesh_GPU_Renderable
+typedef struct Mesh_GPU_Renderable
 {
     u32 material_idx;
     u32 transform_idx;
@@ -111,19 +111,48 @@ typedef struct Vulkan_Mesh_GPU_Renderable
     u32 uv_offset;
     u32 tangent_offset;
 
-    //maybe, we can just switch this off in the shader if we want
-    u32 joint_idx;
-    u32 weight_idx;
-    u32 skinned_matrix_idx;
+    u32 padding0;
 } Mesh_GPU_Renderable;
 
 
-typedef enum Renderable_Type
+typedef struct Skinned_Mesh_GPU_Renderable
 {
-    Renderable_Type_Mesh,
-    Renderable_Type_Particle,
-} Renderable_Type;
+    u32 material_idx;
+    u32 transform_idx;
 
+    // u32 index_count;
+    // u32 index_offset;
+    // u32 vertex_offset;
+    u32 normal_offset;
+    u32 uv_offset;
+    u32 tangent_offset;
+
+    u32 joint_idx;
+    u32 weight_idx;
+    u32 vertex_offset; // for finding the correct skinned index
+    u32 skinned_matrix_idx; // when we get compute skinned
+
+} Skinned_GPU_Renderable;
+
+
+
+typedef struct Vulkan_Skinned_Renderable
+{
+    // Shader_Sort_Key shader_sort_key; // TODO: for another time
+    Shader_Pipeline_Hash pipeline_hash;
+    Permutation_Mask permutation;
+    u32 mesh_id;
+
+    u32 render_pass_masks;
+
+    bool visible;
+
+
+    u32 index_count;
+    u32 index_offset;
+    u32 vertex_offset;
+    Skinned_GPU_Renderable skinned_render_item;
+} Vulkan_Skinned_Renderable;
 
 typedef struct Vulkav_Mesh_Renderable
 {
@@ -135,13 +164,36 @@ typedef struct Vulkav_Mesh_Renderable
     u32 render_pass_masks;
 
     bool visible;
-    // bool skinned; ideally should be part of permutation
 
     u32 index_count;
     u32 index_offset;
     u32 vertex_offset;
     Mesh_GPU_Renderable mesh_render_item;
 } Vulkan_Mesh_Renderable;
+
+
+int vulkan_skinned_mesh_sort_key(const void* render_item1, const void* render_item2)
+{
+    Vulkan_Skinned_Renderable* p1 = (Vulkan_Mesh_Renderable*)render_item1;
+    Vulkan_Mesh_Renderable* p2 = (Vulkan_Mesh_Renderable*)render_item2;
+
+    if (p1->pipeline_hash != p2->pipeline_hash)
+    {
+        return p1->pipeline_hash < p2->pipeline_hash ? -1 : 1;
+    }
+
+    if (p1->permutation != p2->permutation)
+    {
+        return p1->permutation < p2->permutation ? -1 : 1;
+    }
+
+    if (p1->mesh_id != p2->mesh_id)
+    {
+        return p1->mesh_id < p2->mesh_id ? -1 : 1;
+    }
+
+    return 0;
+}
 
 int vulkan_mesh_sort_key(const void* render_item1, const void* render_item2)
 {
@@ -183,7 +235,7 @@ typedef struct Vulkan_Mesh_Render_List
     //TODO: you can condense these all down to one giant buffer with starting offsets for each renderpass
     Vulkan_Mesh_Renderable* mesh_renderable;
     u32 mesh_renderable_count;
-    u32 mesh_renderable_count_max;
+    // u32 mesh_renderable_count_max;
 
     Buffer_Frame_Handle indirect_buffer;
     Buffer_Frame_Handle mesh_draw_data;
@@ -193,8 +245,18 @@ typedef struct Vulkan_Mesh_Render_List
 } Vulkan_Mesh_Render_List;
 
 
+typedef struct Vulkan_Skinned_Mesh_Render_List
+{
+    Buffer_Frame_Handle skinned_indirect_buffer;
+    Buffer_Frame_Handle skinned_draw_data;
 
 
+    Vulkan_Skinned_Renderable* skinned_mesh_renderable;
+    u32 skinned_mesh_renderable_count;
+    // u32 skinned_mesh_renderable_count_max;
+
+    u32 draw_count;
+} Vulkan_Skinned_Mesh_Render_List;
 
 
 //vulkan render items[n]

@@ -20,20 +20,20 @@ void main() {
     uint instance_idx = gl_DrawIDARB;
     //    uint instance_idx = gl_InstanceIndex; // at some point this needs to be used for the mesh data
 
-    Skinned_Mesh_Draw_Data cur_mesh_data = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
+    Skinned_Renderable mesh_renderable = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
 
-    uint local_vertex_idx = gl_VertexIndex -  cur_mesh_data.vertex_offset;
+    uint local_vertex_idx = gl_VertexIndex - mesh_renderable.vertex_offset;
 
     //shoult not be draw idx
-    vec4 joints = ubo.joint_buffer.joint_data[nonuniformEXT(cur_mesh_data.joint_idx + local_vertex_idx)];
-    vec4 weights = ubo.weight_buffer.weights_data[nonuniformEXT(cur_mesh_data.weight_idx + local_vertex_idx)];
+    vec4 joints = ubo.joint_buffer.joint_data[nonuniformEXT(mesh_renderable.joint_idx + local_vertex_idx)];
+    vec4 weights = ubo.weight_buffer.weights_data[nonuniformEXT(mesh_renderable.weight_idx + local_vertex_idx)];
 
     //need to index into the correct buffer
     mat4 skin_matrix =
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx +uint(joints.x)] * weights.x +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx +uint(joints.y)] * weights.y +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx +uint(joints.z)] * weights.z +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx +uint(joints.w)] * weights.w;
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.x)] * weights.x +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.y)] * weights.y +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.z)] * weights.z +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.w)] * weights.w;
 
 
     //global mesh data
@@ -41,7 +41,7 @@ void main() {
 
 
     //get transform data
-    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
+    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(mesh_renderable.transform_idx)];
 
     gl_Position = ubo.proj * ubo.view * model * skin_matrix * vec4(vertex, 1.0);
 

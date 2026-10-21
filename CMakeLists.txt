@@ -110,7 +110,7 @@ include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/z_assets/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/MadnessPulse/)
 include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/Tetris/)
 
-include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy)
+include_directories(MadnessEngine ${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy-0.14.1)
 
 
 add_executable(Madness_Reflection
@@ -196,22 +196,22 @@ if (WIN32)
             lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_vulkan.cpp)
 endif ()
 if (UNIX)
-add_library(imgui_c STATIC
-        # Dear ImGui core
-        lib/imgui_lib/imgui/imgui.cpp
-        lib/imgui_lib/imgui/imgui_draw.cpp
-        lib/imgui_lib/imgui/imgui_tables.cpp
-        lib/imgui_lib/imgui/imgui_widgets.cpp
-        lib/imgui_lib/imgui/imgui_demo.cpp
+    add_library(imgui_c STATIC
+            # Dear ImGui core
+            lib/imgui_lib/imgui/imgui.cpp
+            lib/imgui_lib/imgui/imgui_draw.cpp
+            lib/imgui_lib/imgui/imgui_tables.cpp
+            lib/imgui_lib/imgui/imgui_widgets.cpp
+            lib/imgui_lib/imgui/imgui_demo.cpp
 
-        # Original platform and renderer backends
-        lib/imgui_lib/imgui/backends/imgui_impl_glfw.cpp
-        lib/imgui_lib/imgui/backends/imgui_impl_vulkan.cpp
+            # Original platform and renderer backends
+            lib/imgui_lib/imgui/backends/imgui_impl_glfw.cpp
+            lib/imgui_lib/imgui/backends/imgui_impl_vulkan.cpp
 
-        # Generated C bindings
-        lib/imgui_lib/dear_bindings-main/generated/dcimgui.cpp
-        lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_glfw.cpp
-        lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_vulkan.cpp)
+            # Generated C bindings
+            lib/imgui_lib/dear_bindings-main/generated/dcimgui.cpp
+            lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_glfw.cpp
+            lib/imgui_lib/dear_bindings-main/generated/backends/dcimgui_impl_vulkan.cpp)
 endif ()
 
 set_target_properties(imgui_c PROPERTIES
@@ -230,41 +230,41 @@ target_sources(MadnessEngine_renderer PRIVATE)
 #NOTE: these are set within clions toolchain gui
 #option ( TRACY_ENABLE " " ON )
 #option ( TRACY_ON_DEMAND " " ON)
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy-0.14.1)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/glfw/glfw-master)
 
 if (WIN32)
-SET(MADNESS_WIN_LIBS
-Vulkan::Vulkan
-Tracy::TracyClient
-glfw
-imgui_c
-Xinput
-winmm
-ole32
-bcrypt
-)
-foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
-target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})
-endforeach ()
+    SET(MADNESS_WIN_LIBS
+            Vulkan::Vulkan
+            Tracy::TracyClient
+            glfw
+            imgui_c
+            Xinput
+            winmm
+            ole32
+            bcrypt
+    )
+    foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+        target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})
+    endforeach ()
 endif ()
 if (UNIX)
-SET(MADNESS_UNIX_LIBS
-Vulkan::Vulkan
-Tracy::TracyClient
-glfw
-imgui_c
-X11
-X11-xcb
-xcb
-m #linux math library
-pthread # required for tracy
-dl # required for tracy
-)
-foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
-target_link_libraries(${tgt} PRIVATE ${MADNESS_UNIX_LIBS})
-endforeach ()
+    SET(MADNESS_UNIX_LIBS
+            Vulkan::Vulkan
+            Tracy::TracyClient
+            glfw
+            imgui_c
+            X11
+            X11-xcb
+            xcb
+            m #linux math library
+            pthread # required for tracy
+            dl # required for tracy
+    )
+    foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
+        target_link_libraries(${tgt} PRIVATE ${MADNESS_UNIX_LIBS})
+    endforeach ()
 endif ()
 
 
@@ -280,10 +280,10 @@ endif ()
 #equivalent of above
 
 foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
-target_compile_definitions(${tgt} PRIVATE
-$<$<CONFIG:Debug>:DEBUG_BUILD>
-$<$<CONFIG:Release>:RELEASE_BUILD>
-)
+    target_compile_definitions(${tgt} PRIVATE
+            $<$<CONFIG:Debug>:DEBUG_BUILD>
+            $<$<CONFIG:Release>:RELEASE_BUILD>
+    )
 endforeach ()
 
 set(CMAKE_CXX_FLAGS_PROFILING "${CMAKE_CXX_FLAGS_RELEASE} -PROFILE" CACHE STRING "")
@@ -300,9 +300,8 @@ set(CMAKE_C_FLAGS_PROFILING "${CMAKE_C_FLAGS_RELEASE} -PROFILE" CACHE STRING "")
 #Here because ill get .dll missing errors
 # Force static linking approach for MinGW and only MinGW
 if (MINGW)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
 endif ()
-
 
 
 #i have this tied to left-ctrl+1, which runs the reflection build
@@ -313,3 +312,4 @@ add_custom_target(generate_reflection
 )
 
 add_dependencies(MadnessPulse generate_reflection)]]
+

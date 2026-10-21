@@ -12,10 +12,10 @@
 TracyCFrameMark
 
 #define PROFILE_ZONE(name) \
-TracyCZoneN(ctx_##name, #name, true)
+TracyCZoneN(ctx_##name, #name, true);
 
 #define PROFILE_ZONE_END(name) \
-TracyCZoneEnd(ctx_##name)
+TracyCZoneEnd(ctx_##name);
 
 //what tracy looks like without the extra wrapper
 // TracyCZoneN(ctx, name, true)

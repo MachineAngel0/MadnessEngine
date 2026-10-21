@@ -28,16 +28,16 @@ void main() {
 //    uint instance_idx = gl_InstanceIndex;
 
     //global mesh data
-    vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(vertex_idx)];
-    out_normal = ubo.normal_buffer.normal_data[nonuniformEXT(vertex_idx)];
-    out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(vertex_idx)];
-    out_tangent = ubo.tangent_buffer.tangent_data[nonuniformEXT(vertex_idx)];
+    vec3 vertex = ubo.vertex_buffer.vertex_data[vertex_idx];
+    out_normal = ubo.normal_buffer.normal_data[vertex_idx];
+    out_uv = ubo.uv_buffer.uv_data[vertex_idx];
+    out_tangent = ubo.tangent_buffer.tangent_data[vertex_idx];
 
 
     //get object draw data
-    Mesh_Renderable mesh_renderable = pc_mesh.mesh_renderable_buffer.mesh_data[nonuniformEXT(instance_idx)];
+    Mesh_Renderable mesh_renderable = pc_mesh.mesh_renderable_buffer.mesh_data[instance_idx];
     //get transform data
-    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(mesh_renderable.transform_idx)];
+    mat4 model = ubo.transform_buffer.transform_data[mesh_renderable.transform_idx];
     out_model = model;
 
     gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);

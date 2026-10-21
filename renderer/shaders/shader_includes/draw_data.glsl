@@ -10,10 +10,7 @@ struct Mesh_Renderable{
     uint normal_offset;
     uint uv_offset;
     uint tangent_offset;
-
-    uint joint_idx;
-    uint weight_idx;
-    uint skinned_matrix_idx;
+    uint padding0;
 };
 
 
@@ -24,17 +21,25 @@ layout(buffer_reference, scalar) readonly buffer Mesh_Renderable_Buffer{
 };
 
 
-struct Skinned_Mesh_Draw_Data{
-    uint transform_idx;
+struct Skinned_Renderable{
     uint material_idx;
+    uint transform_idx;
+
+    uint normal_offset;
+    uint uv_offset;
+    uint tangent_offset;
+
     uint joint_idx;
     uint weight_idx;
-    uint skinned_matrix_idx;
     uint vertex_offset;
+    uint skinned_matrix_idx;
+
 };
 
-layout(buffer_reference, scalar) readonly buffer Skinned_Mesh_Draw_Data_Buffer{
-    Skinned_Mesh_Draw_Data skinned_draw_data[];
+
+
+layout(buffer_reference, scalar) readonly buffer Skinned_Renderable_Buffer{
+    Skinned_Renderable skinned_draw_data[];
 };
 
 

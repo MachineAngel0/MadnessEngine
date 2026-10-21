@@ -764,19 +764,14 @@ typedef struct Madness_Mesh_Instance{
 typedef struct Madness_Mesh
 {
     u32 mesh_count;
+    MADNESS_UUID mesh_uuid; // just a single value
     Madness_SubMesh* mesh_data;
     MADNESS_UUID* material_uuid;
     Material_Handle* material_handles;
     //TODO:
-    // MADNESS_UUID mesh_uuid; // just a single value
     // Permutation_Mask* permutation; // set to a default from an dcc, but manually changed by us
 
 } Madness_Mesh;
-
-
-
-
-
 
 
 
@@ -801,53 +796,45 @@ typedef struct Madness_Animation
     bool looping;
 } Madness_Animation;
 
-typedef struct Madness_Skinned_Submesh_Instance
-{
-    //for the renderer
-    u32 skinned_id;
-    Material_Handle material_handle;
-    Transform_Handle parent_transform_handle;
-} Madness_Skinned_Submesh_Instance;
-
-typedef struct Madness_Skinned_Mesh_Instance
-{
-    u32 mesh_count;
-    u32 start_submesh_index; // guaranteed to be continous and have all the data we need when accessed
-
-    u32 mesh_asset_index;
-    Transform_Handle transform_handle;
-
-    Animation_Handle animation_handle;
-    u32 skinned_matrix_count_offset;
-} Madness_Skinned_Mesh_Instance;
 
 typedef struct Madness_Skinned_SubMesh
 {
     u64 joint_bytes;
     u64 weight_bytes;
-
-
-    //runtime data
-    u64 joint_offset_vec4;
-    u64 joint_offset_bytes;
-
-    u64 weight_offset_vec4;
-    u64 weight_offset_bytes;
 } Madness_Skinned_SubMesh;
-
 
 
 typedef struct Madness_Skinned_Mesh
 {
     u32 mesh_count;
+    MADNESS_UUID skinned_mesh_uuid;
     Madness_SubMesh* mesh_data;
-    MADNESS_UUID* material_instance;
+    MADNESS_UUID* material_uuids;
     Material_Handle* material_handles;
     // Madness_Mesh madness_mesh;
     //
     Madness_Skinned_SubMesh* skinned_mesh_data;
     GLTF_Animation_Data* animation_data;
 } Madness_Skinned_Mesh;
+
+
+typedef struct Skinned_Mesh_Instance
+{
+    u32 madness_mesh_index;
+
+    u32 submesh_count;
+    Transform_Handle transform_handle;
+    Material_Handle* material_handles; // overrides for each submesh
+    Shader_Pipeline_Hash* pipeline_hash;
+    Permutation_Mask* permutation;
+
+    Animation_Handle animation_handle;
+    u32 skinned_matrix_count_offset;
+
+    // Shader_Renderpass_Type* renderpass_mask:  TODO:
+} Skinned_Mesh_Instance;
+
+
 
 
 // for loading in
@@ -874,7 +861,6 @@ typedef struct Mesh_GPU_Upload
     Madness_SubMesh* submesh; // reference to an array
     Madness_Mesh_GPU_Data* gpu_data; // data you need to deallocate when done uploading
 
-
     Heap_Allocator* mesh_memory_allocator; // ref
 } Mesh_GPU_Upload;
 
@@ -893,7 +879,6 @@ typedef struct Skinned_Mesh_GPU_Upload
 } Skinned_Mesh_GPU_Upload;
 
 
-
 typedef struct Madness_Mesh_Runtime
 {
     u32 version;
@@ -905,19 +890,21 @@ typedef struct Madness_Mesh_Runtime
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
 } Madness_Mesh_Runtime;
 
-typedef struct Madness_SkMesh_Runtime
+typedef struct Madness_Skinned_Mesh_Runtime
 {
     u32 version;
     u32 mesh_count;
+
+    MADNESS_UUID skinned_mesh_uuid;
+    MADNESS_UUID* material_uuid;
+
     Madness_SubMesh* submeshes;
     Madness_Mesh_GPU_Data* mesh_gpu_upload;
-    MADNESS_UUID* material_uuid;
-    MADNESS_UUID skinned_mesh_uuid;
 
     Madness_Skinned_SubMesh* skinned_submeshes;
     Madness_Skinned_GPU_Data* skmesh_gpu_upload;
     GLTF_Animation_Data* animation_data;
-} Madness_SkMesh_Runtime;
+} Madness_Skinned_Mesh_Runtime;
 
 
 ///////////////// Systems  //////////////////////
@@ -1058,20 +1045,15 @@ typedef struct Mesh_System
     Madness_Skinned_Mesh madness_skinned_mesh[MAX_SKINNED_MESH_COUNT];
     u32 madness_sk_mesh_count;
 
-    Madness_Skinned_Mesh_Instance skinned_mesh_instance[MAX_MESH_COUNT];
+    Skinned_Mesh_Instance skinned_mesh_instance[MAX_SKINNED_MESH_COUNT];
     u32 skinned_mesh_instance_count;
 
-    Madness_Skinned_Submesh_Instance skinned_submesh[MAX_MESH_COUNT];
-    u32 skinned_submesh_count;
 
     // data*, offset, byte_size ->for all the types
     RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
 
-    //TODO:
-    //anything that couldn't be loaded in this frame
-    RING_QUEUE_TYPE(const char*)* load_queue;
 } Mesh_System;
 
 
@@ -1181,7 +1163,7 @@ typedef struct Render_Packet_3D
     u32 mesh_instances_count;
 
 
-    Madness_Skinned_Mesh_Instance* skinned_instances;
+    Skinned_Mesh_Instance* skinned_instances;
     u32 skinned_instances_count;
 
 

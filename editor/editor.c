@@ -660,6 +660,7 @@ void editor_ui_scene(Editor* editor)
         }
     }
     ImGui_End();
+
 }
 
 
@@ -1026,6 +1027,7 @@ void editor_render_view(Editor* editor)
     {
         ImGui_Checkbox("DEBUG AXIS", &renderer->draw_debug_axis);
 
+        ImGui_Checkbox("Should Use Wireframe", &renderer->wireframe_mode);
         ImGui_ComboChar("Render Mode", &renderer->mode, render_mode_enum_string,
                                   ARRAY_SIZE(render_mode_enum_string));
         ImGui_Checkbox("Should Cull", &renderer->should_cull);

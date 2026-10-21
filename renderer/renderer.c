@@ -167,7 +167,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     renderer->pipeline_cache = vulkan_pipeline_cache_initialize(renderer);
 
     vulkan_frame_data_init(renderer);
-    vulkan_render_list_init(renderer, &renderer->mesh_render_list);
+    vulkan_render_list_init(renderer, &renderer->mesh_render_list, &renderer->skinned_render_list);
 
 
     // Texture System
@@ -276,6 +276,7 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     PROFILE_ZONE(renderer_update)
 
     MASSERT(renderer);
+
 
     //NOTE: only duplicate resources which are uploaded from the cpu to the gpu, not anything that lives on the gpu like textures
     // this includes, command buffers, sync objects, and cpu side uniform buffers
@@ -424,7 +425,10 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     // We are ready to start preparing our draw data
-    mesh_renderer_construct_draw_lists(renderer, render_packet, graphics_command_buffer, &renderer->mesh_render_list);
+    vulkan_mesh_system_construct_draw_lists(renderer, render_packet, graphics_command_buffer,
+                                            &renderer->mesh_render_list);
+    vulkan_mesh_system_construct_skinned_draw_lists(renderer, render_packet, graphics_command_buffer,
+                                                    &renderer->skinned_render_list);
 
 
     particle_renderer_upload_data_draw(renderer, renderer->particle_render,
@@ -503,16 +507,18 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //draw geometry into depth buffer
-    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
-                                             renderer->shader_system->shader_batch,
-                                             renderer->shader_system->shader_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_mesh_pipeline);*/
+    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
+                                              graphics_command_buffer,
+                                              &renderer->predepth_mesh_pipeline,
+                                              &renderer->mesh_render_list);
 
-    //TODO:
-    /*mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
-                                             renderer->shader_system->skinned_batch,
-                                             renderer->shader_system->skinned_batch_count,
-                                             graphics_command_buffer, &renderer->predepth_skinned_mesh_pipeline);*/
+    mesh_renderer_skinned_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
+                                              graphics_command_buffer,
+                                              &renderer->predepth_skinned_mesh_pipeline,
+                                              &renderer->skinned_render_list);
+
+
+
 
     vkCmdEndRendering(graphics_command_buffer->handle);
     vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
@@ -694,9 +700,11 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     // SET 2 NOTHING RN:
 
 
-
     mesh_renderer_batch_draw(renderer, renderer->mesh_system,
-                              graphics_command_buffer, &renderer->mesh_render_list);
+                             graphics_command_buffer, &renderer->mesh_render_list);
+
+    mesh_renderer_skinned_batch_draw(renderer, renderer->mesh_system,
+                                     graphics_command_buffer, &renderer->skinned_render_list);
 
     /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->shader_batch, renderer->shader_system->shader_batch_count,
@@ -705,7 +713,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     /*mesh_renderer_batch_draw(renderer, renderer->mesh_system,
                              renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
                              graphics_command_buffer);*/
-
 
 
     particle_renderer_batch_draw(renderer, renderer->particle_render, graphics_command_buffer);

@@ -17,51 +17,56 @@ layout(location = 0) out vec3 out_normal;
 layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out vec3 out_world_position;
-layout(location = 4) out Pbr material;
-
+layout(location = 4) out flat uint64_t material_offset;
+layout(location = 5) out mat4 out_model;
 
 void main() {
 
 
-    uint draw_idx = gl_VertexIndex;
+    uint vertex_index = gl_VertexIndex;
     uint instance_idx = gl_DrawIDARB;
     //    uint instance_idx = gl_InstanceIndex; // at some point this needs to be used for the mesh data
 
-    Skinned_Mesh_Draw_Data cur_mesh_data = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
+    Skinned_Renderable mesh_renderable = pc_skinned_mesh.skinned_draw_data_buffer.skinned_draw_data[instance_idx];
 
-    uint local_vertex_idx = gl_VertexIndex -  cur_mesh_data.vertex_offset;
+    uint local_vertex_idx = gl_VertexIndex -  mesh_renderable.vertex_offset;
     //    cur_mesh_data.vertex_offset;
 
 
     //shoult not be draw idx
-    vec4 joints = ubo.joint_buffer.joint_data[nonuniformEXT(cur_mesh_data.joint_idx + local_vertex_idx)];
-    vec4 weights = ubo.weight_buffer.weights_data[nonuniformEXT(cur_mesh_data.weight_idx + local_vertex_idx)];
+    vec4 joints = ubo.joint_buffer.joint_data[(mesh_renderable.joint_idx + local_vertex_idx)];
+    vec4 weights = ubo.weight_buffer.weights_data[(mesh_renderable.weight_idx + local_vertex_idx)];
+//    vec4 joints = ubo.joint_buffer.joint_data[cur_mesh_data.joint_idx];
+//    vec4 weights = ubo.weight_buffer.weights_data[cur_mesh_data.weight_idx];
 
 
     //need to index into the correct buffer
     mat4 skin_matrix =
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.x)] * weights.x +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.y)] * weights.y +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.z)] * weights.z +
-    ubo.skinned_matrix_buffer.skinned_matrix_data[cur_mesh_data.skinned_matrix_idx + uint(joints.w)] * weights.w;
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.x)] * weights.x +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.y)] * weights.y +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.z)] * weights.z +
+    ubo.skinned_matrix_buffer.skinned_matrix_data[mesh_renderable.skinned_matrix_idx + uint(joints.w)] * weights.w;
 
 
     //global mesh data
-    vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
+    vec3 vertex = ubo.vertex_buffer.vertex_data[vertex_index];
 
-    out_normal = mat3(skin_matrix) * ubo.normal_buffer.normal_data[nonuniformEXT(draw_idx)];
-    out_uv = ubo.uv_buffer.uv_data[nonuniformEXT(draw_idx)];
-    out_tangent = /*mat3(skin_matrix) * */ubo.tangent_buffer.tangent_data[nonuniformEXT(draw_idx)];
+    out_normal = mat3(skin_matrix) * ubo.normal_buffer.normal_data[vertex_index];
+    out_uv = ubo.uv_buffer.uv_data[vertex_index];
+    out_tangent = /*mat3(skin_matrix) * */ubo.tangent_buffer.tangent_data[vertex_index];
 
 
     //get transform data
-    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
+    mat4 model = ubo.transform_buffer.transform_data[mesh_renderable.transform_idx];
+    out_model = model;
+
 
     gl_Position = ubo.proj * ubo.view * model * skin_matrix * vec4(vertex, 1.0);
 
     //Material
-    Pbr mat_data = pc_skinned_mesh.material_buffer.pbr_data[nonuniformEXT(cur_mesh_data.material_idx)];
-    material = mat_data;
+    Material_Record record = ubo.material_record_buffer.data[mesh_renderable.material_idx];
+    material_offset = record.offset;
+
 
 
 

@@ -112,7 +112,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
 
         renderer_plugin->ui_end(renderer_plugin->madness_ui, application_core->asset_system);
-        asset_system_update_and_create_render_packet(application_core->asset_system);
+        asset_system_generate_render_packet(application_core->asset_system);
 
 
         //Render

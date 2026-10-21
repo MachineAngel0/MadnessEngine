@@ -26,9 +26,9 @@ void input_shutdown(void)
 
 void input_update(void)
 {
-    PROFILE_ZONE(input_update)
+    PROFILE_ZONE(input_update);
 
-    MASSERT(input_system);
+    // MASSERT(input_system)
     // Copy current states to previous states.
     memcpy(&input_system->keyboard_previous, &input_system->keyboard_current, sizeof(keyboard_state));
     memcpy(&input_system->mouse_previous, &input_system->mouse_current, sizeof(mouse_state));
@@ -37,7 +37,7 @@ void input_update(void)
     //and only check the previous frame for how the wheel moved
     input_system->mouse_current.mouse_wheel_delta = 0;
 
-    PROFILE_ZONE_END(input_update)
+    PROFILE_ZONE_END(input_update);
 
 }
 

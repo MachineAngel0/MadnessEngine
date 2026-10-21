@@ -166,7 +166,7 @@ void platform_shutdown(Platform_State* plat_state)
 
 bool platform_pump_messages(Platform_State* plat_state)
 {
-    PROFILE_ZONE(WIN32_PLATFORM)
+    PROFILE_ZONE(WIN32_PLATFORM);
 
 
     MSG message;
@@ -176,7 +176,7 @@ bool platform_pump_messages(Platform_State* plat_state)
         DispatchMessageA(&message);
     }
 
-    PROFILE_ZONE_END(WIN32_PLATFORM)
+    PROFILE_ZONE_END(WIN32_PLATFORM);
 
     return true;
 }

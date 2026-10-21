@@ -13,13 +13,16 @@ layout(location = 0) in vec3 in_normal;
 layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_tex;
 layout(location = 3) in vec3 in_world_position;
-layout(location = 4) in flat Pbr material;
+layout(location = 4) in flat uint64_t material_offset;
+layout(location = 5) in mat4 in_model;
 
 
 //look into subpasses/renderpasses for more/different out values
 layout(location = 0) out vec4 outColor;
 
 void main() {
+
+    Pbr material = Pbr_Buffer(uint64_t(ubo.material_buffer) + material_offset).data;
 
 
     // properties

@@ -56,7 +56,7 @@ Asset_System* asset_system_init(Memory_System* memory_system, Reflection_Registr
     asset_system->scene = scene_init(memory_system);
 
     asset_system->shader_system = memory_system_alloc(memory_system, sizeof(Shader_System),
-                                                    MEMORY_SUBSYSTEM_RESOURCE);
+                                                      MEMORY_SUBSYSTEM_RESOURCE);
     shader_system_init(asset_system->shader_system, asset_system, memory_system);
 
     asset_system->material_system = memory_system_alloc(memory_system, sizeof(Material_System2),
@@ -101,13 +101,14 @@ bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_
 }
 
 
-bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
+bool asset_system_generate_render_packet(Asset_System* asset_system)
 {
     PROFILE_ZONE(asset_system_update_and_create_render_packet)
 
     allocator_clear(asset_system->frame_allocator);
     render_packet_clear(asset_system->render_packet);
     asset_system->render_packet->mesh_queue = asset_system->mesh_system->mesh_ring_queue;
+    asset_system->render_packet->skinned_mesh_queue = asset_system->mesh_system->skinned_mesh_ring_queue;
     asset_system->render_packet->texture_upload_queue = asset_system->texture_system->texture_gpu_upload_queue;
 
     sprite_system_generate_render_packet(asset_system->sprite_system,
@@ -137,7 +138,6 @@ bool asset_system_update_and_create_render_packet(Asset_System* asset_system)
         mesh_instance;
     asset_system->render_packet->draw_3d_data_packet.mesh_instances_count = asset_system->mesh_system->
         mesh_instance_count;
-
 
 
     asset_system->render_packet->draw_3d_data_packet.skinned_instances = asset_system->mesh_system->
@@ -503,20 +503,20 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     return true;
 }
 
-Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path)
+bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path, Skinned_Mesh_Handle* out_handle)
 {
     PROFILE_ZONE(asset_load_skmesh)
+    PROFILE_ZONE(out_handle)
 
-
-    Skinned_Mesh_Handle out_handle = (Skinned_Mesh_Handle){0};
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
 
-    Asset_Record* out_meta_data = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));;
-    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, out_meta_data))
+    Asset_Record* asset_record = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));;
+    if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, asset_record))
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
-        return out_handle;
+        *out_handle = (Skinned_Mesh_Handle){0};
+        return false;
     }
 
     //TODO: check if has asset already been loaded
@@ -530,11 +530,18 @@ Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* en
         // return false;
     }
 
-    Madness_SkMesh_Runtime runtime_mesh = {0};
+    Madness_Skinned_Mesh_Runtime runtime_mesh = {0};
     asset_skmesh_deserialize(&runtime_mesh, fptr, asset_system->heap_allocator);
 
-    mesh_system_load_skinned_mesh(asset_system, &runtime_mesh, out_meta_data->hash, out_meta_data->engine_path,
-                                  out_meta_data->uuid);
+    Material_Handle* material_handles = allocator_heap_alloc(asset_system->heap_allocator,
+                                                             sizeof(Material_Handle) * runtime_mesh.mesh_count);
+    for (u32 i = 0; i < runtime_mesh.mesh_count; i++)
+    {
+        asset_load_material_uuid(asset_system, runtime_mesh.material_uuid[i], &material_handles[i]);
+    }
+
+
+    skinned_mesh_acquire(asset_system, asset_record, &runtime_mesh, out_handle, material_handles);
 
     fclose(fptr);
 

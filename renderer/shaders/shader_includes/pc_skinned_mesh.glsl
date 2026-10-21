@@ -8,8 +8,9 @@
 
 
 layout(push_constant, std430) uniform PC_SKINNED_MESH{
-    Skinned_Mesh_Draw_Data_Buffer skinned_draw_data_buffer;
-    Pbr_Buffer material_buffer; // use a default for now
+    Skinned_Renderable_Buffer skinned_draw_data_buffer;
+    uint padding1;
+    uint padding2;
 }pc_skinned_mesh;
 
 

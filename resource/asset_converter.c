@@ -1242,7 +1242,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
     if (data->skins_count > 0)
     {
-        Madness_SkMesh_Runtime sk_mesh_runtime;
+        Madness_Skinned_Mesh_Runtime sk_mesh_runtime;
         sk_mesh_runtime.version = 1;
         sk_mesh_runtime.mesh_count = madness_mesh->mesh_count;
         sk_mesh_runtime.submeshes = madness_mesh->mesh_data;

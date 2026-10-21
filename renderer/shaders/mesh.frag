@@ -23,6 +23,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 
+    Pbr material = Pbr_Buffer(uint64_t(ubo.material_buffer) + material_offset).data;
 
     // properties
     vec3 norm = normalize(in_normal);
@@ -41,7 +42,6 @@ void main() {
         result += calculate_spot_light(ubo.spot_lights.spot_light[i], norm, in_world_position, view_direction);
     }
 
-    Pbr material = Pbr_Buffer(uint64_t(ubo.material_buffer) + material_offset).data;
 
     //final color
     vec4 albedo = material.color;

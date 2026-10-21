@@ -108,7 +108,7 @@ bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Rec
     MASSERT(asset);
 
 
-    PROFILE_ZONE(texture_system_does_texture_exist)
+    PROFILE_ZONE(texture_system_does_texture_exist);
 
     //check the runtime assets
     for (u32 i = 0; i < texture_system->max_textures; i++)
@@ -119,12 +119,12 @@ bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Rec
         {
             runtime->reference_count++;
             *out_handle = runtime->asset_handles.texture_handle;
-            PROFILE_ZONE_END(texture_system_does_texture_exist)
+            PROFILE_ZONE_END(texture_system_does_texture_exist);
             return true;
         }
     }
 
-    PROFILE_ZONE_END(texture_system_does_texture_exist)
+    PROFILE_ZONE_END(texture_system_does_texture_exist);
     return false;
 }
 

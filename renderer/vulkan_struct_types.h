@@ -242,6 +242,47 @@ typedef struct Mesh_Render_Record
     bool is_uploaded;
 } Mesh_Render_Record;
 
+typedef struct Skinned_Mesh_Render_Record
+{
+    //passed in by the cpu mesh system, is a reference
+    Madness_SubMesh* submesh_data;
+    Madness_Skinned_SubMesh* skinned_submesh_data;
+
+
+    //data managed by the mesh system, to know where it is in the buffer and likely to change due to defragging
+    u64* vertex_color_bytes_offset;
+    u64* tangent_bytes_offset;
+    u64* vertex_bytes_offset;
+    u64* normal_bytes_offset;
+    u64* uv_bytes_offset;
+    u64* indices_bytes_offset;
+
+    u64* joints_byte_offset;
+    u64* weight_byte_offset;
+
+
+    //just the offset divided by the stride of either the joint of weight
+    //look up values into the skinned buffer, might not want to keep it here, we will see
+    u64* joint_idx;
+    u64* weight_idx;
+
+    //indirect draw data
+    u32* index_count; // how large is the data
+    u32* vertex_count_offset; //in vec3
+    u32* index_offset_count; //offset into the index buffer
+    Index_Type* index_type;
+
+    u32 mesh_id;
+    u32 submesh_count;
+
+    //when this hits zero the asset is ready for usage
+    u8 pending_uploads;
+
+    bool is_uploaded;
+} Skinned_Mesh_Render_Record;
+
+
+
 typedef struct Mesh_Unfinished_Upload
 {
     u32 submesh_id;
@@ -259,52 +300,8 @@ typedef struct Mesh_Gpu_Upload_Pending
     u64 timeline_semaphore_value;
 } Mesh_Gpu_Upload_Pending;
 
-typedef struct Skinned_Gpu_Upload_Pending
-{
-    u32 skinned_id;
-    u64 timeline_semaphore_value;
-} Skinned_Gpu_Upload_Pending;
 
 
-typedef struct Skinned_Render_Record
-{
-    //passed in by the cpu mesh system
-    //size of data
-    u64 tangent_bytes;
-    u64 vertex_color_bytes;
-    u64 vertex_bytes;
-    u64 normal_bytes;
-    u64 uv_bytes;
-    u64 indices_bytes;
-
-    size_t joints_byte_size;
-    size_t weight_byte_size;
-
-    //everything below is managed by system
-    u64 tangent_bytes_offset;
-    u64 vertex_color_bytes_offset;
-    u64 vertex_bytes_offset;
-    u64 normal_bytes_offset;
-    u64 uv_bytes_offset;
-    u64 indices_bytes_offset;
-
-    size_t joints_byte_offset;
-    size_t weight_byte_offset;
-
-
-    //look up values into the skinned buffer, might not want to keep it here, we will see
-    u64 joint_idx;
-    u64 weight_idx;
-
-    //indirect draw data
-    u32 vertex_count_offset; //in vec3
-    u32 index_count; // how large is the data
-    u32 index_offset_count; //offset into the index buffer
-    Index_Type index_type;
-
-    bool is_uploaded;
-    bool is_in_use;
-} Skinned_Render_Record;
 
 typedef struct Vulkan_Shader_Batch
 {
@@ -723,21 +720,29 @@ typedef struct Vulkan_Mesh_System
     u32 vertex_offset_count;
     u32 index_offset_count;
 
-    Mesh_Render_Record mesh_render_record[MAX_MESH_COUNT];
-    u32 mesh_render_count;
-    // Skinned_Render_Record skinned_render_record[MAX_SKINNED_MESH_COUNT];
+    u32 joint_offset;
+    u32 weight_offset;
 
-    //for uploads we still need to make, but haven't been able to ex: not enough staging memory rn
-    ARRAY_TYPE(Mesh_Unfinished_Upload)* mesh_pending_upload_array;
+    Mesh_Render_Record mesh_render_record[MAX_MESH_COUNT];
+    u32 mesh_record_count;
+    Skinned_Mesh_Render_Record skinned_render_record[MAX_SKINNED_MESH_COUNT];
+    u32 skinned_record_count;
+
+    //for uploads we still need to make, but haven't been able to
+    //ex: not enough staging memory this frame
+    ARRAY_TYPE(Mesh_Unfinished_Upload)* mesh_not_yet_uploaded_array;
     //for uploads, we are waiting on to finish
-    ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* mesh_submitted_upload_array;
+    ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* mesh_submitted_pending_array;
+
+    ARRAY_TYPE(Mesh_Unfinished_Upload)* skinned_not_yet_uploaded_array;
+    ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* skinned_submitted_pending_array;
+
+
     VkSemaphore mesh_upload_timeline_semaphore;
     u64 mesh_upload_semaphore_value;
 
 
-    ARRAY_TYPE(Skinned_Gpu_Upload_Pending)* skinned_pending_array;
-    VkSemaphore skinned_upload_timeline_semaphore;
-    u64 skinned_upload_semaphore_value;
+
 } Vulkan_Mesh_System;
 
 typedef struct Particle_Render
@@ -933,6 +938,7 @@ typedef struct Renderer
     Render_Mode mode;
     bool draw_debug_axis;
     bool should_cull;
+    bool wireframe_mode;
 
 
     Allocator allocator; // total memory for the entire renderer
@@ -963,6 +969,7 @@ typedef struct Renderer
     Buffer_Frame_Handle material_record_buffer;
 
     Vulkan_Mesh_Render_List mesh_render_list;
+    Vulkan_Skinned_Mesh_Render_List skinned_render_list;
 
 
     //pipelines
@@ -989,7 +996,6 @@ typedef struct Renderer
     Vulkan_Shader_Pipeline spot_light_shadow_pipeline;
     Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
-    bool wireframe_mode;
 
 
     ////// Instance and Device //////

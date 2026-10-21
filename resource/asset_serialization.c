@@ -140,10 +140,11 @@ bool asset_mesh_deserialize(Madness_Mesh_Runtime* runtime, FILE* fptr, Heap_Allo
     return true;
 }
 
-bool asset_skmesh_serialize(Madness_SkMesh_Runtime* runtime, FILE* fptr)
+bool asset_skmesh_serialize(Madness_Skinned_Mesh_Runtime* runtime, FILE* fptr)
 {
     fwrite(&runtime->version, sizeof(runtime->version), 1, fptr);
     fwrite(&runtime->mesh_count, sizeof(runtime->mesh_count), 1, fptr);
+    madness_uuid_serialize(runtime->skinned_mesh_uuid, fptr);
     fwrite(runtime->submeshes, sizeof(Madness_SubMesh) * runtime->mesh_count, 1, fptr);
     //submesh contains the material uuid
 
@@ -187,9 +188,9 @@ bool asset_skmesh_serialize(Madness_SkMesh_Runtime* runtime, FILE* fptr)
         string_serialize(joint->joint_name, fptr);
     }
 
-    fwrite(&runtime->animation_data->resting_pose_local_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
+    fwrite(runtime->animation_data->resting_pose_local_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
            fptr);
-    fwrite(&runtime->animation_data->inverse_bind_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
+    fwrite(runtime->animation_data->inverse_bind_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
            fptr);
 
 
@@ -204,9 +205,9 @@ bool asset_skmesh_serialize(Madness_SkMesh_Runtime* runtime, FILE* fptr)
         string_serialize(animation->animation_name, fptr);
 
 
-        fwrite(&animation->channels, sizeof(Animation_Channel) * animation->channel_count, 1, fptr);
+        fwrite(animation->channels, sizeof(Animation_Channel) * animation->channel_count, 1, fptr);
 
-        for (u32 sampler_idx = 0; sampler_idx < animation->channel_count; sampler_idx++)
+        for (u32 sampler_idx = 0; sampler_idx < animation->sampler_count; sampler_idx++)
         {
             Animation_Sampler* sampler = &animation->samplers[sampler_idx];
             fwrite(&sampler->timestamps_count, sizeof(sampler->timestamps_count), 1, fptr);
@@ -222,10 +223,11 @@ bool asset_skmesh_serialize(Madness_SkMesh_Runtime* runtime, FILE* fptr)
 }
 
 
-bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_Allocator* allocator)
+bool asset_skmesh_deserialize(Madness_Skinned_Mesh_Runtime* runtime, FILE* fptr, Heap_Allocator* allocator)
 {
     fread(&runtime->version, sizeof(runtime->version), 1, fptr);
     fread(&runtime->mesh_count, sizeof(runtime->mesh_count), 1, fptr);
+    madness_uuid_deserialize(&runtime->skinned_mesh_uuid, fptr);
 
     runtime->submeshes = allocator_heap_alloc(allocator, sizeof(Madness_SubMesh) * runtime->mesh_count);
     runtime->mesh_gpu_upload = allocator_heap_alloc(allocator, sizeof(Madness_Mesh_GPU_Data) * runtime->mesh_count);
@@ -302,9 +304,9 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
     }
 
 
-    fread(&runtime->animation_data->resting_pose_local_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
+    fread(runtime->animation_data->resting_pose_local_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
           fptr);
-    fread(&runtime->animation_data->inverse_bind_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
+    fread(runtime->animation_data->inverse_bind_matrix, sizeof(mat4s) * runtime->animation_data->joint_count, 1,
           fptr);
 
     for (u32 i = 0; i < runtime->animation_data->animations_count; i++)
@@ -315,16 +317,17 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
         fread(&animation->sampler_count, sizeof(animation->sampler_count), 1, fptr);
         fread(&animation->anim_start, sizeof(animation->anim_start), 1, fptr);
         fread(&animation->anim_end, sizeof(animation->anim_end), 1, fptr);
+        animation->animation_name = allocator_heap_alloc(allocator, sizeof(String));
         string_deserialize_heap(animation->animation_name, fptr, allocator);
 
         animation->channels = allocator_heap_alloc(allocator, sizeof(Animation_Channel) * animation->channel_count);
-        animation->samplers = allocator_heap_alloc(allocator, sizeof(Animation_Channel) * animation->sampler_count);
+        animation->samplers = allocator_heap_alloc(allocator, sizeof(Animation_Sampler) * animation->sampler_count);
 
-        fread(&animation->channels, sizeof(Animation_Channel) * animation->channel_count, 1, fptr);
+        fread(animation->channels, sizeof(Animation_Channel) * animation->channel_count, 1, fptr);
 
-        for (u32 sampler_idx = 0; sampler_idx < animation->channel_count; sampler_idx++)
+        for (u32 channel_idx = 0; channel_idx < animation->sampler_count; channel_idx++)
         {
-            Animation_Sampler* sampler = &animation->samplers[sampler_idx];
+            Animation_Sampler* sampler = &animation->samplers[channel_idx];
             fread(&sampler->timestamps_count, sizeof(sampler->timestamps_count), 1, fptr);
 
             sampler->timestamps = allocator_heap_alloc(allocator, sizeof(float) * sampler->timestamps_count);
@@ -339,6 +342,8 @@ bool asset_skmesh_deserialize(Madness_SkMesh_Runtime* runtime, FILE* fptr, Heap_
             sampler->interperlation_data.trs_float = allocator_heap_alloc(allocator, sampler->trs_interpolation_bytes);
             fread(sampler->interperlation_data.trs_float, sampler->trs_interpolation_bytes, 1, fptr);
         }
+
+
     }
 
 

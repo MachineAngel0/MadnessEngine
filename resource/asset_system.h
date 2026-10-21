@@ -36,7 +36,7 @@ Asset_System* asset_system_init(Memory_System* memory_system,
 bool asset_system_shutdown(Asset_System* resource_system, Memory_System* memory_system);
 
 
-bool asset_system_update_and_create_render_packet(Asset_System* asset_system);
+bool asset_system_generate_render_packet(Asset_System* asset_system);
 
 MAPI void render_packet_clear(Render_Packet* renderer_packets);
 
@@ -56,7 +56,7 @@ bool asset_unload_font(Asset_System* asset_system, Texture_Handle texture_handle
 bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_path, Mesh_Handle* out_handle);
 Mesh_Handle asset_load_mesh_uuid(Asset_System* asset_system, MADNESS_UUID uuid);
 
-Skinned_Mesh_Handle asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path);
+bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path, Skinned_Mesh_Handle* out_handle);
 
 
 //NOTE: we dont unload shaders

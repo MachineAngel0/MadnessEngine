@@ -146,11 +146,21 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     Mesh_Handle mesh_handle;
     // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
-    // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
-    // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system,
+                         "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
+                         &mesh_handle);
 
 
+    Skinned_Mesh_Handle skinned_handle;
+    asset_load_skmesh(
+        application_core->asset_system,
+        "../z_assets_engine/skinned_mesh/CesiumMan/CesiumMan.mskin", &skinned_handle);
+
+    Skinned_Mesh_Handle mc_skinned_handle;
+    asset_load_skmesh(application_core->asset_system, "../z_assets_engine/skinned_mesh/MC/MC4.2_6.mskin",
+                      &mc_skinned_handle);
 
     /*asset_load_texture_path(application_core->asset_system, "../z_assets_engine/test_particle.mtex");
 
@@ -159,9 +169,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet.mmesh");*/
 
     /*
-    asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/CesiumMan/CesiumMan.gltf");
-    Madness_SkMesh_Handle handle2 ={0};
-    asset_load_skmesh_path(application_core->asset_system, "../z_assets_engine/skinned_mesh/CesiumMan.mskin", &handle2);
 
     asset_converter_gltf_mesh(application_core->asset_system, "../z_assets/models/MC_Test/MC4.2_6.gltf");
     Madness_SkMesh_Handle handle3 ={0};
@@ -204,7 +211,6 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     {
         clock_update_frame_start(&application_core->clock);
         PROFILE_FRAME();
-
 
 
         // clock_print_info(&application_core->clock);
@@ -269,7 +275,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
         //render packets
-        asset_system_update_and_create_render_packet(application_core->asset_system);
+        asset_system_generate_render_packet(application_core->asset_system);
 
         application_core->asset_system->render_packet->ui_data_packet.insanity_ui_render_packet = insanity_ui_end();
         application_core->asset_system->render_packet->ui_data_packet.madness_ui_render_packet =
