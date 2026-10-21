@@ -233,6 +233,11 @@ target_sources(MadnessEngine_renderer PRIVATE)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tracy_lib/tracy-0.14.1)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/glfw-3.5.1)
+set_target_properties(glfw PROPERTIES UNITY_BUILD OFF)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(glfw PRIVATE _GNU_SOURCE)
+endif ()
+
 
 if (WIN32)
     SET(MADNESS_WIN_LIBS
