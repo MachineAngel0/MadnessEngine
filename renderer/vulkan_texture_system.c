@@ -155,15 +155,14 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
     }
 
     Vulkan_Command_Buffer* transfer_command_buffer = NULL;
-    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer))
+    u64 semaphore_signal_value = 0;
+    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer, &semaphore_signal_value))
     {
         return;
     }
     Vulkan_Command_Buffer* graphics_command_buffer = NULL;
     vulkan_queue_system_get_graphics_command_buffer(renderer, &graphics_command_buffer);
 
-    u64 semaphore_signal_value = 0;
-    vulkan_queue_system_get_transfer_semaphore_value(renderer, &semaphore_signal_value);
 
     Texture_GPU_Upload texture_upload;
 
@@ -230,8 +229,9 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
 
     //NOTE: for queue family transfers unless VK_KHR_maintence8 is on,
     // all command bits needs to be used for both queues
+    // also we do it at queue frame end
 
-    //submit info
+    /*//submit info
     VkSemaphoreSubmitInfo signal_semaphore_info = {0};
     signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     signal_semaphore_info.pNext = 0;
@@ -251,7 +251,7 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
 
     //TODO: handle the case if transfer and graphics are not the same queue
     vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
-    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
+    vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);*/
 }
 
 

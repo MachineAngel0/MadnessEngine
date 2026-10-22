@@ -161,6 +161,7 @@ void madness_imgui_shutdown(void)
 
 void madness_imgui_frame_start()
 {
+    PROFILE_ZONE(madness_imgui_frame_start)
     // (Your code process and dispatch Win32 messages)
     // Start the Dear ImGui frame
 
@@ -175,16 +176,22 @@ void madness_imgui_frame_start()
 
     bool open_window = true;
     ImGui_ShowDemoWindow(&open_window); // Show demo window! :)
+
+    PROFILE_ZONE_END(madness_imgui_frame_start)
+
 }
 
 void madness_imgui_render(Vulkan_Command_Buffer* command_buffer)
 {
+    PROFILE_ZONE(madness_imgui_render)
     ImGui_Render();
     cImGui_ImplVulkan_RenderDrawData(ImGui_GetDrawData(), command_buffer->handle);
 
 
     ImGui_UpdatePlatformWindows();
     ImGui_RenderPlatformWindowsDefault();
+    PROFILE_ZONE_END(madness_imgui_render)
+
 }
 
 void ImGui_String(const String* string)

@@ -122,7 +122,7 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
         scratch.allocator, sizeof(VkCommandBufferSubmitInfo) * transfer_queue->command_buffer_count);
     u32 ready_commands_buffers = 0;
 
-
+    //if we do have queue work to do, we need to add a buffer
     for (u32 i = 0; i < transfer_queue->command_buffer_count; i++)
     {
         Vulkan_Command_Buffer* current_transfer_buffer = &transfer_queue->command_buffer[i];
@@ -139,6 +139,29 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
                 .semaphore_value = transfer_queue->semaphore_value,
             };
             array_push(transfer_queue->transfer_command_buffer_in_flight, &upload);
+
+            //submit info
+            VkSemaphoreSubmitInfo signal_semaphore_info = {0};
+            signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            signal_semaphore_info.pNext = 0;
+            // pSignalSemaphoreInfos.deviceIndex;
+            signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            //value assumed to be accurate for the current texture upload
+            signal_semaphore_info.value = transfer_queue->semaphore_value;
+            signal_semaphore_info.semaphore = vulkan_queue_system_get_transfer_semaphore(renderer);
+
+            //only need this is we do a queue ownership transfer
+            VkSemaphoreSubmitInfo wait_semaphore_info = {0};
+            wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            wait_semaphore_info.pNext = 0;
+            wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            wait_semaphore_info.value = transfer_queue->semaphore_value;
+            wait_semaphore_info.semaphore = vulkan_queue_system_get_transfer_semaphore(renderer);
+
+            //TODO: handle the case if transfer and graphics are not the same queue
+            vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
+            vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
+
         }
         if (transfer_queue->command_buffer[i].state == VULKAN_COMMAND_BUFFER_STATE_BEGIN)
         {
@@ -154,6 +177,29 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
                 .semaphore_value = transfer_queue->semaphore_value,
             };
             array_push(transfer_queue->transfer_command_buffer_in_flight, &upload);
+
+            //submit info
+            VkSemaphoreSubmitInfo signal_semaphore_info = {0};
+            signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            signal_semaphore_info.pNext = 0;
+            // pSignalSemaphoreInfos.deviceIndex;
+            signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT | VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            //value assumed to be accurate for the current texture upload
+            signal_semaphore_info.value = transfer_queue->semaphore_value;
+            signal_semaphore_info.semaphore = vulkan_queue_system_get_transfer_semaphore(renderer);
+
+            //only need this is we do a queue ownership transfer
+            VkSemaphoreSubmitInfo wait_semaphore_info = {0};
+            wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+            wait_semaphore_info.pNext = 0;
+            wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            wait_semaphore_info.value = transfer_queue->semaphore_value;
+            wait_semaphore_info.semaphore = vulkan_queue_system_get_transfer_semaphore(renderer);
+
+            //TODO: handle the case if transfer and graphics are not the same queue
+            vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
+            vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);
+
         }
     }
 
@@ -246,28 +292,6 @@ void vulkan_queue_frame_end(Renderer* renderer, u32 current_frame, u32 image_ind
 }
 
 
-bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
-                                Vulkan_Command_Buffer** out_cb)
-{
-    Vulkan_Queue_System* system = renderer->queue_system;
-    switch (type)
-    {
-    case VULKAN_QUEUE_TYPE_GRAPHICS:
-        return vulkan_queue_system_get_graphics_command_buffer(renderer, out_cb);
-        break;
-    case VULKAN_QUEUE_TYPE_TRANSFER:
-        return vulkan_queue_system_get_transfer_command_buffer(renderer, out_cb);
-        break;
-    case VULKAN_QUEUE_TYPE_COMPUTE:
-        MASSERT_FALSE()
-        *out_cb = &system->compute_render_queue.command_buffer[renderer->current_frame_index];
-        break;
-    }
-
-
-    INFO("NO COMMAND BUFFERS AVAILABLE")
-    return false;
-}
 
 bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb)
 {
@@ -287,7 +311,7 @@ bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_
     return true;
 }
 
-bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb)
+bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb, u64* out_transfer_semaphore_value)
 {
     Vulkan_Queue_System* system = renderer->queue_system;
     for (u32 i = 0; i < system->transfer_render_queue.command_buffer_count; i++)
@@ -296,11 +320,7 @@ bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_
         if ((system->transfer_render_queue.command_buffer[i].state == VULKAN_COMMAND_BUFFER_STATE_BEGIN))
         {
             *out_cb = &system->transfer_render_queue.command_buffer[i];
-            if (!system->transfer_render_queue.semaphore_incremented_this_frame)
-            {
-                system->transfer_render_queue.semaphore_incremented_this_frame = true;
-                system->transfer_render_queue.semaphore_value++;
-            }
+            *out_transfer_semaphore_value = system->transfer_render_queue.semaphore_value;
             return true;
         }
     }
@@ -309,6 +329,7 @@ bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_
         //if we dont find one, grab one and begin it
         if ((system->transfer_render_queue.command_buffer[i].state == VULKAN_COMMAND_BUFFER_STATE_USABLE))
         {
+            vulkan_command_buffer_reset(&system->transfer_render_queue.command_buffer[i]);
             vulkan_command_buffer_begin(&system->transfer_render_queue.command_buffer[i]);
             *out_cb = &system->transfer_render_queue.command_buffer[i];
 
@@ -316,6 +337,7 @@ bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_
             {
                 system->transfer_render_queue.semaphore_incremented_this_frame = true;
                 system->transfer_render_queue.semaphore_value++;
+                *out_transfer_semaphore_value = system->transfer_render_queue.semaphore_value;
             }
 
             return true;
@@ -326,15 +348,7 @@ bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_
     return false;
 }
 
-void vulkan_queue_system_get_transfer_semaphore_value(Renderer* renderer, u64* out_semaphore_value)
-{
-    if (!renderer->queue_system->transfer_render_queue.semaphore_incremented_this_frame)
-    {
-        renderer->queue_system->transfer_render_queue.semaphore_incremented_this_frame = true;
-        renderer->queue_system->transfer_render_queue.semaphore_value++;
-    }
-    *out_semaphore_value = renderer->queue_system->transfer_render_queue.semaphore_value;
-}
+
 
 VkSemaphore vulkan_queue_system_get_transfer_semaphore(Renderer* renderer)
 {
@@ -588,7 +602,7 @@ void vulkan_command_buffer_reset(Vulkan_Command_Buffer* command_buffer)
 
 void vulkan_command_buffer_begin(Vulkan_Command_Buffer* command_buffer)
 {
-    VkCommandBufferBeginInfo begin_info = {};
+    VkCommandBufferBeginInfo begin_info = {0};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     begin_info.flags = 0;
     begin_info.pInheritanceInfo = NULL; //used if its a secondary command buffer

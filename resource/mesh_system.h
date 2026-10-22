@@ -12,13 +12,70 @@ bool mesh_system_shutdown(Mesh_System* mesh_system, Memory_System* memory_system
 
 bool mesh_is_loaded(Asset_System* asset_system, Asset_Record* asset_record, Mesh_Handle* out_handle)
 {
-    //TODO:
+    /*Mesh_System* mesh_system = asset_system->mesh_system;
+    //check the runtime assets
+    for (u32 i = 0; i < MAX_MESH_COUNT; i++)
+    {
+        Asset_Runtime* runtime = &mesh_system->mesh_asset[i];
+
+        if (runtime->hash == asset_record->hash)
+        {
+            // TODO: fix this garbage later
+            // TODO: create a new mesh instance
+            runtime->reference_count++;
+            runtime->asset_handles.mesh_handle;
+
+
+            for (u32 madness_mesh_idx = 0; madness_mesh_idx < MAX_MESH_COUNT; madness_mesh_idx++)
+            {
+                mesh_system->madness_mesh[madness_mesh_idx].mesh_uuid ==
+            }
+
+
+            Madness_Mesh_Instance mesh_instance = {
+                .madness_mesh_index = ,
+                .transform_handle = ,
+                .submesh_count = ,
+                .material_handles = ,
+                .pipeline_hash = ,
+            };
+
+
+            return true;
+        }
+    }
+    */
     return false;
 }
 
 
-bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, Mesh_Handle* out_handle,
-                  Material_Handle* in_material_handles)
+
+bool skinned_mesh_is_loaded(Asset_System* asset_system, Asset_Record* asset_record, Skinned_Mesh_Handle* out_handle)
+{
+    //check the runtime assets
+    for (u32 i = 0; i < MAX_SKINNED_MESH_COUNT; i++)
+    {
+        Asset_Runtime* runtime = &asset_system->mesh_system->skinned_asset[i];
+
+        if (runtime->hash == asset_record->hash)
+        {
+            runtime->reference_count++;
+            *out_handle = runtime->asset_handles.skinned_handle;
+
+            //TODO: create a new mesh instance
+
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+
+bool mesh_acquire(Asset_System* asset_system, Asset_Record* asset_record, Madness_Mesh_Runtime* mesh_asset,
+                  Mesh_Handle* out_handle, Material_Handle* in_material_handles)
 {
     madness_uuid_validate(mesh_asset->mesh_uuid);
 
@@ -52,8 +109,7 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
 
     mesh_inst->pipeline_hash = allocator_alloc(asset_system->allocator,
                                                mesh_asset->mesh_count * sizeof(Shader_Pipeline_Hash));
-    mesh_inst->permutation = allocator_alloc(asset_system->allocator,
-                                             mesh_asset->mesh_count * sizeof(Permutation_Mask));
+
 
 
     //create the submesh instance
@@ -62,8 +118,7 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
         // TODO: create unique material overrides for each submesh, for now its shared
         mesh_inst->material_handles[submesh_idx] = in_material_handles[submesh_idx];
         mesh_inst->pipeline_hash[submesh_idx] = material_system_get_shader_asset(
-            asset_system, mesh_inst->material_handles[submesh_idx])->shader_pipeline_hash;;
-        mesh_inst->permutation[submesh_idx] = 0;
+            asset_system, mesh_inst->material_handles[submesh_idx])->shader_pipeline_hash;
 
     }
 
@@ -76,6 +131,15 @@ bool mesh_acquire(Asset_System* asset_system, Madness_Mesh_Runtime* mesh_asset, 
         .mesh_memory_allocator = asset_system->mesh_allocator,
     };
     ring_enqueue(mesh_system->mesh_ring_queue, &upload);
+
+
+    //add to the loaded assets list
+    Asset_Runtime* runtime = &asset_system->mesh_system->mesh_asset[out_handle->handle];
+    asset_runtime_set_info_from_record(runtime, asset_record, ASSET_TEXTURE);
+    runtime->asset_handles.mesh_handle = (Mesh_Handle){out_handle->handle, 0};
+
+
+
 
 
     return true;
@@ -151,6 +215,11 @@ bool skinned_mesh_acquire(Asset_System* asset_system, Asset_Record* record, Madn
         .mesh_memory_allocator = asset_system->mesh_allocator,
     };
     ring_enqueue(mesh_system->skinned_mesh_ring_queue, &upload);
+
+    //add to the loaded assets list
+    Asset_Runtime* runtime = &asset_system->mesh_system->skinned_asset[out_handle->handle];
+    asset_runtime_set_info_from_record(runtime, record, ASSET_TEXTURE);
+    runtime->asset_handles.skinned_handle = (Skinned_Mesh_Handle){out_handle->handle};
 
 
 }

@@ -182,7 +182,8 @@ bool platform_pump_messages(Platform_State* plat_state)
 }
 
 
-bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config, Madness_Window* out_window_handle)
+bool platform_create_window(Platform_State* platform_state, Platform_Window_Config window_config,
+                            Madness_Window* out_window_handle)
 {
     Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
 
@@ -251,7 +252,6 @@ bool platform_create_window(Platform_State* platform_state, Platform_Window_Conf
     ShowWindow(state->hwnd, show_window_command_flags);
 
     return true;
-
 }
 
 
@@ -283,18 +283,16 @@ u64 platform_query_page_size(void)
 void* platform_virtual_allocate_reserve(u64 reserve_size)
 {
     return VirtualAlloc(0, reserve_size, MEM_RESERVE, PAGE_READWRITE);
-
 }
 
 void platform_virtual_allocate_commit(void* memory, u64 commit_size)
 {
-     VirtualAlloc(memory, commit_size, MEM_COMMIT, PAGE_READWRITE);
-
+    VirtualAlloc(memory, commit_size, MEM_COMMIT, PAGE_READWRITE);
 }
 
 void* platform_allocate(u64 size, bool aligned)
 {
-    return VirtualAlloc(0, size, MEM_COMMIT , PAGE_READWRITE);
+    return VirtualAlloc(0, size, MEM_COMMIT, PAGE_READWRITE);
     // return malloc(size);
 }
 
@@ -360,16 +358,18 @@ static int imgui_win32_create_vk_surface(
 
 bool platform_init_imgui(Platform_State* plat_state)
 {
-
     //TODO: move to the platform layer
     ImGuiPlatformIO* platform_io = ImGui_GetPlatformIO();
-    platform_io->Platform_CreateVkSurface =
-        imgui_win32_create_vk_surface;
+    platform_io->Platform_CreateVkSurface = imgui_win32_create_vk_surface; // this is a function pointer
 
     Windows_Internal_State* state = (Windows_Internal_State*)plat_state->internal_state;
-    cImGui_ImplWin32_Init(state->hwnd);
+    if (!cImGui_ImplWin32_Init(state->hwnd))
+    {
+        MASSERT_FALSE()
+        return false;
+    }
+    return true;
 }
-
 
 
 LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARAM l_param)
@@ -403,7 +403,7 @@ LRESULT CALLBACK win32_process_message(HWND hwnd, u32 msg, WPARAM w_param, LPARA
         if (imgui_handled)
             // return 1;
 
-        return DefWindowProcA(hwnd, msg, w_param, l_param);
+            return DefWindowProcA(hwnd, msg, w_param, l_param);
     }
 
 
@@ -705,8 +705,6 @@ bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 }
 
 
-
-
 bool platform_file_copy(const char* destination_file, char* source_file)
 {
     if (!CopyFileA(source_file, destination_file, 0))
@@ -761,7 +759,7 @@ void platform_get_window_pos(Platform_State* platform_state, s32* x, s32* y)
 {
     Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
     POINT client_origin = {0, 0};
-    ClientToScreen(state->hwnd, &client_origin);   // client_origin.x/y is now the screen position
+    ClientToScreen(state->hwnd, &client_origin); // client_origin.x/y is now the screen position
 
     //the area which you render into, not including the title bar or any borders
     RECT window_render_rect;
@@ -778,8 +776,8 @@ void platform_get_window_pos(Platform_State* platform_state, s32* x, s32* y)
     // int y = rect.top;
     // int width = rect.right - rect.left;
     // int height = rect.bottom - rect.top;
-
 }
+
 void platform_get_window_size(Platform_State* platform_state, s32* width, s32* height)
 {
     Windows_Internal_State* state = (Windows_Internal_State*)platform_state->internal_state;
@@ -787,7 +785,7 @@ void platform_get_window_size(Platform_State* platform_state, s32* width, s32* h
     //the area which you render into, not including the title bar or any borders
     RECT rect;
     GetClientRect(state->hwnd, &rect);
-    *width = rect.right - rect.left;   // left/top are always 0, so rect.right works too
+    *width = rect.right - rect.left; // left/top are always 0, so rect.right works too
     *height = rect.bottom - rect.top;
 
     //NOTE: the windows message callbacks give you client area
@@ -804,13 +802,12 @@ void platform_set_cursor_pos(Platform_State* platform_state, int x, int y)
     SetCursorPos(x, y);
 }
 
-void platform_get_absolute_cursor_pos(Platform_State* platform_state,int* out_x, int* out_y)
+void platform_get_absolute_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y)
 {
     struct tagPOINT lpPoint; // this is a pointer
     GetCursorPos(&lpPoint);
     *out_x = lpPoint.x;
     *out_y = lpPoint.y;
-
 }
 
 void platform_get_window_cursor_pos(Platform_State* platform_state, int* out_x, int* out_y)
@@ -853,9 +850,8 @@ void platform_set_windows_size(Platform_State* platform_state, int width, int he
     Windows_Internal_State* state = platform_state->internal_state;
 
     //change the size but does not move due to no move flag
-    SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE| SWP_NOZORDER);
+    SetWindowPos(state->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER);
 }
-
 
 
 void platform_copy_to_clipboard(const char* c_string)

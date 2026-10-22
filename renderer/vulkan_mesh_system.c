@@ -46,8 +46,6 @@ Vulkan_Mesh_System* vulkan_mesh_system_init(Renderer* renderer)
     mesh_system->skinned_not_yet_uploaded_array = array_create(Mesh_Unfinished_Upload, 1024, &renderer->allocator);
 
 
-    timeline_semaphore_create(renderer, &mesh_system->mesh_upload_timeline_semaphore, 0);
-    mesh_system->mesh_upload_semaphore_value = 0;
 
 
     return mesh_system;
@@ -192,19 +190,22 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
 {
     PROFILE_ZONE(vulkan_mesh_system_upload_new_resources)
 
-
+    if (ring_queue_is_empty(render_packet->mesh_queue) && ring_queue_is_empty(render_packet->skinned_mesh_queue))
+    {
+        return;
+    }
 
 
     //TODO: we still want to flush our queues
     Vulkan_Command_Buffer* transfer_command_buffer = NULL;
-    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer))
+    u64 mesh_upload_semaphore_value = 0;
+    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer, &mesh_upload_semaphore_value))
     {
         PROFILE_ZONE_END(vulkan_mesh_system_upload_new_resources)
         return;
     }
 
 
-    u64 mesh_upload_semaphore_value = ++mesh_system->mesh_upload_semaphore_value;
 
     // mesh data we werent able to upload yet
      u64 unfinished_idx = 0;
@@ -246,16 +247,16 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
 
 
     u64 skinned_unfinished_idx = 0;
-    while (skinned_unfinished_idx < mesh_system->mesh_not_yet_uploaded_array->num_items)
+    while (skinned_unfinished_idx < mesh_system->skinned_not_yet_uploaded_array->num_items)
     {
         Mesh_Unfinished_Upload unfinished_upload =
             array_get(
-                mesh_system->mesh_not_yet_uploaded_array,
+                mesh_system->skinned_not_yet_uploaded_array,
                 skinned_unfinished_idx,
                 Mesh_Unfinished_Upload);
 
 
-        Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];
+        Skinned_Mesh_Render_Record* record = &mesh_system->skinned_render_record[unfinished_upload.submesh_id];
 
         //if upload successful remove it from the array
         if (mesh_system_upload_data_into_buffers(renderer,
@@ -274,7 +275,7 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
             // Don't increment i.
             // The swapped-in element now occupies index i.
             array_remove_swap(
-                mesh_system->mesh_not_yet_uploaded_array,
+                mesh_system->skinned_not_yet_uploaded_array,
                 skinned_unfinished_idx);
             continue;
         }
@@ -627,7 +628,6 @@ void vulkan_mesh_system_construct_draw_lists(Renderer* renderer,
                 //TODO: each sort key should vary based on pass, as they are being added into the list
                 // .shader_sort_key = sort_key_create_oqaque(mesh_instance->pipeline_hash[i], mesh_instance->permutation[i]),
                 .pipeline_hash = mesh_instance->pipeline_hash[submesh_idx],
-                .permutation = mesh_instance->permutation[submesh_idx],
                 .render_pass_masks = 0,
                 .mesh_id = mesh_instance->madness_mesh_index,
                 .visible = true,

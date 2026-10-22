@@ -25,9 +25,6 @@ void vulkan_queue_system_flush_queues(Renderer* renderer, Vulkan_Queue_System* q
 
 //we hand out the buffer and let the user manage it
 
-bool vulkan_queue_system_get_cb(Renderer* renderer, Vulkan_Queue_Type type,
-                                Vulkan_Command_Buffer** out_cb);
-
 /**
  * @note: this should never fail, if we grab the per frame graphics buffer
  */
@@ -35,8 +32,7 @@ bool vulkan_queue_system_get_graphics_command_buffer(Renderer* renderer, Vulkan_
 /**
  * @note: will begin the command buffer for you, will end at the end of the frame
  */
-bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb);
-void vulkan_queue_system_get_transfer_semaphore_value(Renderer* renderer, u64* out_semaphore_value);
+bool vulkan_queue_system_get_transfer_command_buffer(Renderer* renderer, Vulkan_Command_Buffer** out_cb, u64* out_transfer_semaphore_value);
 VkSemaphore vulkan_queue_system_get_transfer_semaphore(Renderer* renderer);
 
 

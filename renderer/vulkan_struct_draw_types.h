@@ -158,7 +158,6 @@ typedef struct Vulkav_Mesh_Renderable
 {
     // Shader_Sort_Key shader_sort_key; // TODO: for another time
     Shader_Pipeline_Hash pipeline_hash;
-    Permutation_Mask permutation;
     u32 mesh_id;
 
     u32 render_pass_masks;
@@ -182,11 +181,6 @@ int vulkan_skinned_mesh_sort_key(const void* render_item1, const void* render_it
         return p1->pipeline_hash < p2->pipeline_hash ? -1 : 1;
     }
 
-    if (p1->permutation != p2->permutation)
-    {
-        return p1->permutation < p2->permutation ? -1 : 1;
-    }
-
     if (p1->mesh_id != p2->mesh_id)
     {
         return p1->mesh_id < p2->mesh_id ? -1 : 1;
@@ -205,10 +199,6 @@ int vulkan_mesh_sort_key(const void* render_item1, const void* render_item2)
         return p1->pipeline_hash < p2->pipeline_hash ? -1 : 1;
     }
 
-    if (p1->permutation != p2->permutation)
-    {
-        return p1->permutation < p2->permutation ? -1 : 1;
-    }
 
     if (p1->mesh_id != p2->mesh_id)
     {

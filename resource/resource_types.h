@@ -248,9 +248,8 @@ typedef union Asset_Handles
 
     Mesh_Handle mesh_handle;
 
-    // Skinned_Mesh_Handle;
+    Skinned_Mesh_Handle skinned_handle;
 
-    // Madness_SkMesh_Handle_Internal;
 
     Sprite_Handle sprite_handle;
 
@@ -756,7 +755,6 @@ typedef struct Madness_Mesh_Instance{
     u32 submesh_count;
     Material_Handle* material_handles; // overrides for each submesh
     Shader_Pipeline_Hash* pipeline_hash;
-    Permutation_Mask* permutation;
     // Shader_Renderpass_Type* renderpass_mask:  TODO:
 }Madness_Mesh_Instance;
 
@@ -1053,6 +1051,9 @@ typedef struct Mesh_System
     RING_QUEUE_TYPE(Mesh_GPU_Upload)* mesh_ring_queue;
     RING_QUEUE_TYPE(Skinned_Mesh_Upload_Data)* skinned_mesh_ring_queue;
 
+
+    Asset_Runtime mesh_asset[MAX_MESH_COUNT];
+    Asset_Runtime skinned_asset[MAX_SKINNED_MESH_COUNT];
 
 } Mesh_System;
 

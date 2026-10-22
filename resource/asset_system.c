@@ -250,6 +250,7 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     if (!asset_registry_exists_by_uuid(asset_system->asset_registry, uuid, asset_record))
     {
         //TODO: try to load in the asset from the import path
+        PROFILE_ZONE_END(asset_load_texture_uuid)
         MASSERT_FALSE();
         FATAL("ASSET NOT FOUND: %d %d", uuid.high, uuid.low);
         return texture_handle;
@@ -258,6 +259,7 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     //has asset already been loaded
     if (texture_system_does_texture_exist(asset_system->texture_system, asset_record, &texture_handle))
     {
+        PROFILE_ZONE_END(asset_load_texture_uuid)
         return texture_handle;
     }
 
@@ -269,6 +271,7 @@ Texture_Handle asset_load_texture_uuid(Asset_System* asset_system, MADNESS_UUID 
     if (!fptr)
     {
         //TODO: since were in the editor, we should at least try to find the asset in our asset folder
+        PROFILE_ZONE_END(asset_load_texture_uuid)
         MASSERT(false)
         return asset_system->texture_system->default_texture_handle;
     }
@@ -486,7 +489,7 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
     }
 
 
-    if (!mesh_acquire(asset_system, &runtime_mesh, out_handle, material_handles))
+    if (!mesh_acquire(asset_system, asset_record, &runtime_mesh, out_handle, material_handles))
     {
         MASSERT(false);
     }
@@ -506,7 +509,8 @@ bool asset_load_mesh_path(Asset_System* asset_system, const char* engine_asset_p
 bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path, Skinned_Mesh_Handle* out_handle)
 {
     PROFILE_ZONE(asset_load_skmesh)
-    PROFILE_ZONE(out_handle)
+
+    MASSERT(out_handle)
 
 
     String* asset_path_string = STRING_CREATE_FROM_BUFFER_ALLOCATOR(engine_asset_path, asset_system->frame_allocator);
@@ -514,6 +518,7 @@ bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path
     Asset_Record* asset_record = allocator_alloc(asset_system->frame_allocator, sizeof(Asset_Record));;
     if (!asset_registry_exists_by_engine_path(asset_system->asset_registry, asset_path_string, asset_record))
     {
+        PROFILE_ZONE_END(asset_load_skmesh)
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         *out_handle = (Skinned_Mesh_Handle){0};
         return false;
@@ -526,6 +531,7 @@ bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path
 
     if (!fptr)
     {
+        PROFILE_ZONE_END(asset_load_skmesh)
         MASSERT(false);
         // return false;
     }

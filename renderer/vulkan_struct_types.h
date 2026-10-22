@@ -738,10 +738,6 @@ typedef struct Vulkan_Mesh_System
     ARRAY_TYPE(Mesh_Gpu_Upload_Pending)* skinned_submitted_pending_array;
 
 
-    VkSemaphore mesh_upload_timeline_semaphore;
-    u64 mesh_upload_semaphore_value;
-
-
 
 } Vulkan_Mesh_System;
 
