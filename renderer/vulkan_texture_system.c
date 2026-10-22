@@ -5,6 +5,9 @@
 #include "vk_descriptors.h"
 
 
+//first set of values reserved by vulkan for things like internal textures, and renderpass textures
+
+
 //TODO: pass in texture config amount
 Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
 {
@@ -34,8 +37,8 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
 
 
     texture_system->texture_table_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_STORAGE_GPU,
-                                                                sizeof(u32) * MAX_TEXTURE_COUNT);
+                                                                      BUFFER_TYPE_STORAGE_GPU,
+                                                                      sizeof(u32) * MAX_TEXTURE_COUNT);
     texture_system->texture_table_max_size = MAX_TEXTURE_COUNT;
 
 
@@ -43,7 +46,8 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
 }
 
 
-void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet,  Vulkan_Command_Buffer* command_buffer)
+void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* packet,
+                                           Vulkan_Command_Buffer* command_buffer)
 {
     Vulkan_Texture_System* texture_system = renderer->texture_system;
 
@@ -80,7 +84,6 @@ void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* pa
             vulkan_queue_system_get_transfer_semaphore(renderer),
             pending_upload.timeline_semaphore_value))
         {
-
             vulkan_command_buffer_reset(pending_upload.command_buffer);
 
 
@@ -91,7 +94,8 @@ void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* pa
             //TODO: flip off if not using imgui
             //create a descriptor for imgui if using it
             pending_upload.vulkan_texture->ready_for_read_by_imgui = true;
-            pending_upload.vulkan_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(pending_upload.vulkan_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            pending_upload.vulkan_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(
+                pending_upload.vulkan_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
             // Don't increment i.
             // The swapped-in element now occupies index i.
@@ -137,16 +141,11 @@ void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* pa
     vulkan_command_flush_barriers(command_buffer);
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
-
-
-
-
 }
 
 void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet* packet)
 {
     Vulkan_Texture_System* texture_system = renderer->texture_system;
-
 
 
     if (ring_queue_is_empty(packet->texture_upload_queue))
@@ -220,7 +219,7 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
             .vulkan_texture = vulkan_texture,
             .command_buffer = transfer_command_buffer,
             .timeline_semaphore_value = semaphore_signal_value,
-            .bindless_index = texture_upload.texture_index
+            .bindless_index = texture_upload.texture_index,
         };
         array_push(texture_system->texture_pending_array, &new_pending_upload);
     }
@@ -253,7 +252,6 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
     vulkan_queue_add_signal_semaphore(renderer, VULKAN_QUEUE_TYPE_TRANSFER, signal_semaphore_info);
     vulkan_queue_add_wait_semaphore(renderer, VULKAN_QUEUE_TYPE_GRAPHICS, wait_semaphore_info);*/
 }
-
 
 
 Vulkan_Texture* vulkan_texture_system_get_vulkan_texture(Vulkan_Texture_System* system, u32 bindless_index)

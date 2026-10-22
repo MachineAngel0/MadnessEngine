@@ -2,6 +2,14 @@
 
 #include "vk_buffer.h"
 
+typedef struct Directional_Light_Shadow_Data{
+    u32 light_idx;
+    u32 shadow_texture_idx;
+    vec2s shadow_texture_size;
+    mat4s light_world_view_matrix;
+}Directional_Light_Shadow_Data;
+
+
 
 Light_System* light_system_init(Renderer* renderer)
 {
@@ -161,20 +169,59 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
 
 
-    //TODO: shadow calculations
-    /*
-    float near_plane = 1.0f, far_plane = 7.5f;
-    for (u32 i = 0; i < light_system->spot_light_count; i++)
+
+    // TODO: shadow calculations
+    // for (u32 i = 0; i < light_system->spot_light_count; i++)
+    // {
+    //     light_system->spot_lights[i];
+    //     mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
+    //     mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
+    //                            (vec3s){0.0f, 0.0f, 0.0f},
+    //                            (vec3s){0.0f, 1.0f, 0.0f});
+    //     mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
+    //
+    // }
+
+    float near_plane = 1.0f;
+    float far_plane = 96.f;
+
+    renderer->main_camera;
+
+
+    Directional_Light_Shadow_Data* directional_shadow_data_array = allocator_alloc(&renderer->frame_allocator, sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
+
+
+
+
+    for (u32 i = 0; i < light_system->directional_light_count; i++)
     {
-        light_system->spot_lights[i];
+        Directional_Light* directional_light = &light_system->directional_lights[i];
+
+        directional_light->direction;
+        directional_light->color;
+        directional_light->diffuse;
+        directional_light->specular;
+
+
         mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
-        mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
-                               (vec3s){0.0f, 0.0f, 0.0f},
-                               (vec3s){0.0f, 1.0f, 0.0f});
-        mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
+        mat4s light_view = glms_lookat(directional_light->direction,
+                               GLMS_VEC3_ZERO, // world center
+                               GLMS_YUP); // world up
+
+        mat4s light_world_projection_view_matrix = glms_mat4_mul(light_projection, light_view);
+
+        directional_shadow_data_array[i] = (Directional_Light_Shadow_Data){
+            .light_idx = i,
+            .shadow_texture_idx = 0,
+            .shadow_texture_size = 0,
+            .light_world_view_matrix = light_world_projection_view_matrix,
+        };
+
+
 
     }
-    */
+
+
 
 
     /*

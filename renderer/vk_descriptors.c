@@ -40,6 +40,13 @@ Descriptor_System* descriptor_pool_allocator_init(Renderer* renderer)
 
     //BINDLESS
 
+    renderer->descriptor_indexing_properties.maxDescriptorSetUpdateAfterBindSamplers;
+    renderer->descriptor_indexing_properties.maxDescriptorSetUpdateAfterBindSampledImages;
+    renderer->descriptor_indexing_properties.maxDescriptorSetUpdateAfterBindStorageBuffers;
+    renderer->descriptor_indexing_properties.maxDescriptorSetUpdateAfterBindStorageImages;
+    renderer->descriptor_indexing_properties.maxDescriptorSetUpdateAfterBindUniformBuffers;
+
+
     VkDescriptorPoolSize bindless_pool_sizes[] =
     {
         {

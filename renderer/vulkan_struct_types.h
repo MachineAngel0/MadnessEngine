@@ -935,6 +935,7 @@ typedef struct Renderer
     bool draw_debug_axis;
     bool should_cull;
     bool wireframe_mode;
+    bool use_orthographic_projection;
 
 
     Allocator allocator; // total memory for the entire renderer
@@ -1010,6 +1011,7 @@ typedef struct Renderer
     VkPhysicalDevice physical_device;
     u32 physical_device_index;
 
+    VkPhysicalDeviceDescriptorIndexingProperties descriptor_indexing_properties;
     VkPhysicalDeviceFeatures2 features2;
     VkPhysicalDeviceProperties2 properties2;
     VkPhysicalDeviceMemoryProperties2 physical_device_memory;

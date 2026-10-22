@@ -87,6 +87,8 @@ bool editor_update(Editor* editor)
                                 ARRAY_SIZE(Editor_UI_State_ENUM_String)))
             {
                 editor->state = (Editor_UI_State)state; /* use your enum's real type name */
+                editor_serialize_state(editor);
+
             }
             ImGui_EndMenu();
         }
@@ -1028,9 +1030,12 @@ void editor_render_view(Editor* editor)
         ImGui_Checkbox("DEBUG AXIS", &renderer->draw_debug_axis);
 
         ImGui_Checkbox("Should Use Wireframe", &renderer->wireframe_mode);
+        ImGui_Checkbox("Should Cull", &renderer->should_cull);
+        ImGui_Checkbox("Use Ortho Projection", &renderer->use_orthographic_projection);
+
         ImGui_ComboChar("Render Mode", &renderer->mode, render_mode_enum_string,
                                   ARRAY_SIZE(render_mode_enum_string));
-        ImGui_Checkbox("Should Cull", &renderer->should_cull);
+
     }
     ImGui_End();
 }

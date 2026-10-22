@@ -625,9 +625,14 @@ bool vulkan_device_create2(Renderer* renderer)
 
     vulkan_physical_device_get_supported_features(renderer->physical_device, &renderer->features2);
 
+
+    renderer->descriptor_indexing_properties = (VkPhysicalDeviceDescriptorIndexingProperties){
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES
+    };
+
     renderer->properties2 = (VkPhysicalDeviceProperties2){
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-        .pNext = 0,
+        .pNext = &renderer->descriptor_indexing_properties,
         .properties = {0},
     };
     vkGetPhysicalDeviceProperties2(renderer->physical_device, &renderer->properties2);
@@ -1188,7 +1193,6 @@ bool vulkan_physical_device_meets_requirements(VkPhysicalDevice current_device, 
 
     // device_met_requirements.discrete_gpu;
     // device_met_requirements.integrated_gpu;
-
 
     VkPhysicalDeviceProperties2 physical_device_properties = {0};
     physical_device_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;

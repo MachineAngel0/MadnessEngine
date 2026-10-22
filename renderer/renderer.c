@@ -228,8 +228,20 @@ void renderer_update_global_ubo(Renderer* renderer, u64 current_frame_index)
     // ubo.view = camera_get_view_matrix(&main_camera);
     ubo.view = camera_get_fps_view_matrix(&renderer->main_camera);
     // Perspective
+
     ubo.proj = camera_get_projection(&renderer->main_camera, renderer->framebuffer_width,
                                      renderer->framebuffer_height);
+
+    if (renderer->use_orthographic_projection)
+    {
+        ubo.proj= glms_ortho(
+            -20.0f, 20.0f,  // left, right
+            -20.0f, 20.0f,  // bottom, top
+            1.0f,
+            96.f);
+
+        ubo.proj.raw[1][1] *= -1.0f;
+    }
 
 
     ubo.directional_lights_address = vulkan_buffer_get_frame_device_address(

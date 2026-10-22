@@ -144,13 +144,13 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
     madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
 
-    // Mesh_Handle mesh_handle;
-    // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
-    // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
+    Mesh_Handle mesh_handle;
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
     // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
     // asset_load_mesh_path(application_core->asset_system,
-    //                      "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
-    //                      &mesh_handle);
+                         // "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
+                         // &mesh_handle);
 
 
     // Skinned_Mesh_Handle skinned_handle;
