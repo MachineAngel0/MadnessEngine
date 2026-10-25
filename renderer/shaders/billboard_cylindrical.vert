@@ -5,7 +5,7 @@
 
 
 
-#include "shader_includes/2d_structs.glsl"
+#include "shader_includes/sprite_structs.glsl"
 #include "shader_includes/test_uniform.glsl"
 
 //https://www.flipcode.com/archives/Billboarding-Excerpt_From_iReal-Time_Renderingi_2E.shtml
@@ -24,13 +24,9 @@ void main() {
     // meaning if you from a top or bottom angle at the billboard, it will not rotate to look at the camera
 
 
-
-
-
-
     uint instance_idx = gl_InstanceIndex;
     out_material_buffer_location = instance_idx;
-    UI_Data inst_data = PC_2D.material_buffer.ui_data[nonuniformEXT(instance_idx)];
+    UI_Data inst_data = PC_2D.material_buffer.ui_data[instance_idx];
 
 
 

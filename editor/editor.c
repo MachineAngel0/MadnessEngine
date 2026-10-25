@@ -56,6 +56,9 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     editor_deserialize_state(editor);
 
 
+    editor->directional_light_texture = asset_load_texture_path(editor->asset_system, "black_sun");
+
+
     return editor;
 }
 
@@ -88,7 +91,6 @@ bool editor_update(Editor* editor)
             {
                 editor->state = (Editor_UI_State)state; /* use your enum's real type name */
                 editor_serialize_state(editor);
-
             }
             ImGui_EndMenu();
         }
@@ -99,19 +101,21 @@ bool editor_update(Editor* editor)
     const float PAD = 10.0f;
     const ImGuiViewport* vp = ImGui_GetMainViewport();
 
-    ImVec2 pos = {vp->WorkPos.x + vp->WorkSize.x - PAD,   // top-right corner
-                  vp->WorkPos.y + PAD};
-    ImVec2 pivot = {1.0f, 0.0f};                          // anchor window's top-right to pos
+    ImVec2 pos = {
+        vp->WorkPos.x + vp->WorkSize.x - PAD, // top-right corner
+        vp->WorkPos.y + PAD
+    };
+    ImVec2 pivot = {1.0f, 0.0f}; // anchor window's top-right to pos
     ImGui_SetNextWindowPosEx(pos, ImGuiCond_Always, pivot);
     ImGui_SetNextWindowBgAlpha(0.35f);
 
     ImGuiWindowFlags flags =
-        ImGuiWindowFlags_NoDecoration |        // no title bar, resize, scrollbar, collapse
+        ImGuiWindowFlags_NoDecoration | // no title bar, resize, scrollbar, collapse
         ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoSavedSettings |     // don't write it to imgui.ini
+        ImGuiWindowFlags_NoSavedSettings | // don't write it to imgui.ini
         ImGuiWindowFlags_NoFocusOnAppearing |
         ImGuiWindowFlags_NoNav |
-        ImGuiWindowFlags_NoMove;               // drop this if you want it draggable
+        ImGuiWindowFlags_NoMove; // drop this if you want it draggable
 
     if (ImGui_Begin("Overlay", 0, flags))
     {
@@ -121,7 +125,6 @@ bool editor_update(Editor* editor)
         // ImGui_Text("Wireframe: %s", renderer->wireframe_mode ? "on" : "off");
     }
     ImGui_End();
-
 
 
     //do the ui and stuff
@@ -537,40 +540,132 @@ void editor_ui_scene(Editor* editor)
     ImGui_Begin("Lights", 0, 0);
     {
         // madness_scroll_box_begin(STRING("Lights Scroll Box"));
+        for (u32 i = 0; i < light_system->directional_light_count; ++i)
         {
-            for (u32 i = 0; i < light_system->directional_light_count; ++i)
-            {
-                char buffer[50];
-                char buffer2[50];
-                snprintf(buffer, 50, "dir_light direction%d", i);
-                snprintf(buffer2, 50, "dir_light color%d", i);
-                Directional_Light* directional_light = &light_system->directional_lights[i];
-                ImGui_DragFloat3(buffer, directional_light->direction.raw);
-                ImGui_ColorEdit3(buffer2, directional_light->color.raw, 0.1f);
-            }
-            for (u32 i = 0; i < light_system->point_light_count; ++i)
-            {
-                char buffer[50];
-                char buffer2[50];
-                sprintf(buffer, "point_light%d", i);
-                sprintf(buffer2, "point_light_color%d", i);
-                Point_Light* point_light = &light_system->point_lights[i];
-                ImGui_DragFloat4(buffer, point_light->position.raw);
-                ImGui_ColorEdit4(buffer2, point_light->color.raw, 0.1f);
-            }
+            ImGui_PushIDInt(i);
+            ImGui_Separator();
+            ImGui_Text("Directional light %d", i);
+
+            Directional_Light* directional_light = &light_system->directional_lights[i];
 
 
-            for (u32 i = 0; i < light_system->spot_light_count; ++i)
-            {
-                char buffer[50];
-                char buffer2[50];
-                sprintf(buffer, "spot_light%d", i);
-                sprintf(buffer2, "spot_light_color%d", i);
-                Spot_Light* spot_light = &light_system->spot_lights[i];
-                ImGui_DragFloat4(buffer, spot_light->position.raw);
-                ImGui_ColorEdit4(buffer2, spot_light->color.raw, 0.1f);
-            }
+            ImGui_DragFloat("DL Orthographic extent", &directional_light->orthobox_extent);
+            ImGui_DragFloat3("DL Position (doesn't do anything)", directional_light->position.raw);
+            ImGui_DragFloat3("DL Direction", directional_light->direction.raw);
+            ImGui_ColorEdit3("DL Color", directional_light->color.raw, 0.1f);
+
+            ImGui_DragFloat("DL Diffuse", &directional_light->diffuse);
+            ImGui_DragFloat("DL Specular", &directional_light->specular);
+
+            Sprite_Data directional_light_sprite = {
+                .flags = 0,
+                .pos = (vec4s){
+                    directional_light->position.x, directional_light->position.y, directional_light->position.z, 1.0f
+                },
+                .size = (vec2s){4, 4},
+                .rotation = 0.f,
+                .uv_offset = 0.f,
+                .uv_size = (vec2s){1, 1},
+                .color = GLMS_VEC3_ONE,
+                .texture_index = editor->directional_light_texture.handle,
+            };
+
+            directional_light_sprite.flags |= SPRITE_FLAG_TEXTURE;
+
+            sprite_transient_draw(editor->asset_system->sprite_system, directional_light_sprite);
+
+
+            vec3s pos = directional_light->position;
+            vec3s dir = glms_vec3_normalize(directional_light->direction);
+            f32 length = 5.0f;
+            vec3s direction = glms_vec3_scale(dir, length);
+            debug_draw_line(pos, glms_vec3_add(pos, direction), glms_vec4(directional_light->color, 1.0f));
+            ImGui_PopID();
+
+
         }
+        for (u32 i = 0; i < light_system->point_light_count; ++i)
+        {
+            ImGui_Separator();
+
+            ImGui_Text("point light %d", i);
+
+            Point_Light* point_light = &light_system->point_lights[i];
+            ImGui_DragFloat4("Position", point_light->position.raw);
+            ImGui_ColorEdit4("Color", point_light->color.raw, 0.1f);
+        }
+
+
+        for (u32 i = 0; i < light_system->spot_light_count; ++i)
+        {
+            ImGui_Separator();
+
+            ImGui_PushIDInt(i);
+            Spot_Light* spot_light = &light_system->spot_lights[i];
+            ImGui_Text("spot_light %d", i);
+
+
+            ImGui_DragFloat4("Position", spot_light->position.raw);
+            ImGui_ColorEdit4("Color", spot_light->color.raw, 0.1f);
+            ImGui_DragFloat3("Direction", spot_light->direction.raw);
+
+            ImGui_DragFloat("Range", &spot_light->range);
+            ImGui_DragFloat("Cut Off", &spot_light->angle_cut_off);
+            ImGui_DragFloat("Outer Cut Off", &spot_light->angle_outer_cut_off);
+            ImGui_DragFloat("Constant", &spot_light->constant);
+            ImGui_DragFloat("Linear", &spot_light->linear);
+            ImGui_DragFloat("Quadratic", &spot_light->quadratic);
+            ImGui_DragFloat("Specular", &spot_light->specular);
+
+            ImGui_PopID();
+
+
+            Sprite_Data spot_light_sprite = {
+                .flags = 0,
+                .pos = (vec4s){spot_light->position.x, spot_light->position.y, spot_light->position.z, 1.0f},
+                .size = (vec2s){4, 4},
+                .rotation = 0.f,
+                .uv_offset = 0.f,
+                .uv_size = (vec2s){1, 1},
+                .color = GLMS_VEC3_ONE,
+                .texture_index = editor->directional_light_texture.handle,
+            };
+
+            spot_light_sprite.flags |= SPRITE_FLAG_TEXTURE;
+
+            sprite_transient_draw(editor->asset_system->sprite_system, spot_light_sprite);
+
+            vec3s pos = glms_vec4_copy3(spot_light->position);
+            vec3s dir = glms_vec3_normalize(spot_light->direction);
+            f32 length = 5.0f;
+            vec3s direction = glms_vec3_scale(dir, length);
+            debug_draw_line(pos, glms_vec3_add(pos, direction), spot_light->color);
+        }
+    }
+    ImGui_End();
+
+    ImGui_Begin("Camera", 0, 0);
+    {
+        Camera* camera = &editor->renderer->main_camera;
+
+
+        ImGui_DragFloat3("Rotation", camera->rotation.raw);
+        ImGui_DragFloat3("Position", camera->pos.raw);
+
+        ImGui_DragFloat("Rotation Speed", &camera->rotation_speed);
+        ImGui_DragFloat("Move Speed", &camera->move_speed);
+
+        ImGui_DragFloat("Fov", &camera->fov);
+        ImGui_DragFloat("Z Near",&camera->znear);
+        ImGui_DragFloat("Z Far", &camera->zfar);
+
+        ImGui_DragFloat("Pitch", &camera->pitch);
+        ImGui_DragFloat("Yaw", &camera->yaw);
+
+        // mat4s projection;
+        // mat4s view;
+
+
     }
     ImGui_End();
 
@@ -662,7 +757,6 @@ void editor_ui_scene(Editor* editor)
         }
     }
     ImGui_End();
-
 }
 
 
@@ -715,6 +809,58 @@ void editor_texture_view(Editor* editor)
         }
     }
     ImGui_End();
+
+    ImGui_Begin("Texture Render Pass View", 0, 0);
+    {
+        Vulkan_Texture* vk_texture = &editor->renderer->directional_shadow_texture;
+        if (vk_texture->ready_for_read_by_imgui)
+        {
+            ImGui_Text("Width: %d", vk_texture->width);
+            ImGui_Text("Height: %d", vk_texture->height);
+
+            ImTextureRef ref = {0};
+            ref._TexID = (ImTextureID)(uintptr_t)vk_texture->imgui_descriptor_set;
+            // you dont pass in the actual size, you pass in the size you want it displayed
+            // ImGui_Image(ref, (ImVec2){ vk_texture->width, vk_texture->height });
+
+            //give the image a border so its easier to see
+            ImGui_PushStyleVar(ImGuiStyleVar_ImageBorderSize, 1.0f);
+
+            //whites a good color for seeing the textures better
+            ImGui_PushStyleColorImVec4(ImGuiCol_Border, (ImVec4){1.0f, 1.0f, 1.0f, 1.0f});
+
+            ImGui_Image(ref, (ImVec2){128, 128});
+
+            ImGui_PopStyleColor();
+            ImGui_PopStyleVar();
+        }
+
+
+        Vulkan_Texture* vk_texture2 = &editor->renderer->spot_light_shadow_texture;
+        if (vk_texture2->ready_for_read_by_imgui)
+        {
+            ImGui_Text("Width: %d", vk_texture2->width);
+            ImGui_Text("Height: %d", vk_texture2->height);
+
+            ImTextureRef ref = {0};
+            ref._TexID = (ImTextureID)(uintptr_t)vk_texture2->imgui_descriptor_set;
+            // you dont pass in the actual size, you pass in the size you want it displayed
+            // ImGui_Image(ref, (ImVec2){ vk_texture->width, vk_texture->height });
+
+            //give the image a border so its easier to see
+            ImGui_PushStyleVar(ImGuiStyleVar_ImageBorderSize, 1.0f);
+
+            //whites a good color for seeing the textures better
+            ImGui_PushStyleColorImVec4(ImGuiCol_Border, (ImVec4){1.0f, 1.0f, 1.0f, 1.0f});
+
+            ImGui_Image(ref, (ImVec2){128, 128});
+
+            ImGui_PopStyleColor();
+            ImGui_PopStyleVar();
+        }
+    }
+    ImGui_End();
+
 
     ImGui_Begin("Texture Metatable", 0, 0);
     {
@@ -808,7 +954,8 @@ void editor_material_asset_view(Editor* editor)
             for (u32 i = 0; i < shader_system->shader_to_material_mapping.count; i++)
             {
                 const bool is_selected = (selected_shader == i);
-                if (ImGui_SelectableEx(shader_system->shader_to_material_mapping.shader_name[i]->chars, is_selected, 0, (ImVec2){0, 0}))
+                if (ImGui_SelectableEx(shader_system->shader_to_material_mapping.shader_name[i]->chars, is_selected, 0,
+                                       (ImVec2){0, 0}))
                 {
                     selected_shader = i;
                 }
@@ -824,7 +971,7 @@ void editor_material_asset_view(Editor* editor)
 
 
         ImGui_ComboChar("Blend Mode: ", &selected_blend_mode, Shader_Blend_Mode_enum_string,
-                                  ARRAY_SIZE(Shader_Blend_Mode_enum_string));
+                        ARRAY_SIZE(Shader_Blend_Mode_enum_string));
 
         ImGui_Checkbox("Double Sided", &double_sided);
 
@@ -855,15 +1002,15 @@ void editor_material_asset_view(Editor* editor)
         ImGui_NewLine();
 
         ImGui_Reflect_Material(editor->asset_system->asset_registry,
-                                    asset_system->global_reflection_registry,
-                                    material_reflect_struct,
-                                    &material_memory,
-                                    "mat",
-                                    editor->texture_list, editor->frame_allocator);
+                               asset_system->global_reflection_registry,
+                               material_reflect_struct,
+                               &material_memory,
+                               "mat",
+                               editor->texture_list, editor->frame_allocator);
     }
     ImGui_End();
 
-    ImGui_Begin("Additional Shader Info",0, 0);
+    ImGui_Begin("Additional Shader Info", 0, 0);
     {
         ImGui_Text("ADDITIONAL INFO");
         ImGui_NewLine();
@@ -877,8 +1024,8 @@ void editor_material_asset_view(Editor* editor)
             asset_system->global_reflection_registry, TYPE_STRING(Material_Definition));
         // shader_asset
         Imgui_Reflect_Using_Data(asset_system->global_reflection_registry, mat_def_reflect_struct,
-                                      &shader_system->shader_to_material_mapping.material_definition[selected_shader],
-                                      "Mat", editor->frame_allocator);
+                                 &shader_system->shader_to_material_mapping.material_definition[selected_shader],
+                                 "Mat", editor->frame_allocator);
 
 
         Shader_Asset* shader_asset = shader_asset_get(shader_system, handle);
@@ -886,7 +1033,7 @@ void editor_material_asset_view(Editor* editor)
             asset_system->global_reflection_registry, TYPE_STRING(Shader_Asset));
         // shader_asset
         Imgui_Reflect_Using_Data(asset_system->global_reflection_registry, shader_reflect_struct, shader_asset,
-                                      "Shader", editor->frame_allocator);
+                                 "Shader", editor->frame_allocator);
     }
     ImGui_End();
 
@@ -1034,8 +1181,7 @@ void editor_render_view(Editor* editor)
         ImGui_Checkbox("Use Ortho Projection", &renderer->use_orthographic_projection);
 
         ImGui_ComboChar("Render Mode", &renderer->mode, render_mode_enum_string,
-                                  ARRAY_SIZE(render_mode_enum_string));
-
+                        ARRAY_SIZE(render_mode_enum_string));
     }
     ImGui_End();
 }
@@ -1093,7 +1239,7 @@ void editor_particle_view(Editor* editor)
         Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
             editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
         Imgui_Reflect_Using_Data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
-                                      &emitter_to_edit->data, "emitter_edit", editor->frame_allocator);
+                                 &emitter_to_edit->data, "emitter_edit", editor->frame_allocator);
 
 
         ImGui_NewLine();
@@ -1107,8 +1253,8 @@ void editor_particle_view(Editor* editor)
 
         static u32 material_path_index;
         ImGui_Combo_String("selected material asset", material_path_index,
-                             editor->material_asset_list->strings,
-                             editor->material_asset_list->count);
+                           editor->material_asset_list->strings,
+                           editor->material_asset_list->count);
 
 
         /*
@@ -1177,8 +1323,8 @@ void editor_particle_view(Editor* editor)
 
         ImGui_Text("EFFECT SELECTED");
         ImGui_Combo_String("selected effect", effect_path_index,
-                             editor->particle_effect_list->strings,
-                             editor->particle_effect_list->count);
+                           editor->particle_effect_list->strings,
+                           editor->particle_effect_list->count);
         if (ImGui_Button("LOAD EFFECT"))
         {
             Particle_Effect_Handle discard_handle;
@@ -1195,8 +1341,8 @@ void editor_particle_view(Editor* editor)
         ImGui_Text("EMITTER TO ADD");
 
         ImGui_Combo_String("selected emitter to add", emitter_path_index,
-                             editor->particle_emitter_list->strings,
-                             editor->particle_emitter_list->count);
+                           editor->particle_emitter_list->strings,
+                           editor->particle_emitter_list->count);
 
         //add from a global list
         if (ImGui_Button("ADD EMITTER"))
@@ -1298,7 +1444,7 @@ void editor_particle_view(Editor* editor)
             Reflection_Runtime_Struct emitter_runtime_struct = reflection_registry_get_struct(
                 editor->asset_system->global_reflection_registry, TYPE_STRING(Particle_Emitter_Data));
             Imgui_Reflect_Using_Data(editor->asset_system->global_reflection_registry, emitter_runtime_struct,
-                                          &emitter->data, "emitter", editor->frame_allocator);
+                                     &emitter->data, "emitter", editor->frame_allocator);
         }
     }
     ImGui_End();

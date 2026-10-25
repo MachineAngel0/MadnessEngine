@@ -142,11 +142,16 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                   application_core->input_system,
                   application_core->asset_system);
 
-    madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
+    //NOTE: got moved into the renderer, so we could see renderpass textures
+    // madness_imgui_init(&application_core->plat_state, renderer_plugin->renderer);
 
     Mesh_Handle mesh_handle;
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
+    // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/floor_test/floor_test.mmesh", &mesh_handle);
+
+
+
     // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
     // asset_load_mesh_path(application_core->asset_system,
                          // "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
@@ -231,6 +236,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
         // job_system_test();
 
+        sprite_system_begin(application_core->asset_system->sprite_system);
 
         madness_ui_begin(renderer_plugin->renderer->framebuffer_width_new,
                          renderer_plugin->renderer->framebuffer_height_new);
@@ -270,6 +276,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
         particle_system_update(application_core->asset_system->particle_system,
                                application_core->clock.delta_time);
+
+        // sprite_renderer_draw(renderer, sprite_backend, command_buffer);
+
 
         madness_ui_end();
 

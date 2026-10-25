@@ -15,14 +15,18 @@ typedef struct Sprite_System_Config
 Sprite_System* sprite_system_init(Memory_System* memory_system);
 bool sprite_system_shutdown(Sprite_System* sprite_system, Memory_System* memory_system);
 
-MAPI void sprite_system_begin(Sprite_System* sprite_system, s32 screen_size_x, s32 screen_size_y);
+MAPI void sprite_system_begin(Sprite_System* sprite_system);
 
-MAPI Sprite_Handle sprite_system_new_sprite(Sprite_System* sprite_system);
-MAPI Sprite_Data* sprite_system_get_sprite_data(Sprite_System* sprite_system, Sprite_Handle* sprite_handle);
-MAPI void sprite_system_sprite_release(Sprite_System* sprite_system, Sprite_Handle sprite_handle);
+MAPI Sprite_Handle sprite_acquire(Sprite_System* sprite_system);
+MAPI Sprite_Data* sprite_system_get_sprite_data(Sprite_System* sprite_system, Sprite_Handle sprite_handle);
+MAPI void sprite_release(Sprite_System* sprite_system, Sprite_Handle sprite_handle);
 
 
-MAPI Sprite_Data* sprite_system_new_frame_sprite(Sprite_System* sprite_system);
+//pass in the data and it will be drawn for this frame only
+MAPI void sprite_transient_draw(Sprite_System* sprite_system, Sprite_Data data);
+
+
+MAPI Sprite_Data* sprite_system_new_get(Sprite_System* sprite_system);
 
 
 bool sprite_system_generate_render_packet(Sprite_System* sprite_system,

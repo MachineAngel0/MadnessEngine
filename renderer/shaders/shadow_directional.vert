@@ -21,20 +21,20 @@ void main() {
 
 
     //global mesh data
-    vec3 vertex = ubo.vertex_buffer.vertex_data[nonuniformEXT(draw_idx)];
+    vec3 vertex = ubo.vertex_buffer.vertex_data[draw_idx];
 
 
     //get object draw data
-    Mesh_Renderable cur_mesh_data = pc_mesh.mesh_renderable_buffer.mesh_data[nonuniformEXT(instance_idx)];
+    Mesh_Renderable cur_mesh_data = pc_mesh.mesh_renderable_buffer.mesh_data[instance_idx];
 
     //get transform data
-    mat4 model = ubo.transform_buffer.transform_data[nonuniformEXT(cur_mesh_data.transform_idx)];
+    mat4 model = ubo.transform_buffer.transform_data[cur_mesh_data.transform_idx];
 
 
     //TODO: change the ubo to be from the directional lights pov
-    gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
+//    gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
 
 
-    //    gl_Position = light_view * model * vec4(vertex, 1.0);
+    gl_Position = ubo.directional_lights_shadow.directional_light_shadow_data[0].light_world_view_matrix * model * vec4(vertex, 1.0);
 
 }

@@ -43,7 +43,7 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                               Vulkan_Command_Buffer* command_buffer,
                                               Vulkan_Shader_Pipeline* vulkan_pipeline,
-                                              Vulkan_Mesh_Render_List* render_list);
+                                              Vulkan_Mesh_Render_List* render_list, const char* name);
 
 
 void mesh_renderer_skinned_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,

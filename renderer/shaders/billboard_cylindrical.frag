@@ -4,7 +4,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/2d_structs.glsl"
+#include "shader_includes/sprite_structs.glsl"
 
 
 layout(location = 0) in vec3 in_color;

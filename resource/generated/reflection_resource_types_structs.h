@@ -2234,12 +2234,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	Reflection_Runtime_Struct_Field Sprite_System_Fields[] =
 	{
 		{
-			.name = "screen_size",
-			.type = REFLECTION_TYPE_VEC2,
-			.type_name = "vec2s",
-			.offset = offsetof(Sprite_System, screen_size)
-		},
-		{
 			.name = "sprite_indices",
 			.type = REFLECTION_TYPE_U16,
 			.type_name = "u16",
@@ -2251,7 +2245,7 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	{
 		.name = "Sprite_System",
 		.fields = Sprite_System_Fields,
-		.field_count = 2,
+		.field_count = 1,
 		.struct_size = sizeof(Sprite_System)
 	};
 
@@ -2407,13 +2401,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Mesh_System, skinned_mesh_instance_count)
 		},
+		{
+			.name = "mesh_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Asset_Runtime",
+			.offset = offsetof(Mesh_System, mesh_asset)
+		},
+		{
+			.name = "skinned_asset",
+			.type = REFLECTION_TYPE_STRUCT,
+			.type_name = "Asset_Runtime",
+			.offset = offsetof(Mesh_System, skinned_asset)
+		},
 	};
 
 	 Reflection_Runtime_Struct Mesh_System_Runtime_Struct =
 	{
 		.name = "Mesh_System",
 		.fields = Mesh_System_Fields,
-		.field_count = 8,
+		.field_count = 10,
 		.struct_size = sizeof(Mesh_System)
 	};
 
@@ -2789,19 +2795,13 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "char",
 			.offset = offsetof(Render_Packet_Sprite, system_name)
 		},
-		{
-			.name = "sprite_indices",
-			.type = REFLECTION_TYPE_U16,
-			.type_name = "u16",
-			.offset = offsetof(Render_Packet_Sprite, sprite_indices)
-		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Sprite_Runtime_Struct =
 	{
 		.name = "Render_Packet_Sprite",
 		.fields = Render_Packet_Sprite_Fields,
-		.field_count = 2,
+		.field_count = 1,
 		.struct_size = sizeof(Render_Packet_Sprite)
 	};
 

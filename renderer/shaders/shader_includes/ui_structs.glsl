@@ -4,13 +4,6 @@
 
 #include "macros.glsl"
 
-#define SPRITE_FLAG_NONE BITFLAG(1)
-#define SPRITE_FLAG_TEXTURE BITFLAG(2)
-#define SPRITE_FLAG_COLOR BITFLAG(3)
-#define SPRITE_FLAG_TEXT BITFLAG(4)
-#define SPRITE_FLAG_CIRCLE BITFLAG(5)
-#define SPRITE_FLAG_ROUND_CORNER BITFLAG(6)
-#define SPRITE_FLAG_OUTLINE BITFLAG(7)
 
 
 #define UI_FLAG_NONE BITFLAG(0)
@@ -29,23 +22,8 @@
 
 
 
-struct Sprite_Data {
-    uint flags;
-
-    vec2 pos;
-    vec2 size;
-    float rotation;
-
-    float thickness;
 
 
-    vec2 uv_offset;
-    vec2 uv_size;
-
-    vec3 color;
-    uint texture_index;
-    uint _padding0;
-};
 
 struct UI_Data
 {
@@ -79,6 +57,19 @@ struct UI_Data
 };
 
 
+
+layout(buffer_reference, scalar) readonly buffer UI_Instance_Buffer{
+    UI_Data ui_data[];
+};
+
+
+layout(push_constant, scalar) uniform PushConstant_2D{
+    UI_Instance_Buffer material_buffer;
+    uint padding1;
+    uint padding2;
+}PC_2D;
+
+
 // binding 0 stores our textures
 // binding 1 stores our params and indexes into the descriptor
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
@@ -88,33 +79,3 @@ layout (set = 1, binding = 0) uniform textureCube textureCubes[];
 layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
 //layout (set = 1, binding = 1) uniform sampler samplers[];
 
-// binding 2 stores all our buffers
-layout(set = 2, binding = 0, scalar) readonly buffer SPRITE_INSTANCE_BUFFER{
-    Sprite_Data sprite_instance_data[];
-}Sprite_Instance_Buffer[];
-
-layout(buffer_reference, scalar) readonly buffer UI_Instance_Buffer{
-    UI_Data ui_data[];
-};
-
-
-
-struct Sprite
-{
-    vec2 pos;
-    vec2 tex;
-};
-
-layout(buffer_reference, scalar) readonly buffer Sprite_Vertex{
-    Sprite vertice[];
-};
-layout(buffer_reference, scalar) readonly buffer Sprite_Index{
-    uint indices[];
-};
-
-
-layout(push_constant, scalar) uniform PushConstant_2D{
-    UI_Instance_Buffer material_buffer;
-    uint padding1;
-    uint padding2;
-}PC_2D;

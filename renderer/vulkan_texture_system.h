@@ -20,4 +20,14 @@ Texture_Handle vulkan_texture_system_add_texture_file(Renderer* renderer, Vulkan
 bool vulkan_texture_system_free(Renderer* renderer, Texture_Handle handle);
 
 
+
+void vulkan_texture_system_internal(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* out_texture);
+
+void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* vk_texture);
+void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* vk_texture);
+
+
 #endif //VULKAN_TEXTURE_SYSTEM_H

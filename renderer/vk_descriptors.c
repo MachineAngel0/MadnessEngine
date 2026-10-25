@@ -608,6 +608,39 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
     }
 }
 
+
+void update_texture_bindless_descriptor_set_explicit(Renderer* renderer,
+                                            Descriptor_System* descriptor_system, Vulkan_Texture* texture,
+                                            u32 bindless_location, VkImageLayout image_layout)
+{
+    //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
+    MASSERT(texture);
+
+
+    VkDescriptorImageInfo image_info = {0}; // for textures
+    image_info.imageLayout = image_layout;
+    image_info.imageView = texture->texture_image_view;
+    image_info.sampler = texture->texture_sampler;
+
+    for (int i = 0; i < descriptor_system->texture_descriptors.descriptor_set_count; i++)
+    {
+        VkWriteDescriptorSet write_descriptor_set = {0};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = descriptor_system->texture_descriptors.descriptor_sets[i];
+        write_descriptor_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.dstBinding = 0;
+        // write_descriptor_set.descriptorCount = max_bindless_resources;
+        write_descriptor_set.descriptorCount = 1;
+        // is the number of descriptors to update or the number of elements in pimageinfo/pbufferinfo etc...
+        write_descriptor_set.dstArrayElement = bindless_location; // starting element of the array
+        write_descriptor_set.pImageInfo = &image_info;
+        //
+        vkUpdateDescriptorSets(renderer->logical_device, 1,
+                               &write_descriptor_set, 0, 0);
+    }
+}
+
+
 void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_system,
                                                    Buffer_Handle buffer_handle,

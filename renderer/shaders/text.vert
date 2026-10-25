@@ -5,7 +5,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "shader_includes/test_uniform.glsl"
-#include "shader_includes/2d_structs.glsl"
+#include "shader_includes/ui_structs.glsl"
 
 
 layout(location = 0) in vec2 in_pos;

@@ -997,12 +997,12 @@ void mesh_renderer_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_rende
 void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                               Vulkan_Command_Buffer* command_buffer,
                                               Vulkan_Shader_Pipeline* vulkan_pipeline,
-                                              Vulkan_Mesh_Render_List* render_list)
+                                              Vulkan_Mesh_Render_List* render_list, const char* name)
 {
         PROFILE_ZONE(mesh_renderer_batch_draw)
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
-    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "MESH",
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, name,
                                                   (float[4]){1.0, 1.0, 0.0, 1.0});
 
     Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);

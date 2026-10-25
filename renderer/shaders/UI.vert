@@ -4,7 +4,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "shader_includes/2d_structs.glsl"
+#include "shader_includes/ui_structs.glsl"
 #include "shader_includes/test_uniform.glsl"
 
 layout(location = 0) out vec3 out_color;

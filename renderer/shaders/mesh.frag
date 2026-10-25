@@ -14,8 +14,8 @@ layout(location = 1) in vec4 in_tangent;
 layout(location = 2) in vec2 in_uv;
 layout(location = 3) in vec3 in_world_position;
 layout(location = 4) in flat uint64_t material_offset;
-layout(location = 5) in mat4 in_model;
-
+layout(location = 6) in vec4 in_frag_model;
+layout(location = 7) in mat4 in_model_transform;
 
 //look into subpasses/renderpasses for more/different out values
 layout(location = 0) out vec4 outColor;
@@ -31,24 +31,44 @@ void main() {
 
     vec3 view_direction = normalize(ubo.camera_position.xyz - in_world_position);
 
+    vec3 result = vec3(0);
     // Directional lighting
-    vec3 result = calculate_directional_light(ubo.directional_lights.directional_light[0], norm, view_direction);
+    vec4 directional_light_model_matrix = ubo.directional_lights_shadow.directional_light_shadow_data[0].light_world_view_matrix * in_frag_model;
+
+    vec3 sun = calculate_directional_light(ubo.directional_lights.directional_light[0], norm, view_direction);
+    // calculate directional shadow
+    float shadow = directional_shadow_calculation(ubo.directional_lights.directional_light[0], directional_light_model_matrix, ubo.directional_shadow_map_index, norm, in_frag_model);
+    result = sun * (1.0 - shadow);
+
     // Point lights
     for (int i = 0; i < ubo.point_lights_count; i++){
         result += calculate_point_light(ubo.point_lights.point_light[i], norm, in_world_position, view_direction);
+
     }
-    // phase 3: Spot light
+    // Spot light
     for (int i = 0; i < ubo.spot_lights_count; i++){
-        result += calculate_spot_light(ubo.spot_lights.spot_light[i], norm, in_world_position, view_direction);
+
+        vec4 spot_light_model_matrix = ubo.spot_light_shadow_data.spot_light_shadow_data[i].light_world_view_matrix * in_frag_model;
+        vec3 spot_light_result = calculate_spot_light(ubo.spot_lights.spot_light[i], norm, in_world_position, view_direction);
+        float shadow_spot_light_result = spot_light_shadow_calculation(ubo.spot_lights.spot_light[i], spot_light_model_matrix, ubo.spot_light_shadow_map_index, norm, in_frag_model);
+        result += spot_light_result * (1 - shadow_spot_light_result);
     }
+
 
 
     //final color
     vec4 albedo = material.color;
     if ((material.flags & MESH_PIPELINE_COLOR) != 0u){
-        vec4 texture_result = texture(texture_samples[(nonuniformEXT(material.color_index))], in_uv);
+
+        uint color_idx = ubo.texture_table_buffer.texture_table[material.color_index];
+
+        vec4 texture_result = texture(texture_samples[(nonuniformEXT(color_idx))], in_uv);
         albedo *= texture_result;
     }
+
+
+
+
     outColor = vec4(result, 1.0) * albedo;
 
 

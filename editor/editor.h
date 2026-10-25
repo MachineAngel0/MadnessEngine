@@ -67,6 +67,10 @@ typedef struct Editor
 
     Editor_UI_State state;
 
+
+    Texture_Handle directional_light_texture;
+
+
     //meshes
     Asset_List_Scan* texture_list;
 
@@ -85,6 +89,8 @@ typedef struct Editor
 
     //Material asset
     Asset_List_Scan* material_asset_list;
+
+
 } Editor;
 
 

@@ -795,6 +795,9 @@ bool vulkan_device_create2(Renderer* renderer)
         .multiDrawIndirect = VK_TRUE,
         .fillModeNonSolid = VK_TRUE,
         .shaderInt64 = VK_TRUE,
+        .depthClamp = VK_TRUE,
+        .depthBiasClamp = VK_TRUE,
+        .depthBounds = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures2 enable_device_features2 = {

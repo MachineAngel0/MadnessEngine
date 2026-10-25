@@ -5,42 +5,29 @@
 Sprite_Renderer* sprite_render_init(Renderer* renderer)
 {
     Sprite_Renderer* sprite_backend = allocator_alloc(&renderer->allocator, sizeof(Sprite_Renderer));
-    //TODO: move out the memory capacity to the function params or get from sprite system/resource system
-    u64 buffer_memory_size = MB(1);
 
 
-    sprite_backend->sprite_instance_ssbo_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                             BUFFER_TYPE_STORAGE_GPU,
-                                                                             buffer_memory_size);
+    sprite_backend->sprite_ssbo = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
+                                                             BUFFER_TYPE_STORAGE_GPU,
+                                                             sizeof(Sprite_Data) * (MAX_SPRITE_COUNT + MAX_SPRITE_TRANSIENT_COUNT));
 
-    sprite_backend->sprite_indirect_buffer = vulkan_buffer_create_frame(renderer, renderer->buffer_system,
-                                                                        BUFFER_TYPE_INDIRECT, buffer_memory_size);
+
 
     //only needs to happen once
-    Sprite sprites[4];
-    memcpy(sprites, default_sprite, sizeof(default_sprite));
     u16 sprite_indices[6];
     memcpy(sprite_indices, default_sprite_indices, sizeof(default_sprite_indices));
 
     sprite_backend->index_type = VK_INDEX_TYPE_UINT16;
 
-    sprite_backend->sprite_vertex_buffer = vulkan_buffer_create(renderer, renderer->buffer_system,
-                                                                BUFFER_TYPE_VERTEX,
-                                                                sizeof(default_sprite));
+
 
     sprite_backend->sprite_index_buffer = vulkan_buffer_create(renderer, renderer->buffer_system, BUFFER_TYPE_INDEX,
                                                                sizeof(default_sprite_indices));
 
 
-    vulkan_buffer_startup_uploads(renderer, sprite_backend->sprite_vertex_buffer,
-                                  sprites,
-                                  sizeof(Sprite) * 4);
-
     vulkan_buffer_startup_uploads(renderer, sprite_backend->sprite_index_buffer,
                                   sprite_indices,
                                   sizeof(u16) * 6);
-
-
 
 
     return sprite_backend;
@@ -54,57 +41,61 @@ void sprite_upload_draw_data(Renderer* renderer, Sprite_Renderer* sprite_backend
     MASSERT(sprite_backend)
     MASSERT(sprite_render_packet)
 
-    vulkan_buffer_frame_reset(renderer, sprite_backend->sprite_indirect_buffer);
-    vulkan_buffer_frame_reset(renderer, sprite_backend->sprite_instance_ssbo_buffer);
-
+    vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "SPRITE SSBO UPDATE");
 
     sprite_backend->draw_count = sprite_render_packet->sprite_data->num_items + sprite_render_packet->
         sprite_data_transient->num_items;
 
 
-    //one for normal sprite data and one for transient data
-    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                      command_buffer,
+    //one for normal sprite data and one for transient data right after
+    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_ssbo,
+                                       command_buffer,
                                        sprite_render_packet->sprite_data->data,
                                        array_get_byte_size(sprite_render_packet->sprite_data));
-    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_instance_ssbo_buffer,
-                                        command_buffer,
+    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_ssbo,
+                                       command_buffer,
                                        sprite_render_packet->sprite_data_transient->data,
                                        array_get_byte_size(
                                            sprite_render_packet->sprite_data_transient));
 
-    //generate indirect draw data
-    //basically just a bunch of instances with indexes into the instance data buffer
 
-    //literally only need one
-    VkDrawIndexedIndirectCommand sprite_indirect_draw;
-    u64 sprite_count = sprite_backend->draw_count;
+    VkBufferMemoryBarrier2 sprite_draw_data_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 
-    sprite_indirect_draw.firstIndex = 0;
-    sprite_indirect_draw.firstInstance = 0;
-    sprite_indirect_draw.vertexOffset = 0; // one quad is 2 triangles / 6 vertex's
-    sprite_indirect_draw.indexCount = ARRAY_SIZE(default_sprite_indices);
-    sprite_indirect_draw.instanceCount = sprite_count;
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, sprite_backend->sprite_ssbo)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+    vulkan_command_add_buffer_barrier(command_buffer, sprite_draw_data_barrier);
+    vulkan_command_flush_barriers(command_buffer);
 
 
-    vulkan_buffer_frame_staging_upload(renderer, sprite_backend->sprite_indirect_buffer,
-                                                    command_buffer,
-                                                   &sprite_indirect_draw,
-                                                   sizeof(VkDrawIndexedIndirectCommand));
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
+
+
+
+
 }
 
 
-void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer, u64 current_frame_index)
+void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer)
 {
     MASSERT(sprite_backend)
 
-    INFO("Sprite DRAW CALLS")
 
-    u64 sprite_draw_count = sprite_backend->draw_count;
+    vulkan_command_buffer_debug_label_begin(renderer, command_buffer, "SPRITE DRAW");
 
-    Vulkan_Buffer* vert_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_vertex_buffer);
     Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, sprite_backend->sprite_index_buffer);
-    Vulkan_Buffer* sprite_indirect_buffer = vulkan_buffer_get_frame(renderer, sprite_backend->sprite_indirect_buffer);
+
 
     vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       renderer->sprite_pipeline.handle);
@@ -112,7 +103,8 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //uniform
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 0, 1,
-                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[current_frame_index],
+                            &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
+                                current_frame_index],
                             0, 0);
 
     //textures
@@ -123,39 +115,46 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     //storage buffers
     vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             renderer->sprite_pipeline.pipeline_layout, 2, 1,
-                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[current_frame_index],
+                            &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
+                                current_frame_index],
                             0, 0);
 
 
-    //grab material_handle
-    PC_UI pc_2d_ui = {
-        sprite_backend->sprite_instance_ssbo_buffer.handle,
+
+    PC_SPRITE pc_sprite = {
+        .sprite_data_ssbo = vulkan_buffer_get_frame_device_address(renderer, sprite_backend->sprite_ssbo),
+        .padding0 = 0,
+        .padding1 = 0,
     };
 
-    VkPushConstantsInfo push_constant_info_ui = {0};
-    push_constant_info_ui.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
-    push_constant_info_ui.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    push_constant_info_ui.layout = renderer->sprite_pipeline.pipeline_layout;
-    push_constant_info_ui.offset = 0;
-    push_constant_info_ui.size = sizeof(PC_UI);
-    push_constant_info_ui.pValues = &pc_2d_ui;
-    push_constant_info_ui.pNext = NULL;
+    VkPushConstantsInfo push_constant_info = {0};
+    push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+    push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    push_constant_info.layout = renderer->sprite_pipeline.pipeline_layout;
+    push_constant_info.offset = 0;
+    push_constant_info.size = sizeof(PC_SPRITE);
+    push_constant_info.pValues = &pc_sprite;
+    push_constant_info.pNext = NULL;
 
-    vkCmdPushConstants2(command_buffer->handle, &push_constant_info_ui);
-
-
-    VkDeviceSize offsets_bindless[1] = {0};
-    vkCmdBindVertexBuffers(command_buffer->handle, 0, 1,
-                           &vert_buffer->handle, offsets_bindless);
-
-    vkCmdBindIndexBuffer(command_buffer->handle,
-                         index_buffer->handle, 0,
-                         sprite_backend->index_type    );
+    vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
 
 
 
-    //we use one for the draw count since we are instancing the sprites
-    if (renderer->features2.features.multiDrawIndirect)
+    // vkCmdBindIndexBuffer(command_buffer->handle,
+                         // index_buffer->handle, 0,
+                         // sprite_backend->index_type);
+
+
+
+    vkCmdDraw(command_buffer->handle,
+                         6,
+                         sprite_backend->draw_count,
+                         0,
+                         0);
+
+
+    //we would want this if we wanted unique materials on the sprites
+    /*if (renderer->features2.features.multiDrawIndirect)
     {
         vkCmdDrawIndexedIndirect(command_buffer->handle,
                                  sprite_indirect_buffer->handle, 0,
@@ -172,5 +171,11 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
                                      j * sizeof(VkDrawIndexedIndirectCommand), 1,
                                      sizeof(VkDrawIndexedIndirectCommand));
         }
-    }
+    }*/
+
+
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
+
 }

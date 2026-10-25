@@ -128,9 +128,7 @@ bool editor_app_run(Editor_Application* editor_app)
         {
             continue;
         }
-        sprite_system_begin(application_core->asset_system->sprite_system,
-                            renderer_plugin->renderer->context.framebuffer_width_new,
-                            renderer_plugin->renderer->context.framebuffer_height_new);
+        sprite_system_begin(application_core->asset_system->sprite_system);
 
 
         madness_ui_begin(renderer_plugin->renderer->context.framebuffer_width_new, renderer_plugin->renderer->context.framebuffer_height_new);

@@ -142,6 +142,9 @@ void madness_imgui_init(Platform_State* platform_state, Renderer* renderer)
         // renderer->imgui_descriptor_pool = VK_NULL_HANDLE;
         // return false;
     }
+
+
+
 }
 
 //call before shutting anything else in the renderer down

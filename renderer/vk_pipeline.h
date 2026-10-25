@@ -15,7 +15,8 @@ bool vulkan_pipeline_graphics_create(Renderer* renderer, const char* shader_name
                                      Vulkan_Shader_Pipeline* out_wire_frame_pipeline);
 
 bool vulkan_pipeline_predepth_create(Renderer* renderer, const char* shader_name, Vulkan_Shader_Pipeline* out_pipeline);
-
+bool vulkan_pipeline_shadowmap_create(Renderer* renderer, const char* shader_name, Vulkan_Shader_Pipeline* out_pipeline, VkFormat depth_format, float
+                                      depth_bias);
 
 void vulkan_pipeline_destroy(Renderer* renderer, Vulkan_Shader_Pipeline* pipeline);
 

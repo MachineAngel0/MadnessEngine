@@ -22,8 +22,13 @@
 #define MAX_VULKAN_COMMAND_BUFFERS 32
 
 
-/// HANDLES ///
 
+typedef struct Vulkan_Depth_Bias
+{
+    float depth_bias_constant_factor; // = 1.25f;
+    float depth_bias_slope_factor; // = 1.0f;
+    float depth_bias_clamp; // = 0.05f;
+} Vulkan_Depth_Bias;
 
 
 typedef struct Vulkan_Texture
@@ -37,6 +42,7 @@ typedef struct Vulkan_Texture
     u32 width;
     u32 height;
     VkDeviceSize image_size;
+    u32 bindless_index;
 
     //idk if i would want this
     // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
@@ -402,13 +408,21 @@ typedef struct global_descriptor_sets
 
 typedef struct Directional_Light
 {
+    vec3s position; // just for debug, isn't used for anything
     vec3s direction;
     vec3s color;
 
     //strength values
     float diffuse;
     float specular;
+
+    // doesn't actually need to be in the shader, could seperate
+    float orthobox_extent;
+
 } Directional_Light;
+
+
+
 
 typedef struct Point_Light
 {
@@ -430,13 +444,13 @@ typedef struct Point_Light
 
 typedef struct Spot_Light
 {
-    //TODO:
     vec4s position;
     vec4s color;
     vec3s direction;
 
-    float cutOff;
-    float outerCutOff;
+    float range;
+    float angle_cut_off; // determines the lights fov and area of lighting
+    float angle_outer_cut_off; // fall off value outside the cut off
 
     float constant;
     float linear;
@@ -466,12 +480,16 @@ typedef struct Light_System
 
 
     Buffer_Frame_Handle directional_light_ssbo_handle;
+    Buffer_Frame_Handle directional_light_shadow_ssbo_handle;
+
     Buffer_Frame_Handle point_light_ssbo_handle;
+
     Buffer_Frame_Handle spot_light_ssbo_handle;
+    Buffer_Frame_Handle spot_light_shadow_ssbo_handle;
 } Light_System;
 
 
-typedef struct global_ubo
+typedef struct Global_Ubo
 {
     //this can basically be as largae as a i want, the max limit is 64 kib
     mat4s view;
@@ -479,12 +497,16 @@ typedef struct global_ubo
 
 
     VkDeviceAddress directional_lights_address;
-    // which one do we want to use for this particular instance (might be better as a push constant)
-    // u32 directional_light_index;
+    VkDeviceAddress directional_lights_shadow_address;
+    u32 directional_shadow_map_index;
+
+
     VkDeviceAddress point_lights_address;
     u32 point_lights_count;
 
     VkDeviceAddress spot_lights_address;
+    VkDeviceAddress spot_lights_shadow_address;
+    u32 spot_light_shadow_map_index;
     u32 spot_lights_count;
 
     //camera
@@ -549,8 +571,13 @@ typedef struct Vulkan_Texture_System
     // count up for now, releasing is another issue
     u32 available_texture_indexes;
 
-    // Vulkan_Texture renderpass_textures[100];
-    // u32 renderpass_texture_indexes;
+
+    //meant to be textures internal to the renderer, like renderpass textures
+#define VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT 64u
+    //they start from the offset of max texture count
+    // Vulkan_Texture renderer_textures[VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT];
+    u32 renderer_texture_indexes;
+    u32 renderer_texture_indexes_max;
 
 
     // maps a texture index to the texture slot
@@ -689,16 +716,14 @@ typedef struct Chaos_UI_Backend
 typedef struct Sprite_Backend
 {
     u16 sprite_indices[6];
-
     VkIndexType index_type;
 
-    Buffer_Handle sprite_vertex_buffer;
     Buffer_Handle sprite_index_buffer;
-    Buffer_Frame_Handle sprite_indirect_buffer;
-    Buffer_Frame_Handle sprite_instance_ssbo_buffer;
 
-
+    Buffer_Frame_Handle sprite_ssbo;
     u64 draw_count;
+
+
 } Sprite_Renderer;
 
 
@@ -980,17 +1005,20 @@ typedef struct Renderer
     Vulkan_Shader_Pipeline predepth_mesh_pipeline;
     Vulkan_Shader_Pipeline predepth_skinned_mesh_pipeline;
 
-    Vulkan_Shader_Pipeline shadow_mesh_pipeline;
-    Vulkan_Shader_Pipeline shadow_skinned_mesh_pipeline;
 
 
     //lights
     //NOTE: each light needs a texture, for now ill limit it to a pool of texture's,
     // but i'll need a solution at some point
     //TODO: update the material pipeline, and set piepline states
-    Vulkan_Texture shadowpass_texture;
-    Vulkan_Shader_Pipeline directional_shadow_pipeline;
+    Vulkan_Texture directional_shadow_texture;
+    Vulkan_Shader_Pipeline directional_shadow_mesh_pipeline;
+    Vulkan_Depth_Bias directional_depth_bias;
+
+    Vulkan_Texture spot_light_shadow_texture;
     Vulkan_Shader_Pipeline spot_light_shadow_pipeline;
+
+    Vulkan_Texture point_light_shadow_texture;
     Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
 

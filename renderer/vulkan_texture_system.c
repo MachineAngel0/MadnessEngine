@@ -20,6 +20,10 @@ Vulkan_Texture_System* vulkan_texture_system_init(Renderer* renderer)
     memset(texture_system->textures, 0, sizeof(Vulkan_Texture) * MAX_TEXTURE_COUNT);
     texture_system->texture_deletion_queue = ring_queue_create(sizeof(Vulkan_Texture), MAX_TEXTURE_COUNT);
 
+    // memset(texture_system->renderer_textures, 0, sizeof(Vulkan_Texture) * VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT);
+    texture_system->renderer_texture_indexes = 0;
+    texture_system->renderer_texture_indexes_max = VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT;
+
     //we start every index off at 0
     memset(texture_system->texture_table, 0, MAX_TEXTURE_COUNT * sizeof(u32));
 
@@ -172,6 +176,7 @@ void vulkan_texture_system_upload_new_textures(Renderer* renderer, Render_Packet
         ring_dequeue(packet->texture_upload_queue, &texture_upload);
 
         Vulkan_Texture* vulkan_texture = &renderer->texture_system->textures[texture_upload.texture_index];
+        vulkan_texture->bindless_index = texture_upload.texture_index;
 
         /*//TODO: might not want to use this, and instead just recycle the buffers, made just for texture uploads
         Vulkan_Command_Buffer* single_use_cb = allocator_heap_alloc(renderer->heap_allocator,
@@ -269,4 +274,395 @@ bool vulkan_texture_system_free(Renderer* renderer, Texture_Handle handle)
 
 
     return true;
+}
+
+void vulkan_texture_system_internal(Renderer* renderer, u32 width, u32 height, VkFormat format,
+                                    Vulkan_Texture* out_texture)
+{
+    Vulkan_Texture_System* texture_system = renderer->texture_system;
+
+    if (texture_system->renderer_texture_indexes <= VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT)
+    {
+        //if this ever happens bump up the texture count
+        MASSERT_FALSE()
+    }
+
+    out_texture->bindless_index = texture_system->renderer_texture_indexes++;
+
+    out_texture->width = width;
+    out_texture->height = width;
+
+    // We will sample directly from the depth attachment for the shadow mapping
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT // might need
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    /*
+            VK_IMAGE_TILING_LINEAR: Texels are laid out in row-major order like our pixels array
+            VK_IMAGE_TILING_OPTIMAL: Texels are laid out in an implementation defined order for optimal access
+        Unlike the layout of an image, the tiling mode cannot be changed at a later time.
+        If you want to be able to directly access texels in the memory of the image,
+        then you must use VK_IMAGE_TILING_LINEAR. We will be using a staging buffer instead of a staging image,
+        so this won't be necessary. We will be using VK_IMAGE_TILING_OPTIMAL for efficient access from the shader.
+     */
+
+    //shadows use a depth bit
+    VkImageAspectFlags view_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    /*
+    *  VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+     */
+
+    // Creation info.
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 1; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    image_create_info.format = format;
+    image_create_info.tiling = tiling;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = usage;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info,
+                                                 renderer->vk_allocator_callback,
+                                                 &out_texture->texture_image);
+    VK_CHECK(image_create_result);
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VK_CHECK(
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture
+            ->
+            texture_image_memory
+        ));
+
+    // Bind the memory
+    VK_CHECK(
+        vkBindImageMemory(renderer->logical_device, out_texture->texture_image, out_texture->texture_image_memory,
+            0));
+    // TODO: configurable memory offset.
+
+    // Create view
+    out_texture->texture_image_view = 0;
+    vulkan_image_view_create(renderer, format, view_aspect_flags, out_texture);
+
+    VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
+                                    ? VK_FILTER_LINEAR
+                                    : VK_FILTER_NEAREST;
+
+    VkSamplerCreateInfo sampler_info = {0};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = shadowmap_filter;
+    sampler_info.minFilter = shadowmap_filter;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = renderer->properties2.properties.limits.maxSamplerAnisotropy;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE; // not in use
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 1.0f; // has to be set
+
+    VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
+
+
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, out_texture,
+                                                    out_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    //
+    vkDeviceWaitIdle(renderer->logical_device);
+}
+
+
+void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* vk_texture)
+{
+    Vulkan_Texture_System* texture_system = renderer->texture_system;
+
+    if (texture_system->renderer_texture_indexes >= VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT)
+    {
+        //if this ever happens bump up the texture count
+        MASSERT_FALSE()
+    }
+
+    vk_texture->bindless_index = MAX_TEXTURE_COUNT + texture_system->renderer_texture_indexes++;
+
+
+    vk_texture->width = width;
+    vk_texture->height = height;
+
+    // We will sample directly from the depth attachment for the shadow mapping
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT // might need
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    /*
+            VK_IMAGE_TILING_LINEAR: Texels are laid out in row-major order like our pixels array
+            VK_IMAGE_TILING_OPTIMAL: Texels are laid out in an implementation defined order for optimal access
+        Unlike the layout of an image, the tiling mode cannot be changed at a later time.
+        If you want to be able to directly access texels in the memory of the image,
+        then you must use VK_IMAGE_TILING_LINEAR. We will be using a staging buffer instead of a staging image,
+        so this won't be necessary. We will be using VK_IMAGE_TILING_OPTIMAL for efficient access from the shader.
+     */
+
+    //shadows use a depth bit
+    VkImageAspectFlags view_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    /*
+    *  VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+     */
+
+    // Creation info.
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 1; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
+    image_create_info.format = format;
+    image_create_info.tiling = tiling;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = usage;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+
+    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info,
+                                                 renderer->vk_allocator_callback,
+                                                 &vk_texture->texture_image);
+    VK_CHECK(image_create_result);
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(renderer->logical_device, vk_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VK_CHECK(
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &vk_texture->
+            texture_image_memory
+        ));
+
+    // Bind the memory
+    VK_CHECK(
+        vkBindImageMemory(renderer->logical_device, vk_texture->texture_image, vk_texture->texture_image_memory,
+            0));
+    // TODO: configurable memory offset.
+
+    // Create view
+    vk_texture->texture_image_view = 0;
+    vulkan_image_view_create(renderer, format, view_aspect_flags, vk_texture);
+
+    VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
+                                    ? VK_FILTER_LINEAR
+                                    : VK_FILTER_NEAREST;
+
+    VkSamplerCreateInfo sampler_info = {0};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = shadowmap_filter;
+    sampler_info.minFilter = shadowmap_filter;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    //NOTE: for shadows we clamp to border and not edge
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.anisotropyEnable = VK_FALSE; // not needed for shadow mapping
+    sampler_info.maxAnisotropy = renderer->properties2.properties.limits.maxSamplerAnisotropy;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE; // float white
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE; // not in use
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 0.0f; // has to be set
+
+    VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &vk_texture->texture_sampler));
+
+
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, vk_texture,
+                                                    vk_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    //
+    vkDeviceWaitIdle(renderer->logical_device);
+
+    //wont work until imgui is initialized
+    vk_texture->ready_for_read_by_imgui = true;
+    vk_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(
+        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        vk_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+
+
+void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, u32 height,
+                                     VkFormat format, Vulkan_Texture* vk_texture)
+{
+    Vulkan_Texture_System* texture_system = renderer->texture_system;
+
+    if (texture_system->renderer_texture_indexes >= VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT)
+    {
+        //if this ever happens bump up the texture count
+        MASSERT_FALSE()
+    }
+
+    vk_texture->bindless_index = MAX_TEXTURE_COUNT + texture_system->renderer_texture_indexes++;
+
+
+    vk_texture->width = width;
+    vk_texture->height = height;
+
+    // We will sample directly from the depth attachment for the shadow mapping
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT // might need
+    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
+    /*
+            VK_IMAGE_TILING_LINEAR: Texels are laid out in row-major order like our pixels array
+            VK_IMAGE_TILING_OPTIMAL: Texels are laid out in an implementation defined order for optimal access
+        Unlike the layout of an image, the tiling mode cannot be changed at a later time.
+        If you want to be able to directly access texels in the memory of the image,
+        then you must use VK_IMAGE_TILING_LINEAR. We will be using a staging buffer instead of a staging image,
+        so this won't be necessary. We will be using VK_IMAGE_TILING_OPTIMAL for efficient access from the shader.
+     */
+
+    //shadows use a depth bit
+    VkImageAspectFlags view_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    /*
+    *  VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+     */
+
+    // Creation info.
+    VkImageCreateInfo image_create_info = {0};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D; // stays 2D
+    image_create_info.extent.width = width;
+    image_create_info.extent.height = height;
+    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
+    image_create_info.mipLevels = 1; // TODO: Support mip mapping
+    image_create_info.arrayLayers = 6; // NOTE: since its a cube map, needs 6 layers.
+    image_create_info.format = format;
+    image_create_info.tiling = tiling;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = usage;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
+    image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT; //NOTE: needed for cubemaps
+    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info,
+                                                 renderer->vk_allocator_callback,
+                                                 &vk_texture->texture_image);
+    VK_CHECK(image_create_result);
+
+
+    // Query memory requirements.
+    VkMemoryRequirements memory_requirements;
+    vkGetImageMemoryRequirements(renderer->logical_device, vk_texture->texture_image, &memory_requirements);
+
+    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
+    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    if (memory_type == -1)
+    {
+        M_ERROR("Required memory type not found. Image not valid.");
+    }
+
+
+    // Allocate memory
+    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    memory_allocate_info.allocationSize = memory_requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_type;
+    VK_CHECK(
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &vk_texture->
+            texture_image_memory
+        ));
+
+    // Bind the memory
+    VK_CHECK(
+        vkBindImageMemory(renderer->logical_device, vk_texture->texture_image, vk_texture->texture_image_memory,
+            0));
+    // TODO: configurable memory offset.
+
+    // Create view
+    vk_texture->texture_image_view = 0;
+    vulkan_image_view_create(renderer, format, view_aspect_flags, vk_texture);
+
+    VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
+                                    ? VK_FILTER_LINEAR
+                                    : VK_FILTER_NEAREST;
+
+    VkSamplerCreateInfo sampler_info = {0};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = shadowmap_filter;
+    sampler_info.minFilter = shadowmap_filter;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    //NOTE: for shadows we clamp to border and not edge
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_info.anisotropyEnable = VK_FALSE; // not needed for shadow mapping
+    sampler_info.maxAnisotropy = renderer->properties2.properties.limits.maxSamplerAnisotropy;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE; // float white
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE; // not in use
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 0.0f; // has to be set
+
+    VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &vk_texture->texture_sampler));
+
+
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, vk_texture,
+                                                    vk_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    //
+    vkDeviceWaitIdle(renderer->logical_device);
+
+    //wont work until imgui is initialized
+    vk_texture->ready_for_read_by_imgui = true;
+    vk_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(
+        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        vk_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }

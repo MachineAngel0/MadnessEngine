@@ -221,7 +221,7 @@ bool skinned_mesh_acquire(Asset_System* asset_system, Asset_Record* record, Madn
     asset_runtime_set_info_from_record(runtime, record, ASSET_TEXTURE);
     runtime->asset_handles.skinned_handle = (Skinned_Mesh_Handle){out_handle->handle};
 
-
+    return true;
 }
 
 void skinned_mesh_release(Asset_System* asset_system, Skinned_Mesh_Handle handle);

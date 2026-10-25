@@ -9,12 +9,27 @@
 
 //NOTE: ambient can also refer to color
 struct directional_light_data{
+    vec3 position;
     vec3 direction;
     vec3 color;
 
     float diffuse;
     float specular;
+    float orthobox_extent;
+};
 
+struct directional_light_shadow_data{
+    uint light_idx;
+    uint shadow_texture_idx;
+    vec2 shadow_texture_size;
+    mat4 light_world_view_matrix;
+};
+
+struct spot_light_shadow_data{
+    uint light_idx;
+    uint shadow_texture_idx;
+    vec2 shadow_texture_size;
+    mat4 light_world_view_matrix;
 };
 
 struct point_light_data{
@@ -34,6 +49,8 @@ struct spot_light_data{
     vec4 position;
     vec4 color;
     vec3 direction;
+
+    float range;
     float cut_off;
     float outer_cut_off;
 
@@ -52,12 +69,21 @@ layout(buffer_reference, scalar) readonly buffer DIRECTIONAL_LIGHT_BUFFER{
     directional_light_data directional_light[];
 };
 
+layout(buffer_reference, scalar) readonly buffer DIRECTIONAL_LIGHT_SHADOW_BUFFER{
+    directional_light_shadow_data directional_light_shadow_data[];
+};
+
+
+
 layout(buffer_reference, scalar) readonly buffer POINT_LIGHT_BUFFER{
     point_light_data point_light[];
 };
 
 layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
     spot_light_data spot_light[];
+};
+layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_SHADOW_BUFFER{
+    spot_light_shadow_data spot_light_shadow_data[];
 };
 
 
@@ -126,12 +152,18 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 
 
     DIRECTIONAL_LIGHT_BUFFER directional_lights;
+    DIRECTIONAL_LIGHT_SHADOW_BUFFER directional_lights_shadow;
+
+    uint directional_shadow_map_index;
+
 //    uint directional_light_index;
 
     POINT_LIGHT_BUFFER point_lights;
     uint point_lights_count;
 
     SPOT_LIGHT_BUFFER spot_lights;
+    SPOT_LIGHT_SHADOW_BUFFER spot_light_shadow_data;
+    uint spot_light_shadow_map_index;
     uint spot_lights_count;
 
     vec4 camera_position;
@@ -172,19 +204,158 @@ layout (set = 1, binding = 0) uniform textureCube textureCubes[];
 layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
 //layout (set = 1, binding = 1) uniform sampler samplers[];
 
-vec3 calculate_directional_light(directional_light_data light, vec3 normal, vec3 view_direction)
+
+
+
+float directional_shadow_calculation(directional_light_data light, vec4 fragment_light_space_matrix, uint shadow_map_index, vec3 normalized_norm, vec4 model_position)
+{
+
+    //NOTE: doing this using the vulkan pipeline object
+    //    const float min_shadow_bias = 0.00002f;
+    //    const float max_shadow_bias = 0.0001f;
+
+    //    vec3 light_direction = normalize(light.direction);
+
+    //    const float shadow_bias = max(max_shadow_bias * (1.0 - dot(normalized_norm, light_direction)), min_shadow_bias);
+    //    const float shadow_bias = 0;
+
+
+    // perform perspective divide
+    vec3 projection_coordinates = fragment_light_space_matrix.xyz / fragment_light_space_matrix.w;
+    // transform into texture space from normalized device coordinates [-1,1] -> [0,1]
+    projection_coordinates.xy = projection_coordinates.xy * 0.5 + 0.5;
+
+
+    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+    //    if (projection_coordinates.z > 1.0)
+    //    {
+    //        shadow = 0.0;
+    //    }
+
+    //early out for things not in shadow
+    if (projection_coordinates.z < 0.0 ||
+        projection_coordinates.z > 1.0 ||
+        any(lessThan(projection_coordinates.xy, vec2(0.0))) ||
+        any(greaterThan(projection_coordinates.xy, vec2(1.0))))
+    {
+        return 0.0;
+    }
+
+
+    // grab the shadow map
+    // get closest depth value from light's perspective (using [-1,1] range fragPosLight as coords)
+    float closest_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy).x;
+    // get depth of current fragment from light's perspective
+    float current_depth = projection_coordinates.z;
+    // check whether current frag pos is in shadow
+    float shadow = 0;
+//     shadow = current_depth /*- shadow_bias*/ > closest_depth  ? 1.0 : 0.0;
+
+    // percentage-closer filtering
+    vec2 texel_size = 1.0 / textureSize(texture_samples[(nonuniformEXT(shadow_map_index))], 0);
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float pcf_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy + vec2(x, y) * texel_size).r;
+            shadow += current_depth > pcf_depth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+
+
+
+
+
+
+
+    return shadow;
+
+}
+
+float spot_light_shadow_calculation(spot_light_data spot_light_data,  vec4 fragment_light_space_matrix, uint shadow_map_index, vec3 normalized_norm, vec4 model_position)
+{
+    //    const float min_shadow_bias = 0.00002f;
+    //    const float max_shadow_bias = 0.0001f;
+
+    //    vec3 light_direction = normalize(light.direction);
+
+    //    const float shadow_bias = max(max_shadow_bias * (1.0 - dot(normalized_norm, light_direction)), min_shadow_bias);
+    //    const float shadow_bias = 0;
+
+
+    // perform perspective divide
+    vec3 projection_coordinates = fragment_light_space_matrix.xyz / fragment_light_space_matrix.w;
+    // transform into texture space from normalized device coordinates [-1,1] -> [0,1]
+    projection_coordinates.xy = projection_coordinates.xy * 0.5 + 0.5;
+
+
+    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+    //    if (projection_coordinates.z > 1.0)
+    //    {
+    //        shadow = 0.0;
+    //    }
+
+    //early out for things not in shadow
+    if (projection_coordinates.z < 0.0 ||
+        projection_coordinates.z > 1.0 ||
+        any(lessThan(projection_coordinates.xy, vec2(0.0))) ||
+        any(greaterThan(projection_coordinates.xy, vec2(1.0))))
+    {
+        return 0.0;
+    }
+
+
+    // grab the shadow map
+    // get closest depth value from light's perspective (using [-1,1] range fragPosLight as coords)
+    float closest_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy).x;
+    // get depth of current fragment from light's perspective
+    float current_depth = projection_coordinates.z;
+    // check whether current frag pos is in shadow
+    float shadow = 0;
+    //     shadow = current_depth /*- shadow_bias*/ > closest_depth  ? 1.0 : 0.0;
+
+    // percentage-closer filtering
+    vec2 texel_size = 1.0 / textureSize(texture_samples[(nonuniformEXT(shadow_map_index))], 0);
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float pcf_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy + vec2(x, y) * texel_size).r;
+            shadow += current_depth > pcf_depth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+
+
+
+
+
+
+
+    return shadow;
+
+}
+
+
+
+
+
+vec3 calculate_directional_light(directional_light_data light, vec3 normalized_normal, vec3 view_direction)
 {
     float specular_shininess = 32;
 
     vec3 light_direction = normalize(-light.direction);
     // diffuse shading
-    float diff = max(dot(normal, light_direction), 0.0);
+    float diff = max(dot(normalized_normal, light_direction), 0.0);
     // specular shading
-    vec3 reflect_direction = reflect(-light_direction, normal);
+    vec3 reflect_direction = reflect(-light_direction, normalized_normal);
     float spec = pow(max(dot(view_direction, reflect_direction), 0.0), specular_shininess);
     // combine results
-    vec3 ambient  = light.color.xyz;
-    vec3 diffuse  = light.diffuse  * diff * light.color.xyz;
+    vec3 ambient = light.color.xyz;
+    vec3 diffuse = light.diffuse * diff * light.color.xyz;
     vec3 specular = light.specular * spec * light.color.xyz;
 
     //for textures usage
@@ -210,21 +381,21 @@ vec3 calculate_point_light(point_light_data light, vec3 normal, vec3 frag_positi
 
     float spec = pow(max(dot(view_direction, reflect_direction), 0.0), specular_shininess);
     // attenuation
-    float distance    = length(light.position.xyz - frag_position);
+    float distance = length(light.position.xyz - frag_position);
     float attenuation = 1.0 / (light.constant + light.linear * distance +
     light.quadratic * (distance * distance));
     // combine results
 
 
-    vec3 ambient  = light.color.xyz;
-    vec3 diffuse  = light.diffuse * light.color.xyz;
+    vec3 ambient = light.color.xyz;
+    vec3 diffuse = light.diffuse * light.color.xyz;
     vec3 specular = light.specular * spec * light.color.xyz;
     //for textures usage
     //    vec3 ambient  = light.ambient  * vec3(texture(material.diffuse, TexCoords));
     //    vec3 diffuse  = light.diffuse  * diff * vec3(texture(light.diffuse, TexCoords));
     //    vec3 specular = light.specular * spec * vec3(texture(light.specular, TexCoords));
-    ambient  *= attenuation;
-    diffuse  *= attenuation;
+    ambient *= attenuation;
+    diffuse *= attenuation;
     specular *= attenuation;
     return (ambient + diffuse + specular);
 }

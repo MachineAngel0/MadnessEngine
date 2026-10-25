@@ -7,7 +7,7 @@
 Sprite_Renderer* sprite_render_init(Renderer* renderer);
 MAPI void sprite_upload_draw_data(Renderer* renderer,
                                   Sprite_Renderer* sprite_backend, Render_Packet_Sprite* sprite_render_packet, Vulkan_Command_Buffer* command_buffer);
-void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer, u64 current_frame_index);
+void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, Vulkan_Command_Buffer* command_buffer);
 
 
 

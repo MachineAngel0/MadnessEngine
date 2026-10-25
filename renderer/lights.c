@@ -2,13 +2,21 @@
 
 #include "vk_buffer.h"
 
-typedef struct Directional_Light_Shadow_Data{
+typedef struct Directional_Light_Shadow_Data
+{
     u32 light_idx;
     u32 shadow_texture_idx;
     vec2s shadow_texture_size;
     mat4s light_world_view_matrix;
-}Directional_Light_Shadow_Data;
+} Directional_Light_Shadow_Data;
 
+typedef struct Spot_Light_Shadow_Data
+{
+    u32 light_idx;
+    u32 shadow_texture_idx;
+    vec2s shadow_texture_size;
+    mat4s light_world_view_matrix;
+} Spot_Light_Shadow_Data;
 
 
 Light_System* light_system_init(Renderer* renderer)
@@ -27,7 +35,7 @@ Light_System* light_system_init(Renderer* renderer)
         allocator_alloc(&renderer->allocator, sizeof(Directional_Light) * out_light_system->directional_light_count);
 
     out_light_system->spot_lights =
-        allocator_alloc(&renderer->allocator, sizeof(Spot_Light) * out_light_system->directional_light_count);
+        allocator_alloc(&renderer->allocator, sizeof(Spot_Light) * out_light_system->spot_light_count);
 
 
     for (u32 point_light_idx = 0; point_light_idx < out_light_system->point_light_count; point_light_idx++)
@@ -40,7 +48,7 @@ Light_System* light_system_init(Renderer* renderer)
         directional_light_init(&out_light_system->directional_lights[directional_light_idx]);
     }
 
-    for (u32 spot_light_idx = 0; spot_light_idx < out_light_system->directional_light_count;
+    for (u32 spot_light_idx = 0; spot_light_idx < out_light_system->spot_light_count;
          spot_light_idx++)
     {
         spot_light_init(&out_light_system->spot_lights[spot_light_idx]);
@@ -49,8 +57,14 @@ Light_System* light_system_init(Renderer* renderer)
 
     //TODO: remove later just some test lights for now
     out_light_system->directional_lights[0].color = (vec3s){1.0f, 0.0f, 0.5f};
+    out_light_system->directional_lights[0].direction = (vec3s){-1.0f, -0.5f, -10.0f};
+    out_light_system->directional_lights[0].orthobox_extent = 10.f;
+
     out_light_system->point_lights[0].color = (vec4s){1.0f, 1.0f, 0.0f, 0.0f};
-    out_light_system->spot_lights[0].color = (vec4s){0.0f, 0.0f, 1.0f, 0.0f};
+
+    out_light_system->spot_lights[0].color = (vec4s){0.0f, 1.0f, 0.0f, 0.0f};
+    out_light_system->spot_lights[0].position = (vec4s){2.0f, 5.0f, -6.0f, 0.0f};
+    out_light_system->spot_lights[0].direction = (vec3s){-5.0f, -10.0f, 17.0f};
 
 
     //TODO: allocate larger sizes for the buffers
@@ -58,13 +72,18 @@ Light_System* light_system_init(Renderer* renderer)
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
         sizeof(Directional_Light) * out_light_system->directional_light_count);
 
+    out_light_system->directional_light_shadow_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
+        sizeof(Directional_Light_Shadow_Data) * out_light_system->directional_light_count);
+
+
     out_light_system->point_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
         sizeof(Point_Light) * out_light_system->point_light_count);
 
     out_light_system->spot_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Spot_Light) * out_light_system->point_light_count);
+        sizeof(Spot_Light) * out_light_system->spot_light_count);
 
 
     // vulkan_buffer_data_copy_and_upload(renderer,
@@ -84,11 +103,106 @@ Light_System* light_system_init(Renderer* renderer)
     return out_light_system;
 }
 
-void light_system_update_upload_frame_data(Renderer* renderer, Light_System* light_system, Vulkan_Command_Buffer* command_buffer)
+void light_system_update_upload_frame_data(Renderer* renderer, Light_System* light_system,
+                                           Vulkan_Command_Buffer* command_buffer)
 {
-    // vulkan_buffer_frame_reset(renderer, light_system->point_light_ssbo_handle);
-    // vulkan_buffer_frame_reset(renderer, light_system->directional_light_ssbo_handle);
-    // vulkan_buffer_frame_reset(renderer, light_system->spot_light_ssbo_handle);
+    // TODO: shadow calculations
+    // for (u32 i = 0; i < light_system->spot_light_count; i++)
+    // {
+    //     light_system->spot_lights[i];
+    //     mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
+    //     mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
+    //                            (vec3s){0.0f, 0.0f, 0.0f},
+    //                            (vec3s){0.0f, 1.0f, 0.0f});
+    //     mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
+    //
+    // }
+
+    float near_plane = 1.0f;
+    float far_plane = 96.f;
+
+
+
+    Directional_Light_Shadow_Data* directional_shadow_data_array = allocator_alloc(
+        &renderer->frame_allocator, sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
+
+
+
+    // const vec3s world_center = GLMS_VEC3_ZERO;
+    for (u32 i = 0; i < light_system->directional_light_count; i++)
+    {
+        Directional_Light* directional_light = &light_system->directional_lights[i];
+
+        f32 ortho_box = directional_light->orthobox_extent;
+        mat4s light_projection = glms_ortho(-ortho_box, ortho_box, -ortho_box, ortho_box, near_plane, far_plane);
+
+        //make the light appear as thorught it were far away (since it technically has infinite distance)
+        const f32 light_distance = -50.0f;
+        vec3s light_direction = glms_vec3_negate(glms_vec3_scale(glms_vec3_normalize(directional_light->direction), light_distance));
+
+
+
+
+        mat4s light_view = glms_lookat(
+            // renderer->main_camera.pos,
+            // eye,
+            glms_vec3_negate(directional_light->direction),
+           // light_direction,
+            // (vec3s){-2.0f, 4.0f, -1.0f},
+            GLMS_VEC3_ZERO, // world center
+            GLMS_YUP); // world up
+
+        mat4s light_world_projection_view_matrix = glms_mat4_mul(light_projection, light_view);
+
+        directional_shadow_data_array[i] = (Directional_Light_Shadow_Data){
+            .light_idx = i,
+            .shadow_texture_idx = renderer->directional_shadow_texture.bindless_index,
+            .shadow_texture_size = (vec2s){
+                renderer->directional_shadow_texture.width, renderer->directional_shadow_texture.height
+            },
+            .light_world_view_matrix = glms_mat4_copy(light_world_projection_view_matrix),
+        };
+    }
+
+    Spot_Light_Shadow_Data* spot_light_shadow_data_array = allocator_alloc(
+        &renderer->frame_allocator, sizeof(Spot_Light_Shadow_Data) * light_system->spot_light_count);
+
+    // const vec3s world_center = GLMS_VEC3_ZERO;
+    for (u32 i = 0; i < light_system->spot_light_count; i++)
+    {
+        Spot_Light* spot_light = &light_system->spot_lights[i];
+        float spot_light_cone_fov = spot_light->angle_outer_cut_off * 2.f; // generally far plane is the lights range
+
+        vec3s pos = glms_vec4_copy3(spot_light->position);
+
+        f32 aspect_ratio = (float)renderer->spot_light_shadow_texture.width / (float)renderer->spot_light_shadow_texture.height;
+        mat4s light_projection = glms_perspective(deg_to_rad(spot_light_cone_fov), aspect_ratio, 0.1, spot_light->range);
+        light_projection.raw[1][1] *= -1.0f; // get the proper perspective
+
+        vec3s direction = glms_vec3_normalize(spot_light->direction);
+        vec3s target = glms_vec3_add(pos, direction);
+
+
+        mat4s light_view = glms_lookat(
+                    pos, // light pos
+                    target, //spot_light->direction, // direction of the spotlight
+                    GLMS_YUP); // world up
+
+        mat4s light_world_projection_view_matrix = glms_mat4_mul(light_projection, light_view);
+
+        spot_light_shadow_data_array[i] = (Spot_Light_Shadow_Data){
+            .light_idx = i,
+            .shadow_texture_idx = renderer->spot_light_shadow_texture.bindless_index,
+            .shadow_texture_size = (vec2s){
+                renderer->spot_light_shadow_texture.width, renderer->spot_light_shadow_texture.height
+            },
+            .light_world_view_matrix = light_world_projection_view_matrix,
+        };
+
+
+    }
+
+
 
 
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Light SSBO Upload",
@@ -101,6 +215,13 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
                                        sizeof(Directional_Light) * light_system->directional_light_count);
 
     vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->directional_light_shadow_ssbo_handle,
+                                       command_buffer,
+                                       directional_shadow_data_array,
+                                       sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
+
+
+    vulkan_buffer_frame_staging_upload(renderer,
                                        light_system->point_light_ssbo_handle,
                                        command_buffer,
                                        light_system->point_lights,
@@ -111,6 +232,14 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
                                        command_buffer,
                                        light_system->spot_lights,
                                        sizeof(Spot_Light) * light_system->spot_light_count);
+
+    vulkan_buffer_frame_staging_upload(renderer,
+                                   light_system->spot_light_shadow_ssbo_handle,
+                                   command_buffer,
+                                   spot_light_shadow_data_array,
+                                   sizeof(Spot_Light_Shadow_Data) * light_system->spot_light_count);
+
+
 
     VkBufferMemoryBarrier2 directional_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
@@ -127,6 +256,23 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
         .offset = 0,
         .size = VK_WHOLE_SIZE,
     };
+    VkBufferMemoryBarrier2 directional_shadow_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->directional_light_shadow_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+
     VkBufferMemoryBarrier2 point_light_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 
@@ -159,78 +305,34 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
         .offset = 0,
         .size = VK_WHOLE_SIZE,
     };
+    VkBufferMemoryBarrier2 spot_light_shadow_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->spot_light_shadow_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
 
     vulkan_command_add_buffer_barrier(command_buffer, directional_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, directional_shadow_barrier);
+
     vulkan_command_add_buffer_barrier(command_buffer, point_light_barrier);
+
     vulkan_command_add_buffer_barrier(command_buffer, spot_light_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, spot_light_shadow_barrier);
+
     vulkan_command_flush_barriers(command_buffer);
 
     vulkan_command_buffer_debug_label_end(renderer, command_buffer);
-
-
-
-    // TODO: shadow calculations
-    // for (u32 i = 0; i < light_system->spot_light_count; i++)
-    // {
-    //     light_system->spot_lights[i];
-    //     mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
-    //     mat4s light_view = glms_lookat((vec3s){-2.0f, 4.0f, -1.0f},
-    //                            (vec3s){0.0f, 0.0f, 0.0f},
-    //                            (vec3s){0.0f, 1.0f, 0.0f});
-    //     mat4s light_space_matrix = glms_mat4_mul(light_projection, light_view);
-    //
-    // }
-
-    float near_plane = 1.0f;
-    float far_plane = 96.f;
-
-    renderer->main_camera;
-
-
-    Directional_Light_Shadow_Data* directional_shadow_data_array = allocator_alloc(&renderer->frame_allocator, sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
-
-
-
-
-    for (u32 i = 0; i < light_system->directional_light_count; i++)
-    {
-        Directional_Light* directional_light = &light_system->directional_lights[i];
-
-        directional_light->direction;
-        directional_light->color;
-        directional_light->diffuse;
-        directional_light->specular;
-
-
-        mat4s light_projection = glms_ortho(-10, 10, -10, 10, near_plane, far_plane);
-        mat4s light_view = glms_lookat(directional_light->direction,
-                               GLMS_VEC3_ZERO, // world center
-                               GLMS_YUP); // world up
-
-        mat4s light_world_projection_view_matrix = glms_mat4_mul(light_projection, light_view);
-
-        directional_shadow_data_array[i] = (Directional_Light_Shadow_Data){
-            .light_idx = i,
-            .shadow_texture_idx = 0,
-            .shadow_texture_size = 0,
-            .light_world_view_matrix = light_world_projection_view_matrix,
-        };
-
-
-
-    }
-
-
-
-
-    /*
-    vulkan_buffer_cpu_to_gpu_copy_and_upload_batch_global_staging(renderer,
-                                               light_system->spot_light_storage_buffer_handle,
-                                               command_buffer,
-                                               light_system->spot_lights,
-                                               sizeof(Spot_Light) * light_system->spot_light_count);
-    */
 }
 
 
@@ -264,10 +366,14 @@ void spot_light_init(Spot_Light* light)
 {
     light->position = glms_vec4_zero();
     light->color = glms_vec4_one();
-    light->direction = glms_vec3_one();
+    light->direction = glms_vec3_zero();
 
+    light->range = 90.f;
     light->diffuse = 0.5f;
     light->specular = 0.5f;
+
+    light->angle_cut_off = 45.0f;
+    light->angle_outer_cut_off = 60.0f;
 
     // light->intensity = 1.0f;
     // light->radius = 1.0f;

@@ -18,7 +18,8 @@ layout(location = 1) out vec4 out_tangent;
 layout(location = 2) out vec2 out_uv;
 layout(location = 3) out vec3 out_world_position;
 layout(location = 4) out flat uint64_t material_offset;
-layout(location = 5) out mat4 out_model;
+layout(location = 6) out vec4 out_frag_model;
+layout(location = 7) out mat4 out_model_transform;
 
 
 void main() {
@@ -30,6 +31,7 @@ void main() {
     //global mesh data
     vec3 vertex = ubo.vertex_buffer.vertex_data[vertex_idx];
     out_normal = ubo.normal_buffer.normal_data[vertex_idx];
+//    out_normal = normalize(mat3(transpose(inverse(model))) * normal_data[vertex_idx]);
     out_uv = ubo.uv_buffer.uv_data[vertex_idx];
     out_tangent = ubo.tangent_buffer.tangent_data[vertex_idx];
 
@@ -38,7 +40,9 @@ void main() {
     Mesh_Renderable mesh_renderable = pc_mesh.mesh_renderable_buffer.mesh_data[instance_idx];
     //get transform data
     mat4 model = ubo.transform_buffer.transform_data[mesh_renderable.transform_idx];
-    out_model = model;
+    out_model_transform = model;
+
+    out_frag_model = model * vec4(vertex, 1.0);
 
     gl_Position = ubo.proj * ubo.view * model * vec4(vertex, 1.0);
 

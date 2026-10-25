@@ -13,7 +13,8 @@ typedef enum Descriptor_Type
     Descriptor_Type_MAX,
 } Descriptor_Type;
 
-#define max_bindless_texture_resource 1024u //4096u //might want to bump this up at some point
+
+#define max_bindless_texture_resource 1024u + VULKAN_INTERNAL_RENDERER_TEXTURES_COUNT //4096u //might want to bump this up at some point
 #define max_uniform_buffer_resources 100u
 #define max_storage_buffer_resources 100u
 #define max_attachment_resources 100u
@@ -86,6 +87,9 @@ void update_uniform_buffer_bindless_descriptor_set_explicit(Renderer* renderer,
 void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
                                             u32 bindless_location);
+void update_texture_bindless_descriptor_set_explicit(Renderer* renderer,
+                                            Descriptor_System* descriptor_system, Vulkan_Texture* texture,
+                                            u32 bindless_location, VkImageLayout image_layout);
 
 void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
                                                    Descriptor_System* descriptor_system,

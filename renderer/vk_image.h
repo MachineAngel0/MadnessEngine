@@ -16,8 +16,6 @@ void vulkan_image_create(
     VkImageAspectFlags view_aspect_flags, Vulkan_Texture* out_texture);
 
 
-void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
-                                     VkFormat format, Vulkan_Texture* out_texture);
 
 
 void vulkan_image_view_create(Renderer* renderer,
@@ -35,16 +33,11 @@ void copyBufferToImage(Renderer* renderer,
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture);
 
-void image_insert_memory_barrier(
-    VkCommandBuffer cmdbuffer,
-    VkImage image,
-    VkAccessFlags srcAccessMask,
-    VkAccessFlags dstAccessMask,
-    VkImageLayout oldImageLayout,
-    VkImageLayout newImageLayout,
-    VkPipelineStageFlags srcStageMask,
-    VkPipelineStageFlags dstStageMask,
-    VkImageSubresourceRange subresourceRange);
+void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags2 srcAccessMask,
+                                 VkAccessFlags2 dstAccessMask, VkImageLayout oldImageLayout,
+                                 VkImageLayout newImageLayout,
+                                 VkPipelineStageFlags2 srcStageMask, VkPipelineStageFlags2 dstStageMask,
+                                 VkImageSubresourceRange subresourceRange);
 
 
 VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling);

@@ -118,110 +118,6 @@ void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image)
 }
 
 
-void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
-                                     VkFormat format, Vulkan_Texture* out_texture)
-{
-    out_texture->width = width;
-    out_texture->height = width;
-
-    // We will sample directly from the depth attachment for the shadow mapping
-    VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT // might need
-    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-    /*
-            VK_IMAGE_TILING_LINEAR: Texels are laid out in row-major order like our pixels array
-            VK_IMAGE_TILING_OPTIMAL: Texels are laid out in an implementation defined order for optimal access
-        Unlike the layout of an image, the tiling mode cannot be changed at a later time.
-        If you want to be able to directly access texels in the memory of the image,
-        then you must use VK_IMAGE_TILING_LINEAR. We will be using a staging buffer instead of a staging image,
-        so this won't be necessary. We will be using VK_IMAGE_TILING_OPTIMAL for efficient access from the shader.
-     */
-
-    //shadows use a depth bit
-    VkImageAspectFlags view_aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
-    /*
-    *  VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
-    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
-    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
-     */
-
-    // Creation info.
-    VkImageCreateInfo image_create_info = {0};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D; // might need to be an image in the future
-    image_create_info.extent.width = width;
-    image_create_info.extent.height = height;
-    image_create_info.extent.depth = 1; // TODO: Support configurable depth.
-    image_create_info.mipLevels = 4; // TODO: Support mip mapping
-    image_create_info.arrayLayers = 1; // TODO: Support number of layers in the image.
-    image_create_info.format = format;
-    image_create_info.tiling = tiling;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage = usage;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
-
-    VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info, renderer->vk_allocator_callback,
-                                                 &out_texture->texture_image);
-    VK_CHECK(image_create_result);
-
-
-    // Query memory requirements.
-    VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(renderer->logical_device, out_texture->texture_image, &memory_requirements);
-
-    // s32 memory_type = context->find_memory_index(memory_requirements.memoryTypeBits, memory_flags);
-    s32 memory_type = find_memory_type(renderer, memory_requirements.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (memory_type == -1)
-    {
-        M_ERROR("Required memory type not found. Image not valid.");
-    }
-
-
-    // Allocate memory
-    VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    memory_allocate_info.allocationSize = memory_requirements.size;
-    memory_allocate_info.memoryTypeIndex = memory_type;
-    VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture->
-            texture_image_memory
-        ));
-
-    // Bind the memory
-    VK_CHECK(
-        vkBindImageMemory(renderer->logical_device, out_texture->texture_image, out_texture->texture_image_memory,
-            0));
-    // TODO: configurable memory offset.
-
-    // Create view
-    out_texture->texture_image_view = 0;
-    vulkan_image_view_create(renderer, format, view_aspect_flags, out_texture);
-
-    VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
-                                    ? VK_FILTER_LINEAR
-                                    : VK_FILTER_NEAREST;
-
-    VkSamplerCreateInfo sampler_info = {0};
-    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = shadowmap_filter;
-    sampler_info.minFilter = shadowmap_filter;
-    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = renderer->properties2.properties.limits.maxSamplerAnisotropy;
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_info.unnormalizedCoordinates = VK_FALSE;
-    sampler_info.compareEnable = VK_FALSE; // not in use
-    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_info.mipLodBias = 0.0f;
-    sampler_info.minLod = 0.0f;
-    sampler_info.maxLod = 1.0f; // has to be set
-
-    VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
-}
 
 
 
@@ -396,10 +292,10 @@ void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
     VK_CHECK(vkCreateSampler(renderer->logical_device, &samplerInfo, NULL, &texture->texture_sampler));
 }
 
-void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags srcAccessMask,
-                                 VkAccessFlags dstAccessMask, VkImageLayout oldImageLayout,
+void image_insert_memory_barrier(VkCommandBuffer cmdbuffer, VkImage image, VkAccessFlags2 srcAccessMask,
+                                 VkAccessFlags2 dstAccessMask, VkImageLayout oldImageLayout,
                                  VkImageLayout newImageLayout,
-                                 VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+                                 VkPipelineStageFlags2 srcStageMask, VkPipelineStageFlags2 dstStageMask,
                                  VkImageSubresourceRange subresourceRange)
 {
     VkImageMemoryBarrier2 image_memory_barrier = {0};

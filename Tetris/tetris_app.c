@@ -100,9 +100,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
             continue;
         }
 
-        sprite_system_begin(application_core->asset_system->sprite_system,
-                           renderer_plugin->renderer->context.framebuffer_width_new,
-                           renderer_plugin->renderer->context.framebuffer_height_new);
+        sprite_system_begin(application_core->asset_system->sprite_system);
 
         renderer_plugin->ui_begin(renderer_plugin->madness_ui, renderer_plugin->renderer->context.framebuffer_width_new,
                                                renderer_plugin->renderer->context.framebuffer_height_new);

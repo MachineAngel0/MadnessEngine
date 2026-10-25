@@ -117,7 +117,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
             vec3s sprite_color = tetris_color_look_up_table[tetris->tetris_grid->grid_color[i][j]];
 
 
-            Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
+            Sprite_Data* sprite_data = sprite_system_new_get(tetris->resource_system->sprite_system);
             sprite_create_minimal(tetris->frame_allocator);
             sprite_data->pos = (vec2s){x, y};
             sprite_data->size = (vec2s){BLOCK_SCALE,BLOCK_SCALE};
@@ -137,7 +137,7 @@ void tetris_generate_draw_data(Tetris_Game_State* tetris)
         };
         vec2s size = {CELL_SIZE,CELL_SIZE};
 
-        Sprite_Data* sprite_data = sprite_system_new_frame_sprite(tetris->resource_system->sprite_system);
+        Sprite_Data* sprite_data = sprite_system_new_get(tetris->resource_system->sprite_system);
         sprite_data->pos = pos;
         sprite_data->size = size;
         sprite_data->color = tetris_color_look_up_table[cur_tetromino.type];

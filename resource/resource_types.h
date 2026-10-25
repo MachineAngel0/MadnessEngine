@@ -4,7 +4,6 @@
 
 #include <stdalign.h>
 
-#include "array_freelist.h"
 #include "filesystem.h"
 #include "hash_map.h"
 #include "material_types.h"
@@ -103,6 +102,7 @@
 #define MAX_SHADER_COUNT 100u
 
 #define MAX_SPRITE_COUNT 1024u
+#define MAX_SPRITE_TRANSIENT_COUNT 1024u
 
 #define MAX_TEXTURE_COUNT 1024u
 #define MAX_FONT_COUNT 16u
@@ -452,6 +452,14 @@ typedef struct PC_General
     VkDeviceAddress draw_data_buffer;
     VkDeviceAddress extra_buffer;
 } PC_General;
+
+typedef struct PC_SPRITE
+{
+    VkDeviceAddress sprite_data_ssbo;
+    u32 padding0;
+    u32 padding1;
+} PC_SPRITE;
+
 
 typedef struct PC_Particle
 {
@@ -958,15 +966,14 @@ typedef struct Sprite_System
 {
     Allocator* allocator;
     Frame_Allocator* frame_allocator;
-    vec2s screen_size; // grab every frame on start
 
 
     Sprite sprites[4]; // literally just need one quad for a vertex buffer
     u16 sprite_indices[6];
 
-
-    Free_List_ARRAY_TYPE(Sprite_Data)* sprites_data;
-    ARRAY_TYPE(Sprite_Data)* sprites_frame_data;
+    //TODO: use a sparse array to locate sprites so that we can use remove swap and keep array packed
+    ARRAY_TYPE(Sprite_Data)* sprites_array;
+    ARRAY_TYPE(Sprite_Data)* sprites_transient_array;
 } Sprite_System;
 
 
@@ -1016,6 +1023,7 @@ typedef struct Scene
     int transform_count;
 
     mat4s* world_transforms; //the count is the same as the transform_count
+
 
     //TODO: i dont need it rn but could be useful
     // since we know static doesn't change we can cache the transforms
@@ -1208,7 +1216,6 @@ typedef struct Render_Packet_Sprite
     const char* system_name;
     ARRAY_TYPE(Sprite_Data)* sprite_data;
     ARRAY_TYPE(Sprite_Data)* sprite_data_transient;
-    u16 sprite_indices[6];
 } Render_Packet_Sprite;
 
 typedef struct Render_Packet_Particle
