@@ -72,15 +72,17 @@ typedef struct Attachment_Handle
     u32 id;
 } Attachment_Handle;
 
+typedef bool (*render_pass_function)(Renderer* renderer, const char* name);
 
-typedef struct RenderPass_Resources
+typedef struct Render_Pass_Resources
 {
     Attachment_Handle attachment_handle;
     Vulkan_Attachment_Type type;
     Vulkan_Attachment_Load_Op load_op;
     Vulkan_Attachment_Store_Op store_op;
     bool resolve_msaa;
-} RenderPass_Resources;
+} Render_Pass_Resources;
+
 
 
 typedef struct RenderPass
@@ -106,8 +108,8 @@ typedef struct RenderPass
      */
     const char* name; // TODO: should probably replace with String type
     Vulkan_Renderpass_Type type;
-    RenderPass_Resources* inputs;
-    RenderPass_Resources* outputs;
+    Render_Pass_Resources* inputs;
+    Render_Pass_Resources* outputs;
 
     float image_width;
     float image_height;

@@ -230,8 +230,8 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
                                      0.5f);
 
     //spot lights
-    vulkan_texture_create_shadowmap_point_light(renderer, 1024, 1024, shadow_depth_format /*renderer->depth_format*/,
-                                &renderer->point_light_shadow_texture);
+    vulkan_texture_create_shadowmap_point_light(renderer, 1024, shadow_depth_format /*renderer->depth_format*/,
+                                                &renderer->point_light_shadow_texture);
     vulkan_pipeline_shadowmap_create(renderer, "shadow_point_light", &renderer->point_light_shadow_pipeline,
                                      shadow_depth_format,
                                      0.5f);
@@ -277,24 +277,33 @@ void renderer_update_global_ubo(Renderer* renderer, u64 current_frame_index)
     }
 
 
+    //directional light
     ubo.directional_lights_address = vulkan_buffer_get_frame_device_address(
         renderer, renderer->light_system->directional_light_ssbo_handle);
     ubo.directional_lights_shadow_address = vulkan_buffer_get_frame_device_address(
         renderer, renderer->light_system->directional_light_shadow_ssbo_handle);
+
     ubo.directional_shadow_map_index = renderer->directional_shadow_texture.bindless_index;
+    ubo.directional_lights_count = renderer->light_system->directional_light_count;
 
-    ubo.point_lights_address = vulkan_buffer_get_frame_device_address(
-        renderer, renderer->light_system->point_light_ssbo_handle);
-    ubo.point_lights_count = renderer->light_system->point_light_count;
-
-
+    //spot light
     ubo.spot_lights_address = vulkan_buffer_get_frame_device_address(
         renderer, renderer->light_system->spot_light_ssbo_handle);
-    ubo.spot_lights_count = renderer->light_system->spot_light_count;
-
     ubo.spot_lights_shadow_address = vulkan_buffer_get_frame_device_address(
         renderer, renderer->light_system->spot_light_shadow_ssbo_handle);
+
+    ubo.spot_lights_count = renderer->light_system->spot_light_count;
     ubo.spot_light_shadow_map_index = renderer->spot_light_shadow_texture.bindless_index;
+
+    //point light
+    ubo.point_lights_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->point_light_ssbo_handle);
+
+    ubo.point_lights_shadow_address = vulkan_buffer_get_frame_device_address(
+        renderer, renderer->light_system->point_light_shadow_ssbo_handle);
+
+    ubo.point_lights_count = renderer->light_system->point_light_count;
+    ubo.point_light_shadow_map_index = renderer->point_light_shadow_texture.cubemap_bindless_index;
 
 
     ubo.camera_position = camera_get_world_position(&renderer->main_camera);
@@ -615,7 +624,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
     );
 
 
-
     // Set up the rendering attachment info
     VkRenderingAttachmentInfo directional_shadow_depth_attachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -658,7 +666,6 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
 
     //draw mesh, draw skinned mesh
-    //TODO: just start with normal meshes, and spot lights, then expand it out
     mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_system,
                                              graphics_command_buffer,
                                              &renderer->directional_shadow_mesh_pipeline,
@@ -728,18 +735,97 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
                                              &renderer->spot_light_shadow_pipeline,
                                              &renderer->mesh_render_list, "Shadow Spot Light Mesh");
 
-    //TODO: skinned might wait until we do compute skinning
-    /*
-    mesh_renderer_batch_draw_custom_pipeline(renderer, renderer->mesh_renderer,
-                       renderer->shader_system->skinned_batch, renderer->shader_system->skinned_batch_count,
-                       graphics_command_buffer, &renderer->shadow_skinned_mesh_pipeline);
-    */
 
     vkCmdEndRendering(graphics_command_buffer->handle);
+
+
+    //Point Light Shadow Map //
+    image_insert_memory_barrier(graphics_command_buffer->handle,
+                                renderer->point_light_shadow_texture.texture_image,
+                                0,
+                                VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                VK_IMAGE_LAYOUT_UNDEFINED,
+                                VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                                //VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT maybe, this means all pipelines
+                                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, // we are not waiting on anything for this write
+                                VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+                                VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                                (VkImageSubresourceRange){
+                                    //no stencil in this pass
+                                    VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 6 // has to be 6
+                                }
+    );
+
+    for (u32 face_index = 0; face_index < 6; face_index++)
+    {
+        VkRenderingAttachmentInfo point_light_shadow_depth_attachment = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = renderer->point_light_shadow_texture.texture_face_image_view[face_index],
+            .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the image
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE, //keep for reading
+            // .clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f},
+            .clearValue.depthStencil = {1.0f, 0},
+            .pNext = 0,
+            // .clearValue =
+            // .resolveImageLayout =
+            // .resolveImageView =
+            // .resolveMode = ::
+        };
+
+        VkRenderingInfo point_light_shadow_pass_rendering_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea = {
+                .offset = {0, 0},
+                .extent = {renderer->point_light_shadow_texture.width, renderer->point_light_shadow_texture.height},
+            },
+            .layerCount = 1,
+            .colorAttachmentCount = 0,
+            .pColorAttachments = NULL,
+            .pDepthAttachment = &point_light_shadow_depth_attachment,
+        };
+
+        vkCmdBeginRendering(graphics_command_buffer->handle, &point_light_shadow_pass_rendering_info);
+
+        // Dynamic state
+        VkViewport point_light_shadow_map_viewport = {
+            0.0f, 0.0f, (f32)renderer->point_light_shadow_texture.width,
+            (f32)renderer->point_light_shadow_texture.height,
+            0.0f, 1.0f
+        };
+        // Scissor
+        VkRect2D point_light_shadow_map_scissor = {
+            .offset = {.x = 0, .y = 0},
+            .extent = {
+                .width = renderer->point_light_shadow_texture.width,
+                .height = renderer->point_light_shadow_texture.height
+            },
+        };
+        vkCmdSetViewport(graphics_command_buffer->handle, 0, 1, &point_light_shadow_map_viewport);
+        vkCmdSetScissor(graphics_command_buffer->handle, 0, 1, &point_light_shadow_map_scissor);
+
+
+        PC_Point_Light pc_data = {
+            .draw_data_buffer = vulkan_buffer_get_frame_device_address(
+                renderer, renderer->mesh_render_list.mesh_draw_data),
+            .point_light_face_index = face_index,
+            .bindless_texture_index = renderer->point_light_shadow_texture.cubemap_bindless_index,
+        };
+
+
+        mesh_renderer_batch_draw_custom_pipeline_and_push_constant(renderer, renderer->mesh_system,
+                                                                   graphics_command_buffer,
+                                                                   &renderer->point_light_shadow_pipeline,
+                                                                   &renderer->mesh_render_list, &pc_data,
+                                                                   sizeof(PC_Point_Light), "Shadow Point Light Mesh");
+        vkCmdEndRendering(graphics_command_buffer->handle);
+    }
+
+
     vulkan_command_buffer_debug_label_end(renderer, graphics_command_buffer);
 
 
-    //change shadow pass texture from attachment, to read only
+    //change shadow pass textures from attachment, to read only
     image_insert_memory_barrier(
         graphics_command_buffer->handle, renderer->directional_shadow_texture.texture_image,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -775,6 +861,27 @@ void renderer_update(Renderer* renderer, float delta_time, Render_Packet* render
 
         }
     );
+
+
+    image_insert_memory_barrier(
+        graphics_command_buffer->handle, renderer->point_light_shadow_texture.texture_image,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_ACCESS_SHADER_READ_BIT,
+
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, //want to sample in all sorts of shaders
+
+        (VkImageSubresourceRange){
+            //no stencil in this pass
+            VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 6
+
+        }
+    );
+
+
     //Shadow Pass END //
 
 

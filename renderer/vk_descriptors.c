@@ -610,17 +610,14 @@ void update_texture_bindless_descriptor_set(Renderer* renderer,
 
 
 void update_texture_bindless_descriptor_set_explicit(Renderer* renderer,
-                                            Descriptor_System* descriptor_system, Vulkan_Texture* texture,
+                                            Descriptor_System* descriptor_system, VkImageView texture_image_view, VkSampler texture_sampler,
                                             u32 bindless_location, VkImageLayout image_layout)
 {
     //TODO: look into a deletion queue if replacing/updating textures is going to be a problem
-    MASSERT(texture);
-
-
     VkDescriptorImageInfo image_info = {0}; // for textures
     image_info.imageLayout = image_layout;
-    image_info.imageView = texture->texture_image_view;
-    image_info.sampler = texture->texture_sampler;
+    image_info.imageView = texture_image_view;
+    image_info.sampler = texture_sampler;
 
     for (int i = 0; i < descriptor_system->texture_descriptors.descriptor_set_count; i++)
     {

@@ -32,6 +32,7 @@ struct spot_light_shadow_data{
     mat4 light_world_view_matrix;
 };
 
+
 struct point_light_data{
     vec4 position;
     vec4 color;
@@ -42,6 +43,18 @@ struct point_light_data{
 
     float diffuse;
     float specular;
+
+    float range;
+
+    float intensity;
+    float padding1;
+};
+
+struct point_light_shadow_data{
+    uint light_idx;
+    uint shadow_texture_idx;
+    vec2 shadow_texture_size;
+    mat4 light_world_view_matrix[6];
 };
 
 struct spot_light_data{
@@ -74,10 +87,14 @@ layout(buffer_reference, scalar) readonly buffer DIRECTIONAL_LIGHT_SHADOW_BUFFER
 };
 
 
-
 layout(buffer_reference, scalar) readonly buffer POINT_LIGHT_BUFFER{
     point_light_data point_light[];
 };
+
+layout(buffer_reference, scalar) readonly buffer POINT_LIGHT_SHADOW_BUFFER{
+    point_light_shadow_data point_light_shadow_data[];
+};
+
 
 layout(buffer_reference, scalar) readonly buffer SPOT_LIGHT_BUFFER{
     spot_light_data spot_light[];
@@ -153,23 +170,25 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 
     DIRECTIONAL_LIGHT_BUFFER directional_lights;
     DIRECTIONAL_LIGHT_SHADOW_BUFFER directional_lights_shadow;
-
     uint directional_shadow_map_index;
+    uint directional_lights_count;
 
-//    uint directional_light_index;
-
-    POINT_LIGHT_BUFFER point_lights;
-    uint point_lights_count;
 
     SPOT_LIGHT_BUFFER spot_lights;
     SPOT_LIGHT_SHADOW_BUFFER spot_light_shadow_data;
     uint spot_light_shadow_map_index;
     uint spot_lights_count;
 
+
+    POINT_LIGHT_BUFFER point_lights;
+    POINT_LIGHT_SHADOW_BUFFER point_light_shadow_data;
+    uint point_light_shadow_map_index;
+    uint point_lights_count;
+
+
     vec4 camera_position;
     vec2 screen_dimensions;
 
-    float padding;
 
     float time;
     uint render_mode;
@@ -200,7 +219,8 @@ layout(scalar, set = 0, binding = 0) uniform Global_UBO{
 layout (set = 1, binding = 0) uniform sampler2D texture_samples[];
 layout (set = 1, binding = 0) uniform texture2D textures[];
 layout (set = 1, binding = 0) uniform texture2DMS texturesMS[];
-layout (set = 1, binding = 0) uniform textureCube textureCubes[];
+layout (set = 1, binding = 0) uniform textureCube texture_cubes[];
+layout(set = 1, binding = 0) uniform samplerCube texture_cubes_sampler[];
 layout (set = 1, binding = 0) uniform texture2DArray textureArrays[];
 //layout (set = 1, binding = 1) uniform sampler samplers[];
 
@@ -211,71 +231,6 @@ float directional_shadow_calculation(directional_light_data light, vec4 fragment
 {
 
     //NOTE: doing this using the vulkan pipeline object
-    //    const float min_shadow_bias = 0.00002f;
-    //    const float max_shadow_bias = 0.0001f;
-
-    //    vec3 light_direction = normalize(light.direction);
-
-    //    const float shadow_bias = max(max_shadow_bias * (1.0 - dot(normalized_norm, light_direction)), min_shadow_bias);
-    //    const float shadow_bias = 0;
-
-
-    // perform perspective divide
-    vec3 projection_coordinates = fragment_light_space_matrix.xyz / fragment_light_space_matrix.w;
-    // transform into texture space from normalized device coordinates [-1,1] -> [0,1]
-    projection_coordinates.xy = projection_coordinates.xy * 0.5 + 0.5;
-
-
-    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-    //    if (projection_coordinates.z > 1.0)
-    //    {
-    //        shadow = 0.0;
-    //    }
-
-    //early out for things not in shadow
-    if (projection_coordinates.z < 0.0 ||
-        projection_coordinates.z > 1.0 ||
-        any(lessThan(projection_coordinates.xy, vec2(0.0))) ||
-        any(greaterThan(projection_coordinates.xy, vec2(1.0))))
-    {
-        return 0.0;
-    }
-
-
-    // grab the shadow map
-    // get closest depth value from light's perspective (using [-1,1] range fragPosLight as coords)
-    float closest_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy).x;
-    // get depth of current fragment from light's perspective
-    float current_depth = projection_coordinates.z;
-    // check whether current frag pos is in shadow
-    float shadow = 0;
-//     shadow = current_depth /*- shadow_bias*/ > closest_depth  ? 1.0 : 0.0;
-
-    // percentage-closer filtering
-    vec2 texel_size = 1.0 / textureSize(texture_samples[(nonuniformEXT(shadow_map_index))], 0);
-    for (int x = -1; x <= 1; ++x)
-    {
-        for (int y = -1; y <= 1; ++y)
-        {
-            float pcf_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy + vec2(x, y) * texel_size).r;
-            shadow += current_depth > pcf_depth ? 1.0 : 0.0;
-        }
-    }
-    shadow /= 9.0;
-
-
-
-
-
-
-
-
-    return shadow;
-
-}
-
-float spot_light_shadow_calculation(spot_light_data spot_light_data,  vec4 fragment_light_space_matrix, uint shadow_map_index, vec3 normalized_norm, vec4 model_position)
-{
     //    const float min_shadow_bias = 0.00002f;
     //    const float max_shadow_bias = 0.0001f;
 
@@ -339,7 +294,158 @@ float spot_light_shadow_calculation(spot_light_data spot_light_data,  vec4 fragm
 
 }
 
+float spot_light_shadow_calculation(spot_light_data spot_light_data, vec4 fragment_light_space_matrix, uint shadow_map_index, vec3 normalized_norm, vec4 model_position)
+{
+    //    const float min_shadow_bias = 0.00002f;
+    //    const float max_shadow_bias = 0.0001f;
 
+    //    vec3 light_direction = normalize(light.direction);
+
+    //    const float shadow_bias = max(max_shadow_bias * (1.0 - dot(normalized_norm, light_direction)), min_shadow_bias);
+    //    const float shadow_bias = 0;
+
+
+    // perform perspective divide
+    vec3 projection_coordinates = fragment_light_space_matrix.xyz / fragment_light_space_matrix.w;
+    // transform into texture space from normalized device coordinates [-1,1] -> [0,1]
+    projection_coordinates.xy = projection_coordinates.xy * 0.5 + 0.5;
+
+
+    // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+    //    if (projection_coordinates.z > 1.0)
+    //    {
+    //        shadow = 0.0;
+    //    }
+
+    //early out for things not in shadow
+    if (projection_coordinates.z < 0.0 ||
+        projection_coordinates.z > 1.0 ||
+        any(lessThan(projection_coordinates.xy, vec2(0.0))) ||
+        any(greaterThan(projection_coordinates.xy, vec2(1.0))))
+    {
+        return 0.0;
+    }
+
+
+    // grab the shadow map
+    // get closest depth value from light's perspective (using [-1,1] range fragPosLight as coords)
+    float closest_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy).x;
+    // get depth of current fragment from light's perspective
+    float current_depth = projection_coordinates.z;
+    // check whether current frag pos is in shadow
+    float shadow = 0;
+    //     shadow = current_depth /*- shadow_bias*/ > closest_depth  ? 1.0 : 0.0;
+
+    // percentage-closer filtering
+    vec2 texel_size = 1.0 / textureSize(texture_samples[(nonuniformEXT(shadow_map_index))], 0);
+    for (int x = -1; x <= 1; ++x)
+    {
+        for (int y = -1; y <= 1; ++y)
+        {
+            float pcf_depth = texture(texture_samples[(nonuniformEXT(shadow_map_index))], projection_coordinates.xy + vec2(x, y) * texel_size).r;
+            shadow += current_depth > pcf_depth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
+
+}
+
+//TODO:
+float point_light_shadow_calculation(point_light_data point_light_data, uint shadow_map_index, vec3 normalized_norm, vec3 world_position)
+{
+    /*   vec3 world_to_light_space =
+       world_position.xyz - point_light_data.position.xyz;
+
+       float current_distance = length(world_to_light_space);
+
+       // Outside the point light's shadow range.
+       if (current_distance >= point_light_data.range)
+       return 0.0;
+
+       // Sample the cubemap from the light toward the fragment.
+       float closest_depth = texture(texture_cubes_sampler[nonuniformEXT(shadow_map_index)], world_to_light_space).r;
+
+       // Assumes the shadow pass stores radial depth.
+       float current_depth = current_distance / point_light_data.range;
+
+       vec3 light_direction = normalize(-world_to_light_space);
+
+       float NdotL = max(
+               dot(normalize(normalized_norm), light_direction),
+               0.0
+       );
+
+       float bias = max(0.005 * (1.0 - NdotL), 0.0005);
+
+       return current_depth - bias > closest_depth ? 1.0 : 0.0;*/
+
+    /* // must equal the near and far used by the six face projections in the shadow pass
+     float POINT_SHADOW_NEAR = 1.0f;
+     float far_plane = point_light_data.range;
+
+     vec3  to_fragment = world_position.xyz - point_light_data.position.xyz;     // light -> fragment
+     float dist        = length(to_fragment);
+
+     // beyond the light's reach: nothing to shadow
+     if (dist >= far_plane)
+     { return 0.0; }
+
+     // normal-offset bias: move the lookup point along the surface normal,
+     // more at grazing angles to the light
+     float n_dot_l = max(dot(normalized_norm, -to_fragment / dist), 0.0);
+     vec3  lookup  = to_fragment + normalized_norm * (0.02 * (1.0 - n_dot_l) * dist);
+
+     // projected depth that the shadow pass stored in this direction.
+     // m comes from the SAME vector as the cube lookup, because the hardware picks the face from it
+     float m = max(max(abs(lookup.x), abs(lookup.y)), abs(lookup.z));
+     m = max(m, POINT_SHADOW_NEAR);
+     float current = far_plane * (m - POINT_SHADOW_NEAR) / (m * (far_plane - POINT_SHADOW_NEAR));
+
+     float closest = textureLod(texture_cubes_sampler[nonuniformEXT(shadow_map_index)], lookup, 0.0).r;
+
+     const float bias = 0.0005;           // small constant on top of the normal offset
+     return (current - bias > closest) ? 1.0 : 0.0;*/
+
+
+    vec3 to_fragment =
+    world_position - point_light_data.position.xyz;
+
+    float major_axis = max(
+            max(abs(to_fragment.x), abs(to_fragment.y)),
+            abs(to_fragment.z)
+    );
+
+    float near_plane = 0.1;
+    float far_plane = point_light_data.range;
+
+    if (major_axis <= near_plane || major_axis >= far_plane)
+    return 0.0;
+
+    // Depth produced by the perspective projection in the shadow pass.
+    float current_depth =
+    far_plane / (far_plane - near_plane)
+    - (far_plane * near_plane) /
+    ((far_plane - near_plane) * major_axis);
+
+    // Sample the closest depth stored in the cubemap.
+    float closest_depth = textureLod(
+            texture_cubes_sampler[nonuniformEXT(shadow_map_index)],
+            to_fragment, 0.0 ).r;
+
+    // Bias to reduce shadow acne.
+    vec3 light_direction = normalize(-to_fragment);
+
+    float NdotL = max(
+            dot(normalize(normalized_norm), light_direction),
+            0.0
+    );
+
+
+    // 1 = shadow, 0 = lit.
+    return (current_depth > closest_depth) ? 1.0 : 0.0;
+}
 
 
 

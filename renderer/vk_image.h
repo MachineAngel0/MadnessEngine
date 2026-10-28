@@ -21,6 +21,14 @@ void vulkan_image_create(
 void vulkan_image_view_create(Renderer* renderer,
                               VkFormat format, VkImageAspectFlags aspect_flags, Vulkan_Texture* texture);
 
+
+void vulkan_image_view_create_cube_map_face(Renderer* renderer,  u32 base_array_layer, VkFormat format, VkImageAspectFlags aspect_flags,
+    VkImage* texture_image, VkImageView* texture_image_view);
+
+void vulkan_image_view_create_cube(Renderer* renderer,
+                                   VkFormat format, VkImageAspectFlags aspect_flags, Vulkan_Texture_Cubemap* texture,
+                                   VkImageView* texture_image_view);
+
 void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image);
 
 

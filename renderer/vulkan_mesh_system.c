@@ -1088,6 +1088,97 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
 }
 
 
+void mesh_renderer_batch_draw_custom_pipeline_and_push_constant(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
+                                              Vulkan_Command_Buffer* command_buffer,
+                                              Vulkan_Shader_Pipeline* vulkan_pipeline,
+                                              Vulkan_Mesh_Render_List* render_list, void* push_constant, u32 push_constant_size, const char* name)
+{
+        PROFILE_ZONE(mesh_renderer_batch_draw)
+    //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
+
+    vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, name,
+                                                  (float[4]){1.0, 1.0, 0.0, 1.0});
+
+    Vulkan_Buffer* indirect_buffer = vulkan_buffer_get_frame(renderer, render_list->indirect_buffer);
+
+    for (u32 draw_idx = 0; draw_idx < render_list->draw_count; ++draw_idx)
+    {
+        Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
+
+        //get pipeline
+        VkPipeline pipeline = vulkan_pipeline->handle;
+        VkPipelineLayout layout = vulkan_pipeline->pipeline_layout;
+
+
+        //UBER SHADER MESH INDIRECT DRAW
+        vkCmdBindPipeline(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          pipeline);
+
+        //uniform
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 0, 1,
+                                &renderer->descriptor_system->uniform_descriptors.descriptor_sets[renderer->
+                                    current_frame_index], 0, 0);
+        //texturess
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 1, 1,
+                                &renderer->descriptor_system->texture_descriptors.descriptor_sets[0], 0, 0);
+
+        //storage buffers
+        vkCmdBindDescriptorSets(command_buffer->handle, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                layout, 2, 1,
+                                &renderer->descriptor_system->storage_descriptors.descriptor_sets[renderer->
+                                    current_frame_index], 0, 0);
+
+        // vkCmdBindVertexBuffers(command_buffer->handle, 0, 1, &vertex_buffer->handle,
+        // pOffsets);
+
+        vkCmdBindIndexBuffer(command_buffer->handle, index_buffer->handle, 0,
+                             VK_INDEX_TYPE_UINT16);
+
+
+
+
+        VkPushConstantsInfo push_constant_info = {0};
+        push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
+        push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        push_constant_info.layout = layout;
+        push_constant_info.offset = 0;
+        push_constant_info.size = push_constant_size;
+        // push_constant_info.size = sizeof(draw_data->general); // make sure its not a pointer if i use this
+        push_constant_info.pValues = push_constant;
+        push_constant_info.pNext = NULL;
+        vkCmdPushConstants2(command_buffer->handle, &push_constant_info);
+
+
+        if (renderer->features2.features.multiDrawIndirect)
+        {
+            vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                     indirect_buffer->handle, 0,
+                                     render_list->draw_count,
+                                     sizeof(VkDrawIndexedIndirectCommand));
+        }
+        else
+        {
+            // If multi draw is not available, we must issue separate draw commands
+            for (u64 j = 0; j < render_list->draw_count; j++)
+            {
+                vkCmdDrawIndexedIndirect(command_buffer->handle,
+                                         indirect_buffer->handle,
+                                         j * sizeof(VkDrawIndexedIndirectCommand), 1,
+                                         sizeof(VkDrawIndexedIndirectCommand));
+            }
+        }
+    }
+
+
+    vulkan_command_buffer_debug_label_end(renderer, command_buffer);
+
+    PROFILE_ZONE_END(mesh_renderer_batch_draw)
+}
+
+
+
 void mesh_renderer_skinned_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
                                       Vulkan_Command_Buffer* command_buffer, Vulkan_Skinned_Mesh_Render_List* render_list)
 {

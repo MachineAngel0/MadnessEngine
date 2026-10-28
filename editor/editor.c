@@ -562,7 +562,7 @@ void editor_ui_scene(Editor* editor)
                 .pos = (vec4s){
                     directional_light->position.x, directional_light->position.y, directional_light->position.z, 1.0f
                 },
-                .size = (vec2s){4, 4},
+                .size = (vec2s){1, 1},
                 .rotation = 0.f,
                 .uv_offset = 0.f,
                 .uv_size = (vec2s){1, 1},
@@ -581,8 +581,6 @@ void editor_ui_scene(Editor* editor)
             vec3s direction = glms_vec3_scale(dir, length);
             debug_draw_line(pos, glms_vec3_add(pos, direction), glms_vec4(directional_light->color, 1.0f));
             ImGui_PopID();
-
-
         }
         for (u32 i = 0; i < light_system->point_light_count; ++i)
         {
@@ -593,6 +591,34 @@ void editor_ui_scene(Editor* editor)
             Point_Light* point_light = &light_system->point_lights[i];
             ImGui_DragFloat4("Position", point_light->position.raw);
             ImGui_ColorEdit4("Color", point_light->color.raw, 0.1f);
+            ImGui_DragFloat("PL Range", &point_light->range);
+
+            ImGui_DragFloat("Constant", &point_light->constant);
+            ImGui_DragFloat("linear", &point_light->linear);
+            ImGui_DragFloat("quadratic", &point_light->quadratic);
+            ImGui_DragFloat("diffuse", &point_light->diffuse);
+            ImGui_DragFloat("specular", &point_light->specular);
+
+
+            Sprite_Data point_light_sprite = {
+                .flags = 0,
+                .pos = point_light->position,
+                .size = (vec2s){1, 1},
+                .rotation = 0.f,
+                .uv_offset = 0.f,
+                .uv_size = (vec2s){1, 1},
+                .color = GLMS_VEC3_ONE,
+                .texture_index = editor->directional_light_texture.handle,
+            };
+
+            point_light_sprite.flags |= SPRITE_FLAG_TEXTURE;
+
+            sprite_transient_draw(editor->asset_system->sprite_system, point_light_sprite);
+
+
+            vec3s pos = glms_vec4_copy3(point_light->position);
+            debug_draw_sphere(pos, point_light->range, point_light->color);
+
         }
 
 
@@ -623,7 +649,7 @@ void editor_ui_scene(Editor* editor)
             Sprite_Data spot_light_sprite = {
                 .flags = 0,
                 .pos = (vec4s){spot_light->position.x, spot_light->position.y, spot_light->position.z, 1.0f},
-                .size = (vec2s){4, 4},
+                .size = (vec2s){1, 1},
                 .rotation = 0.f,
                 .uv_offset = 0.f,
                 .uv_size = (vec2s){1, 1},
@@ -656,7 +682,7 @@ void editor_ui_scene(Editor* editor)
         ImGui_DragFloat("Move Speed", &camera->move_speed);
 
         ImGui_DragFloat("Fov", &camera->fov);
-        ImGui_DragFloat("Z Near",&camera->znear);
+        ImGui_DragFloat("Z Near", &camera->znear);
         ImGui_DragFloat("Z Far", &camera->zfar);
 
         ImGui_DragFloat("Pitch", &camera->pitch);
@@ -664,8 +690,6 @@ void editor_ui_scene(Editor* editor)
 
         // mat4s projection;
         // mat4s view;
-
-
     }
     ImGui_End();
 
@@ -857,6 +881,33 @@ void editor_texture_view(Editor* editor)
 
             ImGui_PopStyleColor();
             ImGui_PopStyleVar();
+        }
+
+
+        Vulkan_Texture_Cubemap* vk_texture_point_light_depth = &editor->renderer->point_light_shadow_texture;
+        if (vk_texture2->ready_for_read_by_imgui)
+        {
+            ImGui_Text("Width: %d", vk_texture_point_light_depth->width);
+            ImGui_Text("Height: %d", vk_texture_point_light_depth->height);
+
+            for (u32 face_index = 0; face_index < 6; face_index++)
+            {
+                ImTextureRef ref = {0};
+                ref._TexID = (ImTextureID)(uintptr_t)vk_texture_point_light_depth->imgui_descriptor_set[face_index];
+                // you dont pass in the actual size, you pass in the size you want it displayed
+                // ImGui_Image(ref, (ImVec2){ vk_texture->width, vk_texture->height });
+
+                //give the image a border so its easier to see
+                ImGui_PushStyleVar(ImGuiStyleVar_ImageBorderSize, 1.0f);
+
+                //whites a good color for seeing the textures better
+                ImGui_PushStyleColorImVec4(ImGuiCol_Border, (ImVec4){1.0f, 1.0f, 1.0f, 1.0f});
+
+                ImGui_Image(ref, (ImVec2){128, 128});
+
+                ImGui_PopStyleColor();
+                ImGui_PopStyleVar();
+            }
         }
     }
     ImGui_End();

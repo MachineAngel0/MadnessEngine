@@ -393,8 +393,10 @@ void vulkan_texture_system_internal(Renderer* renderer, u32 width, u32 height, V
     VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &out_texture->texture_sampler));
 
 
-    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, out_texture,
-                                                    out_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system,
+                                                    out_texture->texture_image_view, out_texture->texture_sampler,
+                                                    out_texture->bindless_index,
+                                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     //
     vkDeviceWaitIdle(renderer->logical_device);
@@ -519,8 +521,10 @@ void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
     VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &vk_texture->texture_sampler));
 
 
-    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, vk_texture,
-                                                    vk_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system,
+                                                    vk_texture->texture_image_view, vk_texture->texture_sampler,
+                                                    vk_texture->bindless_index,
+                                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     //
     vkDeviceWaitIdle(renderer->logical_device);
@@ -534,9 +538,8 @@ void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
 }
 
 
-
-void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, u32 height,
-                                     VkFormat format, Vulkan_Texture* vk_texture)
+void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 extent,
+                                                 VkFormat format, Vulkan_Texture_Cubemap* vk_texture)
 {
     Vulkan_Texture_System* texture_system = renderer->texture_system;
 
@@ -546,11 +549,11 @@ void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, 
         MASSERT_FALSE()
     }
 
-    vk_texture->bindless_index = MAX_TEXTURE_COUNT + texture_system->renderer_texture_indexes++;
+    vk_texture->cubemap_bindless_index = MAX_TEXTURE_COUNT + texture_system->renderer_texture_indexes++;
 
 
-    vk_texture->width = width;
-    vk_texture->height = height;
+    vk_texture->width = extent;
+    vk_texture->height = extent;
 
     // We will sample directly from the depth attachment for the shadow mapping
     VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -577,8 +580,8 @@ void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, 
     VkImageCreateInfo image_create_info = {0};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_create_info.imageType = VK_IMAGE_TYPE_2D; // stays 2D
-    image_create_info.extent.width = width;
-    image_create_info.extent.height = height;
+    image_create_info.extent.width = extent;
+    image_create_info.extent.height = extent;
     image_create_info.extent.depth = 1; // TODO: Support configurable depth.
     image_create_info.mipLevels = 1; // TODO: Support mip mapping
     image_create_info.arrayLayers = 6; // NOTE: since its a cube map, needs 6 layers.
@@ -589,6 +592,7 @@ void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, 
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // TODO: Configurable sample count.
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // TODO: Configurable sharing mode.
     image_create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT; //NOTE: needed for cubemaps
+
     VkResult image_create_result = vkCreateImage(renderer->logical_device, &image_create_info,
                                                  renderer->vk_allocator_callback,
                                                  &vk_texture->texture_image);
@@ -624,8 +628,14 @@ void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, 
     // TODO: configurable memory offset.
 
     // Create view
-    vk_texture->texture_image_view = 0;
-    vulkan_image_view_create(renderer, format, view_aspect_flags, vk_texture);
+    vulkan_image_view_create_cube(renderer, format, view_aspect_flags, vk_texture, &vk_texture->cubemap_image_view);
+
+    for (u32 face_index = 0; face_index < 6; face_index++)
+    {
+        vulkan_image_view_create_cube_map_face(renderer, face_index, format, view_aspect_flags, &vk_texture->texture_image,
+                                     &vk_texture->texture_face_image_view[face_index]);
+    }
+
 
     VkFilter shadowmap_filter = formatIsFilterable(renderer->physical_device, format, VK_IMAGE_TILING_OPTIMAL)
                                     ? VK_FILTER_LINEAR
@@ -653,16 +663,21 @@ void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, 
     VK_CHECK(vkCreateSampler(renderer->logical_device, &sampler_info, 0, &vk_texture->texture_sampler));
 
 
-    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system, vk_texture,
-                                                    vk_texture->bindless_index, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    update_texture_bindless_descriptor_set_explicit(renderer, renderer->descriptor_system,
+                                                    vk_texture->cubemap_image_view, vk_texture->texture_sampler,
+                                                    vk_texture->cubemap_bindless_index,
+                                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     //
     vkDeviceWaitIdle(renderer->logical_device);
 
     //wont work until imgui is initialized
     vk_texture->ready_for_read_by_imgui = true;
-    vk_texture->imgui_descriptor_set = cImGui_ImplVulkan_AddTexture(
-        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-        // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-        vk_texture->texture_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    for (u32 face_index = 0; face_index < 6; face_index++)
+    {
+        vk_texture->imgui_descriptor_set[face_index] = cImGui_ImplVulkan_AddTexture(
+            // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            // vk_texture->texture_image_view, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            vk_texture->texture_face_image_view[face_index], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
 }

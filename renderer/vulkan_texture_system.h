@@ -26,8 +26,8 @@ void vulkan_texture_system_internal(Renderer* renderer, u32 width, u32 height,
 
 void vulkan_texture_create_shadowmap(Renderer* renderer, u32 width, u32 height,
                                      VkFormat format, Vulkan_Texture* vk_texture);
-void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 width, u32 height,
-                                     VkFormat format, Vulkan_Texture* vk_texture);
+void vulkan_texture_create_shadowmap_point_light(Renderer* renderer, u32 extent,
+                                                 VkFormat format, Vulkan_Texture_Cubemap* vk_texture);
 
 
 #endif //VULKAN_TEXTURE_SYSTEM_H

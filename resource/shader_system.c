@@ -49,6 +49,7 @@ bool shader_system_init(Shader_System* shader_system, Asset_System* asset_system
 bool shader_system_deinit(Shader_System* shader_system)
 {
     //TODO:
+    return true;
 }
 
 void shader_system_update(Shader_System* shader_system)

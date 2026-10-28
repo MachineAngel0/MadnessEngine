@@ -121,7 +121,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
 
 
 
-    PC_SPRITE pc_sprite = {
+    PC_Sprite pc_sprite = {
         .sprite_data_ssbo = vulkan_buffer_get_frame_device_address(renderer, sprite_backend->sprite_ssbo),
         .padding0 = 0,
         .padding1 = 0,
@@ -132,7 +132,7 @@ void sprite_renderer_draw(Renderer* renderer, Sprite_Renderer* sprite_backend, V
     push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_info.layout = renderer->sprite_pipeline.pipeline_layout;
     push_constant_info.offset = 0;
-    push_constant_info.size = sizeof(PC_SPRITE);
+    push_constant_info.size = sizeof(PC_Sprite);
     push_constant_info.pValues = &pc_sprite;
     push_constant_info.pNext = NULL;
 

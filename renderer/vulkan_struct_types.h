@@ -20,6 +20,7 @@
 
 //RESOURCE COUNTS
 #define MAX_VULKAN_COMMAND_BUFFERS 32
+#define CUBEMAP_FACES_COUNT 6
 
 
 
@@ -51,7 +52,35 @@ typedef struct Vulkan_Texture
     //TODO: probably ifdef this out for release builds
     VkDescriptorSet imgui_descriptor_set;
     bool ready_for_read_by_imgui;
+
 } Vulkan_Texture;
+
+
+typedef struct Vulkan_Texture_Cubemap
+{
+
+    VkImage texture_image;
+    VkDeviceMemory texture_image_memory;
+
+    VkImageView cubemap_image_view;
+    VkImageView texture_face_image_view[6];
+
+    VkSampler texture_sampler;
+    // VkFormat texture_format; //TODO: should probably keep a copy of this
+
+    u32 width;
+    u32 height;
+    VkDeviceSize image_size;
+    u32 cubemap_bindless_index;
+
+    //idk if i would want this
+    // enum vk_image_type{ VK_IMAGE_TYPE_TEXTURE, VK_IMAGE_TYPE_ATTACHMENT};
+    // vk_image_type image_type;
+
+    //TODO: probably ifdef this out for release builds
+    VkDescriptorSet imgui_descriptor_set[6];
+    bool ready_for_read_by_imgui;
+} Vulkan_Texture_Cubemap;
 
 
 typedef struct Vulkan_Swapchain
@@ -413,11 +442,11 @@ typedef struct Directional_Light
     vec3s color;
 
     //strength values
-    float diffuse;
-    float specular;
+    f32 diffuse;
+    f32 specular;
 
     // doesn't actually need to be in the shader, could seperate
-    float orthobox_extent;
+    f32 orthobox_extent;
 
 } Directional_Light;
 
@@ -431,15 +460,22 @@ typedef struct Point_Light
     vec4s color;
 
     //light fall offs
-    float constant;
-    float linear;
-    float quadratic;
+    f32 constant;
+    f32 linear;
+    f32 quadratic;
 
     //strength values
-    float diffuse;
-    float specular;
-    // float intensity;
-    // float radius;
+    f32 diffuse;
+    f32 specular;
+    // f32 intensity;
+
+    // range/raduis/far plane of shadow mapping, but we should do it for the light in general too
+    f32 range;
+    // f32 near_plane;
+
+
+    f32 intensity; // TODO: does nothing rn
+    f32 padding1;
 } Point_Light;
 
 typedef struct Spot_Light
@@ -448,16 +484,16 @@ typedef struct Spot_Light
     vec4s color;
     vec3s direction;
 
-    float range;
-    float angle_cut_off; // determines the lights fov and area of lighting
-    float angle_outer_cut_off; // fall off value outside the cut off
+    f32 range;
+    f32 angle_cut_off; // determines the lights fov and area of lighting
+    f32 angle_outer_cut_off; // fall off value outside the cut off
 
-    float constant;
-    float linear;
-    float quadratic;
+    f32 constant;
+    f32 linear;
+    f32 quadratic;
 
-    float diffuse;
-    float specular;
+    f32 diffuse;
+    f32 specular;
 } Spot_Light;
 
 typedef struct Area_Light
@@ -483,6 +519,7 @@ typedef struct Light_System
     Buffer_Frame_Handle directional_light_shadow_ssbo_handle;
 
     Buffer_Frame_Handle point_light_ssbo_handle;
+    Buffer_Frame_Handle point_light_shadow_ssbo_handle;
 
     Buffer_Frame_Handle spot_light_ssbo_handle;
     Buffer_Frame_Handle spot_light_shadow_ssbo_handle;
@@ -499,21 +536,24 @@ typedef struct Global_Ubo
     VkDeviceAddress directional_lights_address;
     VkDeviceAddress directional_lights_shadow_address;
     u32 directional_shadow_map_index;
-
-
-    VkDeviceAddress point_lights_address;
-    u32 point_lights_count;
+    u32 directional_lights_count;
 
     VkDeviceAddress spot_lights_address;
     VkDeviceAddress spot_lights_shadow_address;
     u32 spot_light_shadow_map_index;
     u32 spot_lights_count;
 
+
+
+    VkDeviceAddress point_lights_address;
+    VkDeviceAddress point_lights_shadow_address;
+    u32 point_light_shadow_map_index;
+    u32 point_lights_count;
+
     //camera
     vec4s camera_position;
     vec2s screen_dimensions;
 
-    f32 padding;
 
 
     f32 time;
@@ -1018,7 +1058,7 @@ typedef struct Renderer
     Vulkan_Texture spot_light_shadow_texture;
     Vulkan_Shader_Pipeline spot_light_shadow_pipeline;
 
-    Vulkan_Texture point_light_shadow_texture;
+    Vulkan_Texture_Cubemap point_light_shadow_texture;
     Vulkan_Shader_Pipeline point_light_shadow_pipeline; //this has to be a 3d cubemap
 
 

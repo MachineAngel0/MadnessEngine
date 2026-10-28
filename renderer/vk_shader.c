@@ -579,7 +579,7 @@ bool sprite_shader_create(Renderer* renderer, Vulkan_Shader_Pipeline* sprite_pip
     VkPushConstantRange push_constant[1] = {0};
     push_constant[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant[0].offset = 0;
-    push_constant[0].size = sizeof(PC_SPRITE);
+    push_constant[0].size = sizeof(PC_Sprite);
 
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {0};

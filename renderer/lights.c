@@ -19,23 +19,34 @@ typedef struct Spot_Light_Shadow_Data
 } Spot_Light_Shadow_Data;
 
 
+typedef struct Point_Light_Shadow_Data
+{
+    u32 light_idx;
+    u32 shadow_texture_idx;
+    vec2s shadow_texture_size;
+    mat4s light_world_view_matrix[6]; // one for each cube face
+} Point_Light_Shadow_Data;
+
+
 Light_System* light_system_init(Renderer* renderer)
 {
     Light_System* out_light_system = allocator_alloc(&renderer->allocator, sizeof(Light_System));
+
+
 
     //TODO: TEMP FOR NOW
     out_light_system->directional_light_count = 1;
     out_light_system->point_light_count = 1;
     out_light_system->spot_light_count = 1;
 
-    out_light_system->point_lights =
-        allocator_alloc(&renderer->allocator, sizeof(Point_Light) * out_light_system->point_light_count);
-
     out_light_system->directional_lights =
         allocator_alloc(&renderer->allocator, sizeof(Directional_Light) * out_light_system->directional_light_count);
 
     out_light_system->spot_lights =
         allocator_alloc(&renderer->allocator, sizeof(Spot_Light) * out_light_system->spot_light_count);
+
+    out_light_system->point_lights =
+        allocator_alloc(&renderer->allocator, sizeof(Point_Light) * out_light_system->point_light_count);
 
 
     for (u32 point_light_idx = 0; point_light_idx < out_light_system->point_light_count; point_light_idx++)
@@ -61,6 +72,7 @@ Light_System* light_system_init(Renderer* renderer)
     out_light_system->directional_lights[0].orthobox_extent = 10.f;
 
     out_light_system->point_lights[0].color = (vec4s){1.0f, 1.0f, 0.0f, 0.0f};
+    out_light_system->point_lights[0].position = (vec4s){4.0f, 0.0f, 1.0f, 0.0f};
 
     out_light_system->spot_lights[0].color = (vec4s){0.0f, 1.0f, 0.0f, 0.0f};
     out_light_system->spot_lights[0].position = (vec4s){2.0f, 5.0f, -6.0f, 0.0f};
@@ -77,13 +89,22 @@ Light_System* light_system_init(Renderer* renderer)
         sizeof(Directional_Light_Shadow_Data) * out_light_system->directional_light_count);
 
 
+    out_light_system->spot_light_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
+        sizeof(Spot_Light) * out_light_system->spot_light_count);
+
+    out_light_system->spot_light_shadow_ssbo_handle = vulkan_buffer_create_frame(
+        renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
+        sizeof(Spot_Light_Shadow_Data) * out_light_system->spot_light_count);
+
+
     out_light_system->point_light_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
         sizeof(Point_Light) * out_light_system->point_light_count);
 
-    out_light_system->spot_light_ssbo_handle = vulkan_buffer_create_frame(
+    out_light_system->point_light_shadow_ssbo_handle = vulkan_buffer_create_frame(
         renderer, renderer->buffer_system, BUFFER_TYPE_STORAGE_GPU,
-        sizeof(Spot_Light) * out_light_system->spot_light_count);
+        sizeof(Point_Light_Shadow_Data) * out_light_system->point_light_count);
 
 
     // vulkan_buffer_data_copy_and_upload(renderer,
@@ -118,14 +139,12 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
     //
     // }
 
-    float near_plane = 1.0f;
+    float near_plane = 0.1f;
     float far_plane = 96.f;
-
 
 
     Directional_Light_Shadow_Data* directional_shadow_data_array = allocator_alloc(
         &renderer->frame_allocator, sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
-
 
 
     // const vec3s world_center = GLMS_VEC3_ZERO;
@@ -138,16 +157,15 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
 
         //make the light appear as thorught it were far away (since it technically has infinite distance)
         const f32 light_distance = -50.0f;
-        vec3s light_direction = glms_vec3_negate(glms_vec3_scale(glms_vec3_normalize(directional_light->direction), light_distance));
-
-
+        vec3s light_direction = glms_vec3_negate(
+            glms_vec3_scale(glms_vec3_normalize(directional_light->direction), light_distance));
 
 
         mat4s light_view = glms_lookat(
             // renderer->main_camera.pos,
             // eye,
             glms_vec3_negate(directional_light->direction),
-           // light_direction,
+            // light_direction,
             // (vec3s){-2.0f, 4.0f, -1.0f},
             GLMS_VEC3_ZERO, // world center
             GLMS_YUP); // world up
@@ -175,8 +193,10 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
 
         vec3s pos = glms_vec4_copy3(spot_light->position);
 
-        f32 aspect_ratio = (float)renderer->spot_light_shadow_texture.width / (float)renderer->spot_light_shadow_texture.height;
-        mat4s light_projection = glms_perspective(deg_to_rad(spot_light_cone_fov), aspect_ratio, 0.1, spot_light->range);
+        f32 aspect_ratio = (float)renderer->spot_light_shadow_texture.width / (float)renderer->spot_light_shadow_texture
+            .height;
+        mat4s light_projection =
+            glms_perspective(deg_to_rad(spot_light_cone_fov), aspect_ratio, 0.1, spot_light->range);
         light_projection.raw[1][1] *= -1.0f; // get the proper perspective
 
         vec3s direction = glms_vec3_normalize(spot_light->direction);
@@ -184,9 +204,9 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
 
 
         mat4s light_view = glms_lookat(
-                    pos, // light pos
-                    target, //spot_light->direction, // direction of the spotlight
-                    GLMS_YUP); // world up
+            pos, // light pos
+            target, //spot_light->direction, // direction of the spotlight
+            GLMS_YUP); // world up
 
         mat4s light_world_projection_view_matrix = glms_mat4_mul(light_projection, light_view);
 
@@ -198,11 +218,85 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
             },
             .light_world_view_matrix = light_world_projection_view_matrix,
         };
-
-
     }
 
 
+    static const vec3s face_directions[6] =
+    {
+        {{1.0f, 0.0f, 0.0f}}, // +X
+        {{-1.0f, 0.0f, 0.0f}}, // -X
+        {{0.0f, 1.0f, 0.0f}}, // +Y
+        {{0.0f, -1.0f, 0.0f}}, // -Y
+        {{0.0f, 0.0f, 1.0f}}, // +Z
+        {{0.0f, 0.0f, -1.0f}} // -Z
+    };
+
+    static const vec3s face_ups[6] =
+    {
+        {{0.0f, -1.0f, 0.0f}},
+        {{0.0f, -1.0f, 0.0f}},
+        {{0.0f, 0.0f, 1.0f}},
+        {{0.0f, 0.0f, -1.0f}},
+        {{0.0f, -1.0f, 0.0f}},
+        {{0.0f, -1.0f, 0.0f}}
+    };
+
+
+    Point_Light_Shadow_Data* point_shadow_data_array = allocator_alloc(
+        &renderer->frame_allocator, sizeof(Point_Light_Shadow_Data) * light_system->point_light_count);
+
+
+    // const vec3s world_center = GLMS_VEC3_ZERO;
+    for (u32 i = 0; i < light_system->point_light_count; i++)
+    {
+        Point_Light* point_light = &light_system->point_lights[i];
+
+
+        f32 aspect_ratio = (float)renderer->point_light_shadow_texture.width / (float)renderer->
+            point_light_shadow_texture.height;
+        mat4s light_projection = glms_perspective(deg_to_rad(90.0f), aspect_ratio, 0.1, point_light->range);
+        light_projection.raw[1][1] *= -1.0f; // get the proper perspective
+
+
+        mat4s projection = glms_perspective(
+            deg_to_rad(90.0f),
+            1.0f,
+            near_plane,
+            point_light->range
+        );
+
+        //NOTE: do not flip the perspective, its already done so with the lookup tables
+        // projection.raw[1][1] *= -1.0f;
+
+        vec3s position = glms_vec3(point_light->position);
+
+        point_shadow_data_array[i] = (Point_Light_Shadow_Data){
+            .light_idx = i,
+            .shadow_texture_idx = renderer->point_light_shadow_texture.cubemap_bindless_index,
+            .shadow_texture_size = (vec2s){
+                renderer->point_light_shadow_texture.width, renderer->point_light_shadow_texture.height
+            },
+            // .light_world_view_matrix = light_world_projection_view_matrix,
+        };
+
+
+        for (u32 cube_face = 0; cube_face < 6; ++cube_face)
+        {
+            vec3s target = glms_vec3_add(
+                position,
+                face_directions[cube_face]
+            );
+
+            mat4s view = glms_lookat(
+                position,
+                target,
+                face_ups[cube_face]
+            );
+
+            point_shadow_data_array[i].light_world_view_matrix[cube_face] =
+                glms_mat4_mul(projection, view);
+        }
+    }
 
 
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, "Light SSBO Upload",
@@ -220,6 +314,18 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
                                        directional_shadow_data_array,
                                        sizeof(Directional_Light_Shadow_Data) * light_system->directional_light_count);
 
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->spot_light_ssbo_handle,
+                                       command_buffer,
+                                       light_system->spot_lights,
+                                       sizeof(Spot_Light) * light_system->spot_light_count);
+
+    vulkan_buffer_frame_staging_upload(renderer,
+                                       light_system->spot_light_shadow_ssbo_handle,
+                                       command_buffer,
+                                       spot_light_shadow_data_array,
+                                       sizeof(Spot_Light_Shadow_Data) * light_system->spot_light_count);
+
 
     vulkan_buffer_frame_staging_upload(renderer,
                                        light_system->point_light_ssbo_handle,
@@ -228,17 +334,10 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
                                        sizeof(Point_Light) * light_system->point_light_count);
 
     vulkan_buffer_frame_staging_upload(renderer,
-                                       light_system->spot_light_ssbo_handle,
+                                       light_system->point_light_shadow_ssbo_handle,
                                        command_buffer,
-                                       light_system->spot_lights,
-                                       sizeof(Spot_Light) * light_system->spot_light_count);
-
-    vulkan_buffer_frame_staging_upload(renderer,
-                                   light_system->spot_light_shadow_ssbo_handle,
-                                   command_buffer,
-                                   spot_light_shadow_data_array,
-                                   sizeof(Spot_Light_Shadow_Data) * light_system->spot_light_count);
-
+                                       point_shadow_data_array,
+                                       sizeof(Point_Light_Shadow_Data) * light_system->point_light_count);
 
 
     VkBufferMemoryBarrier2 directional_barrier = {
@@ -273,22 +372,6 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
     };
 
 
-    VkBufferMemoryBarrier2 point_light_barrier = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-
-        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-
-        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
-        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-        .buffer = vulkan_buffer_get_frame(renderer, light_system->point_light_ssbo_handle)->handle,
-        .offset = 0,
-        .size = VK_WHOLE_SIZE,
-    };
     VkBufferMemoryBarrier2 spot_light_barrier = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 
@@ -322,13 +405,51 @@ void light_system_update_upload_frame_data(Renderer* renderer, Light_System* lig
         .size = VK_WHOLE_SIZE,
     };
 
+
+    VkBufferMemoryBarrier2 point_light_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->point_light_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+    VkBufferMemoryBarrier2 point_light_shadow_barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+
+        .srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+
+        .dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+        .buffer = vulkan_buffer_get_frame(renderer, light_system->point_light_shadow_ssbo_handle)->handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+
+
     vulkan_command_add_buffer_barrier(command_buffer, directional_barrier);
     vulkan_command_add_buffer_barrier(command_buffer, directional_shadow_barrier);
 
-    vulkan_command_add_buffer_barrier(command_buffer, point_light_barrier);
-
     vulkan_command_add_buffer_barrier(command_buffer, spot_light_barrier);
     vulkan_command_add_buffer_barrier(command_buffer, spot_light_shadow_barrier);
+
+    vulkan_command_add_buffer_barrier(command_buffer, point_light_barrier);
+    vulkan_command_add_buffer_barrier(command_buffer, point_light_shadow_barrier);
+
 
     vulkan_command_flush_barriers(command_buffer);
 
@@ -360,6 +481,8 @@ void point_light_init(Point_Light* light)
     light->constant = 1.0f;
     light->linear = 0.09f;
     light->quadratic = 0.032f;
+
+    light->range = 90.f;
 }
 
 void spot_light_init(Spot_Light* light)

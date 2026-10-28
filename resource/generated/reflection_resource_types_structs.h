@@ -25,8 +25,9 @@ const char* resources_struct_string_list[] = {
 	"Madness_Font", 
 	"Madness_Font_Runtime", 
 	"PC_General", 
+	"PC_Point_Light", 
+	"PC_Sprite", 
 	"PC_Particle", 
-	"PC_Shadow_Mapping", 
 	"Shader_PSO", 
 	"Shader_Asset", 
 	"Material_GPU_Definition", 
@@ -787,6 +788,46 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	reflection_registry_add_struct(reflection_registry, PC_General_Runtime_Struct);
 
+	Reflection_Runtime_Struct_Field PC_Point_Light_Fields[] =
+	{
+	};
+
+	 Reflection_Runtime_Struct PC_Point_Light_Runtime_Struct =
+	{
+		.name = "PC_Point_Light",
+		.fields = PC_Point_Light_Fields,
+		.field_count = 0,
+		.struct_size = sizeof(PC_Point_Light)
+	};
+
+	reflection_registry_add_struct(reflection_registry, PC_Point_Light_Runtime_Struct);
+
+	Reflection_Runtime_Struct_Field PC_Sprite_Fields[] =
+	{
+		{
+			.name = "padding0",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(PC_Sprite, padding0)
+		},
+		{
+			.name = "padding1",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(PC_Sprite, padding1)
+		},
+	};
+
+	 Reflection_Runtime_Struct PC_Sprite_Runtime_Struct =
+	{
+		.name = "PC_Sprite",
+		.fields = PC_Sprite_Fields,
+		.field_count = 2,
+		.struct_size = sizeof(PC_Sprite)
+	};
+
+	reflection_registry_add_struct(reflection_registry, PC_Sprite_Runtime_Struct);
+
 	Reflection_Runtime_Struct_Field PC_Particle_Fields[] =
 	{
 	};
@@ -800,26 +841,6 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 	};
 
 	reflection_registry_add_struct(reflection_registry, PC_Particle_Runtime_Struct);
-
-	Reflection_Runtime_Struct_Field PC_Shadow_Mapping_Fields[] =
-	{
-		{
-			.name = "light_matrix",
-			.type = REFLECTION_TYPE_MAT4,
-			.type_name = "mat4",
-			.offset = offsetof(PC_Shadow_Mapping, light_matrix)
-		},
-	};
-
-	 Reflection_Runtime_Struct PC_Shadow_Mapping_Runtime_Struct =
-	{
-		.name = "PC_Shadow_Mapping",
-		.fields = PC_Shadow_Mapping_Fields,
-		.field_count = 1,
-		.struct_size = sizeof(PC_Shadow_Mapping)
-	};
-
-	reflection_registry_add_struct(reflection_registry, PC_Shadow_Mapping_Runtime_Struct);
 
 	Reflection_Runtime_Struct_Field Shader_PSO_Fields[] =
 	{

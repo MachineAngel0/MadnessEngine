@@ -453,12 +453,20 @@ typedef struct PC_General
     VkDeviceAddress extra_buffer;
 } PC_General;
 
-typedef struct PC_SPRITE
+typedef struct PC_Point_Light
+{
+    VkDeviceAddress draw_data_buffer;
+    u32 point_light_face_index;
+    u32 bindless_texture_index;
+} PC_Point_Light;
+
+
+typedef struct PC_Sprite
 {
     VkDeviceAddress sprite_data_ssbo;
     u32 padding0;
     u32 padding1;
-} PC_SPRITE;
+} PC_Sprite;
 
 
 typedef struct PC_Particle
@@ -467,12 +475,6 @@ typedef struct PC_Particle
     VkDeviceAddress particle_draw_buffer;
 } PC_Particle;
 
-
-typedef struct PC_Shadow_Mapping
-{
-    mat4 light_matrix;
-    VkDeviceAddress draw_data_buffer;
-} PC_Shadow_Mapping;
 
 
 typedef struct Shader_PSO

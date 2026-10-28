@@ -52,7 +52,8 @@ void vulkan_image_create(Renderer* renderer, u32 width, u32 height,
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
     VK_CHECK(
-        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture->
+        vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback, &out_texture
+            ->
             texture_image_memory
         ));
 
@@ -86,9 +87,53 @@ void vulkan_image_view_create(Renderer* renderer,
     view_create_info.subresourceRange.baseArrayLayer = 0;
     view_create_info.subresourceRange.layerCount = 1;
 
+
     VK_CHECK(
         vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vk_allocator_callback, &texture->
             texture_image_view));
+}
+
+void vulkan_image_view_create_cube_map_face(Renderer* renderer,  u32 base_array_layer, VkFormat format, VkImageAspectFlags aspect_flags,
+    VkImage* texture_image, VkImageView* texture_image_view)
+{
+
+    VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    view_create_info.image = *texture_image;
+    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // TODO: Make configurable.
+    view_create_info.format = format;
+    view_create_info.subresourceRange.aspectMask = aspect_flags;
+    // TODO: Make configurable
+    view_create_info.subresourceRange.baseMipLevel = 0;
+    view_create_info.subresourceRange.levelCount = 1;
+    view_create_info.subresourceRange.baseArrayLayer = base_array_layer;
+    view_create_info.subresourceRange.layerCount = 1;
+
+
+    VkResult result = vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vk_allocator_callback,
+                                        texture_image_view);
+    VK_CHECK(result);
+
+}
+
+void vulkan_image_view_create_cube(Renderer* renderer,
+                                   VkFormat format, VkImageAspectFlags aspect_flags, Vulkan_Texture_Cubemap* texture,
+                                   VkImageView* texture_image_view)
+{
+    VkImageViewCreateInfo view_create_info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    view_create_info.image = texture->texture_image;
+    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE; // TODO: Make configurable.
+    view_create_info.format = format;
+    view_create_info.subresourceRange.aspectMask = aspect_flags;
+    // TODO: Make configurable
+    view_create_info.subresourceRange.baseMipLevel = 0;
+    view_create_info.subresourceRange.levelCount = 1;
+    view_create_info.subresourceRange.baseArrayLayer = 0;
+    view_create_info.subresourceRange.layerCount = 6;
+
+
+    VkResult result = vkCreateImageView(renderer->logical_device, &view_create_info, renderer->vk_allocator_callback,
+                                        texture_image_view);
+    VK_CHECK(result);
 }
 
 
@@ -116,10 +161,6 @@ void vulkan_texture_free(Renderer* renderer, Vulkan_Texture* image)
         vkDestroySampler(renderer->logical_device, image->texture_sampler, renderer->vk_allocator_callback);
     }
 }
-
-
-
-
 
 
 void transition_image_layout(Vulkan_Command_Buffer* command_buffer_context,
@@ -226,8 +267,8 @@ void copyBufferToImage(Renderer* renderer,
 {
     Vulkan_Command_Buffer commandBuffer = {0};
     vulkan_command_buffer_begin_single_use(renderer,
-                                                        renderer->graphics_command_pool,
-                                                        &commandBuffer);
+                                           renderer->graphics_command_pool,
+                                           &commandBuffer);
     VkBufferImageCopy region = {0};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -254,9 +295,9 @@ void copyBufferToImage(Renderer* renderer,
         &region
     );
     vulkan_command_buffer_end_single_use(renderer,
-                                                             renderer->graphics_command_pool,
-                                                             &commandBuffer,
-                                                             renderer->graphics_queue);
+                                         renderer->graphics_command_pool,
+                                         &commandBuffer,
+                                         renderer->graphics_queue);
 }
 
 void create_texture_sampler(Renderer* renderer, Vulkan_Texture* texture)
@@ -326,10 +367,14 @@ VkBool32 formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, Vk
     vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProps);
 
     if (tiling == VK_IMAGE_TILING_OPTIMAL)
-        {return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;}
+    {
+        return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+    }
 
     if (tiling == VK_IMAGE_TILING_LINEAR)
-        {return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;}
+    {
+        return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+    }
 
     return false;
 }
@@ -545,9 +590,8 @@ void vulkan_image_create_startup(Renderer* renderer, Texture_GPU_Upload* texture
     vulkan_command_buffer_begin_single_use(renderer, renderer->graphics_command_pool, &temp_command_buffer);
 
 
-
-
-    vulkan_command_buffer_end_single_use(renderer, renderer->graphics_command_pool, &temp_command_buffer, renderer->graphics_queue);
+    vulkan_command_buffer_end_single_use(renderer, renderer->graphics_command_pool, &temp_command_buffer,
+                                         renderer->graphics_queue);
     vkQueueWaitIdle(renderer->graphics_queue);
 }
 
@@ -609,7 +653,8 @@ void vulkan_texture_create_image_new(Renderer* renderer,
     VkMemoryAllocateInfo memory_allocate_info = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
-    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info, renderer->vk_allocator_callback,
+    VkResult result1 = vkAllocateMemory(renderer->logical_device, &memory_allocate_info,
+                                        renderer->vk_allocator_callback,
                                         &out_texture->texture_image_memory);
     VK_CHECK(result1);
     // Bind the memory

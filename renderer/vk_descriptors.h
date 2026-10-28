@@ -87,8 +87,9 @@ void update_uniform_buffer_bindless_descriptor_set_explicit(Renderer* renderer,
 void update_texture_bindless_descriptor_set(Renderer* renderer,
                                             Descriptor_System* descriptor_system,
                                             u32 bindless_location);
+
 void update_texture_bindless_descriptor_set_explicit(Renderer* renderer,
-                                            Descriptor_System* descriptor_system, Vulkan_Texture* texture,
+                                            Descriptor_System* descriptor_system, VkImageView texture_image_view, VkSampler texture_sampler,
                                             u32 bindless_location, VkImageLayout image_layout);
 
 void update_storage_buffer_bindless_descriptor_set(Renderer* renderer,
