@@ -318,24 +318,25 @@ void turn_update(Madness_Pulse_Game* game)
         //show the player their ui and handle any inputs
         Unit* unit = madness_pulse_get_unit(game, game->current_units_turn);
 
-        madness_ui_set_window_pos(100, 100);
-        madness_ui_set_window_size(500, 400);
-        madness_ui_window_begin(STRING("Ability Select"), 0);
+        ImGui_Begin("Ability Select", 0, 0);
         {
-            madness_ui_c_string(Character_Name_enum_string[unit->name]);
-            madness_ui_s32(STRING("Actions Left:"), &unit->action_component.actions_available, 0);
-            madness_ui_string(STRING("Overflow Bar"));
+            ImGui_Text(Character_Name_enum_string[unit->name]);
+            ImGui_Text("Actions Left: %d", &unit->action_component.actions_available);
+            ImGui_Text("Overflow Bar");
 
 
             u32 overflow_val = battle_inventory_calculate_value_from_usage(
                 &unit->battle_inventory_component,
                 game->ability_registry);
 
-            madness_ui_progress_bar(STRING("Progress bar"), overflow_val,
-                                    unit->battle_inventory_component.overflow_threshold);
+            // madness_ui_progress_bar(STRING("Progress bar"), overflow_val,
+            // unit->battle_inventory_component.overflow_threshold);
+            f32 percent = (f32)overflow_val / (f32)unit->battle_inventory_component.overflow_threshold;
+            ImGui_ProgressBar(percent, (ImVec2){0, 0}, "Progress bar");
 
 
-            madness_scroll_box_begin(STRING("Ability Scroll list"));
+            // madness_scroll_box_begin(STRING("Ability Scroll list"));
+            ImGui_Begin("Ability Scroll List", 0, 0);
             {
                 for (u32 i = 0; i < unit->battle_inventory_component.battle_list->num_items; ++i)
                 {
@@ -346,22 +347,25 @@ void turn_update(Madness_Pulse_Game* game)
                     u16 overflow_usage_count = dynamic_array_get(unit->battle_inventory_component.overflow_usage_count,
                                                                  i, u16);
 
-                    if (madness_ui_button(STRING_STRLEN(Ability_Name_enum_string[name])))
+                    if (ImGui_Button(Ability_Name_enum_string[name]))
                     {
                         FATAL("A THINGS SELECTED");
                         game->currently_selected_ability_by_player = ability_info.ability_name;
                         targeting_handler_create_targeting_info(game, game->currently_selected_ability_by_player);
                         game->turn_phase = Turn_Phase_Target_Select;
                     }
-                    madness_ui_same_line();
-                    madness_ui_u16(STRING("Count:"), &ability_count, 0);
-                    madness_ui_same_line();
+                    ImGui_Text("Count:", &ability_count);
 
 
                     String* usage_id = string_concat(&(STRING("Usage")),
                                                      &STRING_STRLEN(c_string_from_int(i, game->frame_allocator)),
                                                      game->frame_allocator);
-                    madness_ui_slider_arrow(*usage_id, &overflow_usage_count, 0, ability_count);
+
+
+
+                    float slider_val = (float)overflow_usage_count;
+                    madness_ui_slider_arrow(*usage_id, &slider_val, 0, ability_count);
+                    // ImGui_InputInt(*usage_id, &slider_val, 0, ability_count);
 
 
                     //TODO: TEMP: display ability text
@@ -374,9 +378,10 @@ void turn_update(Madness_Pulse_Game* game)
                     dynamic_array_set(unit->battle_inventory_component.overflow_usage_count, &overflow_usage_count, i);
                 }
             }
-            madness_scroll_box_end();
+            // madness_scroll_box_end();
+            ImGui_End();
         }
-        madness_ui_window_end();
+        ImGui_End();
 
         break;
     case Turn_Phase_Target_Select:
@@ -478,6 +483,9 @@ void turn_update(Madness_Pulse_Game* game)
         break;
     case Turn_Phase_Battle_Over:
         break;
+    default:
+        MASSERT_FALSE()
+        return;
     }
 
 
@@ -542,7 +550,7 @@ void turn_update(Madness_Pulse_Game* game)
         for (u32 i = 0; i < game->madness_ai->ai_decision->num_items; ++i)
         {
             Madness_AI_Decision* decision =
-                dynamic_array_get(game->madness_ai->ai_decision,  i, Madness_AI_Decision*);
+                dynamic_array_get(game->madness_ai->ai_decision, i, Madness_AI_Decision*);
 
             madness_ui_string(STRING_STRLEN(Ability_Name_enum_string[decision->ability_info->ability_name]));
         }

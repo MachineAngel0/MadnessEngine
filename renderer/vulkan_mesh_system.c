@@ -46,8 +46,6 @@ Vulkan_Mesh_System* vulkan_mesh_system_init(Renderer* renderer)
     mesh_system->skinned_not_yet_uploaded_array = array_create(Mesh_Unfinished_Upload, 1024, &renderer->allocator);
 
 
-
-
     return mesh_system;
 }
 
@@ -192,6 +190,7 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
 
     if (ring_queue_is_empty(render_packet->mesh_queue) && ring_queue_is_empty(render_packet->skinned_mesh_queue))
     {
+        PROFILE_ZONE_END(vulkan_mesh_system_upload_new_resources)
         return;
     }
 
@@ -199,51 +198,51 @@ void vulkan_mesh_system_upload_new_resources(Renderer* renderer, Vulkan_Mesh_Sys
     //TODO: we still want to flush our queues
     Vulkan_Command_Buffer* transfer_command_buffer = NULL;
     u64 mesh_upload_semaphore_value = 0;
-    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer, &mesh_upload_semaphore_value))
+    if (!vulkan_queue_system_get_transfer_command_buffer(renderer, &transfer_command_buffer,
+                                                         &mesh_upload_semaphore_value))
     {
         PROFILE_ZONE_END(vulkan_mesh_system_upload_new_resources)
         return;
     }
 
 
-
     // mesh data we werent able to upload yet
-     u64 unfinished_idx = 0;
-     while (unfinished_idx < mesh_system->mesh_not_yet_uploaded_array->num_items)
-     {
-         Mesh_Unfinished_Upload unfinished_upload =
-             array_get(
-                 mesh_system->mesh_not_yet_uploaded_array,
-                 unfinished_idx,
-                 Mesh_Unfinished_Upload);
+    u64 unfinished_idx = 0;
+    while (unfinished_idx < mesh_system->mesh_not_yet_uploaded_array->num_items)
+    {
+        Mesh_Unfinished_Upload unfinished_upload =
+            array_get(
+                mesh_system->mesh_not_yet_uploaded_array,
+                unfinished_idx,
+                Mesh_Unfinished_Upload);
 
 
-         Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];
+        Mesh_Render_Record* record = &mesh_system->mesh_render_record[unfinished_upload.submesh_id];
 
-         //if upload successful remove it from the array
-         if (mesh_system_upload_data_into_buffers(renderer,
-                                                  mesh_system,
-                                                  mesh_system->mesh_submitted_pending_array,
-                                                  mesh_system->mesh_not_yet_uploaded_array,
-                                                  transfer_command_buffer,
-                                                  unfinished_upload.buffer_handle,
-                                                  unfinished_upload.type,
-                                                  unfinished_upload.data,
-                                                  unfinished_upload.bytes,
-                                                  unfinished_upload.submesh_id,
-                                                  mesh_upload_semaphore_value,
-                                                  &record->pending_uploads, false))
-         {
-             // Don't increment i.
-             // The swapped-in element now occupies index i.
-             array_remove_swap(
-                 mesh_system->mesh_not_yet_uploaded_array,
-                 unfinished_idx);
-             continue;
-         }
-         //upload could not be done
-         unfinished_idx++;
-     }
+        //if upload successful remove it from the array
+        if (mesh_system_upload_data_into_buffers(renderer,
+                                                 mesh_system,
+                                                 mesh_system->mesh_submitted_pending_array,
+                                                 mesh_system->mesh_not_yet_uploaded_array,
+                                                 transfer_command_buffer,
+                                                 unfinished_upload.buffer_handle,
+                                                 unfinished_upload.type,
+                                                 unfinished_upload.data,
+                                                 unfinished_upload.bytes,
+                                                 unfinished_upload.submesh_id,
+                                                 mesh_upload_semaphore_value,
+                                                 &record->pending_uploads, false))
+        {
+            // Don't increment i.
+            // The swapped-in element now occupies index i.
+            array_remove_swap(
+                mesh_system->mesh_not_yet_uploaded_array,
+                unfinished_idx);
+            continue;
+        }
+        //upload could not be done
+        unfinished_idx++;
+    }
 
 
     u64 skinned_unfinished_idx = 0;
@@ -580,7 +579,7 @@ void vulkan_mesh_system_construct_draw_lists(Renderer* renderer,
     // or even cull and create the render format at the same time, instead of two seperate arrays
 
     vulkan_command_buffer_debug_label_begin_color(renderer, graphics_command_buffer, "MESH DRAW GENERATION",
-                                              (float[4]){1.0, 1.0, 0.0, 1.0});
+                                                  (float[4]){1.0, 1.0, 0.0, 1.0});
     //steps:
     // 1. cull // TODO:
     // 2. add items into each appropriate renderpass list
@@ -742,7 +741,7 @@ void vulkan_mesh_system_construct_skinned_draw_lists(Renderer* renderer, Render_
     // loop through our meshes and create render items for each
 
     vulkan_command_buffer_debug_label_begin_color(renderer, graphics_command_buffer, "SKINNED DRAW GENERATION",
-                                              (float[4]){1.0, 1.0, 0.0, 1.0});
+                                                  (float[4]){1.0, 1.0, 0.0, 1.0});
 
     //TODO: TEMP
     render_list->skinned_mesh_renderable = allocator_alloc(&renderer->frame_allocator,
@@ -999,7 +998,7 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
                                               Vulkan_Shader_Pipeline* vulkan_pipeline,
                                               Vulkan_Mesh_Render_List* render_list, const char* name)
 {
-        PROFILE_ZONE(mesh_renderer_batch_draw)
+    PROFILE_ZONE(mesh_renderer_batch_draw)
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, name,
@@ -1089,11 +1088,13 @@ void mesh_renderer_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_Sy
 
 
 void mesh_renderer_batch_draw_custom_pipeline_and_push_constant(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                              Vulkan_Command_Buffer* command_buffer,
-                                              Vulkan_Shader_Pipeline* vulkan_pipeline,
-                                              Vulkan_Mesh_Render_List* render_list, void* push_constant, u32 push_constant_size, const char* name)
+                                                                Vulkan_Command_Buffer* command_buffer,
+                                                                Vulkan_Shader_Pipeline* vulkan_pipeline,
+                                                                Vulkan_Mesh_Render_List* render_list,
+                                                                void* push_constant, u32 push_constant_size,
+                                                                const char* name)
 {
-        PROFILE_ZONE(mesh_renderer_batch_draw)
+    PROFILE_ZONE(mesh_renderer_batch_draw)
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
 
     vulkan_command_buffer_debug_label_begin_color(renderer, command_buffer, name,
@@ -1137,8 +1138,6 @@ void mesh_renderer_batch_draw_custom_pipeline_and_push_constant(Renderer* render
                              VK_INDEX_TYPE_UINT16);
 
 
-
-
         VkPushConstantsInfo push_constant_info = {0};
         push_constant_info.sType = VK_STRUCTURE_TYPE_PUSH_CONSTANTS_INFO;
         push_constant_info.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -1178,9 +1177,9 @@ void mesh_renderer_batch_draw_custom_pipeline_and_push_constant(Renderer* render
 }
 
 
-
 void mesh_renderer_skinned_batch_draw(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                      Vulkan_Command_Buffer* command_buffer, Vulkan_Skinned_Mesh_Render_List* render_list)
+                                      Vulkan_Command_Buffer* command_buffer,
+                                      Vulkan_Skinned_Mesh_Render_List* render_list)
 {
     PROFILE_ZONE(mesh_renderer_batch_draw)
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
@@ -1287,11 +1286,10 @@ void mesh_renderer_skinned_batch_draw(Renderer* renderer, Vulkan_Mesh_System* me
 }
 
 
-
 void mesh_renderer_skinned_batch_draw_custom_pipeline(Renderer* renderer, Vulkan_Mesh_System* mesh_renderer,
-                                      Vulkan_Command_Buffer* command_buffer,
-                                      Vulkan_Shader_Pipeline* vulkan_pipeline,
-                                      Vulkan_Skinned_Mesh_Render_List* render_list)
+                                                      Vulkan_Command_Buffer* command_buffer,
+                                                      Vulkan_Shader_Pipeline* vulkan_pipeline,
+                                                      Vulkan_Skinned_Mesh_Render_List* render_list)
 {
     PROFILE_ZONE(mesh_renderer_batch_draw)
     //only bind the vertex and index, the storage buffers are bda, so either in the ubo or the push constant
@@ -1304,7 +1302,6 @@ void mesh_renderer_skinned_batch_draw_custom_pipeline(Renderer* renderer, Vulkan
     //TODO: draw count is temporary until we do instancing properly
     for (u32 draw_idx = 0; draw_idx < render_list->skinned_mesh_renderable_count; ++draw_idx)
     {
-
         Vulkan_Buffer* index_buffer = vulkan_buffer_get(renderer, mesh_renderer->index_buffer_handle);
 
         //get pipeline

@@ -325,6 +325,7 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
         //TODO: try to load in the asset from the import path
         FATAL("ASSET NOT FOUND: %s", engine_asset_path);
         scratch_allocator_end(scratch);
+        PROFILE_ZONE_END(asset_load_font_path)
         return out_handle;
     }
 
@@ -332,14 +333,15 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
     {
         MASSERT_MSG(false, "PLZ CONVERT ASSET")
         scratch_allocator_end(scratch);
+        PROFILE_ZONE_END(asset_load_font_path)
         return out_handle;
     }
 
     //has asset already been loaded
-    //has asset already been loaded
     if (texture_system_does_texture_exist(asset_system->texture_system, asset_record, &out_handle))
     {
         scratch_allocator_end(scratch);
+        PROFILE_ZONE_END(asset_load_font_path)
         return out_handle;
     }
 
@@ -354,6 +356,8 @@ Texture_Handle asset_load_font_path(Asset_System* asset_system, const char* engi
     if (!fptr)
     {
         MASSERT(false);
+        PROFILE_ZONE_END(asset_load_font_path)
+        return out_handle;
     }
 
     asset_font_deserialize(&editor_texture, fptr, asset_system->texture_allocator);

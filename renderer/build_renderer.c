@@ -20,7 +20,7 @@
 #include "vk_device.c"
 #include "vk_image.c"
 #include "vk_pipeline.c"
-#include "vk_renderpass.c"
+#include "vk_framegraph.c"
 #include "vk_shader.c"
 #include "vk_swapchain.c"
 #include "vk_sync.c"

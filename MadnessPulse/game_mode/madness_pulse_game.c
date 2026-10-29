@@ -12,15 +12,16 @@ Madness_Pulse_Game* madness_pulse_game_init(Memory_System* memory_system,
     game->game_state = Game_State_Enum_Main_Menu;
 
 
-
-
     u64 game_persistent_memory_size = MB(16);
     u64 game_frame_memory_size = MB(16);
     u64 game_dynamic_memory_size = MB(16);
 
-    game->allocator = memory_system_allocator_create(memory_system, game_persistent_memory_size, MEMORY_SUBSYSTEM_GAME, "game persistent");
-    game->frame_allocator = memory_system_allocator_create(memory_system, game_frame_memory_size, MEMORY_SUBSYSTEM_GAME, "game frame");
-    game->heap_allocator = memory_system_heap_allocator_create(memory_system, game_dynamic_memory_size, MEMORY_SUBSYSTEM_GAME, "game dynamic");
+    game->allocator = memory_system_allocator_create(memory_system, game_persistent_memory_size, MEMORY_SUBSYSTEM_GAME,
+                                                     "game persistent");
+    game->frame_allocator = memory_system_allocator_create(memory_system, game_frame_memory_size, MEMORY_SUBSYSTEM_GAME,
+                                                           "game frame");
+    game->heap_allocator = memory_system_heap_allocator_create(memory_system, game_dynamic_memory_size,
+                                                               MEMORY_SUBSYSTEM_GAME, "game dynamic");
 
 
     game->resource_system = resource_system;
@@ -59,68 +60,56 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
     {
     case Game_State_Enum_Main_Menu:
         //run the ui
-        madness_ui_window_begin(STRING("Main Menu"), 0);
-
-        if (madness_ui_button(STRING("Load Game")))
+        ImGui_Begin("Main Menu", 0, 0);
         {
-            if (platform_is_directory_empty(SAVE_GAME_PATH))
+            if (ImGui_Button("Load Game"))
             {
-                //TODO: pop up and a sound, saying to press new game
+                if (platform_is_directory_empty(SAVE_GAME_PATH))
+                {
+                    //TODO: pop up and a sound, saying to press new game
+                }
+                else
+                {
+                    save_file_load_all_meta_data(game);
+                    game->game_state = Game_State_Load_Save;
+                }
             }
-            else
+            if (ImGui_Button("New Game"))
             {
-                save_file_load_all_meta_data(game);
-                game->game_state = Game_State_Load_Save;
-            }
-        }
-        if (madness_ui_button(STRING("New Game")))
-        {
-            //create a new save file that does not already exist
+                //create a new save file that does not already exist
 
-            if (!save_file_create(game))
+                if (!save_file_create(game))
+                {
+                    //TODO: failed pop up, all slots are used up
+                    MASSERT(false);
+                }
+
+                //set and load save slot function
+
+                game->game_state = Game_State_Enum_Turn_Based; // TODO: temp
+            }
+            if (ImGui_Button("Settings"))
             {
-                //TODO: failed pop up, all slots are used up
-                MASSERT(false);
             }
-
-            //set and load save slot function
-
-            game->game_state = Game_State_Enum_Turn_Based; // TODO: temp
+            if (ImGui_Button("Quit"))
+            {
+                Event_Data data = {0};
+                event_fire(EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
+            }
         }
-        if (madness_ui_button(STRING("Settings")))
-        {
-        }
-        if (madness_ui_button(STRING("Quit")))
-        {
-            Event_Data data = {0};
-            event_fire(EVENT_APP_QUIT, STRING("Madness Pulse Game MAIN MENU"), data);
-        }
-        madness_ui_window_end();
-
-        //TODO: Testing
-        IUI_Node* background_menu = insanity_ui_node("");
-        background_menu->color = COLOR_VIOLET;
-        IUI_Node* load_game = insanity_ui_text("Load Game");
-        IUI_Node* new_game = insanity_ui_text("New Game");
-
-        background_menu->size = insanity_ui_screen_size_percent(0.2, 0.2);
-        insanity_ui_node_align_to_screen_size(background_menu, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
-        /*load_game->pos = */
-        insanity_ui_node_align_to_screen_size(load_game, UI_ALIGNMENT_X_CENTER, UI_ALIGNMENT_X_CENTER);
-        // load_game->size = insanity_ui_node_get_screen_size_percent(0.1, 0.1);
-        new_game->pos = (vec2s){load_game->pos.x, load_game->pos.y + load_game->size.y + 12.0f};
-        // insanity_ui_node_offset(new_game, load_game, (vec2s){0, 8}); //NOTE:  doesnt work how i think it does
+        ImGui_End();
 
 
         break;
     case Game_State_Load_Save:
         // madness_pulse_load_save(game); // TODO:
         // game->game_state = Game_State_Enum_Turn_Based;
-        madness_ui_window_begin(STRING("Load Game Save Slots"), 0);
+        ImGui_Begin("Load Game Save Slots", 0, 0);
         {
             for (u32 i = 0; i < game->saves_found; i++)
             {
-                if (madness_ui_button(STRING("Press To Load This Save")))
+                ImGui_PushIDInt(i);
+                if (ImGui_Button(("Press To Load This Save")))
                 {
                     //TODO: load up the intermediate screen
                     save_game_load(game, game->save_meta_data[i].slot_number);
@@ -128,13 +117,14 @@ bool madness_pulse_game_update(Madness_Pulse_Game* game, float delta_time)
 
                     game->game_state = Game_State_Enum_Turn_Based; // TODO: temp should be intermediate ui mode
                 }
-                madness_ui_u8(STRING("Slot Number:"), &game->save_meta_data[i].slot_number, 0);
-                madness_ui_float(STRING("Game Version:"), &game->save_meta_data[i].version, 0);
-                madness_ui_u8(STRING("Missions Beaten:"), &game->save_meta_data[i].missions_beaten, 0);
-                madness_ui_padding();
+                ImGui_Text("Slot Number: %d", &game->save_meta_data[i].slot_number);
+                ImGui_Text("Game Version: %d", &game->save_meta_data[i].version);
+                ImGui_Text("Missions Beaten: %d", &game->save_meta_data[i].missions_beaten);
+
+                ImGui_PopID();
             }
         }
-        madness_ui_window_end();
+        ImGui_End();
 
         break;
     case Game_State_New_Save:

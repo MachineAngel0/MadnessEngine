@@ -619,6 +619,7 @@ bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
     {
         asset_converter_gltf_mesh(asset_system, gltf_path);
 
+    PROFILE_ZONE_END(asset_converter_mesh)
         return true;
     }
 
@@ -639,6 +640,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     if (!c_string_path_is_extension(gltf_path, ".gltf") && !c_string_path_is_extension(gltf_path, ".glb"))
     {
         FATAL("DID NOT PASS IN A GLTF FILE");
+        PROFILE_ZONE_END(asset_converter_gltf_mesh)
         return false;
     }
 
@@ -650,6 +652,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     if (result != cgltf_result_success)
     {
         fprintf(stderr, "Failed to parse glTF file: %s\n", gltf_path);
+        PROFILE_ZONE_END(asset_converter_gltf_mesh)
         return false;
     }
     result = cgltf_load_buffers(&options, data, gltf_path);

@@ -1,5 +1,5 @@
-﻿#ifndef VK_RENDERPASS_H
-#define VK_RENDERPASS_H
+﻿#ifndef VK_FRAMEGRAPH_H
+#define VK_FRAMEGRAPH_H
 
 #include "vulkan_struct_types.h"
 
@@ -7,13 +7,12 @@
 // unless its specifically to sort where draw objects go
 typedef enum Vulkan_Renderpass_Type
 {
-    RENDERPASS_SHADOW_MAP = BITFLAG(0),
-    RENDERPASS_FORWARD_LIGHT_CULL = BITFLAG(1), //this would not be a renderpass but a calcuation/compute shader
-    RENDERPASS_FORWARD_OPAQUE = BITFLAG(1),
-    RENDERPASS_TRANSPARENCY = BITFLAG(2),
-    RENDERPASS_POST_PROCESSING = BITFLAG(3),
-    RENDERPASS_UI = BITFLAG(4),
-    RENDERPASS_REFLECTION = BITFLAG(5),
+    RENDERPASS_PREDEPTH = BITFLAG(0),
+    RENDERPASS_SHADOW_MAP_DIRECTIONAL = BITFLAG(1),
+    RENDERPASS_SHADOW_MAP_SPOT = BITFLAG(2),
+    RENDERPASS_SHADOW_MAP_POINT = BITFLAG(3),
+    RENDERPASS_OPAQUE = BITFLAG(4),
+    RENDERPASS_TRANSPARENCY = BITFLAG(5),
 } Vulkan_Renderpass_Type;
 
 typedef enum Vulkan_Attachment_Type
@@ -125,7 +124,7 @@ typedef struct Render_Graph
 
     RenderPass render_pass[32];
     u32 renderpass_count;
-} Render_Graph;
+} Frame_Graph;
 
 
 //sudo forward renderer
@@ -139,29 +138,17 @@ typedef struct Render_Graph
 void vulkan_renderpass_create_new(Renderer* renderer);
 
 
-Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* render_graph,
+Attachment_Handle vulkan_create_attachment(Renderer* renderer, Frame_Graph* render_graph,
                                            Vulkan_Attachment_Type type, VkFormat format, u32 width, u32 height);
 
 //TODO: implement this function properly when needed
 void vulkan_renderpass_insert_memory_barrier(Renderer* renderer, Vulkan_Command_Buffer* command_buffer);
 
-//OLD API
+
+void vulkan_frame_graph_setup(Frame_Graph render_graph);
+void vulkan_frame_graph_run();
+void vulkan_frame_graph_end();
 
 
 
-void vulkan_renderpass_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
-void vulkan_renderpass_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
-
-
-void vulkan_renderpass_UI_begin(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
-void vulkan_renderpass_UI_end(Renderer* renderer, Vulkan_Command_Buffer* command_buffer, u32 current_frame);
-
-
-void fake_renderpass_begin(void)
-{
-    //insert memory barriers needed
-    //cmd beging rendering -> but we need rendering attachment info and rendering info struct
-}
-
-
-#endif //VK_RENDERPASS_H
+#endif //VK_FRAMEGRAPH_H

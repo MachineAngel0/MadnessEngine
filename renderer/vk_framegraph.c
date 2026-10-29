@@ -1,4 +1,4 @@
-﻿#include "vk_renderpass.h"
+﻿#include "vk_framegraph.h"
 
 #include "asserts.h"
 #include "logger.h"
@@ -8,7 +8,7 @@
 
 void vulkan_renderpass_create_new(Renderer* renderer)
 {
-    Render_Graph render_graph = {0};
+    Frame_Graph render_graph = {0};
 
     Attachment_Handle depth_attachment_handle = vulkan_create_attachment(renderer, &render_graph, Attachment_Type_Color,
                                                                          VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -52,7 +52,7 @@ void vulkan_renderpass_insert_memory_barrier(Renderer* renderer, Vulkan_Command_
 }
 
 
-Attachment_Handle vulkan_create_attachment(Renderer* renderer, Render_Graph* render_graph,
+Attachment_Handle vulkan_create_attachment(Renderer* renderer, Frame_Graph* render_graph,
                                            Vulkan_Attachment_Type type, VkFormat format, u32 width, u32 height)
 {
     Attachment* attachment = &render_graph->attachments[render_graph->attachments_count++];
