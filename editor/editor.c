@@ -146,9 +146,11 @@ bool editor_update(Editor* editor)
 
     if (ImGui_Begin("Asset Reload Views", 0, 0))
     {
+        ImGui_SeparatorText("Shaders");
         if (ImGui_Button("Reload Shaders"))
         {
             // int result = system("../renderer/shaders/compile_shaders.bat");
+#if MPLATFORM_WINDOWS
             int result = system("cmd.exe /c \"\"../renderer/shaders/compile_shaders.bat\"\"");
             if (result == 0)
             {
@@ -156,19 +158,39 @@ bool editor_update(Editor* editor)
             }
             else
             {
-                FATAL("DOES NOT WORK");
+                M_ERROR("WINDOWS SHADER RELOAD FAIL");
             }
+#endif
 
-
-            FATAL("RELOADING SHADER")
+#if MPLATFORM_LINUX
+            MASSERT_MSG_FALSE("IMPLEMENT IT PROPERLY STUPID")
+            int result = system("cmd.exe /c \"\"../renderer/shaders/compile_shaders.sh\"\"");
+            if (result == 0)
+            {
+                editor->asset_system->shader_system->reload_shaders = true;
+            }
+            else
+            {
+                M_ERROR("WINDOWS SHADER RELOAD FAIL");
+            }
+#endif
         }
+        ImGui_SeparatorText("Texture");
         if (ImGui_Button("Reload Textures"))
         {
-            FATAL("RELOADING SHADER")
+            FATAL("RELOADING TEXTURE")
         }
+        if (ImGui_Button("Scan For New Textures"))
+        {
+            asset_registry_scan_for_new_assets(editor->asset_system, editor->asset_system->asset_registry,
+                                   editor->memory_system, ASSET_TEXTURE);
+        }
+
+
+        ImGui_SeparatorText("Meshes");
         if (ImGui_Button("Reload Meshes"))
         {
-            FATAL("RELOADING SHADER")
+            FATAL("RELOADING MESHES")
         }
     }
 

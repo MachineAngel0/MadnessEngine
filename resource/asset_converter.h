@@ -13,6 +13,7 @@ MAPI bool asset_convert_file_path(Asset_System* asset_system, const char* file_p
 
 
 MAPI bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
+MAPI bool asset_converter_reload_texture(Asset_System* asset_system, const char* file_path);
 
 MAPI bool asset_converter_font(Asset_System* asset_system, const char* file_path);
 

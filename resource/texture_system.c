@@ -89,12 +89,6 @@ bool texture_system_get_texture(Texture_System* texture_system, Texture_Handle h
 }
 
 
-Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
-                                             const char* filepath)
-{
-    UNIMPLEMENTED();
-    return (Texture_Handle){0};
-}
 
 
 Texture_Handle texture_system_get_default_texture(Texture_System* texture_system)

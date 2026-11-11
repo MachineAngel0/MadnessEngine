@@ -619,7 +619,7 @@ bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
     {
         asset_converter_gltf_mesh(asset_system, gltf_path);
 
-    PROFILE_ZONE_END(asset_converter_mesh)
+        PROFILE_ZONE_END(asset_converter_mesh)
         return true;
     }
 
@@ -630,10 +630,40 @@ bool asset_converter_mesh(Asset_System* asset_system, const char* gltf_path)
     return false;
 }
 
+
+/*
+ * NOTE: check the false condition and set the texture to be the default texture
+ */
+MINLINE bool gltf_image_find_and_set_texture(Asset_System* asset_system, GLTF_Image* array, size_t array_size,
+                                             const char* uri,
+                                             MADNESS_UUID* out_uuid)
+{
+    MASSERT(out_uuid)
+    for (size_t i = 0; i < array_size; i++)
+    {
+        if (strcmp(array[i].uri_path, uri) == 0)
+        {
+            if (array[i].valid_image)
+            {
+                *out_uuid = array[i].uuid;
+                return true;
+            }
+
+            *out_uuid = asset_system->texture_system->default_texture_uuid;
+            return false;
+        }
+    }
+
+    *out_uuid = asset_system->texture_system->default_texture_uuid;
+    return false;
+}
+
+
 bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path)
 {
     PROFILE_ZONE(asset_converter_gltf_mesh)
 
+    //TODO: load all textures up front
 
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
@@ -658,6 +688,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     result = cgltf_load_buffers(&options, data, gltf_path);
     MASSERT(result == cgltf_result_success)
 
+    // GET BASE PATH
+    char* base_path = c_string_path_strip(gltf_path, scratch.allocator);
 
     Madness_Mesh* madness_mesh = allocator_alloc(scratch.allocator,
                                                  sizeof(Madness_Mesh));
@@ -675,7 +707,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
     Madness_Skinned_SubMesh* skinned_mesh = allocator_alloc(scratch.allocator,
                                                             sizeof(Madness_Skinned_SubMesh) * data->meshes_count);
     Madness_Skinned_GPU_Data* skinned_gpu_data = allocator_alloc(scratch.allocator,
-                                                                sizeof(Madness_Skinned_GPU_Data) * data->meshes_count);
+                                                                 sizeof(Madness_Skinned_GPU_Data) * data->meshes_count);
     GLTF_Animation_Data* animation_data = allocator_alloc(scratch.allocator,
                                                           sizeof(GLTF_Animation_Data));
     if (data->skins_count > 0)
@@ -691,6 +723,39 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
     Material_Default* default_mats = allocator_alloc(scratch.allocator,
                                                      sizeof(Material_Default) * data->meshes_count);
+
+
+    //load all our images/textures up front, and query for them later when needed
+    GLTF_Image* gltf_images_array = allocator_alloc(scratch.allocator,
+                                                    sizeof(GLTF_Image) * data->images_count);
+
+    for (size_t i = 0; i < data->images_count; i++)
+    {
+        GLTF_Image* cur_image = &gltf_images_array[i];
+        cur_image->valid_image = true;
+
+
+        cgltf_image* cgltf_image = &data->images[i];
+        size_t allocation_size = strlen(base_path) + strlen(cgltf_image->uri) + 1;
+        char* texture_path = allocator_alloc(scratch.allocator,
+                                             allocation_size);
+
+        // takes a buffer, message format, then the remaining strings
+        snprintf(texture_path, allocation_size, "%s%s", base_path, cgltf_image->uri);
+        TRACE("Texture Path:  %s", texture_path);
+
+        if (!filesystem_does_file_exists(texture_path))
+        {
+            M_ERROR("GLTF IMAGE TO LOAD NOT FOUND")
+            cur_image->valid_image = false;
+        }
+
+        cur_image->uri_path = cgltf_image->uri;
+        cur_image->full_source_path = texture_path;;
+
+        asset_converter_texture(asset_system, texture_path, &cur_image->uuid);
+    }
+
 
     for (size_t mesh_idx = 0; mesh_idx < data->meshes_count; mesh_idx++)
     {
@@ -825,8 +890,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
 
 
         //LOAD TEXTURES/MATERIALS
-        // GET BASE PATH
-        char* base_path = c_string_path_strip(gltf_path, scratch.allocator);
+
 
         //every mesh just gets loaded in with a default pbr, well convert the material later into a custom format
         Material_Default* cur_mat = &default_mats[mesh_idx];
@@ -841,19 +905,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (color_texture && color_texture->image->uri)
         {
             cur_mat->flags |= MESH_PIPELINE_COLOR;
-            size_t allocation_size = strlen(base_path) + strlen(color_texture->image->uri) + 1;
 
-            char* texture_path = allocator_alloc(scratch.allocator,
-                                                 allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, color_texture->image->uri);
-            TRACE("COLOR Texture Path:  %s", texture_path);
-            asset_converter_texture(asset_system, texture_path, &cur_mat->color_texture);
-
-            memcpy(cur_mat->color.raw,
-                   data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.base_color_factor,
-                   sizeof(vec4s));
-
+            gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+                                                 color_texture->image->uri, &cur_mat->color_texture);
 
             //base color
             memcpy(cur_mat->color.raw,
@@ -879,15 +933,11 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             {
                 cur_mat->flags |= MESH_PIPELINE_ROUGHNESS;
                 cur_mat->flags |= MESH_PIPELINE_METALLIC;
-                size_t allocation_size = strlen(base_path) +
-                    strlen(metal_roughness_texture->image->uri) + 1;
-                char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
-                // takes a buffer, message format, then the remaining strings
-                snprintf(texture_path, allocation_size, "%s%s", base_path, metal_roughness_texture->image->uri);
-                TRACE("METAL/ROUGHNESS Texture Path:  %s", texture_path);
 
-                asset_converter_texture(asset_system, texture_path, &cur_mat->roughness_texture);
-                asset_converter_texture(asset_system, texture_path, &cur_mat->metallic_texture);
+                gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+                                      metal_roughness_texture->image->uri, &cur_mat->roughness_texture);
+                gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+                                      metal_roughness_texture->image->uri, &cur_mat->metallic_texture);
 
                 cur_mat->metallic_strength =
                     data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.metallic_factor;
@@ -910,13 +960,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (AO_texture && AO_texture->image->uri)
         {
             cur_mat->flags |= MESH_PIPELINE_AO;
-            size_t allocation_size = strlen(base_path) + strlen(AO_texture->image->uri) + 1;
-            char* AO_texture_path = allocator_alloc(scratch.allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(AO_texture_path, allocation_size, "%s%s", base_path, AO_texture->image->uri);
 
-            TRACE("AO Texture Path:  %s", AO_texture_path);
-            asset_converter_texture(asset_system, AO_texture_path, &cur_mat->ambient_occlusion_texture);
+            gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+                                  AO_texture->image->uri, &cur_mat->ambient_occlusion_texture);
         }
 
 
@@ -926,13 +972,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (normal_texture && normal_texture->image->uri)
         {
             cur_mat->flags |= MESH_PIPELINE_NORMAL;
-            size_t allocation_size = strlen(base_path) + strlen(normal_texture->image->uri) + 1;
-            char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, normal_texture->image->uri);
-            TRACE("NORMAL Texture Path:  %s", texture_path);
-
-            asset_converter_texture(asset_system, texture_path, &cur_mat->normal_texture);
+            gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+                      normal_texture->image->uri, &cur_mat->normal_texture);
         }
 
         //EMISSIVE TEXTURE
@@ -941,14 +982,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (emissive_texture && emissive_texture->image->uri)
         {
             cur_mat->flags |= MESH_PIPELINE_EMISSIVE;
-            size_t allocation_size = strlen(base_path) + strlen(emissive_texture->image->uri) + 1;
 
-            char* texture_path = allocator_alloc(scratch.allocator, allocation_size);
-            // takes a buffer, message format, then the remaining strings
-            snprintf(texture_path, allocation_size, "%s%s", base_path, emissive_texture->image->uri);
-            TRACE("EMISSIVE Texture Path:  %s", texture_path);
-
-            asset_converter_texture(asset_system, texture_path, &cur_mat->emissive_texture);
+            gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
+               emissive_texture->image->uri, &cur_mat->emissive_texture);
 
             cur_mat->emissive_strength = data->meshes[mesh_idx].primitives->material->emissive_strength.
                                                                 emissive_strength;
@@ -978,8 +1014,8 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         if (data->meshes[mesh_idx].primitives->material->name)
         {
             material_create_from_data(asset_system, handle,
-                                               data->meshes[mesh_idx].primitives->material->name, cur_mat,
-                                               sizeof(*cur_mat), &material_handle);
+                                      data->meshes[mesh_idx].primitives->material->name, cur_mat,
+                                      sizeof(*cur_mat), &material_handle);
         }
         else
         {
@@ -993,13 +1029,13 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             string_builder_append_u64(string_mat_name, mesh_idx, scratch.allocator);
 
             material_create_from_data(asset_system, handle,
-                                              string_builder_to_c_string(string_mat_name), cur_mat,
-                                              sizeof(*cur_mat), &material_handle);
+                                      string_builder_to_c_string(string_mat_name), cur_mat,
+                                      sizeof(*cur_mat), &material_handle);
         }
 
         //set the uuid for the mesh
-        material_uuids[mesh_idx] = material_system_get_asset(asset_system->material_system, material_handle)->material_uuid;
-
+        material_uuids[mesh_idx] = material_system_get_asset(asset_system->material_system, material_handle)->
+            material_uuid;
     }
 
 
@@ -1280,7 +1316,6 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         asset_registry_add_asset_and_generate_uuid(asset_system->asset_registry, gltf_path, output_path,
                                                    ASSET_SKINNED_MESH, asset_system->heap_allocator,
                                                    &sk_mesh_runtime.skinned_mesh_uuid);
-
     }
     else
     {
@@ -1365,8 +1400,8 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shad
     return true;
 }
 
- bool asset_converter_material(Asset_System* asset_system,
-                                   Material_Asset* material_asset)
+bool asset_converter_material(Asset_System* asset_system,
+                              Material_Asset* material_asset)
 {
     PROFILE_ZONE(asset_converter_material_instance)
 
@@ -1379,7 +1414,7 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shad
     Scratch_Allocator scratch = scratch_allocator_begin(asset_system->scratch_allocator);
 
     //write out the file
-    String_Builder* str_builder =  material_asset_construct_path( material_asset, scratch.allocator);
+    String_Builder* str_builder = material_asset_construct_path(material_asset, scratch.allocator);
 
 
     const char* output_path = string_builder_to_c_string(str_builder);
@@ -1407,7 +1442,3 @@ bool asset_converter_shader_asset(Asset_System* asset_system, Shader_Asset* shad
 
     return true;
 }
-
-
-
-

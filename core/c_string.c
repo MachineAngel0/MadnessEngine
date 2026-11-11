@@ -213,6 +213,20 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
     */
 }
 
+bool c_string_path_is_source_texture_extension(const char* path)
+{
+    return c_string_path_is_extension(path, ENGINE_TEXTURE_EXTENSION);
+}
+
+bool c_string_path_is_engine_texture_extension(const char* path)
+{
+    if (c_string_path_is_extension(path, ".png") || c_string_path_is_extension(path, ".jpeg") ||
+        c_string_path_is_extension(path, ".jpg"))
+    {
+        return true;
+    }
+    return false;
+}
 
 
 // Case-sensitive string comparison. True if the same, otherwise false.

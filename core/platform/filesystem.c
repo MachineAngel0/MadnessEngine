@@ -1,5 +1,7 @@
 ﻿#include "filesystem.h"
 
+#include "asset_converter.h"
+
 
 bool filesystem_open(const char* path, File_Modes mode, bool binary, CFile* file)
 {
@@ -95,7 +97,6 @@ bool filesystem_write(CFile* file, void* data, u64 data_size)
 }
 
 
-
 bool filesystem_read_all_bytes(CFile* file, u8** out_bytes, u64* out_bytes_read)
 {
     if (file->file_state != FILE_STATE_OPEN)
@@ -112,7 +113,7 @@ bool filesystem_read_all_bytes(CFile* file, u8** out_bytes, u64* out_bytes_read)
 
 bool filesystem_read_line(CFile* file, u8* buffer, u64 buffer_size)
 {
-    fgets((char*)buffer,  buffer_size, file->fptr);
+    fgets((char*)buffer, buffer_size, file->fptr);
     return true;
 }
 
@@ -250,7 +251,7 @@ bool filesystem_create_directory_recursive(const char* directory_path)
     {
         if (buffer[i] == '/' || buffer[i] == '\\')
         {
-            if (i == 0) { continue; }  // leading separator, nothing to create yet
+            if (i == 0) { continue; } // leading separator, nothing to create yet
 
             char saved = buffer[i];
             buffer[i] = '\0';
@@ -292,7 +293,7 @@ bool asset_list_regenerate(Asset_List_Scan* asset_list, const char* relative_ass
     allocator_clear(asset_list->allocator);
     asset_list->count = 0;
     asset_list->strings = allocator_alloc(asset_list->allocator,
-                                           sizeof(String) * asset_list->max_count);
+                                          sizeof(String) * asset_list->max_count);
 
     platform_get_assets_from_directory(relative_asset_path, asset_list);
 
@@ -325,63 +326,82 @@ bool filesystem_has_directory_changed(File_Watch_Handle file_handle)
 
 ///////////////// FILE WATCHER /////////////////
 
-
 bool filewatcher_init(Memory_System* memory_system)
 {
     madness_file_watcher = memory_system_alloc(memory_system, sizeof(Madness_File_Watcher), MEMORY_SUBSYSTEM_MISC);
-    madness_file_watcher->allocator = memory_system_allocator_create(memory_system, KB(64), MEMORY_SUBSYSTEM_MISC, "file watcher");
+    madness_file_watcher->allocator = memory_system_allocator_create(memory_system, MB(16), MEMORY_SUBSYSTEM_MISC,
+                                                                     "file watcher");
+
+    madness_file_watcher->registered_directories_count = 0;
+
+    madness_file_watcher->events = ring_queue_create_allocator(sizeof(File_Watch_Event), 1024,
+                                                               madness_file_watcher->allocator);
+
 
     MASSERT(madness_file_watcher);
+    return true;
+}
+
+bool filewatcher_deinit(void)
+{
+    MASSERT(madness_file_watcher);
+    MASSERT_FALSE();
     return true;
 }
 
 bool filewatcher_update(void)
 {
-    MASSERT(madness_file_watcher);
-    for (int i = 0; i < madness_file_watcher->directory_handle_count; ++i)
+    platform_file_watcher_poll_events2(madness_file_watcher);
+
+    while (!ring_queue_is_empty(madness_file_watcher->events))
     {
-        platform_update_directory(madness_file_watcher->directory_handles[i]);
-
         File_Watch_Event event;
+        ring_dequeue(madness_file_watcher->events, &event);
 
-        while (platform_poll_directory_changes(
-            madness_file_watcher->directory_handles[i],
-            &event))
+        INFO("FILE EVENT: %s %s %s", event.base_path, event.path, File_Watch_Action_String[event.action]);
+
+        //TODO: handle/fire off event
+
+        switch (event.action)
         {
-            // Process event
-            INFO("FILE EVENT: %s %d", event.path, event.action)
-            //TODO: send out an event
+        case FILE_WATCH_ACTION_ADDED:
+
+
+            //check extension type
+
+            /*
+             if (c_string_path_is_source_texture_extension(event.path))
+            {
+                c_string_concat(event.base_path, event.path, asset_system->frame_allocator);
+                asset_converter_reload_texture(asset_system);
+            Event_Data context = {0};
+            context.data;
+            event_fire(EVENT_HOT_RELOAD_TEXTURE, STRING("filewatcher"), context);
+            }
+            */
+
+            break;
+        case FILE_WATCH_ACTION_REMOVED:
+            break;
+        case FILE_WATCH_ACTION_MODIFIED:
+            break;
+        case FILE_WATCH_ACTION_RENAMED:
+            break;
+        case FILE_WATCH_ACTION_RENAMED_OLD:
+            break;
+        case FILE_WATCH_ACTION_RENAMED_NEW:
+            break;
         }
     }
-
-
-    return true;
 }
 
-
-bool filewatcher_deinit(void)
+bool filewatcher_directory_register(const char* directory_path)
 {
-    MASSERT(madness_file_watcher);
-    return true;
-}
+    Madness_Registered_Directory* registered_directory = &madness_file_watcher->registered_directories[
+        madness_file_watcher->registered_directories_count++];
 
+    registered_directory->directory_path = c_string_duplicate_allocator(
+        directory_path, madness_file_watcher->allocator);
 
-void filewatcher_directory_register(const char* directory_path)
-{
-    MASSERT(madness_file_watcher);
-
-    File_Watch_Handle* handle = &madness_file_watcher->directory_handles[madness_file_watcher->directory_handle_count
-        ++];
-    *handle = platform_register_directory_watch(directory_path);
-}
-
-void filewatcher_directory_unregister(const char* directory_path)
-{
-    //TODO:
-    MASSERT_FALSE();
-}
-
-
-bool filewatcher_poll(Madness_File_Watcher* watcher, File_Watch_Event event)
-{
+    return platform_register_directory2(madness_file_watcher, registered_directory);
 }

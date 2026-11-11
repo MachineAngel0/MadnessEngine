@@ -83,7 +83,6 @@ bool platform_file_write(Madness_File_Platform* madness_file)
 }
 
 
-
 typedef struct Windows_File_Data
 {
     const char* file_name;
@@ -96,16 +95,6 @@ typedef struct Windows_Directory_Data
     const char* directory_path;
     HANDLE directory_handle;
     OVERLAPPED overlapped;
-
-    BYTE buffer[64 * 1024];
-
-    File_Watch_Event event_queue[256];
-
-    u32 queue_read;
-    u32 queue_write;
-
-
-    bool pending;
 } Windows_Directory_Data;
 
 
@@ -203,190 +192,6 @@ File_Watch_Handle platform_register_directory_watch(const char* directory_name)
     windows_directory_count++;
 
     return out_handle;
-}
-
-
-bool platform_update_directory(File_Watch_Handle directory_watch_handle)
-{
-    Windows_Directory_Data* file_data =
-        &windows_directory_data[directory_watch_handle.handle];
-
-    DWORD bytes_transferred;
-
-    /*
-     * Start a new asynchronous directory read.
-     */
-    if (!file_data->pending)
-    {
-        ResetEvent(file_data->overlapped.hEvent);
-
-        BOOL result =
-            ReadDirectoryChangesW(
-                file_data->directory_handle,
-                file_data->buffer,
-                sizeof(file_data->buffer),
-                TRUE,
-
-                FILE_NOTIFY_CHANGE_FILE_NAME |
-                FILE_NOTIFY_CHANGE_DIR_NAME |
-                FILE_NOTIFY_CHANGE_LAST_WRITE |
-                FILE_NOTIFY_CHANGE_SIZE,
-
-                NULL,
-                &file_data->overlapped,
-                NULL
-            );
-
-        if (!result)
-        {
-            DWORD error = GetLastError();
-            M_ERROR("PLATFORM UPDATE DIRECTORY: ReadDirectoryChangesW RESULT %d", error);
-            if (error != ERROR_IO_PENDING)
-                return false;
-        }
-
-        file_data->pending = true;
-
-        return true;
-    }
-
-    /*
-     * Check if the asynchronous read has completed.
-     * FALSE means do not block.
-     */
-    BOOL result =
-        GetOverlappedResult(
-            file_data->directory_handle,
-            &file_data->overlapped,
-            &bytes_transferred,
-            FALSE
-        );
-
-    if (!result)
-    {
-        DWORD error = GetLastError();
-
-        if (error == ERROR_IO_INCOMPLETE)
-            return true;
-
-        file_data->pending = false;
-
-        return false;
-    }
-
-    file_data->pending = false;
-
-    if (bytes_transferred == 0)
-        return true;
-
-    /*
-     * Parse all FILE_NOTIFY_INFORMATION records.
-     */
-    DWORD offset = 0;
-
-    while (offset < bytes_transferred)
-    {
-        FILE_NOTIFY_INFORMATION* info =
-            (FILE_NOTIFY_INFORMATION*)
-            (file_data->buffer + offset);
-
-        File_Watch_Event event = {0};
-
-        switch (info->Action)
-        {
-        case FILE_ACTION_ADDED:
-            event.action = FILE_WATCH_ACTION_ADDED;
-            break;
-
-        case FILE_ACTION_REMOVED:
-            event.action = FILE_WATCH_ACTION_REMOVED;
-            break;
-
-        case FILE_ACTION_MODIFIED:
-            event.action = FILE_WATCH_ACTION_MODIFIED;
-            break;
-
-        case FILE_ACTION_RENAMED_OLD_NAME:
-            event.action = FILE_WATCH_ACTION_RENAMED;
-            break;
-
-        case FILE_ACTION_RENAMED_NEW_NAME:
-            event.action = FILE_WATCH_ACTION_RENAMED_NEW;
-            break;
-
-        default:
-            goto next_event;
-        }
-
-        int filename_length =
-            WideCharToMultiByte(
-                CP_UTF8,
-                0,
-                info->FileName,
-                info->FileNameLength / sizeof(WCHAR),
-                event.path,
-                sizeof(event.path) - 1,
-                NULL,
-                NULL
-            );
-
-        if (filename_length > 0)
-        {
-            event.path[filename_length] = '\0';
-
-            u32 next_write =
-                (file_data->queue_write + 1) %
-                ARRAY_SIZE(file_data->event_queue);
-
-            /*
-             * Queue is not full.
-             */
-            if (next_write != file_data->queue_read)
-            {
-                file_data->event_queue[
-                    file_data->queue_write
-                ] = event;
-
-                file_data->queue_write =
-                    next_write;
-            }
-        }
-
-    next_event:
-
-        if (info->NextEntryOffset == 0)
-            break;
-
-        offset += info->NextEntryOffset;
-    }
-
-    return true;
-}
-
-bool platform_poll_directory_changes(
-    File_Watch_Handle directory_watch_handle,
-    File_Watch_Event* out_event)
-{
-    Windows_Directory_Data* file_data =
-        &windows_directory_data[directory_watch_handle.handle];
-
-
-    if (file_data->queue_read ==
-        file_data->queue_write)
-    {
-        return false;
-    }
-
-    *out_event =
-        file_data->event_queue[
-            file_data->queue_read
-        ];
-
-    file_data->queue_read =
-        (file_data->queue_read + 1) %
-        ARRAY_SIZE(file_data->event_queue);
-
-    return true;
 }
 
 
@@ -784,6 +589,228 @@ bool platform_is_directory_empty(const char* directory_path)
 bool platform_file_open_async()
 {
     return false;
+}
+
+
+//FILE WATCHER NEW
+
+typedef struct Windows_Directory_FileWatch
+{
+    HANDLE directory_handle;
+    OVERLAPPED overlapped;
+
+    BYTE buffer[64 * 1024];
+    bool pending;
+} Windows_Directory_FileWatch;
+
+bool platform_register_directory2(Madness_File_Watcher* madness_file_watcher,
+                                  Madness_Registered_Directory* registered_directory)
+{
+    //open the file  and store its data for later querying
+    HANDLE dir_win_handle = CreateFileA(
+        registered_directory->directory_path,
+        FILE_LIST_DIRECTORY, //spec: to use ReadDirectoryChangesW we must have this
+        FILE_SHARE_READ |
+        FILE_SHARE_WRITE |
+        FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, // required for async file watch
+        NULL
+    );
+
+    if (dir_win_handle == INVALID_HANDLE_VALUE)
+    {
+        M_ERROR("Failed to open directory\n");
+        return false;
+    }
+
+    //alloc and store window data for later
+    registered_directory->platform_internals = allocator_alloc(madness_file_watcher->allocator,
+                                                               sizeof(Windows_Directory_FileWatch));
+    Windows_Directory_FileWatch* directory_data = (Windows_Directory_FileWatch*)registered_directory->
+        platform_internals;
+    directory_data->directory_handle = dir_win_handle;
+
+    directory_data->overlapped.hEvent =
+        CreateEventA(
+            NULL,
+            TRUE,
+            FALSE,
+            NULL
+        );
+
+    if (!directory_data->overlapped.hEvent)
+    {
+        CloseHandle(directory_data->directory_handle);
+        M_ERROR("Failed to create overlap event");
+        return false;
+    }
+
+
+    return true;
+}
+
+
+void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw)
+{
+    //testing but then use a loop when done
+    for (u32 dir_idx = 0; dir_idx < madness_fw->registered_directories_count; dir_idx++)
+    {
+        Madness_Registered_Directory* directory_data = &madness_file_watcher->registered_directories[dir_idx];
+        Windows_Directory_FileWatch* windows_directory_data = (Windows_Directory_FileWatch*)directory_data->
+            platform_internals;
+
+        // Start an asynchronous directory read.
+        if (!windows_directory_data->pending)
+        {
+            ResetEvent(windows_directory_data->overlapped.hEvent);
+
+            BOOL read_dir_result = ReadDirectoryChangesW(
+                windows_directory_data->directory_handle,
+                windows_directory_data->buffer,
+                sizeof(windows_directory_data->buffer),
+                TRUE,
+                FILE_NOTIFY_CHANGE_FILE_NAME | // channge to a file name
+                // FILE_NOTIFY_CHANGE_DIR_NAME |
+                FILE_NOTIFY_CHANGE_LAST_WRITE | // checks change to last write time
+                FILE_NOTIFY_CHANGE_SIZE, // checks change in file size
+                NULL, // leave null if we do this async
+                &windows_directory_data->overlapped, // required for async
+                NULL
+                // SPEC: A pointer to a completion routine to be called when the operation has been completed or canceled and the calling thread is in an alertable wait state.
+            );
+
+            //check on the error
+            if (!read_dir_result)
+            {
+                DWORD error = GetLastError();
+                M_ERROR("platform_update_directory_watch2: ReadDirectoryChangesW RESULT %d", error);
+                if (error != ERROR_IO_PENDING)
+                {
+                    TRACE("platform_update_directory_watch2: IO PENDING.");
+                }
+
+                if (error == ERROR_INVALID_PARAMETER)
+                {
+                    M_ERROR(
+                        "platform_update_directory_watch2: buffer length is greater than 64 KB and the application is monitoring a directory over the network.");
+                }
+                if (error == ERROR_NOACCESS)
+                {
+                    M_ERROR("platform_update_directory_watch2: buffer is not aligned on a DWORD boundary.");
+                }
+                if (error == ERROR_NOTIFY_ENUM_DIR)
+                {
+                    M_ERROR(
+                        "platform_update_directory_watch2: system was unable to record all the changes to the directory.");
+                }
+
+                continue;
+            }
+
+            windows_directory_data->pending = true;
+        }
+
+
+        DWORD bytes_transferred;
+
+        // Check if the asynchronous read has completed.
+        BOOL overlap_result =
+            GetOverlappedResult(
+                windows_directory_data->directory_handle,
+                &windows_directory_data->overlapped,
+                &bytes_transferred,
+                FALSE // do not block/wait for the operation to complete
+            );
+
+        if (!overlap_result)
+        {
+            DWORD error = GetLastError();
+            // just means the write operation is not yet complete
+            if (error == ERROR_IO_INCOMPLETE)
+            {
+                continue;
+            }
+
+            windows_directory_data->pending = false;
+            // windows_directory_data->pending = false;
+            continue;
+        }
+
+        windows_directory_data->pending = false;
+        if (bytes_transferred <= 0) { continue; }
+
+
+        /*
+         * Parse all FILE_NOTIFY_INFORMATION records.
+         */
+        DWORD offset = 0;
+
+        while (offset < bytes_transferred)
+        {
+            FILE_NOTIFY_INFORMATION* info =
+                (FILE_NOTIFY_INFORMATION*)
+                (windows_directory_data->buffer + offset);
+
+            File_Watch_Event event = {0};
+
+            switch (info->Action)
+            {
+            case FILE_ACTION_ADDED:
+                event.action = FILE_WATCH_ACTION_ADDED;
+                break;
+
+            case FILE_ACTION_REMOVED:
+                event.action = FILE_WATCH_ACTION_REMOVED;
+                break;
+
+            case FILE_ACTION_MODIFIED:
+                event.action = FILE_WATCH_ACTION_MODIFIED;
+                break;
+
+            case FILE_ACTION_RENAMED_OLD_NAME:
+                event.action = FILE_WATCH_ACTION_RENAMED;
+                break;
+
+            case FILE_ACTION_RENAMED_NEW_NAME:
+                event.action = FILE_WATCH_ACTION_RENAMED_NEW;
+                break;
+
+            default:
+                if (info->NextEntryOffset == 0)
+                    break;
+                offset += info->NextEntryOffset;
+                break;
+            }
+
+            int filename_length =
+                WideCharToMultiByte(
+                    CP_UTF8,
+                    0,
+                    info->FileName,
+                    info->FileNameLength / sizeof(WCHAR),
+                    event.path,
+                    sizeof(event.path) - 1,
+                    NULL,
+                    NULL
+                );
+
+            if (filename_length > 0)
+            {
+                event.path[filename_length] = '\0';
+            }
+            event.base_path = directory_data->directory_path;
+
+
+            ring_enqueue(madness_fw->events, &event);
+
+            if (info->NextEntryOffset == 0)
+                break;
+
+            offset += info->NextEntryOffset;
+        }
+    }
 }
 
 

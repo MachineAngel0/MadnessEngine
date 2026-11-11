@@ -109,6 +109,16 @@ void vulkan_texture_update_async_resources(Renderer* renderer, Render_Packet* pa
         i++;
     }
 
+
+    //TODO: hot reload
+
+
+
+
+
+
+
+
     //for now were just going to upload the texture table here every frame,
     //but realistically we want to batch the upload
 

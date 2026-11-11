@@ -15,8 +15,7 @@ MAPI bool texture_system_shutdown(Texture_System* texture_system, Memory_System*
 
 
 //loads in a new texture in place of the old one
-MAPI Texture_Handle texture_system_update_texture(Texture_System* texture_system, Texture_Handle handle,
-                                                  const char* filepath);
+
 
 MAPI Texture_Handle texture_system_get_default_texture(Texture_System* texture_system);
 

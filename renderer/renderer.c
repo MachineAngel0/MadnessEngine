@@ -208,7 +208,7 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     vulkan_pipeline_cache_write_to_file(renderer, renderer->pipeline_cache);
 
 
-    //SHADOW PASS TEXTUREs
+    //SHADOW PASS TEXTURES
     VkFormat shadow_depth_format = VK_FORMAT_D32_SFLOAT; //; // VK_FORMAT_D32_SFLOAT_S8_UINT
     vulkan_texture_create_shadowmap(renderer, 2048*2, 2048*2, shadow_depth_format /*renderer->depth_format*/,
                                     &renderer->directional_shadow_texture);
@@ -222,14 +222,14 @@ Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config p
     };
 
 
-    //spot light
+    //spotlight
     vulkan_texture_create_shadowmap(renderer, 1024, 1024, shadow_depth_format /*renderer->depth_format*/,
                                     &renderer->spot_light_shadow_texture);
     vulkan_pipeline_shadowmap_create(renderer, "shadow_spot_light", &renderer->spot_light_shadow_pipeline,
                                      shadow_depth_format,
                                      0.5f);
 
-    //spot lights
+    //point light
     vulkan_texture_create_shadowmap_point_light(renderer, 1024, shadow_depth_format /*renderer->depth_format*/,
                                                 &renderer->point_light_shadow_texture);
     vulkan_pipeline_shadowmap_create(renderer, "shadow_point_light", &renderer->point_light_shadow_pipeline,

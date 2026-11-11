@@ -950,16 +950,6 @@ typedef struct Shader_System
 
 
     bool reload_shaders;
-    struct Shader_Reload
-    {
-        //a way to reference the old shader and state that it is a reload
-        //which is implicit in this struct/queue
-        Shader_PSO shader_pso;
-        Shader_Handle handle;
-    };
-
-    RING_QUEUE_TYPE(Shader_Reload)* shader_reload_queue;
-
 
     //TODO:
     //Shader_Handle default_shader_handle;
@@ -1020,6 +1010,9 @@ typedef struct Texture_System
 
     //this should be for things we want loaded right away, like on startup
     // RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_gpu_upload_rn_queue;
+
+    //textures to hot reload
+    RING_QUEUE_TYPE(Texture_GPU_Upload)* texture_reload_queue;
 
 
 } Texture_System;

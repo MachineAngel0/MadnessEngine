@@ -145,10 +145,13 @@ bool platform_has_directory_changed(File_Watch_Handle directory_watch_handle);
 bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path);
 
 
-bool platform_update_directory(File_Watch_Handle directory_watch_handle);
-bool platform_poll_directory_changes(File_Watch_Handle directory_watch_handle, File_Watch_Event* out_event);
 bool platform_is_directory_empty(const char* directory_path);
 bool platform_get_assets_from_directory(const char* directory_path, Asset_List_Scan* asset_list_scan);
+
+//FILE WATCHER 2
+
+bool platform_register_directory2(Madness_File_Watcher* madness_file_watcher, Madness_Registered_Directory* registered_directory);
+void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw);
 
 
 //FILE SYSTEM

@@ -1,5 +1,6 @@
 ﻿#ifndef RESOURCE_IMPORT_TYPES_H
 #define RESOURCE_IMPORT_TYPES_H
+
 #include "cgltf.h"
 
 
@@ -109,9 +110,14 @@ typedef struct GLTF_Animation_Data
 
 
 
+typedef struct GLTF_Image
+{
+    const char* uri_path;
+    const char* full_source_path;
+    MADNESS_UUID uuid;
 
-
-
+    bool valid_image;
+}GLTF_Image;
 
 
 

@@ -28,7 +28,6 @@ typedef enum Event_Type
 
     //Renderer
     EVENT_HOT_RELOAD_TEXTURE,
-    EVENT_HOT_RELOAD_SHADER,
 
 
     EDITOR_RELOAD_PATHS,
@@ -94,6 +93,11 @@ typedef struct Event_Data_Window_Focus
     bool focused;
 } Event_Data_Window_Focus;
 
+typedef struct Event_Data_Reload_Texture
+{
+    const char* path;
+} Event_Data_Reload_Texture;
+
 typedef struct Event_Data
 {
     //TODO: just use a proper struct type for the union data, we are not writing a generic engine anyway
@@ -110,6 +114,10 @@ typedef struct Event_Data
         Event_Data_Input_Button event_data_input_button;
         Event_Data_Gamepad_Button event_data_gamepad_button;
         Event_Data_Window_Focus event_data_window_focus;
+
+
+
+        Event_Data_Reload_Texture event_data_reload_texture;
     } data;
 } Event_Data;
 

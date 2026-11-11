@@ -105,6 +105,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     event_register(EVENT_APP_QUIT, STRING("application"), application_on_event);
     event_register(EVENT_APP_RESIZE, STRING("application"), application_on_resized);
 
+    // event_register(EVENT_HOT_RELOAD_TEXTURE, STRING("asset system"), );
+
     //start the platform
     if (!platform_startup(
         &application_core->plat_state,
@@ -194,9 +196,9 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
                                  application_core->asset_system,
                                  &application_core->clock, global_reflection_registry, madness_txt);
 
+
     filewatcher_init(&application_core->memory_system);
     filewatcher_directory_register("../z_assets");
-
 
     //MAIN LOOP
 
@@ -313,6 +315,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     filewatcher_deinit();
+
     editor_shutdown(editor);
     madness_pulse_game_shutdown(madness_pulse_game, &application_core->memory_system);
 
