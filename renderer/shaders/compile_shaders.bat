@@ -16,4 +16,7 @@ forfiles /s /m *.frag /c "cmd /c %VULKAN_SDK%/Bin/glslangValidator.exe @path -gV
 :: -gVS vulkan debug info // -gVS generate nonsemantic shader debug information with source
 ::  -V[ver] create SPIR-V binary
 
-pause
+::pause
+echo shaders compiled!
+
+exit /b 0

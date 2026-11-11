@@ -332,14 +332,20 @@ void turn_update(Madness_Pulse_Game* game)
             // madness_ui_progress_bar(STRING("Progress bar"), overflow_val,
             // unit->battle_inventory_component.overflow_threshold);
             f32 percent = (f32)overflow_val / (f32)unit->battle_inventory_component.overflow_threshold;
-            ImGui_ProgressBar(percent, (ImVec2){0, 0}, "Progress bar");
 
+            char buf[64];
+            sprintf(buf, "%u/%u", overflow_val, unit->battle_inventory_component.overflow_threshold);
+            ImGui_ProgressBar(percent, (ImVec2){0, 0}, buf);
+
+            ImGui_SeparatorText("Abilties");
+            ImGui_Spacing();
 
             // madness_scroll_box_begin(STRING("Ability Scroll list"));
-            ImGui_Begin("Ability Scroll List", 0, 0);
+            ImGui_BeginChild("Ability Scroll List", (ImVec2){0, 0}, 0, 0);
             {
                 for (u32 i = 0; i < unit->battle_inventory_component.battle_list->num_items; ++i)
                 {
+                    ImGui_PushIDInt(i);
                     Ability_Name name =
                         dynamic_array_get(unit->battle_inventory_component.battle_list, i, Ability_Name);
                     Ability_Info ability_info = ability_registry_get_ability_info(game->ability_registry, name);
@@ -357,15 +363,23 @@ void turn_update(Madness_Pulse_Game* game)
                     ImGui_Text("Count:", &ability_count);
 
 
-                    String* usage_id = string_concat(&(STRING("Usage")),
-                                                     &STRING_STRLEN(c_string_from_int(i, game->frame_allocator)),
-                                                     game->frame_allocator);
+                    // String* usage_id = string_concat(&(STRING("Usage")),
+                    // &STRING_STRLEN(c_string_from_int(i, game->frame_allocator)),
+                    // game->frame_allocator);
+                    // float slider_val = (float)overflow_usage_count;
+                    // madness_ui_slider_arrow(*usage_id, &slider_val, 0, ability_count);
 
-
-
-                    float slider_val = (float)overflow_usage_count;
-                    madness_ui_slider_arrow(*usage_id, &slider_val, 0, ability_count);
-                    // ImGui_InputInt(*usage_id, &slider_val, 0, ability_count);
+                    ImGui_InputScalar("##Usage", ImGuiDataType_U16, &overflow_usage_count);
+                    ImGui_SameLine();
+                    if (ImGui_ArrowButton("##left", ImGuiDir_Left))
+                    {
+                        overflow_usage_count = clamp_u16(overflow_usage_count - 1, 0, ability_count);
+                    }
+                    ImGui_SameLine();
+                    if (ImGui_ArrowButton("##right", ImGuiDir_Right))
+                    {
+                        overflow_usage_count = clamp_u16(overflow_usage_count + 1, 0, ability_count);
+                    }
 
 
                     //TODO: TEMP: display ability text
@@ -376,16 +390,17 @@ void turn_update(Madness_Pulse_Game* game)
 
                     //update the usage count
                     dynamic_array_set(unit->battle_inventory_component.overflow_usage_count, &overflow_usage_count, i);
+                    ImGui_PopID();
                 }
             }
             // madness_scroll_box_end();
-            ImGui_End();
+            ImGui_EndChild();
         }
         ImGui_End();
 
         break;
     case Turn_Phase_Target_Select:
-        madness_ui_window_begin(STRING("Target Select"), 0);
+        ImGui_Begin("Target Select", 0, 0);
         {
             Ability_Info ability_info = ability_registry_get_ability_info(
                 game->ability_registry, game->currently_selected_ability_by_player);
@@ -399,15 +414,16 @@ void turn_update(Madness_Pulse_Game* game)
                 game->frame_allocator);
 
 
-            madness_ui_string(*selected_target_string);
+            ImGui_String(selected_target_string);
 
-            madness_ui_string(STRING("Available Targets: "));
+            ImGui_Text("Available Targets: ");
 
             //temp until we reimplement the ui system
             for (int i = 0; i < game->targeting_handler->targets_available_array->num_items; ++i)
             {
-                if (madness_ui_button(STRING_STRLEN(madness_pulse_get_unit_name(game, dynamic_array_get(
-                    game->targeting_handler->targets_available_array, i,Character_Name)))))
+                if (ImGui_Button(madness_pulse_get_unit_name(game, dynamic_array_get(
+                                                                 game->targeting_handler->targets_available_array, i,
+                                                                 Character_Name))))
                 {
                     //we have selected our target
                     game->targeting_handler->current_lock_on_target = dynamic_array_get(
@@ -419,7 +435,7 @@ void turn_update(Madness_Pulse_Game* game)
                 }
             }
         }
-        madness_ui_window_end();
+        ImGui_End();
 
         //TODO:
         /*
@@ -457,7 +473,7 @@ void turn_update(Madness_Pulse_Game* game)
             Madness_AI_Decision* decision =
                 dynamic_array_get(game->madness_ai->ai_decision, i, Madness_AI_Decision*);
 
-            madness_ui_string(STRING_STRLEN(Ability_Name_enum_string[decision->ability_info->ability_name]));
+            ImGui_Text(Ability_Name_enum_string[decision->ability_info->ability_name]);
         }
         game->turn_phase = Turn_Phase_Enemy_Execute_Abilties;
 
@@ -492,71 +508,58 @@ void turn_update(Madness_Pulse_Game* game)
     if (game->turn_phase != Turn_Phase_None)
     {
         //display character info
-        madness_ui_set_window_pos(1400, 50);
-        madness_ui_set_window_size(400, 800);
-        madness_ui_window_begin(STRING("Units Info"), 0);
+        ImGui_Begin("Units Info", 0, 0);
         {
-            madness_ui_string(STRING("Characters Turn"));
-            madness_ui_same_line();
-            madness_ui_c_string(Character_Name_enum_string[game->current_units_turn]);
+            ImGui_SeparatorText("Characters Turn");
+            ImGui_Spacing();
+            ImGui_Text(Character_Name_enum_string[game->current_units_turn]);
 
-            madness_ui_string(STRING("Turn Phase:"));
-            madness_ui_same_line();
-            madness_ui_string(STRING_STRLEN(Turn_Phase_enum_string[game->turn_phase]));
+            ImGui_SeparatorText("Turn Phase:");
+            ImGui_Text(Turn_Phase_enum_string[game->turn_phase]);
 
 
-            madness_ui_string(STRING("PLAYER"));
+            ImGui_SeparatorText("PLAYER");
             for (u32 i = 0; i < game->player_count; i++)
             {
+                ImGui_PushIDInt(i);
                 Unit* unit = madness_pulse_get_unit(game, game->player_names[i]);
-                madness_ui_c_string(Character_Name_enum_string[unit->name]);
+                ImGui_Text(Character_Name_enum_string[unit->name]);
 
                 //health
-                madness_ui_float(STRING("Health"), &unit->health_component.current_health, 0);
-                madness_ui_same_line();
-                madness_ui_string(STRING("\\"));
-                madness_ui_same_line();
-                madness_ui_float(STRING(""), &unit->health_component.max_health, 0);
+                ImGui_Text("Health: %f \\ %f", unit->health_component.current_health,
+                           unit->health_component.max_health);
 
                 //mp
-                madness_ui_float(STRING("MP"), &unit->mp_component.current_mp, 0);
-                madness_ui_same_line();
-                madness_ui_string(STRING("\\"));
-                madness_ui_same_line();
-                madness_ui_float(STRING(""), &unit->mp_component.max_mp, 0);
+                ImGui_Text("MP %f\\ %f", unit->mp_component.current_mp, unit->mp_component.max_mp);
+                ImGui_PopID();
             }
-            madness_ui_padding();
-            madness_ui_string(STRING("ENEMIES"));
+            ImGui_Spacing();
+            ImGui_SeparatorText("ENEMIES");
             for (u32 i = 0; i < game->enemy_count; i++)
             {
+                ImGui_PushIDInt(i);
                 Unit* unit = madness_pulse_get_unit(game, game->enemy_names[i]);
-                madness_ui_c_string(Character_Name_enum_string[unit->name]);
+                ImGui_Text(Character_Name_enum_string[unit->name]);
 
-                madness_ui_float(STRING("Health"), &unit->health_component.current_health, 0);
-                madness_ui_same_line();
-                madness_ui_string(STRING("\\"));
-                madness_ui_same_line();
-                madness_ui_float(STRING(""), &unit->health_component.max_health, 0);
+                ImGui_Text("Health: %f \\ %f", unit->health_component.current_health,
+                           unit->health_component.max_health);
 
-                madness_ui_float(STRING("MP"), &unit->mp_component.current_mp, 0);
-                madness_ui_same_line();
-                madness_ui_string(STRING("\\"));
-                madness_ui_same_line();
-                madness_ui_float(STRING(""), &unit->mp_component.max_mp, 0);
+
+                ImGui_Text("MP %f\\ %f", unit->mp_component.current_mp, unit->mp_component.max_mp);
+                ImGui_PopID();
+            }
+
+            for (u32 i = 0; i < game->madness_ai->ai_decision->num_items; ++i)
+            {
+                Madness_AI_Decision* decision =
+                    dynamic_array_get(game->madness_ai->ai_decision, i, Madness_AI_Decision*);
+
+                ImGui_Text(Ability_Name_enum_string[decision->ability_info->ability_name]);
             }
         }
 
 
-        for (u32 i = 0; i < game->madness_ai->ai_decision->num_items; ++i)
-        {
-            Madness_AI_Decision* decision =
-                dynamic_array_get(game->madness_ai->ai_decision, i, Madness_AI_Decision*);
-
-            madness_ui_string(STRING_STRLEN(Ability_Name_enum_string[decision->ability_info->ability_name]));
-        }
-
-
-        madness_ui_window_end();
+        ImGui_End();
     }
 
     //TODO: seperate the ui and put it here

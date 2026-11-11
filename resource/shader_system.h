@@ -24,6 +24,7 @@ void shader_system_render_packet(Shader_System* shader_system, Render_Packet* re
 //load
 void shader_acquire(Shader_System* shader_system, Asset_Record* record, FILE* file, Shader_Handle* out_handle);
 void shader_release(Shader_System* shader_system, Shader_Handle handle);
+
 bool shader_is_loaded(Shader_System* shader_system, Asset_Record* asset_record, Shader_Handle* out_handle);
 
 //serialize

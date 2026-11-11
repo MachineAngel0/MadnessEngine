@@ -60,6 +60,10 @@ void shader_system_render_packet(Shader_System* shader_system, Render_Packet* re
 {
     render_packet->shaders_packet.shader_assets = shader_system->shader_asset;
     render_packet->shaders_packet.shader_asset_count = shader_system->shader_asset_count;
+
+    render_packet->shaders_packet.reload_shaders = shader_system->reload_shaders;
+    shader_system->reload_shaders = false;
+
 }
 
 void shader_create_material_definition_struct(Reflection_Registry* reflection_registry,
@@ -183,8 +187,8 @@ bool shader_is_loaded(Shader_System* shader_system, Asset_Record* asset_record, 
         {
             *out_handle = shader_system->runtime_asset[i].asset_handles.shader_handle;
             shader_system->runtime_asset[i].reference_count++;
+            return true;
         }
-        return true;
     }
 
     return false;

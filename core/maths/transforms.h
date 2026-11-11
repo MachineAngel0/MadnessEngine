@@ -24,6 +24,9 @@ typedef struct Transform_SOA
 } Transform_SOA;
 
 
+
+
+
 //create operations
 MAPI Transform* transform_from_position_rotation_scale(vec3s position, versors rotation, vec3s scale,
                                                        Allocator* arena);

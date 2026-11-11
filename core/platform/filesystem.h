@@ -148,7 +148,8 @@ typedef enum File_Watch_Action
 typedef struct File_Watch_Event
 {
     File_Watch_Action action;
-    char path[260];
+    char path[MADNESS_MAX_PATH];
+
 } File_Watch_Event;
 
 typedef struct Madness_File_Watcher
@@ -170,3 +171,6 @@ bool filewatcher_update(void);
 
 void filewatcher_directory_register(const char* directory_path);
 void filewatcher_directory_unregister(const char* directory_path);
+
+void filewatcher_file_register(const char* directory_path);
+void filewatcher_file_unregister(const char* directory_path);

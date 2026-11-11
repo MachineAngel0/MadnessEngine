@@ -63,7 +63,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define GB(x) (1024ULL * MB(x)) //gigabytes
 #define TB(x) (1024ULL * GB(x)) // terabyte, should never need this
 
-#define MADNESS_MAX_PATH 256
+#define MADNESS_MAX_PATH 255
+
 
 // build type queries
 bool app_is_debug_build()

@@ -65,6 +65,7 @@ void madness_imgui_init(Platform_State* platform_state, Renderer* renderer)
     style->Colors[ImGuiCol_Tab] = (ImVec4){0.376f, 0.122f, 0.620f, 1.000f};
     style->Colors[ImGuiCol_TabSelected] = *(ImVec4*)COLOR4_PURPLE_HEADER_ACTIVE.raw;
     style->Colors[ImGuiCol_TabHovered] = (ImVec4){0.425f, 0.05f, 0.456f, 1.0f};
+    style->Colors[ImGuiCol_PlotHistogram] = (ImVec4){1.000f, 0.247f, 0.096f, 1.000f};
 
 
     if (!platform_init_imgui(platform_state))

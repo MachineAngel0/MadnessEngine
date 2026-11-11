@@ -790,13 +790,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	Reflection_Runtime_Struct_Field PC_Point_Light_Fields[] =
 	{
+		{
+			.name = "point_light_face_index",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(PC_Point_Light, point_light_face_index)
+		},
+		{
+			.name = "bindless_texture_index",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u32",
+			.offset = offsetof(PC_Point_Light, bindless_texture_index)
+		},
 	};
 
 	 Reflection_Runtime_Struct PC_Point_Light_Runtime_Struct =
 	{
 		.name = "PC_Point_Light",
 		.fields = PC_Point_Light_Fields,
-		.field_count = 0,
+		.field_count = 2,
 		.struct_size = sizeof(PC_Point_Light)
 	};
 

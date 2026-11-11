@@ -39,6 +39,16 @@ typedef enum Vulkan_Attachment_Store_Op
     STORE_OP_NONE = 1000400000,
 } Vulkan_Attachment_Store_Op;
 
+typedef enum Attachment_Access_Type
+{
+    Attachment_Access_Type_Read,
+    Attachment_Access_Type_Write,
+    Attachment_Access_Type_ReadWrite,
+} Attachment_Access_Type;
+
+
+
+
 typedef struct Attachment
 {
     //NOTE: as some point this is going to need to be conveyed to the graphics pipeline at creation, to be used
@@ -81,7 +91,6 @@ typedef struct Render_Pass_Resources
     Vulkan_Attachment_Store_Op store_op;
     bool resolve_msaa;
 } Render_Pass_Resources;
-
 
 
 typedef struct RenderPass
@@ -148,7 +157,6 @@ void vulkan_renderpass_insert_memory_barrier(Renderer* renderer, Vulkan_Command_
 void vulkan_frame_graph_setup(Frame_Graph render_graph);
 void vulkan_frame_graph_run();
 void vulkan_frame_graph_end();
-
 
 
 #endif //VK_FRAMEGRAPH_H

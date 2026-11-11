@@ -4,48 +4,134 @@
 #include "logger.h"
 
 #include "miniaudio.h"
-static ma_engine audio_engine;
+
+#define AUDIO_TEST_FILE "../z_assets/audio/waterdrops-cave-echo.mp3"
+#define AUDIO_TEST_FILE2 "..\\z_assets\\audio\\pcm1644s.wav"
+#define AUDIO_TEST_SHORT_FILE "../z_assets/audiobewm-sound-85483.mp3"
+
+static Madness_Audio_System* madness_audio;
+
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    ma_data_source_read_pcm_frames((ma_data_source*)pDevice->pUserData, pOutput, frameCount, NULL);
+
+    (void)pInput;
+}
 
 Madness_Audio_System* audio_system_init(Memory_System* memory_system, Asset_System* resource_system)
 {
-    Madness_Audio_System* madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio_System), MEMORY_SUBSYSTEM_AUDIO);
+    madness_audio = memory_system_alloc(memory_system, sizeof(Madness_Audio_System), MEMORY_SUBSYSTEM_AUDIO);
     //TODO:
     //just here as a place holder until i write my own audio platform independant system way later
 
     // https://github.com/mackron/miniaudio
 
 
-    ma_result result = ma_engine_init(NULL, &audio_engine);
+    madness_audio->ma_rm_config = ma_resource_manager_config_init();
+    ma_result rm_result = ma_resource_manager_init(&madness_audio->ma_rm_config, &madness_audio->ma_rm);
+    if (rm_result != MA_SUCCESS)
+    {
+        printf("Failed to initialize the audio resource manager.");
+        MASSERT_FALSE();
+    }
+
+    madness_audio->ma_engine_config = ma_engine_config_init();
+    madness_audio->ma_engine_config.pResourceManager = &madness_audio->ma_rm;
+
+    ma_result result = ma_engine_init(&madness_audio->ma_engine_config, &madness_audio->ma_engine);
     MASSERT_MSG(result == MA_SUCCESS, "ma_engine_init failed");
+
+    // audio_play_sound(AUDIO_TEST_FILE, &madness_audio->test_sound, true);
+    // audio_play_sound(AUDIO_TEST_FILE2, &madness_audio->test_sound);
+    // audio_fire_and_forget(AUDIO_TEST_FILE);
+
+    // _sleep(1000);
+    // audio_stop_sound(&madness_audio->test_sound, true);
+
 
     //NOTE: these will play at the same time
     // ma_engine_play_sound(&audio_engine, "..\\z_assets\\audio\\pcm1644s.wav", NULL);
     // ma_result sound_result = ma_engine_play_sound(&audio_engine, "../z_assets/audio/file_example_WAV_1MG.wav", NULL);
 
+    //NOTE: ma has a high level and low level api, engine is high level, device is low level
+    // look to docs for more
+
 
     return madness_audio;
 }
 
-bool audio_system_shutdown(Madness_Audio_System* madness_audio)
+bool audio_system_shutdown(void)
 {
-    ma_engine_uninit(&audio_engine);
+    ma_engine_uninit(&madness_audio->ma_engine);
+
+    /*
+    /* Uninitialize the device first to ensure the data callback is stopped and doesn't try to access any data. #1#
+    ma_device_uninit(&device);
+
+    /*
+    Before uninitializing the resource manager we need to uninitialize every data source. The data source is owned by
+    the caller which means you're responsible for uninitializing it.
+    #1#
+    ma_resource_manager_data_source_uninit(&dataSource);
+
+    /* Uninitialize the resource manager after each data source. #1#
+    ma_resource_manager_uninit(&resourceManager);
+    */
+
     return true;
 }
 
-void audio_play_sound_effects(const char* file_path)
+bool audio_load(const char* file_path, ma_sound* sound)
 {
-    ma_engine_play_sound(&audio_engine, file_path, NULL);
+    ma_result result;
+
+
+    result = ma_sound_init_from_file(&madness_audio->ma_engine,
+                                     file_path,
+                                     0,
+                                     NULL,
+                                     NULL,
+                                     sound);
+    if (result != MA_SUCCESS)
+    {
+        return result;
+    }
+
+    return true;
 }
 
-void audio_play_sound(const char* file_path)
+
+bool audio_play_sound(ma_sound* sound, bool loop)
 {
-    //audio that doesn't need sound effects
-    audio_play_sound_effects(file_path);
+
+
+    ma_result result = ma_sound_start(sound);
+    if (result != MA_SUCCESS)
+    {
+        return false;
+    }
+
+    ma_sound_set_looping(sound, loop);
+
 }
 
-void audio_stop_sound(const char* file_path)
+bool audio_stop_sound(ma_sound* sound, bool reset_to_start)
 {
-    //NOTE: nothing for now
+    ma_result result = ma_sound_stop(sound);
+    if (result != MA_SUCCESS)
+    {
+        return false;
+    }
+
+    if (reset_to_start)
+    {
+        ma_sound_seek_to_pcm_frame(sound, 0);
+    }
+}
+
+void audio_fire_and_forget(const char* file_path)
+{
+    ma_engine_play_sound(&madness_audio->ma_engine, file_path, NULL);
 }
 
 
@@ -188,5 +274,3 @@ bool wav_file_load(const char* file_path, Sound_Data* out_sound_data)
     fclose(wav_file);
     return true;
 }
-
-

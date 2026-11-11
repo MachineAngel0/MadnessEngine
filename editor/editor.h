@@ -5,43 +5,50 @@
 #include "ui_madness.h"
 #include "memory/memory_system.h"
 
-typedef enum Editor_UI_State
+typedef enum Editor_UI_Views
 {
     // EDITOR_UI_STATE_DEBUG,
-    EDITOR_UI_STATE_ENGINE_STATS,
-    EDITOR_UI_STATE_PARTICLE,
-    EDITOR_UI_STATE_RENDERER,
-    EDITOR_UI_STATE_MATERIAL_CREATION,
-    EDITOR_UI_STATE_MATERIAL_EDITOR,
+    EDITOR_UI_VIEW_ENGINE_STATS,
+    EDITOR_UI_VIEW_PARTICLE,
+    EDITOR_UI_VIEW_RENDERER,
+    EDITOR_UI_VIEW_MATERIAL_CREATION,
+    EDITOR_UI_VIEW_MATERIAL_EDITOR,
     // EDITOR_UI_STATE_MADNESS_UI_TEST,
-    EDITOR_UI_STATE_SCENE,
-    EDITOR_UI_STATE_TEXTURE_VIEWER,
-    EDITOR_UI_STATE_ANIMATION,
-    EDITOR_UI_STATE_ASSET_METADATA,
-    EDITOR_UI_STATE_MESH_VIEWER,
-    EDITOR_UI_STATE_REFLECTION_ABILITY,
-    EDITOR_UI_STATE_INSANITY_UI_TEST,
+    EDITOR_UI_VIEW_SCENE,
+    EDITOR_UI_VIEW_TEXTURE_VIEWER,
+    EDITOR_UI_VIEW_ANIMATION,
+    EDITOR_UI_VIEW_ASSET_METADATA,
+    EDITOR_UI_VIEW_MESH_VIEWER,
+    EDITOR_UI_VIEW_AUDIO,
+    EDITOR_UI_VIEW_REFLECTION_ABILITY,
+    EDITOR_UI_VIEW_INSANITY_UI_TEST,
     // EDITOR_UI_STATE_CHAOS_UI_TEST,
-    EDITOR_UI_STATE_MAX,
-} Editor_UI_State;
+    EDITOR_UI_VIEW_MAX,
+} Editor_UI_Views;
 
-const char* Editor_UI_State_ENUM_String[EDITOR_UI_STATE_MAX] = {
+const char* Editor_UI_State_ENUM_String[EDITOR_UI_VIEW_MAX] = {
     // [EDITOR_UI_STATE_DEBUG] = "EDITOR_UI_STATE_DEBUG",
-    [EDITOR_UI_STATE_ENGINE_STATS] = "EDITOR_UI_STATE_ENGINE_STATS",
-    [EDITOR_UI_STATE_PARTICLE] = "EDITOR_UI_STATE_PARTICLE",
-    [EDITOR_UI_STATE_RENDERER] = "EDITOR_UI_STATE_RENDERER",
-    [EDITOR_UI_STATE_MATERIAL_CREATION] = "EDITOR_UI_STATE_MATERIAL_CREATION",
+    [EDITOR_UI_VIEW_ENGINE_STATS] = "Engine Stats",
+    [EDITOR_UI_VIEW_PARTICLE] = "Particle View",
+    [EDITOR_UI_VIEW_RENDERER] = "Renderer View",
+    [EDITOR_UI_VIEW_MATERIAL_CREATION] = "Material Creation View ",
     // [EDITOR_UI_STATE_MADNESS_UI_TEST] = "EDITOR_UI_STATE_MADNESS_UI_TEST",
-    [EDITOR_UI_STATE_SCENE] = "EDITOR_UI_STATE_SCENE",
-    [EDITOR_UI_STATE_TEXTURE_VIEWER] = "EDITOR_UI_STATE_TEXTURE_VIEWER",
-    [EDITOR_UI_STATE_ANIMATION] = "EDITOR_UI_STATE_ANIMATION",
-    [EDITOR_UI_STATE_ASSET_METADATA] = "EDITOR_UI_STATE_ASSET_METADATA",
-    [EDITOR_UI_STATE_MESH_VIEWER] = "EDITOR_UI_STATE_MESH_VIEWER",
-    [EDITOR_UI_STATE_REFLECTION_ABILITY] = "EDITOR_UI_STATE_REFLECTION_ABILITY",
-    [EDITOR_UI_STATE_INSANITY_UI_TEST] = "EDITOR_UI_STATE_INSANITY_UI_TEST",
-    [EDITOR_UI_STATE_MATERIAL_EDITOR] = "EDITOR_UI_STATE_MATERIAL_EDITOR",
+    [EDITOR_UI_VIEW_SCENE] = "Scene View",
+    [EDITOR_UI_VIEW_TEXTURE_VIEWER] = "Texture View",
+    [EDITOR_UI_VIEW_ANIMATION] = "Animation View",
+    [EDITOR_UI_VIEW_ASSET_METADATA] = "Asset Metadata View",
+    [EDITOR_UI_VIEW_MESH_VIEWER] = "Mesh View",
+    [EDITOR_UI_VIEW_AUDIO] = "Audio View",
+    [EDITOR_UI_VIEW_REFLECTION_ABILITY] = "Reflection Ability View",
+    [EDITOR_UI_VIEW_INSANITY_UI_TEST] = "Insanity UI View",
+    [EDITOR_UI_VIEW_MATERIAL_EDITOR] = "Materiel Editor View",
     // [EDITOR_UI_STATE_CHAOS_UI_TEST] = "EDITOR_UI_STATE_CHAOS_UI_TEST",
 };
+
+typedef struct Editor_Serialization
+{
+    bool views[EDITOR_UI_VIEW_MAX];
+}Editor_Serialization;
 
 typedef struct Editor
 {
@@ -65,7 +72,10 @@ typedef struct Editor
     float lowest_ms;
     float highest_ms;
 
-    Editor_UI_State state;
+
+    //editor windows - tells us if a window is open/should be opened
+    bool views[EDITOR_UI_VIEW_MAX];
+
 
 
     Texture_Handle directional_light_texture;
@@ -111,7 +121,6 @@ MAPI bool editor_update(Editor* editor);
 MAPI bool editor_shutdown(Editor* editor);
 
 
-void editor_ui(Editor* editor);
 //UI_States
 void editor_madness_ui_debug(Editor* editor);
 void editor_ui_scene(Editor* editor);
@@ -123,6 +132,8 @@ void editor_material_asset_view(Editor* editor);
 void editor_mesh_view(Editor* editor);
 void editor_particle_view(Editor* editor);
 void editor_render_view(Editor* editor);
+void editor_audio_view(Editor* editor);
+void editor_ui_reflection_ability_view(Editor* editor);
 
 
 void editor_material_editor(Editor* editor);

@@ -80,6 +80,7 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
     fwrite(object->name, strlen(object->name), 1, fptr);
     fwrite("\n", strlen("\n"), 1, fptr);
 
+    u8* struct_pos = struct_data;
 
     while (cur)
     {
@@ -171,7 +172,6 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
 
         fwrite(":\n", strlen(":\n"), 1, fptr);
 
-        u8* struct_pos = struct_data;
 
         for (int i = 0; i < cur->array_count; ++i)
         {
@@ -232,7 +232,8 @@ void madness_txt_schema_write(Madness_txt* txt, Madness_Txt_Handle* object_handl
                 fwrite(str, strlen(str), 1, fptr);
                 break;
             case REFLECTION_TYPE_BOOL:
-                if (*(bool*)struct_pos)
+                bool state= *(bool*)struct_pos;
+                if (state)
                 {
                     fwrite("true", strlen("true"), 1, fptr);
                 }

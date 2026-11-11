@@ -1001,6 +1001,7 @@ typedef struct Renderer
     bool should_cull;
     bool wireframe_mode;
     bool use_orthographic_projection;
+    bool use_frame_graph; //for testing remove when frame graph is done
 
 
     Allocator allocator; // total memory for the entire renderer

@@ -564,6 +564,12 @@ bool asset_load_skmesh(Asset_System* asset_system, const char* engine_asset_path
 bool _asset_load_shader_asset(Asset_System* asset_system, Asset_Record* record,
                               Shader_Handle* out_handle, Scratch_Allocator* scratch_allocator)
 {
+
+    if (shader_is_loaded(asset_system->shader_system, record, out_handle))
+    {
+        return true;
+    }
+
     FILE* fptr = fopen(string_to_c_string_allocator(record->engine_path, scratch_allocator->allocator), "rb");
 
     if (!fptr)

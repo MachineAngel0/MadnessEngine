@@ -324,7 +324,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     //shutdown subsystems
-    audio_system_shutdown(application_core->audio_system);
+    audio_system_shutdown();
 
     asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 

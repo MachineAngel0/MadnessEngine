@@ -261,7 +261,8 @@ String_Builder* ability_text_table(Madness_Pulse_Game* game, Ability* ability)
             break;
         }
 
-        madness_ui_string(*string_builder_to_string(ability_text, game->frame_allocator));
+        // madness_ui_string(*string_builder_to_string(ability_text, game->frame_allocator));
+        ImGui_Text(string_builder_to_c_string(ability_text/*, game->frame_allocator*/));
         string_builder_clear(ability_text);
 
     }

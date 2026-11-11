@@ -25,7 +25,9 @@ void vulkan_shader_system_shader_free(Renderer* renderer, Vulkan_Shader_System* 
                                             const char* shader_name);
 
 
-Vulkan_Shader_Batch*  vulkan_shader_system_get_by_pipeline_hash(Renderer* renderer, Shader_Pipeline_Hash pipeline_hash);
+void vulkan_shader_system_reload(Renderer* renderer, Vulkan_Shader_System* shader_system,
+                                 Shader_Asset* shader_asset);
 
+Vulkan_Shader_Batch*  vulkan_shader_system_get_by_pipeline_hash(Renderer* renderer, Shader_Pipeline_Hash pipeline_hash);
 
 #endif //VULKAN_SHADER_SYSTEM_H

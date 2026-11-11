@@ -1,3 +1,15 @@
-#scheme a test
-editor state[enum][1]:
-- 5
+#editor state
+views[bool][13]:
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false
+- false

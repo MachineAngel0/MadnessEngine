@@ -170,7 +170,7 @@ bool editor_app_run(Editor_Application* editor_app)
 
 
     //shutdown subsystems
-    audio_system_shutdown(application_core->audio_system);
+    audio_system_shutdown();
 
     asset_system_shutdown(application_core->asset_system, &application_core->memory_system);
 

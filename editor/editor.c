@@ -17,6 +17,7 @@
 #include "madness_txt.h"
 #include "clock.h"
 
+
 Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
                     Asset_System* asset_system, Clock* clock, Reflection_Registry* reflection_registry,
                     Madness_txt* txt)
@@ -50,8 +51,9 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
     editor_generate_asset_lists(editor, memory_system);
 
     //reads in editor state and writes it out as well
-    editor->editor_config_file_handle = madness_txt_schema_create(txt, "scheme a test");
-    madness_txt_schema_add_type(txt, editor->editor_config_file_handle, "editor state", REFLECTION_TYPE_ENUM, 1);
+    editor->editor_config_file_handle = madness_txt_schema_create(txt, "editor state");
+    madness_txt_schema_add_type(txt, editor->editor_config_file_handle, "views", REFLECTION_TYPE_BOOL,
+                                EDITOR_UI_VIEW_MAX);
 
     editor_deserialize_state(editor);
 
@@ -65,14 +67,22 @@ Editor* editor_init(Memory_System* memory_system, Renderer* renderer,
 
 bool editor_deserialize_state(Editor* editor)
 {
-    madness_txt_schema_read(editor->madness_txt, &editor->editor_config_file_handle, &editor->state, "../editor.yaml");
+    Editor_Serialization editor_serialization = {0};
+
+    madness_txt_schema_read(editor->madness_txt, &editor->editor_config_file_handle, &editor_serialization,
+                            "../editor.yaml");
+
+    memcpy(editor->views, editor_serialization.views, sizeof(bool) * EDITOR_UI_VIEW_MAX);
 }
 
 bool editor_serialize_state(Editor* editor)
 {
-    madness_txt_schema_write(editor->madness_txt, &editor->editor_config_file_handle, &editor->state, "../editor.yaml");
-}
+    Editor_Serialization editor_serialization = {0};
+    memcpy(editor_serialization.views, editor->views, sizeof(bool) * EDITOR_UI_VIEW_MAX);
 
+    madness_txt_schema_write(editor->madness_txt, &editor->editor_config_file_handle, &editor_serialization,
+                             "../editor.yaml");
+}
 
 bool editor_update(Editor* editor)
 {
@@ -82,19 +92,14 @@ bool editor_update(Editor* editor)
 
     if (ImGui_BeginMainMenuBar())
     {
-        if (ImGui_BeginMenu("Editor"))
+        if (ImGui_BeginMenu("File"))
         {
-            int state = (int)editor->state; /* ImGui_Combo wants an int*, not your enum */
-            if (ImGui_ComboChar("editor states", &state,
-                                Editor_UI_State_ENUM_String,
-                                ARRAY_SIZE(Editor_UI_State_ENUM_String)))
-            {
-                editor->state = (Editor_UI_State)state; /* use your enum's real type name */
-                editor_serialize_state(editor);
-            }
             ImGui_EndMenu();
         }
-
+        if (ImGui_BeginMenu("Options"))
+        {
+            ImGui_EndMenu();
+        }
         ImGui_EndMainMenuBar();
     }
 
@@ -126,29 +131,106 @@ bool editor_update(Editor* editor)
     }
     ImGui_End();
 
-
-    //do the ui and stuff
-    //manage a bunch of ui state
-    if (input_key_released_unique(KEY_E))
+    if (ImGui_Begin("Editor Views", 0, 0))
     {
-        editor->state = (editor->state + 1) % EDITOR_UI_STATE_MAX;
-        editor_serialize_state(editor);
+        for (u32 i = 0; i < EDITOR_UI_VIEW_MAX; i++)
+        {
+            if (ImGui_Checkbox(Editor_UI_State_ENUM_String[i], &editor->views[i]))
+            {
+                editor_serialize_state(editor);
+            }
+        }
+    }
+    ImGui_End();
+
+
+    if (ImGui_Begin("Asset Reload Views", 0, 0))
+    {
+        if (ImGui_Button("Reload Shaders"))
+        {
+            // int result = system("../renderer/shaders/compile_shaders.bat");
+            int result = system("cmd.exe /c \"\"../renderer/shaders/compile_shaders.bat\"\"");
+            if (result == 0)
+            {
+                editor->asset_system->shader_system->reload_shaders = true;
+            }
+            else
+            {
+                FATAL("DOES NOT WORK");
+            }
+
+
+            FATAL("RELOADING SHADER")
+        }
+        if (ImGui_Button("Reload Textures"))
+        {
+            FATAL("RELOADING SHADER")
+        }
+        if (ImGui_Button("Reload Meshes"))
+        {
+            FATAL("RELOADING SHADER")
+        }
     }
 
-    if (input_key_released_unique(KEY_Q))
+    ImGui_End();
+
+    //if a view is active, set previously it will be displayed
+    if (editor->views[EDITOR_UI_VIEW_AUDIO])
     {
-        if (editor->state == 0)
-        {
-            editor->state = EDITOR_UI_STATE_MAX - 1;
-        }
-        else
-        {
-            editor->state = (editor->state - 1);
-        }
-        editor_serialize_state(editor);
+        editor_audio_view(editor);
     }
 
-    editor_ui(editor);
+    if (editor->views[EDITOR_UI_VIEW_ENGINE_STATS])
+    {
+        editor_ui_stats(editor);
+    }
+
+    if (editor->views[EDITOR_UI_VIEW_RENDERER])
+    {
+        editor_render_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_SCENE])
+    {
+        editor_ui_scene(editor);
+    }
+
+    if (editor->views[EDITOR_UI_VIEW_TEXTURE_VIEWER])
+    {
+        editor_texture_view(editor);
+    }
+
+    if (editor->views[EDITOR_UI_VIEW_MESH_VIEWER])
+    {
+        editor_mesh_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_ANIMATION])
+    {
+        editor_ui_animation(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_ASSET_METADATA])
+    {
+        editor_meta_data_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_PARTICLE])
+    {
+        editor_particle_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_MATERIAL_EDITOR])
+    {
+        editor_material_editor(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_MATERIAL_CREATION])
+    {
+        editor_material_asset_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_REFLECTION_ABILITY])
+    {
+        editor_ui_reflection_ability_view(editor);
+    }
+    if (editor->views[EDITOR_UI_VIEW_INSANITY_UI_TEST])
+    {
+        insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
+    }
 
     PROFILE_ZONE_END(editor_update);
 
@@ -212,102 +294,6 @@ bool editor_generate_asset_lists(Editor* editor, Memory_System* memory_system)
 
 static float thick = 1.0f;
 
-
-void editor_ui(Editor* editor)
-{
-    switch (editor->state)
-    {
-    case EDITOR_UI_STATE_MAX:
-        break;
-    // case EDITOR_UI_STATE_DEBUG:
-    // editor_madness_ui_debug(editor);
-    // break;
-    case EDITOR_UI_STATE_ENGINE_STATS:
-        editor_ui_stats(editor);
-        break;
-    case EDITOR_UI_STATE_RENDERER:
-        editor_render_view(editor);
-        break;
-    case EDITOR_UI_STATE_SCENE:
-        editor_ui_scene(editor);
-        break;
-    case EDITOR_UI_STATE_TEXTURE_VIEWER:
-        editor_texture_view(editor);
-        break;
-    case EDITOR_UI_STATE_ANIMATION:
-        editor_ui_animation(editor);
-        break;
-    // case EDITOR_UI_STATE_CHAOS_UI_TEST:
-    //     chaos_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
-    //     break;
-    case EDITOR_UI_STATE_INSANITY_UI_TEST:
-        insanity_ui_test(editor->clock->delta_time, editor->clock->time_elapsed);
-        break;
-    // case EDITOR_UI_STATE_MADNESS_UI_TEST:
-    //     // madness_ui_test();
-    //     madness_ui_example();
-    //     // madness_ui_window_testing();
-    //     break;
-
-    case EDITOR_UI_STATE_REFLECTION_ABILITY:
-        madness_ui_window_begin(STRING("RUNTIME TESTING"), 0);
-        {
-            // static u32 i = 0;
-            // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
-            // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
-
-            if (madness_ui_button(STRING("Serialize Runtime Data")))
-            {
-                reflection_registry_runtime_serialize_all_data_to_txt_format(editor->reflection_registry);
-            }
-
-            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "1");
-            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "2");
-            madness_ui_reflection_runtime_registry(editor->reflection_registry, "Damage_Component", "1");
-
-            // madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Game_Level_Data", "1");
-
-
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Component", "1");
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Info", "1");
-            // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability", "1");
-        }
-        madness_ui_window_end();
-
-
-        madness_ui_set_window_pos(700, 100);
-        madness_ui_window_begin(STRING("Material Menu"), 0);
-        {
-            Reflection_Registry* material_reflection_registry = editor->asset_system->material_reflection_registry;
-
-            if (madness_ui_button(STRING("Serialize Runtime Data")))
-            {
-                reflection_registry_runtime_serialize_all_data_to_txt_format(material_reflection_registry);
-            }
-
-            madness_ui_reflection_runtime_registry(material_reflection_registry, "Material_Default", "1");
-        }
-        madness_ui_window_end();
-
-
-        break;
-    case EDITOR_UI_STATE_ASSET_METADATA:
-        editor_meta_data_view(editor);
-        break;
-    case EDITOR_UI_STATE_MATERIAL_CREATION:
-        editor_material_asset_view(editor);
-        break;
-    case EDITOR_UI_STATE_MESH_VIEWER:
-        editor_mesh_view(editor);
-        break;
-    case EDITOR_UI_STATE_PARTICLE:
-        editor_particle_view(editor);
-        break;
-    case EDITOR_UI_STATE_MATERIAL_EDITOR:
-        editor_material_editor(editor);
-        break;
-    }
-}
 
 //testing bezier curves
 static vec2s pos1 = {400, 400};
@@ -618,7 +604,6 @@ void editor_ui_scene(Editor* editor)
 
             vec3s pos = glms_vec4_copy3(point_light->position);
             debug_draw_sphere(pos, point_light->range, point_light->color);
-
         }
 
 
@@ -1526,8 +1511,8 @@ void editor_particle_view(Editor* editor)
 void editor_material_editor(Editor* editor)
 {
     Asset_System* asset_system = editor->asset_system;
-
     static Material_Handle handle;
+
     ImGui_Begin("Material Table", 0, 0);
     {
         //
@@ -1542,19 +1527,26 @@ void editor_material_editor(Editor* editor)
                           "C:/Users/Adams Humbert/Documents/Clion/MadnessEngine/z_assets_engine/material");
         if (ImGui_Button("LOAD MATERIAL ASSET"))
         {
-            String_Builder* builder_path = string_builder_create(256, editor->frame_allocator);
-            string_builder_append_c_string(builder_path, path);
-            string_builder_convert_path_to_proper_path(builder_path);
-            string_builder_strip_path_to_base_name(builder_path);
+            if (filesystem_does_file_exists(path))
+            {
+                String_Builder* builder_path = string_builder_create(256, editor->frame_allocator);
+                string_builder_append_c_string(builder_path, path);
+                string_builder_convert_path_to_proper_path(builder_path);
+                string_builder_strip_path_to_base_name(builder_path);
 
 
-            String_Builder* final_path = string_builder_create(256, editor->frame_allocator);
-            string_builder_append_c_string(final_path, ENGINE_MATERIAL_PATH);
-            string_builder_append_string_builder(final_path, builder_path);
+                String_Builder* final_path = string_builder_create(256, editor->frame_allocator);
+                string_builder_append_c_string(final_path, ENGINE_MATERIAL_PATH);
+                string_builder_append_string_builder(final_path, builder_path);
 
-            asset_load_material_path(editor->asset_system,
-                                     string_builder_to_c_string(final_path),
-                                     &handle);
+                asset_load_material_path(editor->asset_system,
+                                         string_builder_to_c_string(final_path),
+                                         &handle);
+            }
+            else
+            {
+                WARN("EDITOR MATERIAL EDITOR: MATERIAL INVALID PATH")
+            }
         }
 
         if (handle.handle != 0)
@@ -1644,4 +1636,68 @@ void editor_material_editor(Editor* editor)
         }
     }
     ImGui_End();
+}
+
+
+void editor_audio_view(Editor* editor)
+{
+    if (ImGui_Begin("Audio View", &editor->views[EDITOR_UI_VIEW_AUDIO], 0))
+    {
+        if (ImGui_Button("load sound"))
+        {
+            audio_load(AUDIO_TEST_FILE, &madness_audio->test_sound);
+        }
+        if (ImGui_Button("play sound"))
+        {
+            audio_play_sound(&madness_audio->test_sound, false);
+        }
+        if (ImGui_Button("stop sound"))
+        {
+            audio_stop_sound(&madness_audio->test_sound, true);
+        }
+    }
+    ImGui_End();
+}
+
+
+void editor_ui_reflection_ability_view(Editor* editor)
+{
+    madness_ui_window_begin(STRING("RUNTIME TESTING"), 0);
+    {
+        // static u32 i = 0;
+        // madness_ui_combo_box_char(renderer_plugin->madness_ui, STRING("combo box box"), &i,
+        // Ability_Icon_Type_enum_string, ARRAY_SIZE(Ability_Icon_Type_enum_string));
+
+        if (madness_ui_button(STRING("Serialize Runtime Data")))
+        {
+            reflection_registry_runtime_serialize_all_data_to_txt_format(editor->reflection_registry);
+        }
+
+        madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "1");
+        madness_ui_reflection_runtime_registry(editor->reflection_registry, "Heal_Component", "2");
+        madness_ui_reflection_runtime_registry(editor->reflection_registry, "Damage_Component", "1");
+
+        // madness_ui_reflection_test(editor->madness_ui, editor->reflection_registry, "Game_Level_Data", "1");
+
+
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Component", "1");
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability_Info", "1");
+        // madness_ui_reflection_test(renderer_plugin->madness_ui, reflection_registry, "Ability", "1");
+    }
+    madness_ui_window_end();
+
+
+    madness_ui_set_window_pos(700, 100);
+    madness_ui_window_begin(STRING("Material Menu"), 0);
+    {
+        Reflection_Registry* material_reflection_registry = editor->asset_system->material_reflection_registry;
+
+        if (madness_ui_button(STRING("Serialize Runtime Data")))
+        {
+            reflection_registry_runtime_serialize_all_data_to_txt_format(material_reflection_registry);
+        }
+
+        madness_ui_reflection_runtime_registry(material_reflection_registry, "Material_Default", "1");
+    }
+    madness_ui_window_end();
 }

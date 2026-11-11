@@ -949,6 +949,18 @@ typedef struct Shader_System
     Reflection_Registry* material_reflection_registry;
 
 
+    bool reload_shaders;
+    struct Shader_Reload
+    {
+        //a way to reference the old shader and state that it is a reload
+        //which is implicit in this struct/queue
+        Shader_PSO shader_pso;
+        Shader_Handle handle;
+    };
+
+    RING_QUEUE_TYPE(Shader_Reload)* shader_reload_queue;
+
+
     //TODO:
     //Shader_Handle default_shader_handle;
 } Shader_System;
@@ -1203,6 +1215,7 @@ typedef struct Render_Packet_Shaders
     Shader_Asset* shader_assets;
     u32 shader_asset_count;
 
+    bool reload_shaders;
 }Render_Packet_Shaders;
 
 

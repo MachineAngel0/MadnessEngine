@@ -45,16 +45,23 @@ void vulkan_shader_system_update(Renderer* renderer, Vulkan_Shader_System* shade
             continue;
         }
         vulkan_shader_system_shader_create(renderer, shader_system,
-                                                 &render_packet->shaders_packet.shader_assets[i]);
+                                           &render_packet->shaders_packet.shader_assets[i]);
     }
 
 
-
+    if (render_packet->shaders_packet.reload_shaders)
+    {
+        for (int i = 0; i < render_packet->shaders_packet.shader_asset_count; ++i)
+        {
+            Shader_Asset* shader_asset = &render_packet->shaders_packet.shader_assets[i];
+            vulkan_shader_system_reload(renderer, shader_system, shader_asset);
+        }
+    }
 }
 
 
 void vulkan_shader_system_shader_create(Renderer* renderer, Vulkan_Shader_System* shader_system,
-                                              Shader_Asset* shader_asset)
+                                        Shader_Asset* shader_asset)
 {
     Vulkan_Shader_Batch* shader_batch = &shader_system->shader_batch[shader_system->shader_batch_count++];
 
@@ -73,16 +80,41 @@ void vulkan_shader_system_shader_create(Renderer* renderer, Vulkan_Shader_System
                                     &shader_batch->wireframe_pipeline);
 
 
-
     hash_set_insert(shader_system->shader_batch_hash_set, &shader_batch->pipeline_hash);
 }
 
 void vulkan_shader_system_shader_free(Renderer* renderer, Vulkan_Shader_System* shader_system,
-                                            const char* shader_name)
+                                      const char* shader_name)
 {
     //TODO:
 }
 
+
+void vulkan_shader_system_reload(Renderer* renderer, Vulkan_Shader_System* shader_system,
+                                 Shader_Asset* shader_asset)
+{
+    for (u32 i = 0; i < shader_system->shader_batch_count; i++)
+    {
+        //find our shader
+        Vulkan_Shader_Batch* shader_batch = &shader_system->shader_batch[i];
+
+        if (shader_batch->pipeline_hash == shader_asset->shader_pipeline_hash)
+        {
+            vulkan_pipeline_destroy(renderer, &shader_system->shader_batch[i].pipeline);
+            vulkan_pipeline_destroy(renderer, &shader_system->shader_batch[i].wireframe_pipeline);
+
+
+            //load pipeline from our configs
+            //TODO: add more configs when neccessary
+            vulkan_pipeline_graphics_create(renderer, shader_batch->shader_name, shader_batch->shader_pso.blend_mode,
+                                            false,
+                                            &shader_batch->pipeline,
+                                            &shader_batch->wireframe_pipeline);
+            //hard wait for everything to finish
+            vkDeviceWaitIdle(renderer->logical_device);
+        }
+    }
+}
 
 
 Vulkan_Shader_Batch* vulkan_shader_system_get_by_pipeline_hash(Renderer* renderer, Shader_Pipeline_Hash pipeline_hash)
@@ -99,5 +131,4 @@ Vulkan_Shader_Batch* vulkan_shader_system_get_by_pipeline_hash(Renderer* rendere
     }
 
     return false;
-
 }

@@ -127,7 +127,7 @@ bool tetris_game_run(Tetris_Application* tetris_application)
 
 
     //shutdown subsystems
-    audio_system_shutdown(application_core->audio_system);
+    audio_system_shutdown();
 
     asset_system_shutdown(application_core->asset_system, TODO);
 
