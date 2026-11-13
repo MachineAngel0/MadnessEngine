@@ -599,7 +599,7 @@ typedef struct Windows_Directory_FileWatch
     HANDLE directory_handle;
     OVERLAPPED overlapped;
 
-    BYTE buffer[64 * 1024];
+    BYTE buffer[32 * 1024];
     bool pending;
 } Windows_Directory_FileWatch;
 
@@ -652,7 +652,7 @@ bool platform_register_directory2(Madness_File_Watcher* madness_file_watcher,
 }
 
 
-void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw)
+void platform_file_watcher_poll_events(Madness_File_Watcher* madness_fw, Clock* clock)
 {
     //testing but then use a loop when done
     for (u32 dir_idx = 0; dir_idx < madness_fw->registered_directories_count; dir_idx++)
@@ -713,7 +713,7 @@ void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw)
         }
 
 
-        DWORD bytes_transferred;
+        DWORD bytes_transferred = 0;
 
         // Check if the asynchronous read has completed.
         BOOL overlap_result =
@@ -730,6 +730,7 @@ void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw)
             // just means the write operation is not yet complete
             if (error == ERROR_IO_INCOMPLETE)
             {
+                windows_directory_data->pending = true;
                 continue;
             }
 
@@ -801,9 +802,12 @@ void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw)
                 event.path[filename_length] = '\0';
             }
             event.base_path = directory_data->directory_path;
+            event.last_event_time = clock->time_elapsed;
 
 
-            ring_enqueue(madness_fw->events, &event);
+            filewatcher_add_pending_event(madness_fw, event);
+
+            // ring_enqueue(madness_fw->events, &event);
 
             if (info->NextEntryOffset == 0)
                 break;

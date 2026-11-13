@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "clock.h"
 #include "defines.h"
 #include "platform.h"
 #include "resource_types.h"
@@ -171,12 +172,18 @@ typedef struct Madness_Registered_Files
 } Madness_Registered_Files;
 */
 
+
+
+#define PENDING_EVENT_FINISHED_IN_SECONDS 2
+
 typedef struct File_Watch_Event
 {
     File_Watch_Action action;
     char path[MADNESS_MAX_PATH];
     const char* base_path;
+    u64 last_event_time;
 } File_Watch_Event;
+
 
 typedef struct Madness_File_Watcher
 {
@@ -186,7 +193,9 @@ typedef struct Madness_File_Watcher
     Madness_Registered_Directory registered_directories[32];
     u32 registered_directories_count;
 
-    RING_QUEUE_TYPE(File_Watch_Event2)* events;
+    RING_QUEUE_TYPE(File_Watch_Event)* ready_events;
+
+    ARRAY_TYPE(File_Watch_Event)* pending_events;
 } Madness_File_Watcher;
 
 
@@ -197,9 +206,10 @@ bool filewatcher_init(Memory_System* memory_system);
 bool filewatcher_deinit(void);
 
 
-bool filewatcher_update(void);
+bool filewatcher_update(Clock* clock);
 
 bool filewatcher_directory_register(const char* directory_path);
+
 //NOTE: there is no need to unregister anything rn
 // void filewatcher2_directory_unregister(const char* directory_path);
 

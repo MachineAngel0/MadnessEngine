@@ -151,7 +151,7 @@ bool platform_get_assets_from_directory(const char* directory_path, Asset_List_S
 //FILE WATCHER 2
 
 bool platform_register_directory2(Madness_File_Watcher* madness_file_watcher, Madness_Registered_Directory* registered_directory);
-void platform_file_watcher_poll_events2(Madness_File_Watcher* madness_fw);
+void platform_file_watcher_poll_events(Madness_File_Watcher* madness_fw, Clock* clock);
 
 
 //FILE SYSTEM

@@ -1,7 +1,5 @@
 ﻿#include "filesystem.h"
 
-#include "asset_converter.h"
-
 
 bool filesystem_open(const char* path, File_Modes mode, bool binary, CFile* file)
 {
@@ -334,9 +332,9 @@ bool filewatcher_init(Memory_System* memory_system)
 
     madness_file_watcher->registered_directories_count = 0;
 
-    madness_file_watcher->events = ring_queue_create_allocator(sizeof(File_Watch_Event), 1024,
+    madness_file_watcher->ready_events = ring_queue_create_allocator(sizeof(File_Watch_Event), 1024,
                                                                madness_file_watcher->allocator);
-
+    madness_file_watcher->pending_events = array_create(File_Watch_Event, 1024, madness_file_watcher->allocator);
 
     MASSERT(madness_file_watcher);
     return true;
@@ -349,14 +347,29 @@ bool filewatcher_deinit(void)
     return true;
 }
 
-bool filewatcher_update(void)
+bool filewatcher_update(Clock* clock)
 {
-    platform_file_watcher_poll_events2(madness_file_watcher);
+    platform_file_watcher_poll_events(madness_file_watcher, clock);
 
-    while (!ring_queue_is_empty(madness_file_watcher->events))
+    //see if an event is ready to be used
+    for (u32 i = 0; i < madness_file_watcher->pending_events->num_items; i++)
+    {
+        File_Watch_Event cur_pending_event = array_get(madness_file_watcher->pending_events, i, File_Watch_Event);
+        f64 ms_time_elapsed = (clock->time_elapsed - cur_pending_event.last_event_time);
+        if (ms_time_elapsed > PENDING_EVENT_FINISHED_IN_SECONDS)
+        {
+            ring_enqueue(madness_file_watcher->ready_events, &cur_pending_event);
+            array_remove_swap(madness_file_watcher->pending_events, i);
+            i--;
+
+        }
+    }
+
+
+    while (!ring_queue_is_empty(madness_file_watcher->ready_events))
     {
         File_Watch_Event event;
-        ring_dequeue(madness_file_watcher->events, &event);
+        ring_dequeue(madness_file_watcher->ready_events, &event);
 
         INFO("FILE EVENT: %s %s %s", event.base_path, event.path, File_Watch_Action_String[event.action]);
 
@@ -394,6 +407,48 @@ bool filewatcher_update(void)
         }
     }
 }
+
+
+bool filewatcher_add_pending_event(Madness_File_Watcher* file_watcher, File_Watch_Event new_pending_event)
+{
+    for (u32 i = 0; i < file_watcher->pending_events->num_items; i++)
+    {
+        File_Watch_Event* cur_pending_event = &array_get(file_watcher->pending_events, i, File_Watch_Event);
+        if (strcmp(new_pending_event.base_path, cur_pending_event->base_path) == 0 && strcmp(
+            new_pending_event.path, cur_pending_event->path) == 0)
+        {
+            //we have found a duplicate of an event
+            WARN("WE HAVE FOUD YOU 2")
+            cur_pending_event->last_event_time = new_pending_event.last_event_time;
+
+            //we want to handle these events first
+            if (cur_pending_event->action == FILE_WATCH_ACTION_ADDED)
+            {
+                return false;
+            }
+            if (cur_pending_event->action == FILE_WATCH_ACTION_REMOVED)
+            {
+                return false;
+            }
+
+
+            if (cur_pending_event->action == FILE_WATCH_ACTION_MODIFIED && cur_pending_event->action ==
+                FILE_WATCH_ACTION_MODIFIED)
+            {
+                return false;
+            }
+
+            //TODO: handle renames
+        }
+    }
+
+    //if we reach this point we are safe to put into the pending events
+    array_push(file_watcher->pending_events, &new_pending_event);
+
+
+    return true;
+}
+
 
 bool filewatcher_directory_register(const char* directory_path)
 {

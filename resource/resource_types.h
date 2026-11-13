@@ -449,8 +449,12 @@ typedef enum Mesh_PBR_Flags
 
 typedef struct PC_General
 {
-    VkDeviceAddress draw_data_buffer;
-    VkDeviceAddress extra_buffer;
+    // VkDeviceAddress draw_data_buffer;
+    // VkDeviceAddress draw_data_buffer;
+    // VkDeviceAddress extra_buffer;
+    u64 draw_data_buffer;
+    u64 extra_buffer;
+
 } PC_General;
 
 typedef struct PC_Point_Light
@@ -471,8 +475,10 @@ typedef struct PC_Sprite
 
 typedef struct PC_Particle
 {
-    VkDeviceAddress particle_render_data_buffer;
-    VkDeviceAddress particle_draw_buffer;
+    // VkDeviceAddress particle_render_data_buffer;
+    // VkDeviceAddress particle_draw_buffer;
+    u64 particle_render_data_buffer;
+    u64 particle_draw_buffer;
 } PC_Particle;
 
 
@@ -1216,6 +1222,7 @@ typedef struct Render_Packet_UI
 {
     UI_Render_Packet madness_ui_render_packet;
     Insanity_UI_Render_Packet insanity_ui_render_packet;
+    u8 do_not_touch;
 } Render_Packet_UI;
 
 
@@ -1277,6 +1284,7 @@ typedef struct Asset_Registry
     // DYNAMIC_ARRAY_TYPE(Mesh_MetaData)* skinned_mesh_table;
     // DYNAMIC_ARRAY_TYPE(Material_MetaData)* material_table;
     // DYNAMIC_ARRAY_TYPE(Shader_MetaData)* shader_table;
+
 
 
 } Asset_Registry;

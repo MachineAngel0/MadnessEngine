@@ -23,6 +23,7 @@ bool application_on_resized(const Event_Type code, String sender, String listene
 bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
 
+
 static Madness_Pulse_Application* app_internal;
 
 bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
@@ -262,7 +263,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
             break;
         case DEBUG_APP_STATE_EDITOR:
             editor_update(editor);
-            filewatcher_update();
+            filewatcher_update(&application_core->clock);
             break;
         case DEBUG_APP_STATE_MAX:
             FATAL("DEBUG GAME STATE should not be here");

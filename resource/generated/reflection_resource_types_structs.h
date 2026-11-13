@@ -776,13 +776,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	Reflection_Runtime_Struct_Field PC_General_Fields[] =
 	{
+		{
+			.name = "draw_data_buffer",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(PC_General, draw_data_buffer)
+		},
+		{
+			.name = "extra_buffer",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(PC_General, extra_buffer)
+		},
 	};
 
 	 Reflection_Runtime_Struct PC_General_Runtime_Struct =
 	{
 		.name = "PC_General",
 		.fields = PC_General_Fields,
-		.field_count = 0,
+		.field_count = 2,
 		.struct_size = sizeof(PC_General)
 	};
 
@@ -842,13 +854,25 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	Reflection_Runtime_Struct_Field PC_Particle_Fields[] =
 	{
+		{
+			.name = "particle_render_data_buffer",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(PC_Particle, particle_render_data_buffer)
+		},
+		{
+			.name = "particle_draw_buffer",
+			.type = REFLECTION_TYPE_U32,
+			.type_name = "u64",
+			.offset = offsetof(PC_Particle, particle_draw_buffer)
+		},
 	};
 
 	 Reflection_Runtime_Struct PC_Particle_Runtime_Struct =
 	{
 		.name = "PC_Particle",
 		.fields = PC_Particle_Fields,
-		.field_count = 0,
+		.field_count = 2,
 		.struct_size = sizeof(PC_Particle)
 	};
 
@@ -2226,13 +2250,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "Shader_Material_Mapping",
 			.offset = offsetof(Shader_System, shader_to_material_mapping)
 		},
+		{
+			.name = "reload_shaders",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Shader_System, reload_shaders)
+		},
 	};
 
 	 Reflection_Runtime_Struct Shader_System_Runtime_Struct =
 	{
 		.name = "Shader_System",
 		.fields = Shader_System_Fields,
-		.field_count = 5,
+		.field_count = 6,
 		.struct_size = sizeof(Shader_System)
 	};
 
@@ -2794,13 +2824,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 			.type_name = "u32",
 			.offset = offsetof(Render_Packet_Shaders, shader_asset_count)
 		},
+		{
+			.name = "reload_shaders",
+			.type = REFLECTION_TYPE_BOOL,
+			.type_name = "bool",
+			.offset = offsetof(Render_Packet_Shaders, reload_shaders)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_Shaders_Runtime_Struct =
 	{
 		.name = "Render_Packet_Shaders",
 		.fields = Render_Packet_Shaders_Fields,
-		.field_count = 2,
+		.field_count = 3,
 		.struct_size = sizeof(Render_Packet_Shaders)
 	};
 
@@ -2808,13 +2844,19 @@ void generate_runtime_structs_resources(Reflection_Registry* reflection_registry
 
 	Reflection_Runtime_Struct_Field Render_Packet_UI_Fields[] =
 	{
+		{
+			.name = "do_not_touch",
+			.type = REFLECTION_TYPE_U8,
+			.type_name = "u8",
+			.offset = offsetof(Render_Packet_UI, do_not_touch)
+		},
 	};
 
 	 Reflection_Runtime_Struct Render_Packet_UI_Runtime_Struct =
 	{
 		.name = "Render_Packet_UI",
 		.fields = Render_Packet_UI_Fields,
-		.field_count = 0,
+		.field_count = 1,
 		.struct_size = sizeof(Render_Packet_UI)
 	};
 

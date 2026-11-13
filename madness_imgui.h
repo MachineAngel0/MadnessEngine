@@ -5,8 +5,8 @@
 #include "dcimgui.h"
 
 #if MPLATFORM_WINDOWS
-#include "dcimgui_impl_win32.h"
 #define VK_USE_PLATFORM_WIN32_KHR
+#include "dcimgui_impl_win32.h"
 #endif
 
 #if MPLATFORM_LINUX

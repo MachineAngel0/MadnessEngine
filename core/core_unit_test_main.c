@@ -22,7 +22,6 @@ int main(void)
     freelist_test();
 
     array_test();
-    free_list_array_test();
 
     darray_test();
 

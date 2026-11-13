@@ -173,7 +173,7 @@ typedef struct Vulkav_Mesh_Renderable
 
 int vulkan_skinned_mesh_sort_key(const void* render_item1, const void* render_item2)
 {
-    Vulkan_Skinned_Renderable* p1 = (Vulkan_Mesh_Renderable*)render_item1;
+    Vulkan_Skinned_Renderable* p1 = (Vulkan_Skinned_Renderable*)render_item1;
     Vulkan_Mesh_Renderable* p2 = (Vulkan_Mesh_Renderable*)render_item2;
 
     if (p1->pipeline_hash != p2->pipeline_hash)

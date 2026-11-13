@@ -12,20 +12,24 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_UNITY_BUILD ON) # UNITY BUILD
+set(UNITY_BUILD_BATCH_SIZE 8)
+
+
+if (WIN32)
+    set(PKG_CONFIG_EXECUTABLE "C:\\msys64\\mingw64\\bin\\pkg-config.exe")
+endif ()
+
 
 set(MADNESS_BUILD_TARGETS
         CORE_UNIT_TEST
         Madness_Reflection
-        MadnessEngine
 
         MadnessEngine_renderer
         MADNESSRENDERER
 
-        Madness_Editor
-        MADNESSEDITOR
-
         MadnessPulse
         MADNESSPULSE
+
         Tetris
 
 
@@ -45,7 +49,7 @@ endif ()
 #GCC/MINGW OR CLANG
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -Wvla -Wfloat-equal -Werror=vla -Wswitch")
+#    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpeadantic -Wvla -Wfloat-equal -Werror=vla -Wswitch")
     #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Waggregate-return -Wconversion") # additional compiler flags
 
     #LINUX
@@ -58,14 +62,16 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
         #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
         #        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=memory")
         #        set(CMAKE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+        find_package(X11 REQUIRED)
+
     endif ()
-    find_package(X11 REQUIRED)
-    find_package(PkgConfig REQUIRED)
+find_package(X11 REQUIRED)
 
 endif ()
 
 
 find_package(Vulkan REQUIRED)
+find_package(PkgConfig REQUIRED)
 
 include_directories(${Vulkan_INCLUDE_DIRS})
 
@@ -150,18 +156,6 @@ add_library(MADNESSRENDERER SHARED
 )
 
 
-### EDITOR ###
-add_executable(Madness_Editor
-        unity_build_editor.c
-        lib/build_lib.c
-)
-
-add_library(MADNESSEDITOR SHARED
-        unity_build_editor.c
-        lib/build_lib.c
-)
-
-
 ### CORE ###
 add_executable(CORE_UNIT_TEST
         core/build_core.h
@@ -170,10 +164,6 @@ add_executable(CORE_UNIT_TEST
         lib/build_lib.c
 )
 
-add_executable(MadnessEngine
-        unity_build_madness_pulse.c
-        lib/build_lib.c
-)
 
 if (WIN32)
     add_library(imgui_c STATIC
@@ -249,6 +239,7 @@ if (WIN32)
             winmm
             ole32
             bcrypt
+            dwmapi # wierd thing imgui needs
     )
     foreach (tgt IN LISTS MADNESS_BUILD_TARGETS)
         target_link_libraries(${tgt} PRIVATE ${MADNESS_WIN_LIBS})

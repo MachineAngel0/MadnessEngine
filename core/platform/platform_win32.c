@@ -880,8 +880,8 @@ void platform_generate_uuid(u64* high, u64* low)
     if (result != 0)
     {
         // handle error
-        high = 0;
-        low = 0;
+        *high = 0;
+        *low = 0;
         return;
     }
 
