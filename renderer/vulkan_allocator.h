@@ -111,6 +111,7 @@ void* vulkan_allocator_alloc(void* pUserData,
                              size_t alignment,
                              VkSystemAllocationScope allocationScope)
 {
+    return NULL;
 }
 
 void* vulkan_allocator_realloc(void* pUserData,
@@ -119,6 +120,7 @@ void* vulkan_allocator_realloc(void* pUserData,
                                size_t alignment,
                                VkSystemAllocationScope allocationScope)
 {
+    return NULL;
 }
 
 void vulkan_allocator_free(void* pUserData,

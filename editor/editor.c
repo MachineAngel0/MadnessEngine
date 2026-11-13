@@ -73,6 +73,7 @@ bool editor_deserialize_state(Editor* editor)
                             "../editor.yaml");
 
     memcpy(editor->views, editor_serialization.views, sizeof(bool) * EDITOR_UI_VIEW_MAX);
+    return true;
 }
 
 bool editor_serialize_state(Editor* editor)
@@ -82,6 +83,7 @@ bool editor_serialize_state(Editor* editor)
 
     madness_txt_schema_write(editor->madness_txt, &editor->editor_config_file_handle, &editor_serialization,
                              "../editor.yaml");
+    return true;
 }
 
 bool editor_update(Editor* editor)

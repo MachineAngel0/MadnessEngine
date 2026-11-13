@@ -101,7 +101,7 @@ void event_fire(Event_Type event, String sender_name, Event_Data context)
         {
             //the subscriber/listener is telling us we want to not fire this off for anyone else
             return;
-        };
+        }
     }
 }
 

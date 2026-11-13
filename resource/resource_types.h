@@ -28,7 +28,6 @@
 #define IMPORT_FONTS_PATH "../z_assets/msdf_fonts"
 #define IMPORT_MESH_PATH "../z_assets/mesh"
 #define IMPORT_AUDIO_PATH "../z_assets/audio"
-#define IMPORT_RESOURCE_PATH "../z_assets/asset_list"
 
 #define ENGINE_PATH_NO_SLASH "../z_assets_engine"
 #define ENGINE_PATH_SLASH "../z_assets_engine/"
@@ -60,6 +59,38 @@
 #define ENGINE_PARTICLE_EFFECT_EXTENSION ".mparticle"
 #define ENGINE_PARTICLE_EMITTER_EXTENSION ".memitter"
 
+const char* source_asset_texture_ext[] = {
+    ".png",
+    ".jpeg",
+    ".jpg",
+};
+
+
+const char* source_asset_mesh_ext[] = {
+    ".gltf",
+};
+
+const char* source_asset_extension_c_string_array[] = {
+    //texture
+    ".png",
+    ".jpeg",
+    ".jpg",
+
+    //NOTE: we dont actually want to handle this automatically
+    // font
+    // ".msdf"
+
+    //mesh
+    ".gltf"
+
+    //audio
+    ".wave"
+    ".mp3"
+    //TODO: add other stuff
+
+
+
+};
 
 ///////////////// RESOURCES VERSIONS //////////////////////
 #define TEXTURE_VERSION 1

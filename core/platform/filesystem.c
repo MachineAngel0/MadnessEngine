@@ -333,7 +333,7 @@ bool filewatcher_init(Memory_System* memory_system)
     madness_file_watcher->registered_directories_count = 0;
 
     madness_file_watcher->ready_events = ring_queue_create_allocator(sizeof(File_Watch_Event), 1024,
-                                                               madness_file_watcher->allocator);
+                                                                     madness_file_watcher->allocator);
     madness_file_watcher->pending_events = array_create(File_Watch_Event, 1024, madness_file_watcher->allocator);
 
     MASSERT(madness_file_watcher);
@@ -361,7 +361,6 @@ bool filewatcher_update(Clock* clock)
             ring_enqueue(madness_file_watcher->ready_events, &cur_pending_event);
             array_remove_swap(madness_file_watcher->pending_events, i);
             i--;
-
         }
     }
 
@@ -375,6 +374,8 @@ bool filewatcher_update(Clock* clock)
 
         //TODO: handle/fire off event
 
+        Scratch_Allocator scratch_allocator = scratch_allocator_begin(madness_file_watcher->allocator);
+
         switch (event.action)
         {
         case FILE_WATCH_ACTION_ADDED:
@@ -382,16 +383,18 @@ bool filewatcher_update(Clock* clock)
 
             //check extension type
 
-            /*
-             if (c_string_path_is_source_texture_extension(event.path))
+            if (c_string_path_is_source_asset_extension(event.path))
             {
-                c_string_concat(event.base_path, event.path, asset_system->frame_allocator);
-                asset_converter_reload_texture(asset_system);
-            Event_Data context = {0};
-            context.data;
-            event_fire(EVENT_HOT_RELOAD_TEXTURE, STRING("filewatcher"), context);
+                const char* asset_path =
+                    c_string_concat(event.base_path, event.path, scratch_allocator.allocator);
+
+                c_string_convert_backward_to_forward_slash(asset_path);
+
+                // asset_converter_reload_texture(asset_system);
+                Event_Data context = {0};
+                context.data.event_data_resource_convert.path = asset_path;
+                event_fire(EVENT_RESOURCE_CONVERT, STRING("Filewatcher"), context);
             }
-            */
 
             break;
         case FILE_WATCH_ACTION_REMOVED:
@@ -405,7 +408,11 @@ bool filewatcher_update(Clock* clock)
         case FILE_WATCH_ACTION_RENAMED_NEW:
             break;
         }
+
+        scratch_allocator_end(scratch_allocator);
     }
+
+    return true;
 }
 
 

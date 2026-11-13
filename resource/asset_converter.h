@@ -9,7 +9,7 @@
 
 
 //takes in any file and checks its extension type, and calls the appropriate function
-MAPI bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
+MAPI bool asset_converter_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);
 
 
 MAPI bool asset_converter_texture(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid);

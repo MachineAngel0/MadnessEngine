@@ -683,7 +683,7 @@ void* platform_get_function_address(DLL_HANDLE handle, const char* function_name
 
 bool platform_open_file_dialogue(char* out_path, char* start_file_absolute_path)
 {
-    c_string_convert_forward_to_backslashes(start_file_absolute_path);
+    c_string_convert_forward_to_back_slash(start_file_absolute_path);
 
 
     OPENFILENAMEA ofn = {0};

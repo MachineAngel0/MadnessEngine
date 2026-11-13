@@ -32,6 +32,8 @@ bool renderer_on_key(const Event_Type code, String sender, String listener_inst,
 }
 
 
+
+
 Renderer* renderer_init(Platform_State* platform_state, Platform_Window_Config platform_config,
                         Memory_System* memory_system,
                         Input_System* input_system)

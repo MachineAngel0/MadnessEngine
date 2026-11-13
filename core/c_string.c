@@ -5,6 +5,7 @@
 #include "string.h"
 #include <stdint.h>
 #include "allocator.h"
+#include "resource_types.h"
 
 // Returns the length of the given string.
 u64 c_string_length(const char* str)
@@ -91,7 +92,7 @@ const char* c_string_concat_heap(const char* str1, const char* str2, Heap_Alloca
     return out_str;
 }
 
-void c_string_convert_forward_to_backslashes(char* path)
+void c_string_convert_forward_to_back_slash(char* path)
 {
     for (char* c = path; *c; ++c)
     {
@@ -99,6 +100,13 @@ void c_string_convert_forward_to_backslashes(char* path)
     }
 }
 
+void c_string_convert_backward_to_forward_slash(char* path)
+{
+    for (char* c = path; *c; ++c)
+    {
+        if (*c == '\\') *c = '/';
+    }
+}
 
 // Performs string formatting to dest given format string and parameters.
 char* c_string_path_strip(const char* path, Allocator* arena)
@@ -215,16 +223,36 @@ bool c_string_path_is_extension(const char* path, const char* extensions_name)
 
 bool c_string_path_is_source_texture_extension(const char* path)
 {
-    return c_string_path_is_extension(path, ENGINE_TEXTURE_EXTENSION);
+    for (u32 i = 0; i < ARRAY_SIZE(source_asset_texture_ext); i++)
+    {
+        if (c_string_path_is_extension(path, source_asset_texture_ext[i]))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
+
 
 bool c_string_path_is_engine_texture_extension(const char* path)
 {
-    if (c_string_path_is_extension(path, ".png") || c_string_path_is_extension(path, ".jpeg") ||
-        c_string_path_is_extension(path, ".jpg"))
+    return c_string_path_is_extension(path, ENGINE_TEXTURE_EXTENSION);
+
+
+}
+
+bool c_string_path_is_source_asset_extension(const char* path)
+{
+    for (u32 i = 0; i < ARRAY_SIZE(source_asset_extension_c_string_array); i++)
     {
-        return true;
+        if (c_string_path_is_extension(path, source_asset_extension_c_string_array[i]))
+        {
+            return true;
+        }
+
     }
+
     return false;
 }
 

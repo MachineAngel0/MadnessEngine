@@ -23,6 +23,9 @@ bool application_on_resized(const Event_Type code, String sender, String listene
 bool application_on_event(const Event_Type code, String sender, String listener_inst, const Event_Data context);
 
 
+bool resource_convert_event(const Event_Type code, String sender, String listener_inst, Event_Data context);
+bool texture_reload_event(const Event_Type code, String sender, String listener_inst, Event_Data context);
+
 
 static Madness_Pulse_Application* app_internal;
 
@@ -105,6 +108,8 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     //register events needed for this application
     event_register(EVENT_APP_QUIT, STRING("application"), application_on_event);
     event_register(EVENT_APP_RESIZE, STRING("application"), application_on_resized);
+    event_register(EVENT_HOT_RELOAD_TEXTURE, STRING("asset system"), texture_reload_event);
+    event_register(EVENT_RESOURCE_CONVERT, STRING("asset system"), resource_convert_event);
 
     // event_register(EVENT_HOT_RELOAD_TEXTURE, STRING("asset system"), );
 
@@ -151,14 +156,14 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
     Mesh_Handle mesh_handle;
     asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/cube_gltf/Cube.mmesh", &mesh_handle);
     // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/damaged_helmet_gltf/DamagedHelmet.mmesh", &mesh_handle);
-    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/floor_test/floor_test.mmesh", &mesh_handle);
-
+    asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/floor_test/floor_test.mmesh",
+                         &mesh_handle);
 
 
     // asset_load_mesh_path(application_core->asset_system, "../z_assets_engine/mesh/FlightHelmet_gltf/FlightHelmet.mmesh", &mesh_handle);
     // asset_load_mesh_path(application_core->asset_system,
-                         // "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
-                         // &mesh_handle);
+    // "../z_assets_engine/mesh/blender_test_scene/Test_Scene_For_Engine.mmesh",
+    // &mesh_handle);
 
 
     // Skinned_Mesh_Handle skinned_handle;
@@ -199,7 +204,7 @@ bool madness_pulse_run(Madness_Pulse_Application* madness_pulse_app)
 
 
     filewatcher_init(&application_core->memory_system);
-    filewatcher_directory_register("../z_assets");
+    filewatcher_directory_register("../z_assets/");
 
     //MAIN LOOP
 
@@ -390,5 +395,32 @@ bool application_on_resized(const Event_Type code, String sender, String listene
     }
 
     // Event purposely not handled to allow other listeners to get this.
+    return false;
+}
+
+bool resource_convert_event(const Event_Type code, String sender, String listener_inst, Event_Data context)
+{
+    if (code != EVENT_RESOURCE_CONVERT)
+    {
+        MASSERT_FALSE();
+    }
+
+    INFO("filewatcher asset to convert %s", context.data.event_data_resource_convert.path);
+    asset_converter_file_path(app_internal->application_core.asset_system,
+                              context.data.event_data_resource_convert.path, NULL);
+    return false;
+}
+
+bool texture_reload_event(const Event_Type code, String sender, String listener_inst, Event_Data context)
+{
+    if (code != EVENT_HOT_RELOAD_TEXTURE)
+    {
+        MASSERT_FALSE();
+    }
+    INFO("texture to hot reload %s", context.data.event_data_reload_texture.path);
+    texture_reload(app_internal->application_core.asset_system,
+                   app_internal->application_core.asset_system->texture_system,
+                   context.data.event_data_reload_texture.path);
+
     return false;
 }

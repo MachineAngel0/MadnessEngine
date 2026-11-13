@@ -12,7 +12,8 @@ MAPI const char* c_string_concat(const char* str1, const char* str2, Allocator* 
 MAPI const char* c_string_concat_heap(const char* str1, const char* str2, Heap_Allocator* allocator);
 
 //this is a windows thing
-MAPI void c_string_convert_forward_to_backslashes(char* path);
+MAPI void c_string_convert_forward_to_back_slash(char* path);
+MAPI void c_string_convert_backward_to_forward_slash(char* path);
 
 // Performs string formatting to dest given format string and parameters.
 MAPI char* c_string_path_strip(const char* path, Allocator* arena);
@@ -25,6 +26,9 @@ MAPI bool c_string_path_is_extension(const char* path, const char* extensions_na
 
 MAPI bool c_string_path_is_source_texture_extension(const char* path);
 MAPI bool c_string_path_is_engine_texture_extension(const char* path);
+
+MAPI bool c_string_path_is_source_asset_extension(const char* path);
+
 
 // Case-sensitive string comparison. True if the same, otherwise false.
 MAPI bool c_strings_equal(const char* str0, const char* str1);

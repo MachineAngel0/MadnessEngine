@@ -26,7 +26,7 @@ typedef enum Event_Type
     EVENT_GAMEPAD_PRESS,
     EVENT_GAMEPAD_RELEASE,
 
-    //Renderer
+    EVENT_RESOURCE_CONVERT, // general function might want to use
     EVENT_HOT_RELOAD_TEXTURE,
 
 
@@ -93,10 +93,16 @@ typedef struct Event_Data_Window_Focus
     bool focused;
 } Event_Data_Window_Focus;
 
+typedef struct Event_Data_Resource_Convert
+{
+    const char* path;
+} Event_Data_Resource_Convert;
+
 typedef struct Event_Data_Reload_Texture
 {
     const char* path;
 } Event_Data_Reload_Texture;
+
 
 typedef struct Event_Data
 {
@@ -116,6 +122,7 @@ typedef struct Event_Data
         Event_Data_Window_Focus event_data_window_focus;
 
 
+        Event_Data_Resource_Convert event_data_resource_convert;
 
         Event_Data_Reload_Texture event_data_reload_texture;
     } data;

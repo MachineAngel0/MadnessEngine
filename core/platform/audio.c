@@ -113,6 +113,7 @@ bool audio_play_sound(ma_sound* sound, bool loop)
 
     ma_sound_set_looping(sound, loop);
 
+    return true;
 }
 
 bool audio_stop_sound(ma_sound* sound, bool reset_to_start)
@@ -127,6 +128,7 @@ bool audio_stop_sound(ma_sound* sound, bool reset_to_start)
     {
         ma_sound_seek_to_pcm_frame(sound, 0);
     }
+    return true;
 }
 
 void audio_fire_and_forget(const char* file_path)

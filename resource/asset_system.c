@@ -153,6 +153,7 @@ bool asset_system_generate_render_packet(Asset_System* asset_system)
 
 bool asset_unload_material(Asset_System* asset_system, const char* asset_path)
 {
+
 }
 
 

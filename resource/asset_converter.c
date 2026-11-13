@@ -9,25 +9,26 @@
 #include "math_lib.h"
 
 
-bool asset_convert_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
+bool asset_converter_file_path(Asset_System* asset_system, const char* file_path, MADNESS_UUID* out_uuid)
 {
     PROFILE_ZONE(asset_convert_file_path)
 
     const char* extension_name = c_string_path_get_extension(file_path, asset_system->frame_allocator);
-    if (strcmp(extension_name, ".png") == 0)
+
+    if (c_string_path_is_source_texture_extension(file_path))
     {
         asset_converter_texture(asset_system, file_path, out_uuid);
+        PROFILE_ZONE_END(asset_convert_file_path)
         return true;
     }
-    if (strcmp(extension_name, ".jpg") == 0)
-    {
-        asset_converter_texture(asset_system, file_path, out_uuid);
-        return true;
-    }
+
+
     //TODO: system fonts like .ttf into msdf fonts
+
     if (strcmp(extension_name, ".gltf") == 0)
     {
         asset_converter_gltf_mesh(asset_system, file_path);
+        PROFILE_ZONE_END(asset_convert_file_path)
         return true;
     }
 
@@ -173,8 +174,7 @@ bool asset_converter_texture(Asset_System* asset_system, const char* file_path, 
 
 
     //check for supported file formats
-    if (!c_string_path_is_extension(file_path, ".png") && !c_string_path_is_extension(file_path, ".jpeg") && !
-        c_string_path_is_extension(file_path, ".jpg"))
+    if (!c_string_path_is_source_texture_extension(file_path))
     {
         WARN("asset_converter_texture: INVALID TEXTURE EXTENSION: %s", file_path);
         PROFILE_ZONE_END(asset_converter_texture)
@@ -907,7 +907,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cur_mat->flags |= MESH_PIPELINE_COLOR;
 
             gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-                                                 color_texture->image->uri, &cur_mat->color_texture);
+                                            color_texture->image->uri, &cur_mat->color_texture);
 
             //base color
             memcpy(cur_mat->color.raw,
@@ -935,9 +935,9 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
                 cur_mat->flags |= MESH_PIPELINE_METALLIC;
 
                 gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-                                      metal_roughness_texture->image->uri, &cur_mat->roughness_texture);
+                                                metal_roughness_texture->image->uri, &cur_mat->roughness_texture);
                 gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-                                      metal_roughness_texture->image->uri, &cur_mat->metallic_texture);
+                                                metal_roughness_texture->image->uri, &cur_mat->metallic_texture);
 
                 cur_mat->metallic_strength =
                     data->meshes[mesh_idx].primitives->material->pbr_metallic_roughness.metallic_factor;
@@ -962,7 +962,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cur_mat->flags |= MESH_PIPELINE_AO;
 
             gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-                                  AO_texture->image->uri, &cur_mat->ambient_occlusion_texture);
+                                            AO_texture->image->uri, &cur_mat->ambient_occlusion_texture);
         }
 
 
@@ -973,7 +973,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
         {
             cur_mat->flags |= MESH_PIPELINE_NORMAL;
             gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-                      normal_texture->image->uri, &cur_mat->normal_texture);
+                                            normal_texture->image->uri, &cur_mat->normal_texture);
         }
 
         //EMISSIVE TEXTURE
@@ -984,7 +984,7 @@ bool asset_converter_gltf_mesh(Asset_System* asset_system, const char* gltf_path
             cur_mat->flags |= MESH_PIPELINE_EMISSIVE;
 
             gltf_image_find_and_set_texture(asset_system, gltf_images_array, data->images_count,
-               emissive_texture->image->uri, &cur_mat->emissive_texture);
+                                            emissive_texture->image->uri, &cur_mat->emissive_texture);
 
             cur_mat->emissive_strength = data->meshes[mesh_idx].primitives->material->emissive_strength.
                                                                 emissive_strength;

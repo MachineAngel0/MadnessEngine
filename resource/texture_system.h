@@ -37,8 +37,14 @@ bool texture_system_does_texture_exist(Texture_System* texture_system, Asset_Rec
 
 //only reloads textures if they are in use, otherwise we just write it out to a file
 bool texture_reload(Asset_System* asset_system, Texture_System* texture_system,
-                    Asset_Record* asset)
+                    const char* path)
 {
+
+    return false;
+    //check to see if the asset actually exists in the registry, then check if its loaded
+
+
+    /*
     //check the runtime assets
     for (u32 i = 0; i < texture_system->max_textures; i++)
     {
@@ -46,15 +52,14 @@ bool texture_reload(Asset_System* asset_system, Texture_System* texture_system,
 
         if (runtime->hash == asset->hash)
         {
-            runtime->reference_count++;
             return true;
         }
-    }
+    }*/
 
     //reconvert the asset again
-    asset_converter_texture(asset_system,
-                            string_to_c_string_allocator(asset->source_file, asset_system->frame_allocator),
-                            NULL);
+    // asset_converter_texture(asset_system,
+                            // string_to_c_string_allocator(asset->source_file, asset_system->frame_allocator),
+                            // NULL);
 
     //load it in again
     // asset_load_texture_uuid();
